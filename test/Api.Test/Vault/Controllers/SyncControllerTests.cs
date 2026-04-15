@@ -530,6 +530,91 @@ public class SyncControllerTests
         Assert.DoesNotContain(result.Ciphers, c => c.Type == CipherType.BankAccount);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task Get_BankAccountCiphers_FilteredWhenFlagEnabledButClientVersionIsNull(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+
+        var bankAccountCipher = new CipherDetails { Type = CipherType.BankAccount, Data = "{}", UserId = user.Id };
+        var loginCipher = new CipherDetails { Type = CipherType.Login, Data = "{}", UserId = user.Id };
+        var ciphers = new List<CipherDetails> { bankAccountCipher, loginCipher };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
+
+        // Null client version (missing/unparseable Bitwarden-Client-Version header)
+        sutProvider.GetDependency<ICurrentContext>()
+            .ClientVersion.Returns((Version?)null);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user).Returns(false);
+        userService.HasPremiumFromOrganization(user).Returns(false);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.DoesNotContain(result.Ciphers, c => c.Type == CipherType.BankAccount);
+        Assert.Contains(result.Ciphers, c => c.Type == CipherType.Login);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_SSHKeyCiphers_FilteredWhenClientVersionIsNull(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+
+        var sshKeyCipher = new CipherDetails { Type = CipherType.SSHKey, Data = "{}", UserId = user.Id };
+        var loginCipher = new CipherDetails { Type = CipherType.Login, Data = "{}", UserId = user.Id };
+        var ciphers = new List<CipherDetails> { sshKeyCipher, loginCipher };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
+
+        // Null client version (missing/unparseable Bitwarden-Client-Version header)
+        sutProvider.GetDependency<ICurrentContext>()
+            .ClientVersion.Returns((Version?)null);
+
+        // QA override disabled
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.SSHVersionCheckQAOverride).Returns(false);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user).Returns(false);
+        userService.HasPremiumFromOrganization(user).Returns(false);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.DoesNotContain(result.Ciphers, c => c.Type == CipherType.SSHKey);
+        Assert.Contains(result.Ciphers, c => c.Type == CipherType.Login);
+    }
+
     private async Task AssertMethodsCalledAsync(IUserService userService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IOrganizationUserRepository organizationUserRepository,
