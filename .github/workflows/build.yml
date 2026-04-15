@@ -176,7 +176,7 @@ jobs:
         uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
 
       ########## Registries ##########
       - name: Log in to GHCR
@@ -235,15 +235,21 @@ jobs:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           SHA: ${{ github.sha }}
         run: |
-          GHCR_TAG="${_GHCR_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
+          # Always push to ACR
           ACR_TAG="${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
-          TAGS="${GHCR_TAG},${ACR_TAG}"
-          echo "primary_tag=${GHCR_TAG}" >> "$GITHUB_OUTPUT"
+          TAGS="${ACR_TAG}"
+          echo "primary_tag=${ACR_TAG}" >> "$GITHUB_OUTPUT"
+
+          # Additionally push rc and hotfix-rc tags to GHCR
+          if [[ "${IMAGE_TAG}" == "rc" || "${IMAGE_TAG}" == "hotfix-rc" ]]; then
+            TAGS=$TAGS",${_GHCR_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
+          fi
+
           if [[ "${IMAGE_TAG}" == "dev" ]]; then
             SHORT_SHA=$(git rev-parse --short "${SHA}")
-            TAGS=$TAGS",${_GHCR_REGISTRY}/${PROJECT_NAME}:dev-${SHORT_SHA}"
             TAGS=$TAGS",${_AZ_REGISTRY}/${PROJECT_NAME}:dev-${SHORT_SHA}"
           fi
+
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
 
       - name: Set platforms
@@ -500,7 +506,7 @@ jobs:
         uses: bitwarden/gh-actions/azure-logout@main
 
       - name: Generate GH App token
-        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3.0.0
         id: app-token
         with:
           app-id: ${{ steps.get-kv-secrets.outputs.BW-GHAPP-ID }}
@@ -549,7 +555,7 @@ jobs:
         uses: bitwarden/gh-actions/azure-logout@main
 
       - name: Generate GH App token
-        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3.0.0
         id: app-token
         with:
           app-id: ${{ steps.get-kv-secrets.outputs.BW-GHAPP-ID }}

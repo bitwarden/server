@@ -12,12 +12,13 @@ CREATE PROCEDURE [dbo].[OrganizationUser_CreateWithCollections]
     @Permissions NVARCHAR(MAX),
     @ResetPasswordKey VARCHAR(MAX),
     @Collections AS [dbo].[CollectionAccessSelectionType] READONLY,
-    @AccessSecretsManager BIT = 0
+    @AccessSecretsManager BIT = 0,
+    @RevocationReason TINYINT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[OrganizationUser_Create] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @ExternalId, @CreationDate, @RevisionDate, @Permissions, @ResetPasswordKey, @AccessSecretsManager
+    EXEC [dbo].[OrganizationUser_Create] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @ExternalId, @CreationDate, @RevisionDate, @Permissions, @ResetPasswordKey, @AccessSecretsManager, @RevocationReason
 
     ;WITH [AvailableCollectionsCTE] AS(
         SELECT

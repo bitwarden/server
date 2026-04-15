@@ -40,7 +40,8 @@ public class ProviderUsersController : Controller
     public async Task<ProviderUserResponseModel> Get(Guid providerId, Guid id)
     {
         var providerUser = await _providerUserRepository.GetByIdAsync(id);
-        if (providerUser == null || !_currentContext.ProviderManageUsers(providerUser.ProviderId))
+        if (providerUser == null || providerUser.ProviderId != providerId ||
+            !_currentContext.ProviderManageUsers(providerUser.ProviderId))
         {
             throw new NotFoundException();
         }

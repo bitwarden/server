@@ -1,13 +1,13 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
-using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
@@ -33,7 +33,6 @@ public class GroupsController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IUserService _userService;
-    private readonly IFeatureService _featureService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ICollectionRepository _collectionRepository;
 
@@ -48,7 +47,6 @@ public class GroupsController : Controller
         IAuthorizationService authorizationService,
         IApplicationCacheService applicationCacheService,
         IUserService userService,
-        IFeatureService featureService,
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
@@ -62,16 +60,16 @@ public class GroupsController : Controller
         _authorizationService = authorizationService;
         _applicationCacheService = applicationCacheService;
         _userService = userService;
-        _featureService = featureService;
         _organizationUserRepository = organizationUserRepository;
         _collectionRepository = collectionRepository;
     }
 
     [HttpGet("{id}")]
-    public async Task<GroupResponseModel> Get(string orgId, string id)
+    [Authorize<ManageGroupsRequirement>]
+    public async Task<GroupResponseModel> Get(Guid orgId, Guid id)
     {
-        var group = await _groupRepository.GetByIdAsync(new Guid(id));
-        if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))
+        var group = await _groupRepository.GetByIdAsync(id);
+        if (group == null || group.OrganizationId != orgId)
         {
             throw new NotFoundException();
         }
@@ -80,10 +78,11 @@ public class GroupsController : Controller
     }
 
     [HttpGet("{id}/details")]
-    public async Task<GroupDetailsResponseModel> GetDetails(string orgId, string id)
+    [Authorize<ManageGroupsRequirement>]
+    public async Task<GroupDetailsResponseModel> GetDetails(Guid orgId, Guid id)
     {
-        var groupDetails = await _groupRepository.GetByIdWithCollectionsAsync(new Guid(id));
-        if (groupDetails?.Item1 == null || !await _currentContext.ManageGroups(groupDetails.Item1.OrganizationId))
+        var groupDetails = await _groupRepository.GetByIdWithCollectionsAsync(id);
+        if (groupDetails?.Item1 == null || groupDetails.Item1.OrganizationId != orgId)
         {
             throw new NotFoundException();
         }
@@ -92,56 +91,41 @@ public class GroupsController : Controller
     }
 
     [HttpGet("")]
+    [Authorize<MemberOrProviderRequirement>]
     public async Task<ListResponseModel<GroupResponseModel>> GetOrganizationGroups(Guid orgId)
     {
-        var authResult = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(orgId), GroupOperations.ReadAll);
-        if (!authResult.Succeeded)
-        {
-            throw new NotFoundException();
-        }
-
         var groups = await _groupRepository.GetManyByOrganizationIdAsync(orgId);
         var responses = groups.Select(g => new GroupResponseModel(g));
         return new ListResponseModel<GroupResponseModel>(responses);
     }
 
     [HttpGet("details")]
+    [Authorize<ManageUsersOrGroupsRequirement>]
     public async Task<ListResponseModel<GroupDetailsResponseModel>> GetOrganizationGroupDetails(Guid orgId)
     {
-        var authResult = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(orgId), GroupOperations.ReadAllDetails);
-
-        if (!authResult.Succeeded)
-        {
-            throw new NotFoundException();
-        }
-
         var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgId);
         var responses = groups.Select(g => new GroupDetailsResponseModel(g.Item1, g.Item2));
         return new ListResponseModel<GroupDetailsResponseModel>(responses);
     }
 
     [HttpGet("{id}/users")]
-    public async Task<IEnumerable<Guid>> GetUsers(string orgId, string id)
+    [Authorize<ManageGroupsRequirement>]
+    public async Task<IEnumerable<Guid>> GetUsers(Guid orgId, Guid id)
     {
-        var idGuid = new Guid(id);
-        var group = await _groupRepository.GetByIdAsync(idGuid);
-        if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))
+        var group = await _groupRepository.GetByIdAsync(id);
+        if (group == null || group.OrganizationId != orgId)
         {
             throw new NotFoundException();
         }
 
-        var groupIds = await _groupRepository.GetManyUserIdsByIdAsync(idGuid);
+        var groupIds = await _groupRepository.GetManyUserIdsByIdAsync(id);
         return groupIds;
     }
 
     [HttpPost("")]
+    [Authorize<ManageGroupsRequirement>]
     public async Task<GroupResponseModel> Post(Guid orgId, [FromBody] GroupRequestModel model)
     {
-        if (!await _currentContext.ManageGroups(orgId))
-        {
-            throw new NotFoundException();
-        }
-
         // Check the user has permission to grant access to the collections for the new group
         if (model.Collections?.Any() == true)
         {
@@ -163,13 +147,9 @@ public class GroupsController : Controller
     }
 
     [HttpPut("{id}")]
+    [Authorize<ManageGroupsRequirement>]
     public async Task<GroupResponseModel> Put(Guid orgId, Guid id, [FromBody] GroupRequestModel model)
     {
-        if (!await _currentContext.ManageGroups(orgId))
-        {
-            throw new NotFoundException();
-        }
-
         var (group, currentAccess) = await _groupRepository.GetByIdWithCollectionsAsync(id);
         if (group == null || group.OrganizationId != orgId)
         {
@@ -238,16 +218,18 @@ public class GroupsController : Controller
 
     [HttpPost("{id}")]
     [Obsolete("This endpoint is deprecated. Use PUT method instead")]
+    [Authorize<ManageGroupsRequirement>]
     public async Task<GroupResponseModel> PostPut(Guid orgId, Guid id, [FromBody] GroupRequestModel model)
     {
         return await Put(orgId, id, model);
     }
 
     [HttpDelete("{id}")]
-    public async Task Delete(string orgId, string id)
+    [Authorize<ManageGroupsRequirement>]
+    public async Task Delete(Guid orgId, Guid id)
     {
-        var group = await _groupRepository.GetByIdAsync(new Guid(id));
-        if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))
+        var group = await _groupRepository.GetByIdAsync(id);
+        if (group == null || group.OrganizationId != orgId)
         {
             throw new NotFoundException();
         }
@@ -257,19 +239,21 @@ public class GroupsController : Controller
 
     [HttpPost("{id}/delete")]
     [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
-    public async Task PostDelete(string orgId, string id)
+    [Authorize<ManageGroupsRequirement>]
+    public async Task PostDelete(Guid orgId, Guid id)
     {
         await Delete(orgId, id);
     }
 
     [HttpDelete("")]
-    public async Task BulkDelete([FromBody] GroupBulkRequestModel model)
+    [Authorize<ManageGroupsRequirement>]
+    public async Task BulkDelete(Guid orgId, [FromBody] GroupBulkRequestModel model)
     {
         var groups = await _groupRepository.GetManyByManyIds(model.Ids);
 
         foreach (var group in groups)
         {
-            if (!await _currentContext.ManageGroups(group.OrganizationId))
+            if (group.OrganizationId != orgId)
             {
                 throw new NotFoundException();
             }
@@ -280,26 +264,29 @@ public class GroupsController : Controller
 
     [HttpPost("delete")]
     [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
-    public async Task PostBulkDelete([FromBody] GroupBulkRequestModel model)
+    [Authorize<ManageGroupsRequirement>]
+    public async Task PostBulkDelete(Guid orgId, [FromBody] GroupBulkRequestModel model)
     {
-        await BulkDelete(model);
+        await BulkDelete(orgId, model);
     }
 
     [HttpDelete("{id}/user/{orgUserId}")]
-    public async Task DeleteUser(string orgId, string id, string orgUserId)
+    [Authorize<ManageGroupsRequirement>]
+    public async Task DeleteUser(Guid orgId, Guid id, Guid orgUserId)
     {
-        var group = await _groupRepository.GetByIdAsync(new Guid(id));
-        if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))
+        var group = await _groupRepository.GetByIdAsync(id);
+        if (group == null || group.OrganizationId != orgId)
         {
             throw new NotFoundException();
         }
 
-        await _groupService.DeleteUserAsync(group, new Guid(orgUserId));
+        await _groupService.DeleteUserAsync(group, orgUserId);
     }
 
     [HttpPost("{id}/delete-user/{orgUserId}")]
     [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
-    public async Task PostDeleteUser(string orgId, string id, string orgUserId)
+    [Authorize<ManageGroupsRequirement>]
+    public async Task PostDeleteUser(Guid orgId, Guid id, Guid orgUserId)
     {
         await DeleteUser(orgId, id, orgUserId);
     }
