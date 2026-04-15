@@ -295,8 +295,7 @@ public static class ServiceCollectionExtensions
         services.AddTokenizers();
 
         services.AddDistributedCache(globalSettings);
-        services.AddExtendedCache(ExtendedProviderAbilityCacheService.CacheName, globalSettings);
-        services.AddSingleton<IProviderAbilityCacheService, ExtendedProviderAbilityCacheService>();
+        services.AddProviderAbilityCache(globalSettings);
 
         services.AddScoped<IApplicationCacheService, FeatureRoutedCacheService>();
 
