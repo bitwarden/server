@@ -108,6 +108,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("Enabled")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("ExemptFromBillingAutomation")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("TEXT");
 
@@ -1715,6 +1718,9 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("TEXT");
+
+                    b.Property<byte?>("RevocationReason")
+                        .HasColumnType("INTEGER");
 
                     b.Property<short>("Status")
                         .HasColumnType("INTEGER");

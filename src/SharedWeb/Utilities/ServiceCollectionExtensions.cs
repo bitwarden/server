@@ -298,6 +298,7 @@ public static class ServiceCollectionExtensions
         services.AddProviderAbilityCache(globalSettings);
 
         services.AddScoped<IApplicationCacheService, FeatureRoutedCacheService>();
+        services.AddOrganizationAbilityCache(globalSettings);
 
         if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
             CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
