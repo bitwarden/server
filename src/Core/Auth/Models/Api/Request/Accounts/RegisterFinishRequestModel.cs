@@ -68,11 +68,11 @@ public class RegisterFinishRequestModel : IValidatableObject
 
     public Guid? ProviderUserId { get; set; }
 
-    public User ToUser(bool IsV2Encryption)
+    public User ToUser(bool isV2Encryption)
     {
         // TODO remove IsV2Encryption bool and simplify logic below after a compatibility period - once V2 accounts are supported
         // https://bitwarden.atlassian.net/browse/PM-27326
-        if (!IsV2Encryption)
+        if (!isV2Encryption)
         {
             var user = new User
             {
