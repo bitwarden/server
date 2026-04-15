@@ -80,6 +80,8 @@ public class LicensingService : ILicensingService
             {
                 devCert = CoreHelpers.GetEmbeddedCertificateAsync("licensing_dev.cer", null).GetAwaiter().GetResult();
                 _creationCertificate = devCert;
+                // All self host envs accept prod cert. Creation cert added below to handle dev self-hosts
+                _verificationCertificates.Add(prodCert);
             }
             else
             {
