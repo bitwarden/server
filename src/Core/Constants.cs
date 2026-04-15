@@ -199,7 +199,6 @@ public static class FeatureFlagKeys
     /* Billing Team */
     public const string TrialPayment = "PM-8163-trial-payment";
     public const string PM24032_NewNavigationPremiumUpgradeButton = "pm-24032-new-navigation-premium-upgrade-button";
-    public const string PM23713_PremiumBadgeOpensNewPremiumUpgradeDialog = "pm-23713-premium-badge-opens-new-premium-upgrade-dialog";
     public const string PM26793_FetchPremiumPriceFromPricingService = "pm-26793-fetch-premium-price-from-pricing-service";
 
 
