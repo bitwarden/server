@@ -1,17 +1,17 @@
 ﻿using System.Security.Claims;
 using Bit.Api.AdminConsole.Controllers;
+using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -173,32 +173,7 @@ public class OrganizationsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetAutoEnrollStatus_WithPolicyRequirementsEnabled_ReturnsOrganizationAutoEnrollStatus_WithResetPasswordEnabledTrue(
-        SutProvider<OrganizationsController> sutProvider,
-        User user,
-        Organization organization,
-        OrganizationUser organizationUser)
-    {
-        var policyRequirement = new ResetPasswordPolicyRequirement { AutoEnrollOrganizations = [organization.Id] };
-
-        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdentifierAsync(organization.Id.ToString()).Returns(organization);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(organization.Id, user.Id).Returns(organizationUser);
-        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<ResetPasswordPolicyRequirement>(user.Id).Returns(policyRequirement);
-
-        var result = await sutProvider.Sut.GetAutoEnrollStatus(organization.Id.ToString());
-
-        await sutProvider.GetDependency<IUserService>().Received(1).GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>());
-        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).GetByIdentifierAsync(organization.Id.ToString());
-        await sutProvider.GetDependency<IPolicyRequirementQuery>().Received(1).GetAsync<ResetPasswordPolicyRequirement>(user.Id);
-
-        Assert.True(result.ResetPasswordEnabled);
-        Assert.Equal(result.Id, organization.Id);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetAutoEnrollStatus_WithPolicyRequirementsDisabled_ReturnsOrganizationAutoEnrollStatus_WithResetPasswordEnabledTrue(
+    public async Task GetAutoEnrollStatus_ReturnsOrganizationAutoEnrollStatus_WithResetPasswordEnabledTrue(
         SutProvider<OrganizationsController> sutProvider,
         User user,
         Organization organization,
@@ -207,7 +182,6 @@ public class OrganizationsControllerTests
     {
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdentifierAsync(organization.Id.ToString()).Returns(organization);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(false);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(organization.Id, user.Id).Returns(organizationUser);
         sutProvider.GetDependency<IPolicyQuery>().RunAsync(organization.Id, PolicyType.ResetPassword).Returns(policy);
 
@@ -215,7 +189,6 @@ public class OrganizationsControllerTests
 
         await sutProvider.GetDependency<IUserService>().Received(1).GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>());
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).GetByIdentifierAsync(organization.Id.ToString());
-        await sutProvider.GetDependency<IPolicyRequirementQuery>().Received(0).GetAsync<ResetPasswordPolicyRequirement>(user.Id);
         await sutProvider.GetDependency<IPolicyQuery>().Received(1).RunAsync(organization.Id, PolicyType.ResetPassword);
 
         Assert.True(result.ResetPasswordEnabled);
@@ -256,5 +229,114 @@ public class OrganizationsControllerTests
                     s.LimitCollectionDeletion == model.LimitCollectionDeletion &&
                     s.LimitItemDeletion == model.LimitItemDeletion &&
                     s.AllowAdminAccessToAllCollectionItems == model.AllowAdminAccessToAllCollectionItems));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ApiKey_ScimType_InvalidSecret_ThrowsBadRequest(
+        SutProvider<OrganizationsController> sutProvider,
+        Organization organization,
+        OrganizationApiKey organizationApiKey,
+        User user)
+    {
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        var model = new OrganizationApiKeyRequestModel
+        {
+            Type = OrganizationApiKeyType.Scim,
+            MasterPasswordHash = "invalid-hash"
+        };
+
+        sutProvider.GetDependency<ICurrentContext>().ManageScim(organization.Id).Returns(true);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IGetOrganizationApiKeyQuery>()
+            .GetOrganizationApiKeyAsync(organization.Id, OrganizationApiKeyType.Scim)
+            .Returns(organizationApiKey);
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        userService.VerifySecretAsync(user, model.Secret).Returns(false);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ApiKey(organization.Id.ToString(), model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ApiKey_ScimType_ValidSecret_ReturnsApiKey(
+        SutProvider<OrganizationsController> sutProvider,
+        Organization organization,
+        OrganizationApiKey organizationApiKey,
+        User user)
+    {
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        var model = new OrganizationApiKeyRequestModel
+        {
+            Type = OrganizationApiKeyType.Scim,
+            MasterPasswordHash = "valid-hash"
+        };
+
+        sutProvider.GetDependency<ICurrentContext>().ManageScim(organization.Id).Returns(true);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IGetOrganizationApiKeyQuery>()
+            .GetOrganizationApiKeyAsync(organization.Id, OrganizationApiKeyType.Scim)
+            .Returns(organizationApiKey);
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        userService.VerifySecretAsync(user, model.Secret).Returns(true);
+
+        var result = await sutProvider.Sut.ApiKey(organization.Id.ToString(), model);
+
+        Assert.Equal(organizationApiKey.ApiKey, result.ApiKey);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RotateApiKey_ScimType_InvalidSecret_ThrowsBadRequest(
+        SutProvider<OrganizationsController> sutProvider,
+        Organization organization,
+        OrganizationApiKey organizationApiKey,
+        User user)
+    {
+        var model = new OrganizationApiKeyRequestModel
+        {
+            Type = OrganizationApiKeyType.Scim,
+            MasterPasswordHash = "invalid-hash"
+        };
+
+        sutProvider.GetDependency<ICurrentContext>().ManageScim(organization.Id).Returns(true);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IGetOrganizationApiKeyQuery>()
+            .GetOrganizationApiKeyAsync(organization.Id, OrganizationApiKeyType.Scim)
+            .Returns(organizationApiKey);
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        userService.VerifySecretAsync(user, model.Secret).Returns(false);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RotateApiKey(organization.Id.ToString(), model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RotateApiKey_ScimType_ValidSecret_ReturnsApiKey(
+        SutProvider<OrganizationsController> sutProvider,
+        Organization organization,
+        OrganizationApiKey organizationApiKey,
+        User user)
+    {
+        var model = new OrganizationApiKeyRequestModel
+        {
+            Type = OrganizationApiKeyType.Scim,
+            MasterPasswordHash = "valid-hash"
+        };
+
+        sutProvider.GetDependency<ICurrentContext>().ManageScim(organization.Id).Returns(true);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IGetOrganizationApiKeyQuery>()
+            .GetOrganizationApiKeyAsync(organization.Id, OrganizationApiKeyType.Scim)
+            .Returns(organizationApiKey);
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        userService.VerifySecretAsync(user, model.Secret).Returns(true);
+
+        var result = await sutProvider.Sut.RotateApiKey(organization.Id.ToString(), model);
+
+        Assert.Equal(organizationApiKey.ApiKey, result.ApiKey);
     }
 }
