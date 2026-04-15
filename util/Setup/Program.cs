@@ -153,7 +153,7 @@ public class Program
         Console.WriteLine(string.Empty);
     }
 
-    private static void Update(Application config)
+    private static void Update(Application application)
     {
         // This portion of code checks for multiple certs in the Identity.pfx PKCS12 bag.  If found, it generates
         // a new cert and bag to replace the old Identity.pfx.  This fixes an issue that came up as a result of
