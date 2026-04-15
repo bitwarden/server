@@ -338,5 +338,13 @@
                 </div>
             </div>
         </div>
+        <div class="row">
+            <div class="col-sm">
+                <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" asp-for="ExemptFromBillingAutomation" disabled="@(!canEditBilling)">
+                    <label class="form-check-label" asp-for="ExemptFromBillingAutomation"></label>
+                </div>
+            </div>
+        </div>
     }
 </form>

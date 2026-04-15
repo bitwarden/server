@@ -42,7 +42,8 @@ public class SubscriberService(
         bool cancelImmediately,
         OffboardingSurveyResponse offboardingSurveyResponse = null)
     {
-        var subscription = await GetSubscriptionOrThrow(subscriber);
+        var subscription = await GetSubscriptionOrThrow(subscriber,
+            new SubscriptionGetOptions { Expand = ["test_clock"] });
 
         if (subscription.CanceledAt.HasValue ||
             subscription.Status == "canceled" ||
@@ -279,7 +280,9 @@ public class SubscriberService(
                     "{Service}: Active subscription schedule ({ScheduleId}) found for subscription ({SubscriptionId}), updating schedule phases",
                     GetType().Name, activeSchedule.Id, subscription.Id);
 
-                var phase1 = activeSchedule.Phases[0];
+                var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+                var currentPhase = activeSchedule.Phases.FirstOrDefault(p => p.EndDate > now)
+                    ?? activeSchedule.Phases[^1];
 
                 await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
                     new SubscriptionScheduleUpdateOptions
@@ -289,15 +292,17 @@ public class SubscriberService(
                         [
                             new SubscriptionSchedulePhaseOptions
                             {
-                                StartDate = phase1.StartDate,
-                                EndDate = phase1.EndDate,
-                                Items = phase1.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
+                                StartDate = currentPhase.StartDate,
+                                EndDate = currentPhase.EndDate,
+                                Items = currentPhase.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
                                 {
                                     Price = i.PriceId,
                                     Quantity = i.Quantity
                                 }).ToList(),
-                                Discounts = phase1.Discounts?.Select(d =>
-                                    new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),
+                                Discounts = currentPhase.StartDate <= now
+                                    ? []
+                                    : currentPhase.Discounts?.Select(d =>
+                                        new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),
                                 ProrationBehavior = ProrationBehavior.None,
                                 Metadata = cancellingUserMetadata
                             }
