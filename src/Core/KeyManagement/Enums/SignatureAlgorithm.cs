@@ -6,5 +6,5 @@
 public enum SignatureAlgorithm : byte
 {
     Ed25519 = 0,
-    MlDsa65 = 1,
+    MlDsa44 = 1,
 }
