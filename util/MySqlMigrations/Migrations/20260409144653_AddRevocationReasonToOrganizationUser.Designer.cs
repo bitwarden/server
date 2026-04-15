@@ -4,6 +4,7 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20260409144653_AddRevocationReasonToOrganizationUser")]
+    partial class AddRevocationReasonToOrganizationUser
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -111,9 +114,6 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<bool>("Enabled")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<bool>("ExemptFromBillingAutomation")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<DateTime?>("ExpirationDate")
@@ -290,47 +290,6 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasAnnotation("Npgsql:IndexInclude", new[] { "UseTotp", "UsersGetPremium" });
 
                     b.ToTable("Organization", (string)null);
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.OrganizationInviteLink", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("AllowedDomains")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<Guid>("Code")
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("EncryptedInviteKey")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("EncryptedOrgKey")
-                        .HasColumnType("longtext");
-
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique()
-                        .HasAnnotation("SqlServer:Clustered", false);
-
-                    b.HasIndex("OrganizationId")
-                        .IsUnique()
-                        .HasAnnotation("SqlServer:Clustered", false);
-
-                    b.ToTable("OrganizationInviteLink", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Policy", b =>
@@ -2778,17 +2737,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasIndex("OrganizationUserId");
 
                     b.HasDiscriminator().HasValue("user_service_account");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.OrganizationInviteLink", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
-                        .WithMany()
-                        .HasForeignKey("OrganizationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Organization");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Policy", b =>
