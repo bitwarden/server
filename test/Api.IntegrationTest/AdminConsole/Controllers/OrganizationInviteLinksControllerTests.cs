@@ -84,5 +84,4 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         Assert.NotNull(persisted);
         Assert.Equal(content.Id, persisted.Id);
     }
-
 }
