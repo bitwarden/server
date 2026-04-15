@@ -3,7 +3,7 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Licenses;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
@@ -23,20 +23,17 @@ public class GetCloudOrganizationLicenseQuery : IGetCloudOrganizationLicenseQuer
 {
     private readonly IInstallationRepository _installationRepository;
     private readonly IStripePaymentService _paymentService;
-    private readonly IStripeAdapter _stripeAdapter;
     private readonly ILicensingService _licensingService;
     private readonly IProviderRepository _providerRepository;
 
     public GetCloudOrganizationLicenseQuery(
         IInstallationRepository installationRepository,
         IStripePaymentService paymentService,
-        IStripeAdapter stripeAdapter,
         ILicensingService licensingService,
         IProviderRepository providerRepository)
     {
         _installationRepository = installationRepository;
         _paymentService = paymentService;
-        _stripeAdapter = stripeAdapter;
         _licensingService = licensingService;
         _providerRepository = providerRepository;
     }
@@ -51,10 +48,20 @@ public class GetCloudOrganizationLicenseQuery : IGetCloudOrganizationLicenseQuer
         }
 
         var subscriptionInfo = await GetSubscriptionAsync(organization);
-        var subscription = string.IsNullOrEmpty(organization.GatewaySubscriptionId)
-            ? null
-            : await _stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId);
-        SubscriptionLicenseValidator.ValidateSubscriptionForLicenseGeneration(subscription);
+
+        if (subscriptionInfo.Subscription is null)
+        {
+            throw new BadRequestException("No active subscription found.");
+        }
+
+        if (subscriptionInfo.Subscription.Status is StripeConstants.SubscriptionStatus.Canceled
+            or StripeConstants.SubscriptionStatus.Incomplete
+            or StripeConstants.SubscriptionStatus.IncompleteExpired)
+        {
+            throw new BadRequestException(
+                "Unable to generate license due to a payment issue. Please update your billing information or contact support for assistance.");
+        }
+
         var license = new OrganizationLicense(organization, subscriptionInfo, installationId, _licensingService, version);
         license.Token = await _licensingService.CreateOrganizationTokenAsync(organization, installationId, subscriptionInfo);
 
