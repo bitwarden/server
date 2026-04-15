@@ -8,8 +8,6 @@ namespace Bit.Api.Test.Auth.Models.Request.Accounts;
 
 public class PasswordRequestModelTests
 {
-    #region Centralized Validation Tests
-
     [Theory]
     [InlineData(KdfType.PBKDF2_SHA256, 600000, null, null)]
     [InlineData(KdfType.Argon2id, 3, 64, 4)]
@@ -161,8 +159,6 @@ public class PasswordRequestModelTests
         Assert.Contains(result, r => r.ErrorMessage != null && r.ErrorMessage.Contains("KDF iterations must be between"));
     }
 
-    #endregion
-
     [Fact]
     public void Validate_WhenOnlyAuthPresent_ReturnsError()
     {
@@ -221,7 +217,28 @@ public class PasswordRequestModelTests
         Assert.Contains(result, r => r.ErrorMessage != null && r.ErrorMessage.Contains(nameof(PasswordRequestModel.AuthenticationData)));
     }
 
-    #region Base Validation Preserved
+    [Fact]
+    public void Validate_WhenNeitherAuthNorUnlockPresent_NoAuthUnlockErrors()
+    {
+        // Arrange — backward compat: old clients send neither field
+        var model = new PasswordRequestModel
+        {
+            MasterPasswordHash = "masterPasswordHash",
+            NewMasterPasswordHash = "newHash",
+            Key = "key",
+            AuthenticationData = null,
+            UnlockData = null
+        };
+
+        // Act
+        var result = model.Validate(new ValidationContext(model)).ToList();
+
+        // Assert — no errors about AuthenticationData or UnlockData
+        Assert.DoesNotContain(result, r =>
+            r.ErrorMessage != null &&
+            (r.ErrorMessage.Contains(nameof(PasswordRequestModel.AuthenticationData)) ||
+             r.ErrorMessage.Contains(nameof(PasswordRequestModel.UnlockData))));
+    }
 
     [Fact]
     public void Validate_BaseValidation_StillRuns()
@@ -241,6 +258,4 @@ public class PasswordRequestModelTests
         // Assert — base validation should require a secret
         Assert.Contains(result, r => r.ErrorMessage != null && r.ErrorMessage.Contains("must be supplied"));
     }
-
-    #endregion
 }

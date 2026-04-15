@@ -27,7 +27,8 @@ public class PasswordRequestModel : SecretVerificationRequestModel
             yield return result;
         }
 
-        // Enforce: if one is provided, both must be provided.
+        // Enforce: if one is provided, both must be provided. Neither is also acceptable
+        // for backward compatibility with clients that don't yet send these fields.
         if (AuthenticationData != null && UnlockData != null)
         {
             foreach (var validationResult in KdfSettingsValidator.ValidateAuthenticationAndUnlockData(
@@ -36,7 +37,7 @@ public class PasswordRequestModel : SecretVerificationRequestModel
                 yield return validationResult;
             }
         }
-        else
+        else if (AuthenticationData != null || UnlockData != null)
         {
             yield return new ValidationResult(
                 "AuthenticationData and UnlockData must be provided.",
