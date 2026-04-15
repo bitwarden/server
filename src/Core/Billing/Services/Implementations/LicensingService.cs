@@ -161,7 +161,7 @@ public class LicensingService : ILicensingService
                     continue;
                 }
 
-                if (string.IsNullOrWhiteSpace(license.Token) && !license.VerifySignature(_creationCertificate))
+                if (string.IsNullOrWhiteSpace(license.Token) && !_verificationCertificates.Any(c => license.VerifySignature(c)))
                 {
                     await DisableOrganizationAsync(org, license, "Invalid signature.");
                     continue;
@@ -260,7 +260,7 @@ public class LicensingService : ILicensingService
             return false;
         }
 
-        if (string.IsNullOrWhiteSpace(license.Token) && !license.VerifySignature(_creationCertificate))
+        if (string.IsNullOrWhiteSpace(license.Token) && !_verificationCertificates.Any(c => license.VerifySignature(c)))
         {
             await DisablePremiumAsync(user, license, "Invalid signature.");
             return false;
@@ -300,7 +300,7 @@ public class LicensingService : ILicensingService
     {
         if (string.IsNullOrWhiteSpace(license.Token))
         {
-            return license.VerifySignature(_creationCertificate);
+            return _verificationCertificates.Any((c) => license.VerifySignature(c));
         }
 
         try
