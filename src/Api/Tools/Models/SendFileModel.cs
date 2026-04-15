@@ -1,7 +1,6 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using System.Text.Json.Serialization;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Utilities;
 
