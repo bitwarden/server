@@ -36,7 +36,8 @@ public class RevokeOrganizationUserCommandTests
         var request = new RevokeOrganizationUsersRequest(
             organizationId,
             [orgUser1.Id, orgUser2.Id],
-            actingUser);
+            actingUser,
+            RevocationReason.Manual);
 
         SetupRepositoryMocks(sutProvider, [orgUser1, orgUser2]);
         SetupValidatorMock(sutProvider, [
@@ -54,7 +55,7 @@ public class RevokeOrganizationUserCommandTests
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .RevokeManyAsync(Arg.Is<IEnumerable<Guid>>(ids =>
-                ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id)), null);
+                ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id)), RevocationReason.Manual);
 
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
@@ -86,7 +87,8 @@ public class RevokeOrganizationUserCommandTests
         var request = new RevokeOrganizationUsersRequest(
             organizationId,
             [orgUser.Id],
-            actingUser);
+            actingUser,
+            RevocationReason.Manual);
 
         SetupRepositoryMocks(sutProvider, [orgUser]);
         SetupValidatorMock(sutProvider, [ValidationResultHelpers.Valid(orgUser)]);
@@ -118,7 +120,8 @@ public class RevokeOrganizationUserCommandTests
         var request = new RevokeOrganizationUsersRequest(
             organizationId,
             [orgUser1.Id, orgUser2.Id],
-            actingUser);
+            actingUser,
+            RevocationReason.Manual);
 
         SetupRepositoryMocks(sutProvider, [orgUser1, orgUser2]);
         SetupValidatorMock(sutProvider, [
@@ -141,7 +144,7 @@ public class RevokeOrganizationUserCommandTests
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .RevokeManyAsync(Arg.Is<IEnumerable<Guid>>(ids =>
-                ids.Count() == 1 && ids.Contains(orgUser2.Id)), null);
+                ids.Count() == 1 && ids.Contains(orgUser2.Id)), RevocationReason.Manual);
     }
 
     [Theory]
@@ -161,7 +164,8 @@ public class RevokeOrganizationUserCommandTests
         var request = new RevokeOrganizationUsersRequest(
             organizationId,
             [orgUser.Id],
-            actingUser);
+            actingUser,
+            RevocationReason.Manual);
 
         SetupRepositoryMocks(sutProvider, [orgUser]);
         SetupValidatorMock(sutProvider, [ValidationResultHelpers.Valid(orgUser)]);
@@ -205,7 +209,8 @@ public class RevokeOrganizationUserCommandTests
         var request = new RevokeOrganizationUsersRequest(
             organizationId,
             [orgUser.Id, userFromDifferentOrg.Id],
-            actingUser);
+            actingUser,
+            RevocationReason.Manual);
 
         SetupRepositoryMocks(sutProvider, [orgUser, userFromDifferentOrg]);
         SetupValidatorMock(sutProvider, [ValidationResultHelpers.Valid(orgUser)]);
