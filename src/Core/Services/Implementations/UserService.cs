@@ -429,6 +429,10 @@ public class UserService : UserManager<User>, IUserService
         user.Email = newEmail;
         user.EmailVerified = true;
         user.RevisionDate = user.AccountRevisionDate = now;
+
+        // We need this to backfill the salt for now to keep the email and salt always in sync.
+        user.MasterPasswordSalt = newEmail;
+
         user.LastEmailChangeDate = now;
         await _userRepository.ReplaceAsync(user);
 
@@ -445,6 +449,10 @@ public class UserService : UserManager<User>, IUserService
                 //if sync to strip fails, update email and securityStamp to previous
                 user.Key = previousState.Key;
                 user.Email = previousState.Email;
+
+                // We need this to backfill the salt for now to keep the email and salt always in sync.
+                user.MasterPasswordSalt = previousState.Email;
+
                 user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
                 user.MasterPassword = previousState.MasterPassword;
                 user.SecurityStamp = previousState.SecurityStamp;

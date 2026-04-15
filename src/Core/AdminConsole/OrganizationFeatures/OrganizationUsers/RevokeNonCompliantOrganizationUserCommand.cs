@@ -30,7 +30,7 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
             return validationResult;
         }
 
-        await organizationUserRepository.RevokeManyByIdAsync(request.OrganizationUsers.Select(x => x.Id));
+        await organizationUserRepository.RevokeManyAsync(request.OrganizationUsers.Select(x => x.Id));
 
         var now = timeProvider.GetUtcNow();
 
