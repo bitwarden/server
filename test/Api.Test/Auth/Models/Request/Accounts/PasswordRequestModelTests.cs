@@ -241,7 +241,7 @@ public class PasswordRequestModelTests
     }
 
     [Fact]
-    public void Validate_BaseValidation_StillRuns()
+    public void Validate_LegacyValidationFailsFirst()
     {
         // Arrange — no MasterPasswordHash, OTP, or AuthRequestAccessCode
         var model = new PasswordRequestModel
@@ -255,7 +255,7 @@ public class PasswordRequestModelTests
         // Act
         var result = model.Validate(new ValidationContext(model)).ToList();
 
-        // Assert — base validation should require a secret
+        // Assert — legacy validation should fail first
         Assert.Contains(result, r => r.ErrorMessage != null && r.ErrorMessage.Contains("must be supplied"));
     }
 }
