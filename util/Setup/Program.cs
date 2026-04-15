@@ -159,18 +159,18 @@ public class Program
         // a new cert and bag to replace the old Identity.pfx.  This fixes an issue that came up as a result of
         // moving the project to .NET 5.
         _context.Install.IdentityCertPassword = Helpers.GetValueFromEnvFile(_context.App, "global", "globalSettings__identityServer__certificatePassword");
-        var certCountString = Helpers.Exec($"openssl pkcs12 -nokeys -info -in {config.RootDirectory}/identity/identity.pfx " +
+        var certCountString = Helpers.Exec($"openssl pkcs12 -nokeys -info -in {application.RootDirectory}/identity/identity.pfx " +
             $"-passin pass:{_context.Install.IdentityCertPassword} 2> /dev/null | grep -c \"\\-----BEGIN CERTIFICATE----\"", true);
         if (int.TryParse(certCountString, out var certCount) && certCount > 1)
         {
             // Extract key from identity.pfx
-            Helpers.Exec($"openssl pkcs12 -in {config.RootDirectory}/identity/identity.pfx -nocerts -nodes -out identity.key " +
+            Helpers.Exec($"openssl pkcs12 -in {application.RootDirectory}/identity/identity.pfx -nocerts -nodes -out identity.key " +
                 $"-passin pass:{_context.Install.IdentityCertPassword} > /dev/null 2>&1");
             // Extract certificate from identity.pfx
-            Helpers.Exec($"openssl pkcs12 -in {config.RootDirectory}/identity/identity.pfx -clcerts -nokeys -out identity.crt " +
+            Helpers.Exec($"openssl pkcs12 -in {application.RootDirectory}/identity/identity.pfx -clcerts -nokeys -out identity.crt " +
                 $"-passin pass:{_context.Install.IdentityCertPassword} > /dev/null 2>&1");
             // Create new PKCS12 bag with certificate and key
-            Helpers.Exec($"openssl pkcs12 -export -out {config.RootDirectory}/identity/identity.pfx -inkey identity.key " +
+            Helpers.Exec($"openssl pkcs12 -export -out {application.RootDirectory}/identity/identity.pfx -inkey identity.key " +
                 $"-in identity.crt -passout pass:{_context.Install.IdentityCertPassword} > /dev/null 2>&1");
         }
 
