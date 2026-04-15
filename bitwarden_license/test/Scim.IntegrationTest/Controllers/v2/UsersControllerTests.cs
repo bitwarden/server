@@ -6,6 +6,7 @@ using Bit.Scim.IntegrationTest.Factories;
 using Bit.Scim.Models;
 using Bit.Scim.Utilities;
 using Bit.Test.Common.Helpers;
+using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using Xunit;
 
@@ -710,5 +711,56 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
 
         var databaseContext = _factory.GetDatabaseContext();
         Assert.Equal(_initialUserCount, databaseContext.OrganizationUsers.Count());
+    }
+
+    [Fact]
+    public async Task Post_MultipleSequentialInvitations_Success()
+    {
+        // Arrange: Tests that multiple sequential SCIM user invitations succeed via the
+        // new optimized invite path (ScimInviteUserOptimization flag enabled).
+        // The org has no seat limit (Seats = null), so no autoscaling occurs and the CAS
+        // IncrementSeatCountAsync path is not triggered (SeatsRequiredToAdd = 0).
+        // CAS retry behavior is fully tested in unit tests (InviteOrganizationUserCommandTests).
+        const int usersToInvite = 3;
+
+        var localFactory = new ScimApplicationFactory();
+        localFactory.SubstituteService((IFeatureService featureService)
+            => featureService.IsEnabled(FeatureFlagKeys.ScimInviteUserOptimization)
+                .Returns(true));
+
+        localFactory.ReinitializeDbForTests(localFactory.GetDatabaseContext());
+
+        // Create distinct user models
+        var userModels = Enumerable.Range(0, usersToInvite).Select(i => new ScimUserRequestModel
+        {
+            Name = new BaseScimUserModel.NameModel($"Sequential User {i}"),
+            DisplayName = $"Sequential User {i}",
+            Emails = new List<BaseScimUserModel.EmailModel>
+            {
+                new BaseScimUserModel.EmailModel($"sequential-user-{i}@example.com")
+            },
+            ExternalId = $"SEQUENTIAL_{i}",
+            Active = true,
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        }).ToArray();
+
+        // Act: invite users sequentially
+        var results = new List<HttpContext>();
+        foreach (var model in userModels)
+        {
+            var context = await localFactory.UsersPostAsync(ScimApplicationFactory.TestOrganizationId1, model);
+            results.Add(context);
+        }
+
+        // Assert
+        var successCount = results.Count(r => r.Response.StatusCode == StatusCodes.Status201Created);
+        Assert.Equal(usersToInvite, successCount);
+
+        // Verify total org users in database
+        var freshDbContext = localFactory.GetDatabaseContext();
+        var totalOrgUsers = await freshDbContext.OrganizationUsers
+            .AsNoTracking()
+            .CountAsync(ou => ou.OrganizationId == ScimApplicationFactory.TestOrganizationId1);
+        Assert.Equal(_initialUserCount + usersToInvite, totalOrgUsers);
     }
 }

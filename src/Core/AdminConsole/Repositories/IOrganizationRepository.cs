@@ -60,14 +60,18 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     Task UpdateSuccessfulOrganizationSyncStatusAsync(IEnumerable<Guid> successfulOrganizations, DateTime syncDate);
 
     /// <summary>
-    /// This increments the password manager seat count on the organization by the provided amount and sets SyncSeats to true.
-    /// It also sets the revision date using the request date.
+    /// Atomically increments the password manager seat count on the organization by the provided amount,
+    /// but only if the current seat count matches <paramref name="expectedCurrentSeats"/> (compare-and-swap).
+    /// Also sets SyncSeats to true and the revision date to <paramref name="requestDate"/>.
     /// </summary>
     /// <param name="organizationId">Organization to update</param>
+    /// <param name="expectedCurrentSeats">The seat count the caller expects the organization currently has. If the actual value differs, the update is rejected.</param>
     /// <param name="increaseAmount">Amount to increase password manager seats by</param>
     /// <param name="requestDate">When the action was performed</param>
-    /// <returns></returns>
-    Task IncrementSeatCountAsync(Guid organizationId, int increaseAmount, DateTime requestDate);
+    /// <exception cref="Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Errors.SeatCountConcurrencyException">
+    /// Thrown when the current seat count does not match <paramref name="expectedCurrentSeats"/>.
+    /// </exception>
+    Task IncrementSeatCountAsync(Guid organizationId, int expectedCurrentSeats, int increaseAmount, DateTime requestDate);
 
     /// <summary>
     /// Atomically initializes a pending organization and confirms its first owner user

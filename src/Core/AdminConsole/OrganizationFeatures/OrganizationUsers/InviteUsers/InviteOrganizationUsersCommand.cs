@@ -19,6 +19,7 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
+using Polly.Registry;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 
@@ -32,9 +33,11 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
     ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
     IProviderOrganizationRepository providerOrganizationRepository,
-    IProviderUserRepository providerUserRepository
+    IProviderUserRepository providerUserRepository,
+    ResiliencePipelineProvider<string> resiliencePipelineProvider
     ) : IInviteOrganizationUsersCommand
 {
+    public const string SeatRetryPipelineKey = "InviteUsersSeatRetry";
 
     public const string IssueNotifyingOwnersOfSeatLimitReached = "Error encountered notifying organization owners of seat limit reached.";
 
@@ -109,6 +112,13 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     private async Task<CommandResult<InviteOrganizationUsersResponse>> InviteOrganizationUsersAsync(InviteOrganizationUsersRequest request)
     {
+        var pipeline = resiliencePipelineProvider.GetPipeline(SeatRetryPipelineKey);
+
+        return await pipeline.ExecuteAsync(async _ => await InviteOrganizationUsersInternalAsync(request));
+    }
+
+    private async Task<CommandResult<InviteOrganizationUsersResponse>> InviteOrganizationUsersInternalAsync(InviteOrganizationUsersRequest request)
+    {
         var invitesToSend = (await FilterExistingUsersAsync(request)).ToArray();
 
         if (invitesToSend.Length == 0)
@@ -117,10 +127,18 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
                 new InviteOrganizationUsersResponse(request.InviteOrganization.OrganizationId)));
         }
 
+        // Re-fetch the organization to get the latest seat counts (critical for retry correctness)
+        var freshOrganization = await organizationRepository.GetByIdAsync(request.InviteOrganization.OrganizationId);
+        var inviteOrganization = request.InviteOrganization with
+        {
+            Seats = freshOrganization?.Seats,
+            SmSeats = freshOrganization?.SmSeats
+        };
+
         var validationResult = await inviteUsersValidator.ValidateAsync(new InviteOrganizationUsersValidationRequest
         {
             Invites = invitesToSend.ToArray(),
-            InviteOrganization = request.InviteOrganization,
+            InviteOrganization = inviteOrganization,
             PerformedBy = request.PerformedBy,
             PerformedAt = request.PerformedAt,
             OccupiedPmSeats = (await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(request.InviteOrganization.OrganizationId)).Total,
@@ -138,7 +156,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             .Select(x => x.MapToDataModel(request.PerformedAt, validatedRequest!.Value.InviteOrganization))
             .ToArray();
 
-        var organization = await organizationRepository.GetByIdAsync(validatedRequest!.Value.InviteOrganization.OrganizationId);
+        var organization = freshOrganization;
 
         try
         {
@@ -151,6 +169,17 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             await SendAdditionalEmailsAsync(validatedRequest, organization);
 
             await SendInvitesAsync(organizationUserToInviteEntities, organization, request.PerformedBy);
+        }
+        catch (SeatCountConcurrencyException)
+        {
+            logger.LogWarning("Seat count concurrency conflict for organization {OrganizationId}. Retrying.", organization?.Id);
+
+            await organizationUserRepository.DeleteManyAsync(organizationUserToInviteEntities.Select(x => x.OrganizationUser.Id));
+
+            await RevertSecretsManagerChangesAsync(validatedRequest, organization, validatedRequest.Value.InviteOrganization.SmSeats);
+
+            // Re-throw so the resilience pipeline can retry the entire operation
+            throw;
         }
         catch (Exception ex)
         {
@@ -294,6 +323,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         {
             await organizationRepository.IncrementSeatCountAsync(
                 organization.Id,
+                validatedResult.Value.PasswordManagerSubscriptionUpdate.Seats!.Value,
                 validatedResult.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd,
                 validatedResult.Value.PerformedAt.UtcDateTime);
 

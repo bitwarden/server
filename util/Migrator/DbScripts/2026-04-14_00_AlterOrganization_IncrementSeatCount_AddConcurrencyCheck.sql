@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[Organization_IncrementSeatCount]
+CREATE OR ALTER PROCEDURE [dbo].[Organization_IncrementSeatCount]
     @OrganizationId UNIQUEIDENTIFIER,
     @ExpectedCurrentSeats INT,
     @SeatsToAdd INT,

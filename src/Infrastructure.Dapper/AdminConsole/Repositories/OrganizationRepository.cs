@@ -2,6 +2,7 @@
 using System.Data.Common;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Errors;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
@@ -283,13 +284,20 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task IncrementSeatCountAsync(Guid organizationId, int increaseAmount, DateTime requestDate)
+    public async Task IncrementSeatCountAsync(Guid organizationId, int expectedCurrentSeats, int increaseAmount, DateTime requestDate)
     {
         await using var connection = new SqlConnection(ConnectionString);
 
-        await connection.ExecuteAsync("[dbo].[Organization_IncrementSeatCount]",
-            new { OrganizationId = organizationId, SeatsToAdd = increaseAmount, RequestDate = requestDate },
-            commandType: CommandType.StoredProcedure);
+        try
+        {
+            await connection.ExecuteAsync("[dbo].[Organization_IncrementSeatCount]",
+                new { OrganizationId = organizationId, ExpectedCurrentSeats = expectedCurrentSeats, SeatsToAdd = increaseAmount, RequestDate = requestDate },
+                commandType: CommandType.StoredProcedure);
+        }
+        catch (SqlException ex) when (ex.Number == 50000 && ex.Message.Contains("Seat count concurrency conflict"))
+        {
+            throw new SeatCountConcurrencyException();
+        }
     }
 
     public async Task InitializeOrganizationAsync(Organization organization, Func<DbConnection, DbTransaction, Task> confirmOwnerAction)

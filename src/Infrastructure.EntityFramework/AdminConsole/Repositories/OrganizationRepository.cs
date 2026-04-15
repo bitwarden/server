@@ -5,6 +5,7 @@ using System.Data.Common;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Errors;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
@@ -467,17 +468,22 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .SetProperty(x => x.RevisionDate, syncDate.Date));
     }
 
-    public async Task IncrementSeatCountAsync(Guid organizationId, int increaseAmount, DateTime requestDate)
+    public async Task IncrementSeatCountAsync(Guid organizationId, int expectedCurrentSeats, int increaseAmount, DateTime requestDate)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         await using var dbContext = GetDatabaseContext(scope);
 
-        await dbContext.Organizations
-            .Where(o => o.Id == organizationId)
+        var rowsAffected = await dbContext.Organizations
+            .Where(o => o.Id == organizationId && o.Seats == expectedCurrentSeats)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(o => o.Seats, o => o.Seats + increaseAmount)
                 .SetProperty(o => o.SyncSeats, true)
                 .SetProperty(o => o.RevisionDate, requestDate));
+
+        if (rowsAffected == 0)
+        {
+            throw new SeatCountConcurrencyException();
+        }
     }
 
     public async Task InitializeOrganizationAsync(Core.AdminConsole.Entities.Organization organization, Func<DbConnection, DbTransaction, Task> confirmOwnerAction)

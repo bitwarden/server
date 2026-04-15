@@ -19,6 +19,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUs
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Errors;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.GlobalSettings;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Organization;
@@ -46,6 +47,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Polly;
+using Polly.Retry;
 using AccountRecoveryV2 = Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
 using V1_RevokeUsersCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1;
 using V2_RevokeUsersCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
@@ -216,6 +219,16 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IHasConfirmedOwnersExceptQuery, HasConfirmedOwnersExceptQuery>();
 
         services.AddScoped<IInviteOrganizationUsersCommand, InviteOrganizationUsersCommand>();
+        services.AddResiliencePipeline(InviteOrganizationUsersCommand.SeatRetryPipelineKey, builder =>
+        {
+            builder.AddRetry(new RetryStrategyOptions
+            {
+                MaxRetryAttempts = 3,
+                BackoffType = DelayBackoffType.Exponential,
+                Delay = TimeSpan.FromMilliseconds(500),
+                ShouldHandle = new PredicateBuilder().Handle<SeatCountConcurrencyException>()
+            });
+        });
         services.AddScoped<ISendOrganizationInvitesCommand, SendOrganizationInvitesCommand>();
         services.AddScoped<IResendOrganizationInviteCommand, ResendOrganizationInviteCommand>();
         services.AddScoped<IBulkResendOrganizationInvitesCommand, BulkResendOrganizationInvitesCommand>();

@@ -186,7 +186,7 @@ public class OrganizationRepositoryTests
         organization.Seats = 5;
         await organizationRepository.ReplaceAsync(organization);
 
-        await organizationRepository.IncrementSeatCountAsync(organization.Id, 3, DateTime.UtcNow);
+        await organizationRepository.IncrementSeatCountAsync(organization.Id, 5, 3, DateTime.UtcNow);
 
         var result = await organizationRepository.GetByIdAsync(organization.Id);
         Assert.NotNull(result);
@@ -202,7 +202,7 @@ public class OrganizationRepositoryTests
         var requestDate = DateTime.UtcNow;
 
         // Act
-        await sutRepository.IncrementSeatCountAsync(organization.Id, 1, requestDate);
+        await sutRepository.IncrementSeatCountAsync(organization.Id, 2, 1, requestDate);
 
         // Assert
         var result = (await sutRepository.GetOrganizationsForSubscriptionSyncAsync()).ToArray();
@@ -223,12 +223,12 @@ public class OrganizationRepositoryTests
     {
         // Arrange
         var organization = await sutRepository.CreateTestOrganizationAsync(seatCount: 2);
-        await sutRepository.IncrementSeatCountAsync(organization.Id, 1, DateTime.UtcNow);
+        await sutRepository.IncrementSeatCountAsync(organization.Id, 2, 1, DateTime.UtcNow);
 
         var requestDate = DateTime.UtcNow;
 
         // Act
-        await sutRepository.IncrementSeatCountAsync(organization.Id, 1, DateTime.UtcNow);
+        await sutRepository.IncrementSeatCountAsync(organization.Id, 3, 1, DateTime.UtcNow);
 
         // Assert
         var result = (await sutRepository.GetOrganizationsForSubscriptionSyncAsync()).ToArray();
@@ -249,7 +249,7 @@ public class OrganizationRepositoryTests
         // Arrange
         var organization = await sutRepository.CreateTestOrganizationAsync(seatCount: 2);
         var requestDate = DateTime.UtcNow;
-        await sutRepository.IncrementSeatCountAsync(organization.Id, 1, requestDate);
+        await sutRepository.IncrementSeatCountAsync(organization.Id, 2, 1, requestDate);
 
         // Act
         var result = (await sutRepository.GetOrganizationsForSubscriptionSyncAsync()).ToArray();
@@ -273,7 +273,7 @@ public class OrganizationRepositoryTests
         var organization = await sutRepository.CreateTestOrganizationAsync(seatCount: 2);
         var requestDate = DateTime.UtcNow;
         var syncDate = DateTime.UtcNow.AddMinutes(1);
-        await sutRepository.IncrementSeatCountAsync(organization.Id, 1, requestDate);
+        await sutRepository.IncrementSeatCountAsync(organization.Id, 2, 1, requestDate);
 
         // Act
         await sutRepository.UpdateSuccessfulOrganizationSyncStatusAsync([organization.Id], syncDate);
