@@ -93,6 +93,8 @@ public static class ServiceCollectionExtensions
     public static void AddAuthorizationHandlers(this IServiceCollection services)
     {
         services.AddScoped<IAuthorizationHandler, VaultExportAuthorizationHandler>();
+        // SecurityTaskAuthorizationHandler must remain scoped. It caches cipher permissions per-request.
+        // Changing to singleton would allow one user's cached permissions to be reused by other users in the same organization.
         services.AddScoped<IAuthorizationHandler, SecurityTaskAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, SecurityTaskOrganizationAuthorizationHandler>();
 
