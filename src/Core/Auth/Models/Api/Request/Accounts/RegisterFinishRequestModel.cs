@@ -87,7 +87,7 @@ public class RegisterFinishRequestModel : IValidatableObject
                 Key = MasterPasswordUnlock?.MasterKeyWrappedUserKey ?? UserSymmetricKey
             };
 
-            user = UserAsymmetricKeys?.ToUser(user) ?? throw new Exception("User's public and private account keys couldn't be found in either AccountKeys or UserAsymmetricKeys");
+            user = UserAsymmetricKeys?.ToUser(user)!;
 
             return user;
         }
@@ -112,20 +112,20 @@ public class RegisterFinishRequestModel : IValidatableObject
                     PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData
                     (
                         UserAsymmetricKeys?.EncryptedPrivateKey ??
-                            throw new Exception("WrappedPrivateKey couldn't be found in either AccountKeys or UserAsymmetricKeys."),
+                            throw new BadRequestException("WrappedPrivateKey couldn't be found in either AccountKeys or UserAsymmetricKeys."),
                         UserAsymmetricKeys?.PublicKey ??
-                            throw new Exception("PublicKey couldn't be found in either AccountKeys or UserAsymmetricKeys")
+                            throw new BadRequestException("PublicKey couldn't be found in either AccountKeys or UserAsymmetricKeys")
                     ),
                 },
             Kdf = unlockData?.Kdf ?? new KdfSettings
             {
-                KdfType = Kdf ?? throw new Exception("KdfType couldn't be found on either the MasterPasswordUnlockData or the Kdf property passed in."),
-                Iterations = KdfIterations ?? throw new Exception("KdfIterations couldn't be found on either the MasterPasswordUnlockData or the KdfIterations property passed in."),
+                KdfType = Kdf ?? throw new BadRequestException("KdfType couldn't be found on either the MasterPasswordUnlockData or the Kdf property passed in."),
+                Iterations = KdfIterations ?? throw new BadRequestException("KdfIterations couldn't be found on either the MasterPasswordUnlockData or the KdfIterations property passed in."),
                 // KdfMemory and KdfParallelism are optional (only used for Argon2id)
                 Memory = KdfMemory,
                 Parallelism = KdfParallelism,
             },
-            MasterKeyWrappedUserKey = unlockData?.MasterKeyWrappedUserKey ?? UserSymmetricKey ?? throw new Exception("MasterKeyWrappedUserKey couldn't be found on either the MasterPasswordUnlockData or the UserSymmetricKey property passed in."),
+            MasterKeyWrappedUserKey = unlockData?.MasterKeyWrappedUserKey ?? UserSymmetricKey ?? throw new BadRequestException("MasterKeyWrappedUserKey couldn't be found on either the MasterPasswordUnlockData or the UserSymmetricKey property passed in."),
             MasterPasswordAuthenticationHash = authenticationData?.MasterPasswordAuthenticationHash ?? MasterPasswordHash ?? throw new BadRequestException("MasterPasswordHash couldn't be found on either the MasterPasswordAuthenticationData or the MasterPasswordHash property passed in."),
             Salt = unlockData?.Salt,
         };
