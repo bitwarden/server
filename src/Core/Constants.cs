@@ -167,7 +167,7 @@ public static class FeatureFlagKeys
     public const string OrgAbilityExtendedCache = "pm-32104-org-ability-extended-cache";
     public const string PolicyDrawers = "pm-34804-policy-drawers";
     public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
-    public const string CollectionUserCollectionGroupAuthorizationHandlers = "pm-12473-collection-user-collection-group-authorization-handlers";
+    public const string CollectionUserCollectionGroupAuthorizationHandlers = "pm-35160-collection-user-collection-group-authorization-handlers";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
