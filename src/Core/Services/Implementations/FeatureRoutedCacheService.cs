@@ -40,6 +40,11 @@ public class FeatureRoutedCacheService(
 
     public async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync(IEnumerable<Guid> orgIds)
     {
+        if (featureService.IsEnabled(FeatureFlagKeys.OrgAbilityExtendedCache))
+        {
+            return await extendedCacheService.GetOrganizationAbilitiesAsync(orgIds);
+        }
+
         var allOrganizationAbilities = await inMemoryApplicationCacheService.GetOrganizationAbilitiesAsync();
         return orgIds
             .Distinct()

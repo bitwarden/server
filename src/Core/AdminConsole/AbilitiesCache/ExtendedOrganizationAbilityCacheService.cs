@@ -18,24 +18,34 @@ public class ExtendedOrganizationAbilityCacheService(
     : IOrganizationAbilityCacheService
 {
 
-    public async Task<OrganizationAbility?> GetOrganizationAbilityAsync(Guid orgId)
+    public async Task<OrganizationAbility?> GetOrganizationAbilityAsync(Guid orgId, CancellationToken cancellationToken = default)
     {
         var cacheKey = BuildCacheKeyForOrganizationAbility(orgId);
         return await cache.GetOrSetAsync<OrganizationAbility?>(
             cacheKey,
-            async _ => await organizationRepository.GetAbilityAsync(orgId));
+            async (_, _) => await organizationRepository.GetAbilityAsync(orgId),
+            token: cancellationToken);
     }
 
-    public async Task UpsertOrganizationAbilityAsync(Organization organization)
+    public async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync(IEnumerable<Guid> orgIds, CancellationToken cancellationToken = default)
+    {
+        var tasks = orgIds.Distinct().Select(async orgId => (orgId, ability: await GetOrganizationAbilityAsync(orgId, cancellationToken)));
+        var results = await Task.WhenAll(tasks);
+        return results
+            .Where(r => r.ability != null)
+            .ToDictionary(r => r.orgId, r => r.ability!);
+    }
+
+    public async Task UpsertOrganizationAbilityAsync(Organization organization, CancellationToken cancellationToken = default)
     {
         var cacheKey = BuildCacheKeyForOrganizationAbility(organization.Id);
-        await cache.SetAsync<OrganizationAbility?>(cacheKey, new OrganizationAbility(organization));
+        await cache.SetAsync<OrganizationAbility?>(cacheKey, new OrganizationAbility(organization), token: cancellationToken);
     }
 
-    public async Task DeleteOrganizationAbilityAsync(Guid organizationId)
+    public async Task DeleteOrganizationAbilityAsync(Guid organizationId, CancellationToken cancellationToken = default)
     {
         var cacheKey = BuildCacheKeyForOrganizationAbility(organizationId);
-        await cache.RemoveAsync(cacheKey);
+        await cache.RemoveAsync(cacheKey, token: cancellationToken);
     }
 
     private static string BuildCacheKeyForOrganizationAbility(Guid organizationId)

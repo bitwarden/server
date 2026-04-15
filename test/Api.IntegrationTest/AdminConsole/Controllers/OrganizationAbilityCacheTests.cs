@@ -1,8 +1,8 @@
 ﻿using System.Net;
-using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
+using Bit.Api.Models.Request.Organizations;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
@@ -76,22 +76,30 @@ public class OrganizationAbilityCacheTests : IClassFixture<ApiApplicationFactory
     {
         // Arrange - setup in InitializeAsync()
         await _loginHelper.LoginAsync(_ownerEmail);
-        var updateRequest = new OrganizationUpdateRequestModel
-        {
-            Name = "Updated Cache Test Org",
-            BillingEmail = "updated-cache@example.com"
-        };
-
-        // Act - update the organization via the HTTP endpoint
-        var response = await _client.PutAsJsonAsync($"/organizations/{_organization.Id}", updateRequest);
-
-        // Assert - endpoint succeeded and cache was updated
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var cacheService = _factory.GetService<IApplicationCacheService>();
-        var ability = await cacheService.GetOrganizationAbilityAsync(_organization.Id);
-        Assert.NotNull(ability);
-        Assert.Equal(_organization.Id, ability.Id);
+        var abilityBefore = await cacheService.GetOrganizationAbilityAsync(_organization.Id);
+        Assert.NotNull(abilityBefore);
+        Assert.False(abilityBefore.LimitCollectionCreation);
+
+        var updateRequest = new OrganizationCollectionManagementUpdateRequestModel
+        {
+            LimitCollectionCreation = true,
+            LimitCollectionDeletion = false,
+            LimitItemDeletion = false,
+            AllowAdminAccessToAllCollectionItems = true
+        };
+
+        // Act - update collection management settings via the HTTP endpoint
+        var response = await _client.PutAsJsonAsync(
+            $"/organizations/{_organization.Id}/collection-management", updateRequest);
+
+        // Assert - endpoint succeeded and cache reflects the updated value
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var abilityAfter = await cacheService.GetOrganizationAbilityAsync(_organization.Id);
+        Assert.NotNull(abilityAfter);
+        Assert.True(abilityAfter.LimitCollectionCreation);
     }
 
     [Fact]
