@@ -6,7 +6,7 @@ namespace Bit.Core.AdminConsole.Entities;
 public class OrganizationInviteLink : ITableObject<Guid>
 {
     public Guid Id { get; set; }
-    public Guid Code { get; set; }
+    public Guid Code { get; set; } = Guid.NewGuid();
     public Guid OrganizationId { get; set; }
     public string AllowedDomains { get; set; } = null!;
     public string EncryptedInviteKey { get; set; } = null!;
