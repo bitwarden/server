@@ -1738,6 +1738,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<byte?>("RevocationReason")
+                        .HasColumnType("smallint");
+
                     b.Property<short>("Status")
                         .HasColumnType("smallint");
 

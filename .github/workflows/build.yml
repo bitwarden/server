@@ -480,9 +480,7 @@ jobs:
 
   bitwarden-lite-build:
     name: Trigger Bitwarden lite build
-    if: |
-      github.event_name != 'pull_request'
-      && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-22.04
     needs: build-artifacts
     permissions:
