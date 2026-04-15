@@ -15,7 +15,7 @@ public class SendFileModel
     {
         Id = data.Id;
         FileName = data.FileName;
-        Size = data.Size;
+        Size = data.Size.ToString();
         SizeName = CoreHelpers.ReadableBytesSize(data.Size);
     }
 
@@ -23,7 +23,6 @@ public class SendFileModel
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string FileName { get; set; }
-    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString)]
-    public long? Size { get; set; }
+    public string Size { get; set; }
     public string SizeName { get; set; }
 }
