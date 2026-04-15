@@ -114,6 +114,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("Enabled")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("ExemptFromBillingAutomation")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("timestamp with time zone");
 
