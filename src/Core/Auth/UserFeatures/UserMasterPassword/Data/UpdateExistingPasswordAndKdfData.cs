@@ -34,6 +34,7 @@ public class UpdateExistingPasswordAndKdfData
             throw new BadRequestException("User does not have an existing master password to update.");
         }
 
+        // DAVE double check me here that a key connector user cannot rotate kdf.
         if (user.UsesKeyConnector)
         {
             throw new BadRequestException("Cannot update password of a user with Key Connector.");

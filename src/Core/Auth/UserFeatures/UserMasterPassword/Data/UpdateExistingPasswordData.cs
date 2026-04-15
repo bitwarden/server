@@ -34,7 +34,8 @@ public class UpdateExistingPasswordData
             throw new BadRequestException("User does not have an existing master password to update.");
         }
 
-        // Is this correct?
+        // DAVE investigate if this is correct for owners and admins, can owners and admins update existing passwords
+        // within the context of a key connector organization.
         if (user.UsesKeyConnector)
         {
             throw new BadRequestException("Cannot update password of a user with Key Connector.");

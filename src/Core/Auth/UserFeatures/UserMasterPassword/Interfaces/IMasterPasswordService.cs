@@ -15,6 +15,20 @@ namespace Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 /// There should never be business logic in this service. It is to bottleneck all flows that change and set
 /// initial password so we can perform validation of the conditions while setting an initial password and when updating
 /// an existing password.
+///
+/// DAVE could you write this better
+/// The public api is following a specific naming structure where its "MUTATE|SAVE-OPERATION-ASYNC"
+///
+/// DAVE
+/// Look into returning the User or IdentityError
+///     IdentityError[] | User
+/// also remove the idea of Mutate and have callers be responsible for saving the updated user entity.
+///
+/// DAVE
+/// Consider filtering/erroring on non hydrated users in this service. Probably don't need to think too
+/// hard about this one.
+///
+/// Thank you Dave!
 /// </summary>
 public interface IMasterPasswordService
 {
@@ -65,6 +79,8 @@ public interface IMasterPasswordService
     Task<IdentityResult> MutateSetInitialMasterPasswordAsync(User user, SetInitialPasswordData setInitialPasswordData);
 
     /// <summary>
+    /// Note: This is to be used in the future when a TDE user wants to self serve set a password.
+    ///
     /// Applies a new initial master password to the <paramref name="user"/> object and persists
     /// the updated user to the database. Use when no external transaction coordination is needed.
     /// </summary>

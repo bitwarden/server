@@ -72,6 +72,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         _userSignatureKeyPairRepository = userSignatureKeyPairRepository;
     }
 
+    /// TODO: Need to handle this one too.
     /// <inheritdoc />
     public async Task<IdentityResult> PasswordChangeAndRotateUserAccountKeysAsync(User user, PasswordChangeAndRotateUserAccountKeysData model)
     {

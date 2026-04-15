@@ -242,7 +242,7 @@ public class AccountsController(
         }
         else
         {
-            // TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
+            // To be removed in PM-33141
             try
             {
                 user = model.ToUser(user);

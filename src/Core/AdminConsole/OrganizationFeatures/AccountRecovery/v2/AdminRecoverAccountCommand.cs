@@ -140,7 +140,7 @@ public class AdminRecoverAccountCommand(
     }
 
     /// <summary>
-    /// TODO: Change to ResetMasterPassword after
+    /// TODO: Change this function to ResetMasterPassword during PM-33141
     /// </summary>
     private async Task<CommandResult> HandlePayloadsWithUnlockAndAuthenticationDataAsync(User user, RecoverAccountRequest request)
     {

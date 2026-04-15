@@ -47,7 +47,9 @@ public class SetInitialPasswordData
             throw new BadRequestException("User already has a master password set.");
         }
 
-        // Once a user is in the KeyConnector state they cannot become a master password user again so we can
+        // Once a user is in the KeyConnector state they cannot become a master password
+        // user ever again so we can check here to make sure that they shouldn't ever be
+        // setting a password
         if (user.UsesKeyConnector)
         {
             throw new BadRequestException("Cannot set an initial password of a user with Key Connector.");
