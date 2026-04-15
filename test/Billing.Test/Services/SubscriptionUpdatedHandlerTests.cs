@@ -156,6 +156,8 @@ public class SubscriptionUpdatedHandlerTests
                 options.ProrationBehavior == ProrationBehavior.None &&
                 options.CancellationDetails != null &&
                 options.CancellationDetails.Comment != null));
+        await _organizationRepository.DidNotReceive()
+            .ReplaceAsync(Arg.Any<Organization>());
     }
 
     [Fact]
@@ -1933,5 +1935,293 @@ public class SubscriptionUpdatedHandlerTests
         Assert.Equal(6, organization.Seats);
         await _organizationRepository.Received(1).ReplaceAsync(
             Arg.Is<Organization>(o => o.Id == organizationId));
+    }
+
+    [Fact]
+    public async Task HandleAsync_UnpaidOrganizationSubscription_WithExemptOrganization_DoesNotDisableAndClearsExemption()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var subscriptionId = "sub_123";
+        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var previousSubscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Active
+        };
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Unpaid,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = currentPeriodEnd,
+                        Plan = new Plan { Id = "2023-enterprise-org-seat-annually" }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            Enabled = true,
+            ExemptFromBillingAutomation = true,
+            PlanType = PlanType.EnterpriseAnnually2023
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+
+        var plan = new Enterprise2023Plan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _organizationDisableCommand.DidNotReceive()
+            .DisableAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>());
+        await _stripeAdapter.DidNotReceive()
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+        await _organizationRepository.Received(1).ReplaceAsync(
+            Arg.Is<Organization>(o => o.Id == organizationId && !o.ExemptFromBillingAutomation));
+    }
+
+    [Fact]
+    public async Task HandleAsync_UnpaidOrganizationSubscription_WithExemptOrganizationAndSubscriptionCreate_DoesNotDisableAndClearsExemption()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var subscriptionId = "sub_123";
+        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var previousSubscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Active
+        };
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Unpaid,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = currentPeriodEnd,
+                        Plan = new Plan { Id = "2023-enterprise-org-seat-annually" }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCreate }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            Enabled = true,
+            ExemptFromBillingAutomation = true,
+            PlanType = PlanType.EnterpriseAnnually2023
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+
+        var plan = new Enterprise2023Plan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _organizationDisableCommand.DidNotReceive()
+            .DisableAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>());
+        await _stripeAdapter.DidNotReceive()
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+        await _organizationRepository.Received(1).ReplaceAsync(
+            Arg.Is<Organization>(o => o.Id == organizationId && !o.ExemptFromBillingAutomation));
+    }
+
+    [Fact]
+    public async Task HandleAsync_UnpaidOrganizationSubscription_WithSubscriptionUpdateBillingReason_DoesNotDisableAndPreservesExemption()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var subscriptionId = "sub_123";
+        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var previousSubscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Active
+        };
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Unpaid,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = currentPeriodEnd,
+                        Plan = new Plan { Id = "2023-enterprise-org-seat-annually" }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionUpdate }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            Enabled = true,
+            ExemptFromBillingAutomation = true,
+            PlanType = PlanType.EnterpriseAnnually2023
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+
+        var plan = new Enterprise2023Plan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — subscription_update billing reason does not match SubscriptionWentUnpaid
+        // (which filters on subscription_create and subscription_cycle only), so no disable,
+        // no cancellation, and the exempt flag is left unchanged.
+        await _organizationDisableCommand.DidNotReceive()
+            .DisableAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>());
+        await _stripeAdapter.DidNotReceive()
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+        await _organizationRepository.DidNotReceive()
+            .ReplaceAsync(Arg.Any<Organization>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_UnpaidOrganizationSubscription_WithAutomaticPendingInvoiceItemInvoiceBillingReason_DoesNotDisableAndPreservesExemption()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var subscriptionId = "sub_123";
+        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var previousSubscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Active
+        };
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Unpaid,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = currentPeriodEnd,
+                        Plan = new Plan { Id = "2023-enterprise-org-seat-annually" }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.AutomaticPendingInvoiceItemInvoice }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            Enabled = true,
+            ExemptFromBillingAutomation = true,
+            PlanType = PlanType.EnterpriseAnnually2023
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+
+        var plan = new Enterprise2023Plan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — automatic_pending_invoice_item_invoice does not match SubscriptionWentUnpaid
+        // (which filters on subscription_create and subscription_cycle only), so no disable,
+        // no cancellation, and the exempt flag is left unchanged.
+        await _organizationDisableCommand.DidNotReceive()
+            .DisableAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>());
+        await _stripeAdapter.DidNotReceive()
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+        await _organizationRepository.DidNotReceive()
+            .ReplaceAsync(Arg.Any<Organization>());
     }
 }
