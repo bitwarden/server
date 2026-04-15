@@ -109,7 +109,9 @@ public class GetBitwardenSubscriptionQuery(
 
         var (cartLevelDiscount, productLevelDiscounts) = GetStripeDiscounts(subscription);
 
-        var cartDiscount = cartLevelDiscount ?? await GetSchedulePhase2DiscountAsync(subscription);
+        var (scheduleDiscount, scheduleCouponId) = cartLevelDiscount == null
+            ? await GetSchedulePhase2DiscountAsync(subscription)
+            : (null, (string?)null);
 
         var availablePlan = plans.First(plan => plan.Available);
         var onCurrentPricing = passwordManagerSeatsItem.Price.Id == availablePlan.Seat.StripePriceId;
@@ -125,7 +127,7 @@ public class GetBitwardenSubscriptionQuery(
         else
         {
             seatCost = availablePlan.Seat.Price;
-            estimatedTax = await EstimatePremiumTaxAsync(subscription, plans, availablePlan);
+            estimatedTax = await EstimatePremiumTaxAsync(subscription, plans, availablePlan, scheduleCouponId);
         }
 
         var passwordManagerSeats = new CartItem
@@ -133,7 +135,7 @@ public class GetBitwardenSubscriptionQuery(
             TranslationKey = "premiumMembership",
             Quantity = passwordManagerSeatsItem.Quantity,
             Cost = seatCost,
-            Discount = productLevelDiscounts.FirstOrDefault(discount => discount.AppliesTo(passwordManagerSeatsItem))
+            Discount = productLevelDiscounts.FirstOrDefault(discount => discount.AppliesTo(passwordManagerSeatsItem)) ?? scheduleDiscount
         };
 
         var additionalStorage = additionalStorageItem != null
@@ -154,7 +156,7 @@ public class GetBitwardenSubscriptionQuery(
                 AdditionalStorage = additionalStorage
             },
             Cadence = PlanCadenceType.Annually,
-            Discount = cartDiscount,
+            Discount = cartLevelDiscount,
             EstimatedTax = estimatedTax
         };
     }
@@ -164,7 +166,8 @@ public class GetBitwardenSubscriptionQuery(
     private async Task<decimal> EstimatePremiumTaxAsync(
         Subscription subscription,
         List<PremiumPlan>? plans = null,
-        PremiumPlan? availablePlan = null)
+        PremiumPlan? availablePlan = null,
+        string? couponId = null)
     {
         try
         {
@@ -193,6 +196,11 @@ public class GetBitwardenSubscriptionQuery(
                         };
                     }).ToList()
                 };
+
+                if (couponId != null)
+                {
+                    options.Discounts = [new InvoiceDiscountOptions { Coupon = couponId }];
+                }
             }
             else
             {
@@ -246,11 +254,11 @@ public class GetBitwardenSubscriptionQuery(
         return (cartLevel.FirstOrDefault(), productLevel);
     }
 
-    private async Task<BitwardenDiscount?> GetSchedulePhase2DiscountAsync(Subscription subscription)
+    private async Task<(BitwardenDiscount? Discount, string? CouponId)> GetSchedulePhase2DiscountAsync(Subscription subscription)
     {
         if (string.IsNullOrEmpty(subscription.ScheduleId))
         {
-            return null;
+            return (null, null);
         }
 
         try
@@ -263,17 +271,29 @@ public class GetBitwardenSubscriptionQuery(
 
             if (schedule.Status != SubscriptionScheduleStatus.Active || schedule.Phases.Count < 2)
             {
-                return null;
+                return (null, null);
             }
 
-            return schedule.Phases[1].Discounts?.FirstOrDefault()?.Coupon;
+            var phase2 = schedule.Phases[1];
+            var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+
+            if (phase2.StartDate < now)
+            {
+                logger.LogInformation(
+                    "Schedule phase 2 for subscription schedule ({ScheduleID}) has already started, skipping discount display",
+                    subscription.ScheduleId);
+                return (null, null);
+            }
+
+            var discount = phase2.Discounts?.FirstOrDefault();
+            return (discount?.Coupon, discount?.CouponId);
         }
         catch (StripeException stripeException)
         {
             logger.LogError(stripeException,
                 "Failed to retrieve subscription schedule ({ScheduleID}) for discount resolution",
                 subscription.ScheduleId);
-            return null;
+            return (null, null);
         }
     }
 
