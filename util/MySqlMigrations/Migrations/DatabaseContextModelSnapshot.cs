@@ -113,6 +113,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("Enabled")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("ExemptFromBillingAutomation")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("datetime(6)");
 
