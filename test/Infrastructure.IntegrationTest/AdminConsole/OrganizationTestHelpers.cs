@@ -4,6 +4,8 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
+using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.IntegrationTest.AdminConsole;
 
@@ -16,7 +18,7 @@ public static class OrganizationTestHelpers
 {
     public static Task<User> CreateTestUserAsync(this IUserRepository userRepository, string identifier = "test")
     {
-        var id = Guid.NewGuid();
+        var id = CoreHelpers.GenerateComb();
         return userRepository.CreateAsync(new User
         {
             Id = id,
@@ -34,7 +36,7 @@ public static class OrganizationTestHelpers
         int? seatCount = null,
         string identifier = "test")
     {
-        var id = Guid.NewGuid();
+        var id = CoreHelpers.GenerateComb();
         return organizationRepository.CreateAsync(new Organization
         {
             Name = $"{identifier}-{id}",
@@ -180,6 +182,41 @@ public static class OrganizationTestHelpers
             OrganizationId = organization.Id,
             Name = $"{identifier} {Guid.NewGuid()}"
         });
+
+    /// <summary>
+    /// Deletes an organization with retry logic for SQL Server deadlocks (error 1205).
+    /// Use this instead of <see cref="IOrganizationRepository.DeleteAsync"/> in test cleanup
+    /// to avoid deadlocks when tests run in parallel.
+    /// </summary>
+    public static async Task SafeDeleteAsync(this IOrganizationRepository repo, Organization org, int maxRetries = 3)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                await repo.DeleteAsync(org);
+                return;
+            }
+            catch (Exception ex) when (attempt < maxRetries && IsDeadlock(ex))
+            {
+                await Task.Delay(Random.Shared.Next(50, 200));
+            }
+        }
+    }
+
+    private static bool IsDeadlock(Exception ex)
+    {
+        var current = ex;
+        while (current != null)
+        {
+            if (current is SqlException { Number: 1205 })
+            {
+                return true;
+            }
+            current = current.InnerException;
+        }
+        return false;
+    }
 
     public static Task<OrganizationInviteLink> CreateTestOrganizationInviteLinkAsync(
         this IOrganizationInviteLinkRepository repository,

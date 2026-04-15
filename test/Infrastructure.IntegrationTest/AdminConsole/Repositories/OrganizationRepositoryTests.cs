@@ -38,8 +38,8 @@ public class OrganizationRepositoryTests
         Assert.Contains(result, org => org.Id == organization2.Id);
 
         // Clean up
-        await organizationRepository.DeleteAsync(organization1);
-        await organizationRepository.DeleteAsync(organization2);
+        await organizationRepository.SafeDeleteAsync(organization1);
+        await organizationRepository.SafeDeleteAsync(organization2);
     }
 
     [Theory, DatabaseData]
@@ -214,7 +214,7 @@ public class OrganizationRepositoryTests
         Assert.Equal(requestDate.ToString("yyyy-MM-dd HH:mm:ss"), updateResult.RevisionDate.ToString("yyyy-MM-dd HH:mm:ss"));
 
         // Annul
-        await sutRepository.DeleteAsync(organization);
+        await sutRepository.SafeDeleteAsync(organization);
     }
 
     [DatabaseData, Theory]
@@ -239,7 +239,7 @@ public class OrganizationRepositoryTests
         Assert.Equal(requestDate.ToString("yyyy-MM-dd HH:mm:ss"), updateResult.RevisionDate.ToString("yyyy-MM-dd HH:mm:ss"));
 
         // Annul
-        await sutRepository.DeleteAsync(organization);
+        await sutRepository.SafeDeleteAsync(organization);
     }
 
     [DatabaseData, Theory]
@@ -262,7 +262,7 @@ public class OrganizationRepositoryTests
         Assert.Equal(requestDate.ToString("yyyy-MM-dd HH:mm:ss"), updateResult.RevisionDate.ToString("yyyy-MM-dd HH:mm:ss"));
 
         // Annul
-        await sutRepository.DeleteAsync(organization);
+        await sutRepository.SafeDeleteAsync(organization);
     }
 
     [DatabaseData, Theory]
@@ -283,7 +283,7 @@ public class OrganizationRepositoryTests
         Assert.Null(result.FirstOrDefault(x => x.Id == organization.Id));
 
         // Annul
-        await sutRepository.DeleteAsync(organization);
+        await sutRepository.SafeDeleteAsync(organization);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -402,7 +402,7 @@ public class OrganizationRepositoryTests
         Assert.Equal(organization.UseMyItems, result.UseMyItems);
 
         // Clean up
-        await organizationRepository.DeleteAsync(organization);
+        await organizationRepository.SafeDeleteAsync(organization);
     }
 
     [Theory, DatabaseData]

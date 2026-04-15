@@ -13,6 +13,7 @@ using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
+using Bit.Infrastructure.IntegrationTest.AdminConsole;
 using Xunit;
 using CipherType = Bit.Core.Vault.Enums.CipherType;
 
@@ -630,7 +631,7 @@ public class CipherRepositoryTests
         // Annul
         await cipherRepository.DeleteAsync(cipher);
         await organizationUserRepository.DeleteAsync(orgUser);
-        await organizationRepository.DeleteAsync(organization);
+        await organizationRepository.SafeDeleteAsync(organization);
         await userRepository.DeleteAsync(user);
     }
 

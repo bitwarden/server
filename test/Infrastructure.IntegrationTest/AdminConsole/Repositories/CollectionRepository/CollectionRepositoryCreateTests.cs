@@ -65,7 +65,7 @@ public class CollectionRepositoryCreateTests
         // Clean up data
         await userRepository.DeleteAsync(user1);
         await userRepository.DeleteAsync(user2);
-        await organizationRepository.DeleteAsync(organization);
+        await organizationRepository.SafeDeleteAsync(organization);
         await groupRepository.DeleteManyAsync([group1.Id, group2.Id]);
         await organizationUserRepository.DeleteManyAsync([orgUser1.Id, orgUser2.Id]);
     }
@@ -100,6 +100,6 @@ public class CollectionRepositoryCreateTests
         Assert.Empty(actualAccess.Users);
 
         // Clean up
-        await organizationRepository.DeleteAsync(organization);
+        await organizationRepository.SafeDeleteAsync(organization);
     }
 }

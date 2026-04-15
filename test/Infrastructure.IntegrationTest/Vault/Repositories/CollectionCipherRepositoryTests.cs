@@ -6,6 +6,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
+using Bit.Infrastructure.IntegrationTest.AdminConsole;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Vault.Repositories;
@@ -79,6 +80,6 @@ public class CollectionCipherRepositoryTests
         await cipherRepository.DeleteAsync(defaultCipher);
         await collectionRepository.DeleteAsync(sharedCollection);
         await collectionRepository.DeleteAsync(defaultUserCollection);
-        await organizationRepository.DeleteAsync(organization);
+        await organizationRepository.SafeDeleteAsync(organization);
     }
 }

@@ -92,7 +92,7 @@ public class CollectionRepositoryReplaceTests
         await userRepository.DeleteAsync(user1);
         await userRepository.DeleteAsync(user2);
         await userRepository.DeleteAsync(user3);
-        await organizationRepository.DeleteAsync(organization);
+        await organizationRepository.SafeDeleteAsync(organization);
     }
 
     /// <remarks>
@@ -144,7 +144,7 @@ public class CollectionRepositoryReplaceTests
 
         // Clean up
         await userRepository.DeleteAsync(user);
-        await organizationRepository.DeleteAsync(organization);
+        await organizationRepository.SafeDeleteAsync(organization);
     }
 
     [Theory, DatabaseData]
@@ -209,6 +209,6 @@ public class CollectionRepositoryReplaceTests
         // Clean up data
         await userRepository.DeleteAsync(user1);
         await userRepository.DeleteAsync(user2);
-        await organizationRepository.DeleteAsync(organization);
+        await organizationRepository.SafeDeleteAsync(organization);
     }
 }

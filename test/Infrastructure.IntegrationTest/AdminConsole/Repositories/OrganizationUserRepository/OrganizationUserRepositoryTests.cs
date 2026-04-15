@@ -1395,7 +1395,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(key, updatedUser.Key);
 
         // Annul
-        await organizationRepository.DeleteAsync(organization);
+        await organizationRepository.SafeDeleteAsync(organization);
         await userRepository.DeleteAsync(user);
     }
 
@@ -1428,7 +1428,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(OrganizationUserStatusType.Confirmed, unchangedUser.Status);
 
         // Annul
-        await organizationRepository.DeleteAsync(organization);
+        await organizationRepository.SafeDeleteAsync(organization);
         await userRepository.DeleteAsync(user);
     }
 
@@ -1462,7 +1462,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(OrganizationUserStatusType.Confirmed, finalUser.Status);
 
         // Annul
-        await organizationRepository.DeleteAsync(organization);
+        await organizationRepository.SafeDeleteAsync(organization);
         await userRepository.DeleteAsync(user);
     }
 

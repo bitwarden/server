@@ -147,7 +147,7 @@ public static class CreateDefaultCollectionsSharedTests
         Organization organization,
         IEnumerable<OrganizationUser> organizationUsers)
     {
-        await organizationRepository.DeleteAsync(organization);
+        await organizationRepository.SafeDeleteAsync(organization);
 
         await userRepository.DeleteManyAsync(
             organizationUsers

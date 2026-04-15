@@ -41,7 +41,7 @@ public class GetPolicyDetailsByOrganizationIdAsyncTests
         Assert.True(results.Single().IsProvider);
 
         // Annul
-        await organizationRepository.DeleteAsync(new Organization { Id = userOrgConnectedDirectly.OrganizationId });
+        await organizationRepository.SafeDeleteAsync(new Organization { Id = userOrgConnectedDirectly.OrganizationId });
         await userRepository.DeleteAsync(user);
 
         async Task ArrangeProvider()
@@ -92,8 +92,8 @@ public class GetPolicyDetailsByOrganizationIdAsyncTests
         Assert.DoesNotContain(results, result => result.OrganizationId == notConnectedOrg.Id);
 
         // Annul
-        await organizationRepository.DeleteAsync(new Organization { Id = userOrgConnectedDirectly.OrganizationId });
-        await organizationRepository.DeleteAsync(notConnectedOrg);
+        await organizationRepository.SafeDeleteAsync(new Organization { Id = userOrgConnectedDirectly.OrganizationId });
+        await organizationRepository.SafeDeleteAsync(notConnectedOrg);
         await userRepository.DeleteAsync(user);
     }
 
@@ -126,7 +126,7 @@ public class GetPolicyDetailsByOrganizationIdAsyncTests
         Assert.DoesNotContain(results, result => result.PolicyType == notInputPolicyType);
 
         // Annul
-        await organizationRepository.DeleteAsync(new Organization { Id = orgUser.OrganizationId });
+        await organizationRepository.SafeDeleteAsync(new Organization { Id = orgUser.OrganizationId });
         await userRepository.DeleteAsync(user);
     }
 
@@ -158,9 +158,9 @@ public class GetPolicyDetailsByOrganizationIdAsyncTests
         AssertPolicyDetailUserConnections(results, userOrgConnectedDirectly, userOrgConnectedByEmail, userOrgConnectedByUserId);
 
         // Annul
-        await organizationRepository.DeleteAsync(new Organization() { Id = userOrgConnectedDirectly.OrganizationId });
-        await organizationRepository.DeleteAsync(new Organization() { Id = userOrgConnectedByEmail.OrganizationId });
-        await organizationRepository.DeleteAsync(new Organization() { Id = userOrgConnectedByUserId.OrganizationId });
+        await organizationRepository.SafeDeleteAsync(new Organization() { Id = userOrgConnectedDirectly.OrganizationId });
+        await organizationRepository.SafeDeleteAsync(new Organization() { Id = userOrgConnectedByEmail.OrganizationId });
+        await organizationRepository.SafeDeleteAsync(new Organization() { Id = userOrgConnectedByUserId.OrganizationId });
         await userRepository.DeleteAsync(user);
     }
 
@@ -188,9 +188,9 @@ public class GetPolicyDetailsByOrganizationIdAsyncTests
         AssertPolicyDetailUserConnections(results, userOrgConnectedDirectly, userOrgConnectedByEmail, userOrgConnectedByUserId);
 
         // Annul
-        await organizationRepository.DeleteAsync(new Organization() { Id = userOrgConnectedDirectly.OrganizationId });
-        await organizationRepository.DeleteAsync(new Organization() { Id = userOrgConnectedByEmail.OrganizationId });
-        await organizationRepository.DeleteAsync(new Organization() { Id = userOrgConnectedByUserId.OrganizationId });
+        await organizationRepository.SafeDeleteAsync(new Organization() { Id = userOrgConnectedDirectly.OrganizationId });
+        await organizationRepository.SafeDeleteAsync(new Organization() { Id = userOrgConnectedByEmail.OrganizationId });
+        await organizationRepository.SafeDeleteAsync(new Organization() { Id = userOrgConnectedByUserId.OrganizationId });
         await userRepository.DeleteAsync(user);
     }
 
@@ -227,7 +227,7 @@ public class GetPolicyDetailsByOrganizationIdAsyncTests
                                            && result.OrganizationId == orgUser2.OrganizationId);
 
         // Annul
-        await organizationRepository.DeleteAsync(organization);
+        await organizationRepository.SafeDeleteAsync(organization);
         await userRepository.DeleteManyAsync([user1, user2]);
     }
 

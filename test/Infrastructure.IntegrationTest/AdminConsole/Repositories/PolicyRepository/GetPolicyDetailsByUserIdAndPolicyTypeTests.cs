@@ -59,7 +59,7 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
         Assert.False(result.IsProvider);
 
         // Cleanup
-        await organizationRepository.DeleteAsync(org);
+        await organizationRepository.SafeDeleteAsync(org);
         await userRepository.DeleteAsync(user);
     }
 
@@ -99,7 +99,7 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
         Assert.False(result.IsProvider);
 
         // Cleanup
-        await organizationRepository.DeleteAsync(org);
+        await organizationRepository.SafeDeleteAsync(org);
         await userRepository.DeleteAsync(user);
     }
 
@@ -137,7 +137,7 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
         Assert.False(result.IsProvider);
 
         // Cleanup
-        await organizationRepository.DeleteAsync(org);
+        await organizationRepository.SafeDeleteAsync(org);
         await userRepository.DeleteAsync(user);
     }
 
@@ -188,8 +188,8 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
         Assert.Equal(PolicyType.SingleOrg, result2.PolicyType);
 
         // Cleanup
-        await organizationRepository.DeleteAsync(org1);
-        await organizationRepository.DeleteAsync(org2);
+        await organizationRepository.SafeDeleteAsync(org1);
+        await organizationRepository.SafeDeleteAsync(org2);
         await userRepository.DeleteAsync(user);
     }
 
@@ -238,7 +238,7 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
         Assert.Equal(PolicyType.TwoFactorAuthentication, result.PolicyType);
 
         // Cleanup
-        await organizationRepository.DeleteAsync(org);
+        await organizationRepository.SafeDeleteAsync(org);
         await userRepository.DeleteAsync(user);
     }
 
@@ -272,7 +272,7 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
         Assert.Empty(results);
 
         // Cleanup
-        await organizationRepository.DeleteAsync(org);
+        await organizationRepository.SafeDeleteAsync(org);
         await userRepository.DeleteAsync(user);
     }
 
@@ -321,7 +321,7 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
         Assert.Empty(results);
 
         // Cleanup
-        await organizationRepository.DeleteAsync(org);
+        await organizationRepository.SafeDeleteAsync(org);
         await userRepository.DeleteAsync(user);
     }
 
@@ -370,7 +370,7 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
         Assert.Empty(results);
 
         // Cleanup
-        await organizationRepository.DeleteAsync(org);
+        await organizationRepository.SafeDeleteAsync(org);
         await userRepository.DeleteAsync(user);
     }
 
@@ -436,7 +436,7 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
         Assert.Equal(org.Id, result.OrganizationId);
 
         // Cleanup
-        await organizationRepository.DeleteAsync(org);
+        await organizationRepository.SafeDeleteAsync(org);
         await userRepository.DeleteAsync(user);
     }
 

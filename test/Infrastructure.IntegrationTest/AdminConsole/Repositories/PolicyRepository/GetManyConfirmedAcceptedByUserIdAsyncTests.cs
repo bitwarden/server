@@ -35,7 +35,7 @@ public class GetManyConfirmedAcceptedByUserIdAsyncTests
         Assert.Contains(results, p => p.Id == policy.Id);
 
         // Annul
-        await organizationRepository.DeleteAsync(organization);
+        await organizationRepository.SafeDeleteAsync(organization);
         await userRepository.DeleteAsync(user);
     }
 
@@ -64,7 +64,7 @@ public class GetManyConfirmedAcceptedByUserIdAsyncTests
         Assert.Contains(results, p => p.Id == policy.Id);
 
         // Annul
-        await organizationRepository.DeleteAsync(organization);
+        await organizationRepository.SafeDeleteAsync(organization);
         await userRepository.DeleteAsync(user);
     }
 
@@ -104,8 +104,8 @@ public class GetManyConfirmedAcceptedByUserIdAsyncTests
         Assert.Contains(results, p => p.Id == acceptedPolicy.Id);
 
         // Annul
-        await organizationRepository.DeleteAsync(confirmedOrg);
-        await organizationRepository.DeleteAsync(acceptedOrg);
+        await organizationRepository.SafeDeleteAsync(confirmedOrg);
+        await organizationRepository.SafeDeleteAsync(acceptedOrg);
         await userRepository.DeleteAsync(user);
     }
 
@@ -141,7 +141,7 @@ public class GetManyConfirmedAcceptedByUserIdAsyncTests
         Assert.DoesNotContain(results, p => p.Id == policy.Id);
 
         // Annul
-        await organizationRepository.DeleteAsync(organization);
+        await organizationRepository.SafeDeleteAsync(organization);
         await userRepository.DeleteAsync(user);
     }
 
@@ -170,7 +170,7 @@ public class GetManyConfirmedAcceptedByUserIdAsyncTests
         Assert.DoesNotContain(results, p => p.Id == policy.Id);
 
         // Annul
-        await organizationRepository.DeleteAsync(organization);
+        await organizationRepository.SafeDeleteAsync(organization);
         await userRepository.DeleteAsync(user);
     }
 
@@ -201,7 +201,7 @@ public class GetManyConfirmedAcceptedByUserIdAsyncTests
         Assert.DoesNotContain(results, p => p.Id == policy.Id);
 
         // Annul
-        await organizationRepository.DeleteAsync(organization);
+        await organizationRepository.SafeDeleteAsync(organization);
         await userRepository.DeleteManyAsync([targetUser, otherUser]);
     }
 }
