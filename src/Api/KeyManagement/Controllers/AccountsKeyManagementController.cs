@@ -1,21 +1,21 @@
 ﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.WebAuthn;
+using Bit.Api.KeyManagement.Enums;
 using Bit.Api.KeyManagement.Models.Requests;
 using Bit.Api.KeyManagement.Models.Responses;
 using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
-using Bit.Core;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Commands.Interfaces;
-using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.KeyManagement.UserKey;
+using Bit.Core.KeyManagement.UserKey.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
@@ -30,7 +30,6 @@ namespace Bit.Api.KeyManagement.Controllers;
 public class AccountsKeyManagementController : Controller
 {
     private readonly IEmergencyAccessRepository _emergencyAccessRepository;
-    private readonly IFeatureService _featureService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IRegenerateUserAsymmetricKeysCommand _regenerateUserAsymmetricKeysCommand;
     private readonly IUserService _userService;
@@ -50,7 +49,6 @@ public class AccountsKeyManagementController : Controller
     private readonly ISetKeyConnectorKeyCommand _setKeyConnectorKeyCommand;
 
     public AccountsKeyManagementController(IUserService userService,
-        IFeatureService featureService,
         IOrganizationUserRepository organizationUserRepository,
         IEmergencyAccessRepository emergencyAccessRepository,
         IKeyConnectorConfirmationDetailsQuery keyConnectorConfirmationDetailsQuery,
@@ -69,7 +67,6 @@ public class AccountsKeyManagementController : Controller
         ISetKeyConnectorKeyCommand setKeyConnectorKeyCommand)
     {
         _userService = userService;
-        _featureService = featureService;
         _regenerateUserAsymmetricKeysCommand = regenerateUserAsymmetricKeysCommand;
         _organizationUserRepository = organizationUserRepository;
         _emergencyAccessRepository = emergencyAccessRepository;
@@ -88,11 +85,6 @@ public class AccountsKeyManagementController : Controller
     [HttpPost("key-management/regenerate-keys")]
     public async Task RegenerateKeysAsync([FromBody] KeyRegenerationRequestModel request)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.PrivateKeyRegeneration) && !_featureService.IsEnabled(FeatureFlagKeys.DataRecoveryTool))
-        {
-            throw new NotFoundException();
-        }
-
         var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
         var usersOrganizationAccounts = await _organizationUserRepository.GetManyByUserAsync(user.Id);
         var designatedEmergencyAccess = await _emergencyAccessRepository.GetManyDetailsByGranteeIdAsync(user.Id);
@@ -102,7 +94,7 @@ public class AccountsKeyManagementController : Controller
 
 
     [HttpPost("key-management/rotate-user-account-keys")]
-    public async Task RotateUserAccountKeysAsync([FromBody] RotateUserAccountKeysAndDataRequestModel model)
+    public async Task PasswordChangeAndRotateUserAccountKeysAsync([FromBody] RotateUserAccountKeysAndDataRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -110,25 +102,32 @@ public class AccountsKeyManagementController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var dataModel = new RotateUserAccountKeysData
+        var dataModel = new PasswordChangeAndRotateUserAccountKeysData
         {
             OldMasterKeyAuthenticationHash = model.OldMasterKeyAuthenticationHash,
-
-            AccountKeys = model.AccountKeys.ToAccountKeysData(),
-
-            MasterPasswordUnlockData = model.AccountUnlockData.MasterPasswordUnlockData.ToUnlockData(),
-            EmergencyAccesses = await _emergencyAccessValidator.ValidateAsync(user, model.AccountUnlockData.EmergencyAccessUnlockData),
-            OrganizationUsers = await _organizationUserValidator.ValidateAsync(user, model.AccountUnlockData.OrganizationAccountRecoveryUnlockData),
-            WebAuthnKeys = await _webauthnKeyValidator.ValidateAsync(user, model.AccountUnlockData.PasskeyUnlockData),
-            DeviceKeys = await _deviceValidator.ValidateAsync(user, model.AccountUnlockData.DeviceKeyUnlockData),
-            V2UpgradeToken = model.AccountUnlockData.V2UpgradeToken?.ToData(),
-
-            Ciphers = await _cipherValidator.ValidateAsync(user, model.AccountData.Ciphers),
-            Folders = await _folderValidator.ValidateAsync(user, model.AccountData.Folders),
-            Sends = await _sendValidator.ValidateAsync(user, model.AccountData.Sends),
+            MasterPasswordHint = model.AccountUnlockData.MasterPasswordUnlockData.MasterPasswordHint,
+            MasterPasswordAuthenticationData = model.AccountUnlockData.MasterPasswordUnlockData.ToAuthenticationData(),
+            MasterPasswordUnlockData = model.AccountUnlockData.MasterPasswordUnlockData.ToMasterPasswordUnlockData(),
+            BaseData = new BaseRotateUserAccountKeysData
+            {
+                AccountKeys = model.AccountKeys.ToAccountKeysData(),
+                EmergencyAccesses =
+                    await _emergencyAccessValidator.ValidateAsync(user,
+                        model.AccountUnlockData.EmergencyAccessUnlockData),
+                OrganizationUsers =
+                    await _organizationUserValidator.ValidateAsync(user,
+                        model.AccountUnlockData.OrganizationAccountRecoveryUnlockData),
+                WebAuthnKeys =
+                    await _webauthnKeyValidator.ValidateAsync(user, model.AccountUnlockData.PasskeyUnlockData),
+                DeviceKeys = await _deviceValidator.ValidateAsync(user, model.AccountUnlockData.DeviceKeyUnlockData),
+                V2UpgradeToken = model.AccountUnlockData.V2UpgradeToken?.ToData(),
+                Ciphers = await _cipherValidator.ValidateAsync(user, model.AccountData.Ciphers),
+                Folders = await _folderValidator.ValidateAsync(user, model.AccountData.Folders),
+                Sends = await _sendValidator.ValidateAsync(user, model.AccountData.Sends)
+            }
         };
 
-        var result = await _rotateUserAccountKeysCommand.RotateUserAccountKeysAsync(user, dataModel);
+        var result = await _rotateUserAccountKeysCommand.PasswordChangeAndRotateUserAccountKeysAsync(user, dataModel);
         if (result.Succeeded)
         {
             return;
@@ -140,6 +139,34 @@ public class AccountsKeyManagementController : Controller
         }
 
         throw new BadRequestException(ModelState);
+    }
+
+    [HttpPost("key-management/rotate-user-keys")]
+    public async Task RotateUserKeysAsync([FromBody] RotateUserKeysRequestModel request)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        switch (request.UnlockMethodData.UnlockMethod)
+        {
+            case UnlockMethod.MasterPassword:
+                var dataModel = new MasterPasswordRotateUserAccountKeysData
+                {
+                    MasterPasswordUnlockData = request.UnlockMethodData.MasterPasswordUnlockData!.ToData(),
+                    BaseData = await ToBaseDataModelAsync(request, user),
+                };
+                await _rotateUserAccountKeysCommand.MasterPasswordRotateUserAccountKeysAsync(user, dataModel);
+                break;
+            case UnlockMethod.Tde:
+                throw new BadRequestException("TDE not implemented");
+            case UnlockMethod.KeyConnector:
+                throw new BadRequestException("Key connector not implemented");
+            default:
+                throw new ArgumentOutOfRangeException(nameof(request.UnlockMethodData.UnlockMethod), "Unrecognized unlock method");
+        }
     }
 
     [HttpPost("set-key-connector-key")]
@@ -232,5 +259,25 @@ public class AccountsKeyManagementController : Controller
 
         var details = await _keyConnectorConfirmationDetailsQuery.Run(orgSsoIdentifier, user.Id);
         return new KeyConnectorConfirmationDetailsResponseModel(details);
+    }
+
+    private async Task<BaseRotateUserAccountKeysData> ToBaseDataModelAsync(RotateUserKeysRequestModel request, User user)
+    {
+        return new BaseRotateUserAccountKeysData
+        {
+            AccountKeys = request.WrappedAccountCryptographicState.ToAccountKeysData(),
+            EmergencyAccesses =
+                await _emergencyAccessValidator.ValidateAsync(user, request.UnlockData.EmergencyAccessUnlockData),
+            OrganizationUsers =
+                await _organizationUserValidator.ValidateAsync(user,
+                    request.UnlockData.OrganizationAccountRecoveryUnlockData),
+            WebAuthnKeys = await _webauthnKeyValidator.ValidateAsync(user, request.UnlockData.PasskeyUnlockData),
+            DeviceKeys = await _deviceValidator.ValidateAsync(user, request.UnlockData.DeviceKeyUnlockData),
+            V2UpgradeToken = request.UnlockData.V2UpgradeToken?.ToData(),
+
+            Ciphers = await _cipherValidator.ValidateAsync(user, request.AccountData.Ciphers),
+            Folders = await _folderValidator.ValidateAsync(user, request.AccountData.Folders),
+            Sends = await _sendValidator.ValidateAsync(user, request.AccountData.Sends),
+        };
     }
 }

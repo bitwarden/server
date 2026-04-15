@@ -64,7 +64,8 @@ internal sealed class IdentityDataGenerator(int seed, GeographicRegion region = 
         GeographicRegion.Europe => $"AB {10 + (index % 90):D2} {10 + ((index + 1) % 90):D2} {10 + ((index + 2) % 90):D2} C",
         GeographicRegion.AsiaPacific => $"{1000 + (index % 9000):D4}-{1000 + ((index + 1) % 9000):D4}-{1000 + ((index + 2) % 9000):D4}",
         GeographicRegion.LatinAmerica => $"{100 + (index % 900):D3}.{100 + ((index + 1) % 900):D3}.{100 + ((index + 2) % 900):D3}-{10 + (index % 90):D2}",
-        _ => $"{100 + (index % 899):D3}-{10 + (index % 90):D2}-{1000 + (index % 9000):D4}"
+        GeographicRegion.MiddleEast or GeographicRegion.Africa or GeographicRegion.Global => $"{100 + (index % 899):D3}-{10 + (index % 90):D2}-{1000 + (index % 9000):D4}",
+        _ => throw new ArgumentOutOfRangeException(nameof(_region), _region, null)
     };
 
     private static string GeneratePassportNumberByIndex(int index) =>
@@ -81,7 +82,8 @@ internal sealed class IdentityDataGenerator(int seed, GeographicRegion region = 
         GeographicRegion.LatinAmerica => faker.PickRandom("BR", "MX", "AR", "CO", "CL"),
         GeographicRegion.MiddleEast => faker.PickRandom("AE", "SA", "IL", "TR"),
         GeographicRegion.Africa => faker.PickRandom("ZA", "NG", "EG", "KE"),
-        _ => faker.Address.CountryCode()
+        GeographicRegion.Global => faker.Address.CountryCode(),
+        _ => throw new ArgumentOutOfRangeException(nameof(_region), _region, null)
     };
 
     private static string MapRegionToLocale(GeographicRegion region) => region switch
@@ -92,6 +94,7 @@ internal sealed class IdentityDataGenerator(int seed, GeographicRegion region = 
         GeographicRegion.LatinAmerica => "es",
         GeographicRegion.MiddleEast => "en",
         GeographicRegion.Africa => "en",
-        _ => "en"
+        GeographicRegion.Global => "en",
+        _ => throw new ArgumentOutOfRangeException(nameof(region), region, null)
     };
 }

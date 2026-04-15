@@ -16,7 +16,7 @@ internal sealed class CreateOwnerStep : IStep
         var password = context.GetPassword();
         var kdfIterations = context.GetKdfIterations();
         var ownerEmail = context.GetMangler().Mangle($"owner@{context.RequireDomain()}");
-        var userKeys = RustSdkService.GenerateUserKeys(ownerEmail, password, kdfIterations);
+        var userKeys = RustSdkService.GenerateUserKeys(ownerEmail, password, kdfIterations, poolIndex: 0);
         var (owner, _) = UserSeeder.Create(ownerEmail, context.GetPasswordHasher(), context.GetMangler(), keys: userKeys, password: password, kdfIterations: kdfIterations);
 
 

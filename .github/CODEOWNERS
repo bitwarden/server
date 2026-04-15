@@ -45,9 +45,12 @@ src/Core/MailTemplates/Mjml/.mjmlconfig # This change allows teams to add compon
 # Auth team
 **/Auth @bitwarden/team-auth-dev
 bitwarden_license/src/Sso @bitwarden/team-auth-dev
+bitwarden_license/test/Sso.IntegrationTest @bitwarden/team-auth-dev
 src/Identity @bitwarden/team-auth-dev
 src/Core/Identity @bitwarden/team-auth-dev
 src/Core/IdentityServer @bitwarden/team-auth-dev
+test/Identity.IntegrationTest @bitwarden/team-auth-dev
+test/Identity.Test @bitwarden/team-auth-dev
 
 # Autofill team
 src/Core/Utilities/StaticStore.cs @bitwarden/team-autofill-dev

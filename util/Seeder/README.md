@@ -47,7 +47,8 @@ The Seeder is organized around six core patterns, each with a specific responsib
 - **Mix & Match**: Fixtures + generation in one preset
 - **Extensible**: Add entity types via new step implementations
 
-**Phase order**: Org → Owner → Generator → Roster → Users → Groups → Collections → Folders → Ciphers → PersonalCiphers
+**Phase order (org)**: Org → OrgApiKey → Roster → Owner (conditional) → Generator (conditional) → Users → Groups → Collections → Folders → Ciphers → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
+**Phase order (individual)**: IndividualUser → NamedFolders → Generator → Folders → Ciphers → FolderAssignments → FavoriteAssignments
 
 **Files**: `Pipeline/` folder
 
@@ -64,7 +65,9 @@ The Seeder is organized around six core patterns, each with a specific responsib
 - Stateless (except for SDK service dependency)
 - Do NOT interact with database directly
 
-**Naming:** `{Entity}Seeder` with `Create{Type}{Entity}()` methods
+**Naming:** `{Entity}Seeder` with `Create()` methods
+
+**Pipeline cipher path:** Each cipher factory accepts a single `CipherSeed` parameter. `CipherSeed.FromSeedItem()` converts a deserialized `SeedVaultItem` into a `CipherSeed` for the pipeline path.
 
 #### Recipes
 

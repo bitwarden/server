@@ -10,6 +10,7 @@ using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Pricing.Premium;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2019Renewal;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2020Renewal;
@@ -39,7 +40,8 @@ public class UpcomingInvoiceHandlerTests
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IPricingClient _pricingClient;
     private readonly IProviderRepository _providerRepository;
-    private readonly IStripeFacade _stripeFacade;
+    private readonly IStripeAdapter _stripeAdapter;
+    private readonly IPriceIncreaseScheduler _priceIncreaseScheduler;
     private readonly IStripeEventService _stripeEventService;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
     private readonly IUserRepository _userRepository;
@@ -61,8 +63,10 @@ public class UpcomingInvoiceHandlerTests
         _mailService = Substitute.For<IMailService>();
         _organizationRepository = Substitute.For<IOrganizationRepository>();
         _pricingClient = Substitute.For<IPricingClient>();
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan>());
         _providerRepository = Substitute.For<IProviderRepository>();
-        _stripeFacade = Substitute.For<IStripeFacade>();
+        _stripeAdapter = Substitute.For<IStripeAdapter>();
+        _priceIncreaseScheduler = Substitute.For<IPriceIncreaseScheduler>();
         _stripeEventService = Substitute.For<IStripeEventService>();
         _stripeEventUtilityService = Substitute.For<IStripeEventUtilityService>();
         _userRepository = Substitute.For<IUserRepository>();
@@ -77,7 +81,8 @@ public class UpcomingInvoiceHandlerTests
             _organizationRepository,
             _pricingClient,
             _providerRepository,
-            _stripeFacade,
+            _stripeAdapter,
+            _priceIncreaseScheduler,
             _stripeEventService,
             _stripeEventUtilityService,
             _userRepository,
@@ -95,16 +100,16 @@ public class UpcomingInvoiceHandlerTests
         var customer = new Customer { Id = "cus_123", Subscriptions = new StripeList<Subscription> { Data = [] } };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade
-            .GetCustomer(invoice.CustomerId, Arg.Any<CustomerGetOptions>())
+        _stripeAdapter
+            .GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>())
             .Returns(customer);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        await _stripeFacade.DidNotReceive()
-            .UpdateCustomer(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
+        await _stripeAdapter.DidNotReceive()
+            .UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
     }
 
     [Fact]
@@ -144,6 +149,14 @@ public class UpcomingInvoiceHandlerTests
             Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
             Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
         };
+        var oldPlan = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            LegacyYear = 2023,
+            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
         var customer = new Customer
         {
             Id = customerId,
@@ -152,8 +165,8 @@ public class UpcomingInvoiceHandlerTests
         };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade
-            .GetCustomer(customerId, Arg.Any<CustomerGetOptions>())
+        _stripeAdapter
+            .GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>())
             .Returns(customer);
 
         _stripeEventUtilityService
@@ -161,13 +174,7 @@ public class UpcomingInvoiceHandlerTests
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
 
         _userRepository.GetByIdAsync(_userId).Returns(user);
-        _pricingClient.GetAvailablePremiumPlan().Returns(plan);
-
-        // If milestone 2 is disabled, the default email is sent
-        _featureService
-            .IsEnabled(FeatureFlagKeys.PM23341_Milestone_2)
-            .Returns(false);
-
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -227,6 +234,14 @@ public class UpcomingInvoiceHandlerTests
             Seat = new Purchasable { Price = 10M, StripePriceId = priceId },
             Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
         };
+        var oldPlan = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            LegacyYear = 2023,
+            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
         var customer = new Customer
         {
             Id = customerId,
@@ -234,8 +249,8 @@ public class UpcomingInvoiceHandlerTests
         };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade
-            .GetCustomer(customerId, Arg.Any<CustomerGetOptions>())
+        _stripeAdapter
+            .GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>())
             .Returns(customer);
 
         _stripeEventUtilityService
@@ -243,29 +258,24 @@ public class UpcomingInvoiceHandlerTests
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
 
         _userRepository.GetByIdAsync(_userId).Returns(user);
-        _pricingClient.GetAvailablePremiumPlan().Returns(plan);
-        _stripeFacade.UpdateSubscription(
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
+        _stripeAdapter.UpdateSubscriptionAsync(
                 subscription.Id,
                 Arg.Any<SubscriptionUpdateOptions>())
             .Returns(subscription);
 
-        // If milestone 2 is true, the updated invoice email is sent
-        _featureService
-            .IsEnabled(FeatureFlagKeys.PM23341_Milestone_2)
-            .Returns(true);
-
         var coupon = new Coupon { PercentOff = 20, Id = CouponIDs.Milestone2SubscriptionDiscount };
 
-        _stripeFacade.GetCoupon(CouponIDs.Milestone2SubscriptionDiscount).Returns(coupon);
+        _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount).Returns(coupon);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
         await _userRepository.Received(1).GetByIdAsync(_userId);
-        await _pricingClient.Received(1).GetAvailablePremiumPlan();
-        await _stripeFacade.Received(1).GetCoupon(CouponIDs.Milestone2SubscriptionDiscount);
-        await _stripeFacade.Received(1).UpdateSubscription(
+        await _pricingClient.Received(1).ListPremiumPlans();
+        await _stripeAdapter.Received(1).GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount);
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             Arg.Is("sub_123"),
             Arg.Is<SubscriptionUpdateOptions>(o =>
                 o.Items[0].Id == priceSubscriptionId &&
@@ -325,8 +335,8 @@ public class UpcomingInvoiceHandlerTests
         var plan = new FamiliesPlan();
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade
-            .GetCustomer(invoice.CustomerId, Arg.Any<CustomerGetOptions>())
+        _stripeAdapter
+            .GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>())
             .Returns(customer);
 
         _stripeEventUtilityService
@@ -415,8 +425,8 @@ public class UpcomingInvoiceHandlerTests
         var paymentMethod = new Card { Last4 = "4242", Brand = "visa" };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade
-            .GetCustomer(invoice.CustomerId, Arg.Any<CustomerGetOptions>())
+        _stripeAdapter
+            .GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>())
             .Returns(customer);
 
         _stripeEventUtilityService
@@ -440,8 +450,8 @@ public class UpcomingInvoiceHandlerTests
         _validateSponsorshipCommand
             .ValidateSponsorshipAsync(_organizationId)
             .Returns(false);
-        _stripeFacade
-            .GetInvoice(subscription.LatestInvoiceId)
+        _stripeAdapter
+            .GetInvoiceAsync(subscription.LatestInvoiceId)
             .Returns(invoice);
 
         _getPaymentMethodQuery.Run(organization).Returns(MaskedPaymentMethod.From(paymentMethod));
@@ -453,7 +463,7 @@ public class UpcomingInvoiceHandlerTests
         await _organizationRepository.Received(1).GetByIdAsync(_organizationId);
         _stripeEventUtilityService.Received(1).IsSponsoredSubscription(subscription);
         await _validateSponsorshipCommand.Received(1).ValidateSponsorshipAsync(_organizationId);
-        await _stripeFacade.Received(1).GetInvoice(Arg.Is("inv_latest"));
+        await _stripeAdapter.Received(1).GetInvoiceAsync(Arg.Is("inv_latest"));
 
         await _mailService.Received(1).SendInvoiceUpcoming(
             Arg.Is<IEnumerable<string>>(emails => emails.Contains("org@example.com")),
@@ -509,8 +519,8 @@ public class UpcomingInvoiceHandlerTests
         var paymentMethod = new Card { Last4 = "4242", Brand = "visa" };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade
-            .GetCustomer(invoice.CustomerId, Arg.Any<CustomerGetOptions>())
+        _stripeAdapter
+            .GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>())
             .Returns(customer);
 
         _stripeEventUtilityService
@@ -529,8 +539,8 @@ public class UpcomingInvoiceHandlerTests
             .IsSponsoredSubscription(subscription)
             .Returns(false);
 
-        _stripeFacade
-            .GetInvoice(subscription.LatestInvoiceId)
+        _stripeAdapter
+            .GetInvoiceAsync(subscription.LatestInvoiceId)
             .Returns(invoice);
 
         _getPaymentMethodQuery.Run(organization).Returns(MaskedPaymentMethod.From(paymentMethod));
@@ -553,6 +563,193 @@ public class UpcomingInvoiceHandlerTests
             Arg.Is<bool>(b => b == true));
     }
 
+    [Fact]
+    public async Task HandleAsync_WhenNonDirectTaxCountryOrganization_SetsReverseCharge()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123" };
+        var invoice = new Invoice { CustomerId = "cus_123", AmountDue = 0, Lines = new StripeList<InvoiceLineItem> { Data = [] } };
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            CustomerId = "cus_123",
+            Items = new StripeList<SubscriptionItem>(),
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
+            Customer = new Customer { Id = "cus_123" },
+            Metadata = new Dictionary<string, string>()
+        };
+        var customer = new Customer
+        {
+            Id = "cus_123",
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
+            Address = new Address { Country = "DE" },
+            TaxExempt = TaxExempt.None
+        };
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.EnterpriseAnnually
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService
+            .GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new EnterprisePlan(isAnnual: true));
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeAdapter.Received(1).UpdateCustomerAsync(
+            Arg.Is("cus_123"),
+            Arg.Is<CustomerUpdateOptions>(o => o.TaxExempt == TaxExempt.Reverse));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenUSOrganizationWithManualReverseCharge_CorrectsTaxExemptToNone()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123" };
+        var invoice = new Invoice { CustomerId = "cus_123", AmountDue = 0, Lines = new StripeList<InvoiceLineItem> { Data = [] } };
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            CustomerId = "cus_123",
+            Items = new StripeList<SubscriptionItem>(),
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
+            Customer = new Customer { Id = "cus_123" },
+            Metadata = new Dictionary<string, string>()
+        };
+        var customer = new Customer
+        {
+            Id = "cus_123",
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
+            Address = new Address { Country = "US" },
+            TaxExempt = TaxExempt.Reverse
+        };
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.EnterpriseAnnually
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService
+            .GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new EnterprisePlan(isAnnual: true));
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeAdapter.Received(1).UpdateCustomerAsync(
+            Arg.Is("cus_123"),
+            Arg.Is<CustomerUpdateOptions>(o => o.TaxExempt == TaxExempt.None));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenSwissOrganizationWithReverse_CorrectsTaxExemptToNone()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123" };
+        var invoice = new Invoice { CustomerId = "cus_123", AmountDue = 0, Lines = new StripeList<InvoiceLineItem> { Data = [] } };
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            CustomerId = "cus_123",
+            Items = new StripeList<SubscriptionItem>(),
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
+            Customer = new Customer { Id = "cus_123" },
+            Metadata = new Dictionary<string, string>()
+        };
+        var customer = new Customer
+        {
+            Id = "cus_123",
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
+            Address = new Address { Country = "CH" },
+            TaxExempt = TaxExempt.Reverse
+        };
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.EnterpriseAnnually
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService
+            .GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new EnterprisePlan(isAnnual: true));
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeAdapter.Received(1).UpdateCustomerAsync(
+            "cus_123",
+            Arg.Is<CustomerUpdateOptions>(options => options.TaxExempt == TaxExempt.None));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenOrganizationCustomerIsExempt_DoesNotUpdateTaxExemption()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123" };
+        var invoice = new Invoice { CustomerId = "cus_123", AmountDue = 0, Lines = new StripeList<InvoiceLineItem> { Data = [] } };
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            CustomerId = "cus_123",
+            Items = new StripeList<SubscriptionItem>(),
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
+            Customer = new Customer { Id = "cus_123" },
+            Metadata = new Dictionary<string, string>()
+        };
+        var customer = new Customer
+        {
+            Id = "cus_123",
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
+            Address = new Address { Country = "DE" },
+            TaxExempt = TaxExempt.Exempt
+        };
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.EnterpriseAnnually
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService
+            .GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new EnterprisePlan(isAnnual: true));
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeAdapter.DidNotReceive().UpdateCustomerAsync(
+            Arg.Any<string>(),
+            Arg.Any<CustomerUpdateOptions>());
+    }
 
     [Fact]
     public async Task HandleAsync_WhenValidProviderSubscription_SendsEmail()
@@ -591,7 +788,7 @@ public class UpcomingInvoiceHandlerTests
         var paymentMethod = new Card { Last4 = "4242", Brand = "visa" };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade.GetCustomer(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
 
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
@@ -606,13 +803,13 @@ public class UpcomingInvoiceHandlerTests
         // Assert
         await _providerRepository.Received(2).GetByIdAsync(_providerId);
 
-        // Verify tax exempt was set to reverse for non-US providers
-        await _stripeFacade.Received(1).UpdateCustomer(
+        // Verify tax exempt was set to reverse for non-direct-tax-country providers
+        await _stripeAdapter.Received(1).UpdateCustomerAsync(
             Arg.Is("cus_123"),
             Arg.Is<CustomerUpdateOptions>(o => o.TaxExempt == TaxExempt.Reverse));
 
         // Verify automatic tax was enabled
-        await _stripeFacade.Received(1).UpdateSubscription(
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             Arg.Is("sub_123"),
             Arg.Is<SubscriptionUpdateOptions>(o => o.AutomaticTax.Enabled == true));
 
@@ -625,6 +822,197 @@ public class UpcomingInvoiceHandlerTests
             Arg.Is<string>(s => s == subscription.CollectionMethod),
             Arg.Is<bool>(b => b == true),
             Arg.Is<string>(s => s == $"{paymentMethod.Brand} ending in {paymentMethod.Last4}"));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenSwissProviderWithReverse_CorrectsTaxExemptToNone()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123" };
+        var invoice = new Invoice
+        {
+            CustomerId = "cus_123",
+            AmountDue = 10000,
+            NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
+            Lines = new StripeList<InvoiceLineItem>
+            {
+                Data = [new() { Description = "Test Item" }]
+            }
+        };
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            CustomerId = "cus_123",
+            Items = new StripeList<SubscriptionItem>(),
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
+            Customer = new Customer { Id = "cus_123" },
+            Metadata = new Dictionary<string, string>(),
+            CollectionMethod = "charge_automatically"
+        };
+        var customer = new Customer
+        {
+            Id = "cus_123",
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
+            Address = new Address { Country = "CH" },
+            TaxExempt = TaxExempt.Reverse
+        };
+        var provider = new Provider { Id = _providerId, BillingEmail = "provider@example.com" };
+
+        var paymentMethod = new Card { Last4 = "4242", Brand = "visa" };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+
+        _stripeEventUtilityService
+            .GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(null, null, _providerId));
+
+        _providerRepository.GetByIdAsync(_providerId).Returns(provider);
+        _getPaymentMethodQuery.Run(provider).Returns(MaskedPaymentMethod.From(paymentMethod));
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _providerRepository.Received(2).GetByIdAsync(_providerId);
+
+        await _stripeAdapter.Received(1).UpdateCustomerAsync(
+            "cus_123",
+            Arg.Is<CustomerUpdateOptions>(options => options.TaxExempt == TaxExempt.None));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenProviderCustomerIsExempt_DoesNotUpdateTaxExemption()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123" };
+        var invoice = new Invoice
+        {
+            CustomerId = "cus_123",
+            AmountDue = 10000,
+            NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
+            Lines = new StripeList<InvoiceLineItem>
+            {
+                Data = [new() { Description = "Test Item" }]
+            }
+        };
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            CustomerId = "cus_123",
+            Items = new StripeList<SubscriptionItem>(),
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
+            Customer = new Customer { Id = "cus_123" },
+            Metadata = new Dictionary<string, string>(),
+            CollectionMethod = "charge_automatically"
+        };
+        var customer = new Customer
+        {
+            Id = "cus_123",
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
+            Address = new Address { Country = "DE" },
+            TaxExempt = TaxExempt.Exempt
+        };
+        var provider = new Provider { Id = _providerId, BillingEmail = "provider@example.com" };
+        var paymentMethod = new Card { Last4 = "4242", Brand = "visa" };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService
+            .GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(null, null, _providerId));
+        _providerRepository.GetByIdAsync(_providerId).Returns(provider);
+        _getPaymentMethodQuery.Run(provider).Returns(MaskedPaymentMethod.From(paymentMethod));
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeAdapter.DidNotReceive().UpdateCustomerAsync(
+            Arg.Any<string>(),
+            Arg.Any<CustomerUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenNonDirectTaxCountryProvider_SetsReverseCharge()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123" };
+        var invoice = new Invoice { CustomerId = "cus_123", AmountDue = 0, Lines = new StripeList<InvoiceLineItem> { Data = [] } };
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            CustomerId = "cus_123",
+            Items = new StripeList<SubscriptionItem>(),
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
+            Customer = new Customer { Id = "cus_123" },
+            Metadata = new Dictionary<string, string>(),
+            CollectionMethod = "charge_automatically"
+        };
+        var customer = new Customer
+        {
+            Id = "cus_123",
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
+            Address = new Address { Country = "DE" },
+            TaxExempt = TaxExempt.None
+        };
+        var provider = new Provider { Id = _providerId, BillingEmail = "provider@example.com" };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService
+            .GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(null, null, _providerId));
+        _providerRepository.GetByIdAsync(_providerId).Returns(provider);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeAdapter.Received(1).UpdateCustomerAsync(
+            Arg.Is("cus_123"),
+            Arg.Is<CustomerUpdateOptions>(o => o.TaxExempt == TaxExempt.Reverse));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenUSProviderWithManualReverseCharge_CorrectsTaxExemptToNone()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123" };
+        var invoice = new Invoice { CustomerId = "cus_123", AmountDue = 0, Lines = new StripeList<InvoiceLineItem> { Data = [] } };
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            CustomerId = "cus_123",
+            Items = new StripeList<SubscriptionItem>(),
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
+            Customer = new Customer { Id = "cus_123" },
+            Metadata = new Dictionary<string, string>(),
+            CollectionMethod = "charge_automatically"
+        };
+        var customer = new Customer
+        {
+            Id = "cus_123",
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
+            Address = new Address { Country = "US" },
+            TaxExempt = TaxExempt.Reverse
+        };
+        var provider = new Provider { Id = _providerId, BillingEmail = "provider@example.com" };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService
+            .GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(null, null, _providerId));
+        _providerRepository.GetByIdAsync(_providerId).Returns(provider);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeAdapter.Received(1).UpdateCustomerAsync(
+            Arg.Is("cus_123"),
+            Arg.Is<CustomerUpdateOptions>(o => o.TaxExempt == TaxExempt.None));
     }
 
     [Fact]
@@ -670,6 +1058,14 @@ public class UpcomingInvoiceHandlerTests
             Seat = new Purchasable { Price = 10M, StripePriceId = priceId },
             Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
         };
+        var oldPlan = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            LegacyYear = 2023,
+            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
         var customer = new Customer
         {
             Id = customerId,
@@ -677,7 +1073,7 @@ public class UpcomingInvoiceHandlerTests
         };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade.GetCustomer(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
 
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
@@ -685,15 +1081,11 @@ public class UpcomingInvoiceHandlerTests
 
         _userRepository.GetByIdAsync(_userId).Returns(user);
 
-        _featureService
-            .IsEnabled(FeatureFlagKeys.PM23341_Milestone_2)
-            .Returns(true);
-
-        _pricingClient.GetAvailablePremiumPlan().Returns(plan);
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
 
         // Setup exception when updating subscription
-        _stripeFacade
-            .UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+        _stripeAdapter
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .ThrowsAsync(new Exception());
 
         // Act
@@ -753,8 +1145,8 @@ public class UpcomingInvoiceHandlerTests
         };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade
-            .GetCustomer(invoice.CustomerId, Arg.Any<CustomerGetOptions>())
+        _stripeAdapter
+            .GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>())
             .Returns(customer);
 
         _stripeEventUtilityService
@@ -811,8 +1203,8 @@ public class UpcomingInvoiceHandlerTests
         };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade
-            .GetCustomer(invoice.CustomerId, Arg.Any<CustomerGetOptions>())
+        _stripeAdapter
+            .GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>())
             .Returns(customer);
 
         _stripeEventUtilityService
@@ -867,8 +1259,8 @@ public class UpcomingInvoiceHandlerTests
         };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade
-            .GetCustomer(invoice.CustomerId, Arg.Any<CustomerGetOptions>())
+        _stripeAdapter
+            .GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>())
             .Returns(customer);
 
         _stripeEventUtilityService
@@ -926,8 +1318,8 @@ public class UpcomingInvoiceHandlerTests
         };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade
-            .GetCustomer(invoice.CustomerId, Arg.Any<CustomerGetOptions>())
+        _stripeAdapter
+            .GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>())
             .Returns(customer);
 
         _stripeEventUtilityService
@@ -1019,22 +1411,21 @@ public class UpcomingInvoiceHandlerTests
         var coupon = new Coupon { PercentOff = 25, Id = CouponIDs.Milestone3SubscriptionDiscount };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
-        _stripeFacade.GetCoupon(CouponIDs.Milestone3SubscriptionDiscount).Returns(coupon);
+        _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetCouponAsync(CouponIDs.Milestone3SubscriptionDiscount).Returns(coupon);
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
-        _featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
         _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        await _stripeFacade.Received(1).UpdateSubscription(
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             Arg.Is(subscriptionId),
             Arg.Is<SubscriptionUpdateOptions>(o =>
                 o.Items.Count == 2 &&
@@ -1046,7 +1437,7 @@ public class UpcomingInvoiceHandlerTests
                 o.Discounts[0].Coupon == CouponIDs.Milestone3SubscriptionDiscount &&
                 o.ProrationBehavior == ProrationBehavior.None));
 
-        await _stripeFacade.Received(1).GetCoupon(CouponIDs.Milestone3SubscriptionDiscount);
+        await _stripeAdapter.Received(1).GetCouponAsync(CouponIDs.Milestone3SubscriptionDiscount);
 
         await _organizationRepository.Received(1).ReplaceAsync(
             Arg.Is<Organization>(org =>
@@ -1059,11 +1450,16 @@ public class UpcomingInvoiceHandlerTests
         await _mailer.Received(1).SendEmail(
             Arg.Is<Families2019RenewalMail>(email =>
                 email.ToEmails.Contains("org@example.com") &&
-                email.Subject == "Your Bitwarden Families renewal is updating" &&
+                email.Subject == "Your Bitwarden Families subscription is updating" &&
                 email.View.BaseMonthlyRenewalPrice == (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US")) &&
                 email.View.BaseAnnualRenewalPrice == familiesPlan.PasswordManager.BasePrice.ToString("C", new CultureInfo("en-US")) &&
                 email.View.DiscountAmount == $"{coupon.PercentOff}%"
                 ));
+
+        // Families plan is excluded from tax exempt alignment
+        await _stripeAdapter.DidNotReceive().UpdateCustomerAsync(
+            Arg.Any<string>(),
+            Arg.Any<CustomerUpdateOptions>());
     }
 
     [Fact]
@@ -1123,21 +1519,20 @@ public class UpcomingInvoiceHandlerTests
         };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
-        _featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
         _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        await _stripeFacade.Received(1).UpdateSubscription(
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             Arg.Is(subscriptionId),
             Arg.Is<SubscriptionUpdateOptions>(o =>
                 o.Items.Count == 1 &&
@@ -1154,83 +1549,11 @@ public class UpcomingInvoiceHandlerTests
                 org.Plan == familiesPlan.Name &&
                 org.UsersGetPremium == familiesPlan.UsersGetPremium &&
                 org.Seats == familiesPlan.PasswordManager.BaseSeats));
-    }
 
-    [Fact]
-    public async Task HandleAsync_WhenMilestone3Disabled_AndFamilies2019Plan_DoesNotUpdateSubscription()
-    {
-        // Arrange
-        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
-        var customerId = "cus_123";
-        var subscriptionId = "sub_123";
-        var passwordManagerItemId = "si_pm_123";
-
-        var invoice = new Invoice
-        {
-            CustomerId = customerId,
-            AmountDue = 40000,
-            NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
-            Lines = new StripeList<InvoiceLineItem>
-            {
-                Data = [new() { Description = "Test Item" }]
-            }
-        };
-
-        var families2019Plan = new Families2019Plan();
-
-        var subscription = new Subscription
-        {
-            Id = subscriptionId,
-            CustomerId = customerId,
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data =
-                [
-                    new()
-                    {
-                        Id = passwordManagerItemId,
-                        Price = new Price { Id = families2019Plan.PasswordManager.StripePlanId }
-                    }
-                ]
-            },
-            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
-            Metadata = new Dictionary<string, string>()
-        };
-
-        var customer = new Customer
-        {
-            Id = customerId,
-            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
-            Address = new Address { Country = "US" }
-        };
-
-        var organization = new Organization
-        {
-            Id = _organizationId,
-            BillingEmail = "org@example.com",
-            PlanType = PlanType.FamiliesAnnually2019
-        };
-
-        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
-        _stripeEventUtilityService
-            .GetIdsFromMetadata(subscription.Metadata)
-            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
-        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
-        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
-        _featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(false);
-        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
-
-        // Act
-        await _sut.HandleAsync(parsedEvent);
-
-        // Assert - should not update subscription or organization when feature flag is disabled
-        await _stripeFacade.DidNotReceive().UpdateSubscription(
+        // Families plan is excluded from tax exempt alignment
+        await _stripeAdapter.DidNotReceive().UpdateCustomerAsync(
             Arg.Any<string>(),
-            Arg.Is<SubscriptionUpdateOptions>(o => o.Discounts != null));
-
-        await _organizationRepository.DidNotReceive().ReplaceAsync(
-            Arg.Is<Organization>(org => org.PlanType == PlanType.FamiliesAnnually));
+            Arg.Any<CustomerUpdateOptions>());
     }
 
     [Fact]
@@ -1284,24 +1607,27 @@ public class UpcomingInvoiceHandlerTests
         };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
-        _featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
         _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
 
         // Assert - should not update subscription when not on FamiliesAnnually2019 plan
-        await _stripeFacade.DidNotReceive().UpdateSubscription(
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
             Arg.Any<string>(),
             Arg.Is<SubscriptionUpdateOptions>(o => o.Discounts != null));
 
         await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+        // Families plan is excluded from tax exempt alignment
+        await _stripeAdapter.DidNotReceive().UpdateCustomerAsync(
+            Arg.Any<string>(),
+            Arg.Any<CustomerUpdateOptions>());
     }
 
     [Fact]
@@ -1355,13 +1681,12 @@ public class UpcomingInvoiceHandlerTests
         };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
-        _featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
         _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
 
         // Act
@@ -1378,7 +1703,7 @@ public class UpcomingInvoiceHandlerTests
             Arg.Any<Func<object, Exception, string>>());
 
         // Should not update subscription or organization when password manager item not found
-        await _stripeFacade.DidNotReceive().UpdateSubscription(
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
             Arg.Any<string>(),
             Arg.Is<SubscriptionUpdateOptions>(o => o.Discounts != null));
 
@@ -1442,19 +1767,18 @@ public class UpcomingInvoiceHandlerTests
         };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
-        _featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
         _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
 
         // Simulate update failure
-        _stripeFacade
-            .UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+        _stripeAdapter
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .ThrowsAsync(new Exception("Stripe API error"));
 
         // Act
@@ -1540,17 +1864,16 @@ public class UpcomingInvoiceHandlerTests
         };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
-        _featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
         _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
-        _stripeFacade.GetCoupon(CouponIDs.Milestone3SubscriptionDiscount).Returns((Coupon)null);
-        _stripeFacade.UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+        _stripeAdapter.GetCouponAsync(CouponIDs.Milestone3SubscriptionDiscount).Returns((Coupon)null);
+        _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(subscription);
 
         // Act
@@ -1640,17 +1963,16 @@ public class UpcomingInvoiceHandlerTests
         };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
-        _featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
         _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
-        _stripeFacade.GetCoupon(CouponIDs.Milestone3SubscriptionDiscount).Returns(coupon);
-        _stripeFacade.UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+        _stripeAdapter.GetCouponAsync(CouponIDs.Milestone3SubscriptionDiscount).Returns(coupon);
+        _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(subscription);
 
         // Act
@@ -1744,22 +2066,21 @@ public class UpcomingInvoiceHandlerTests
         var coupon = new Coupon { PercentOff = 25, Id = CouponIDs.Milestone3SubscriptionDiscount };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
-        _stripeFacade.GetCoupon(CouponIDs.Milestone3SubscriptionDiscount).Returns(coupon);
+        _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetCouponAsync(CouponIDs.Milestone3SubscriptionDiscount).Returns(coupon);
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
-        _featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
         _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        await _stripeFacade.Received(1).UpdateSubscription(
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             Arg.Is(subscriptionId),
             Arg.Is<SubscriptionUpdateOptions>(o =>
                 o.Items.Count == 2 &&
@@ -1771,7 +2092,7 @@ public class UpcomingInvoiceHandlerTests
                 o.Discounts[0].Coupon == CouponIDs.Milestone3SubscriptionDiscount &&
                 o.ProrationBehavior == ProrationBehavior.None));
 
-        await _stripeFacade.Received(1).GetCoupon(CouponIDs.Milestone3SubscriptionDiscount);
+        await _stripeAdapter.Received(1).GetCouponAsync(CouponIDs.Milestone3SubscriptionDiscount);
 
         await _organizationRepository.Received(1).ReplaceAsync(
             Arg.Is<Organization>(org =>
@@ -1784,7 +2105,7 @@ public class UpcomingInvoiceHandlerTests
         await _mailer.Received(1).SendEmail(
             Arg.Is<Families2019RenewalMail>(email =>
                 email.ToEmails.Contains("org@example.com") &&
-                email.Subject == "Your Bitwarden Families renewal is updating" &&
+                email.Subject == "Your Bitwarden Families subscription is updating" &&
                 email.View.BaseMonthlyRenewalPrice == (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US")) &&
                 email.View.BaseAnnualRenewalPrice == familiesPlan.PasswordManager.BasePrice.ToString("C", new CultureInfo("en-US")) &&
                 email.View.DiscountAmount == $"{coupon.PercentOff}%"
@@ -1858,22 +2179,21 @@ public class UpcomingInvoiceHandlerTests
         var coupon = new Coupon { PercentOff = 25, Id = CouponIDs.Milestone3SubscriptionDiscount };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
-        _stripeFacade.GetCoupon(CouponIDs.Milestone3SubscriptionDiscount).Returns(coupon);
+        _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetCouponAsync(CouponIDs.Milestone3SubscriptionDiscount).Returns(coupon);
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
-        _featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
         _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        await _stripeFacade.Received(1).UpdateSubscription(
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             Arg.Is(subscriptionId),
             Arg.Is<SubscriptionUpdateOptions>(o =>
                 o.Items.Count == 2 &&
@@ -1885,7 +2205,7 @@ public class UpcomingInvoiceHandlerTests
                 o.Discounts[0].Coupon == CouponIDs.Milestone3SubscriptionDiscount &&
                 o.ProrationBehavior == ProrationBehavior.None));
 
-        await _stripeFacade.Received(1).GetCoupon(CouponIDs.Milestone3SubscriptionDiscount);
+        await _stripeAdapter.Received(1).GetCouponAsync(CouponIDs.Milestone3SubscriptionDiscount);
 
         await _organizationRepository.Received(1).ReplaceAsync(
             Arg.Is<Organization>(org =>
@@ -1898,7 +2218,7 @@ public class UpcomingInvoiceHandlerTests
         await _mailer.Received(1).SendEmail(
             Arg.Is<Families2019RenewalMail>(email =>
                 email.ToEmails.Contains("org@example.com") &&
-                email.Subject == "Your Bitwarden Families renewal is updating" &&
+                email.Subject == "Your Bitwarden Families subscription is updating" &&
                 email.View.BaseMonthlyRenewalPrice == (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US")) &&
                 email.View.BaseAnnualRenewalPrice == familiesPlan.PasswordManager.BasePrice.ToString("C", new CultureInfo("en-US")) &&
                 email.View.DiscountAmount == $"{coupon.PercentOff}%"
@@ -1979,22 +2299,21 @@ public class UpcomingInvoiceHandlerTests
         var coupon = new Coupon { PercentOff = 25, Id = CouponIDs.Milestone3SubscriptionDiscount };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
-        _stripeFacade.GetCoupon(CouponIDs.Milestone3SubscriptionDiscount).Returns(coupon);
+        _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetCouponAsync(CouponIDs.Milestone3SubscriptionDiscount).Returns(coupon);
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
-        _featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
         _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        await _stripeFacade.Received(1).UpdateSubscription(
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             Arg.Is(subscriptionId),
             Arg.Is<SubscriptionUpdateOptions>(o =>
                 o.Items.Count == 3 &&
@@ -2008,7 +2327,7 @@ public class UpcomingInvoiceHandlerTests
                 o.Discounts[0].Coupon == CouponIDs.Milestone3SubscriptionDiscount &&
                 o.ProrationBehavior == ProrationBehavior.None));
 
-        await _stripeFacade.Received(1).GetCoupon(CouponIDs.Milestone3SubscriptionDiscount);
+        await _stripeAdapter.Received(1).GetCouponAsync(CouponIDs.Milestone3SubscriptionDiscount);
 
         await _organizationRepository.Received(1).ReplaceAsync(
             Arg.Is<Organization>(org =>
@@ -2021,7 +2340,7 @@ public class UpcomingInvoiceHandlerTests
         await _mailer.Received(1).SendEmail(
             Arg.Is<Families2019RenewalMail>(email =>
                 email.ToEmails.Contains("org@example.com") &&
-                email.Subject == "Your Bitwarden Families renewal is updating" &&
+                email.Subject == "Your Bitwarden Families subscription is updating" &&
                 email.View.BaseMonthlyRenewalPrice == (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US")) &&
                 email.View.BaseAnnualRenewalPrice == familiesPlan.PasswordManager.BasePrice.ToString("C", new CultureInfo("en-US")) &&
                 email.View.DiscountAmount == $"{coupon.PercentOff}%"
@@ -2085,21 +2404,20 @@ public class UpcomingInvoiceHandlerTests
         };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025Plan);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
-        _featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
         _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        await _stripeFacade.Received(1).UpdateSubscription(
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             Arg.Is(subscriptionId),
             Arg.Is<SubscriptionUpdateOptions>(o =>
                 o.Items.Count == 1 &&
@@ -2121,83 +2439,6 @@ public class UpcomingInvoiceHandlerTests
                 email.ToEmails.Contains("org@example.com") &&
                 email.Subject == "Your Bitwarden Families renewal is updating" &&
                 email.View.MonthlyRenewalPrice == (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US"))));
-    }
-
-    [Fact]
-    public async Task HandleAsync_WhenMilestone3Disabled_AndFamilies2025Plan_DoesNotUpdateSubscription()
-    {
-        // Arrange
-        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
-        var customerId = "cus_123";
-        var subscriptionId = "sub_123";
-        var passwordManagerItemId = "si_pm_123";
-
-        var invoice = new Invoice
-        {
-            CustomerId = customerId,
-            AmountDue = 40000,
-            NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
-            Lines = new StripeList<InvoiceLineItem>
-            {
-                Data = [new() { Description = "Test Item" }]
-            }
-        };
-
-        var families2025Plan = new Families2025Plan();
-
-        var subscription = new Subscription
-        {
-            Id = subscriptionId,
-            CustomerId = customerId,
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data =
-                [
-                    new()
-                    {
-                        Id = passwordManagerItemId,
-                        Price = new Price { Id = families2025Plan.PasswordManager.StripePlanId }
-                    }
-                ]
-            },
-            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
-            Metadata = new Dictionary<string, string>()
-        };
-
-        var customer = new Customer
-        {
-            Id = customerId,
-            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
-            Address = new Address { Country = "US" }
-        };
-
-        var organization = new Organization
-        {
-            Id = _organizationId,
-            BillingEmail = "org@example.com",
-            PlanType = PlanType.FamiliesAnnually2025
-        };
-
-        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
-        _stripeEventUtilityService
-            .GetIdsFromMetadata(subscription.Metadata)
-            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
-        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
-        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025Plan);
-        _featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(false);
-        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
-
-        // Act
-        await _sut.HandleAsync(parsedEvent);
-
-        // Assert - should not update subscription or organization when feature flag is disabled
-        await _stripeFacade.DidNotReceive().UpdateSubscription(
-            Arg.Any<string>(),
-            Arg.Any<SubscriptionUpdateOptions>());
-
-        await _organizationRepository.DidNotReceive().ReplaceAsync(
-            Arg.Is<Organization>(org => org.PlanType == PlanType.FamiliesAnnually));
     }
 
     #region Premium Renewal Email Tests
@@ -2239,6 +2480,14 @@ public class UpcomingInvoiceHandlerTests
             Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
             Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
         };
+        var oldPlan = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            LegacyYear = 2023,
+            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
         var customer = new Customer
         {
             Id = customerId,
@@ -2247,14 +2496,13 @@ public class UpcomingInvoiceHandlerTests
         };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
-        _pricingClient.GetAvailablePremiumPlan().Returns(plan);
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
-        _stripeFacade.GetCoupon(CouponIDs.Milestone2SubscriptionDiscount).Returns((Coupon)null);
-        _stripeFacade.UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
+        _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount).Returns((Coupon)null);
+        _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(subscription);
 
         // Act
@@ -2318,6 +2566,14 @@ public class UpcomingInvoiceHandlerTests
             Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
             Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
         };
+        var oldPlan = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            LegacyYear = 2023,
+            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
         var customer = new Customer
         {
             Id = customerId,
@@ -2331,14 +2587,13 @@ public class UpcomingInvoiceHandlerTests
         };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
-        _pricingClient.GetAvailablePremiumPlan().Returns(plan);
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
-        _stripeFacade.GetCoupon(CouponIDs.Milestone2SubscriptionDiscount).Returns(coupon);
-        _stripeFacade.UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
+        _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount).Returns(coupon);
+        _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(subscription);
 
         // Act
@@ -2402,6 +2657,14 @@ public class UpcomingInvoiceHandlerTests
             Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
             Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
         };
+        var oldPlan = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            LegacyYear = 2023,
+            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
         var customer = new Customer
         {
             Id = customerId,
@@ -2415,14 +2678,13 @@ public class UpcomingInvoiceHandlerTests
         };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
-        _pricingClient.GetAvailablePremiumPlan().Returns(plan);
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
-        _stripeFacade.GetCoupon(CouponIDs.Milestone2SubscriptionDiscount).Returns(coupon);
-        _stripeFacade.UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
+        _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount).Returns(coupon);
+        _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(subscription);
 
         // Act
@@ -2484,6 +2746,14 @@ public class UpcomingInvoiceHandlerTests
             Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
             Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
         };
+        var oldPlan = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            LegacyYear = 2023,
+            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
         var customer = new Customer
         {
             Id = customerId,
@@ -2492,15 +2762,14 @@ public class UpcomingInvoiceHandlerTests
         };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
-        _pricingClient.GetAvailablePremiumPlan().Returns(plan);
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
-        _stripeFacade.GetCoupon(CouponIDs.Milestone2SubscriptionDiscount)
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
+        _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount)
             .ThrowsAsync(new StripeException("Stripe API error"));
-        _stripeFacade.UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+        _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(subscription);
 
         // Act
@@ -2527,4 +2796,488 @@ public class UpcomingInvoiceHandlerTests
     }
 
     #endregion
+
+    #region Deferred Price Migration (PM-32645)
+
+    [Fact]
+    public async Task HandleAsync_Premium_DeferEnabled_CallsScheduler()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var customerId = "cus_123";
+        var subscriptionId = "sub_123";
+
+        var invoice = new Invoice { CustomerId = customerId };
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            CustomerId = customerId,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new() { Id = "si_premium_123", Price = new Price { Id = Prices.PremiumAnnually }, Quantity = 1 }
+                ]
+            },
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
+            Metadata = new Dictionary<string, string>()
+        };
+        var user = new User { Id = _userId, Email = "user@example.com", Premium = true };
+        var plan = new PremiumPlan
+        {
+            Name = "Premium",
+            Available = true,
+            LegacyYear = null,
+            Seat = new Purchasable { Price = 10M, StripePriceId = "premium-annually-2025" },
+            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
+        var oldPlan = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            LegacyYear = 2023,
+            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
+        var customer = new Customer
+        {
+            Id = customerId,
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] }
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
+        _userRepository.GetByIdAsync(_userId).Returns(user);
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+        _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount)
+            .Returns(new Coupon { PercentOff = 20, Id = CouponIDs.Milestone2SubscriptionDiscount });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _priceIncreaseScheduler.Received(1).Schedule(subscription);
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_Families_DeferEnabled_CallsScheduler()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var customerId = "cus_123";
+        var subscriptionId = "sub_123";
+
+        var families2019Plan = new Families2019Plan();
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            CustomerId = customerId,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new()
+                    {
+                        Id = "si_pm_123",
+                        Price = new Price { Id = families2019Plan.PasswordManager.StripePlanId },
+                        Quantity = 1
+                    }
+                ]
+            },
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
+            Metadata = new Dictionary<string, string>()
+        };
+        var invoice = new Invoice { CustomerId = customerId };
+        var customer = new Customer
+        {
+            Id = customerId,
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
+            Address = new Address { Country = "US" }
+        };
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.FamiliesAnnually2019
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(new FamiliesPlan());
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+        _stripeAdapter.GetCouponAsync(CouponIDs.Milestone3SubscriptionDiscount)
+            .Returns(new Coupon { PercentOff = 25, Id = CouponIDs.Milestone3SubscriptionDiscount });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _priceIncreaseScheduler.Received(1).Schedule(subscription);
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    #endregion
+
+    #region Schedule-Aware Tax Handling
+
+    [Fact]
+    public async Task HandleAsync_WhenOrganizationTaxNotEnabled_FlagOn_SchedulePresent_UpdatesSchedulePhasesAndDefaultSettings()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var invoice = new Invoice { CustomerId = "cus_123", Lines = new StripeList<InvoiceLineItem> { Data = [] } };
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            CustomerId = "cus_123",
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = false },
+            Items = new StripeList<SubscriptionItem> { Data = [] },
+            Metadata = new Dictionary<string, string> { { "organizationId", _organizationId.ToString() } }
+        };
+        var customer = new Customer
+        {
+            Id = "cus_123",
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
+            Address = new Address { Country = "US" }
+        };
+        var organization = new Organization { Id = _organizationId, PlanType = PlanType.TeamsAnnually, BillingEmail = "test@test.com" };
+
+        var phase1Start = DateTime.UtcNow.AddDays(-10);
+        var phase1End = DateTime.UtcNow.AddDays(5);
+        var phase2End = DateTime.UtcNow.AddDays(370);
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new TeamsPlan(isAnnual: true));
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data =
+                [
+                    new SubscriptionSchedule
+                    {
+                        Id = "sub_sched_123",
+                        SubscriptionId = "sub_123",
+                        Status = SubscriptionScheduleStatus.Active,
+                        Phases = new List<SubscriptionSchedulePhase>
+                        {
+                            new()
+                            {
+                                StartDate = phase1Start,
+                                EndDate = phase1End,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_old", Quantity = 1 }],
+                                Discounts = [],
+                                ProrationBehavior = "none"
+                            },
+                            new()
+                            {
+                                StartDate = phase1End,
+                                EndDate = phase2End,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_new", Quantity = 1 }],
+                                Discounts = [new SubscriptionSchedulePhaseDiscount { CouponId = "milestone-coupon" }],
+                                ProrationBehavior = "none"
+                            }
+                        }
+                    }
+                ]
+            });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — schedule updated with phases and default_settings
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            Arg.Is("sub_sched_123"),
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.DefaultSettings.AutomaticTax.Enabled == true &&
+                o.Phases.Count == 2 &&
+                o.Phases[0].AutomaticTax.Enabled == true &&
+                o.Phases[0].Items[0].Price == "price_old" &&
+                o.Phases[1].AutomaticTax.Enabled == true &&
+                o.Phases[1].Items[0].Price == "price_new" &&
+                o.Phases[1].Discounts[0].Coupon == "milestone-coupon"));
+
+        // Assert — subscription NOT updated directly for tax
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Is("sub_123"), Arg.Is<SubscriptionUpdateOptions>(o => o.AutomaticTax != null));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenOrganizationTaxNotEnabled_FlagOn_NoSchedule_UpdatesSubscriptionDirectly()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var invoice = new Invoice { CustomerId = "cus_123", Lines = new StripeList<InvoiceLineItem> { Data = [] } };
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            CustomerId = "cus_123",
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = false },
+            Items = new StripeList<SubscriptionItem> { Data = [] },
+            Metadata = new Dictionary<string, string> { { "organizationId", _organizationId.ToString() } }
+        };
+        var customer = new Customer
+        {
+            Id = "cus_123",
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
+            Address = new Address { Country = "US" }
+        };
+        var organization = new Organization { Id = _organizationId, PlanType = PlanType.TeamsAnnually, BillingEmail = "test@test.com" };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new TeamsPlan(isAnnual: true));
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = new List<SubscriptionSchedule>() });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — subscription updated directly
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            Arg.Is("sub_123"),
+            Arg.Is<SubscriptionUpdateOptions>(o => o.AutomaticTax.Enabled == true));
+
+        // Assert — schedule NOT updated
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionScheduleAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenPremiumUserTaxNotEnabled_FlagOn_SchedulePresent_UpdatesSchedulePhasesAndDefaultSettings()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var invoice = new Invoice { CustomerId = "cus_123", Lines = new StripeList<InvoiceLineItem> { Data = [] } };
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            CustomerId = "cus_123",
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = false },
+            Items = new StripeList<SubscriptionItem> { Data = [] },
+            Metadata = new Dictionary<string, string> { { "userId", _userId.ToString() } }
+        };
+        var customer = new Customer
+        {
+            Id = "cus_123",
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
+            Tax = new CustomerTax { AutomaticTax = AutomaticTaxStatus.Supported }
+        };
+        var user = new User { Id = _userId, Email = "test@test.com", Premium = true };
+
+        var phase1Start = DateTime.UtcNow.AddDays(-10);
+        var phase1End = DateTime.UtcNow.AddDays(5);
+        var phase2End = DateTime.UtcNow.AddDays(370);
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
+        _userRepository.GetByIdAsync(_userId).Returns(user);
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data =
+                [
+                    new SubscriptionSchedule
+                    {
+                        Id = "sub_sched_456",
+                        SubscriptionId = "sub_123",
+                        Status = SubscriptionScheduleStatus.Active,
+                        Phases = new List<SubscriptionSchedulePhase>
+                        {
+                            new()
+                            {
+                                StartDate = phase1Start,
+                                EndDate = phase1End,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "premium-annually", Quantity = 1 }],
+                                Discounts = [],
+                                ProrationBehavior = "none"
+                            },
+                            new()
+                            {
+                                StartDate = phase1End,
+                                EndDate = phase2End,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "premium-annually-new", Quantity = 1 }],
+                                Discounts = [new SubscriptionSchedulePhaseDiscount { CouponId = "milestone-2c" }],
+                                ProrationBehavior = "none"
+                            }
+                        }
+                    }
+                ]
+            });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — schedule updated with phases and default_settings
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            Arg.Is("sub_sched_456"),
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.DefaultSettings.AutomaticTax.Enabled == true &&
+                o.Phases.Count == 2 &&
+                o.Phases[0].AutomaticTax.Enabled == true &&
+                o.Phases[0].Items[0].Price == "premium-annually" &&
+                o.Phases[1].AutomaticTax.Enabled == true &&
+                o.Phases[1].Items[0].Price == "premium-annually-new" &&
+                o.Phases[1].Discounts[0].Coupon == "milestone-2c"));
+
+        // Assert — subscription NOT updated directly for tax
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Is("sub_123"), Arg.Is<SubscriptionUpdateOptions>(o => o.AutomaticTax != null));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenPremiumUserTaxNotEnabled_FlagOn_NoSchedule_UpdatesSubscriptionDirectly()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var invoice = new Invoice { CustomerId = "cus_123", Lines = new StripeList<InvoiceLineItem> { Data = [] } };
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            CustomerId = "cus_123",
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = false },
+            Items = new StripeList<SubscriptionItem> { Data = [] },
+            Metadata = new Dictionary<string, string> { { "userId", _userId.ToString() } }
+        };
+        var customer = new Customer
+        {
+            Id = "cus_123",
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
+            Tax = new CustomerTax { AutomaticTax = AutomaticTaxStatus.Supported }
+        };
+        var user = new User { Id = _userId, Email = "test@test.com", Premium = true };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
+        _userRepository.GetByIdAsync(_userId).Returns(user);
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = new List<SubscriptionSchedule>() });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — subscription updated directly
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            Arg.Is("sub_123"),
+            Arg.Is<SubscriptionUpdateOptions>(o => o.AutomaticTax.Enabled == true));
+
+        // Assert — schedule NOT updated
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionScheduleAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenTaxNotEnabled_FlagOn_Phase2Active_SkipsCompletedPhaseAndClearsConsumedDiscounts()
+    {
+        // Arrange — Phase 1 has ended, Phase 2 is now the active phase.
+        // Phase 2's one-time migration discount was consumed at transition and must not be re-included.
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var invoice = new Invoice { CustomerId = "cus_123", Lines = new StripeList<InvoiceLineItem> { Data = [] } };
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            CustomerId = "cus_123",
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = false },
+            Items = new StripeList<SubscriptionItem> { Data = [] },
+            Metadata = new Dictionary<string, string> { { "userId", _userId.ToString() } }
+        };
+        var customer = new Customer
+        {
+            Id = "cus_123",
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
+            Tax = new CustomerTax { AutomaticTax = AutomaticTaxStatus.Supported }
+        };
+        var user = new User { Id = _userId, Email = "test@test.com", Premium = true };
+
+        // Phase 1 ended yesterday, Phase 2 active now
+        var phase1Start = DateTime.UtcNow.AddDays(-375);
+        var phase1End = DateTime.UtcNow.AddDays(-1);
+        var phase2End = DateTime.UtcNow.AddDays(364);
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
+        _userRepository.GetByIdAsync(_userId).Returns(user);
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data =
+                [
+                    new SubscriptionSchedule
+                    {
+                        Id = "sub_sched_789",
+                        SubscriptionId = "sub_123",
+                        Status = SubscriptionScheduleStatus.Active,
+                        Phases = new List<SubscriptionSchedulePhase>
+                        {
+                            new()
+                            {
+                                StartDate = phase1Start,
+                                EndDate = phase1End,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_old", Quantity = 1 }],
+                                Discounts = [],
+                                ProrationBehavior = "none"
+                            },
+                            new()
+                            {
+                                StartDate = phase1End,
+                                EndDate = phase2End,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_new", Quantity = 1 }],
+                                Discounts = [new SubscriptionSchedulePhaseDiscount { CouponId = "milestone-2c" }],
+                                ProrationBehavior = "none"
+                            }
+                        }
+                    }
+                ]
+            });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — schedule updated: Phase 1 skipped, Phase 2 included with cleared discounts
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            Arg.Is("sub_sched_789"),
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.DefaultSettings.AutomaticTax.Enabled == true &&
+                o.Phases.Count == 1 &&
+                o.Phases[0].AutomaticTax.Enabled == true &&
+                o.Phases[0].Items[0].Price == "price_new" &&
+                o.Phases[0].Discounts.Count == 0));
+    }
+
+    #endregion
 }
+
