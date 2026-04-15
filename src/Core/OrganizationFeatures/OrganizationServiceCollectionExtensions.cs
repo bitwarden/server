@@ -4,6 +4,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Import;
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections;
@@ -64,6 +66,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationApiKeyCommandsQueries();
         services.AddOrganizationCollectionCommands();
         services.AddOrganizationGroupCommands();
+        services.AddOrganizationInviteLinkCommands();
         services.AddOrganizationDomainCommandsQueries();
         services.AddOrganizationSignUpCommands();
         services.AddOrganizationDeleteCommands();
@@ -185,6 +188,11 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<ICreateGroupCommand, CreateGroupCommand>();
         services.AddScoped<IDeleteGroupCommand, DeleteGroupCommand>();
         services.AddScoped<IUpdateGroupCommand, UpdateGroupCommand>();
+    }
+
+    private static void AddOrganizationInviteLinkCommands(this IServiceCollection services)
+    {
+        services.AddScoped<ICreateOrganizationInviteLinkCommand, CreateOrganizationInviteLinkCommand>();
     }
 
     private static void AddOrganizationDomainCommandsQueries(this IServiceCollection services)
