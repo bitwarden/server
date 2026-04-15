@@ -1,0 +1,201 @@
+﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
+using NSubstitute;
+using Xunit;
+
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.InviteLinks;
+
+[SutProviderCustomize]
+public class CreateOrganizationInviteLinkCommandTests
+{
+    [Theory, BitAutoData]
+    public async Task CreateAsync_WithValidInput_Success(
+        Guid organizationId,
+        SutProvider<CreateOrganizationInviteLinkCommand> sutProvider)
+    {
+        var request = new CreateOrganizationInviteLinkRequest
+        {
+            OrganizationId = organizationId,
+            AllowedDomains = ["acme.com", "example.com"],
+            EncryptedInviteKey = "encrypted-key-value",
+        };
+
+        var result = await sutProvider.Sut.CreateAsync(request);
+
+        Assert.True(result.IsSuccess);
+        var link = result.AsSuccess;
+        Assert.Equal(organizationId, link.OrganizationId);
+        Assert.NotEqual(Guid.Empty, link.Id);
+        Assert.NotEqual(Guid.Empty, link.Code);
+        Assert.Equal(request.EncryptedInviteKey, link.EncryptedInviteKey);
+
+        var deserializedDomains = JsonSerializer.Deserialize<List<string>>(link.AllowedDomains);
+        Assert.NotNull(deserializedDomains);
+        Assert.Equal(2, deserializedDomains.Count);
+        Assert.Contains("acme.com", deserializedDomains);
+        Assert.Contains("example.com", deserializedDomains);
+
+        await sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
+            .Received(1)
+            .CreateAsync(link);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_WithExistingLinkForOrg_ReturnsConflictError(
+        Guid organizationId,
+        OrganizationInviteLink existingLink,
+        SutProvider<CreateOrganizationInviteLinkCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
+            .GetByOrganizationIdAsync(organizationId)
+            .Returns(existingLink);
+
+        var request = new CreateOrganizationInviteLinkRequest
+        {
+            OrganizationId = organizationId,
+            AllowedDomains = ["acme.com"],
+            EncryptedInviteKey = "encrypted-key",
+        };
+
+        var result = await sutProvider.Sut.CreateAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<InviteLinkAlreadyExists>(result.AsError);
+
+        await sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_WithEmptyDomainsList_ReturnsBadRequestError(
+        Guid organizationId,
+        SutProvider<CreateOrganizationInviteLinkCommand> sutProvider)
+    {
+        var request = new CreateOrganizationInviteLinkRequest
+        {
+            OrganizationId = organizationId,
+            AllowedDomains = [],
+            EncryptedInviteKey = "encrypted-key",
+        };
+
+        var result = await sutProvider.Sut.CreateAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<InviteLinkDomainsRequired>(result.AsError);
+
+        await sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_WithWhitespaceOnlyDomains_ReturnsBadRequestError(
+        Guid organizationId,
+        SutProvider<CreateOrganizationInviteLinkCommand> sutProvider)
+    {
+        var request = new CreateOrganizationInviteLinkRequest
+        {
+            OrganizationId = organizationId,
+            AllowedDomains = [" ", ""],
+            EncryptedInviteKey = "encrypted-key",
+        };
+
+        var result = await sutProvider.Sut.CreateAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<InviteLinkDomainsRequired>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_WithNullDomains_ReturnsBadRequestError(
+        Guid organizationId,
+        SutProvider<CreateOrganizationInviteLinkCommand> sutProvider)
+    {
+        var request = new CreateOrganizationInviteLinkRequest
+        {
+            OrganizationId = organizationId,
+            AllowedDomains = null!,
+            EncryptedInviteKey = "encrypted-key",
+        };
+
+        var result = await sutProvider.Sut.CreateAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<InviteLinkDomainsRequired>(result.AsError);
+    }
+
+    [Theory]
+    [BitAutoData("")]
+    [BitAutoData("   ")]
+    public async Task CreateAsync_WithEmptyOrWhitespaceEncryptedKey_ReturnsBadRequestError(
+        string encryptedKey,
+        Guid organizationId,
+        SutProvider<CreateOrganizationInviteLinkCommand> sutProvider)
+    {
+        var request = new CreateOrganizationInviteLinkRequest
+        {
+            OrganizationId = organizationId,
+            AllowedDomains = ["acme.com"],
+            EncryptedInviteKey = encryptedKey,
+        };
+
+        var result = await sutProvider.Sut.CreateAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<InviteLinkEncryptedKeyRequired>(result.AsError);
+
+        await sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_WithNullEncryptedKey_ReturnsBadRequestError(
+        Guid organizationId,
+        SutProvider<CreateOrganizationInviteLinkCommand> sutProvider)
+    {
+        var request = new CreateOrganizationInviteLinkRequest
+        {
+            OrganizationId = organizationId,
+            AllowedDomains = ["acme.com"],
+            EncryptedInviteKey = null!,
+        };
+
+        var result = await sutProvider.Sut.CreateAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<InviteLinkEncryptedKeyRequired>(result.AsError);
+
+        await sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_WithMixedValidAndBlankDomains_Success(
+        Guid organizationId,
+        SutProvider<CreateOrganizationInviteLinkCommand> sutProvider)
+    {
+        var request = new CreateOrganizationInviteLinkRequest
+        {
+            OrganizationId = organizationId,
+            AllowedDomains = [" acme.com ", "", " ", "example.com "],
+            EncryptedInviteKey = "encrypted-key",
+        };
+
+        var result = await sutProvider.Sut.CreateAsync(request);
+
+        Assert.True(result.IsSuccess);
+        var link = result.AsSuccess;
+        var deserializedDomains = JsonSerializer.Deserialize<List<string>>(link.AllowedDomains);
+        Assert.NotNull(deserializedDomains);
+        Assert.Equal(2, deserializedDomains.Count);
+        Assert.Contains("acme.com", deserializedDomains);
+        Assert.Contains("example.com", deserializedDomains);
+    }
+}
