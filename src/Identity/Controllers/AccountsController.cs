@@ -239,9 +239,9 @@ public class AccountsController : Controller
     }
 
     [HttpGet("webauthn/assertion-options")]
-    public async Task<WebAuthnLoginAssertionOptionsResponseModel> GetWebAuthnLoginAssertionOptions()
+    public WebAuthnLoginAssertionOptionsResponseModel GetWebAuthnLoginAssertionOptions()
     {
-        var options = await _getWebAuthnLoginCredentialAssertionOptionsCommand.GetWebAuthnLoginCredentialAssertionOptionsAsync();
+        var options = _getWebAuthnLoginCredentialAssertionOptionsCommand.GetWebAuthnLoginCredentialAssertionOptions();
 
         var tokenable = new WebAuthnLoginAssertionOptionsTokenable(WebAuthnLoginAssertionOptionsScope.Authentication, options);
         var token = _assertionOptionsDataProtector.Protect(tokenable);

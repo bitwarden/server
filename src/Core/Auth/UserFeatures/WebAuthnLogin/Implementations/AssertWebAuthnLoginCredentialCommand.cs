@@ -30,7 +30,7 @@ internal class AssertWebAuthnLoginCredentialCommand : IAssertWebAuthnLoginCreden
 
     public async Task<(User, WebAuthnCredential)> AssertWebAuthnLoginCredential(AssertionOptions options, AuthenticatorAssertionRawResponse assertionResponse)
     {
-        if (!await _webAuthnChallengeCache.ConsumeChallengeAsync(options.Challenge))
+        if (!await _webAuthnChallengeCache.TryMarkChallengeAsUsedAsync(options.Challenge))
         {
             throw new BadRequestException("Invalid credential.");
         }

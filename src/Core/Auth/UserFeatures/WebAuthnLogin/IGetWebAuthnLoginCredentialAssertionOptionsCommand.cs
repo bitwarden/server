@@ -4,5 +4,5 @@ namespace Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 
 public interface IGetWebAuthnLoginCredentialAssertionOptionsCommand
 {
-    public Task<AssertionOptions> GetWebAuthnLoginCredentialAssertionOptionsAsync();
+    public AssertionOptions GetWebAuthnLoginCredentialAssertionOptions();
 }

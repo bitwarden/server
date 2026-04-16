@@ -170,7 +170,7 @@ public class WebAuthnControllerTests
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
         sutProvider.GetDependency<IUserService>().VerifySecretAsync(user, requestModel.Secret).Returns(true);
         sutProvider.GetDependency<IGetWebAuthnLoginCredentialAssertionOptionsCommand>()
-            .GetWebAuthnLoginCredentialAssertionOptionsAsync()
+            .GetWebAuthnLoginCredentialAssertionOptions()
             .Returns(assertionOptions);
         sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>()
             .Protect(Arg.Any<WebAuthnLoginAssertionOptionsTokenable>()).Returns("token");

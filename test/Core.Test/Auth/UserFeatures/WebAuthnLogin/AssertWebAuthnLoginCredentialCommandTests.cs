@@ -25,7 +25,7 @@ public class AssertWebAuthnLoginCredentialCommandTests
     {
         // Arrange
         sutProvider.GetDependency<IWebAuthnChallengeCacheProvider>()
-            .ConsumeChallengeAsync(options.Challenge)
+            .TryMarkChallengeAsUsedAsync(options.Challenge)
             .Returns(false);
 
         // Act
@@ -40,7 +40,7 @@ public class AssertWebAuthnLoginCredentialCommandTests
     {
         // Arrange
         sutProvider.GetDependency<IWebAuthnChallengeCacheProvider>()
-            .ConsumeChallengeAsync(options.Challenge).Returns(true);
+            .TryMarkChallengeAsUsedAsync(options.Challenge).Returns(true);
         response.Response.UserHandle = Encoding.UTF8.GetBytes("invalid-user-handle");
 
         // Act
@@ -55,7 +55,7 @@ public class AssertWebAuthnLoginCredentialCommandTests
     {
         // Arrange
         sutProvider.GetDependency<IWebAuthnChallengeCacheProvider>()
-            .ConsumeChallengeAsync(options.Challenge).Returns(true);
+            .TryMarkChallengeAsUsedAsync(options.Challenge).Returns(true);
         response.Response.UserHandle = user.Id.ToByteArray();
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).ReturnsNull();
 
@@ -71,7 +71,7 @@ public class AssertWebAuthnLoginCredentialCommandTests
     {
         // Arrange
         sutProvider.GetDependency<IWebAuthnChallengeCacheProvider>()
-            .ConsumeChallengeAsync(options.Challenge).Returns(true);
+            .TryMarkChallengeAsUsedAsync(options.Challenge).Returns(true);
         response.Response.UserHandle = user.Id.ToByteArray();
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).Returns(user);
         sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetManyByUserIdAsync(user.Id).Returns(new WebAuthnCredential[] { });
@@ -88,7 +88,7 @@ public class AssertWebAuthnLoginCredentialCommandTests
     {
         // Arrange
         sutProvider.GetDependency<IWebAuthnChallengeCacheProvider>()
-            .ConsumeChallengeAsync(options.Challenge).Returns(true);
+            .TryMarkChallengeAsUsedAsync(options.Challenge).Returns(true);
         var credentialId = Guid.NewGuid().ToByteArray();
         credential.CredentialId = CoreHelpers.Base64UrlEncode(credentialId);
         response.Id = credentialId;
@@ -111,7 +111,7 @@ public class AssertWebAuthnLoginCredentialCommandTests
     {
         // Arrange
         sutProvider.GetDependency<IWebAuthnChallengeCacheProvider>()
-            .ConsumeChallengeAsync(options.Challenge).Returns(true);
+            .TryMarkChallengeAsUsedAsync(options.Challenge).Returns(true);
         var credentialId = Guid.NewGuid().ToByteArray();
         credential.CredentialId = CoreHelpers.Base64UrlEncode(credentialId);
         response.Id = credentialId;

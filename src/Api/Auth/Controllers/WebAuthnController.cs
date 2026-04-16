@@ -94,7 +94,7 @@ public class WebAuthnController : Controller
     public async Task<WebAuthnLoginAssertionOptionsResponseModel> AssertionOptions([FromBody] SecretVerificationRequestModel model)
     {
         await VerifyUserAsync(model);
-        var options = await _getWebAuthnLoginCredentialAssertionOptionsCommand.GetWebAuthnLoginCredentialAssertionOptionsAsync();
+        var options = _getWebAuthnLoginCredentialAssertionOptionsCommand.GetWebAuthnLoginCredentialAssertionOptions();
 
         var tokenable = new WebAuthnLoginAssertionOptionsTokenable(WebAuthnLoginAssertionOptionsScope.UpdateKeySet, options);
         var token = _assertionOptionsDataProtector.Protect(tokenable);
