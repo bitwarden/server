@@ -137,7 +137,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         } && currentSubscription is
         {
             Status: SubscriptionStatus.Unpaid,
-            LatestInvoice.BillingReason: BillingReasons.SubscriptionCreate or BillingReasons.SubscriptionCycle
+            LatestInvoice.BillingReason: BillingReasons.SubscriptionCycle
         };
 
     private static bool SubscriptionWentIncompleteExpired(
