@@ -1,5 +1,4 @@
-﻿using System.Text.Json;
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
@@ -39,12 +38,12 @@ public class CreateOrganizationInviteLinkCommand(
         var inviteLink = new OrganizationInviteLink
         {
             OrganizationId = request.OrganizationId,
-            AllowedDomains = JsonSerializer.Serialize(sanitizedDomains),
             EncryptedInviteKey = request.EncryptedInviteKey,
             EncryptedOrgKey = request.EncryptedOrgKey,
             CreationDate = now,
             RevisionDate = now,
         };
+        inviteLink.SetAllowedDomains(sanitizedDomains);
         inviteLink.SetNewId();
 
         await organizationInviteLinkRepository.CreateAsync(inviteLink);
