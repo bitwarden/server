@@ -34,6 +34,11 @@ public enum EventType : int
     Cipher_SoftDeleted = 1115,
     Cipher_Restored = 1116,
     Cipher_ClientToggledCardNumberVisible = 1117,
+    Cipher_ClientToggledTOTPSeedVisible = 1118,
+    Cipher_ClientCopiedBankAccountNumber = 1119,
+    Cipher_ClientCopiedBankAccountPin = 1120,
+    Cipher_ClientToggledBankAccountNumberVisible = 1121,
+    Cipher_ClientToggledBankAccountPinVisible = 1122,
 
     Collection_Created = 1300,
     Collection_Updated = 1301,

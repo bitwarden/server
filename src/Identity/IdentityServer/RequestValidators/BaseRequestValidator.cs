@@ -11,6 +11,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -35,12 +36,13 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly ITwoFactorAuthenticationValidator _twoFactorAuthenticationValidator;
     private readonly ISsoRequestValidator _ssoRequestValidator;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly ILogger _logger;
+    protected readonly ILogger _logger;
     private readonly GlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
     private readonly IAuthRequestRepository _authRequestRepository;
     private readonly IMailService _mailService;
     private readonly IClientVersionValidator _clientVersionValidator;
+    protected readonly IBumpDeviceLastActivityDateCommand _bumpDeviceLastActivityDateCommand;
 
     protected ICurrentContext CurrentContext { get; }
     protected IPolicyService PolicyService { get; }
@@ -71,7 +73,8 @@ public abstract class BaseRequestValidator<T> where T : class
         IAuthRequestRepository authRequestRepository,
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
-        IClientVersionValidator clientVersionValidator
+        IClientVersionValidator clientVersionValidator,
+        IBumpDeviceLastActivityDateCommand bumpDeviceLastActivityDateCommand
     )
     {
         _userManager = userManager;
@@ -94,6 +97,7 @@ public abstract class BaseRequestValidator<T> where T : class
         _mailService = mailService;
         _accountKeysQuery = userAccountKeysQuery;
         _clientVersionValidator = clientVersionValidator;
+        _bumpDeviceLastActivityDateCommand = bumpDeviceLastActivityDateCommand;
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
@@ -440,6 +444,21 @@ public abstract class BaseRequestValidator<T> where T : class
         var customResponse = await BuildCustomResponse(user, context, device, sendRememberToken);
 
         await ResetFailedAuthDetailsAsync(user);
+
+        // TODO: PM-34091 - remove feature flag check when cleaning up
+        if (device != null && _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate))
+        {
+            try
+            {
+                await _bumpDeviceLastActivityDateCommand.BumpAsync(device);
+            }
+            catch (Exception e)
+            {
+                // Log and swallow exceptions from this non-critical update, as we don't want to fail logins 
+                // due to issues updating the device's last activity date.
+                _logger.LogWarning(e, "Failed to bump LastActivityDate for device {DeviceId}.", device.Id);
+            }
+        }
 
         // Once we've built the claims and custom response, we can set the success result.
         // We delegate this to the derived classes, as the implementation varies based on the grant type.

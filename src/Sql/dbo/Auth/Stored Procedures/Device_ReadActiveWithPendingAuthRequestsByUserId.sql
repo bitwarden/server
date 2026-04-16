@@ -18,6 +18,7 @@ BEGIN
         D.[EncryptedPublicKey],
         D.[EncryptedPrivateKey],
         D.[Active],
+        D.[LastActivityDate],
         AR.[Id] AS [AuthRequestId],
         AR.[CreationDate] AS [AuthRequestCreationDate]
     FROM
