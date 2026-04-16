@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using System.Text.Json;
+using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.Entities;
@@ -13,6 +14,13 @@ public class OrganizationInviteLink : ITableObject<Guid>
     public string? EncryptedOrgKey { get; set; }
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
+
+    public IEnumerable<string> GetAllowedDomains() =>
+        JsonSerializer.Deserialize<IEnumerable<string>>(AllowedDomains)
+        ?? throw new JsonException("Failed to deserialize AllowedDomains.");
+
+    public void SetAllowedDomains(IEnumerable<string> domains) =>
+        AllowedDomains = JsonSerializer.Serialize(domains);
 
     public void SetNewId()
     {

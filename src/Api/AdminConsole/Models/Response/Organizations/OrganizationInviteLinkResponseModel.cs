@@ -1,5 +1,4 @@
-﻿using System.Text.Json;
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Models.Api;
 
 namespace Bit.Api.AdminConsole.Models.Response.Organizations;
@@ -18,11 +17,7 @@ public class OrganizationInviteLinkResponseModel : ResponseModel
         Id = inviteLink.Id;
         Code = inviteLink.Code;
         OrganizationId = inviteLink.OrganizationId;
-        if (!string.IsNullOrWhiteSpace(inviteLink.AllowedDomains))
-        {
-            AllowedDomains = JsonSerializer.Deserialize<IEnumerable<string>>(inviteLink.AllowedDomains)
-                             ?? throw new JsonException("Failed to deserialize AllowedDomains.");
-        }
+        AllowedDomains = inviteLink.GetAllowedDomains();
         EncryptedInviteKey = inviteLink.EncryptedInviteKey;
         EncryptedOrgKey = inviteLink.EncryptedOrgKey;
         CreationDate = inviteLink.CreationDate;
