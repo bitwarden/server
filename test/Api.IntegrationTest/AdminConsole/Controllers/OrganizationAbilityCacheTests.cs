@@ -105,36 +105,27 @@ public class OrganizationAbilityCacheTests : IClassFixture<ApiApplicationFactory
     [Fact]
     public async Task Delete_RemovesOrganization_CacheReturnsNull()
     {
-        // Arrange - create a separate org for deletion so we don't affect other tests
-        var deleteOwnerEmail = $"delete-test-{Guid.NewGuid()}@example.com";
-        await _factory.LoginWithNewAccount(deleteOwnerEmail);
-
-        var signUpResult = await OrganizationTestHelpers.SignUpAsync(
-            _factory,
-            plan: PlanType.EnterpriseAnnually,
-            ownerEmail: deleteOwnerEmail,
-            passwordManagerSeats: 5,
-            paymentMethod: PaymentMethodType.Card);
-        var orgToDelete = signUpResult.Item1;
+        // Arrange - setup in InitializeAsync()
+        await _loginHelper.LoginAsync(_ownerEmail);
 
         // Verify cache is populated before delete
         var cacheService = _factory.GetService<IApplicationCacheService>();
-        var abilityBeforeDelete = await cacheService.GetOrganizationAbilityAsync(orgToDelete.Id);
+        var abilityBeforeDelete = await cacheService.GetOrganizationAbilityAsync(_organization.Id);
         Assert.NotNull(abilityBeforeDelete);
 
         // Act - delete the organization via the HTTP endpoint
-        await _loginHelper.LoginAsync(deleteOwnerEmail);
+        await _loginHelper.LoginAsync(_ownerEmail);
         var deleteRequest = new SecretVerificationRequestModel
         {
             MasterPasswordHash = "master_password_hash"
         };
         var response = await _client.PostAsJsonAsync(
-            $"/organizations/{orgToDelete.Id}/delete", deleteRequest);
+            $"/organizations/{_organization.Id}/delete", deleteRequest);
 
         // Assert - endpoint succeeded and cache was cleared
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var abilityAfterDelete = await cacheService.GetOrganizationAbilityAsync(orgToDelete.Id);
+        var abilityAfterDelete = await cacheService.GetOrganizationAbilityAsync(_organization.Id);
         Assert.Null(abilityAfterDelete);
     }
 }

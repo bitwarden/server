@@ -17,12 +17,10 @@ public class ExtendedOrganizationAbilityCacheService(
     IOrganizationRepository organizationRepository)
     : IOrganizationAbilityCacheService
 {
-
     public async Task<OrganizationAbility?> GetOrganizationAbilityAsync(Guid orgId, CancellationToken cancellationToken = default)
     {
-        var cacheKey = BuildCacheKeyForOrganizationAbility(orgId);
         return await cache.GetOrSetAsync<OrganizationAbility?>(
-            cacheKey,
+            orgId.ToString(),
             async (_, _) => await organizationRepository.GetAbilityAsync(orgId),
             token: cancellationToken);
     }
@@ -38,16 +36,11 @@ public class ExtendedOrganizationAbilityCacheService(
 
     public async Task UpsertOrganizationAbilityAsync(Organization organization, CancellationToken cancellationToken = default)
     {
-        var cacheKey = BuildCacheKeyForOrganizationAbility(organization.Id);
-        await cache.SetAsync<OrganizationAbility?>(cacheKey, new OrganizationAbility(organization), token: cancellationToken);
+        await cache.SetAsync<OrganizationAbility?>(organization.Id.ToString(), new OrganizationAbility(organization), token: cancellationToken);
     }
 
     public async Task DeleteOrganizationAbilityAsync(Guid organizationId, CancellationToken cancellationToken = default)
     {
-        var cacheKey = BuildCacheKeyForOrganizationAbility(organizationId);
-        await cache.RemoveAsync(cacheKey, token: cancellationToken);
+        await cache.RemoveAsync(organizationId.ToString(), token: cancellationToken);
     }
-
-    private static string BuildCacheKeyForOrganizationAbility(Guid organizationId)
-        => $"org-ability:{organizationId:N}";
 }
