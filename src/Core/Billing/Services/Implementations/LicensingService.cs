@@ -22,7 +22,6 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Duende.IdentityModel;
-using Duende.IdentityServer.Extensions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -114,7 +113,7 @@ public class LicensingService : ILicensingService
         {
             throw new Exception("Invalid licensing certificate.");
         }
-        if (_verificationCertificates.IsNullOrEmpty() || _verificationCertificates.Any((c) => !new List<string>([productionCertThumbprint, developmentCertThumbprint]).Select(CoreHelpers.CleanCertificateThumbprint).Contains(c.Thumbprint)))
+        if (_verificationCertificates.Count == 0 || _verificationCertificates.Any((c) => !new List<string>([productionCertThumbprint, developmentCertThumbprint]).Select(CoreHelpers.CleanCertificateThumbprint).Contains(c.Thumbprint)))
         {
             throw new Exception("Invalid license verifying certificate.");
         }
