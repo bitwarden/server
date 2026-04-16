@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
@@ -554,6 +555,166 @@ public class SubscriberServiceTests
 
         await stripeAdapter.Received(1).UpdateSubscriptionAsync(subscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(o => o.CancelAtPeriodEnd == true));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelSubscription_TeamsOrg_OtherReason_FeedbackIsNull(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        organization.PlanType = PlanType.TeamsAnnually;
+
+        const string subscriptionId = "subscription_id";
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = "active",
+            Metadata = new Dictionary<string, string>
+            {
+                { "organizationId", "organization_id" }
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        var offboardingSurveyResponse = new OffboardingSurveyResponse
+        {
+            UserId = Guid.NewGuid(),
+            Reason = "other",
+            Feedback = "Some feedback"
+        };
+
+        await sutProvider.Sut.CancelSubscription(organization, true, offboardingSurveyResponse);
+
+        await stripeAdapter
+            .Received(1)
+            .CancelSubscriptionAsync(subscriptionId, Arg.Is<SubscriptionCancelOptions>(options =>
+                options.CancellationDetails.Comment == "Some feedback" &&
+                options.CancellationDetails.Feedback == null));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelSubscription_EnterpriseOrg_OtherReason_FeedbackIsNull(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        organization.PlanType = PlanType.EnterpriseAnnually;
+
+        const string subscriptionId = "subscription_id";
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = "active",
+            Metadata = new Dictionary<string, string>
+            {
+                { "organizationId", "organization_id" }
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        var offboardingSurveyResponse = new OffboardingSurveyResponse
+        {
+            UserId = Guid.NewGuid(),
+            Reason = "other",
+            Feedback = "Some feedback"
+        };
+
+        await sutProvider.Sut.CancelSubscription(organization, true, offboardingSurveyResponse);
+
+        await stripeAdapter
+            .Received(1)
+            .CancelSubscriptionAsync(subscriptionId, Arg.Is<SubscriptionCancelOptions>(options =>
+                options.CancellationDetails.Comment == "Some feedback" &&
+                options.CancellationDetails.Feedback == null));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelSubscription_TeamsOrg_ValidReason_FeedbackIsPreserved(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        organization.PlanType = PlanType.TeamsAnnually;
+
+        const string subscriptionId = "subscription_id";
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = "active",
+            Metadata = new Dictionary<string, string>
+            {
+                { "organizationId", "organization_id" }
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        var offboardingSurveyResponse = new OffboardingSurveyResponse
+        {
+            UserId = Guid.NewGuid(),
+            Reason = "missing_features",
+            Feedback = "Some feedback"
+        };
+
+        await sutProvider.Sut.CancelSubscription(organization, true, offboardingSurveyResponse);
+
+        await stripeAdapter
+            .Received(1)
+            .CancelSubscriptionAsync(subscriptionId, Arg.Is<SubscriptionCancelOptions>(options =>
+                options.CancellationDetails.Comment == "Some feedback" &&
+                options.CancellationDetails.Feedback == "missing_features"));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelSubscription_FamiliesOrg_OtherReason_FeedbackIsPreserved(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        organization.PlanType = PlanType.FamiliesAnnually;
+
+        const string subscriptionId = "subscription_id";
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = "active",
+            Metadata = new Dictionary<string, string>
+            {
+                { "organizationId", "organization_id" }
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        var offboardingSurveyResponse = new OffboardingSurveyResponse
+        {
+            UserId = Guid.NewGuid(),
+            Reason = "other",
+            Feedback = "Some feedback"
+        };
+
+        await sutProvider.Sut.CancelSubscription(organization, true, offboardingSurveyResponse);
+
+        await stripeAdapter
+            .Received(1)
+            .CancelSubscriptionAsync(subscriptionId, Arg.Is<SubscriptionCancelOptions>(options =>
+                options.CancellationDetails.Comment == "Some feedback" &&
+                options.CancellationDetails.Feedback == "other"));
     }
 
     #endregion

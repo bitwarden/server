@@ -66,6 +66,12 @@ public class SubscriberService(
             "unused"
         ];
 
+        if (subscriber is Organization { PlanType: var planType } &&
+            planType.IsBusinessProductTierType())
+        {
+            validCancellationReasons.Remove("other");
+        }
+
         // Build once from survey — null when survey is absent (system-initiated cancellation)
         var cancellationDetails = offboardingSurveyResponse != null
             ? new SubscriptionCancellationDetailsOptions
