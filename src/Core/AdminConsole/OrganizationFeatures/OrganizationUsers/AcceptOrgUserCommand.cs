@@ -234,7 +234,9 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
 
         var error = (await _automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser.OrganizationId,
-                    allOrgUsers.Append(orgUser),
+                    allOrgUsers
+                        .Where(u => u.OrganizationId != orgUser.OrganizationId && u.UserId != orgUser.UserId)
+                        .Append(orgUser),
                     user),
                 policyRequirement))
             .Match(
