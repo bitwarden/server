@@ -130,50 +130,51 @@ public class CreateOrganizationInviteLinkCommandTests
     }
 
     [Theory]
-    [BitAutoData("")]
-    [BitAutoData("   ")]
-    public async Task CreateAsync_WithEmptyOrWhitespaceEncryptedKey_ReturnsBadRequestError(
-        string encryptedKey,
+    [BitAutoData("not a domain")]
+    [BitAutoData("<script>alert(1)</script>")]
+    [BitAutoData("double..dot.com")]
+    [BitAutoData("-starts-with-hyphen.com")]
+    public async Task CreateAsync_WithInvalidDomainFormat_ReturnsInvalidDomainsError(
+        string invalidDomain,
         Guid organizationId,
         SutProvider<CreateOrganizationInviteLinkCommand> sutProvider)
     {
         var request = new CreateOrganizationInviteLinkRequest
         {
             OrganizationId = organizationId,
-            AllowedDomains = ["acme.com"],
-            EncryptedInviteKey = encryptedKey,
+            AllowedDomains = [invalidDomain],
+            EncryptedInviteKey = "encrypted-key",
         };
 
         var result = await sutProvider.Sut.CreateAsync(request);
 
         Assert.True(result.IsError);
-        Assert.IsType<InviteLinkEncryptedKeyRequired>(result.AsError);
+        Assert.IsType<InviteLinkInvalidDomains>(result.AsError);
 
         await sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
             .DidNotReceiveWithAnyArgs()
             .CreateAsync(default!);
     }
 
-    [Theory, BitAutoData]
-    public async Task CreateAsync_WithNullEncryptedKey_ReturnsBadRequestError(
+    [Theory]
+    [BitAutoData("acme.com")]
+    [BitAutoData("sub.example.org")]
+    [BitAutoData("my-company.co.uk")]
+    public async Task CreateAsync_WithValidDomainFormat_Succeeds(
+        string validDomain,
         Guid organizationId,
         SutProvider<CreateOrganizationInviteLinkCommand> sutProvider)
     {
         var request = new CreateOrganizationInviteLinkRequest
         {
             OrganizationId = organizationId,
-            AllowedDomains = ["acme.com"],
-            EncryptedInviteKey = null!,
+            AllowedDomains = [validDomain],
+            EncryptedInviteKey = "encrypted-key",
         };
 
         var result = await sutProvider.Sut.CreateAsync(request);
 
-        Assert.True(result.IsError);
-        Assert.IsType<InviteLinkEncryptedKeyRequired>(result.AsError);
-
-        await sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .CreateAsync(default!);
+        Assert.True(result.IsSuccess);
     }
 
     [Theory, BitAutoData]

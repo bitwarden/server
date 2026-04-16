@@ -8,5 +8,5 @@ public record InviteLinkAlreadyExists()
 public record InviteLinkDomainsRequired()
     : BadRequestError("At least one allowed domain is required.");
 
-public record InviteLinkEncryptedKeyRequired()
-    : BadRequestError("An encrypted invite key is required.");
+public record InviteLinkInvalidDomains(IEnumerable<string> InvalidDomains)
+    : BadRequestError($"One or more domains are invalid: {string.Join(", ", InvalidDomains)}.");
