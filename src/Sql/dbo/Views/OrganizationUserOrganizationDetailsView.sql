@@ -59,6 +59,7 @@ SELECT
     O.[UsePhishingBlocker],
     O.[UseDisableSmAdsForUsers],
     O.[UseMyItems],
+    OU.[RevocationReason],
     O.[ExemptFromBillingAutomation]
 FROM
     [dbo].[OrganizationUser] OU
