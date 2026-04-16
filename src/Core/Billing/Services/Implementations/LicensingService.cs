@@ -68,7 +68,7 @@ public class LicensingService : ILicensingService
 
 
         // Load license creation cert
-        var creationCertThumbprint = environment.IsDevelopment() ? developmentCertThumbprint : productionCertThumbprint;
+        var creationCertThumbprint = environment.IsDevelopment() ? _developmentCertThumbprint : _productionCertThumbprint;
         _verificationCertificates = new HashSet<X509Certificate2>();
         if (_globalSettings.SelfHosted)
         {
@@ -115,8 +115,8 @@ public class LicensingService : ILicensingService
         }
         var allowedThumbprints = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            CoreHelpers.CleanCertificateThumbprint(productionCertThumbprint),
-            CoreHelpers.CleanCertificateThumbprint(developmentCertThumbprint)
+            CoreHelpers.CleanCertificateThumbprint(_productionCertThumbprint),
+            CoreHelpers.CleanCertificateThumbprint(_developmentCertThumbprint)
         };
         if (_verificationCertificates is null || _verificationCertificates.Count == 0
             || _verificationCertificates.Any(c => !allowedThumbprints.Contains(c.Thumbprint)))
