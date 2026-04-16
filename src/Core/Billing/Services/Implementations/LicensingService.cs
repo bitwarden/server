@@ -113,7 +113,13 @@ public class LicensingService : ILicensingService
         {
             throw new Exception("Invalid licensing certificate.");
         }
-        if (_verificationCertificates.Count == 0 || _verificationCertificates.Any((c) => !new List<string>([productionCertThumbprint, developmentCertThumbprint]).Select(CoreHelpers.CleanCertificateThumbprint).Contains(c.Thumbprint)))
+        var allowedThumbprints = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            CoreHelpers.CleanCertificateThumbprint(productionCertThumbprint),
+            CoreHelpers.CleanCertificateThumbprint(developmentCertThumbprint)
+        };
+        if (_verificationCertificates is null || _verificationCertificates.Count == 0
+            || _verificationCertificates.Any(c => !allowedThumbprints.Contains(c.Thumbprint)))
         {
             throw new Exception("Invalid license verifying certificate.");
         }
