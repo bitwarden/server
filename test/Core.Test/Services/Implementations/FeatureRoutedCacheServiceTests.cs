@@ -114,9 +114,9 @@ public class FeatureRoutedCacheServiceTests
 
     [Theory, BitAutoData]
     public async Task GetProviderAbilityAsync_WhenFeatureFlagEnabled_UsesExtendedCacheService(
-    SutProvider<FeatureRoutedCacheService> sutProvider,
-    Guid providerId,
-    ProviderAbility expectedAbility)
+        SutProvider<FeatureRoutedCacheService> sutProvider,
+        Guid providerId,
+        ProviderAbility expectedAbility)
     {
         // Arrange
         sutProvider.GetDependency<IFeatureService>()
