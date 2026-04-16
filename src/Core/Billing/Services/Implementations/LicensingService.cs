@@ -107,7 +107,7 @@ public class LicensingService : ILicensingService
             _creationCertificate = CoreHelpers.GetCertificate(creationCertThumbprint);
         }
         // Creation cert can always be used to verify
-        _verificationCertificates.Add(_creationCertificate);
+        _verificationCertificates = _verificationCertificates.Append(_creationCertificate).Distinct().ToList();
 
         if (_creationCertificate == null || !_creationCertificate.Thumbprint.Equals(CoreHelpers.CleanCertificateThumbprint(creationCertThumbprint),
             StringComparison.InvariantCultureIgnoreCase))
