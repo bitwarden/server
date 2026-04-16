@@ -31,8 +31,8 @@ namespace Bit.Core.Billing.Services;
 
 public class LicensingService : ILicensingService
 {
-    const string productionCertThumbprint = "‎B34876439FCDA2846505B2EFBBA6C4A951313EBE";
-    const string developmentCertThumbprint = "207E64A231E8AA32AAF68A61037C075EBEBD553F";
+    private const string productionCertThumbprint = "‎B34876439FCDA2846505B2EFBBA6C4A951313EBE";
+    private const string developmentCertThumbprint = "207E64A231E8AA32AAF68A61037C075EBEBD553F";
     private readonly X509Certificate2 _creationCertificate;
     private readonly List<X509Certificate2> _verificationCertificates;
     private readonly IGlobalSettings _globalSettings;
