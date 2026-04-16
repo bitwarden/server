@@ -9,13 +9,13 @@ public class CreateOrganizationInviteLinkRequestModel
     /// Email domains permitted to accept the invite link (e.g. <c>["acme.com"]</c>).
     /// </summary>
     [Required]
-    public IEnumerable<string> AllowedDomains { get; set; } = null!;
+    public required IEnumerable<string> AllowedDomains { get; set; }
 
     /// <summary>
     /// The invite key encrypted with the organization key.
     /// </summary>
     [Required]
-    public string EncryptedInviteKey { get; set; } = null!;
+    public required string EncryptedInviteKey { get; set; }
 
     /// <summary>
     /// The organization key encrypted for the invite link. Currently unused; will be populated in a future stage.
