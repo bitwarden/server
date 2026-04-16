@@ -34,7 +34,7 @@ public class LicensingService : ILicensingService
     private const string productionCertThumbprint = "‎B34876439FCDA2846505B2EFBBA6C4A951313EBE";
     private const string developmentCertThumbprint = "207E64A231E8AA32AAF68A61037C075EBEBD553F";
     private readonly X509Certificate2 _creationCertificate;
-    private readonly List<X509Certificate2> _verificationCertificates;
+    private readonly HashSet<X509Certificate2> _verificationCertificates;
     private readonly IGlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
     private readonly IOrganizationRepository _organizationRepository;
@@ -69,7 +69,7 @@ public class LicensingService : ILicensingService
 
         // Load license creation cert
         var creationCertThumbprint = environment.IsDevelopment() ? developmentCertThumbprint : productionCertThumbprint;
-        _verificationCertificates = new List<X509Certificate2>();
+        _verificationCertificates = new HashSet<X509Certificate2>();
         if (_globalSettings.SelfHosted)
         {
             X509Certificate2 devCert = null;
@@ -106,7 +106,7 @@ public class LicensingService : ILicensingService
             _creationCertificate = CoreHelpers.GetCertificate(creationCertThumbprint);
         }
         // Creation cert can always be used to verify
-        _verificationCertificates = _verificationCertificates.Append(_creationCertificate).Distinct().ToList();
+        _verificationCertificates.Add(_creationCertificate);
 
         if (_creationCertificate == null || !_creationCertificate.Thumbprint.Equals(CoreHelpers.CleanCertificateThumbprint(creationCertThumbprint),
             StringComparison.InvariantCultureIgnoreCase))
