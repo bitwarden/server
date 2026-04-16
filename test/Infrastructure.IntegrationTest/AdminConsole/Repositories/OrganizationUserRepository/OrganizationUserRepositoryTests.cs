@@ -618,6 +618,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(organization.UseOrganizationDomains, result.UseOrganizationDomains);
         Assert.Equal(organization.UseAdminSponsoredFamilies, result.UseAdminSponsoredFamilies);
         Assert.Equal(organization.UseAutomaticUserConfirmation, result.UseAutomaticUserConfirmation);
+        Assert.Equal(orgUser1.RevocationReason, result.RevocationReason);
     }
 
     [Theory, DatabaseData]
@@ -1003,10 +1004,11 @@ public class OrganizationUserRepositoryTests
             Id = CoreHelpers.GenerateComb(),
             OrganizationId = organization.Id,
             UserId = user2.Id,
-            Status = OrganizationUserStatusType.Invited,
+            Status = OrganizationUserStatusType.Revoked,
             Type = OrganizationUserType.User,
             ResetPasswordKey = "resetpasswordkey2",
-            AccessSecretsManager = true
+            AccessSecretsManager = true,
+            RevocationReason = RevocationReason.TwoFactorPolicyNonCompliance
         });
 
         var responseModel = await organizationUserRepository.GetManyDetailsByOrganizationAsync_vNext(organization.Id, includeGroups: false, includeSharedCollections: false);
@@ -1022,6 +1024,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(orgUser1.Type, user1Result.Type);
         Assert.Equal(organization.Id, user1Result.OrganizationId);
         Assert.Equal(user1.Id, user1Result.UserId);
+        Assert.Null(user1Result.RevocationReason);
         Assert.Empty(user1Result.Groups);
         Assert.Empty(user1Result.Collections);
 
@@ -1033,6 +1036,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(orgUser2.Type, user2Result.Type);
         Assert.Equal(organization.Id, user2Result.OrganizationId);
         Assert.Equal(user2.Id, user2Result.UserId);
+        Assert.Equal(RevocationReason.TwoFactorPolicyNonCompliance, user2Result.RevocationReason);
         Assert.Empty(user2Result.Groups);
         Assert.Empty(user2Result.Collections);
     }

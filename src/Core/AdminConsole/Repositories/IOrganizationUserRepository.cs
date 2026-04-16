@@ -67,7 +67,18 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<OrganizationUser?> GetByOrganizationEmailAsync(Guid organizationId, string email);
     Task<IEnumerable<OrganizationUserPublicKey>> GetManyPublicKeysByOrganizationUserAsync(Guid organizationId, IEnumerable<Guid> Ids);
     Task<IEnumerable<OrganizationUserUserDetails>> GetManyByMinimumRoleAsync(Guid organizationId, OrganizationUserType minRole);
+    /// <summary>
+    /// Revokes access for a single organization user. This is a convenience wrapper
+    /// around <see cref="RevokeManyAsync"/> for single-user operations.
+    /// </summary>
+    /// <param name="id">The ID of the organization user to revoke.</param>
     Task RevokeAsync(Guid id);
+    /// <summary>
+    /// Restores access for a single revoked organization user. This is a convenience wrapper
+    /// around <see cref="RestoreManyAsync"/> for single-user operations.
+    /// </summary>
+    /// <param name="id">The ID of the organization user to restore.</param>
+    /// <param name="status">The status to restore the user to (their status prior to being revoked).</param>
     Task RestoreAsync(Guid id, OrganizationUserStatusType status);
     Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId, PolicyType policyType);
     Task<int> GetOccupiedSmSeatCountByOrganizationIdAsync(Guid organizationId);
@@ -85,7 +96,22 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// Returns a list of OrganizationUsers with email domains that match one of the Organization's claimed domains.
     /// </summary>
     Task<ICollection<OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync(Guid organizationId);
-    Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds);
+    /// <summary>
+    /// Revokes access for one or more organization users, setting their status to
+    /// <see cref="OrganizationUserStatusType.Revoked"/> and optionally recording a
+    /// <see cref="RevocationReason"/>.
+    /// </summary>
+    /// <param name="organizationUserIds">The IDs of the organization users to revoke.</param>
+    /// <param name="reason">The reason for revocation. May be null if the reason is not known.</param>
+    Task RevokeManyAsync(IEnumerable<Guid> organizationUserIds, RevocationReason? reason = null);
+    /// <summary>
+    /// Restores access for one or more revoked organization users, clearing their
+    /// <see cref="Core.Entities.OrganizationUser.RevocationReason"/>. Only affects users
+    /// whose current status is <see cref="OrganizationUserStatusType.Revoked"/>.
+    /// </summary>
+    /// <param name="organizationUserIds">The IDs of the organization users to restore.</param>
+    /// <param name="status">The status to restore each user to (their status prior to being revoked).</param>
+    Task RestoreManyAsync(IEnumerable<Guid> organizationUserIds, OrganizationUserStatusType status);
 
     /// <summary>
     /// Returns a list of OrganizationUsersUserDetails with the specified role.
