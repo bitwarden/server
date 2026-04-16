@@ -256,6 +256,12 @@ public class PasswordRequestModelTests
         var result = model.Validate(new ValidationContext(model)).ToList();
 
         // Assert — legacy validation should fail first
-        Assert.Contains(result, r => r.ErrorMessage != null && r.ErrorMessage.Contains("must be supplied"));
+        Assert.Contains(result,
+        r => r.ErrorMessage != null &&
+        r.ErrorMessage.Contains(nameof(PasswordRequestModel.MasterPasswordHash)) &&
+        // NOT auth/unlock errors
+        !r.ErrorMessage.Contains(nameof(PasswordRequestModel.AuthenticationData)) &&
+        !r.ErrorMessage.Contains(nameof(PasswordRequestModel.UnlockData)));
+
     }
 }
