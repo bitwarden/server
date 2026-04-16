@@ -57,4 +57,5 @@ public interface IProfileOrganizationDetails
 
     bool UsePhishingBlocker { get; set; }
     bool UseMyItems { get; set; }
+    bool ExemptFromBillingAutomation { get; set; }
 }
