@@ -58,7 +58,7 @@ public class CreateOrganizationInviteLinkCommand(
     /// <returns>A list of sanitized domains.</returns>
     private static List<string> SanitizeDomains(IEnumerable<string>? domains) =>
         domains?
-            .Select(d => d?.Trim())
+            .Select(d => d?.Trim().ToLowerInvariant())
             .Where(d => !string.IsNullOrEmpty(d))
             .Cast<string>()
             .ToList() ?? [];
