@@ -44,12 +44,28 @@ public class CertBuilder
                     _context.Config.Ssl = true;
                     _context.Install.Trusted = false;
                     _context.Install.SelfSignedCert = true;
-                    Helpers.Exec("openssl req -x509 -newkey rsa:4096 -sha256 -nodes -days 36500 " +
-                                 $"-keyout /bitwarden/ssl/self/{_context.Install.Domain}/private.key " +
-                                 $"-out /bitwarden/ssl/self/{_context.Install.Domain}/certificate.crt " +
-                                 $"-reqexts SAN -extensions SAN " +
-                                 $"-config <(cat /usr/lib/ssl/openssl.cnf <(printf '[SAN]\nsubjectAltName=DNS:{_context.Install.Domain}\nbasicConstraints=CA:true')) " +
-                                 $"-subj \"/C=US/ST=California/L=Santa Barbara/O=Bitwarden Inc./OU=Bitwarden/CN={_context.Install.Domain}\"");
+                    var opensslConfig = File.ReadAllText("/usr/lib/ssl/openssl.cnf") +
+                        $"\n[SAN]\nsubjectAltName=DNS:{_context.Install.Domain}\nbasicConstraints=CA:true";
+                    var opensslConfigPath = Path.GetTempFileName();
+
+                    File.WriteAllText(opensslConfigPath, opensslConfig);
+                    Helpers.Exec(
+                        "openssl",
+                        [
+                            "req",
+                            "-x509",
+                            "-newkey", "rsa:4096",
+                            "-sha256",
+                            "-nodes",
+                            "-days", "36500",
+                            "-keyout", $"/bitwarden/ssl/self/{_context.Install.Domain}/private.key",
+                            "-out", $"/bitwarden/ssl/self/{_context.Install.Domain}/certificate.crt",
+                            "-reqexts", "SAN",
+                            "-extensions", "SAN",
+                            "-config", opensslConfigPath,
+                            "-subj", $"/C=US/ST=California/L=Santa Barbara/O=Bitwarden Inc./OU=Bitwarden/CN={_context.Install.Domain}",
+                        ]);
+                    File.Delete(opensslConfigPath);
                 }
             }
         }
@@ -58,9 +74,15 @@ public class CertBuilder
         {
             _context.Install.Trusted = true;
             _context.Install.DiffieHellman = true;
-            Directory.CreateDirectory($"{_context.App.RootDirectory}/letsencrypt/live/{_context.Install.Domain}/");
-            Helpers.Exec($"openssl dhparam -out " +
-                $"{_context.App.RootDirectory}/letsencrypt/live/{_context.Install.Domain}/dhparam.pem 2048");
+            var directory = $"{_context.App.RootDirectory}/letsencrypt/live/{_context.Install.Domain}/";
+            Directory.CreateDirectory(directory);
+            Helpers.Exec(
+                "openssl",
+                [
+                    "dhparam",
+                    "-out", $"{directory}/dhparam.pem",
+                    "2048",
+                ]);
         }
         else if (_context.Config.Ssl && !_context.Install.SelfSignedCert)
         {
@@ -71,10 +93,29 @@ public class CertBuilder
         Helpers.WriteLine(_context, "Generating key for IdentityServer.");
         _context.Install.IdentityCertPassword = Helpers.SecureRandomString(32, alpha: true, numeric: true);
         Directory.CreateDirectory($"{_context.App.RootDirectory}/identity/");
-        Helpers.Exec("openssl req -x509 -newkey rsa:4096 -sha256 -nodes -keyout identity.key " +
-            "-out identity.crt -subj \"/CN=Bitwarden IdentityServer\" -days 36500");
-        Helpers.Exec($"openssl pkcs12 -export -out {_context.App.RootDirectory}/identity/identity.pfx -inkey identity.key " +
-            $"-in identity.crt -passout pass:{_context.Install.IdentityCertPassword}");
+        Helpers.Exec(
+            "openssl",
+            [
+                "req",
+                "-x509",
+                "-newkey", "rsa:4096",
+                "-sha256",
+                "-nodes",
+                "-keyout", "identity.key",
+                "-out", "identity.crt",
+                "-subj", "/CN=Bitwarden IdentityServer",
+                "-days", "36500",
+            ]);
+        Helpers.Exec(
+            "openssl",
+            [
+                "pkcs12",
+                "-export",
+                "-out", $"{_context.App.RootDirectory}/identity/identity.pfx",
+                "-inkey", "identity.key",
+                "-in", "identity.crt",
+                "-passout", $"pass:{_context.Install.IdentityCertPassword}",
+            ]);
 
         Helpers.WriteLine(_context);
 
@@ -102,10 +143,29 @@ public class CertBuilder
             Directory.CreateDirectory($"{_context.App.RootDirectory}/key-connector/");
             var keyConnectorCertPassword = Helpers.GetValueFromEnvFile(_context.App, "key-connector",
                 "keyConnectorSettings__certificate__filesystemPassword");
-            Helpers.Exec("openssl req -x509 -newkey rsa:4096 -sha256 -nodes -keyout bwkc.key " +
-                         "-out bwkc.crt -subj \"/CN=Bitwarden Key Connector\" -days 36500");
-            Helpers.Exec($"openssl pkcs12 -export -out {_context.App.RootDirectory}/key-connector/bwkc.pfx -inkey bwkc.key " +
-                         $"-in bwkc.crt -passout pass:{keyConnectorCertPassword}");
+            Helpers.Exec(
+                "openssl",
+                [
+                    "req",
+                    "-x509",
+                    "-newkey", "rsa:4096",
+                    "-sha256",
+                    "-nodes",
+                    "-keyout", "bwkc.key",
+                    "-out", "bwkc.crt",
+                    "-subj", "/CN=Bitwarden Key Connector",
+                    "-days", "36500",
+                ]);
+            Helpers.Exec(
+                "openssl",
+                [
+                    "pkcs12",
+                    "-export",
+                    "-out", $"{_context.App.RootDirectory}/key-connector/bwkc.pfx",
+                    "-inkey", "bwkc.key",
+                    "-in", "bwkc.crt",
+                    "-passout", $"pass:{keyConnectorCertPassword}"
+                ]);
         }
     }
 }
