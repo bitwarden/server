@@ -1,4 +1,4 @@
-﻿using Bit.Core.Utilities;
+using Bit.Core.Utilities;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -15,22 +15,16 @@ internal class WebAuthnChallengeCacheProvider(
 
     private readonly IDistributedCache _distributedCache = distributedCache;
 
-    public async Task StoreChallengeAsync(byte[] challenge)
-    {
-        var cacheKey = BuildCacheKey(challenge);
-        await _distributedCache.SetAsync(cacheKey, [1], _cacheOptions);
-    }
-
-    public async Task<bool> ConsumeChallengeAsync(byte[] challenge)
+    public async Task<bool> TryMarkChallengeAsUsedAsync(byte[] challenge)
     {
         var cacheKey = BuildCacheKey(challenge);
         var cached = await _distributedCache.GetAsync(cacheKey);
-        if (cached == null)
+        if (cached != null)
         {
             return false;
         }
 
-        await _distributedCache.RemoveAsync(cacheKey);
+        await _distributedCache.SetAsync(cacheKey, [1], _cacheOptions);
         return true;
     }
 
