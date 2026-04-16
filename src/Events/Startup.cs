@@ -57,6 +57,7 @@ public class Startup
             CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName);
         services.AddScoped<IApplicationCacheService, FeatureRoutedCacheService>();
         services.AddOrganizationAbilityCache(globalSettings);
+        services.AddProviderAbilityCache(globalSettings);
 
         if (usingServiceBusAppCache)
         {
@@ -85,7 +86,6 @@ public class Startup
 
         // Add event integration services
         services.AddDistributedCache(globalSettings);
-        services.AddProviderAbilityCache(globalSettings);
         services.AddRabbitMqListeners(globalSettings);
     }
 
