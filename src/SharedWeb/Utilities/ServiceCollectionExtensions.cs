@@ -499,7 +499,7 @@ public static class ServiceCollectionExtensions
                     .GetAwaiter().GetResult();
             }
 
-            if (dataProtectionCert != null)
+            if (!env.IsDevelopment())
             {
                 builder
                     .PersistKeysToAzureBlobStorage(globalSettings.Storage.ConnectionString, "aspnet-dataprotection", "keys.xml")
