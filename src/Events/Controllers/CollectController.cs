@@ -85,6 +85,10 @@ public class CollectController : Controller
                 case EventType.Cipher_ClientToggledCardCodeVisible:
                 case EventType.Cipher_ClientToggledHiddenFieldVisible:
                 case EventType.Cipher_ClientToggledPasswordVisible:
+                case EventType.Cipher_ClientCopiedBankAccountNumber:
+                case EventType.Cipher_ClientCopiedBankAccountPin:
+                case EventType.Cipher_ClientToggledBankAccountNumberVisible:
+                case EventType.Cipher_ClientToggledBankAccountPinVisible:
                 case EventType.Cipher_ClientViewed:
                     if (!eventModel.CipherId.HasValue)
                     {
