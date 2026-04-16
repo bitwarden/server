@@ -20,6 +20,9 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
     private readonly ApiApplicationFactory _factory;
     private readonly LoginHelper _loginHelper;
 
+    private const string _validEncryptedKey =
+        "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
+
     private Organization _organization = null!;
     private string _ownerEmail = null!;
 
@@ -63,7 +66,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         var request = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = ["acme.com", "example.com"],
-            EncryptedInviteKey = "encrypted-key",
+            EncryptedInviteKey = _validEncryptedKey,
         };
 
         var response = await _client.PostAsJsonAsync(
@@ -77,7 +80,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         Assert.NotEqual(Guid.Empty, content.Code);
         Assert.Equal(_organization.Id, content.OrganizationId);
         Assert.Equal(["acme.com", "example.com"], content.AllowedDomains);
-        Assert.Equal("encrypted-key", content.EncryptedInviteKey);
+        Assert.Equal(_validEncryptedKey, content.EncryptedInviteKey);
 
         var repository = _factory.GetService<IOrganizationInviteLinkRepository>();
         var persisted = await repository.GetByOrganizationIdAsync(_organization.Id);
