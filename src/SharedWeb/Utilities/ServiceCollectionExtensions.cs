@@ -21,6 +21,7 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Services.Implementations;
 using Bit.Core.Auth.UserFeatures;
+using Bit.Core.Auth.UserFeatures.Devices;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess;
 using Bit.Core.Auth.UserFeatures.PasswordValidation;
 using Bit.Core.Billing.Providers.Services;
@@ -166,6 +167,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEventService, EventService>();
         services.AddScoped<IEmergencyAccessService, EmergencyAccessService>();
         services.AddSingleton<IDeviceService, DeviceService>();
+        services.AddDeviceServices();
         services.AddScoped<ISsoConfigService, SsoConfigService>();
         services.AddScoped<IAuthRequestService, AuthRequestService>();
         services.AddScoped<IDuoUniversalTokenService, DuoUniversalTokenService>();

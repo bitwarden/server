@@ -159,8 +159,6 @@ public static class FeatureFlagKeys
     public const string PolicyRequirements = "pm-14439-policy-requirements";
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
     public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
-    public const string BulkReinviteUI = "pm-28416-bulk-reinvite-ux-improvements";
-    public const string RefactorOrgAcceptInit = "pm-33082-refactor-org-accept-init";
     public const string AdminResetTwoFactor = "pm-15489-reset-two-factor-account-recovery";
     public const string PublicMembersInviteRefactor = "pm-33398-refactor-members-invite-org-users-command";
     public const string GenerateInviteLink = "pm-32497-generate-invite-link";
@@ -185,6 +183,7 @@ public static class FeatureFlagKeys
     public const string ChangeEmailNewAuthenticationApis = "pm-30811-change-email-new-authentication-apis";
     public const string PM31088_MasterPasswordServiceEmitSalt = "pm-31088-master-password-service-emit-salt";
     public const string PM32413_MultiClientPasswordManagement = "pm-32413-multi-client-password-management";
+    public const string DevicesLastActivityDate = "pm-4516-devices-add-last-activity-date";
     public const string PM34210_DesktopAddDevices = "pm-34210-desktop-add-devices";
 
     /* Autofill Team */

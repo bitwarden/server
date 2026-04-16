@@ -41,5 +41,7 @@ public class DeviceAuthDetails : Device
         Active = device.Active;
         AuthRequestId = authRequestId;
         AuthRequestCreationDate = authRequestCreationDate;
+        LastActivityDate = device.LastActivityDate;
+
     }
 }
