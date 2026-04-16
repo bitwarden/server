@@ -89,8 +89,9 @@ public class LicensingService : ILicensingService
             }
 
             // non-production environments can use dev cert-generated licenses
-            if (!environment.IsProduction() && devCert != null) // Should already be set by above IsDevelopment check
+            if (!environment.IsProduction())
             {
+                devCert ??= CoreHelpers.GetEmbeddedCertificateAsync("licensing_dev.cer", null).GetAwaiter().GetResult();
                 _verificationCertificates.Add(devCert);
             }
         }
