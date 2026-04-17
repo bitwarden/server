@@ -31,7 +31,6 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
     private readonly ILicensingService _licensingService;
     private readonly IGlobalSettings _globalSettings;
     private readonly IStripePaymentService _paymentService;
-    private readonly IFeatureService _featureService;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
 
     public SelfHostedOrganizationSignUpCommand(
@@ -46,7 +45,6 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
         ILicensingService licensingService,
         IGlobalSettings globalSettings,
         IStripePaymentService paymentService,
-        IFeatureService featureService,
         IPolicyRequirementQuery policyRequirementQuery)
     {
         _organizationRepository = organizationRepository;
@@ -60,7 +58,6 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
         _licensingService = licensingService;
         _globalSettings = globalSettings;
         _paymentService = paymentService;
-        _featureService = featureService;
         _policyRequirementQuery = policyRequirementQuery;
     }
 
@@ -107,15 +104,12 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
 
     private async Task ValidateSignUpPoliciesAsync(Guid ownerId)
     {
-        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
-        {
-            var requirement = await _policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(ownerId);
+        var requirement = await _policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(ownerId);
 
-            if (requirement.CannotCreateNewOrganization())
-            {
-                throw new BadRequestException("You may not create an organization. You belong to an organization " +
-                                              "which has a policy that prohibits you from being a member of any other organization.");
-            }
+        if (requirement.CannotCreateNewOrganization())
+        {
+            throw new BadRequestException("You may not create an organization. You belong to an organization " +
+                                          "which has a policy that prohibits you from being a member of any other organization.");
         }
 
         var singleOrgRequirement = await _policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(ownerId);

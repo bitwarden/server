@@ -1,7 +1,8 @@
 CREATE PROCEDURE [dbo].[OrganizationUser_CreateManyWithCollectionsAndGroups]
     @organizationUserData NVARCHAR(MAX),
     @collectionData NVARCHAR(MAX),
-    @groupData NVARCHAR(MAX)
+    @groupData NVARCHAR(MAX),
+    @RevisionDate DATETIME2(7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -20,7 +21,8 @@ BEGIN
         [RevisionDate],
         [Permissions],
         [ResetPasswordKey],
-        [AccessSecretsManager]
+        [AccessSecretsManager],
+        [RevocationReason]
     )
     SELECT
         OUI.[Id],
@@ -35,7 +37,8 @@ BEGIN
         OUI.[RevisionDate],
         OUI.[Permissions],
         OUI.[ResetPasswordKey],
-        OUI.[AccessSecretsManager]
+        OUI.[AccessSecretsManager],
+        OUI.[RevocationReason]
     FROM
         OPENJSON(@organizationUserData)
                  WITH (
@@ -51,7 +54,8 @@ BEGIN
                      [RevisionDate] DATETIME2(7) '$.RevisionDate',
                      [Permissions] NVARCHAR (MAX) '$.Permissions',
                      [ResetPasswordKey] VARCHAR (MAX) '$.ResetPasswordKey',
-                     [AccessSecretsManager] BIT '$.AccessSecretsManager'
+                     [AccessSecretsManager] BIT '$.AccessSecretsManager',
+                     [RevocationReason] TINYINT '$.RevocationReason'
                      ) OUI
 
     INSERT INTO [dbo].[GroupUser]
@@ -69,20 +73,13 @@ BEGIN
                 [GroupId] UNIQUEIDENTIFIER '$.GroupId'
             ) OUG
 
-    INSERT INTO [dbo].[CollectionUser]
-    (
-        [CollectionId],
-        [OrganizationUserId],
-        [ReadOnly],
-        [HidePasswords],
-        [Manage]
-    )
     SELECT
         OUC.[CollectionId],
         OUC.[OrganizationUserId],
         OUC.[ReadOnly],
         OUC.[HidePasswords],
         OUC.[Manage]
+    INTO #CollectionUserData
     FROM
         OPENJSON(@collectionData)
             WITH(
@@ -92,6 +89,35 @@ BEGIN
                 [HidePasswords] BIT '$.HidePasswords',
                 [Manage] BIT '$.Manage'
             ) OUC
+
+    INSERT INTO [dbo].[CollectionUser]
+    (
+        [CollectionId],
+        [OrganizationUserId],
+        [ReadOnly],
+        [HidePasswords],
+        [Manage]
+    )
+    SELECT
+        [CollectionId],
+        [OrganizationUserId],
+        [ReadOnly],
+        [HidePasswords],
+        [Manage]
+    FROM #CollectionUserData
+
+    -- Bump RevisionDate on all affected collections
+    IF @RevisionDate IS NOT NULL
+    BEGIN
+        UPDATE
+            C
+        SET
+            C.[RevisionDate] = @RevisionDate
+        FROM
+            [dbo].[Collection] C
+        INNER JOIN
+            #CollectionUserData CUD ON CUD.[CollectionId] = C.[Id]
+    END
 END
 go
 
