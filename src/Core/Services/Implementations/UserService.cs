@@ -803,33 +803,6 @@ public class UserService : UserManager<User>, IUserService
         await SaveUserAsync(user);
     }
 
-    // TODO: Remove with deletion of pm-29594-update-individual-subscription-page
-    public async Task<string> AdjustStorageAsync(User user, short storageAdjustmentGb)
-    {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
-
-        if (!user.Premium)
-        {
-            throw new BadRequestException("Not a premium user.");
-        }
-
-        var premiumPlan = await _pricingClient.GetAvailablePremiumPlan();
-
-        var baseStorageGb = (short)premiumPlan.Storage.Provided;
-        var secret = await BillingHelpers.AdjustStorageAsync(
-            _paymentService,
-            null,
-            _featureService,
-            user,
-            storageAdjustmentGb,
-            premiumPlan.Storage.StripePriceId,
-            baseStorageGb);
-        await SaveUserAsync(user);
-        return secret;
-    }
     //TODO: Remove with the deletion of PM32645_DeferPriceMigrationToRenewal feature flag
     public async Task CancelPremiumAsync(User user, bool? endOfPeriod = null)
     {
@@ -840,12 +813,6 @@ public class UserService : UserManager<User>, IUserService
             eop = false;
         }
         await _paymentService.CancelSubscriptionAsync(user, eop);
-    }
-
-    // TODO: Remove with deletion of pm-29594-update-individual-subscription-page
-    public async Task ReinstatePremiumAsync(User user)
-    {
-        await _paymentService.ReinstateSubscriptionAsync(user);
     }
 
     public async Task EnablePremiumAsync(Guid userId, DateTime? expirationDate)

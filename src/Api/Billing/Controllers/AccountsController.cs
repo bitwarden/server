@@ -1,15 +1,11 @@
-﻿using Bit.Api.Models.Request;
-using Bit.Api.Models.Request.Accounts;
+using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
-using Bit.Core;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,16 +15,11 @@ namespace Bit.Api.Billing.Controllers;
 [Route("accounts")]
 [Authorize("Application")]
 public class AccountsController(
-    IUserService userService,
-    IFeatureService featureService,
-    ILicensingService licensingService,
-    IReinstateSubscriptionCommand reinstateSubscriptionCommand) : Controller
+    IUserService userService) : Controller
 {
-    // TODO: Remove with deletion of pm-29594-update-individual-subscription-page
     [HttpGet("subscription")]
-    public async Task<SubscriptionResponseModel> GetSubscriptionAsync(
-        [FromServices] GlobalSettings globalSettings,
-        [FromServices] IStripePaymentService paymentService)
+    [SelfHosted(SelfHostedOnly = true)]
+    public async Task<SubscriptionResponseModel> GetSubscriptionAsync()
     {
         var user = await userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -36,42 +27,7 @@ public class AccountsController(
             throw new UnauthorizedAccessException();
         }
 
-        // Only cloud-hosted users with payment gateways have subscription and discount information
-        if (!globalSettings.SelfHosted)
-        {
-            if (user.Gateway != null)
-            {
-                var subscriptionInfo = await paymentService.GetSubscriptionAsync(user);
-                var license = await userService.GenerateLicenseAsync(user, subscriptionInfo);
-                var claimsPrincipal = licensingService.GetClaimsPrincipalFromLicense(license);
-                return new SubscriptionResponseModel(user, subscriptionInfo, license, claimsPrincipal);
-            }
-            else
-            {
-                var license = await userService.GenerateLicenseAsync(user);
-                var claimsPrincipal = licensingService.GetClaimsPrincipalFromLicense(license);
-                return new SubscriptionResponseModel(user, null, license, claimsPrincipal);
-            }
-        }
-        else
-        {
-            return new SubscriptionResponseModel(user);
-        }
-    }
-
-    // TODO: Remove with deletion of pm-29594-update-individual-subscription-page
-    [HttpPost("storage")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<PaymentResponseModel> PostStorageAsync([FromBody] StorageRequestModel model)
-    {
-        var user = await userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var result = await userService.AdjustStorageAsync(user, model.StorageGbAdjustment!.Value);
-        return new PaymentResponseModel { Success = true, PaymentIntentClientSecret = result };
+        return new SubscriptionResponseModel(user);
     }
 
     /*
@@ -114,26 +70,5 @@ public class AccountsController(
         await subscriberService.CancelSubscription(user,
             user.IsExpired(),
             new OffboardingSurveyResponse { UserId = user.Id, Reason = request.Reason, Feedback = request.Feedback });
-    }
-
-    // TODO: Remove with deletion of pm-29594-update-individual-subscription-page
-    [HttpPost("reinstate-premium")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostReinstateAsync()
-    {
-        var user = await userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
-        {
-            (await reinstateSubscriptionCommand.Run(user)).GetValueOrThrow();
-        }
-        else
-        {
-            await userService.ReinstatePremiumAsync(user);
-        }
     }
 }
