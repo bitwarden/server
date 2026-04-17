@@ -562,6 +562,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             userEntity.KdfParallelism = masterPasswordUnlockData.Kdf.Parallelism;
             userEntity.RevisionDate = timestamp;
             userEntity.AccountRevisionDate = timestamp;
+            // userEntity.LastPasswordChangeDate = timestamp; This needs adding in PM-34905
             userEntity.MasterPasswordSalt = masterPasswordUnlockData.Salt;
             await dbContext.SaveChangesAsync();
         };

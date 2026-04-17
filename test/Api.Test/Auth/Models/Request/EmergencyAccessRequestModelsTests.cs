@@ -61,6 +61,7 @@ public class EmergencyAccessUpdateRequestModelTests
         {
             Type = EmergencyAccessType.View,
             WaitTimeDays = waitTimeDays,
+            KeyEncrypted = "",
         };
         var result = Validate(model);
         Assert.Contains(result, r => r.MemberNames.Contains("WaitTimeDays"));
@@ -77,6 +78,7 @@ public class EmergencyAccessUpdateRequestModelTests
         {
             Type = EmergencyAccessType.View,
             WaitTimeDays = waitTimeDays,
+            KeyEncrypted = "",
         };
         var result = Validate(model);
         Assert.DoesNotContain(result, r => r.MemberNames.Contains("WaitTimeDays"));
@@ -128,6 +130,7 @@ public class EmergencyAccessUpdateRequestModelTests
         {
             Type = EmergencyAccessType.Takeover,
             WaitTimeDays = 14,
+            KeyEncrypted = "",
         };
         var existing = new EmergencyAccess
         {

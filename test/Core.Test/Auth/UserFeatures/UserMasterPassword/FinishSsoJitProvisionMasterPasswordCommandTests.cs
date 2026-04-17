@@ -1,6 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -10,13 +12,15 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
 
 namespace Bit.Core.Test.Auth.UserFeatures.UserMasterPassword;
 
+/// <summary>
+
+/// </summary>
 [SutProviderCustomize]
 public class FinishSsoJitProvisionMasterPasswordCommandTests
 {
@@ -24,7 +28,7 @@ public class FinishSsoJitProvisionMasterPasswordCommandTests
     [BitAutoData]
     public async Task FinishProvisionAsync_Success(SutProvider<FinishSsoJitProvisionMasterPasswordCommand> sutProvider,
         User user, UserAccountKeysData accountKeys, KdfSettings kdfSettings,
-        Organization org, OrganizationUser orgUser, string serverSideHash, string masterPasswordHint)
+        Organization org, OrganizationUser orgUser, string masterPasswordHint)
     {
         // Arrange
         user.Key = null;
@@ -38,14 +42,9 @@ public class FinishSsoJitProvisionMasterPasswordCommandTests
             .GetByOrganizationAsync(org.Id, user.Id)
             .Returns(orgUser);
 
-        sutProvider.GetDependency<IPasswordHasher<User>>()
-            .HashPassword(user, model.MasterPasswordAuthentication.MasterPasswordAuthenticationHash)
-            .Returns(serverSideHash);
-
-        // Mock SetMasterPassword to return a specific UpdateUserData delegate
         UpdateUserData mockUpdateUserData = (connection, transaction) => Task.CompletedTask;
-        sutProvider.GetDependency<IUserRepository>()
-            .SetMasterPassword(user.Id, model.MasterPasswordUnlock, serverSideHash, model.MasterPasswordHint)
+        sutProvider.GetDependency<IMasterPasswordService>()
+            .BuildUpdateUserDelegateSetInitialMasterPassword(user, Arg.Any<SetInitialPasswordData>())
             .Returns(mockUpdateUserData);
 
         // Act
@@ -144,7 +143,7 @@ public class FinishSsoJitProvisionMasterPasswordCommandTests
     public async Task FinishProvisionAsync_NullSalt_UsesEmailFallback(
         SutProvider<FinishSsoJitProvisionMasterPasswordCommand> sutProvider,
         User user, UserAccountKeysData accountKeys, KdfSettings kdfSettings,
-        Organization org, OrganizationUser orgUser, string serverSideHash, string masterPasswordHint)
+        Organization org, OrganizationUser orgUser, string masterPasswordHint)
     {
         // Arrange
         user.Key = null;
@@ -164,13 +163,9 @@ public class FinishSsoJitProvisionMasterPasswordCommandTests
             .GetByOrganizationAsync(org.Id, user.Id)
             .Returns(orgUser);
 
-        sutProvider.GetDependency<IPasswordHasher<User>>()
-            .HashPassword(user, model.MasterPasswordAuthentication.MasterPasswordAuthenticationHash)
-            .Returns(serverSideHash);
-
         UpdateUserData mockUpdateUserData = (connection, transaction) => Task.CompletedTask;
-        sutProvider.GetDependency<IUserRepository>()
-            .SetMasterPassword(user.Id, model.MasterPasswordUnlock, serverSideHash, model.MasterPasswordHint)
+        sutProvider.GetDependency<IMasterPasswordService>()
+            .BuildUpdateUserDelegateSetInitialMasterPassword(user, Arg.Any<SetInitialPasswordData>())
             .Returns(mockUpdateUserData);
 
         // Act — should not throw since email fallback provides a valid salt

@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Models.Data;
 using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
@@ -9,6 +10,10 @@ namespace Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 /// </summary>
 public interface ITdeOffboardingPasswordCommand
 {
+    [Obsolete("To be removed in PM-33141")]
     public Task<IdentityResult> UpdateTdeOffboardingPasswordAsync(User user, string masterPassword, string key,
-        string orgSsoIdentifier);
+        string? masterPasswordHint);
+
+    public Task<IdentityResult> UpdateTdeOffboardingPasswordAsync(User user, MasterPasswordUnlockData unlockData,
+        MasterPasswordAuthenticationData authenticationData, string? masterPasswordHint);
 }

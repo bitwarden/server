@@ -15,11 +15,15 @@ using Xunit;
 
 namespace Bit.Core.Test.Auth.UserFeatures.UserMasterPassword;
 
+/// <summary>
+/// Add tests for new function to ensure parity
+/// </summary>
 [SutProviderCustomize]
 public class TdeOffboardingPasswordTests
 {
     [Theory]
     [BitAutoData]
+    [Obsolete("To be removed in PM-33141")]
     public async Task TdeOffboardingPasswordCommand_Success(SutProvider<TdeOffboardingPasswordCommand> sutProvider,
         User user, string masterPassword, string key, string hint, OrganizationUserOrganizationDetails orgUserDetails, SsoUser ssoUser)
     {
@@ -56,6 +60,7 @@ public class TdeOffboardingPasswordTests
 
     [Theory]
     [BitAutoData]
+    [Obsolete("To be removed in PM-33141")]
     public async Task TdeOffboardingPasswordCommand_RejectWithTdeEnabled(SutProvider<TdeOffboardingPasswordCommand> sutProvider,
         User user, string masterPassword, string key, string hint, OrganizationUserOrganizationDetails orgUserDetails, SsoUser ssoUser)
     {

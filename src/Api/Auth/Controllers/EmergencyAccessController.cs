@@ -13,6 +13,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Auth.Controllers;
@@ -170,10 +171,34 @@ public class EmergencyAccessController : Controller
     }
 
     [HttpPost("{id}/password")]
-    public async Task Password(Guid id, [FromBody] EmergencyAccessPasswordRequestModel model)
+    public async Task<IResult> Password(Guid id, [FromBody] EmergencyAccessPasswordRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
-        await _emergencyAccessService.PasswordAsync(id, user, model.NewMasterPasswordHash, model.Key);
+
+        IdentityResult identityResult;
+        if (model.RequestHasNewDataTypes())
+        {
+            identityResult = await _emergencyAccessService.FinishRecoveryTakeoverAsync(id, user, model.UnlockData!.ToData(), model.AuthenticationData!.ToData());
+
+            if (identityResult.Succeeded)
+            {
+                return TypedResults.Ok();
+            }
+
+            foreach (var error in identityResult.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
+            return TypedResults.BadRequest(ModelState);
+        }
+        // To be removed in PM-33141
+        else
+        {
+            await _emergencyAccessService.FinishRecoveryTakeoverAsync(id, user, model.NewMasterPasswordHash!, model.Key!);
+
+            return TypedResults.Ok();
+        }
     }
 
     [HttpPost("{id}/view")]

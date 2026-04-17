@@ -20,6 +20,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
@@ -570,14 +571,14 @@ public class OrganizationUsersControllerTests
             .IsEnabled(FeatureFlagKeys.AdminResetTwoFactor)
             .Returns(false);
         sutProvider.GetDependency<IAdminRecoverAccountCommand>()
-            .RecoverAccountAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUser>(), Arg.Any<string>(), Arg.Any<string>())
+            .RecoverAccountAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUser>(), Arg.Any<MasterPasswordUnlockData>(), Arg.Any<MasterPasswordAuthenticationData>())
             .Returns(Microsoft.AspNetCore.Identity.IdentityResult.Success);
 
         var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model);
 
         Assert.IsType<Ok>(result);
         await sutProvider.GetDependency<IAdminRecoverAccountCommand>().Received(1)
-            .RecoverAccountAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUser>(), Arg.Any<string>(), Arg.Any<string>());
+            .RecoverAccountAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUser>(), Arg.Any<MasterPasswordUnlockData>(), Arg.Any<MasterPasswordAuthenticationData>());
     }
 
     [Theory]
@@ -598,7 +599,7 @@ public class OrganizationUsersControllerTests
             .IsEnabled(FeatureFlagKeys.AdminResetTwoFactor)
             .Returns(false);
         sutProvider.GetDependency<IAdminRecoverAccountCommand>()
-            .RecoverAccountAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUser>(), Arg.Any<string>(), Arg.Any<string>())
+            .RecoverAccountAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUser>(), Arg.Any<MasterPasswordUnlockData>(), Arg.Any<MasterPasswordAuthenticationData>())
             .Returns(Microsoft.AspNetCore.Identity.IdentityResult.Failed(new Microsoft.AspNetCore.Identity.IdentityError { Description = "Error message" }));
 
         var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model);

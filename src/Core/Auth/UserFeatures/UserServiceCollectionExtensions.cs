@@ -4,6 +4,8 @@ using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.Registration.Implementations;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
+using Bit.Core.Auth.UserFeatures.TempPassword;
+using Bit.Core.Auth.UserFeatures.TempPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Implementations;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
@@ -26,6 +28,7 @@ public static class UserServiceCollectionExtensions
         services.AddScoped<IUserService, UserService>();
         services.AddEmergencyAccessCommands();
         services.AddUserPasswordCommands();
+        services.AddUpdateTempPasswordCommands();
         services.AddUserRegistrationCommands();
         services.AddWebAuthnLoginCommands();
         services.AddTdeOffboardingPasswordCommands();
@@ -48,11 +51,18 @@ public static class UserServiceCollectionExtensions
         services.AddScoped<IFinishSsoJitProvisionMasterPasswordCommand, FinishSsoJitProvisionMasterPasswordCommand>();
         services.AddScoped<ISetInitialMasterPasswordCommandV1, SetInitialMasterPasswordCommandV1>();
         services.AddScoped<ITdeSetPasswordCommand, TdeSetPasswordCommand>();
+        services.AddScoped<IMasterPasswordService, MasterPasswordService>();
+        services.AddScoped<ISelfServicePasswordChangeCommand, SelfServicePasswordChangeCommand>();
     }
 
     private static void AddTdeOffboardingPasswordCommands(this IServiceCollection services)
     {
         services.AddScoped<ITdeOffboardingPasswordCommand, TdeOffboardingPasswordCommand>();
+    }
+
+    private static void AddUpdateTempPasswordCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IReplaceAdminSetTemporaryPasswordCommand, ReplaceAdminSetTemporaryPasswordCommand>();
     }
 
     private static void AddUserRegistrationCommands(this IServiceCollection services)

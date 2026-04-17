@@ -6,7 +6,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Auth.UserFeatures.UserMasterPassword;
 
@@ -14,23 +13,27 @@ public class FinishSsoJitProvisionMasterPasswordCommand : IFinishSsoJitProvision
 {
     private readonly IUserService _userService;
     private readonly IUserRepository _userRepository;
+    private readonly IMasterPasswordService _masterPasswordService;
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IEventService _eventService;
 
-    public FinishSsoJitProvisionMasterPasswordCommand(IUserService userService, IUserRepository userRepository,
-        IAcceptOrgUserCommand acceptOrgUserCommand, IOrganizationUserRepository organizationUserRepository,
-        IOrganizationRepository organizationRepository, IPasswordHasher<User> passwordHasher,
+    public FinishSsoJitProvisionMasterPasswordCommand(
+        IUserService userService,
+        IUserRepository userRepository,
+        IMasterPasswordService masterPasswordService,
+        IAcceptOrgUserCommand acceptOrgUserCommand,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository,
         IEventService eventService)
     {
         _userService = userService;
         _userRepository = userRepository;
+        _masterPasswordService = masterPasswordService;
         _acceptOrgUserCommand = acceptOrgUserCommand;
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
-        _passwordHasher = passwordHasher;
         _eventService = eventService;
     }
 
@@ -63,15 +66,13 @@ public class FinishSsoJitProvisionMasterPasswordCommand : IFinishSsoJitProvision
             throw new BadRequestException("User not found within organization.");
         }
 
-        // Hash the provided user master password authentication hash on the server side
-        var serverSideHashedMasterPasswordAuthenticationHash = _passwordHasher.HashPassword(user,
-            masterPasswordDataModel.MasterPasswordAuthentication.MasterPasswordAuthenticationHash);
+        var updateUserData =
+            _masterPasswordService.BuildUpdateUserDelegateSetInitialMasterPassword(
+                user,
+                masterPasswordDataModel.ToSetInitialPasswordData());
 
-        var setMasterPasswordTask = _userRepository.SetMasterPassword(user.Id,
-            masterPasswordDataModel.MasterPasswordUnlock, serverSideHashedMasterPasswordAuthenticationHash,
-            masterPasswordDataModel.MasterPasswordHint);
         await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, masterPasswordDataModel.AccountKeys,
-            [setMasterPasswordTask]);
+            [updateUserData]);
 
         await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
 

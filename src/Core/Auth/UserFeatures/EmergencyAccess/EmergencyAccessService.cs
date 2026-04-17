@@ -9,9 +9,12 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -19,6 +22,7 @@ using Bit.Core.Tokens;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
+using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Auth.UserFeatures.EmergencyAccess;
 
@@ -32,6 +36,7 @@ public class EmergencyAccessService : IEmergencyAccessService
     private readonly ICipherService _cipherService;
     private readonly IMailService _mailService;
     private readonly IUserService _userService;
+    private readonly IMasterPasswordService _masterPasswordService;
     private readonly GlobalSettings _globalSettings;
     private readonly IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> _dataProtectorTokenizer;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
@@ -46,6 +51,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         ICipherService cipherService,
         IMailService mailService,
         IUserService userService,
+        IMasterPasswordService masterPasswordService,
         GlobalSettings globalSettings,
         IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> dataProtectorTokenizer,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
@@ -59,6 +65,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         _cipherService = cipherService;
         _mailService = mailService;
         _userService = userService;
+        _masterPasswordService = masterPasswordService;
         _globalSettings = globalSettings;
         _dataProtectorTokenizer = dataProtectorTokenizer;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
@@ -357,8 +364,8 @@ public class EmergencyAccessService : IEmergencyAccessService
         return (emergencyAccess, grantor);
     }
 
-    // TODO PM-21687: rename this to something like FinishRecoveryTakeoverAsync
-    public async Task PasswordAsync(Guid emergencyAccessId, User granteeUser, string newMasterPasswordHash, string key)
+    [Obsolete("To be removed in PM-33141")]
+    public async Task FinishRecoveryTakeoverAsync(Guid emergencyAccessId, User granteeUser, string newMasterPasswordHash, string key)
     {
         var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);
 
@@ -388,6 +395,60 @@ public class EmergencyAccessService : IEmergencyAccessService
                 await _removeOrganizationUserCommand.RemoveUserAsync(o.OrganizationId, grantor.Id);
             }
         }
+    }
+
+    public async Task<IdentityResult> FinishRecoveryTakeoverAsync(
+        Guid emergencyAccessId,
+        User granteeUser,
+        MasterPasswordUnlockData unlockData,
+        MasterPasswordAuthenticationData authenticationData)
+    {
+        var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);
+
+        if (!IsValidRequest(emergencyAccess, granteeUser, EmergencyAccessType.Takeover))
+        {
+            throw new BadRequestException("Emergency Access not valid.");
+        }
+
+        var grantor = await _userRepository.GetByIdAsync(emergencyAccess.GrantorId);
+
+        if (grantor == null)
+        {
+            throw new BadRequestException("Grantor not found when trying to finish recovery takeover.");
+        }
+
+        var identityResult = await _masterPasswordService.MutateSetInitialOrUpdateExistingMasterPasswordAsync(
+            user: grantor,
+            new SetInitialOrUpdateExistingPasswordData
+            {
+                MasterPasswordUnlock = unlockData,
+                MasterPasswordAuthentication = authenticationData,
+            });
+
+        if (!identityResult.Succeeded)
+        {
+            return identityResult;
+        }
+
+        // Side effects that we still need to run when performing emergency access.
+
+        // Disable TwoFactor providers since they will otherwise block logins
+        grantor.SetTwoFactorProviders([]);
+        // Disable New Device Verification since it will otherwise block logins
+        grantor.VerifyDevices = false;
+
+        await _userRepository.ReplaceAsync(grantor);
+
+        // Remove grantor from all organizations unless Owner
+        var orgUser = await _organizationUserRepository.GetManyByUserAsync(grantor.Id);
+        foreach (var o in orgUser)
+        {
+            if (o.Type != OrganizationUserType.Owner)
+            {
+                await _removeOrganizationUserCommand.RemoveUserAsync(o.OrganizationId, grantor.Id);
+            }
+        }
+        return IdentityResult.Success;
     }
 
     public async Task SendNotificationsAsync()

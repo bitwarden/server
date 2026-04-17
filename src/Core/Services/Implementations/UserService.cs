@@ -481,6 +481,7 @@ public class UserService : UserManager<User>, IUserService
         });
     }
 
+    [Obsolete("To be removed in PM-33141")]
     public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint,
         string key)
     {
@@ -657,6 +658,7 @@ public class UserService : UserManager<User>, IUserService
         return IdentityResult.Success;
     }
 
+    [Obsolete("To be removed in PM-33141")]
     public async Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint)
     {
         if (!user.ForcePasswordReset)
@@ -1027,6 +1029,7 @@ public class UserService : UserManager<User>, IUserService
         return user.Key == null && user.MasterPassword != null && user.PrivateKey != null;
     }
 
+    [Obsolete("Migrating to the MasterPasswordService")]
     private async Task<IdentityResult> ValidatePasswordInternal(User user, string password)
     {
         var errors = new List<IdentityError>();
