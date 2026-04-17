@@ -62,9 +62,6 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
         Assert.Equal(PolicyType.TwoFactorAuthentication, result2.PolicyType);
         Assert.Equal(policy.Data, result2.PolicyData);
         Assert.Equal(OrganizationUserStatusType.Confirmed, result2.OrganizationUserStatus);
-
-        await organizationRepository.SafeDeleteAsync(organization);
-        await userRepository.DeleteManyAsync([user1, user2]);
     }
 
     [Theory]
@@ -114,9 +111,6 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
         Assert.Equal(organization.Id, result2.OrganizationId);
         Assert.Equal(PolicyType.MasterPassword, result2.PolicyType);
         Assert.Equal(OrganizationUserStatusType.Invited, result2.OrganizationUserStatus);
-
-        await organizationRepository.SafeDeleteAsync(organization);
-        await userRepository.DeleteManyAsync([user1, user2]);
     }
 
     [Theory]
@@ -178,9 +172,6 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
         Assert.True(result.IsProvider);
         Assert.Equal(user.Id, result.UserId);
         Assert.Equal(organization.Id, result.OrganizationId);
-
-        await organizationRepository.SafeDeleteAsync(organization);
-        await userRepository.DeleteManyAsync([user]);
     }
 
     [Theory]
@@ -212,9 +203,6 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
         var resultsList = results.ToList();
         Assert.Single(resultsList);
         Assert.All(resultsList, r => Assert.Equal(PolicyType.TwoFactorAuthentication, r.PolicyType));
-
-        await organizationRepository.SafeDeleteAsync(organization);
-        await userRepository.DeleteManyAsync([user]);
     }
 
     [Theory]
@@ -246,8 +234,6 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
 
         // Assert
         Assert.Empty(results);
-        await organizationRepository.SafeDeleteAsync(organization);
-        await userRepository.DeleteManyAsync([user]);
     }
 
     [Theory]
@@ -289,9 +275,6 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
 
         // Assert
         Assert.Empty(results);
-
-        await organizationRepository.SafeDeleteAsync(organization);
-        await userRepository.DeleteManyAsync([user]);
     }
 
     [Theory]
@@ -333,9 +316,6 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
 
         // Assert
         Assert.Empty(results);
-
-        await organizationRepository.SafeDeleteAsync(organization);
-        await userRepository.DeleteManyAsync([user]);
     }
 
     [Theory]

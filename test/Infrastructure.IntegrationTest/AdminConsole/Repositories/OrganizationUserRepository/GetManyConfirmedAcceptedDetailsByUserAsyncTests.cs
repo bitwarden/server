@@ -26,10 +26,6 @@ public class GetManyConfirmedAcceptedDetailsByUserAsyncTests
         Assert.Equal(organization.Id, result.OrganizationId);
         Assert.Equal(user.Id, result.UserId);
         Assert.Equal(OrganizationUserStatusType.Confirmed, result.Status);
-
-        // Annul
-        await organizationRepository.SafeDeleteAsync(organization);
-        await userRepository.DeleteAsync(user);
     }
 
     [Theory, DatabaseData]
@@ -52,10 +48,6 @@ public class GetManyConfirmedAcceptedDetailsByUserAsyncTests
         Assert.Equal(organization.Id, result.OrganizationId);
         Assert.Equal(user.Id, result.UserId);
         Assert.Equal(OrganizationUserStatusType.Accepted, result.Status);
-
-        // Annul
-        await organizationRepository.SafeDeleteAsync(organization);
-        await userRepository.DeleteAsync(user);
     }
 
     [Theory, DatabaseData]
@@ -80,11 +72,6 @@ public class GetManyConfirmedAcceptedDetailsByUserAsyncTests
         Assert.Equal(2, results.Count);
         Assert.Contains(results, r => r.OrganizationId == confirmedOrg.Id && r.Status == OrganizationUserStatusType.Confirmed);
         Assert.Contains(results, r => r.OrganizationId == acceptedOrg.Id && r.Status == OrganizationUserStatusType.Accepted);
-
-        // Annul
-        await organizationRepository.SafeDeleteAsync(confirmedOrg);
-        await organizationRepository.SafeDeleteAsync(acceptedOrg);
-        await userRepository.DeleteAsync(user);
     }
 
     [Theory, DatabaseData]
@@ -103,10 +90,6 @@ public class GetManyConfirmedAcceptedDetailsByUserAsyncTests
 
         // Assert
         Assert.DoesNotContain(results, r => r.OrganizationId == organization.Id);
-
-        // Annul
-        await organizationRepository.SafeDeleteAsync(organization);
-        await userRepository.DeleteAsync(user);
     }
 
     [Theory, DatabaseData]
@@ -125,10 +108,6 @@ public class GetManyConfirmedAcceptedDetailsByUserAsyncTests
 
         // Assert
         Assert.DoesNotContain(results, r => r.OrganizationId == organization.Id);
-
-        // Annul
-        await organizationRepository.SafeDeleteAsync(organization);
-        await userRepository.DeleteAsync(user);
     }
 
     [Theory, DatabaseData]
@@ -149,9 +128,5 @@ public class GetManyConfirmedAcceptedDetailsByUserAsyncTests
 
         // Assert
         Assert.DoesNotContain(results, r => r.OrganizationId == organization.Id);
-
-        // Annul
-        await organizationRepository.SafeDeleteAsync(organization);
-        await userRepository.DeleteManyAsync([targetUser, otherUser]);
     }
 }

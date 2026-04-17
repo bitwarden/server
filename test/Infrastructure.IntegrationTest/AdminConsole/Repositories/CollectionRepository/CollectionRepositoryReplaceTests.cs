@@ -87,12 +87,6 @@ public class CollectionRepositoryReplaceTests
         Assert.Equal(2, users.Length);
         Assert.Single(users, u => u.Id == orgUser2.Id && !u.Manage && !u.HidePasswords && u.ReadOnly);
         Assert.Single(users, u => u.Id == orgUser3.Id && u.Manage && !u.HidePasswords && u.ReadOnly);
-
-        // Clean up data
-        await userRepository.DeleteAsync(user1);
-        await userRepository.DeleteAsync(user2);
-        await userRepository.DeleteAsync(user3);
-        await organizationRepository.SafeDeleteAsync(organization);
     }
 
     /// <remarks>
@@ -141,10 +135,6 @@ public class CollectionRepositoryReplaceTests
 
         Assert.Empty(actualAccess.Groups);
         Assert.Empty(actualAccess.Users);
-
-        // Clean up
-        await userRepository.DeleteAsync(user);
-        await organizationRepository.SafeDeleteAsync(organization);
     }
 
     [Theory, DatabaseData]
@@ -205,10 +195,5 @@ public class CollectionRepositoryReplaceTests
         Assert.Equal(2, users.Length);
         Assert.Single(users, u => u.Id == orgUser1.Id && u.Manage && !u.HidePasswords && u.ReadOnly);
         Assert.Single(users, u => u.Id == orgUser2.Id && !u.Manage && u.HidePasswords && !u.ReadOnly);
-
-        // Clean up data
-        await userRepository.DeleteAsync(user1);
-        await userRepository.DeleteAsync(user2);
-        await organizationRepository.SafeDeleteAsync(organization);
     }
 }
