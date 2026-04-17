@@ -19,7 +19,7 @@ public class PresetCommand
 
             if (args.List)
             {
-                PrintAvailablePresets(args.Json);
+                PrintAvailablePresets(args.GetOutputFormat());
                 return;
             }
 
@@ -90,7 +90,7 @@ public class PresetCommand
         ConsoleOutput.PrintMangleMap(deps);
     }
 
-    private static void PrintAvailablePresets(bool json = false)
+    private static void PrintAvailablePresets(OutputFormat format = OutputFormat.Text)
     {
         var available = PresetCatalogService.ListAvailable();
 
@@ -109,7 +109,7 @@ public class PresetCommand
             }
         }
 
-        if (json)
+        if (format == OutputFormat.Json)
         {
             var output = new
             {
