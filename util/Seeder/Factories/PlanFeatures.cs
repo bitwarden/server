@@ -165,6 +165,7 @@ public static class PlanFeatures
         org.UseRiskInsights = false;
         org.UseAdminSponsoredFamilies = false;
         org.SyncSeats = false;
+        org.UseInviteLinks = false;
     }
 
     private static void ApplyTeamsFeatures(Organization org)
@@ -191,6 +192,7 @@ public static class PlanFeatures
         org.UseRiskInsights = false;
         org.UseAdminSponsoredFamilies = false;
         org.SyncSeats = true;
+        org.UseInviteLinks = false;
     }
 
     private static void ApplyEnterpriseFeatures(Organization org)
@@ -217,5 +219,6 @@ public static class PlanFeatures
         org.UseRiskInsights = true;
         org.UseAdminSponsoredFamilies = true;
         org.SyncSeats = true;
+        org.UseInviteLinks = true;
     }
 }
