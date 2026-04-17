@@ -96,4 +96,24 @@ public class SecurityTaskRepository : Repository<Core.Vault.Entities.SecurityTas
 
         return metrics ?? new Core.Vault.Entities.SecurityTaskMetrics(0, 0);
     }
+
+    /// <inheritdoc />
+    public async Task MarkAsCompleteByCipherIds(IEnumerable<Guid> cipherIds)
+    {
+        if (!cipherIds.Any())
+        {
+            return;
+        }
+
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var cipherIdsList = cipherIds.ToList();
+
+        await dbContext.SecurityTasks
+            .Where(st => st.CipherId.HasValue && cipherIdsList.Contains(st.CipherId.Value) && st.Status != SecurityTaskStatus.Completed)
+            .ExecuteUpdateAsync(st => st
+                .SetProperty(s => s.Status, SecurityTaskStatus.Completed)
+                .SetProperty(s => s.RevisionDate, DateTime.UtcNow));
+    }
 }

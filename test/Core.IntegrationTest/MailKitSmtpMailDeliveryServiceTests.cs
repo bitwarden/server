@@ -1,7 +1,7 @@
 ﻿using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Models.Mail;
-using Bit.Core.Services;
+using Bit.Core.Platform.Mail.Delivery;
 using Bit.Core.Settings;
 using MailKit.Security;
 using Microsoft.Extensions.Logging;

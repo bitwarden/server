@@ -27,7 +27,11 @@ BEGIN
         [UseRiskInsights],
         [LimitItemDeletion],
         [UseOrganizationDomains],
-        [UseAdminSponsoredFamilies]
+        [UseAdminSponsoredFamilies],
+        [UseAutomaticUserConfirmation],
+        [UsePhishingBlocker],
+        [UseDisableSmAdsForUsers],
+        [UseMyItems]
     FROM
         [dbo].[Organization]
 END

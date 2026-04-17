@@ -19,7 +19,7 @@ using Bit.SharedWeb.Utilities;
 
 namespace Bit.Admin.AdminConsole.Models;
 
-public class OrganizationEditModel : OrganizationViewModel
+public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
 {
     private readonly List<Plan> _plans;
 
@@ -106,6 +106,12 @@ public class OrganizationEditModel : OrganizationViewModel
         SmServiceAccounts = org.SmServiceAccounts;
         MaxAutoscaleSmServiceAccounts = org.MaxAutoscaleSmServiceAccounts;
         UseOrganizationDomains = org.UseOrganizationDomains;
+        UseAutomaticUserConfirmation = org.UseAutomaticUserConfirmation;
+        UseDisableSmAdsForUsers = org.UseDisableSmAdsForUsers;
+        UsePhishingBlocker = org.UsePhishingBlocker;
+        UseMyItems = org.UseMyItems;
+        ExemptFromBillingAutomation = org.ExemptFromBillingAutomation;
+
         _plans = plans;
     }
 
@@ -158,6 +164,8 @@ public class OrganizationEditModel : OrganizationViewModel
     public new bool UseSecretsManager { get; set; }
     [Display(Name = "Risk Insights")]
     public new bool UseRiskInsights { get; set; }
+    [Display(Name = "Phishing Blocker")]
+    public new bool UsePhishingBlocker { get; set; }
     [Display(Name = "Admin Sponsored Families")]
     public bool UseAdminSponsoredFamilies { get; set; }
     [Display(Name = "Self Host")]
@@ -191,7 +199,15 @@ public class OrganizationEditModel : OrganizationViewModel
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
     [Display(Name = "Use Organization Domains")]
     public bool UseOrganizationDomains { get; set; }
+    [Display(Name = "Disable SM Ads For Users")]
+    public new bool UseDisableSmAdsForUsers { get; set; }
 
+    [Display(Name = "Automatic User Confirmation")]
+    public bool UseAutomaticUserConfirmation { get; set; }
+    [Display(Name = "Create My Items for organization ownership")]
+    public bool UseMyItems { get; set; }
+    [Display(Name = "Exempt From Billing Automation")]
+    public bool ExemptFromBillingAutomation { get; set; }
     /**
      * Creates a Plan[] object for use in Javascript
      * This is mapped manually below to provide some type safety in case the plan objects change
@@ -226,11 +242,13 @@ public class OrganizationEditModel : OrganizationViewModel
                     HasResetPassword = p.HasResetPassword,
                     UsersGetPremium = p.UsersGetPremium,
                     HasCustomPermissions = p.HasCustomPermissions,
+                    HasMyItems = p.HasMyItems,
                     UpgradeSortOrder = p.UpgradeSortOrder,
                     DisplaySortOrder = p.DisplaySortOrder,
                     LegacyYear = p.LegacyYear,
                     Disabled = p.Disabled,
                     SupportsSecretsManager = p.SupportsSecretsManager,
+                    AutomaticUserConfirmation = p.AutomaticUserConfirmation,
                     PasswordManager =
                         new
                         {
@@ -322,6 +340,21 @@ public class OrganizationEditModel : OrganizationViewModel
         existingOrganization.SmServiceAccounts = SmServiceAccounts;
         existingOrganization.MaxAutoscaleSmServiceAccounts = MaxAutoscaleSmServiceAccounts;
         existingOrganization.UseOrganizationDomains = UseOrganizationDomains;
+        existingOrganization.UseDisableSmAdsForUsers = UseDisableSmAdsForUsers;
+        existingOrganization.UsePhishingBlocker = UsePhishingBlocker;
+        existingOrganization.UseMyItems = UseMyItems;
+        existingOrganization.ExemptFromBillingAutomation = ExemptFromBillingAutomation;
         return existingOrganization;
+    }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (UseMyItems && !UsePolicies)
+        {
+            var displayName = nameof(UseMyItems).GetDisplayAttribute<OrganizationEditModel>()?.GetName() ?? nameof(UseMyItems);
+            yield return new ValidationResult(
+                $"The {displayName} feature requires Policies to be enabled.",
+                [nameof(UseMyItems)]);
+        }
     }
 }

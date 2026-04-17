@@ -12,6 +12,7 @@ public interface IProviderUserRepository : IRepository<ProviderUser, Guid>
     Task<int> GetCountByProviderAsync(Guid providerId, string email, bool onlyRegisteredUsers);
     Task<ICollection<ProviderUser>> GetManyAsync(IEnumerable<Guid> ids);
     Task<ICollection<ProviderUser>> GetManyByUserAsync(Guid userId);
+    Task<ICollection<ProviderUser>> GetManyByManyUsersAsync(IEnumerable<Guid> userIds);
     Task<ProviderUser?> GetByProviderUserAsync(Guid providerId, Guid userId);
     Task<ICollection<ProviderUser>> GetManyByProviderAsync(Guid providerId, ProviderUserType? type = null);
     Task<ICollection<ProviderUserUserDetails>> GetManyDetailsByProviderAsync(Guid providerId, ProviderUserStatusType? status = null);

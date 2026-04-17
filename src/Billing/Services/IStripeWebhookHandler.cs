@@ -67,3 +67,13 @@ public interface ICustomerUpdatedHandler : IStripeWebhookHandler;
 public interface IInvoiceFinalizedHandler : IStripeWebhookHandler;
 
 public interface ISetupIntentSucceededHandler : IStripeWebhookHandler;
+
+/// <summary>
+/// Defines the contract for handling Stripe coupon deleted events.
+/// </summary>
+public interface ICouponDeletedHandler : IStripeWebhookHandler;
+
+/// <summary>
+/// Defines the contract for handling Stripe checkout session completed events.
+/// </summary>
+public interface ICheckoutSessionCompletedHandler : IStripeWebhookHandler;

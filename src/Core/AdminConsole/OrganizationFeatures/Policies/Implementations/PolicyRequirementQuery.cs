@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using Bit.Core.AdminConsole.Enums;
+﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
@@ -13,6 +11,9 @@ public class PolicyRequirementQuery(
     : IPolicyRequirementQuery
 {
     public async Task<T> GetAsync<T>(Guid userId) where T : IPolicyRequirement
+        => (await GetAsync<T>([userId])).Single().Requirement;
+
+    public async Task<T> GetAsyncVNext<T>(Guid userId) where T : IPolicyRequirement
     {
         var factory = factories.OfType<IPolicyRequirementFactory<T>>().SingleOrDefault();
         if (factory is null)
@@ -20,16 +21,13 @@ public class PolicyRequirementQuery(
             throw new NotImplementedException("No Requirement Factory found for " + typeof(T));
         }
 
-        var policyDetails = await GetPolicyDetails(userId);
-        var filteredPolicies = policyDetails
-            .Where(p => p.PolicyType == factory.PolicyType)
-            .Where(factory.Enforce);
-        var requirement = factory.Create(filteredPolicies);
-        return requirement;
+        var policyDetails = await policyRepository.GetPolicyDetailsByUserIdAndPolicyTypeAsync(userId, factory.PolicyType);
+        var enforcedPolicyDetails = policyDetails.Where(factory.Enforce);
+
+        return factory.Create(enforcedPolicyDetails);
     }
 
-    public async Task<IEnumerable<Guid>> GetManyByOrganizationIdAsync<T>(Guid organizationId)
-        where T : IPolicyRequirement
+    public async Task<IEnumerable<(Guid UserId, T Requirement)>> GetAsync<T>(IEnumerable<Guid> userIds) where T : IPolicyRequirement
     {
         var factory = factories.OfType<IPolicyRequirementFactory<T>>().SingleOrDefault();
         if (factory is null)
@@ -37,20 +35,17 @@ public class PolicyRequirementQuery(
             throw new NotImplementedException("No Requirement Factory found for " + typeof(T));
         }
 
-        var organizationPolicyDetails = await GetOrganizationPolicyDetails(organizationId, factory.PolicyType);
+        var userIdList = userIds.ToList();
 
-        var eligibleOrganizationUserIds = organizationPolicyDetails
-            .Where(p => p.PolicyType == factory.PolicyType)
+        var policyDetailsByUser = (await GetPolicyDetails(userIdList, factory.PolicyType))
             .Where(factory.Enforce)
-            .Select(p => p.OrganizationUserId)
-            .ToList();
+            .ToLookup(l => l.UserId);
 
-        return eligibleOrganizationUserIds;
+        var policyRequirements = userIdList.Select(u => (u, factory.Create(policyDetailsByUser[u])));
+
+        return policyRequirements;
     }
 
-    private Task<IEnumerable<PolicyDetails>> GetPolicyDetails(Guid userId)
-        => policyRepository.GetPolicyDetailsByUserId(userId);
-
-    private async Task<IEnumerable<OrganizationPolicyDetails>> GetOrganizationPolicyDetails(Guid organizationId, PolicyType policyType)
-        => await policyRepository.GetPolicyDetailsByOrganizationIdAsync(organizationId, policyType);
+    private async Task<IEnumerable<OrganizationPolicyDetails>> GetPolicyDetails(IEnumerable<Guid> userIds, PolicyType policyType)
+        => await policyRepository.GetPolicyDetailsByUserIdsAndPolicyType(userIds, policyType);
 }

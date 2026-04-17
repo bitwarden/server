@@ -15,7 +15,7 @@ public static class BillingExtensions
         => planType switch
         {
             PlanType.Custom or PlanType.Free => ProductTierType.Free,
-            PlanType.FamiliesAnnually or PlanType.FamiliesAnnually2019 => ProductTierType.Families,
+            PlanType.FamiliesAnnually or PlanType.FamiliesAnnually2025 or PlanType.FamiliesAnnually2019 => ProductTierType.Families,
             PlanType.TeamsStarter or PlanType.TeamsStarter2023 => ProductTierType.TeamsStarter,
             _ when planType.ToString().Contains("Teams") => ProductTierType.Teams,
             _ when planType.ToString().Contains("Enterprise") => ProductTierType.Enterprise,

@@ -1,6 +1,12 @@
 ﻿using Bit.Billing.Constants;
+using Bit.Billing.Jobs;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Services;
+using Bit.Core.Billing.Extensions;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Quartz;
 using Event = Stripe.Event;
 namespace Bit.Billing.Services.Implementations;
 
@@ -8,19 +14,34 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
 {
     private readonly IStripeEventService _stripeEventService;
     private readonly IUserService _userService;
+    private readonly IUserRepository _userRepository;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
     private readonly IOrganizationDisableCommand _organizationDisableCommand;
+    private readonly IProviderRepository _providerRepository;
+    private readonly IProviderService _providerService;
+    private readonly ISchedulerFactory _schedulerFactory;
+    private readonly IPushNotificationAdapter _pushNotificationAdapter;
 
     public SubscriptionDeletedHandler(
         IStripeEventService stripeEventService,
         IUserService userService,
+        IUserRepository userRepository,
         IStripeEventUtilityService stripeEventUtilityService,
-        IOrganizationDisableCommand organizationDisableCommand)
+        IOrganizationDisableCommand organizationDisableCommand,
+        IProviderRepository providerRepository,
+        IProviderService providerService,
+        ISchedulerFactory schedulerFactory,
+        IPushNotificationAdapter pushNotificationAdapter)
     {
         _stripeEventService = stripeEventService;
         _userService = userService;
+        _userRepository = userRepository;
         _stripeEventUtilityService = stripeEventUtilityService;
         _organizationDisableCommand = organizationDisableCommand;
+        _providerRepository = providerRepository;
+        _providerService = providerService;
+        _schedulerFactory = schedulerFactory;
+        _pushNotificationAdapter = pushNotificationAdapter;
     }
 
     /// <summary>
@@ -50,11 +71,45 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
                 return;
             }
 
-            await _organizationDisableCommand.DisableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
+            await _organizationDisableCommand.DisableAsync(organizationId.Value, subscription.GetCurrentPeriodEnd());
+        }
+        else if (providerId.HasValue)
+        {
+            var provider = await _providerRepository.GetByIdAsync(providerId.Value);
+            if (provider != null)
+            {
+                provider.Enabled = false;
+                await _providerService.UpdateAsync(provider);
+
+                await QueueProviderOrganizationDisableJobAsync(providerId.Value, subscription.GetCurrentPeriodEnd());
+            }
         }
         else if (userId.HasValue)
         {
-            await _userService.DisablePremiumAsync(userId.Value, subscription.CurrentPeriodEnd);
+            await _userService.DisablePremiumAsync(userId.Value, subscription.GetCurrentPeriodEnd());
+            var user = await _userRepository.GetByIdAsync(userId.Value);
+            if (user != null)
+            {
+                await _pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user!);
+            }
         }
+    }
+
+    private async Task QueueProviderOrganizationDisableJobAsync(Guid providerId, DateTime? expirationDate)
+    {
+        var scheduler = await _schedulerFactory.GetScheduler();
+
+        var job = JobBuilder.Create<ProviderOrganizationDisableJob>()
+            .WithIdentity($"disable-provider-orgs-{providerId}", "provider-management")
+            .UsingJobData("providerId", providerId.ToString())
+            .UsingJobData("expirationDate", expirationDate?.ToString("O"))
+            .Build();
+
+        var trigger = TriggerBuilder.Create()
+            .WithIdentity($"disable-trigger-{providerId}", "provider-management")
+            .StartNow()
+            .Build();
+
+        await scheduler.ScheduleJob(job, trigger);
     }
 }

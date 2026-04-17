@@ -14,8 +14,7 @@ using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core.Auth.Entities;
 using Bit.SharedWeb.Health;
-using Microsoft.IdentityModel.Logging;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -85,6 +84,7 @@ public class Startup
 
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
+        services.AddTestPlayIdTracking(globalSettings);
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
@@ -93,9 +93,6 @@ public class Startup
         // Caching
         services.AddMemoryCache();
         services.AddDistributedCache(globalSettings);
-
-        // BitPay
-        services.AddSingleton<BitPayClient>();
 
         if (!globalSettings.SelfHosted)
         {
@@ -188,9 +185,8 @@ public class Startup
         services.AddOrganizationSubscriptionServices();
         services.AddCoreLocalizationServices();
         services.AddBillingOperations();
-        services.AddReportingServices();
+        services.AddReportingServices(globalSettings);
         services.AddImportServices();
-        services.AddPhishingDomainServices(globalSettings);
 
         services.AddSendServices();
 
@@ -219,7 +215,7 @@ public class Startup
             config.Conventions.Add(new PublicApiControllersModelConvention());
         });
 
-        services.AddSwagger(globalSettings, Environment);
+        services.AddSwaggerGen(globalSettings, Environment);
         Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
         services.AddHostedService<Jobs.JobsHostedService>();
 
@@ -229,7 +225,8 @@ public class Startup
             services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
         }
 
-        // Add Slack / Teams Services for OAuth API requests - if configured
+        // Add Event Integrations services
+        services.AddEventIntegrationsCommandsQueries(globalSettings);
         services.AddSlackService(globalSettings);
         services.AddTeamsService(globalSettings);
     }
@@ -237,13 +234,9 @@ public class Startup
     public void Configure(
         IApplicationBuilder app,
         IWebHostEnvironment env,
-        IHostApplicationLifetime appLifetime,
         GlobalSettings globalSettings,
         ILogger<Startup> logger)
     {
-        IdentityModelEventSource.ShowPII = true;
-        app.UseSerilog(env, appLifetime, globalSettings);
-
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
 
@@ -297,17 +290,62 @@ public class Startup
         });
 
         // Add Swagger
+        // Note that the swagger.json generation is configured in the call to AddSwaggerGen above.
         if (Environment.IsDevelopment() || globalSettings.SelfHosted)
         {
+            // adds the middleware to serve the swagger.json while the server is running
             app.UseSwagger(config =>
             {
                 config.RouteTemplate = "specs/{documentName}/swagger.json";
+
+                // Remove all Bitwarden cloud servers and only register the local server
                 config.PreSerializeFilters.Add((swaggerDoc, httpReq) =>
-                    swaggerDoc.Servers = new List<OpenApiServer>
+                {
+                    swaggerDoc.Servers =
+                    [
+                        new()
+                        {
+                            Url = globalSettings.BaseServiceUri.Api,
+                        }
+                    ];
+
+                    swaggerDoc.Components ??= new OpenApiComponents();
+                    swaggerDoc.Components.SecuritySchemes = new Dictionary<string, IOpenApiSecurityScheme>
                     {
-                        new OpenApiServer { Url = globalSettings.BaseServiceUri.Api }
-                    });
+                        {
+                            "oauth2-client-credentials",
+                            new OpenApiSecurityScheme
+                            {
+                                Type = SecuritySchemeType.OAuth2,
+                                Flows = new OpenApiOAuthFlows
+                                {
+                                    ClientCredentials = new OpenApiOAuthFlow
+                                    {
+                                        TokenUrl = new Uri($"{globalSettings.BaseServiceUri.Identity}/connect/token"),
+                                        Scopes = new Dictionary<string, string>
+                                {
+                                    { ApiScopes.ApiOrganization, "Organization APIs" }
+                                }
+                                    }
+                                }
+                            }
+                        }
+                    };
+
+                    swaggerDoc.Security =
+                    [
+                        new OpenApiSecurityRequirement
+                        {
+                            [new OpenApiSecuritySchemeReference("oauth2-client-credentials", swaggerDoc)] = [ApiScopes.ApiOrganization]
+                        },
+                    ];
+
+                    swaggerDoc.Workspace = new OpenApiWorkspace();
+                    swaggerDoc.RegisterComponents();
+                });
             });
+
+            // adds the middleware to display the web UI
             app.UseSwaggerUI(config =>
             {
                 config.DocumentTitle = "Bitwarden API Documentation";
@@ -326,6 +364,6 @@ public class Startup
         }
 
         // Log startup
-        logger.LogInformation(Constants.BypassFiltersEventId, globalSettings.ProjectName + " started.");
+        logger.LogInformation(Constants.BypassFiltersEventId, "{Project} started.", globalSettings.ProjectName);
     }
 }

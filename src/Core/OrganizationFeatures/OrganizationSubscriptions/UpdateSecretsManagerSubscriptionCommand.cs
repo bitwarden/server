@@ -3,6 +3,9 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -18,7 +21,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubscriptionCommand
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly IMailService _mailService;
     private readonly ILogger<UpdateSecretsManagerSubscriptionCommand> _logger;
     private readonly IServiceAccountRepository _serviceAccountRepository;
@@ -26,17 +29,21 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IEventService _eventService;
+    private readonly IFeatureService _featureService;
+    private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand;
 
     public UpdateSecretsManagerSubscriptionCommand(
         IOrganizationUserRepository organizationUserRepository,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         IMailService mailService,
         ILogger<UpdateSecretsManagerSubscriptionCommand> logger,
         IServiceAccountRepository serviceAccountRepository,
         IGlobalSettings globalSettings,
         IOrganizationRepository organizationRepository,
         IApplicationCacheService applicationCacheService,
-        IEventService eventService)
+        IEventService eventService,
+        IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
+        IFeatureService featureService)
     {
         _organizationUserRepository = organizationUserRepository;
         _paymentService = paymentService;
@@ -47,6 +54,8 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         _organizationRepository = organizationRepository;
         _applicationCacheService = applicationCacheService;
         _eventService = eventService;
+        _updateOrganizationSubscriptionCommand = updateOrganizationSubscriptionCommand;
+        _featureService = featureService;
     }
 
     public async Task UpdateSubscriptionAsync(SecretsManagerSubscriptionUpdate update)
@@ -60,19 +69,50 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     private async Task FinalizeSubscriptionAdjustmentAsync(SecretsManagerSubscriptionUpdate update)
     {
-        if (update.SmSeatsChanged)
+        if (_featureService.IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand))
         {
-            await _paymentService.AdjustSmSeatsAsync(update.Organization, update.Plan, update.SmSeatsExcludingBase);
+            var builder = OrganizationSubscriptionChangeSet.Builder(update.Plan);
 
-            // TODO: call ReferenceEventService - see AC-1481
+            if (update.SmSeatsChanged)
+            {
+                builder.UpdateSecretsManagerSeats(update.SmSeatsExcludingBase);
+            }
+
+            if (update.SmServiceAccountsChanged)
+            {
+                if (update.Organization.SmServiceAccounts > update.Plan.SecretsManager.BaseServiceAccount)
+                {
+                    builder.UpdateServiceAccounts(update.SmServiceAccountsExcludingBase);
+                }
+                else
+                {
+                    builder.AddServiceAccounts(update.SmServiceAccountsExcludingBase);
+                }
+            }
+
+            var changeSet = builder.Build();
+            if (changeSet.Changes.Any())
+            {
+                var result = await _updateOrganizationSubscriptionCommand.Run(update.Organization, changeSet);
+                result.GetValueOrThrow();
+            }
         }
-
-        if (update.SmServiceAccountsChanged)
+        else
         {
-            await _paymentService.AdjustServiceAccountsAsync(update.Organization, update.Plan,
-                update.SmServiceAccountsExcludingBase);
+            if (update.SmSeatsChanged)
+            {
+                await _paymentService.AdjustSmSeatsAsync(update.Organization, update.Plan, update.SmSeatsExcludingBase);
 
-            // TODO: call ReferenceEventService - see AC-1481
+                // TODO: call ReferenceEventService - see AC-1481
+            }
+
+            if (update.SmServiceAccountsChanged)
+            {
+                await _paymentService.AdjustServiceAccountsAsync(update.Organization, update.Plan,
+                    update.SmServiceAccountsExcludingBase);
+
+                // TODO: call ReferenceEventService - see AC-1481
+            }
         }
 
         var organization = update.Organization;
@@ -226,7 +266,11 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         // Check minimum seats currently in use by the organization
         if (organization.SmSeats.Value > update.SmSeats.Value)
         {
+            // Retrieve the number of currently occupied Secrets Manager seats for the organization.
             var occupiedSeats = await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id);
+
+            // Check if the occupied number of seats exceeds the updated seat count.
+            // If so, throw an exception indicating that the subscription cannot be decreased below the current usage.
             if (occupiedSeats > update.SmSeats.Value)
             {
                 throw new BadRequestException($"{occupiedSeats} users are currently occupying Secrets Manager seats. " +
@@ -412,7 +456,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     }
 
     /// <summary>
-    /// Requests the number of Secret Manager seats and service accounts are currently used by the organization
+    /// Requests the number of Secret Manager seats and service accounts currently used by the organization
     /// </summary>
     /// <param name="organizationId"> The id of the organization</param>
     /// <returns > A tuple containing the occupied seats and the occupied service account counts</returns>

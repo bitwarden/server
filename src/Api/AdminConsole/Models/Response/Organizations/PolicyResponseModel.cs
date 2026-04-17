@@ -30,6 +30,7 @@ public class PolicyResponseModel : ResponseModel
         {
             Data = JsonSerializer.Deserialize<Dictionary<string, object>>(policy.Data);
         }
+        RevisionDate = policy.RevisionDate;
     }
 
     public Guid Id { get; set; }
@@ -37,4 +38,5 @@ public class PolicyResponseModel : ResponseModel
     public PolicyType Type { get; set; }
     public Dictionary<string, object> Data { get; set; }
     public bool Enabled { get; set; }
+    public DateTime RevisionDate { get; set; }
 }

@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Identity;
+﻿using System.Globalization;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Services;
 using Bit.Core.Tools.Models.Data;
@@ -67,8 +68,8 @@ public class SendEmailOtpRequestValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, result.Error);
-        Assert.Equal("email is invalid.", result.ErrorDescription);
+        Assert.Equal(OidcConstants.TokenErrors.InvalidRequest, result.Error);
+        Assert.Equal("email and otp are required.", result.ErrorDescription);
 
         // Verify no OTP generation or email sending occurred
         await sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
@@ -96,7 +97,7 @@ public class SendEmailOtpRequestValidatorTests
             Request = tokenRequest
         };
 
-        var expectedUniqueId = string.Format(SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email);
+        var expectedUniqueId = string.Format(CultureInfo.InvariantCulture, SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email);
 
         sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
             .GenerateTokenAsync(
@@ -105,7 +106,7 @@ public class SendEmailOtpRequestValidatorTests
                 expectedUniqueId)
             .Returns(generatedToken);
 
-        emailOtp = emailOtp with { Emails = [email] };
+        emailOtp = emailOtp with { emails = [email] };
 
         // Act
         var result = await sutProvider.Sut.ValidateRequestAsync(context, emailOtp, sendId);
@@ -113,7 +114,7 @@ public class SendEmailOtpRequestValidatorTests
         // Assert
         Assert.True(result.IsError);
         Assert.Equal(OidcConstants.TokenErrors.InvalidRequest, result.Error);
-        Assert.Equal("email otp sent.", result.ErrorDescription);
+        Assert.Equal("email and otp are required.", result.ErrorDescription);
 
         // Verify OTP generation
         await sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
@@ -144,7 +145,7 @@ public class SendEmailOtpRequestValidatorTests
             Request = tokenRequest
         };
 
-        emailOtp = emailOtp with { Emails = [email] };
+        emailOtp = emailOtp with { emails = [email] };
 
         sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
             .GenerateTokenAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
@@ -179,9 +180,9 @@ public class SendEmailOtpRequestValidatorTests
             Request = tokenRequest
         };
 
-        emailOtp = emailOtp with { Emails = [email] };
+        emailOtp = emailOtp with { emails = [email] };
 
-        var expectedUniqueId = string.Format(SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email);
+        var expectedUniqueId = string.Format(CultureInfo.InvariantCulture, SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email);
 
         sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
             .ValidateTokenAsync(
@@ -216,7 +217,7 @@ public class SendEmailOtpRequestValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateRequestAsync_InvalidOtp_ReturnsInvalidGrant(
+    public async Task ValidateRequestAsync_InvalidOtp_ReturnsInvalidRequest(
         SutProvider<SendEmailOtpRequestValidator> sutProvider,
         [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         EmailOtp emailOtp,
@@ -231,9 +232,9 @@ public class SendEmailOtpRequestValidatorTests
             Request = tokenRequest
         };
 
-        emailOtp = emailOtp with { Emails = [email] };
+        emailOtp = emailOtp with { emails = [email] };
 
-        var expectedUniqueId = string.Format(SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email);
+        var expectedUniqueId = string.Format(CultureInfo.InvariantCulture, SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email);
 
         sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
             .ValidateTokenAsync(invalidOtp,
@@ -247,8 +248,8 @@ public class SendEmailOtpRequestValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, result.Error);
-        Assert.Equal("email otp is invalid.", result.ErrorDescription);
+        Assert.Equal(OidcConstants.TokenErrors.InvalidRequest, result.Error);
+        Assert.Equal($"{SendAccessConstants.TokenRequest.Email} and {SendAccessConstants.TokenRequest.Otp} are required.", result.ErrorDescription);
 
         // Verify OTP validation was attempted
         await sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
@@ -265,9 +266,9 @@ public class SendEmailOtpRequestValidatorTests
         // Arrange
         var otpTokenProvider = Substitute.For<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>();
         var mailService = Substitute.For<IMailService>();
-
+        var logger = Substitute.For<Microsoft.Extensions.Logging.ILogger<SendEmailOtpRequestValidator>>();
         // Act
-        var validator = new SendEmailOtpRequestValidator(otpTokenProvider, mailService);
+        var validator = new SendEmailOtpRequestValidator(logger, otpTokenProvider, mailService);
 
         // Assert
         Assert.NotNull(validator);

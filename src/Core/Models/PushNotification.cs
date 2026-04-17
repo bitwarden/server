@@ -1,4 +1,5 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Enums;
 using Bit.Core.NotificationCenter.Enums;
 
 namespace Bit.Core.Models;
@@ -96,4 +97,39 @@ public class ProviderBankAccountVerifiedPushNotification
 {
     public Guid ProviderId { get; set; }
     public Guid AdminId { get; set; }
+}
+
+public class LogOutPushNotification
+{
+    public Guid UserId { get; set; }
+    public PushNotificationLogOutReason? Reason { get; set; }
+}
+
+public class SyncPolicyPushNotification
+{
+    public Guid OrganizationId { get; set; }
+    public required Policy Policy { get; set; }
+}
+
+public class AutoConfirmPushNotification
+{
+    /// <summary>
+    /// The admin/owner receiving this notification
+    /// </summary>
+    public Guid UserId { get; set; }
+
+    /// <summary>
+    /// The organization the user accepted an invite to
+    /// </summary>
+    public Guid OrganizationId { get; set; }
+
+    /// <summary>
+    /// The user id who accepted the organization invite (Needed for key-exchange on the client)
+    /// </summary>
+    public Guid TargetUserId { get; set; }
+    ///
+    /// <summary>
+    /// The organization user id who accepted the organization invite (will be auto-confirmed)
+    /// </summary>
+    public Guid TargetOrganizationUserId { get; set; }
 }

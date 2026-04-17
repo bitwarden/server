@@ -4,7 +4,10 @@ using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Core.Dirt.Reports.ReportFeatures;
 
@@ -12,15 +15,18 @@ public class AddOrganizationReportCommand : IAddOrganizationReportCommand
 {
     private readonly IOrganizationRepository _organizationRepo;
     private readonly IOrganizationReportRepository _organizationReportRepo;
+    private readonly IFusionCache _cache;
     private ILogger<AddOrganizationReportCommand> _logger;
 
     public AddOrganizationReportCommand(
         IOrganizationRepository organizationRepository,
         IOrganizationReportRepository organizationReportRepository,
+        [FromKeyedServices(OrganizationReportCacheConstants.CacheName)] IFusionCache cache,
         ILogger<AddOrganizationReportCommand> logger)
     {
         _organizationRepo = organizationRepository;
         _organizationReportRepo = organizationReportRepository;
+        _cache = cache;
         _logger = logger;
     }
 
@@ -35,20 +41,36 @@ public class AddOrganizationReportCommand : IAddOrganizationReportCommand
             throw new BadRequestException(errorMessage);
         }
 
+        var requestMetrics = request.Metrics ?? new OrganizationReportMetricsRequest();
+
         var organizationReport = new OrganizationReport
         {
             OrganizationId = request.OrganizationId,
-            ReportData = request.ReportData,
+            ReportData = request.ReportData ?? string.Empty,
             CreationDate = DateTime.UtcNow,
-            ContentEncryptionKey = request.ContentEncryptionKey,
+            ContentEncryptionKey = request.ContentEncryptionKey ?? string.Empty,
             SummaryData = request.SummaryData,
             ApplicationData = request.ApplicationData,
+            ApplicationCount = requestMetrics.ApplicationCount,
+            ApplicationAtRiskCount = requestMetrics.ApplicationAtRiskCount,
+            CriticalApplicationCount = requestMetrics.CriticalApplicationCount,
+            CriticalApplicationAtRiskCount = requestMetrics.CriticalApplicationAtRiskCount,
+            MemberCount = requestMetrics.MemberCount,
+            MemberAtRiskCount = requestMetrics.MemberAtRiskCount,
+            CriticalMemberCount = requestMetrics.CriticalMemberCount,
+            CriticalMemberAtRiskCount = requestMetrics.CriticalMemberAtRiskCount,
+            PasswordCount = requestMetrics.PasswordCount,
+            PasswordAtRiskCount = requestMetrics.PasswordAtRiskCount,
+            CriticalPasswordCount = requestMetrics.CriticalPasswordCount,
+            CriticalPasswordAtRiskCount = requestMetrics.CriticalPasswordAtRiskCount,
             RevisionDate = DateTime.UtcNow
         };
 
         organizationReport.SetNewId();
 
         var data = await _organizationReportRepo.CreateAsync(organizationReport);
+
+        await _cache.RemoveByTagAsync(OrganizationReportCacheConstants.BuildCacheTagForOrganizationReports(request.OrganizationId));
 
         _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully added organization report for organization {organizationId}, {organizationReportId}",
                 request.OrganizationId, data.Id);

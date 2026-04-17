@@ -218,6 +218,8 @@ public static class BulkResourceCreationService
         ciphersTable.Columns.Add(revisionDateColumn);
         var deletedDateColumn = new DataColumn(nameof(c.DeletedDate), typeof(DateTime));
         ciphersTable.Columns.Add(deletedDateColumn);
+        var archivesColumn = new DataColumn(nameof(c.Archives), typeof(string));
+        ciphersTable.Columns.Add(archivesColumn);
         var repromptColumn = new DataColumn(nameof(c.Reprompt), typeof(short));
         ciphersTable.Columns.Add(repromptColumn);
         var keyColummn = new DataColumn(nameof(c.Key), typeof(string));
@@ -247,6 +249,7 @@ public static class BulkResourceCreationService
             row[creationDateColumn] = cipher.CreationDate;
             row[revisionDateColumn] = cipher.RevisionDate;
             row[deletedDateColumn] = cipher.DeletedDate.HasValue ? (object)cipher.DeletedDate : DBNull.Value;
+            row[archivesColumn] = cipher.Archives;
             row[repromptColumn] = cipher.Reprompt.HasValue ? cipher.Reprompt.Value : DBNull.Value;
             row[keyColummn] = cipher.Key;
 

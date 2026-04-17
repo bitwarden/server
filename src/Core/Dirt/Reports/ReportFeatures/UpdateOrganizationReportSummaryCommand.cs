@@ -1,10 +1,14 @@
 ﻿using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Core.Dirt.Reports.ReportFeatures;
 
@@ -13,15 +17,17 @@ public class UpdateOrganizationReportSummaryCommand : IUpdateOrganizationReportS
     private readonly IOrganizationRepository _organizationRepo;
     private readonly IOrganizationReportRepository _organizationReportRepo;
     private readonly ILogger<UpdateOrganizationReportSummaryCommand> _logger;
-
+    private readonly IFusionCache _cache;
     public UpdateOrganizationReportSummaryCommand(
         IOrganizationRepository organizationRepository,
         IOrganizationReportRepository organizationReportRepository,
-        ILogger<UpdateOrganizationReportSummaryCommand> logger)
+        ILogger<UpdateOrganizationReportSummaryCommand> logger,
+        [FromKeyedServices(OrganizationReportCacheConstants.CacheName)] IFusionCache cache)
     {
         _organizationRepo = organizationRepository;
         _organizationReportRepo = organizationReportRepository;
         _logger = logger;
+        _cache = cache;
     }
 
     public async Task<OrganizationReport> UpdateOrganizationReportSummaryAsync(UpdateOrganizationReportSummaryRequest request)
@@ -53,7 +59,11 @@ public class UpdateOrganizationReportSummaryCommand : IUpdateOrganizationReportS
                 throw new BadRequestException("Organization report does not belong to the specified organization");
             }
 
-            var updatedReport = await _organizationReportRepo.UpdateSummaryDataAsync(request.OrganizationId, request.ReportId, request.SummaryData);
+            await _organizationReportRepo.UpdateMetricsAsync(request.ReportId, OrganizationReportMetricsData.From(request.OrganizationId, request.Metrics));
+            var updatedReport = await _organizationReportRepo.UpdateSummaryDataAsync(request.OrganizationId, request.ReportId, request.SummaryData ?? string.Empty);
+
+            // Invalidate cache
+            await _cache.RemoveByTagAsync(OrganizationReportCacheConstants.BuildCacheTagForOrganizationReports(request.OrganizationId));
 
             _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully updated organization report summary {reportId} for organization {organizationId}",
                 request.ReportId, request.OrganizationId);

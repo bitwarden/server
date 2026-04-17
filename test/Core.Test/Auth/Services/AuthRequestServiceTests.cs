@@ -375,7 +375,8 @@ public class AuthRequestServiceTests
 
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
-            .LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval);
+            .LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval,
+                includeAcceptedStatusOrgs: true);
 
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
@@ -457,7 +458,8 @@ public class AuthRequestServiceTests
 
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
-            .LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval);
+            .LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval,
+                includeAcceptedStatusOrgs: true);
 
         await sutProvider.GetDependency<IMailService>()
             .Received(0)
@@ -467,10 +469,9 @@ public class AuthRequestServiceTests
                 Arg.Any<string>(),
                 Arg.Any<string>());
 
-        var expectedLogMessage = "There are no admin emails to send to.";
         sutProvider.GetDependency<ILogger<AuthRequestService>>()
             .Received(1)
-            .LogWarning(expectedLogMessage);
+            .LogWarning("There are no admin emails to send to.");
     }
 
     /// <summary>

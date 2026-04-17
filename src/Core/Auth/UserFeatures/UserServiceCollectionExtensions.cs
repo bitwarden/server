@@ -1,10 +1,11 @@
-﻿
-
-using Bit.Core.Auth.UserFeatures.DeviceTrust;
+﻿using Bit.Core.Auth.Sso;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess.Commands;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.Registration.Implementations;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Implementations;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
@@ -23,17 +24,18 @@ public static class UserServiceCollectionExtensions
     public static void AddUserServices(this IServiceCollection services, IGlobalSettings globalSettings)
     {
         services.AddScoped<IUserService, UserService>();
-        services.AddDeviceTrustCommands();
+        services.AddEmergencyAccessCommands();
         services.AddUserPasswordCommands();
         services.AddUserRegistrationCommands();
         services.AddWebAuthnLoginCommands();
         services.AddTdeOffboardingPasswordCommands();
-        services.AddTwoFactorQueries();
+        services.AddTwoFactorCommandsQueries();
+        services.AddSsoQueries();
     }
 
-    public static void AddDeviceTrustCommands(this IServiceCollection services)
+    private static void AddEmergencyAccessCommands(this IServiceCollection services)
     {
-        services.AddScoped<IUntrustDevicesCommand, UntrustDevicesCommand>();
+        services.AddScoped<IDeleteEmergencyAccessCommand, DeleteEmergencyAccessCommand>();
     }
 
     public static void AddUserKeyCommands(this IServiceCollection services, IGlobalSettings globalSettings)
@@ -43,7 +45,9 @@ public static class UserServiceCollectionExtensions
 
     private static void AddUserPasswordCommands(this IServiceCollection services)
     {
-        services.AddScoped<ISetInitialMasterPasswordCommand, SetInitialMasterPasswordCommand>();
+        services.AddScoped<IFinishSsoJitProvisionMasterPasswordCommand, FinishSsoJitProvisionMasterPasswordCommand>();
+        services.AddScoped<ISetInitialMasterPasswordCommandV1, SetInitialMasterPasswordCommandV1>();
+        services.AddScoped<ITdeSetPasswordCommand, TdeSetPasswordCommand>();
     }
 
     private static void AddTdeOffboardingPasswordCommands(this IServiceCollection services)
@@ -65,8 +69,20 @@ public static class UserServiceCollectionExtensions
         services.AddScoped<IAssertWebAuthnLoginCredentialCommand, AssertWebAuthnLoginCredentialCommand>();
     }
 
-    private static void AddTwoFactorQueries(this IServiceCollection services)
+    private static void AddTwoFactorCommandsQueries(this IServiceCollection services)
     {
+        services
+            .AddScoped<ICompleteTwoFactorWebAuthnRegistrationCommand, CompleteTwoFactorWebAuthnRegistrationCommand>();
+        services
+            .AddScoped<IStartTwoFactorWebAuthnRegistrationCommand,
+                StartTwoFactorWebAuthnRegistrationCommand>();
+        services.AddScoped<IDeleteTwoFactorWebAuthnCredentialCommand, DeleteTwoFactorWebAuthnCredentialCommand>();
         services.AddScoped<ITwoFactorIsEnabledQuery, TwoFactorIsEnabledQuery>();
+        services.AddScoped<IResetUserTwoFactorCommand, ResetUserTwoFactorCommand>();
+    }
+
+    private static void AddSsoQueries(this IServiceCollection services)
+    {
+        services.AddScoped<IUserSsoOrganizationIdentifierQuery, UserSsoOrganizationIdentifierQuery>();
     }
 }

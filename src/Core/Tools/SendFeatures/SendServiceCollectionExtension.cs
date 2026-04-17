@@ -17,5 +17,6 @@ public static class SendServiceCollectionExtension
         services.AddScoped<ISendValidationService, SendValidationService>();
         services.AddScoped<ISendCoreHelperService, SendCoreHelperService>();
         services.AddScoped<ISendAuthenticationQuery, SendAuthenticationQuery>();
+        services.AddScoped<ISendOwnerQuery, SendOwnerQuery>();
     }
 }

@@ -1,0 +1,65 @@
+﻿using Microsoft.EntityFrameworkCore.Migrations;
+
+#nullable disable
+
+namespace Bit.MySqlMigrations.Migrations;
+
+/// <inheritdoc />
+public partial class CreatePlayItem : Migration
+{
+    /// <inheritdoc />
+    protected override void Up(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.CreateTable(
+            name: "PlayItem",
+            columns: table => new
+            {
+                Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                PlayId = table.Column<string>(type: "varchar(256)", maxLength: 256, nullable: false)
+                    .Annotation("MySql:CharSet", "utf8mb4"),
+                UserId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                OrganizationId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                CreationDate = table.Column<DateTime>(type: "datetime(6)", nullable: false)
+            },
+            constraints: table =>
+            {
+                table.PrimaryKey("PK_PlayItem", x => x.Id);
+                table.CheckConstraint("CK_PlayItem_UserOrOrganization", "(\"UserId\" IS NOT NULL AND \"OrganizationId\" IS NULL) OR (\"UserId\" IS NULL AND \"OrganizationId\" IS NOT NULL)");
+                table.ForeignKey(
+                    name: "FK_PlayItem_Organization_OrganizationId",
+                    column: x => x.OrganizationId,
+                    principalTable: "Organization",
+                    principalColumn: "Id",
+                    onDelete: ReferentialAction.Cascade);
+                table.ForeignKey(
+                    name: "FK_PlayItem_User_UserId",
+                    column: x => x.UserId,
+                    principalTable: "User",
+                    principalColumn: "Id",
+                    onDelete: ReferentialAction.Cascade);
+            })
+            .Annotation("MySql:CharSet", "utf8mb4");
+
+        migrationBuilder.CreateIndex(
+            name: "IX_PlayItem_OrganizationId",
+            table: "PlayItem",
+            column: "OrganizationId");
+
+        migrationBuilder.CreateIndex(
+            name: "IX_PlayItem_PlayId",
+            table: "PlayItem",
+            column: "PlayId");
+
+        migrationBuilder.CreateIndex(
+            name: "IX_PlayItem_UserId",
+            table: "PlayItem",
+            column: "UserId");
+    }
+
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropTable(
+            name: "PlayItem");
+    }
+}

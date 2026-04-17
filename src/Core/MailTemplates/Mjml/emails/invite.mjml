@@ -22,26 +22,7 @@
           </mj-text>
         </mj-column>
       </mj-section>
-      <mj-section background-color="#fbfbfb">
-        <mj-column width="70%">
-          <mj-text line-height="24px">
-            <h3 style="font-size: 20px; margin: 0; line-height: 28px">
-              We’re here for you!
-            </h3>
-            If you have any questions, search the Bitwarden
-            <a href="#" class="link">Help</a>
-            site or
-            <a href="#" class="link">contact us</a>.
-          </mj-text>
-        </mj-column>
-        <mj-column width="30%">
-          <mj-image
-            src="https://assets.bitwarden.com/email/v1/chat.png"
-            height="77px"
-            width="94px"
-          />
-        </mj-column>
-      </mj-section>
+      <mj-bw-learn-more-footer />
     </mj-wrapper>
 
     <mj-include path="../components/footer.mjml" />

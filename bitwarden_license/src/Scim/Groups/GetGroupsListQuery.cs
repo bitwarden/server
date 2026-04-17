@@ -4,6 +4,7 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Scim.Groups.Interfaces;
+using Bit.Scim.Models;
 
 namespace Bit.Scim.Groups;
 
@@ -16,10 +17,16 @@ public class GetGroupsListQuery : IGetGroupsListQuery
         _groupRepository = groupRepository;
     }
 
-    public async Task<(IEnumerable<Group> groupList, int totalResults)> GetGroupsListAsync(Guid organizationId, string filter, int? count, int? startIndex)
+    public async Task<(IEnumerable<Group> groupList, int totalResults)> GetGroupsListAsync(
+        Guid organizationId, GetGroupsQueryParamModel groupQueryParams)
     {
         string nameFilter = null;
         string externalIdFilter = null;
+
+        int count = groupQueryParams.Count;
+        int startIndex = groupQueryParams.StartIndex;
+        string filter = groupQueryParams.Filter;
+
         if (!string.IsNullOrWhiteSpace(filter))
         {
             if (filter.StartsWith("displayName eq "))
@@ -53,11 +60,11 @@ public class GetGroupsListQuery : IGetGroupsListQuery
             }
             totalResults = groupList.Count;
         }
-        else if (string.IsNullOrWhiteSpace(filter) && startIndex.HasValue && count.HasValue)
+        else if (string.IsNullOrWhiteSpace(filter))
         {
             groupList = groups.OrderBy(g => g.Name)
-                .Skip(startIndex.Value - 1)
-                .Take(count.Value)
+                .Skip(startIndex - 1)
+                .Take(count)
                 .ToList();
             totalResults = groups.Count;
         }

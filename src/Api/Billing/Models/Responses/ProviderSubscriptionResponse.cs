@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Tax.Models;
@@ -10,7 +11,7 @@ namespace Bit.Api.Billing.Models.Responses;
 
 public record ProviderSubscriptionResponse(
     string Status,
-    DateTime CurrentPeriodEndDate,
+    DateTime? CurrentPeriodEndDate,
     decimal? DiscountPercentage,
     string CollectionMethod,
     IEnumerable<ProviderPlanResponse> Plans,
@@ -51,10 +52,12 @@ public record ProviderSubscriptionResponse(
 
         var accountCredit = Convert.ToDecimal(subscription.Customer?.Balance) * -1 / 100;
 
+        var discount = subscription.Customer?.Discount ?? subscription.Discounts?.FirstOrDefault();
+
         return new ProviderSubscriptionResponse(
             subscription.Status,
-            subscription.CurrentPeriodEnd,
-            subscription.Customer?.Discount?.Coupon?.PercentOff,
+            subscription.GetCurrentPeriodEnd(),
+            discount?.Coupon?.PercentOff,
             subscription.CollectionMethod,
             providerPlanResponses,
             accountCredit,

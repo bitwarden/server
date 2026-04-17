@@ -8,7 +8,6 @@ using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Bit.Sso.Utilities;
 using Duende.IdentityServer.Services;
-using Microsoft.IdentityModel.Logging;
 using Stripe;
 
 namespace Bit.Sso;
@@ -41,6 +40,7 @@ public class Startup
 
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
+        services.AddTestPlayIdTracking(globalSettings);
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
@@ -90,22 +90,15 @@ public class Startup
 
     public void Configure(
         IApplicationBuilder app,
-        IWebHostEnvironment env,
+        IWebHostEnvironment environment,
         IHostApplicationLifetime appLifetime,
         GlobalSettings globalSettings,
         ILogger<Startup> logger)
     {
-        if (env.IsDevelopment() || globalSettings.SelfHosted)
-        {
-            IdentityModelEventSource.ShowPII = true;
-        }
-
-        app.UseSerilog(env, appLifetime, globalSettings);
-
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
 
-        if (!env.IsDevelopment())
+        if (!environment.IsDevelopment())
         {
             var uri = new Uri(globalSettings.BaseServiceUri.Sso);
             app.Use(async (ctx, next) =>
@@ -121,7 +114,7 @@ public class Startup
             app.UseForwardedHeaders(globalSettings);
         }
 
-        if (env.IsDevelopment())
+        if (environment.IsDevelopment())
         {
             app.UseDeveloperExceptionPage();
             app.UseCookiePolicy();
@@ -157,6 +150,6 @@ public class Startup
         app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
 
         // Log startup
-        logger.LogInformation(Constants.BypassFiltersEventId, globalSettings.ProjectName + " started.");
+        logger.LogInformation(Constants.BypassFiltersEventId, "{Project} started.", globalSettings.ProjectName);
     }
 }

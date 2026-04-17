@@ -61,12 +61,12 @@ public class PolicyRepository : Repository<Policy, Guid>, IPolicyRepository
         }
     }
 
-    public async Task<IEnumerable<PolicyDetails>> GetPolicyDetailsByUserId(Guid userId)
+    public async Task<ICollection<Policy>> GetManyConfirmedAcceptedByUserIdAsync(Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var results = await connection.QueryAsync<PolicyDetails>(
-                $"[{Schema}].[PolicyDetails_ReadByUserId]",
+            var results = await connection.QueryAsync<Policy>(
+                $"[{Schema}].[{Table}_ReadConfirmedAcceptedByUserId]",
                 new { UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
@@ -100,5 +100,20 @@ public class PolicyRepository : Repository<Policy, Guid>, IPolicyRepository
 
             return results.ToList();
         }
+    }
+
+    public async Task<IEnumerable<PolicyDetails>> GetPolicyDetailsByUserIdAndPolicyTypeAsync(Guid userId, PolicyType policyType)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<PolicyDetails>(
+            $"[{Schema}].[PolicyDetails_ReadByUserIdPolicyType]",
+            new
+            {
+                UserId = userId,
+                PolicyType = (byte)policyType
+            },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToList();
     }
 }

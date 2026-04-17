@@ -39,7 +39,7 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         await _factory.LoginWithNewAccount(_ownerEmail);
 
         // Create the organization
-        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually2023,
+        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually,
             ownerEmail: _ownerEmail, passwordManagerSeats: 10, paymentMethod: PaymentMethodType.Card);
 
         // Authorize with the organization api key
@@ -61,7 +61,8 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
             Enabled = true,
             Data = new Dictionary<string, object>
             {
-                { "minComplexity", 15},
+                { "minComplexity", 4},
+                { "minLength", 128 },
                 { "requireLower", true}
             }
         };
@@ -78,7 +79,8 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         Assert.IsType<Guid>(result.Id);
         Assert.NotEqual(default, result.Id);
         Assert.NotNull(result.Data);
-        Assert.Equal(15, ((JsonElement)result.Data["minComplexity"]).GetInt32());
+        Assert.Equal(4, ((JsonElement)result.Data["minComplexity"]).GetInt32());
+        Assert.Equal(128, ((JsonElement)result.Data["minLength"]).GetInt32());
         Assert.True(((JsonElement)result.Data["requireLower"]).GetBoolean());
 
         // Assert against the database values
@@ -94,7 +96,7 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
 
         Assert.NotNull(policy.Data);
         var data = policy.GetDataModel<MasterPasswordPolicyData>();
-        var expectedData = new MasterPasswordPolicyData { MinComplexity = 15, RequireLower = true };
+        var expectedData = new MasterPasswordPolicyData { MinComplexity = 4, MinLength = 128, RequireLower = true };
         AssertHelper.AssertPropertyEqual(expectedData, data);
     }
 
@@ -159,5 +161,129 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var data = policy.GetDataModel<MasterPasswordPolicyData>();
         Assert.Equal(15, data.MinLength);
         Assert.Equal(true, data.RequireUpper);
+    }
+
+    [Fact]
+    public async Task Put_MasterPasswordPolicy_InvalidDataType_ReturnsBadRequest()
+    {
+        // Arrange
+        var policyType = PolicyType.MasterPassword;
+        var request = new PolicyUpdateRequestModel
+        {
+            Enabled = true,
+            Data = new Dictionary<string, object>
+            {
+                { "minLength", "not a number" }, // Wrong type - should be int
+                { "requireUpper", true }
+            }
+        };
+
+        // Act
+        var response = await _client.PutAsync($"/public/policies/{policyType}", JsonContent.Create(request));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Put_SendOptionsPolicy_InvalidDataType_ReturnsBadRequest()
+    {
+        // Arrange
+        var policyType = PolicyType.SendOptions;
+        var request = new PolicyUpdateRequestModel
+        {
+            Enabled = true,
+            Data = new Dictionary<string, object>
+            {
+                { "disableHideEmail", "not a boolean" } // Wrong type - should be bool
+            }
+        };
+
+        // Act
+        var response = await _client.PutAsync($"/public/policies/{policyType}", JsonContent.Create(request));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Put_ResetPasswordPolicy_InvalidDataType_ReturnsBadRequest()
+    {
+        // Arrange
+        var policyType = PolicyType.ResetPassword;
+        var request = new PolicyUpdateRequestModel
+        {
+            Enabled = true,
+            Data = new Dictionary<string, object>
+            {
+                { "autoEnrollEnabled", 123 } // Wrong type - should be bool
+            }
+        };
+
+        // Act
+        var response = await _client.PutAsync($"/public/policies/{policyType}", JsonContent.Create(request));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Put_PolicyWithNullData_Success()
+    {
+        // Arrange
+        var policyType = PolicyType.DisableSend;
+        var request = new PolicyUpdateRequestModel
+        {
+            Enabled = true,
+            Data = null
+        };
+
+        // Act
+        var response = await _client.PutAsync($"/public/policies/{policyType}", JsonContent.Create(request));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Put_MasterPasswordPolicy_ExcessiveMinLength_ReturnsBadRequest()
+    {
+        // Arrange
+        var policyType = PolicyType.MasterPassword;
+        var request = new PolicyUpdateRequestModel
+        {
+            Enabled = true,
+            Data = new Dictionary<string, object>
+            {
+                { "minLength", 129 }
+            }
+        };
+
+        // Act
+        var response = await _client.PutAsync($"/public/policies/{policyType}", JsonContent.Create(request));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Put_MasterPasswordPolicy_ExcessiveMinComplexity_ReturnsBadRequest()
+    {
+        // Arrange
+        var policyType = PolicyType.MasterPassword;
+        var request = new PolicyUpdateRequestModel
+        {
+            Enabled = true,
+            Data = new Dictionary<string, object>
+            {
+                { "minComplexity", 5 }
+            }
+        };
+
+        // Act
+        var response = await _client.PutAsync($"/public/policies/{policyType}", JsonContent.Create(request));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 }

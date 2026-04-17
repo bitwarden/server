@@ -3,10 +3,10 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -20,7 +20,7 @@ namespace Bit.Core.Auth.Services;
 public class SsoConfigService : ISsoConfigService
 {
     private readonly ISsoConfigRepository _ssoConfigRepository;
-    private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyQuery _policyQuery;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IEventService _eventService;
@@ -28,14 +28,14 @@ public class SsoConfigService : ISsoConfigService
 
     public SsoConfigService(
         ISsoConfigRepository ssoConfigRepository,
-        IPolicyRepository policyRepository,
+        IPolicyQuery policyQuery,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IEventService eventService,
         ISavePolicyCommand savePolicyCommand)
     {
         _ssoConfigRepository = ssoConfigRepository;
-        _policyRepository = policyRepository;
+        _policyQuery = policyQuery;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _eventService = eventService;
@@ -67,13 +67,12 @@ public class SsoConfigService : ISsoConfigService
         // Automatically enable account recovery, SSO required, and single org policies if trusted device encryption is selected
         if (config.GetData().MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption)
         {
-
-            await _savePolicyCommand.SaveAsync(new()
+            var singleOrgPolicy = new PolicyUpdate
             {
                 OrganizationId = config.OrganizationId,
                 Type = PolicyType.SingleOrg,
                 Enabled = true
-            });
+            };
 
             var resetPasswordPolicy = new PolicyUpdate
             {
@@ -82,14 +81,18 @@ public class SsoConfigService : ISsoConfigService
                 Enabled = true,
             };
             resetPasswordPolicy.SetDataModel(new ResetPasswordDataModel { AutoEnrollEnabled = true });
-            await _savePolicyCommand.SaveAsync(resetPasswordPolicy);
 
-            await _savePolicyCommand.SaveAsync(new()
+            var requireSsoPolicy = new PolicyUpdate
             {
                 OrganizationId = config.OrganizationId,
                 Type = PolicyType.RequireSso,
                 Enabled = true
-            });
+            };
+
+            var performedBy = new SystemUser(EventSystemUser.Unknown);
+            await _savePolicyCommand.SaveAsync(new SavePolicyModel(singleOrgPolicy, performedBy));
+            await _savePolicyCommand.SaveAsync(new SavePolicyModel(resetPasswordPolicy, performedBy));
+            await _savePolicyCommand.SaveAsync(new SavePolicyModel(requireSsoPolicy, performedBy));
         }
 
         await LogEventsAsync(config, oldConfig);
@@ -110,14 +113,14 @@ public class SsoConfigService : ISsoConfigService
             throw new BadRequestException("Organization cannot use Key Connector.");
         }
 
-        var singleOrgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.SingleOrg);
-        if (singleOrgPolicy is not { Enabled: true })
+        var singleOrgPolicy = await _policyQuery.RunAsync(config.OrganizationId, PolicyType.SingleOrg);
+        if (!singleOrgPolicy.Enabled)
         {
             throw new BadRequestException("Key Connector requires the Single Organization policy to be enabled.");
         }
 
-        var ssoPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.RequireSso);
-        if (ssoPolicy is not { Enabled: true })
+        var ssoPolicy = await _policyQuery.RunAsync(config.OrganizationId, PolicyType.RequireSso);
+        if (!ssoPolicy.Enabled)
         {
             throw new BadRequestException("Key Connector requires the Single Sign-On Authentication policy to be enabled.");
         }

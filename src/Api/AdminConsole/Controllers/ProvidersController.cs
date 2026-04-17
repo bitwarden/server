@@ -1,11 +1,13 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.AdminConsole.Authorization.Providers.Requirements;
 using Bit.Api.AdminConsole.Models.Request.Providers;
 using Bit.Api.AdminConsole.Models.Response.Providers;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Context;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -21,28 +23,27 @@ public class ProvidersController : Controller
     private readonly IUserService _userService;
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderService _providerService;
-    private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
+    private readonly IProviderBillingService _providerBillingService;
+    private readonly ILogger<ProvidersController> _logger;
 
     public ProvidersController(IUserService userService, IProviderRepository providerRepository,
-        IProviderService providerService, ICurrentContext currentContext, GlobalSettings globalSettings)
+        IProviderService providerService, GlobalSettings globalSettings,
+        IProviderBillingService providerBillingService, ILogger<ProvidersController> logger)
     {
         _userService = userService;
         _providerRepository = providerRepository;
         _providerService = providerService;
-        _currentContext = currentContext;
         _globalSettings = globalSettings;
+        _providerBillingService = providerBillingService;
+        _logger = logger;
     }
 
-    [HttpGet("{id:guid}")]
-    public async Task<ProviderResponseModel> Get(Guid id)
+    [HttpGet("{providerId:guid}")]
+    [Authorize<ProviderUserRequirement>]
+    public async Task<ProviderResponseModel> Get(Guid providerId)
     {
-        if (!_currentContext.ProviderUser(id))
-        {
-            throw new NotFoundException();
-        }
-
-        var provider = await _providerRepository.GetByIdAsync(id);
+        var provider = await _providerRepository.GetByIdAsync(providerId);
         if (provider == null)
         {
             throw new NotFoundException();
@@ -51,40 +52,53 @@ public class ProvidersController : Controller
         return new ProviderResponseModel(provider);
     }
 
-    [HttpPut("{id:guid}")]
-    public async Task<ProviderResponseModel> Put(Guid id, [FromBody] ProviderUpdateRequestModel model)
+    [HttpPut("{providerId:guid}")]
+    [Authorize<ProviderAdminRequirement>]
+    public async Task<ProviderResponseModel> Put(Guid providerId, [FromBody] ProviderUpdateRequestModel model)
     {
-        if (!_currentContext.ProviderProviderAdmin(id))
-        {
-            throw new NotFoundException();
-        }
-
-        var provider = await _providerRepository.GetByIdAsync(id);
+        var provider = await _providerRepository.GetByIdAsync(providerId);
         if (provider == null)
         {
             throw new NotFoundException();
         }
+
+        // Capture original values before modifications for Stripe sync
+        var originalName = provider.Name;
+        var originalBillingEmail = provider.BillingEmail;
 
         await _providerService.UpdateAsync(model.ToProvider(provider, _globalSettings));
+
+        // Sync name/email changes to Stripe
+        if (originalName != provider.Name || originalBillingEmail != provider.BillingEmail)
+        {
+            try
+            {
+                await _providerBillingService.UpdateProviderNameAndEmail(provider);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to update Stripe customer for provider {ProviderId}. Database was updated successfully.",
+                    provider.Id);
+            }
+        }
+
         return new ProviderResponseModel(provider);
     }
 
-    [HttpPost("{id:guid}")]
+    [HttpPost("{providerId:guid}")]
     [Obsolete("This endpoint is deprecated. Use PUT method instead")]
-    public async Task<ProviderResponseModel> PostPut(Guid id, [FromBody] ProviderUpdateRequestModel model)
+    [Authorize<ProviderAdminRequirement>]
+    public async Task<ProviderResponseModel> PostPut(Guid providerId, [FromBody] ProviderUpdateRequestModel model)
     {
-        return await Put(id, model);
+        return await Put(providerId, model);
     }
 
-    [HttpPost("{id:guid}/setup")]
-    public async Task<ProviderResponseModel> Setup(Guid id, [FromBody] ProviderSetupRequestModel model)
+    [HttpPost("{providerId:guid}/setup")]
+    [Authorize<ProviderAdminRequirement>]
+    public async Task<ProviderResponseModel> Setup(Guid providerId, [FromBody] ProviderSetupRequestModel model)
     {
-        if (!_currentContext.ProviderProviderAdmin(id))
-        {
-            throw new NotFoundException();
-        }
-
-        var provider = await _providerRepository.GetByIdAsync(id);
+        var provider = await _providerRepository.GetByIdAsync(providerId);
         if (provider == null)
         {
             throw new NotFoundException();
@@ -102,11 +116,11 @@ public class ProvidersController : Controller
         return new ProviderResponseModel(response);
     }
 
-    [HttpPost("{id}/delete-recover-token")]
+    [HttpPost("{providerId}/delete-recover-token")]
     [AllowAnonymous]
-    public async Task PostDeleteRecoverToken(Guid id, [FromBody] ProviderVerifyDeleteRecoverRequestModel model)
+    public async Task PostDeleteRecoverToken(Guid providerId, [FromBody] ProviderVerifyDeleteRecoverRequestModel model)
     {
-        var provider = await _providerRepository.GetByIdAsync(id);
+        var provider = await _providerRepository.GetByIdAsync(providerId);
         if (provider == null)
         {
             throw new NotFoundException();
@@ -114,15 +128,11 @@ public class ProvidersController : Controller
         await _providerService.DeleteAsync(provider, model.Token);
     }
 
-    [HttpDelete("{id}")]
-    public async Task Delete(Guid id)
+    [HttpDelete("{providerId}")]
+    [Authorize<ProviderAdminRequirement>]
+    public async Task Delete(Guid providerId)
     {
-        if (!_currentContext.ProviderProviderAdmin(id))
-        {
-            throw new NotFoundException();
-        }
-
-        var provider = await _providerRepository.GetByIdAsync(id);
+        var provider = await _providerRepository.GetByIdAsync(providerId);
         if (provider == null)
         {
             throw new NotFoundException();
@@ -137,10 +147,11 @@ public class ProvidersController : Controller
         await _providerService.DeleteAsync(provider);
     }
 
-    [HttpPost("{id}/delete")]
+    [HttpPost("{providerId}/delete")]
     [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
-    public async Task PostDelete(Guid id)
+    [Authorize<ProviderAdminRequirement>]
+    public async Task PostDelete(Guid providerId)
     {
-        await Delete(id);
+        await Delete(providerId);
     }
 }

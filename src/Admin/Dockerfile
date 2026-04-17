@@ -1,7 +1,7 @@
 ###############################################
 #           Node.js build stage               #
 ###############################################
-FROM node:20-alpine3.21 AS node-build
+FROM --platform=$BUILDPLATFORM node:20-alpine3.21 AS node-build
 
 WORKDIR /app
 COPY src/Admin/package*.json ./

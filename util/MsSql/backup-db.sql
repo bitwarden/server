@@ -2,6 +2,18 @@
 DECLARE @DatabaseName varchar(100)
 SET @DatabaseName = 'vault'
 
+-- Check if database is in FULL recovery and has never had a t-log backup
+IF EXISTS (
+    SELECT 1 FROM sys.databases
+    WHERE name = @DatabaseName AND recovery_model = 1  -- 1 = FULL
+) AND NOT EXISTS (
+    SELECT 1 FROM msdb.dbo.backupset
+    WHERE database_name = @DatabaseName AND type = 'L'  -- L = Transaction Log
+)
+BEGIN   
+    EXEC('ALTER DATABASE [' + @DatabaseName + '] SET RECOVERY SIMPLE')
+END
+
 -- Database name without spaces for saving the backup files.
 DECLARE @DatabaseNameSafe varchar(100)
 SET @DatabaseNameSafe = 'vault'

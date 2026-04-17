@@ -50,6 +50,7 @@ public abstract class SubscriptionUpdate
     protected static bool IsNonSeatBasedPlan(StaticStore.Plan plan)
         => plan.Type is
             >= PlanType.FamiliesAnnually2019 and <= PlanType.EnterpriseAnnually2019
+            or PlanType.FamiliesAnnually2025
             or PlanType.FamiliesAnnually
             or PlanType.TeamsStarter2023
             or PlanType.TeamsStarter;

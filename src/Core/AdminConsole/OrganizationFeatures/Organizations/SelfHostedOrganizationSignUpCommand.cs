@@ -1,7 +1,8 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
@@ -28,9 +29,9 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IDeviceRepository _deviceRepository;
     private readonly ILicensingService _licensingService;
-    private readonly IPolicyService _policyService;
     private readonly IGlobalSettings _globalSettings;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
 
     public SelfHostedOrganizationSignUpCommand(
         IOrganizationRepository organizationRepository,
@@ -42,9 +43,9 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
         IPushNotificationService pushNotificationService,
         IDeviceRepository deviceRepository,
         ILicensingService licensingService,
-        IPolicyService policyService,
         IGlobalSettings globalSettings,
-        IPaymentService paymentService)
+        IStripePaymentService paymentService,
+        IPolicyRequirementQuery policyRequirementQuery)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -55,9 +56,9 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
         _pushNotificationService = pushNotificationService;
         _deviceRepository = deviceRepository;
         _licensingService = licensingService;
-        _policyService = policyService;
         _globalSettings = globalSettings;
         _paymentService = paymentService;
+        _policyRequirementQuery = policyRequirementQuery;
     }
 
     public async Task<(Organization organization, OrganizationUser? organizationUser)> SignUpAsync(
@@ -103,11 +104,19 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
 
     private async Task ValidateSignUpPoliciesAsync(Guid ownerId)
     {
-        var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(ownerId, PolicyType.SingleOrg);
-        if (anySingleOrgPolicies)
+        var requirement = await _policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(ownerId);
+
+        if (requirement.CannotCreateNewOrganization())
         {
             throw new BadRequestException("You may not create an organization. You belong to an organization " +
                                           "which has a policy that prohibits you from being a member of any other organization.");
+        }
+
+        var singleOrgRequirement = await _policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(ownerId);
+        var error = singleOrgRequirement.CanCreateOrganization();
+        if (error is not null)
+        {
+            throw new BadRequestException(error.Message);
         }
     }
 

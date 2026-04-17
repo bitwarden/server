@@ -55,7 +55,7 @@ public enum PushType : byte
     [NotificationInfo("not-specified", typeof(Models.UserPushNotification))]
     SyncSettings = 10,
 
-    [NotificationInfo("not-specified", typeof(Models.UserPushNotification))]
+    [NotificationInfo("not-specified", typeof(Models.LogOutPushNotification))]
     LogOut = 11,
 
     [NotificationInfo("@bitwarden/team-tools-dev", typeof(Models.SyncSendPushNotification))]
@@ -95,5 +95,14 @@ public enum PushType : byte
     OrganizationBankAccountVerified = 23,
 
     [NotificationInfo("@bitwarden/team-billing-dev", typeof(Models.ProviderBankAccountVerifiedPushNotification))]
-    ProviderBankAccountVerified = 24
+    ProviderBankAccountVerified = 24,
+
+    [NotificationInfo("@bitwarden/team-admin-console-dev", typeof(Models.SyncPolicyPushNotification))]
+    PolicyChanged = 25,
+
+    [NotificationInfo("@bitwarden/team-admin-console-dev", typeof(Models.AutoConfirmPushNotification))]
+    AutoConfirm = 26,
+
+    [NotificationInfo("@bitwarden/team-billing-dev", typeof(Billing.Models.PremiumStatusPushNotification))]
+    PremiumStatusChanged = 27,
 }

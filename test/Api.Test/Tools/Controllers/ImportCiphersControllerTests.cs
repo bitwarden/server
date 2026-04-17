@@ -75,6 +75,7 @@ public class ImportCiphersControllerTests
             .With(x => x.Ciphers, fixture.Build<CipherRequestModel>()
                 .With(c => c.OrganizationId, Guid.NewGuid().ToString())
                 .With(c => c.FolderId, Guid.NewGuid().ToString())
+                .With(c => c.ArchivedDate, (DateTime?)null)
                 .CreateMany(1).ToArray())
             .Create();
 
@@ -89,6 +90,37 @@ public class ImportCiphersControllerTests
             Arg.Any<List<CipherDetails>>(),
             Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
             user.Id
+            );
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostImportIndividual_WithArchivedDate_SavesArchivedDate(User user,
+        IFixture fixture, SutProvider<ImportCiphersController> sutProvider)
+    {
+        var archivedDate = DateTime.UtcNow;
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+
+        sutProvider.GetDependency<Core.Services.IUserService>()
+            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
+            .Returns(user.Id);
+
+        var request = fixture.Build<ImportCiphersRequestModel>()
+            .With(x => x.Ciphers, fixture.Build<CipherRequestModel>()
+                .With(c => c.ArchivedDate, archivedDate)
+                .With(c => c.FolderId, (string)null)
+                .CreateMany(1).ToArray())
+            .Create();
+
+        await sutProvider.Sut.PostImport(request);
+
+        await sutProvider.GetDependency<IImportCiphersCommand>()
+            .Received()
+            .ImportIntoIndividualVaultAsync(
+                Arg.Any<List<Folder>>(),
+                Arg.Is<List<CipherDetails>>(ciphers => ciphers.First().ArchivedDate == archivedDate),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
+                user.Id
             );
     }
 
@@ -156,6 +188,7 @@ public class ImportCiphersControllerTests
             .With(x => x.Ciphers, fixture.Build<CipherRequestModel>()
                 .With(c => c.OrganizationId, Guid.NewGuid().ToString())
                 .With(c => c.FolderId, Guid.NewGuid().ToString())
+                .With(c => c.ArchivedDate, (DateTime?)null)
                 .CreateMany(1).ToArray())
             .With(y => y.Collections, fixture.Build<CollectionWithIdRequestModel>()
                 .With(c => c.Id, orgIdGuid)
@@ -227,6 +260,7 @@ public class ImportCiphersControllerTests
             .With(x => x.Ciphers, fixture.Build<CipherRequestModel>()
                 .With(c => c.OrganizationId, Guid.NewGuid().ToString())
                 .With(c => c.FolderId, Guid.NewGuid().ToString())
+                .With(c => c.ArchivedDate, (DateTime?)null)
                 .CreateMany(1).ToArray())
             .With(y => y.Collections, fixture.Build<CollectionWithIdRequestModel>()
                 .With(c => c.Id, orgIdGuid)
@@ -291,6 +325,7 @@ public class ImportCiphersControllerTests
             .With(x => x.Ciphers, fixture.Build<CipherRequestModel>()
                 .With(c => c.OrganizationId, Guid.NewGuid().ToString())
                 .With(c => c.FolderId, Guid.NewGuid().ToString())
+                .With(c => c.ArchivedDate, (DateTime?)null)
                 .CreateMany(1).ToArray())
             .With(y => y.Collections, fixture.Build<CollectionWithIdRequestModel>()
                 .With(c => c.Id, orgIdGuid)
@@ -354,6 +389,7 @@ public class ImportCiphersControllerTests
             .With(x => x.Ciphers, fixture.Build<CipherRequestModel>()
                 .With(c => c.OrganizationId, Guid.NewGuid().ToString())
                 .With(c => c.FolderId, Guid.NewGuid().ToString())
+                .With(c => c.ArchivedDate, (DateTime?)null)
                 .CreateMany(1).ToArray())
             .With(y => y.Collections, fixture.Build<CollectionWithIdRequestModel>()
                 .With(c => c.Id, orgIdGuid)
@@ -423,6 +459,7 @@ public class ImportCiphersControllerTests
             Ciphers = fixture.Build<CipherRequestModel>()
                 .With(_ => _.OrganizationId, orgId.ToString())
                 .With(_ => _.FolderId, Guid.NewGuid().ToString())
+                .With(_ => _.ArchivedDate, (DateTime?)null)
                 .CreateMany(2).ToArray(),
             CollectionRelationships = new List<KeyValuePair<int, int>>().ToArray(),
         };
@@ -499,6 +536,7 @@ public class ImportCiphersControllerTests
             Ciphers = fixture.Build<CipherRequestModel>()
                 .With(_ => _.OrganizationId, orgId.ToString())
                 .With(_ => _.FolderId, Guid.NewGuid().ToString())
+                .With(_ => _.ArchivedDate, (DateTime?)null)
                 .CreateMany(2).ToArray(),
             CollectionRelationships = new List<KeyValuePair<int, int>>().ToArray(),
         };
@@ -578,6 +616,7 @@ public class ImportCiphersControllerTests
             Ciphers = fixture.Build<CipherRequestModel>()
                 .With(_ => _.OrganizationId, orgId.ToString())
                 .With(_ => _.FolderId, Guid.NewGuid().ToString())
+                .With(_ => _.ArchivedDate, (DateTime?)null)
                 .CreateMany(2).ToArray(),
             CollectionRelationships = new List<KeyValuePair<int, int>>().ToArray(),
         };
@@ -651,6 +690,7 @@ public class ImportCiphersControllerTests
             Ciphers = fixture.Build<CipherRequestModel>()
                 .With(_ => _.OrganizationId, orgId.ToString())
                 .With(_ => _.FolderId, Guid.NewGuid().ToString())
+                .With(_ => _.ArchivedDate, (DateTime?)null)
                 .CreateMany(2).ToArray(),
             CollectionRelationships = new List<KeyValuePair<int, int>>().ToArray(),
         };
@@ -698,7 +738,7 @@ public class ImportCiphersControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task PostImportOrganization_ImportWithNoCollectionsWithCreatePermissionsOnlySuccessAsync(
+    public async Task PostImportOrganization_ImportWithNoCollectionsWithCreatePermissionsOnly_ThrowsBadRequestAsync(
       SutProvider<ImportCiphersController> sutProvider,
       IFixture fixture,
       User user)
@@ -713,13 +753,14 @@ public class ImportCiphersControllerTests
 
         SetupUserService(sutProvider, user);
 
-        // Import model includes new and existing collection
+        // Import model with no collections — previously bypassed all authorization
         var request = new ImportOrganizationCiphersRequestModel
         {
             Collections = new List<CollectionWithIdRequestModel>().ToArray(),   // No collections
             Ciphers = fixture.Build<CipherRequestModel>()
                 .With(_ => _.OrganizationId, orgId.ToString())
                 .With(_ => _.FolderId, Guid.NewGuid().ToString())
+                .With(_ => _.ArchivedDate, (DateTime?)null)
                 .CreateMany(2).ToArray(),
             CollectionRelationships = new List<KeyValuePair<int, int>>().ToArray(),
         };
@@ -749,15 +790,16 @@ public class ImportCiphersControllerTests
             .GetManyByOrganizationIdAsync(orgId)
             .Returns(new List<Collection>());
 
-        // Act
-        // import ciphers only and no collections
-        // User has Create permissions
-        // expected to be successful
-        await sutProvider.Sut.PostImportOrganization(orgId.ToString(), request);
+        // Act & Assert
+        // With no collections and no AccessImportExport permission,
+        // the import should be rejected — empty collections must not bypass authorization
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.PostImportOrganization(orgId.ToString(), request));
 
-        // Assert
+        Assert.Equal("Not enough privileges to import into this organization.", exception.Message);
+
         await sutProvider.GetDependency<IImportCiphersCommand>()
-            .Received(1)
+            .DidNotReceive()
             .ImportIntoOrganizationalVaultAsync(
                 Arg.Any<List<Collection>>(),
                 Arg.Any<List<CipherDetails>>(),

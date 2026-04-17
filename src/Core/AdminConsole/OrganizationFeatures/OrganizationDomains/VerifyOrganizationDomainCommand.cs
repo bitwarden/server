@@ -131,15 +131,19 @@ public class VerifyOrganizationDomainCommand(
         await SendVerifiedDomainUserEmailAsync(domain);
     }
 
-    private async Task EnableSingleOrganizationPolicyAsync(Guid organizationId, IActingUser actingUser) =>
-        await savePolicyCommand.SaveAsync(
-            new PolicyUpdate
-            {
-                OrganizationId = organizationId,
-                Type = PolicyType.SingleOrg,
-                Enabled = true,
-                PerformedBy = actingUser
-            });
+    private async Task EnableSingleOrganizationPolicyAsync(Guid organizationId, IActingUser actingUser)
+    {
+        var policyUpdate = new PolicyUpdate
+        {
+            OrganizationId = organizationId,
+            Type = PolicyType.SingleOrg,
+            Enabled = true,
+            PerformedBy = actingUser
+        };
+
+        var savePolicyModel = new SavePolicyModel(policyUpdate, actingUser);
+        await savePolicyCommand.SaveAsync(savePolicyModel);
+    }
 
     private async Task SendVerifiedDomainUserEmailAsync(OrganizationDomain domain)
     {
@@ -153,6 +157,6 @@ public class VerifyOrganizationDomainCommand(
 
         var organization = await organizationRepository.GetByIdAsync(domain.OrganizationId);
 
-        await mailService.SendClaimedDomainUserEmailAsync(new ClaimedUserDomainClaimedEmails(domainUserEmails, organization));
+        await mailService.SendClaimedDomainUserEmailAsync(new ClaimedUserDomainClaimedEmails(domainUserEmails, organization, domain.DomainName));
     }
 }

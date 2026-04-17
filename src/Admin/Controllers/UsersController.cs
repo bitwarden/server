@@ -5,6 +5,7 @@ using Bit.Admin.Models;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -20,7 +21,7 @@ public class UsersController : Controller
 {
     private readonly IUserRepository _userRepository;
     private readonly ICipherRepository _cipherRepository;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly GlobalSettings _globalSettings;
     private readonly IAccessControlService _accessControlService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
@@ -30,7 +31,7 @@ public class UsersController : Controller
     public UsersController(
         IUserRepository userRepository,
         ICipherRepository cipherRepository,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         GlobalSettings globalSettings,
         IAccessControlService accessControlService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
@@ -85,7 +86,7 @@ public class UsersController : Controller
             return RedirectToAction("Index");
         }
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id, withOrganizations: false);
 
         var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var verifiedDomain = await _userService.IsClaimedByAnyOrganizationAsync(user.Id);

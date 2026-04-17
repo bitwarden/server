@@ -3,24 +3,26 @@ using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Utilities;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using OneOf;
 using Stripe;
 
 namespace Bit.Core.Billing.Organizations.Commands;
 
-using static Core.Constants;
 using static StripeConstants;
 
 public interface IPreviewOrganizationTaxCommand
 {
     Task<BillingCommandResult<(decimal Tax, decimal Total)>> Run(
+        User user,
         OrganizationSubscriptionPurchase purchase,
         BillingAddress billingAddress);
 
@@ -37,10 +39,12 @@ public interface IPreviewOrganizationTaxCommand
 public class PreviewOrganizationTaxCommand(
     ILogger<PreviewOrganizationTaxCommand> logger,
     IPricingClient pricingClient,
-    IStripeAdapter stripeAdapter)
+    IStripeAdapter stripeAdapter,
+    ISubscriptionDiscountService subscriptionDiscountService)
     : BaseBillingCommand<PreviewOrganizationTaxCommand>(logger), IPreviewOrganizationTaxCommand
 {
     public Task<BillingCommandResult<(decimal Tax, decimal Total)>> Run(
+        User user,
         OrganizationSubscriptionPurchase purchase,
         BillingAddress billingAddress)
         => HandleAsync<(decimal, decimal)>(async () =>
@@ -54,7 +58,7 @@ public class PreviewOrganizationTaxCommand(
             switch (purchase)
             {
                 case { PasswordManager.Sponsored: true }:
-                    var sponsoredPlan = StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise);
+                    var sponsoredPlan = SponsoredPlans.Get(PlanSponsorshipType.FamiliesForEnterprise);
                     items.Add(new InvoiceSubscriptionDetailsItemOptions
                     {
                         Price = sponsoredPlan.StripePlanId,
@@ -75,7 +79,15 @@ public class PreviewOrganizationTaxCommand(
                             Quantity = purchase.SecretsManager.Seats
                         }
                     ]);
-                    options.Coupon = CouponIDs.SecretsManagerStandalone;
+                    // System coupon takes precedence for standalone Secrets Manager purchases.
+                    // Any user-provided coupons are ignored in this scenario.
+                    options.Discounts =
+                    [
+                        new InvoiceDiscountOptions
+                        {
+                            Coupon = CouponIDs.SecretsManagerStandalone
+                        }
+                    ];
                     break;
 
                 default:
@@ -114,12 +126,35 @@ public class PreviewOrganizationTaxCommand(
                         }
                     }
 
+                    // Validate all coupons at once. If all are eligible, apply them; otherwise skip gracefully.
+                    // Only Families plans support user-provided coupons.
+                    if (purchase is { Coupons.Length: > 0, Tier: ProductTierType.Families })
+                    {
+                        var trimmedCoupons = purchase.Coupons
+                            .Where(c => !string.IsNullOrWhiteSpace(c))
+                            .Select(c => c.Trim())
+                            .ToArray();
+
+                        if (trimmedCoupons.Length > 0)
+                        {
+                            var allValid = await subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
+                                user, trimmedCoupons, DiscountTierType.Families);
+
+                            if (allValid)
+                            {
+                                options.Discounts = trimmedCoupons
+                                    .Select(c => new InvoiceDiscountOptions { Coupon = c })
+                                    .ToList();
+                            }
+                        }
+                    }
+
                     break;
             }
 
             options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
 
-            var invoice = await stripeAdapter.InvoiceCreatePreviewAsync(options);
+            var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
             return GetAmounts(invoice);
         });
 
@@ -159,7 +194,7 @@ public class PreviewOrganizationTaxCommand(
 
                 options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
 
-                var invoice = await stripeAdapter.InvoiceCreatePreviewAsync(options);
+                var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
                 return GetAmounts(invoice);
             }
             else
@@ -175,12 +210,15 @@ public class PreviewOrganizationTaxCommand(
 
                 var options = GetBaseOptions(billingAddress, planChange.Tier != ProductTierType.Families);
 
-                var subscription = await stripeAdapter.SubscriptionGetAsync(organization.GatewaySubscriptionId,
+                var subscription = await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
                     new SubscriptionGetOptions { Expand = ["customer"] });
 
                 if (subscription.Customer.Discount != null)
                 {
-                    options.Coupon = subscription.Customer.Discount.Coupon.Id;
+                    options.Discounts =
+                    [
+                        new InvoiceDiscountOptions { Coupon = subscription.Customer.Discount.Coupon.Id }
+                    ];
                 }
 
                 var currentPlan = await pricingClient.GetPlanOrThrow(organization.PlanType);
@@ -250,7 +288,7 @@ public class PreviewOrganizationTaxCommand(
 
                 options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
 
-                var invoice = await stripeAdapter.InvoiceCreatePreviewAsync(options);
+                var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
                 return GetAmounts(invoice);
             }
         });
@@ -269,7 +307,7 @@ public class PreviewOrganizationTaxCommand(
                 return new BadRequest("Organization does not have a subscription.");
             }
 
-            var subscription = await stripeAdapter.SubscriptionGetAsync(organization.GatewaySubscriptionId,
+            var subscription = await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
                 new SubscriptionGetOptions { Expand = ["customer.tax_ids"] });
 
             var options = GetBaseOptions(subscription.Customer,
@@ -277,7 +315,10 @@ public class PreviewOrganizationTaxCommand(
 
             if (subscription.Customer.Discount != null)
             {
-                options.Coupon = subscription.Customer.Discount.Coupon.Id;
+                options.Discounts =
+                [
+                    new InvoiceDiscountOptions { Coupon = subscription.Customer.Discount.Coupon.Id }
+                ];
             }
 
             var currentPlan = await pricingClient.GetPlanOrThrow(organization.PlanType);
@@ -324,12 +365,12 @@ public class PreviewOrganizationTaxCommand(
 
             options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
 
-            var invoice = await stripeAdapter.InvoiceCreatePreviewAsync(options);
+            var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
             return GetAmounts(invoice);
         });
 
     private static (decimal, decimal) GetAmounts(Invoice invoice) => (
-        Convert.ToDecimal(invoice.Tax) / 100,
+        Convert.ToDecimal(invoice.TotalTaxes.Sum(invoiceTotalTax => invoiceTotalTax.Amount)) / 100,
         Convert.ToDecimal(invoice.Total) / 100);
 
     private static InvoiceCreatePreviewOptions GetBaseOptions(
@@ -352,11 +393,23 @@ public class PreviewOrganizationTaxCommand(
             CustomerDetails = new InvoiceCustomerDetailsOptions
             {
                 Address = new AddressOptions { Country = country, PostalCode = postalCode },
-                TaxExempt = businessUse && country != CountryAbbreviations.UnitedStates
-                    ? TaxExempt.Reverse
-                    : TaxExempt.None
             }
         };
+
+        switch (businessUse)
+        {
+            case true:
+                var existingTaxExemptStatus = addressChoice.Match(
+                    customer => customer.TaxExempt,
+                    _ => null!);
+
+                var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(country, existingTaxExemptStatus);
+                options.CustomerDetails.TaxExempt = determinedTaxExemptStatus;
+                break;
+            default:
+                options.CustomerDetails.TaxExempt = TaxExempt.None;
+                break;
+        }
 
         var taxId = addressChoice.Match(
             customer =>

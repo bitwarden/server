@@ -5,7 +5,6 @@ using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Duende.IdentityModel;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.IdentityModel.Logging;
 
 namespace Bit.Notifications;
 
@@ -61,6 +60,7 @@ public class Startup
         }
         services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
         services.AddSingleton<ConnectionCounter>();
+        services.AddSingleton<HubHelpers>();
 
         // Mvc
         services.AddMvc();
@@ -81,12 +81,8 @@ public class Startup
     public void Configure(
         IApplicationBuilder app,
         IWebHostEnvironment env,
-        IHostApplicationLifetime appLifetime,
         GlobalSettings globalSettings)
     {
-        IdentityModelEventSource.ShowPII = true;
-        app.UseSerilog(env, appLifetime, globalSettings);
-
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
 

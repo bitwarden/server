@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Globalization;
 using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Bit.Api.Auth.Models.Request.Accounts;
@@ -9,11 +10,11 @@ using Bit.Api.Utilities;
 using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -42,7 +43,6 @@ public class CiphersController : Controller
     private readonly ICipherService _cipherService;
     private readonly IUserService _userService;
     private readonly IAttachmentStorageService _attachmentStorageService;
-    private readonly IProviderService _providerService;
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<CiphersController> _logger;
     private readonly GlobalSettings _globalSettings;
@@ -51,7 +51,6 @@ public class CiphersController : Controller
     private readonly ICollectionRepository _collectionRepository;
     private readonly IArchiveCiphersCommand _archiveCiphersCommand;
     private readonly IUnarchiveCiphersCommand _unarchiveCiphersCommand;
-    private readonly IFeatureService _featureService;
 
     public CiphersController(
         ICipherRepository cipherRepository,
@@ -59,7 +58,6 @@ public class CiphersController : Controller
         ICipherService cipherService,
         IUserService userService,
         IAttachmentStorageService attachmentStorageService,
-        IProviderService providerService,
         ICurrentContext currentContext,
         ILogger<CiphersController> logger,
         GlobalSettings globalSettings,
@@ -67,15 +65,13 @@ public class CiphersController : Controller
         IApplicationCacheService applicationCacheService,
         ICollectionRepository collectionRepository,
         IArchiveCiphersCommand archiveCiphersCommand,
-        IUnarchiveCiphersCommand unarchiveCiphersCommand,
-        IFeatureService featureService)
+        IUnarchiveCiphersCommand unarchiveCiphersCommand)
     {
         _cipherRepository = cipherRepository;
         _collectionCipherRepository = collectionCipherRepository;
         _cipherService = cipherService;
         _userService = userService;
         _attachmentStorageService = attachmentStorageService;
-        _providerService = providerService;
         _currentContext = currentContext;
         _logger = logger;
         _globalSettings = globalSettings;
@@ -84,7 +80,6 @@ public class CiphersController : Controller
         _collectionRepository = collectionRepository;
         _archiveCiphersCommand = archiveCiphersCommand;
         _unarchiveCiphersCommand = unarchiveCiphersCommand;
-        _featureService = featureService;
     }
 
     [HttpGet("{id}")]
@@ -97,9 +92,9 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var organizationAbility = await GetOrganizationAbilityAsync(cipher);
 
-        return new CipherResponseModel(cipher, user, organizationAbilities, _globalSettings);
+        return new CipherResponseModel(cipher, user, organizationAbility, _globalSettings);
     }
 
     [HttpGet("{id}/admin")]
@@ -128,9 +123,9 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var organizationAbility = await GetOrganizationAbilityAsync(cipher);
         var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(user.Id, id);
-        return new CipherDetailsResponseModel(cipher, user, organizationAbilities, _globalSettings, collectionCiphers);
+        return new CipherDetailsResponseModel(cipher, user, organizationAbility, _globalSettings, collectionCiphers);
     }
 
     [HttpGet("{id}/full-details")]
@@ -153,15 +148,16 @@ public class CiphersController : Controller
             var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(user.Id);
             collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
         }
-        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var organizationAbilities = await GetOrganizationAbilitiesAsync(ciphers);
         var responses = ciphers.Select(cipher => new CipherDetailsResponseModel(
             cipher,
             user,
-            organizationAbilities,
+            GetOrganizationAbility(cipher, organizationAbilities),
             _globalSettings,
-            collectionCiphersGroupDict)).ToList();
+            collectionCiphersGroupDict)).ToArray();
         return new ListResponseModel<CipherDetailsResponseModel>(responses);
     }
+
 
     [HttpPost("")]
     public async Task<CipherResponseModel> Post([FromBody] CipherRequestModel model)
@@ -185,11 +181,7 @@ public class CiphersController : Controller
         }
 
         await _cipherService.SaveDetailsAsync(cipher, user.Id, model.LastKnownRevisionDate, null, cipher.OrganizationId.HasValue);
-        var response = new CipherResponseModel(
-            cipher,
-            user,
-            await _applicationCacheService.GetOrganizationAbilitiesAsync(),
-            _globalSettings);
+        var response = new CipherResponseModel(cipher, user, await GetOrganizationAbilityAsync(cipher), _globalSettings);
         return response;
     }
 
@@ -280,11 +272,7 @@ public class CiphersController : Controller
 
         await _cipherService.SaveDetailsAsync(model.ToCipherDetails(cipher), user.Id, model.LastKnownRevisionDate, collectionIds);
 
-        var response = new CipherResponseModel(
-            cipher,
-            user,
-            await _applicationCacheService.GetOrganizationAbilitiesAsync(),
-            _globalSettings);
+        var response = new CipherResponseModel(cipher, user, await GetOrganizationAbilityAsync(cipher), _globalSettings);
         return response;
     }
 
@@ -343,8 +331,7 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        bool excludeDefaultUserCollections = _featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation) && !includeMemberItems;
-        var allOrganizationCiphers = excludeDefaultUserCollections
+        var allOrganizationCiphers = !includeMemberItems
         ?
             await _organizationCiphersQuery.GetAllOrganizationCiphersExcludingDefaultUserCollections(organizationId)
         :
@@ -380,13 +367,9 @@ public class CiphersController : Controller
         }
 
         var user = await _userService.GetUserByPrincipalAsync(User);
-        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
         var responses = ciphers.Select(cipher =>
-            new CipherDetailsResponseModel(
-                cipher,
-                user,
-                organizationAbilities,
-                _globalSettings));
+            new CipherDetailsResponseModel(cipher, user, organizationAbility, _globalSettings));
 
         return new ListResponseModel<CipherDetailsResponseModel>(responses);
     }
@@ -401,8 +384,9 @@ public class CiphersController : Controller
     {
         var org = _currentContext.GetOrganization(organizationId);
 
-        // If we're not an "admin" or if we're not a provider user we don't need to check the ciphers
-        if (org is not ({ Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or { Permissions.EditAnyCollection: true }) || await _currentContext.ProviderUserForOrgAsync(organizationId))
+        // If we're not an "admin" we don't need to check the ciphers
+        if (org is not ({ Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
+            { Permissions.EditAnyCollection: true }))
         {
             return false;
         }
@@ -415,8 +399,9 @@ public class CiphersController : Controller
     {
         var org = _currentContext.GetOrganization(organizationId);
 
-        // If we're not an "admin" or if we're a provider user we don't need to check the ciphers
-        if (org is not ({ Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or { Permissions.EditAnyCollection: true }) || await _currentContext.ProviderUserForOrgAsync(organizationId))
+        // If we're not an "admin" we don't need to check the ciphers
+        if (org is not ({ Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
+            { Permissions.EditAnyCollection: true }))
         {
             return false;
         }
@@ -714,15 +699,17 @@ public class CiphersController : Controller
     public async Task<CipherResponseModel> PutPartial(Guid id, [FromBody] CipherPartialRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
+        var cipher = await GetByIdAsync(id, user.Id);
+        if (cipher == null)
+        {
+            throw new NotFoundException();
+        }
+
         var folderId = string.IsNullOrWhiteSpace(model.FolderId) ? null : (Guid?)new Guid(model.FolderId);
         await _cipherRepository.UpdatePartialAsync(id, user.Id, folderId, model.Favorite);
 
-        var cipher = await GetByIdAsync(id, user.Id);
-        var response = new CipherResponseModel(
-            cipher,
-            user,
-            await _applicationCacheService.GetOrganizationAbilitiesAsync(),
-            _globalSettings);
+        var updatedCipher = await GetByIdAsync(id, user.Id);
+        var response = new CipherResponseModel(updatedCipher, user, await GetOrganizationAbilityAsync(updatedCipher), _globalSettings);
         return response;
     }
 
@@ -754,23 +741,14 @@ public class CiphersController : Controller
             }
         }
 
-        if (cipher.ArchivedDate.HasValue)
-        {
-            throw new BadRequestException("Cannot move an archived item to an organization.");
-        }
-
         ValidateClientVersionForFido2CredentialSupport(cipher);
 
         var original = cipher.Clone();
-        await _cipherService.ShareAsync(original, model.Cipher.ToCipher(cipher), new Guid(model.Cipher.OrganizationId),
+        await _cipherService.ShareAsync(original, model.Cipher.ToCipher(cipher, user.Id), new Guid(model.Cipher.OrganizationId),
             model.CollectionIds.Select(c => new Guid(c)), user.Id, model.Cipher.LastKnownRevisionDate);
 
         var sharedCipher = await GetByIdAsync(id, user.Id);
-        var response = new CipherResponseModel(
-            sharedCipher,
-            user,
-            await _applicationCacheService.GetOrganizationAbilitiesAsync(),
-            _globalSettings);
+        var response = new CipherResponseModel(sharedCipher, user, await GetOrganizationAbilityAsync(sharedCipher), _globalSettings);
         return response;
     }
 
@@ -798,12 +776,7 @@ public class CiphersController : Controller
         var updatedCipher = await GetByIdAsync(id, user.Id);
         var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(user.Id, id);
 
-        return new CipherDetailsResponseModel(
-            updatedCipher,
-            user,
-            await _applicationCacheService.GetOrganizationAbilitiesAsync(),
-            _globalSettings,
-            collectionCiphers);
+        return new CipherDetailsResponseModel(updatedCipher, user, await GetOrganizationAbilityAsync(updatedCipher), _globalSettings, collectionCiphers);
     }
 
     [HttpPost("{id}/collections")]
@@ -836,12 +809,7 @@ public class CiphersController : Controller
             Unavailable = updatedCipher is null,
             Cipher = updatedCipher is null
                 ? null
-                : new CipherDetailsResponseModel(
-                    updatedCipher,
-                    user,
-                    await _applicationCacheService.GetOrganizationAbilitiesAsync(),
-                    _globalSettings,
-                    collectionCiphers)
+                : new CipherDetailsResponseModel(updatedCipher, user, await GetOrganizationAbilityAsync(updatedCipher), _globalSettings, collectionCiphers)
         };
         return response;
     }
@@ -912,8 +880,7 @@ public class CiphersController : Controller
     }
 
     [HttpPut("{id}/archive")]
-    [RequireFeature(FeatureFlagKeys.ArchiveVaultItems)]
-    public async Task<CipherMiniResponseModel> PutArchive(Guid id)
+    public async Task<CipherResponseModel> PutArchive(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
 
@@ -924,12 +891,12 @@ public class CiphersController : Controller
             throw new BadRequestException("Cipher was not archived. Ensure the provided ID is correct and you have permission to archive it.");
         }
 
-        return new CipherMiniResponseModel(archivedCipherOrganizationDetails.First(), _globalSettings, archivedCipherOrganizationDetails.First().OrganizationUseTotp);
+        var archivedCipher = archivedCipherOrganizationDetails.First();
+        return new CipherResponseModel(archivedCipher, await _userService.GetUserByPrincipalAsync(User), await GetOrganizationAbilityAsync(archivedCipher), _globalSettings);
     }
 
     [HttpPut("archive")]
-    [RequireFeature(FeatureFlagKeys.ArchiveVaultItems)]
-    public async Task<ListResponseModel<CipherMiniResponseModel>> PutArchiveMany([FromBody] CipherBulkArchiveRequestModel model)
+    public async Task<ListResponseModel<CipherResponseModel>> PutArchiveMany([FromBody] CipherBulkArchiveRequestModel model)
     {
         if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
         {
@@ -937,6 +904,7 @@ public class CiphersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User).Value;
+        var user = await _userService.GetUserByPrincipalAsync(User);
 
         var cipherIdsToArchive = new HashSet<Guid>(model.Ids);
 
@@ -947,9 +915,11 @@ public class CiphersController : Controller
             throw new BadRequestException("No ciphers were archived. Ensure the provided IDs are correct and you have permission to archive them.");
         }
 
-        var responses = archivedCiphers.Select(c => new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
+        var organizationAbilities = await GetOrganizationAbilitiesAsync(archivedCiphers);
+        var responses = archivedCiphers.Select(cipher =>
+            new CipherResponseModel(cipher, user, GetOrganizationAbility(cipher, organizationAbilities), _globalSettings)).ToArray();
 
-        return new ListResponseModel<CipherMiniResponseModel>(responses);
+        return new ListResponseModel<CipherResponseModel>(responses);
     }
 
     [HttpDelete("{id}")]
@@ -976,14 +946,14 @@ public class CiphersController : Controller
     public async Task DeleteAdmin(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await GetByIdAsync(id, userId);
+        var cipher = await GetByIdAsyncAdmin(id);
         if (cipher == null || !cipher.OrganizationId.HasValue ||
             !await CanDeleteOrRestoreCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
         {
             throw new NotFoundException();
         }
 
-        await _cipherService.DeleteAsync(cipher, userId, true);
+        await _cipherService.DeleteAsync(new CipherDetails(cipher), userId, true);
     }
 
     [HttpPost("{id}/delete-admin")]
@@ -1110,8 +1080,7 @@ public class CiphersController : Controller
     }
 
     [HttpPut("{id}/unarchive")]
-    [RequireFeature(FeatureFlagKeys.ArchiveVaultItems)]
-    public async Task<CipherMiniResponseModel> PutUnarchive(Guid id)
+    public async Task<CipherResponseModel> PutUnarchive(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
 
@@ -1122,12 +1091,16 @@ public class CiphersController : Controller
             throw new BadRequestException("Cipher was not unarchived. Ensure the provided ID is correct and you have permission to archive it.");
         }
 
-        return new CipherMiniResponseModel(unarchivedCipherDetails.First(), _globalSettings, unarchivedCipherDetails.First().OrganizationUseTotp);
+        var unarchivedCipher = unarchivedCipherDetails.First();
+        return new CipherResponseModel(unarchivedCipher,
+            await _userService.GetUserByPrincipalAsync(User),
+            await GetOrganizationAbilityAsync(unarchivedCipher),
+            _globalSettings
+        );
     }
 
     [HttpPut("unarchive")]
-    [RequireFeature(FeatureFlagKeys.ArchiveVaultItems)]
-    public async Task<ListResponseModel<CipherMiniResponseModel>> PutUnarchiveMany([FromBody] CipherBulkUnarchiveRequestModel model)
+    public async Task<ListResponseModel<CipherResponseModel>> PutUnarchiveMany([FromBody] CipherBulkUnarchiveRequestModel model)
     {
         if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
         {
@@ -1135,6 +1108,7 @@ public class CiphersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User).Value;
+        var user = await _userService.GetUserByPrincipalAsync(User);
 
         var cipherIdsToUnarchive = new HashSet<Guid>(model.Ids);
 
@@ -1145,9 +1119,11 @@ public class CiphersController : Controller
             throw new BadRequestException("Ciphers were not unarchived. Ensure the provided ID is correct and you have permission to archive it.");
         }
 
-        var responses = unarchivedCipherOrganizationDetails.Select(c => new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
+        var organizationAbilities = await GetOrganizationAbilitiesAsync(unarchivedCipherOrganizationDetails);
+        var responses = unarchivedCipherOrganizationDetails.Select(cipher =>
+            new CipherResponseModel(cipher, user, GetOrganizationAbility(cipher, organizationAbilities), _globalSettings)).ToArray();
 
-        return new ListResponseModel<CipherMiniResponseModel>(responses);
+        return new ListResponseModel<CipherResponseModel>(responses);
     }
 
     [HttpPut("{id}/restore")]
@@ -1164,7 +1140,7 @@ public class CiphersController : Controller
         return new CipherResponseModel(
             cipher,
             user,
-            await _applicationCacheService.GetOrganizationAbilitiesAsync(),
+            await GetOrganizationAbilityAsync(cipher),
             _globalSettings);
     }
 
@@ -1268,11 +1244,6 @@ public class CiphersController : Controller
                 _logger.LogError("Cipher was not encrypted for the current user. CipherId: {CipherId}, CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", cipher.Id, userId, cipher.EncryptedFor);
                 throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
             }
-
-            if (cipher.ArchivedDate.HasValue)
-            {
-                throw new BadRequestException("Cannot move archived items to an organization.");
-            }
         }
 
         var shareCiphers = new List<(CipherDetails, DateTime?)>();
@@ -1284,11 +1255,6 @@ public class CiphersController : Controller
             }
 
             ValidateClientVersionForFido2CredentialSupport(existingCipher);
-
-            if (existingCipher.ArchivedDate.HasValue)
-            {
-                throw new BadRequestException("Cannot move archived items to an organization.");
-            }
 
             shareCiphers.Add((cipher.ToCipherDetails(existingCipher), cipher.LastKnownRevisionDate));
         }
@@ -1366,16 +1332,18 @@ public class CiphersController : Controller
         }
 
         var (attachmentId, uploadUrl) = await _cipherService.CreateAttachmentForDelayedUploadAsync(cipher,
-            request.Key, request.FileName, request.FileSize, request.AdminRequest, user.Id);
+            request.Key, request.FileName, request.FileSize, request.AdminRequest, user.Id, request.LastKnownRevisionDate);
+
+        var cipherDetails = (CipherDetails)cipher;
         return new AttachmentUploadDataResponseModel
         {
             AttachmentId = attachmentId,
             Url = uploadUrl,
             FileUploadType = _attachmentStorageService.FileUploadType,
             CipherResponse = request.AdminRequest ? null : new CipherResponseModel(
-                (CipherDetails)cipher,
+                cipherDetails,
                 user,
-                await _applicationCacheService.GetOrganizationAbilitiesAsync(),
+                await GetOrganizationAbilityAsync(cipherDetails),
                 _globalSettings),
             CipherMiniResponse = request.AdminRequest ? new CipherMiniResponseModel(cipher, _globalSettings, cipher.OrganizationUseTotp) : null,
         };
@@ -1386,12 +1354,22 @@ public class CiphersController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsync(id, userId);
+
+        var orgAdmin = false;
+        if (cipher.OrganizationId.HasValue &&
+            await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
+        {
+            orgAdmin = true;
+        }
+
         var attachments = cipher?.GetAttachments();
 
         if (attachments == null || !attachments.TryGetValue(attachmentId, out var attachment) || attachment.Validated)
         {
             throw new NotFoundException();
         }
+
+        await _cipherService.ValidateCipherEditForAttachmentAsync(cipher, userId, orgAdmin, attachment.Size);
 
         return new AttachmentUploadDataResponseModel
         {
@@ -1413,6 +1391,13 @@ public class CiphersController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsync(id, userId);
+
+        var orgAdmin = false;
+        if (cipher.OrganizationId.HasValue &&
+            await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
+        {
+            orgAdmin = true;
+        }
         var attachments = cipher?.GetAttachments();
         if (attachments == null || !attachments.TryGetValue(attachmentId, out var attachmentData))
         {
@@ -1421,7 +1406,7 @@ public class CiphersController : Controller
 
         await Request.GetFileAsync(async (stream) =>
         {
-            await _cipherService.UploadFileForExistingAttachmentAsync(stream, cipher, attachmentData);
+            await _cipherService.UploadFileForExistingAttachmentAsync(stream, cipher, attachmentData, userId, orgAdmin);
         });
     }
 
@@ -1440,16 +1425,18 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
+        // Extract lastKnownRevisionDate from form data if present
+        DateTime? lastKnownRevisionDate = GetLastKnownRevisionDateFromForm();
         await Request.GetFileAsync(async (stream, fileName, key) =>
         {
             await _cipherService.CreateAttachmentAsync(cipher, stream, fileName, key,
-                    Request.ContentLength.GetValueOrDefault(0), user.Id);
+                    Request.ContentLength.GetValueOrDefault(0), user.Id, false, lastKnownRevisionDate);
         });
 
         return new CipherResponseModel(
             cipher,
             user,
-            await _applicationCacheService.GetOrganizationAbilitiesAsync(),
+            await GetOrganizationAbilityAsync(cipher),
             _globalSettings);
     }
 
@@ -1469,10 +1456,13 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
+        // Extract lastKnownRevisionDate from form data if present
+        DateTime? lastKnownRevisionDate = GetLastKnownRevisionDateFromForm();
+
         await Request.GetFileAsync(async (stream, fileName, key) =>
         {
             await _cipherService.CreateAttachmentAsync(cipher, stream, fileName, key,
-                    Request.ContentLength.GetValueOrDefault(0), userId, true);
+                    Request.ContentLength.GetValueOrDefault(0), userId, true, lastKnownRevisionDate);
         });
 
         return new CipherMiniResponseModel(cipher, _globalSettings, cipher.OrganizationUseTotp);
@@ -1497,8 +1487,50 @@ public class CiphersController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsync(id, userId);
+        if (cipher == null)
+        {
+            throw new NotFoundException();
+        }
+
         var result = await _cipherService.GetAttachmentDownloadDataAsync(cipher, attachmentId);
         return new AttachmentResponseModel(result);
+    }
+
+    /// <summary>
+    /// Serves a locally stored attachment file using a time-limited, signed token.
+    /// This endpoint replaces direct static file access for self-hosted environments
+    /// to ensure that only authorized users can download attachment files.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("attachment/download")]
+    public async Task<IActionResult> DownloadAttachmentAsync([FromQuery] string token)
+    {
+        if (string.IsNullOrEmpty(token))
+        {
+            throw new NotFoundException();
+        }
+
+        (Guid cipherId, string attachmentId) = _attachmentStorageService.ParseAttachmentDownloadToken(token);
+
+        var cipher = await _cipherRepository.GetByIdAsync(cipherId);
+        if (cipher == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var attachments = cipher.GetAttachments();
+        if (attachments == null || !attachments.TryGetValue(attachmentId, out var attachmentData))
+        {
+            throw new NotFoundException();
+        }
+
+        var stream = await _attachmentStorageService.GetAttachmentReadStreamAsync(cipher, attachmentData);
+        if (stream == null)
+        {
+            throw new NotFoundException();
+        }
+
+        return File(stream, "application/octet-stream", attachmentData.FileName);
     }
 
     [HttpPost("{id}/attachment/{attachmentId}/share")]
@@ -1523,7 +1555,7 @@ public class CiphersController : Controller
     }
 
     [HttpDelete("{id}/attachment/{attachmentId}")]
-    public async Task<DeleteAttachmentResponseData> DeleteAttachment(Guid id, string attachmentId)
+    public async Task<DeleteAttachmentResponseModel> DeleteAttachment(Guid id, string attachmentId)
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsync(id, userId);
@@ -1532,18 +1564,19 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        return await _cipherService.DeleteAttachmentAsync(cipher, attachmentId, userId, false);
+        var result = await _cipherService.DeleteAttachmentAsync(cipher, attachmentId, userId, false);
+        return new DeleteAttachmentResponseModel(result, _globalSettings);
     }
 
     [HttpPost("{id}/attachment/{attachmentId}/delete")]
     [Obsolete("This endpoint is deprecated. Use DELETE method instead.")]
-    public async Task<DeleteAttachmentResponseData> PostDeleteAttachment(Guid id, string attachmentId)
+    public async Task<DeleteAttachmentResponseModel> PostDeleteAttachment(Guid id, string attachmentId)
     {
         return await DeleteAttachment(id, attachmentId);
     }
 
     [HttpDelete("{id}/attachment/{attachmentId}/admin")]
-    public async Task<DeleteAttachmentResponseData> DeleteAttachmentAdmin(Guid id, string attachmentId)
+    public async Task<DeleteAttachmentResponseModel> DeleteAttachmentAdmin(Guid id, string attachmentId)
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await _cipherRepository.GetByIdAsync(id);
@@ -1553,12 +1586,13 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        return await _cipherService.DeleteAttachmentAsync(cipher, attachmentId, userId, true);
+        var result = await _cipherService.DeleteAttachmentAsync(cipher, attachmentId, userId, true);
+        return new DeleteAttachmentResponseModel(result, _globalSettings);
     }
 
     [HttpPost("{id}/attachment/{attachmentId}/delete-admin")]
     [Obsolete("This endpoint is deprecated. Use DELETE method instead.")]
-    public async Task<DeleteAttachmentResponseData> PostDeleteAttachmentAdmin(Guid id, string attachmentId)
+    public async Task<DeleteAttachmentResponseModel> PostDeleteAttachmentAdmin(Guid id, string attachmentId)
     {
         return await DeleteAttachmentAdmin(id, attachmentId);
     }
@@ -1593,7 +1627,7 @@ public class CiphersController : Controller
                     }
                     catch (Exception e)
                     {
-                        _logger.LogError(e, $"Uncaught exception occurred while handling event grid event: {JsonSerializer.Serialize(eventGridEvent)}");
+                        _logger.LogError(e, "Uncaught exception occurred while handling event grid event: {Event}", JsonSerializer.Serialize(eventGridEvent));
                         return;
                     }
                 }
@@ -1630,4 +1664,50 @@ public class CiphersController : Controller
     {
         return await _cipherRepository.GetByIdAsync(cipherId, userId);
     }
+
+    private DateTime? GetLastKnownRevisionDateFromForm()
+    {
+        DateTime? lastKnownRevisionDate = null;
+        if (Request.Form.TryGetValue("lastKnownRevisionDate", out var dateValue))
+        {
+            if (!DateTime.TryParse(dateValue, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedDate))
+            {
+                throw new BadRequestException("Invalid lastKnownRevisionDate format.");
+            }
+            lastKnownRevisionDate = parsedDate;
+        }
+
+        return lastKnownRevisionDate;
+    }
+#nullable enable
+
+    private async Task<OrganizationAbility?> GetOrganizationAbilityAsync(CipherDetails cipher)
+    {
+        if (cipher.OrganizationId.HasValue)
+        {
+            return await _applicationCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value);
+        }
+        return null;
+    }
+
+    private static OrganizationAbility? GetOrganizationAbility(CipherDetails cipher, IDictionary<Guid, OrganizationAbility> organizationAbilities) =>
+        cipher.OrganizationId.HasValue && organizationAbilities.TryGetValue(cipher.OrganizationId.Value, out var ability) ? ability : null;
+
+    private async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync(
+        IEnumerable<CipherDetails> ciphers)
+    {
+        var orgIds = ciphers
+            .Where(c => c.OrganizationId.HasValue)
+            .Select(c => c.OrganizationId!.Value)
+            .Distinct()
+            .ToList();
+
+        if (orgIds.Count == 0)
+        {
+            return new Dictionary<Guid, OrganizationAbility>();
+        }
+
+        return await _applicationCacheService.GetOrganizationAbilitiesAsync(orgIds);
+    }
+
 }

@@ -3,7 +3,6 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
-using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.CurrentContextFixtures;
 using Bit.Core.Test.Tools.AutoFixture.SendFixtures;
 using Bit.Core.Tools.Entities;
@@ -11,6 +10,7 @@ using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.SendFeatures.Commands;
+using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
 using Bit.Core.Tools.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Logging;
@@ -28,9 +28,7 @@ public class NonAnonymousSendCommandTests
     private readonly ISendRepository _sendRepository;
     private readonly ISendFileStorageService _sendFileStorageService;
     private readonly IPushNotificationService _pushNotificationService;
-    private readonly ISendAuthorizationService _sendAuthorizationService;
     private readonly ISendValidationService _sendValidationService;
-    private readonly IFeatureService _featureService;
     private readonly ICurrentContext _currentContext;
     private readonly ISendCoreHelperService _sendCoreHelperService;
     private readonly NonAnonymousSendCommand _nonAnonymousSendCommand;
@@ -42,8 +40,6 @@ public class NonAnonymousSendCommandTests
         _sendRepository = Substitute.For<ISendRepository>();
         _sendFileStorageService = Substitute.For<ISendFileStorageService>();
         _pushNotificationService = Substitute.For<IPushNotificationService>();
-        _sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
-        _featureService = Substitute.For<IFeatureService>();
         _sendValidationService = Substitute.For<ISendValidationService>();
         _currentContext = Substitute.For<ICurrentContext>();
         _sendCoreHelperService = Substitute.For<ISendCoreHelperService>();
@@ -53,7 +49,6 @@ public class NonAnonymousSendCommandTests
             _sendRepository,
             _sendFileStorageService,
             _pushNotificationService,
-            _sendAuthorizationService,
             _sendValidationService,
             _sendCoreHelperService,
             _logger
@@ -293,9 +288,6 @@ public class NonAnonymousSendCommandTests
         _currentContext.ClientId.Returns("test-client");
         _currentContext.ClientVersion.Returns(Version.Parse("1.0.0"));
 
-        // Enable feature flag for policy requirements (vNext path)
-        _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
-
         // Act
         await _nonAnonymousSendCommand.SaveSendAsync(send);
 
@@ -333,9 +325,6 @@ public class NonAnonymousSendCommandTests
             UserId = userId,
             HideEmail = true
         };
-
-        // Enable feature flag for policy requirements (vNext path)
-        _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
 
         // Configure validation service to throw when DisableHideEmail policy applies in vNext implementation
         _sendValidationService.ValidateUserCanSaveAsync(userId, send)
@@ -376,9 +365,6 @@ public class NonAnonymousSendCommandTests
 
         var initialDate = DateTime.UtcNow.AddMinutes(-5);
         send.RevisionDate = initialDate;
-
-        // Enable feature flag for policy requirements (vNext path)
-        _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
 
         // Configure validation service to allow saves when HideEmail is false
         _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
@@ -1092,5 +1078,330 @@ public class NonAnonymousSendCommandTests
             _nonAnonymousSendCommand.UploadFileToExistingSendAsync(stream, send));
 
         Assert.Equal("File received does not match expected file length.", exception.Message);
+    }
+
+    [Fact]
+    public async Task GetSendFileDownloadUrlAsync_WithTextSend_ThrowsBadRequest()
+    {
+        // Arrange
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.Text,
+            UserId = Guid.NewGuid()
+        };
+        var fileId = "somefile123";
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId));
+
+        Assert.Equal("Can only get a download URL for a file type of Send", exception.Message);
+
+        // Verify no storage service methods were called
+        await _sendFileStorageService.DidNotReceive()
+            .GetSendFileDownloadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task GetSendFileDownloadUrlAsync_WithDisabledSend_ReturnsDenied()
+    {
+        // Arrange
+        var fileId = "file123";
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = Guid.NewGuid(),
+            Disabled = true,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+
+        // Act
+        var (url, result) = await _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId);
+
+        // Assert
+        Assert.Null(url);
+        Assert.Equal(SendAccessResult.Denied, result);
+
+        // Verify no repository updates occurred
+        await _sendRepository.DidNotReceive().ReplaceAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
+        await _sendFileStorageService.DidNotReceive()
+            .GetSendFileDownloadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task GetSendFileDownloadUrlAsync_WithMaxAccessCountReached_ReturnsDenied()
+    {
+        // Arrange
+        var fileId = "file123";
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = Guid.NewGuid(),
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            AccessCount = 5,
+            MaxAccessCount = 5
+        };
+
+        // Act
+        var (url, result) = await _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId);
+
+        // Assert
+        Assert.Null(url);
+        Assert.Equal(SendAccessResult.Denied, result);
+
+        // Verify no repository updates occurred
+        await _sendRepository.DidNotReceive().ReplaceAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
+        await _sendFileStorageService.DidNotReceive()
+            .GetSendFileDownloadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task GetSendFileDownloadUrlAsync_WithExpiredSend_ReturnsDenied()
+    {
+        // Arrange
+        var fileId = "file123";
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = Guid.NewGuid(),
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = DateTime.UtcNow.AddDays(-1), // Expired yesterday
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+
+        // Act
+        var (url, result) = await _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId);
+
+        // Assert
+        Assert.Null(url);
+        Assert.Equal(SendAccessResult.Denied, result);
+
+        // Verify no repository updates occurred
+        await _sendRepository.DidNotReceive().ReplaceAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
+        await _sendFileStorageService.DidNotReceive()
+            .GetSendFileDownloadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task GetSendFileDownloadUrlAsync_WithDeletionDatePassed_ReturnsDenied()
+    {
+        // Arrange
+        var fileId = "file123";
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = Guid.NewGuid(),
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(-1), // Deletion date has passed
+            ExpirationDate = null,
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+
+        // Act
+        var (url, result) = await _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId);
+
+        // Assert
+        Assert.Null(url);
+        Assert.Equal(SendAccessResult.Denied, result);
+
+        // Verify no repository updates occurred
+        await _sendRepository.DidNotReceive().ReplaceAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
+        await _sendFileStorageService.DidNotReceive()
+            .GetSendFileDownloadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task GetSendFileDownloadUrlAsync_WithValidSend_ReturnsUrlAndIncrementsAccessCount()
+    {
+        // Arrange
+        var fileId = "file123";
+        var expectedUrl = "https://download.example.com/file123";
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = Guid.NewGuid(),
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            AccessCount = 3,
+            MaxAccessCount = 10
+        };
+
+        _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId).Returns(expectedUrl);
+
+        // Act
+        var (url, result) = await _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId);
+
+        // Assert
+        Assert.Equal(expectedUrl, url);
+        Assert.Equal(SendAccessResult.Granted, result);
+
+        // Verify access count was incremented
+        Assert.Equal(4, send.AccessCount);
+
+        // Verify repository was updated
+        await _sendRepository.Received(1).ReplaceAsync(send);
+        await _pushNotificationService.Received(1).PushSyncSendUpdateAsync(send);
+
+        // Verify file storage service was called
+        await _sendFileStorageService.Received(1).GetSendFileDownloadUrlAsync(send, fileId);
+    }
+
+    [Fact]
+    public void SendCanBeAccessed_WithDisabledSend_ReturnsFalse()
+    {
+        // Arrange
+        var send = new Send
+        {
+            Disabled = true,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+
+        // Act
+        var result = INonAnonymousSendCommand.SendCanBeAccessed(send);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void SendCanBeAccessed_WithMaxAccessCountReached_ReturnsFalse()
+    {
+        // Arrange
+        var send = new Send
+        {
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            AccessCount = 10,
+            MaxAccessCount = 10
+        };
+
+        // Act
+        var result = INonAnonymousSendCommand.SendCanBeAccessed(send);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void SendCanBeAccessed_WithExpiredSend_ReturnsFalse()
+    {
+        // Arrange
+        var send = new Send
+        {
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = DateTime.UtcNow.AddDays(-1),
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+
+        // Act
+        var result = INonAnonymousSendCommand.SendCanBeAccessed(send);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void SendCanBeAccessed_WithDeletionDatePassed_ReturnsFalse()
+    {
+        // Arrange
+        var send = new Send
+        {
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(-1),
+            ExpirationDate = null,
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+
+        // Act
+        var result = INonAnonymousSendCommand.SendCanBeAccessed(send);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void SendCanBeAccessed_WithValidSend_ReturnsTrue()
+    {
+        // Arrange
+        var send = new Send
+        {
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = DateTime.UtcNow.AddDays(7),
+            AccessCount = 5,
+            MaxAccessCount = 10
+        };
+
+        // Act
+        var result = INonAnonymousSendCommand.SendCanBeAccessed(send);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void SendCanBeAccessed_WithNullMaxAccessCount_ReturnsTrue()
+    {
+        // Arrange
+        var send = new Send
+        {
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            AccessCount = 100,
+            MaxAccessCount = null
+        };
+
+        // Act
+        var result = INonAnonymousSendCommand.SendCanBeAccessed(send);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void SendCanBeAccessed_WithNullExpirationDate_ReturnsTrue()
+    {
+        // Arrange
+        var send = new Send
+        {
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            AccessCount = 0,
+            MaxAccessCount = 10
+        };
+
+        // Act
+        var result = INonAnonymousSendCommand.SendCanBeAccessed(send);
+
+        // Assert
+        Assert.True(result);
     }
 }

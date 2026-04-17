@@ -58,7 +58,12 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @LimitItemDeletion BIT = 0,
     @UseOrganizationDomains BIT = 0,
     @UseAdminSponsoredFamilies BIT = 0,
-    @SyncSeats BIT = 0
+    @SyncSeats BIT = 0,
+    @UseAutomaticUserConfirmation BIT = 0,
+    @UsePhishingBlocker BIT = 0,
+    @UseDisableSmAdsForUsers BIT = 0,
+    @UseMyItems BIT = 0,
+    @ExemptFromBillingAutomation BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -124,7 +129,13 @@ BEGIN
         [LimitItemDeletion] = @LimitItemDeletion,
         [UseOrganizationDomains] = @UseOrganizationDomains,
         [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies,
-        [SyncSeats] = @SyncSeats
+        [SyncSeats] = @SyncSeats,
+        [UseAutomaticUserConfirmation] = @UseAutomaticUserConfirmation,
+        [UsePhishingBlocker] = @UsePhishingBlocker,
+        [MaxStorageGbIncreased] = @MaxStorageGb,
+        [UseDisableSmAdsForUsers] = @UseDisableSmAdsForUsers,
+        [UseMyItems] = @UseMyItems,
+        [ExemptFromBillingAutomation] = @ExemptFromBillingAutomation
     WHERE
-        [Id] = @Id
+        [Id] = @Id;
 END

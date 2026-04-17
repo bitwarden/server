@@ -1,5 +1,5 @@
 ﻿using Bit.Core.Models.Mail;
-using Bit.Core.Services;
+using Bit.Core.Platform.Mail.Delivery;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
@@ -74,7 +74,7 @@ public class SendGridMailDeliveryServiceTests : IDisposable
                 Assert.Equal(mailMessage.HtmlContent, msg.HtmlContent);
                 Assert.Equal(mailMessage.TextContent, msg.PlainTextContent);
 
-                Assert.Contains("type:Cateogry", msg.Categories);
+                Assert.Contains("type:Category", msg.Categories);
                 Assert.Contains(msg.Categories, x => x.StartsWith("env:"));
                 Assert.Contains(msg.Categories, x => x.StartsWith("sender:"));
 

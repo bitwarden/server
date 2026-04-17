@@ -73,7 +73,12 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         UseAdminSponsoredFamilies = o.UseAdminSponsoredFamilies,
                         LimitItemDeletion = o.LimitItemDeletion,
                         IsAdminInitiated = os.IsAdminInitiated,
-                        UseOrganizationDomains = o.UseOrganizationDomains
+                        UseOrganizationDomains = o.UseOrganizationDomains,
+                        UseAutomaticUserConfirmation = o.UseAutomaticUserConfirmation,
+                        UseDisableSMAdsForUsers = o.UseDisableSmAdsForUsers,
+                        UsePhishingBlocker = o.UsePhishingBlocker,
+                        UseMyItems = o.UseMyItems,
+                        RevocationReason = ou.RevocationReason
                     };
         return query;
     }

@@ -11,6 +11,7 @@ public class StripeFacade : IStripeFacade
 {
     private readonly ChargeService _chargeService = new();
     private readonly CustomerService _customerService = new();
+    private readonly CustomerCashBalanceTransactionService _customerCashBalanceTransactionService = new();
     private readonly EventService _eventService = new();
     private readonly InvoiceService _invoiceService = new();
     private readonly PaymentMethodService _paymentMethodService = new();
@@ -18,6 +19,7 @@ public class StripeFacade : IStripeFacade
     private readonly DiscountService _discountService = new();
     private readonly SetupIntentService _setupIntentService = new();
     private readonly TestClockService _testClockService = new();
+    private readonly CouponService _couponService = new();
 
     public async Task<Charge> GetCharge(
         string chargeId,
@@ -39,6 +41,13 @@ public class StripeFacade : IStripeFacade
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default) =>
         await _customerService.GetAsync(customerId, customerGetOptions, requestOptions, cancellationToken);
+
+    public IAsyncEnumerable<CustomerCashBalanceTransaction> GetCustomerCashBalanceTransactions(
+        string customerId,
+        CustomerCashBalanceTransactionListOptions customerCashBalanceTransactionListOptions = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default)
+        => _customerCashBalanceTransactionService.ListAutoPagingAsync(customerId, customerCashBalanceTransactionListOptions, requestOptions, cancellationToken);
 
     public async Task<Customer> UpdateCustomer(
         string customerId,
@@ -98,6 +107,12 @@ public class StripeFacade : IStripeFacade
         CancellationToken cancellationToken = default) =>
         await _subscriptionService.ListAsync(options, requestOptions, cancellationToken);
 
+    public IAsyncEnumerable<Subscription> ListSubscriptionsAutoPagingAsync(
+        SubscriptionListOptions options = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default) =>
+        _subscriptionService.ListAutoPagingAsync(options, requestOptions, cancellationToken);
+
     public async Task<Subscription> GetSubscription(
         string subscriptionId,
         SubscriptionGetOptions subscriptionGetOptions = null,
@@ -137,4 +152,11 @@ public class StripeFacade : IStripeFacade
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default) =>
         _testClockService.GetAsync(testClockId, testClockGetOptions, requestOptions, cancellationToken);
+
+    public Task<Coupon> GetCoupon(
+        string couponId,
+        CouponGetOptions couponGetOptions = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default) =>
+        _couponService.GetAsync(couponId, couponGetOptions, requestOptions, cancellationToken);
 }

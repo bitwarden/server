@@ -3,10 +3,10 @@ using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.Utilities;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
-
-#nullable enable
 
 namespace Bit.Core.Entities;
 
@@ -21,6 +21,9 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     [MaxLength(256)]
     public string Email { get; set; } = null!;
     public bool EmailVerified { get; set; }
+    /// <summary>
+    /// The server-side master-password hash
+    /// </summary>
     [MaxLength(300)]
     public string? MasterPassword { get; set; }
     [MaxLength(50)]
@@ -41,9 +44,35 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     /// organization membership.
     /// </summary>
     public DateTime AccountRevisionDate { get; set; } = DateTime.UtcNow;
+    /// <summary>
+    /// The master-password-sealed user key.
+    /// </summary>
     public string? Key { get; set; }
+    /// <summary>
+    /// The raw public key, without a signature from the user's signature key.
+    /// </summary>
     public string? PublicKey { get; set; }
+    /// <summary>
+    /// User key wrapped private key.
+    /// </summary>
     public string? PrivateKey { get; set; }
+    /// <summary>
+    /// The public key, signed by the user's signature key.
+    /// </summary>
+    public string? SignedPublicKey { get; set; }
+    /// <summary>
+    /// The security version is included in the security state, but needs COSE parsing
+    /// </summary>
+    public int? SecurityVersion { get; set; }
+    /// <summary>
+    /// The security state is a signed object attesting to the version of the user's account.
+    /// </summary>
+    public string? SecurityState { get; set; }
+    /// <summary>
+    /// Indicates whether the user has a personal premium subscription.
+    /// Does not include premium access from organizations -
+    /// do not use this to check whether the user can access premium features.
+    /// </summary>
     public bool Premium { get; set; }
     public DateTime? PremiumExpirationDate { get; set; }
     public DateTime? RenewalReminderDate { get; set; }
@@ -77,10 +106,17 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public DateTime? LastKeyRotationDate { get; set; }
     public DateTime? LastEmailChangeDate { get; set; }
     public bool VerifyDevices { get; set; } = true;
+    /// <summary>
+    /// V2 upgrade token stored as JSON containing two wrapped user keys.
+    /// Allows clients to unlock vault after V1 to V2 key rotation without logout.
+    /// </summary>
+    public string? V2UpgradeToken { get; set; }
+    [MaxLength(256)]
+    public string? MasterPasswordSalt { get; set; }
 
     public string GetMasterPasswordSalt()
     {
-        return Email.ToLowerInvariant().Trim();
+        return MasterPasswordSalt ?? Email.ToLowerInvariant().Trim();
     }
 
     public void SetNewId()
@@ -175,9 +211,46 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
         return Id;
     }
 
-    public bool GetPremium()
+    public int GetSecurityVersion()
     {
-        return Premium;
+        // If no security version is set, it is version 1. The minimum initialized version is 2.
+        return SecurityVersion ?? 1;
+    }
+
+    /// <summary>
+    /// Evaluates user state to determine if they are currently in a v2 encryption state.
+    /// </summary>
+    /// <returns>If the shape of their private key is v2 as well as has the proper security version then true, otherwise false</returns>
+    public bool HasV2Encryption()
+    {
+        return HasV2KeyShape() && IsSecurityVersionTwo();
+    }
+
+    private bool HasV2KeyShape()
+    {
+        if (string.IsNullOrEmpty(PrivateKey))
+        {
+            return false;
+        }
+
+        try
+        {
+            return EncryptionParsing.GetEncryptionType(PrivateKey) == EncryptionType.XChaCha20Poly1305_B64;
+        }
+        catch (ArgumentException)
+        {
+            // Invalid encryption string format - treat as not v2
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// This technically is correct but all versions after 1 are considered v2 encryption. Leaving for now with
+    /// KM's blessing that when a new version comes along they will handle migration.
+    /// </summary>
+    private bool IsSecurityVersionTwo()
+    {
+        return SecurityVersion == 2;
     }
 
     /// <summary>
@@ -242,5 +315,15 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public bool HasMasterPassword()
     {
         return MasterPassword != null;
+    }
+
+    public PublicKeyEncryptionKeyPairData GetPublicKeyEncryptionKeyPair()
+    {
+        if (string.IsNullOrWhiteSpace(PrivateKey) || string.IsNullOrWhiteSpace(PublicKey))
+        {
+            throw new InvalidOperationException("User public key encryption key pair is not fully initialized.");
+        }
+
+        return new PublicKeyEncryptionKeyPairData(PrivateKey, PublicKey, SignedPublicKey);
     }
 }

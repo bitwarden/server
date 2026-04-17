@@ -17,8 +17,6 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using DP = Microsoft.AspNetCore.DataProtection;
 
 
-#nullable enable
-
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class DatabaseContext : DbContext
@@ -57,9 +55,11 @@ public class DatabaseContext : DbContext
     public DbSet<OrganizationApiKey> OrganizationApiKeys { get; set; }
     public DbSet<OrganizationSponsorship> OrganizationSponsorships { get; set; }
     public DbSet<OrganizationConnection> OrganizationConnections { get; set; }
+    public DbSet<PlayItem> PlayItem { get; set; }
     public DbSet<OrganizationIntegration> OrganizationIntegrations { get; set; }
     public DbSet<OrganizationIntegrationConfiguration> OrganizationIntegrationConfigurations { get; set; }
     public DbSet<OrganizationUser> OrganizationUsers { get; set; }
+    public DbSet<OrganizationInviteLink> OrganizationInviteLinks { get; set; }
     public DbSet<Policy> Policies { get; set; }
     public DbSet<Provider> Providers { get; set; }
     public DbSet<Secret> Secret { get; set; }
@@ -74,11 +74,13 @@ public class DatabaseContext : DbContext
     public DbSet<TaxRate> TaxRates { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
     public DbSet<User> Users { get; set; }
+    public DbSet<UserSignatureKeyPair> UserSignatureKeyPairs { get; set; }
     public DbSet<AuthRequest> AuthRequests { get; set; }
     public DbSet<OrganizationDomain> OrganizationDomains { get; set; }
     public DbSet<WebAuthnCredential> WebAuthnCredentials { get; set; }
     public DbSet<ProviderPlan> ProviderPlans { get; set; }
     public DbSet<ProviderInvoiceItem> ProviderInvoiceItems { get; set; }
+    public DbSet<SubscriptionDiscount> SubscriptionDiscounts { get; set; }
     public DbSet<Notification> Notifications { get; set; }
     public DbSet<NotificationStatus> NotificationStatuses { get; set; }
     public DbSet<ClientOrganizationMigrationRecord> ClientOrganizationMigrationRecords { get; set; }
@@ -119,6 +121,7 @@ public class DatabaseContext : DbContext
         var eOrganizationDomain = builder.Entity<OrganizationDomain>();
         var aWebAuthnCredential = builder.Entity<WebAuthnCredential>();
         var eOrganizationMemberBaseDetail = builder.Entity<OrganizationMemberBaseDetail>();
+        var eSend = builder.Entity<Send>();
 
         // Shadow property configurations go here
 
@@ -148,6 +151,7 @@ public class DatabaseContext : DbContext
         var dataProtectionConverter = new DataProtectionConverter(dataProtector);
         eUser.Property(c => c.Key).HasConversion(dataProtectionConverter);
         eUser.Property(c => c.MasterPassword).HasConversion(dataProtectionConverter);
+        eSend.Property(c => c.Emails).HasConversion(dataProtectionConverter);
 
         if (Database.IsNpgsql())
         {

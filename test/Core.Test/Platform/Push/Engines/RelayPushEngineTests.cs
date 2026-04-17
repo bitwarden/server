@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.Platform.Push.Internal;
 using Bit.Core.Repositories;
@@ -64,7 +65,7 @@ public class RelayPushNotificationServiceTests : PushTestBase
                 ["UserId"] = cipher.UserId,
                 ["OrganizationId"] = null,
                 // Currently CollectionIds are not passed along from the method signature
-                // to the request body. 
+                // to the request body.
                 ["CollectionIds"] = null,
                 ["RevisionDate"] = cipher.RevisionDate,
             },
@@ -88,7 +89,7 @@ public class RelayPushNotificationServiceTests : PushTestBase
                 ["UserId"] = cipher.UserId,
                 ["OrganizationId"] = null,
                 // Currently CollectionIds are not passed along from the method signature
-                // to the request body. 
+                // to the request body.
                 ["CollectionIds"] = null,
                 ["RevisionDate"] = cipher.RevisionDate,
             },
@@ -274,7 +275,8 @@ public class RelayPushNotificationServiceTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushLogOutPayload(Guid userId, bool excludeCurrentContext)
+    protected override JsonNode GetPushLogOutPayload(Guid userId, bool excludeCurrentContext,
+        PushNotificationLogOutReason? reason)
     {
         JsonNode? identifier = excludeCurrentContext ? DeviceIdentifier : null;
 
@@ -288,7 +290,7 @@ public class RelayPushNotificationServiceTests : PushTestBase
             ["Payload"] = new JsonObject
             {
                 ["UserId"] = userId,
-                ["Date"] = FakeTimeProvider.GetUtcNow().UtcDateTime,
+                ["Reason"] = reason != null ? (int)reason : null
             },
             ["ClientType"] = null,
             ["InstallationId"] = null,

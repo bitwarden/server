@@ -106,7 +106,7 @@ public class WebAuthnControllerTests
         sutProvider.GetDependency<IUserService>().VerifySecretAsync(user, default).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<RequireSsoPolicyRequirement>(user.Id)
+            .GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .ReturnsForAnyArgs(new RequireSsoPolicyRequirement { CanUsePasskeyLogin = false });
 
         // Act & Assert
@@ -123,7 +123,7 @@ public class WebAuthnControllerTests
         sutProvider.GetDependency<IUserService>().VerifySecretAsync(user, default).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<RequireSsoPolicyRequirement>(user.Id)
+            .GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .ReturnsForAnyArgs(new RequireSsoPolicyRequirement { CanUsePasskeyLogin = true });
         sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable>>()
             .Protect(Arg.Any<WebAuthnCredentialCreateOptionsTokenable>()).Returns("token");
@@ -212,7 +212,7 @@ public class WebAuthnControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Post_ValidInput_Returns(WebAuthnLoginCredentialCreateRequestModel requestModel, CredentialCreateOptions createOptions, User user, SutProvider<WebAuthnController> sutProvider)
+    public async Task Post_ValidInput_ReturnsCredential(WebAuthnLoginCredentialCreateRequestModel requestModel, CredentialCreateOptions createOptions, User user, WebAuthnCredential credential, SutProvider<WebAuthnController> sutProvider)
     {
         // Arrange
         var token = new WebAuthnCredentialCreateOptionsTokenable(user, createOptions);
@@ -221,21 +221,39 @@ public class WebAuthnControllerTests
             .ReturnsForAnyArgs(user);
         sutProvider.GetDependency<ICreateWebAuthnLoginCredentialCommand>()
             .CreateWebAuthnLoginCredentialAsync(user, requestModel.Name, createOptions, Arg.Any<AuthenticatorAttestationRawResponse>(), requestModel.SupportsPrf, requestModel.EncryptedUserKey, requestModel.EncryptedPublicKey, requestModel.EncryptedPrivateKey)
-            .Returns(true);
+            .Returns(credential);
         sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable>>()
             .Unprotect(requestModel.Token)
             .Returns(token);
 
         // Act
-        await sutProvider.Sut.Post(requestModel);
+        var result = await sutProvider.Sut.Post(requestModel);
 
         // Assert
-        await sutProvider.GetDependency<IUserService>()
-            .Received(1)
-            .GetUserByPrincipalAsync(default);
+        Assert.NotNull(result);
+        Assert.Equal(credential.Id.ToString(), result.Id);
         await sutProvider.GetDependency<ICreateWebAuthnLoginCredentialCommand>()
             .Received(1)
             .CreateWebAuthnLoginCredentialAsync(user, requestModel.Name, createOptions, Arg.Any<AuthenticatorAttestationRawResponse>(), requestModel.SupportsPrf, requestModel.EncryptedUserKey, requestModel.EncryptedPublicKey, requestModel.EncryptedPrivateKey);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Post_CredentialCreationFailed_ThrowsBadRequestException(WebAuthnLoginCredentialCreateRequestModel requestModel, CredentialCreateOptions createOptions, User user, SutProvider<WebAuthnController> sutProvider)
+    {
+        // Arrange
+        var token = new WebAuthnCredentialCreateOptionsTokenable(user, createOptions);
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(default)
+            .ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<ICreateWebAuthnLoginCredentialCommand>()
+            .CreateWebAuthnLoginCredentialAsync(user, requestModel.Name, createOptions, Arg.Any<AuthenticatorAttestationRawResponse>(), requestModel.SupportsPrf, requestModel.EncryptedUserKey, requestModel.EncryptedPublicKey, requestModel.EncryptedPrivateKey)
+            .Returns((WebAuthnCredential)null);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable>>()
+            .Unprotect(requestModel.Token)
+            .Returns(token);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Post(requestModel));
     }
 
     [Theory, BitAutoData]
@@ -250,9 +268,6 @@ public class WebAuthnControllerTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByPrincipalAsync(default)
             .ReturnsForAnyArgs(user);
-        sutProvider.GetDependency<ICreateWebAuthnLoginCredentialCommand>()
-            .CreateWebAuthnLoginCredentialAsync(user, requestModel.Name, createOptions, Arg.Any<AuthenticatorAttestationRawResponse>(), false)
-            .Returns(true);
         sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable>>()
             .Unprotect(requestModel.Token)
             .Returns(token);
@@ -269,6 +284,7 @@ public class WebAuthnControllerTests
         WebAuthnLoginCredentialCreateRequestModel requestModel,
         CredentialCreateOptions createOptions,
         User user,
+        WebAuthnCredential credential,
         SutProvider<WebAuthnController> sutProvider)
     {
         // Arrange
@@ -278,7 +294,7 @@ public class WebAuthnControllerTests
             .ReturnsForAnyArgs(user);
         sutProvider.GetDependency<ICreateWebAuthnLoginCredentialCommand>()
             .CreateWebAuthnLoginCredentialAsync(user, requestModel.Name, createOptions, Arg.Any<AuthenticatorAttestationRawResponse>(), requestModel.SupportsPrf, requestModel.EncryptedUserKey, requestModel.EncryptedPublicKey, requestModel.EncryptedPrivateKey)
-            .Returns(true);
+            .Returns(credential);
         sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable>>()
             .Unprotect(requestModel.Token)
             .Returns(token);
@@ -308,15 +324,12 @@ public class WebAuthnControllerTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByPrincipalAsync(default)
             .ReturnsForAnyArgs(user);
-        sutProvider.GetDependency<ICreateWebAuthnLoginCredentialCommand>()
-            .CreateWebAuthnLoginCredentialAsync(user, requestModel.Name, createOptions, Arg.Any<AuthenticatorAttestationRawResponse>(), false)
-            .Returns(true);
         sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable>>()
             .Unprotect(requestModel.Token)
             .Returns(token);
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<RequireSsoPolicyRequirement>(user.Id)
+            .GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .ReturnsForAnyArgs(new RequireSsoPolicyRequirement { CanUsePasskeyLogin = false });
 
         // Act & Assert
@@ -330,6 +343,7 @@ public class WebAuthnControllerTests
         WebAuthnLoginCredentialCreateRequestModel requestModel,
         CredentialCreateOptions createOptions,
         User user,
+        WebAuthnCredential credential,
         SutProvider<WebAuthnController> sutProvider)
     {
         // Arrange
@@ -339,13 +353,13 @@ public class WebAuthnControllerTests
             .ReturnsForAnyArgs(user);
         sutProvider.GetDependency<ICreateWebAuthnLoginCredentialCommand>()
             .CreateWebAuthnLoginCredentialAsync(user, requestModel.Name, createOptions, Arg.Any<AuthenticatorAttestationRawResponse>(), requestModel.SupportsPrf, requestModel.EncryptedUserKey, requestModel.EncryptedPublicKey, requestModel.EncryptedPrivateKey)
-            .Returns(true);
+            .Returns(credential);
         sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable>>()
             .Unprotect(requestModel.Token)
             .Returns(token);
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<RequireSsoPolicyRequirement>(user.Id)
+            .GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .ReturnsForAnyArgs(new RequireSsoPolicyRequirement { CanUsePasskeyLogin = true });
 
         // Act

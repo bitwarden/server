@@ -2,6 +2,7 @@
 #nullable disable
 
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
@@ -13,6 +14,12 @@ namespace Bit.Api.Models.Public.Response;
 /// </summary>
 public class CollectionResponseModel : CollectionBaseModel, IResponseModel
 {
+    [JsonConstructor]
+    public CollectionResponseModel()
+    {
+
+    }
+
     public CollectionResponseModel(Collection collection, IEnumerable<CollectionAccessSelection> groups)
     {
         if (collection == null)

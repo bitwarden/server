@@ -213,7 +213,10 @@ If you believe you need to change the version for a valid reason, please discuss
             LimitCollectionDeletion = true,
             AllowAdminAccessToAllCollectionItems = true,
             UseOrganizationDomains = true,
-            UseAdminSponsoredFamilies = false
+            UseAdminSponsoredFamilies = false,
+            UseDisableSmAdsForUsers = false,
+            UsePhishingBlocker = false,
+            UseMyItems = false,
         };
     }
 
@@ -227,8 +230,16 @@ If you believe you need to change the version for a valid reason, please discuss
             Status = "active",
             TrialStart = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             TrialEnd = new DateTime(2024, 2, 1, 0, 0, 0, DateTimeKind.Utc),
-            CurrentPeriodStart = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            CurrentPeriodEnd = new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc)
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodStart = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                        CurrentPeriodEnd = new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc)
+                    }
+                ]
+            }
         };
 
         return new SubscriptionInfo
@@ -250,5 +261,160 @@ If you believe you need to change the version for a valid reason, please discuss
         mockService.SignLicense(Arg.Any<ILicense>())
             .Returns([0x00, 0x01, 0x02, 0x03]); // Dummy signature for hash testing
         return mockService;
+    }
+
+    /// <summary>
+    /// Verifies that UseDisableSmAdsForUsers claim is properly generated in the license Token
+    /// and that VerifyData correctly validates the claim.
+    /// </summary>
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public void OrganizationLicense_UseDisableSmAdsForUsers_ClaimGenerationAndValidation(bool useDisableSmAdsForUsers, ClaimsPrincipal claimsPrincipal)
+    {
+        // Arrange
+        var organization = CreateDeterministicOrganization();
+        organization.UseDisableSmAdsForUsers = useDisableSmAdsForUsers;
+
+        var subscriptionInfo = CreateDeterministicSubscriptionInfo();
+        var installationId = new Guid("78900000-0000-0000-0000-000000000123");
+        var mockLicensingService = CreateMockLicensingService();
+
+        var license = new OrganizationLicense(organization, subscriptionInfo, installationId, mockLicensingService);
+        license.Expires = DateTime.MaxValue; // Prevent expiration during test
+
+        var globalSettings = Substitute.For<IGlobalSettings>();
+        globalSettings.Installation.Returns(new GlobalSettings.InstallationSettings
+        {
+            Id = installationId
+        });
+
+        // Act & Assert - Verify VerifyData passes with the UseDisableSmAdsForUsers value
+        Assert.True(license.VerifyData(organization, claimsPrincipal, globalSettings));
+    }
+
+    /// <summary>
+    /// Regression test for PM-33980: Self-hosted orgs disabled after updating to 2026.3.0
+    /// because their pre-existing license lacks the UseMyItems claim. VerifyData must skip
+    /// comparison for claims absent from the license.
+    /// </summary>
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public void OrganizationLicense_VerifyData_PassesWhenUseMyItemsClaimAbsent(bool useMyItemsDbValue)
+    {
+        // Arrange
+        var organization = CreateDeterministicOrganization();
+        organization.UseMyItems = useMyItemsDbValue;
+
+        var installationId = new Guid("78900000-0000-0000-0000-000000000123");
+
+        // Build a ClaimsPrincipal with all claims VerifyData checks EXCEPT UseMyItems,
+        // simulating a license generated before UseMyItems was added.
+        var claims = BuildBaseVerifyDataClaims(organization, installationId);
+        var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        // Token must be non-empty to enter the claims-based VerifyData path
+        var license = new OrganizationLicense { Token = "non-empty", Expires = DateTime.MaxValue };
+
+        var globalSettings = Substitute.For<IGlobalSettings>();
+        globalSettings.Installation.Returns(new GlobalSettings.InstallationSettings
+        {
+            Id = installationId
+        });
+
+        // Act & Assert — VerifyData must pass regardless of the org's UseMyItems DB value
+        Assert.True(license.VerifyData(organization, claimsPrincipal, globalSettings));
+    }
+
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public void OrganizationLicense_VerifyData_PassesWhenUseMyItemsClaimPresentAndMatches(bool useMyItemsValue)
+    {
+        var organization = CreateDeterministicOrganization();
+        organization.UseMyItems = useMyItemsValue;
+
+        var installationId = new Guid("78900000-0000-0000-0000-000000000123");
+
+        var claims = BuildBaseVerifyDataClaims(organization, installationId);
+        claims.Add(new Claim(nameof(OrganizationLicense.UseMyItems), useMyItemsValue.ToString()));
+        var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        var license = new OrganizationLicense { Token = "non-empty", Expires = DateTime.MaxValue };
+
+        var globalSettings = Substitute.For<IGlobalSettings>();
+        globalSettings.Installation.Returns(new GlobalSettings.InstallationSettings
+        {
+            Id = installationId
+        });
+
+        Assert.True(license.VerifyData(organization, claimsPrincipal, globalSettings));
+    }
+
+    [Fact]
+    public void OrganizationLicense_VerifyData_FailsWhenUseMyItemsClaimPresentAndMismatches()
+    {
+        var organization = CreateDeterministicOrganization();
+        organization.UseMyItems = true;
+
+        var installationId = new Guid("78900000-0000-0000-0000-000000000123");
+
+        var claims = BuildBaseVerifyDataClaims(organization, installationId);
+        // Claim says false, org says true — should fail
+        claims.Add(new Claim(nameof(OrganizationLicense.UseMyItems), false.ToString()));
+        var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        var license = new OrganizationLicense { Token = "non-empty", Expires = DateTime.MaxValue };
+
+        var globalSettings = Substitute.For<IGlobalSettings>();
+        globalSettings.Installation.Returns(new GlobalSettings.InstallationSettings
+        {
+            Id = installationId
+        });
+
+        Assert.False(license.VerifyData(organization, claimsPrincipal, globalSettings));
+    }
+
+    /// <summary>
+    /// Builds the base set of claims that VerifyData checks, excluding UseMyItems.
+    /// Callers can add or omit UseMyItems to test specific scenarios.
+    /// </summary>
+    private static List<Claim> BuildBaseVerifyDataClaims(Organization organization, Guid installationId)
+    {
+        return new List<Claim>
+        {
+            new(nameof(OrganizationLicense.Issued), DateTime.UtcNow.AddDays(-1).ToString()),
+            new(nameof(OrganizationLicense.Expires), DateTime.MaxValue.ToString()),
+            new(nameof(OrganizationLicense.InstallationId), installationId.ToString()),
+            new(nameof(OrganizationLicense.LicenseKey), organization.LicenseKey),
+            new(nameof(OrganizationLicense.Enabled), organization.Enabled.ToString()),
+            new(nameof(OrganizationLicense.PlanType), ((int)organization.PlanType).ToString()),
+            new(nameof(OrganizationLicense.Seats), organization.Seats.ToString()),
+            new(nameof(OrganizationLicense.MaxCollections), organization.MaxCollections.ToString()),
+            new(nameof(OrganizationLicense.UseGroups), organization.UseGroups.ToString()),
+            new(nameof(OrganizationLicense.UseDirectory), organization.UseDirectory.ToString()),
+            new(nameof(OrganizationLicense.UseTotp), organization.UseTotp.ToString()),
+            new(nameof(OrganizationLicense.SelfHost), organization.SelfHost.ToString()),
+            new(nameof(OrganizationLicense.Name), organization.Name),
+            new(nameof(OrganizationLicense.UsersGetPremium), organization.UsersGetPremium.ToString()),
+            new(nameof(OrganizationLicense.UseEvents), organization.UseEvents.ToString()),
+            new(nameof(OrganizationLicense.Use2fa), organization.Use2fa.ToString()),
+            new(nameof(OrganizationLicense.UseApi), organization.UseApi.ToString()),
+            new(nameof(OrganizationLicense.UsePolicies), organization.UsePolicies.ToString()),
+            new(nameof(OrganizationLicense.UseSso), organization.UseSso.ToString()),
+            new(nameof(OrganizationLicense.UseResetPassword), organization.UseResetPassword.ToString()),
+            new(nameof(OrganizationLicense.UseKeyConnector), organization.UseKeyConnector.ToString()),
+            new(nameof(OrganizationLicense.UseScim), organization.UseScim.ToString()),
+            new(nameof(OrganizationLicense.UseCustomPermissions), organization.UseCustomPermissions.ToString()),
+            new(nameof(OrganizationLicense.UseSecretsManager), organization.UseSecretsManager.ToString()),
+            new(nameof(OrganizationLicense.UsePasswordManager), organization.UsePasswordManager.ToString()),
+            new(nameof(OrganizationLicense.SmSeats), organization.SmSeats.ToString()),
+            new(nameof(OrganizationLicense.SmServiceAccounts), organization.SmServiceAccounts.ToString()),
+            new(nameof(OrganizationLicense.UseAdminSponsoredFamilies), organization.UseAdminSponsoredFamilies.ToString()),
+            new(nameof(OrganizationLicense.UseOrganizationDomains), organization.UseOrganizationDomains.ToString()),
+            new(nameof(OrganizationLicense.UseAutomaticUserConfirmation), organization.UseAutomaticUserConfirmation.ToString()),
+            new(nameof(OrganizationLicense.UseDisableSmAdsForUsers), organization.UseDisableSmAdsForUsers.ToString()),
+        };
     }
 }

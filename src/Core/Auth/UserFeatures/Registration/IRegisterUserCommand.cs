@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Entities;
 using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Auth.UserFeatures.Registration;
@@ -13,6 +14,15 @@ public interface IRegisterUserCommand
     /// <param name="user">The <see cref="User"/> to create</param>
     /// <returns><see cref="IdentityResult"/></returns>
     public Task<IdentityResult> RegisterUser(User user);
+
+    /// <summary>
+    /// Creates a new user, sends a welcome email, and raises the signup reference event.
+    /// This method is used by SSO auto-provisioned organization Users.
+    /// </summary>
+    /// <param name="user">The <see cref="User"/> to create</param>
+    /// <param name="organization">The <see cref="Organization"/> associated with the user</param>
+    /// <returns><see cref="IdentityResult"/></returns>
+    Task<IdentityResult> RegisterSSOAutoProvisionedUserAsync(User user, Organization organization);
 
     /// <summary>
     /// Creates a new user with a given master password hash, sends a welcome email (differs based on initiation path),

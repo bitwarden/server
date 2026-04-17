@@ -8,14 +8,13 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Context;
-using Bit.Core.Services;
 using Stripe;
 using Stripe.Tax;
 
 namespace Bit.Core.Billing.Organizations.Queries;
 
-using static Core.Constants;
 using static StripeConstants;
 using FreeTrialWarning = OrganizationWarnings.FreeTrialWarning;
 using InactiveSubscriptionWarning = OrganizationWarnings.InactiveSubscriptionWarning;
@@ -162,17 +161,23 @@ public class GetOrganizationWarningsQuery(
         if (subscription is
             {
                 Status: SubscriptionStatus.Trialing or SubscriptionStatus.Active,
-                LatestInvoice: null or { Status: InvoiceStatus.Paid }
-            } && (subscription.CurrentPeriodEnd - now).TotalDays <= 14)
+                LatestInvoice: null or { Status: InvoiceStatus.Paid },
+                Items.Data.Count: > 0
+            })
         {
-            return new ResellerRenewalWarning
+            var currentPeriodEnd = subscription.GetCurrentPeriodEnd();
+
+            if (currentPeriodEnd != null && (currentPeriodEnd.Value - now).TotalDays <= 14)
             {
-                Type = "upcoming",
-                Upcoming = new ResellerRenewalWarning.UpcomingRenewal
+                return new ResellerRenewalWarning
                 {
-                    RenewalDate = subscription.CurrentPeriodEnd
-                }
-            };
+                    Type = "upcoming",
+                    Upcoming = new ResellerRenewalWarning.UpcomingRenewal
+                    {
+                        RenewalDate = currentPeriodEnd.Value
+                    }
+                };
+            }
         }
 
         if (subscription is
@@ -195,7 +200,7 @@ public class GetOrganizationWarningsQuery(
         // ReSharper disable once InvertIf
         if (subscription.Status == SubscriptionStatus.PastDue)
         {
-            var openInvoices = await stripeAdapter.InvoiceSearchAsync(new InvoiceSearchOptions
+            var openInvoices = await stripeAdapter.SearchInvoiceAsync(new InvoiceSearchOptions
             {
                 Query = $"subscription:'{subscription.Id}' status:'open'"
             });
@@ -225,7 +230,7 @@ public class GetOrganizationWarningsQuery(
         Customer customer,
         Provider? provider)
     {
-        if (customer.Address?.Country == CountryAbbreviations.UnitedStates)
+        if (TaxHelpers.IsDirectTaxCountry(customer.Address?.Country))
         {
             return null;
         }
@@ -251,8 +256,8 @@ public class GetOrganizationWarningsQuery(
 
         // Get active and scheduled registrations
         var registrations = (await Task.WhenAll(
-                stripeAdapter.TaxRegistrationsListAsync(new RegistrationListOptions { Status = TaxRegistrationStatus.Active }),
-                stripeAdapter.TaxRegistrationsListAsync(new RegistrationListOptions { Status = TaxRegistrationStatus.Scheduled })))
+                stripeAdapter.ListTaxRegistrationsAsync(new RegistrationListOptions { Status = TaxRegistrationStatus.Active }),
+                stripeAdapter.ListTaxRegistrationsAsync(new RegistrationListOptions { Status = TaxRegistrationStatus.Scheduled })))
             .SelectMany(registrations => registrations.Data);
 
         // Find the matching registration for the customer

@@ -28,9 +28,14 @@ public class ProviderEventService(
             return;
         }
 
-        var invoice = await stripeEventService.GetInvoice(parsedEvent);
+        var invoice = await stripeEventService.GetInvoice(parsedEvent, true, ["discounts"]);
 
-        var metadata = (await stripeFacade.GetSubscription(invoice.SubscriptionId)).Metadata ?? new Dictionary<string, string>();
+        if (invoice.Parent is not { Type: "subscription_details" })
+        {
+            return;
+        }
+
+        var metadata = (await stripeFacade.GetSubscription(invoice.Parent.SubscriptionDetails.SubscriptionId)).Metadata ?? new Dictionary<string, string>();
 
         var hasProviderId = metadata.TryGetValue("providerId", out var providerId);
 
@@ -68,7 +73,9 @@ public class ProviderEventService(
 
                         var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
-                        var discountedPercentage = (100 - (invoice.Discount?.Coupon?.PercentOff ?? 0)) / 100;
+                        var totalPercentOff = invoice.Discounts?.Sum(discount => discount?.Coupon?.PercentOff ?? 0) ?? 0;
+
+                        var discountedPercentage = (100 - totalPercentOff) / 100;
 
                         var discountedSeatPrice = plan.PasswordManager.ProviderPortalSeatPrice * discountedPercentage;
 
@@ -96,7 +103,9 @@ public class ProviderEventService(
 
                         var unassignedSeats = providerPlan.SeatMinimum - clientSeats ?? 0;
 
-                        var discountedPercentage = (100 - (invoice.Discount?.Coupon?.PercentOff ?? 0)) / 100;
+                        var totalPercentOff = invoice.Discounts?.Sum(discount => discount?.Coupon?.PercentOff ?? 0) ?? 0;
+
+                        var discountedPercentage = (100 - totalPercentOff) / 100;
 
                         var discountedSeatPrice = plan.PasswordManager.ProviderPortalSeatPrice * discountedPercentage;
 

@@ -3,17 +3,14 @@
 
 using System.Globalization;
 using Bit.Commercial.Core.Billing.Providers.Models;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing;
-using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
-using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Entities;
@@ -21,7 +18,7 @@ using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Tax.Models;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -37,7 +34,6 @@ using Subscription = Stripe.Subscription;
 
 namespace Bit.Commercial.Core.Billing.Providers.Services;
 
-using static Constants;
 using static StripeConstants;
 
 public class ProviderBillingService(
@@ -51,7 +47,6 @@ public class ProviderBillingService(
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderPlanRepository providerPlanRepository,
     IProviderUserRepository providerUserRepository,
-    ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService)
     : IProviderBillingService
@@ -61,11 +56,11 @@ public class ProviderBillingService(
         Organization organization,
         string key)
     {
-        await stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId,
+        await stripeAdapter.UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             new SubscriptionUpdateOptions { CancelAtPeriodEnd = false });
 
         var subscription =
-            await stripeAdapter.SubscriptionCancelAsync(organization.GatewaySubscriptionId,
+            await stripeAdapter.CancelSubscriptionAsync(organization.GatewaySubscriptionId,
                 new SubscriptionCancelOptions
                 {
                     CancellationDetails = new SubscriptionCancellationDetailsOptions
@@ -83,7 +78,7 @@ public class ProviderBillingService(
 
         if (!wasTrialing && subscription.LatestInvoice.Status == InvoiceStatus.Draft)
         {
-            await stripeAdapter.InvoiceFinalizeInvoiceAsync(subscription.LatestInvoiceId,
+            await stripeAdapter.FinalizeInvoiceAsync(subscription.LatestInvoiceId,
                 new InvoiceFinalizeOptions { AutoAdvance = true });
         }
 
@@ -95,6 +90,7 @@ public class ProviderBillingService(
         organization.MaxCollections = plan.PasswordManager.MaxCollections;
         organization.MaxStorageGb = plan.PasswordManager.BaseStorageGb;
         organization.UsePolicies = plan.HasPolicies;
+        organization.UseMyItems = plan.HasMyItems;
         organization.UseSso = plan.HasSso;
         organization.UseOrganizationDomains = plan.HasOrganizationDomains;
         organization.UseGroups = plan.HasGroups;
@@ -138,7 +134,7 @@ public class ProviderBillingService(
 
         if (clientCustomer.Balance != 0)
         {
-            await stripeAdapter.CustomerBalanceTransactionCreate(provider.GatewayCustomerId,
+            await stripeAdapter.CreateCustomerBalanceTransactionAsync(provider.GatewayCustomerId,
                 new CustomerBalanceTransactionCreateOptions
                 {
                     Amount = clientCustomer.Balance,
@@ -187,7 +183,7 @@ public class ProviderBillingService(
             ]
         };
 
-        await stripeAdapter.SubscriptionUpdateAsync(provider.GatewaySubscriptionId, updateOptions);
+        await stripeAdapter.UpdateSubscriptionAsync(provider.GatewaySubscriptionId, updateOptions);
 
         // Refactor later to ?ChangeClientPlanCommand? (ProviderPlanId, ProviderId, OrganizationId)
         // 1. Retrieve PlanType and PlanName for ProviderPlan
@@ -270,12 +266,15 @@ public class ProviderBillingService(
                 ]
         };
 
-        if (providerCustomer.Address is not { Country: CountryAbbreviations.UnitedStates })
+        var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(providerCustomer.Address?.Country, providerCustomer.TaxExempt);
+        customerCreateOptions.TaxExempt = providerCustomer switch
         {
-            customerCreateOptions.TaxExempt = TaxExempt.Reverse;
-        }
+            { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus } when
+                determinedTaxExemptStatus != customerTaxExemptStatus => determinedTaxExemptStatus,
+            _ => providerCustomer.TaxExempt
+        };
 
-        var customer = await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+        var customer = await stripeAdapter.CreateCustomerAsync(customerCreateOptions);
 
         organization.GatewayCustomerId = customer.Id;
 
@@ -470,6 +469,7 @@ public class ProviderBillingService(
         TokenizedPaymentMethod paymentMethod,
         BillingAddress billingAddress)
     {
+        var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(billingAddress.Country);
         var options = new CustomerCreateOptions
         {
             Address = new AddressOptions
@@ -481,7 +481,6 @@ public class ProviderBillingService(
                 City = billingAddress.City,
                 State = billingAddress.State
             },
-            Coupon = !string.IsNullOrEmpty(provider.DiscountId) ? provider.DiscountId : null,
             Description = provider.DisplayBusinessName(),
             Email = provider.BillingEmail,
             InvoiceSettings = new CustomerInvoiceSettingsOptions
@@ -498,7 +497,7 @@ public class ProviderBillingService(
                 ]
             },
             Metadata = new Dictionary<string, string> { { "region", globalSettings.BaseServiceUri.CloudRegion } },
-            TaxExempt = billingAddress.Country != CountryAbbreviations.UnitedStates ? TaxExempt.Reverse : TaxExempt.None
+            TaxExempt = determinedTaxExemptStatus
         };
 
         if (billingAddress.TaxId != null)
@@ -519,6 +518,7 @@ public class ProviderBillingService(
         }
 
         var braintreeCustomerId = "";
+        var setupIntentId = "";
 
         // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
         switch (paymentMethod.Type)
@@ -526,7 +526,7 @@ public class ProviderBillingService(
             case TokenizablePaymentMethodType.BankAccount:
                 {
                     var setupIntent =
-                        (await stripeAdapter.SetupIntentList(new SetupIntentListOptions
+                        (await stripeAdapter.ListSetupIntentsAsync(new SetupIntentListOptions
                         {
                             PaymentMethod = paymentMethod.Token
                         }))
@@ -540,7 +540,7 @@ public class ProviderBillingService(
                         throw new BillingException();
                     }
 
-                    await setupIntentCache.Set(provider.Id, setupIntent.Id);
+                    setupIntentId = setupIntent.Id;
                     break;
                 }
             case TokenizablePaymentMethodType.Card:
@@ -559,7 +559,15 @@ public class ProviderBillingService(
 
         try
         {
-            return await stripeAdapter.CustomerCreateAsync(options);
+            var customer = await stripeAdapter.CreateCustomerAsync(options);
+
+            if (!string.IsNullOrEmpty(setupIntentId))
+            {
+                await stripeAdapter.UpdateSetupIntentAsync(setupIntentId,
+                    new SetupIntentUpdateOptions { Customer = customer.Id });
+            }
+
+            return customer;
         }
         catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.TaxIdInvalid)
         {
@@ -578,12 +586,10 @@ public class ProviderBillingService(
             // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
             switch (paymentMethod.Type)
             {
-                case TokenizablePaymentMethodType.BankAccount:
+                case TokenizablePaymentMethodType.BankAccount when !string.IsNullOrEmpty(setupIntentId):
                     {
-                        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(provider.Id);
-                        await stripeAdapter.SetupIntentCancel(setupIntentId,
+                        await stripeAdapter.CancelSetupIntentAsync(setupIntentId,
                             new SetupIntentCancelOptions { CancellationReason = "abandoned" });
-                        await setupIntentCache.RemoveSetupIntentForSubscriber(provider.Id);
                         break;
                     }
                 case TokenizablePaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
@@ -636,17 +642,18 @@ public class ProviderBillingService(
             });
         }
 
-        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(provider.Id);
+        var setupIntents = await stripeAdapter.ListSetupIntentsAsync(new SetupIntentListOptions
+        {
+            Customer = customer.Id,
+            Expand = ["data.payment_method"]
+        });
 
-        var setupIntent = !string.IsNullOrEmpty(setupIntentId)
-            ? await stripeAdapter.SetupIntentGet(setupIntentId,
-                new SetupIntentGetOptions { Expand = ["payment_method"] })
-            : null;
+        var hasUnverifiedBankAccount = setupIntents?.Any(si => si.IsUnverifiedBankAccount()) ?? false;
 
         var usePaymentMethod =
             !string.IsNullOrEmpty(customer.InvoiceSettings?.DefaultPaymentMethodId) ||
             customer.Metadata?.ContainsKey(BraintreeCustomerIdKey) == true ||
-            setupIntent?.IsUnverifiedBankAccount() == true;
+            hasUnverifiedBankAccount;
 
         int? trialPeriodDays = provider.Type switch
         {
@@ -663,6 +670,7 @@ public class ProviderBillingService(
                     : CollectionMethod.SendInvoice,
             Customer = customer.Id,
             DaysUntilDue = usePaymentMethod ? null : 30,
+            Discounts = !string.IsNullOrEmpty(provider.DiscountId) ? [new SubscriptionDiscountOptions { Coupon = provider.DiscountId }] : null,
             Items = subscriptionItemOptionsList,
             Metadata = new Dictionary<string, string> { { "providerId", provider.Id.ToString() } },
             OffSession = true,
@@ -671,10 +679,9 @@ public class ProviderBillingService(
             AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
         };
 
-
         try
         {
-            var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+            var subscription = await stripeAdapter.CreateSubscriptionAsync(subscriptionCreateOptions);
 
             if (subscription is
                 {
@@ -698,19 +705,6 @@ public class ProviderBillingService(
             throw new BadRequestException(
                 "Your location wasn't recognized. Please ensure your country and postal code are valid.");
         }
-    }
-
-    public async Task UpdatePaymentMethod(
-        Provider provider,
-        TokenizedPaymentSource tokenizedPaymentSource,
-        TaxInformation taxInformation)
-    {
-        await Task.WhenAll(
-            subscriberService.UpdatePaymentSource(provider, tokenizedPaymentSource),
-            subscriberService.UpdateTaxInformation(provider, taxInformation));
-
-        await stripeAdapter.SubscriptionUpdateAsync(provider.GatewaySubscriptionId,
-            new SubscriptionUpdateOptions { CollectionMethod = CollectionMethod.ChargeAutomatically });
     }
 
     public async Task UpdateSeatMinimums(UpdateProviderSeatMinimumsCommand command)
@@ -792,9 +786,47 @@ public class ProviderBillingService(
 
         if (subscriptionItemOptionsList.Count > 0)
         {
-            await stripeAdapter.SubscriptionUpdateAsync(provider.GatewaySubscriptionId,
+            await stripeAdapter.UpdateSubscriptionAsync(provider.GatewaySubscriptionId,
                 new SubscriptionUpdateOptions { Items = subscriptionItemOptionsList });
         }
+    }
+
+    public async Task UpdateProviderNameAndEmail(Provider provider)
+    {
+        if (string.IsNullOrWhiteSpace(provider.GatewayCustomerId))
+        {
+            logger.LogWarning(
+                "Provider ({ProviderId}) has no Stripe customer to update",
+                provider.Id);
+            return;
+        }
+
+        var newDisplayName = provider.DisplayName();
+
+        // Provider.DisplayName() can return null - handle gracefully
+        if (string.IsNullOrWhiteSpace(newDisplayName))
+        {
+            logger.LogWarning(
+                "Provider ({ProviderId}) has no name to update in Stripe",
+                provider.Id);
+            return;
+        }
+
+        await stripeAdapter.UpdateCustomerAsync(provider.GatewayCustomerId,
+            new CustomerUpdateOptions
+            {
+                Email = provider.BillingEmail,
+                Description = newDisplayName,
+                InvoiceSettings = new CustomerInvoiceSettingsOptions
+                {
+                    CustomFields = [
+                        new CustomerInvoiceSettingsCustomFieldOptions
+                        {
+                            Name = provider.SubscriberType(),
+                            Value = newDisplayName
+                        }]
+                },
+            });
     }
 
     private Func<int, Task> CurrySeatScalingUpdate(
@@ -808,7 +840,7 @@ public class ProviderBillingService(
 
         var item = subscription.Items.First(item => item.Price.Id == priceId);
 
-        await stripeAdapter.SubscriptionUpdateAsync(provider.GatewaySubscriptionId, new SubscriptionUpdateOptions
+        await stripeAdapter.UpdateSubscriptionAsync(provider.GatewaySubscriptionId, new SubscriptionUpdateOptions
         {
             Items =
             [

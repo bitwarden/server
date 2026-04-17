@@ -14,8 +14,7 @@ using Bit.SharedWeb.Swagger;
 using Bit.SharedWeb.Utilities;
 using Duende.IdentityServer.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.IdentityModel.Logging;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 
 namespace Bit.Identity;
 
@@ -49,6 +48,7 @@ public class Startup
 
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
+        services.AddTestPlayIdTracking(globalSettings);
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
@@ -169,19 +169,14 @@ public class Startup
 
     public void Configure(
         IApplicationBuilder app,
-        IWebHostEnvironment env,
-        IHostApplicationLifetime appLifetime,
+        IWebHostEnvironment environment,
         GlobalSettings globalSettings,
         ILogger<Startup> logger)
     {
-        IdentityModelEventSource.ShowPII = true;
-
-        app.UseSerilog(env, appLifetime, globalSettings);
-
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
 
-        if (!env.IsDevelopment())
+        if (!environment.IsDevelopment())
         {
             var uri = new Uri(globalSettings.BaseServiceUri.Identity);
             app.Use(async (ctx, next) =>
@@ -198,7 +193,7 @@ public class Startup
         }
 
         // Default Middleware
-        app.UseDefaultMiddleware(env, globalSettings);
+        app.UseDefaultMiddleware(environment, globalSettings);
 
         if (!globalSettings.SelfHosted)
         {
@@ -206,7 +201,7 @@ public class Startup
             app.UseMiddleware<CustomIpRateLimitMiddleware>();
         }
 
-        if (env.IsDevelopment())
+        if (environment.IsDevelopment())
         {
             app.UseSwagger();
             app.UseDeveloperExceptionPage();
@@ -240,6 +235,6 @@ public class Startup
         app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
 
         // Log startup
-        logger.LogInformation(Constants.BypassFiltersEventId, globalSettings.ProjectName + " started.");
+        logger.LogInformation(Constants.BypassFiltersEventId, "{Project} started.", globalSettings.ProjectName);
     }
 }

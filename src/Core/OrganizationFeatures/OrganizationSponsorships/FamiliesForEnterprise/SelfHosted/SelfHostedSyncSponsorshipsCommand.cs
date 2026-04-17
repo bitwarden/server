@@ -62,7 +62,7 @@ public class SelfHostedSyncSponsorshipsCommand : BaseIdentityClientService, ISel
             .ToDictionary(i => i.SponsoringOrganizationUserId);
         if (!organizationSponsorshipsDict.Any())
         {
-            _logger.LogInformation($"No existing sponsorships to sync for organization {organizationId}");
+            _logger.LogInformation("No existing sponsorships to sync for organization {organizationId}", organizationId);
             return;
         }
         var syncedSponsorships = new List<OrganizationSponsorshipData>();

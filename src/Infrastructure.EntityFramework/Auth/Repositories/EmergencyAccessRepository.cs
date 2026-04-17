@@ -10,8 +10,6 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-#nullable enable
-
 namespace Bit.Infrastructure.EntityFramework.Auth.Repositories;
 
 public class EmergencyAccessRepository : Repository<Core.Auth.Entities.EmergencyAccess, EmergencyAccess, Guid>, IEmergencyAccessRepository
@@ -31,6 +29,8 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
+            // TODO: in future, this probably is not necessary as we have no synced EA data. 
+            // if we delete from here, also delete from stored proc as well + update repo tests.
             await dbContext.UserBumpAccountRevisionDateByEmergencyAccessGranteeIdAsync(emergencyAccess.Id);
             await dbContext.SaveChangesAsync();
         }
@@ -51,6 +51,17 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
         }
     }
 
+    public async Task<EmergencyAccessDetails?> GetDetailsByIdAsync(Guid id)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var view = new EmergencyAccessDetailsViewQuery();
+            var query = view.Run(dbContext).Where(ea => ea.Id == id);
+            return await query.FirstOrDefaultAsync();
+        }
+    }
+
     public async Task<ICollection<EmergencyAccessDetails>> GetExpiredRecoveriesAsync()
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -58,7 +69,9 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
             var dbContext = GetDatabaseContext(scope);
             var view = new EmergencyAccessDetailsViewQuery();
             var query = view.Run(dbContext).Where(ea =>
-                ea.Status == EmergencyAccessStatusType.RecoveryInitiated
+                ea.Status == EmergencyAccessStatusType.RecoveryInitiated &&
+                ea.RecoveryInitiatedDate.HasValue &&
+                ea.RecoveryInitiatedDate.Value.AddDays(ea.WaitTimeDays) <= DateTime.UtcNow
             );
             return await query.ToListAsync();
         }
@@ -90,6 +103,20 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
         }
     }
 
+    public async Task<ICollection<EmergencyAccessDetails>> GetManyDetailsByUserIdsAsync(ICollection<Guid> userIds)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var view = new EmergencyAccessDetailsViewQuery();
+            var query = view.Run(dbContext).Where(ea =>
+                userIds.Contains(ea.GrantorId) ||
+                (ea.GranteeId.HasValue && userIds.Contains(ea.GranteeId.Value))
+            );
+            return await query.ToListAsync();
+        }
+    }
+
     public async Task<ICollection<EmergencyAccessNotify>> GetManyToNotifyAsync()
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -97,7 +124,11 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
             var dbContext = GetDatabaseContext(scope);
             var view = new EmergencyAccessDetailsViewQuery();
             var query = view.Run(dbContext).Where(ea =>
-                ea.Status == EmergencyAccessStatusType.RecoveryInitiated
+                ea.Status == EmergencyAccessStatusType.RecoveryInitiated &&
+                ea.RecoveryInitiatedDate.HasValue &&
+                ea.RecoveryInitiatedDate.Value.AddDays(ea.WaitTimeDays - 1) <= DateTime.UtcNow &&
+                ea.LastNotificationDate.HasValue &&
+                ea.LastNotificationDate.Value.AddDays(1) <= DateTime.UtcNow
             );
             var notifies = await query.Select(ea => new EmergencyAccessNotify
             {
@@ -146,4 +177,16 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
         };
     }
 
+    /// <inheritdoc />
+    public async Task DeleteManyAsync(ICollection<Guid> emergencyAccessIds)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var entitiesToRemove = from ea in dbContext.EmergencyAccesses
+                               where emergencyAccessIds.Contains(ea.Id)
+                               select ea;
+
+        dbContext.EmergencyAccesses.RemoveRange(entitiesToRemove);
+        await dbContext.SaveChangesAsync();
+    }
 }

@@ -87,7 +87,7 @@ public interface IPushNotificationService
             ExcludeCurrentContext = true,
         });
 
-    Task PushSyncCiphersAsync(Guid userId)
+    Task PushSyncCiphersAsync(Guid userId, bool excludeCurrentContext = false)
         => PushAsync(new PushNotification<UserPushNotification>
         {
             Type = PushType.SyncCiphers,
@@ -100,7 +100,7 @@ public interface IPushNotificationService
                 Date = TimeProvider.GetUtcNow().UtcDateTime,
 #pragma warning restore BWP0001 // Type or member is obsolete
             },
-            ExcludeCurrentContext = false,
+            ExcludeCurrentContext = excludeCurrentContext,
         });
 
     Task PushSyncVaultAsync(Guid userId)
@@ -167,18 +167,17 @@ public interface IPushNotificationService
             ExcludeCurrentContext = false,
         });
 
-    Task PushLogOutAsync(Guid userId, bool excludeCurrentContextFromPush = false)
-        => PushAsync(new PushNotification<UserPushNotification>
+    Task PushLogOutAsync(Guid userId, bool excludeCurrentContextFromPush = false,
+        PushNotificationLogOutReason? reason = null)
+        => PushAsync(new PushNotification<LogOutPushNotification>
         {
             Type = PushType.LogOut,
             Target = NotificationTarget.User,
             TargetId = userId,
-            Payload = new UserPushNotification
+            Payload = new LogOutPushNotification
             {
                 UserId = userId,
-#pragma warning disable BWP0001 // Type or member is obsolete
-                Date = TimeProvider.GetUtcNow().UtcDateTime,
-#pragma warning restore BWP0001 // Type or member is obsolete
+                Reason = reason
             },
             ExcludeCurrentContext = excludeCurrentContextFromPush,
         });

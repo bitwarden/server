@@ -177,5 +177,25 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         return Mapper.Map<List<OrganizationDomain>>(verifiedDomains);
     }
 
+    public async Task<bool> HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(string domainName, Guid? excludeOrganizationId = null)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var query = from od in dbContext.OrganizationDomains
+                    join o in dbContext.Organizations on od.OrganizationId equals o.Id
+                    join p in dbContext.Policies on o.Id equals p.OrganizationId
+                    where od.DomainName == domainName
+                        && od.VerifiedDate != null
+                        && o.Enabled
+                        && o.UsePolicies
+                        && o.UseOrganizationDomains
+                        && (!excludeOrganizationId.HasValue || o.Id != excludeOrganizationId.Value)
+                        && p.Type == Core.AdminConsole.Enums.PolicyType.BlockClaimedDomainAccountCreation
+                        && p.Enabled
+                    select od;
+
+        return await query.AnyAsync();
+    }
 }
 

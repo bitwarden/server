@@ -66,7 +66,10 @@ public class HibpController : Controller
         }
         else if (response.StatusCode == HttpStatusCode.NotFound)
         {
-            return new NotFoundResult();
+            /* 12/1/2025 - Per the HIBP API, If the domain does not have any email addresses in any breaches, 
+               an HTTP 404 response will be returned. API also specifies that "404 Not found is the account could 
+               not be found and has therefore not been pwned". Per REST semantics we will return 200 OK with empty array. */
+            return Content("[]", "application/json");
         }
         else if (response.StatusCode == HttpStatusCode.TooManyRequests && retry)
         {

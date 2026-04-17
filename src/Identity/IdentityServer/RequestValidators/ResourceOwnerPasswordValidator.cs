@@ -6,8 +6,10 @@ using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -30,6 +32,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IEventService eventService,
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
+        ISsoRequestValidator ssoRequestValidator,
         IOrganizationUserRepository organizationUserRepository,
         ILogger<ResourceOwnerPasswordValidator> logger,
         ICurrentContext currentContext,
@@ -41,13 +44,17 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IPolicyRequirementQuery policyRequirementQuery,
-        IMailService mailService)
+        IMailService mailService,
+        IUserAccountKeysQuery userAccountKeysQuery,
+        IClientVersionValidator clientVersionValidator,
+        IBumpDeviceLastActivityDateCommand bumpDeviceLastActivityDateCommand)
         : base(
             userManager,
             userService,
             eventService,
             deviceValidator,
             twoFactorAuthenticationValidator,
+            ssoRequestValidator,
             organizationUserRepository,
             logger,
             currentContext,
@@ -59,7 +66,10 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             userDecryptionOptionsBuilder,
             policyRequirementQuery,
             authRequestRepository,
-            mailService)
+            mailService,
+            userAccountKeysQuery,
+            clientVersionValidator,
+            bumpDeviceLastActivityDateCommand)
     {
         _userManager = userManager;
         _currentContext = currentContext;
@@ -69,7 +79,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
 
     public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
     {
-
         var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
         // We want to keep this device around incase the device is new for the user
         var requestDevice = DeviceValidator.GetDeviceFromRequest(context.Request);
@@ -144,14 +153,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         Dictionary<string, object> customResponse)
     {
         context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Two factor required.",
-            customResponse);
-    }
-
-    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
-    protected override void SetSsoResult(ResourceOwnerPasswordValidationContext context,
-        Dictionary<string, object> customResponse)
-    {
-        context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Sso authentication required.",
             customResponse);
     }
 

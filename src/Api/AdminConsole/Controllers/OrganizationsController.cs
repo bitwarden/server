@@ -11,8 +11,6 @@ using Bit.Api.Auth.Models.Response.Organizations;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
-using Bit.Core;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
@@ -21,7 +19,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -49,7 +46,7 @@ public class OrganizationsController : Controller
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyQuery _policyQuery;
     private readonly IOrganizationService _organizationService;
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
@@ -59,7 +56,6 @@ public class OrganizationsController : Controller
     private readonly IRotateOrganizationApiKeyCommand _rotateOrganizationApiKeyCommand;
     private readonly ICreateOrganizationApiKeyCommand _createOrganizationApiKeyCommand;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
-    private readonly IFeatureService _featureService;
     private readonly GlobalSettings _globalSettings;
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderBillingService _providerBillingService;
@@ -67,14 +63,14 @@ public class OrganizationsController : Controller
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly ICloudOrganizationSignUpCommand _cloudOrganizationSignUpCommand;
     private readonly IOrganizationDeleteCommand _organizationDeleteCommand;
-    private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IPricingClient _pricingClient;
     private readonly IOrganizationUpdateKeysCommand _organizationUpdateKeysCommand;
+    private readonly IOrganizationUpdateCommand _organizationUpdateCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IPolicyRepository policyRepository,
+        IPolicyQuery policyQuery,
         IOrganizationService organizationService,
         IUserService userService,
         ICurrentContext currentContext,
@@ -84,7 +80,6 @@ public class OrganizationsController : Controller
         IRotateOrganizationApiKeyCommand rotateOrganizationApiKeyCommand,
         ICreateOrganizationApiKeyCommand createOrganizationApiKeyCommand,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
-        IFeatureService featureService,
         GlobalSettings globalSettings,
         IProviderRepository providerRepository,
         IProviderBillingService providerBillingService,
@@ -92,13 +87,13 @@ public class OrganizationsController : Controller
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         ICloudOrganizationSignUpCommand cloudOrganizationSignUpCommand,
         IOrganizationDeleteCommand organizationDeleteCommand,
-        IPolicyRequirementQuery policyRequirementQuery,
         IPricingClient pricingClient,
-        IOrganizationUpdateKeysCommand organizationUpdateKeysCommand)
+        IOrganizationUpdateKeysCommand organizationUpdateKeysCommand,
+        IOrganizationUpdateCommand organizationUpdateCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
-        _policyRepository = policyRepository;
+        _policyQuery = policyQuery;
         _organizationService = organizationService;
         _userService = userService;
         _currentContext = currentContext;
@@ -108,7 +103,6 @@ public class OrganizationsController : Controller
         _rotateOrganizationApiKeyCommand = rotateOrganizationApiKeyCommand;
         _createOrganizationApiKeyCommand = createOrganizationApiKeyCommand;
         _organizationApiKeyRepository = organizationApiKeyRepository;
-        _featureService = featureService;
         _globalSettings = globalSettings;
         _providerRepository = providerRepository;
         _providerBillingService = providerBillingService;
@@ -116,9 +110,9 @@ public class OrganizationsController : Controller
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _cloudOrganizationSignUpCommand = cloudOrganizationSignUpCommand;
         _organizationDeleteCommand = organizationDeleteCommand;
-        _policyRequirementQuery = policyRequirementQuery;
         _pricingClient = pricingClient;
         _organizationUpdateKeysCommand = organizationUpdateKeysCommand;
+        _organizationUpdateCommand = organizationUpdateCommand;
     }
 
     [HttpGet("{id}")]
@@ -175,21 +169,15 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
-        {
-            var resetPasswordPolicyRequirement = await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id);
-            return new OrganizationAutoEnrollStatusResponseModel(organization.Id, resetPasswordPolicyRequirement.AutoEnrollEnabled(organization.Id));
-        }
-
-        var resetPasswordPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword);
-        if (resetPasswordPolicy == null || !resetPasswordPolicy.Enabled || resetPasswordPolicy.Data == null)
+        // Todo: Cannot use PolicyRequirements until PM-34092 is complete
+        var resetPasswordPolicy = await _policyQuery.RunAsync(organization.Id, PolicyType.ResetPassword);
+        if (!resetPasswordPolicy.Enabled || resetPasswordPolicy.Data == null)
         {
             return new OrganizationAutoEnrollStatusResponseModel(organization.Id, false);
         }
 
         var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data, JsonHelpers.IgnoreCase);
         return new OrganizationAutoEnrollStatusResponseModel(organization.Id, data?.AutoEnrollEnabled ?? false);
-
     }
 
     [HttpPost("")]
@@ -224,36 +212,31 @@ public class OrganizationsController : Controller
         return new OrganizationResponseModel(result.Organization, plan);
     }
 
-    [HttpPut("{id}")]
-    public async Task<OrganizationResponseModel> Put(string id, [FromBody] OrganizationUpdateRequestModel model)
+    [HttpPut("{organizationId:guid}")]
+    public async Task<IResult> Put(Guid organizationId, [FromBody] OrganizationUpdateRequestModel model)
     {
-        var orgIdGuid = new Guid(id);
+        // If billing email is being changed, require subscription editing permissions.
+        // Otherwise, organization owner permissions are sufficient.
+        var requiresBillingPermission = model.BillingEmail is not null;
+        var authorized = requiresBillingPermission
+            ? await _currentContext.EditSubscription(organizationId)
+            : await _currentContext.OrganizationOwner(organizationId);
 
-        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-        if (organization == null)
+        if (!authorized)
         {
-            throw new NotFoundException();
+            return TypedResults.Unauthorized();
         }
 
-        var updateBilling = ShouldUpdateBilling(model, organization);
+        var commandRequest = model.ToCommandRequest(organizationId);
+        var updatedOrganization = await _organizationUpdateCommand.UpdateAsync(commandRequest);
 
-        var hasRequiredPermissions = updateBilling
-            ? await _currentContext.EditSubscription(orgIdGuid)
-            : await _currentContext.OrganizationOwner(orgIdGuid);
-
-        if (!hasRequiredPermissions)
-        {
-            throw new NotFoundException();
-        }
-
-        await _organizationService.UpdateAsync(model.ToOrganization(organization, _globalSettings), updateBilling);
-        var plan = await _pricingClient.GetPlan(organization.PlanType);
-        return new OrganizationResponseModel(organization, plan);
+        var plan = await _pricingClient.GetPlan(updatedOrganization.PlanType);
+        return TypedResults.Ok(new OrganizationResponseModel(updatedOrganization, plan));
     }
 
     [HttpPost("{id}")]
     [Obsolete("This endpoint is deprecated. Use PUT method instead")]
-    public async Task<OrganizationResponseModel> PostPut(string id, [FromBody] OrganizationUpdateRequestModel model)
+    public async Task<IResult> PostPut(Guid id, [FromBody] OrganizationUpdateRequestModel model)
     {
         return await Put(id, model);
     }
@@ -411,17 +394,14 @@ public class OrganizationsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (model.Type != OrganizationApiKeyType.Scim
-            && !await _userService.VerifySecretAsync(user, model.Secret))
+        if (!await _userService.VerifySecretAsync(user, model.Secret))
         {
             await Task.Delay(2000);
             throw new BadRequestException("MasterPasswordHash", "Invalid password.");
         }
-        else
-        {
-            var response = new ApiKeyResponseModel(organizationApiKey);
-            return response;
-        }
+
+        var response = new ApiKeyResponseModel(organizationApiKey);
+        return response;
     }
 
     [HttpGet("{id}/api-key-information/{type?}")]
@@ -464,18 +444,15 @@ public class OrganizationsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (model.Type != OrganizationApiKeyType.Scim
-            && !await _userService.VerifySecretAsync(user, model.Secret))
+        if (!await _userService.VerifySecretAsync(user, model.Secret))
         {
             await Task.Delay(2000);
             throw new BadRequestException("MasterPasswordHash", "Invalid password.");
         }
-        else
-        {
-            await _rotateOrganizationApiKeyCommand.RotateApiKeyAsync(organizationApiKey);
-            var response = new ApiKeyResponseModel(organizationApiKey);
-            return response;
-        }
+
+        await _rotateOrganizationApiKeyCommand.RotateApiKeyAsync(organizationApiKey);
+        var response = new ApiKeyResponseModel(organizationApiKey);
+        return response;
     }
 
     private async Task<bool> HasApiKeyAccessAsync(Guid orgId, OrganizationApiKeyType? type)
@@ -576,23 +553,4 @@ public class OrganizationsController : Controller
         return new OrganizationResponseModel(organization, plan);
     }
 
-    [HttpGet("{id}/plan-type")]
-    public async Task<PlanType> GetPlanType(string id)
-    {
-        var orgIdGuid = new Guid(id);
-        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        return organization.PlanType;
-    }
-
-    private bool ShouldUpdateBilling(OrganizationUpdateRequestModel model, Organization organization)
-    {
-        var organizationNameChanged = model.Name != organization.Name;
-        var billingEmailChanged = model.BillingEmail != organization.BillingEmail;
-        return !_globalSettings.SelfHosted && (organizationNameChanged || billingEmailChanged);
-    }
 }

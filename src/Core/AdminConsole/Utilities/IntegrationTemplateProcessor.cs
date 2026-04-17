@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
 namespace Bit.Core.AdminConsole.Utilities;
 
@@ -26,7 +24,7 @@ public static partial class IntegrationTemplateProcessor
                 return match.Value;  // Return unknown keys as keys - i.e. #Key#
             }
 
-            return property?.GetValue(values)?.ToString() ?? "";
+            return property.GetValue(values)?.ToString() ?? string.Empty;
         });
     }
 
@@ -38,7 +36,8 @@ public static partial class IntegrationTemplateProcessor
         }
 
         return template.Contains("#UserName#", StringComparison.Ordinal)
-               || template.Contains("#UserEmail#", StringComparison.Ordinal);
+               || template.Contains("#UserEmail#", StringComparison.Ordinal)
+               || template.Contains("#UserType#", StringComparison.Ordinal);
     }
 
     public static bool TemplateRequiresActingUser(string template)
@@ -49,7 +48,18 @@ public static partial class IntegrationTemplateProcessor
         }
 
         return template.Contains("#ActingUserName#", StringComparison.Ordinal)
-               || template.Contains("#ActingUserEmail#", StringComparison.Ordinal);
+               || template.Contains("#ActingUserEmail#", StringComparison.Ordinal)
+               || template.Contains("#ActingUserType#", StringComparison.Ordinal);
+    }
+
+    public static bool TemplateRequiresGroup(string template)
+    {
+        if (string.IsNullOrEmpty(template))
+        {
+            return false;
+        }
+
+        return template.Contains("#GroupName#", StringComparison.Ordinal);
     }
 
     public static bool TemplateRequiresOrganization(string template)

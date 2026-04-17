@@ -1,4 +1,6 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Net.Mail;
+using System.Text.RegularExpressions;
+using Bit.Core.Exceptions;
 using MimeKit;
 
 namespace Bit.Core.Utilities;
@@ -40,5 +42,23 @@ public static class EmailValidation
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Extracts the domain portion from an email address and normalizes it to lowercase.
+    /// </summary>
+    /// <param name="email">The email address to extract the domain from.</param>
+    /// <returns>The domain portion of the email address in lowercase (e.g., "example.com").</returns>
+    /// <exception cref="BadRequestException">Thrown when the email address format is invalid.</exception>
+    public static string GetDomain(string email)
+    {
+        try
+        {
+            return new MailAddress(email).Host.ToLower();
+        }
+        catch (Exception ex) when (ex is FormatException || ex is ArgumentException)
+        {
+            throw new BadRequestException("Invalid email address format.");
+        }
     }
 }

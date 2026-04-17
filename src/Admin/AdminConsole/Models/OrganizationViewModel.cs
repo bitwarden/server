@@ -75,6 +75,8 @@ public class OrganizationViewModel
     public int OccupiedSmSeatsCount { get; set; }
     public bool UseSecretsManager => Organization.UseSecretsManager;
     public bool UseRiskInsights => Organization.UseRiskInsights;
+    public bool UsePhishingBlocker => Organization.UsePhishingBlocker;
+    public bool UseDisableSmAdsForUsers => Organization.UseDisableSmAdsForUsers;
     public IEnumerable<OrganizationUserUserDetails> OwnersDetails { get; set; }
     public IEnumerable<OrganizationUserUserDetails> AdminsDetails { get; set; }
 }

@@ -3,11 +3,13 @@ using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.IdentityServer;
-using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Platform.Installations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -15,10 +17,7 @@ using Bit.Core.Settings;
 using Duende.IdentityModel;
 using Duende.IdentityServer.Extensions;
 using Duende.IdentityServer.Validation;
-using HandlebarsDotNet;
 using Microsoft.AspNetCore.Identity;
-
-#nullable enable
 
 namespace Bit.Identity.IdentityServer.RequestValidators;
 
@@ -35,6 +34,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IEventService eventService,
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
+        ISsoRequestValidator ssoRequestValidator,
         IOrganizationUserRepository organizationUserRepository,
         ILogger<CustomTokenRequestValidator> logger,
         ICurrentContext currentContext,
@@ -47,13 +47,17 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IUpdateInstallationCommand updateInstallationCommand,
         IPolicyRequirementQuery policyRequirementQuery,
         IAuthRequestRepository authRequestRepository,
-        IMailService mailService)
+        IMailService mailService,
+        IUserAccountKeysQuery userAccountKeysQuery,
+        IClientVersionValidator clientVersionValidator,
+        IBumpDeviceLastActivityDateCommand bumpDeviceLastActivityDateCommand)
         : base(
             userManager,
             userService,
             eventService,
             deviceValidator,
             twoFactorAuthenticationValidator,
+            ssoRequestValidator,
             organizationUserRepository,
             logger,
             currentContext,
@@ -65,7 +69,10 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             userDecryptionOptionsBuilder,
             policyRequirementQuery,
             authRequestRepository,
-            mailService)
+            mailService,
+            userAccountKeysQuery,
+            clientVersionValidator,
+            bumpDeviceLastActivityDateCommand)
     {
         _userManager = userManager;
         _updateInstallationCommand = updateInstallationCommand;
@@ -82,6 +89,12 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             {
                 await FailAuthForLegacyUserAsync(null, context);
                 return;
+            }
+
+            // TODO: PM-34091 - remove feature flag check when cleaning up
+            if (_featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate))
+            {
+                await TryBumpDeviceLastActivityForRefreshAsync(context);
             }
         }
 
@@ -150,23 +163,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             {
                 // KeyConnectorUrl is configured in the CLI client, we just need to tell the client to use it
                 context.Result.CustomResponse["ApiUseKeyConnector"] = true;
-                context.Result.CustomResponse["ResetMasterPassword"] = false;
             }
-            return Task.CompletedTask;
-        }
-
-        // Key connector data should have already been set in the decryption options
-        // for backwards compatibility we set them this way too. We can eventually get rid of this
-        // when all clients don't read them from the existing locations.
-        if (!context.Result.CustomResponse.TryGetValue("UserDecryptionOptions", out var userDecryptionOptionsObj) ||
-            userDecryptionOptionsObj is not UserDecryptionOptions userDecryptionOptions)
-        {
-            return Task.CompletedTask;
-        }
-        if (userDecryptionOptions is { KeyConnectorOption: { } })
-        {
-            context.Result.CustomResponse["KeyConnectorUrl"] = userDecryptionOptions.KeyConnectorOption.KeyConnectorUrl;
-            context.Result.CustomResponse["ResetMasterPassword"] = false;
         }
 
         return Task.CompletedTask;
@@ -190,17 +187,6 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
     }
 
     [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
-    protected override void SetSsoResult(CustomTokenRequestValidationContext context,
-        Dictionary<string, object> customResponse)
-    {
-        Debug.Assert(context.Result is not null);
-        context.Result.Error = "invalid_grant";
-        context.Result.ErrorDescription = "Sso authentication required.";
-        context.Result.IsError = true;
-        context.Result.CustomResponse = customResponse;
-    }
-
-    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
     protected override void SetErrorResult(CustomTokenRequestValidationContext context,
         Dictionary<string, object> customResponse)
     {
@@ -218,6 +204,30 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         context.Result.IsError = requestContext.ValidationErrorResult.IsError;
         context.Result.ErrorDescription = requestContext.ValidationErrorResult.ErrorDescription;
         context.Result.CustomResponse = requestContext.CustomResponse;
+    }
+
+    private async Task TryBumpDeviceLastActivityForRefreshAsync(CustomTokenRequestValidationContext context)
+    {
+        Debug.Assert(context.Result is not null);
+        try
+        {
+            var subject = context.Result.ValidatedRequest.Subject;
+            var identifier = subject?.FindFirstValue(Claims.Device);
+            var userIdString = subject?.GetSubjectId();
+            if (string.IsNullOrEmpty(identifier) || !Guid.TryParse(userIdString, out var userId))
+            {
+                return;
+            }
+
+            await _bumpDeviceLastActivityDateCommand.BumpByIdentifierAndUserIdAsync(identifier, userId);
+        }
+        catch (Exception e)
+        {
+            // Log and swallow exceptions from this non-critical update, as we don't want to fail logins
+            // due to issues updating the device's last activity date.
+            _logger.LogWarning(e, "Failed to bump LastActivityDate for device with identifier {DeviceIdentifier}.",
+                context.Result.ValidatedRequest.Subject?.FindFirstValue(Claims.Device));
+        }
     }
 
     /// <summary>

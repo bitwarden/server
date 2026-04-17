@@ -1,7 +1,9 @@
 ﻿using Bit.Billing.Constants;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -17,6 +19,7 @@ public class PaymentSucceededHandler(
     IOrganizationRepository organizationRepository,
     IStripeEventUtilityService stripeEventUtilityService,
     IUserService userService,
+    IUserRepository userRepository,
     IOrganizationEnableCommand organizationEnableCommand,
     IPricingClient pricingClient,
     IPushNotificationAdapter pushNotificationAdapter)
@@ -29,12 +32,17 @@ public class PaymentSucceededHandler(
     public async Task HandleAsync(Event parsedEvent)
     {
         var invoice = await stripeEventService.GetInvoice(parsedEvent, true);
-        if (!invoice.Paid || invoice.BillingReason != "subscription_create")
+        if (invoice.Status != StripeConstants.InvoiceStatus.Paid || invoice.BillingReason != "subscription_create")
         {
             return;
         }
 
-        var subscription = await stripeFacade.GetSubscription(invoice.SubscriptionId);
+        if (invoice.Parent?.SubscriptionDetails == null)
+        {
+            return;
+        }
+
+        var subscription = await stripeFacade.GetSubscription(invoice.Parent.SubscriptionDetails.SubscriptionId);
         if (subscription?.Status != StripeSubscriptionStatus.Active)
         {
             return;
@@ -96,18 +104,23 @@ public class PaymentSucceededHandler(
                 return;
             }
 
-            await organizationEnableCommand.EnableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
+            await organizationEnableCommand.EnableAsync(organizationId.Value, subscription.GetCurrentPeriodEnd());
             organization = await organizationRepository.GetByIdAsync(organization.Id);
             await pushNotificationAdapter.NotifyEnabledChangedAsync(organization!);
         }
         else if (userId.HasValue)
         {
-            if (subscription.Items.All(i => i.Plan.Id != IStripeEventUtilityService.PremiumPlanId))
+            if (subscription.Items.All(i => i.Price.Id is not IStripeEventUtilityService.PremiumPlanId and not IStripeEventUtilityService.PremiumPlanIdAppStore))
             {
                 return;
             }
 
-            await userService.EnablePremiumAsync(userId.Value, subscription.CurrentPeriodEnd);
+            await userService.EnablePremiumAsync(userId.Value, subscription.GetCurrentPeriodEnd());
+            var user = await userRepository.GetByIdAsync(userId.Value);
+            if (user != null)
+            {
+                await pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user);
+            }
         }
     }
 }

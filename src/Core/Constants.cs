@@ -31,7 +31,26 @@ public static class Constants
 
     public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
     public const string SSHKeyCipherMinimumVersion = "2024.12.0";
+
+    // TODO: PM-34798 Update with actual version once the feature is implemented
+    public const string BankAccountCipherMinimumVersion = "2026.2.0";
     public const string DenyLegacyUserMinimumVersion = "2025.6.0";
+
+    /// <summary>
+    /// Domain suffixes for Bitwarden cloud-hosted environments.
+    /// </summary>
+    public static readonly string[] BitwardenCloudDomains = ["bitwarden.com", "bitwarden.eu", "bitwarden.pw"];
+
+    /// <summary>
+    /// Server permitted SSO callback redirect URIs for mobile clients.
+    /// </summary>
+    public static readonly string[] BitwardenMobileSsoCallbackUris =
+    [
+        "bitwarden://sso-callback",
+        "https://bitwarden.com/sso-callback",
+        "https://bitwarden.eu/sso-callback",
+        "https://bitwarden.pw/sso-callback",
+    ];
 
     /// <summary>
     /// Used by IdentityServer to identify our own provider.
@@ -69,8 +88,13 @@ public static class Constants
         /// This value must match what Stripe uses for the `Country` field value for the United States.
         /// </summary>
         public const string UnitedStates = "US";
-    }
 
+        /// <summary>
+        /// Abbreviation for Switzerland.
+        /// This value must match what Stripe uses for the `Country` field value for Switzerland.
+        /// </summary>
+        public const string Switzerland = "CH";
+    }
 
     /// <summary>
     /// Constants for our browser extensions IDs
@@ -137,68 +161,76 @@ public static class FeatureFlagKeys
     /* Admin Console Team */
     public const string PolicyRequirements = "pm-14439-policy-requirements";
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
-    public const string EventBasedOrganizationIntegrations = "event-based-organization-integrations";
-    public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
-    public const string CreateDefaultLocation = "pm-19467-create-default-location";
-    public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
+    public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
+    public const string AdminResetTwoFactor = "pm-15489-reset-two-factor-account-recovery";
+    public const string PublicMembersInviteRefactor = "pm-33398-refactor-members-invite-org-users-command";
+    public const string GenerateInviteLink = "pm-32497-generate-invite-link";
+    public const string OrgAbilityExtendedCache = "pm-32104-org-ability-extended-cache";
+    public const string ProviderAbilityExtendedCache = "pm-32111-provider-ability-extended-cache";
+    public const string PolicyDrawers = "pm-34804-policy-drawers";
+    public const string PM35153CollectionSdkDecryption = "pm-35153-collection-sdk-decryption";
+    public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
+
+    /* Architecture */
+    public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
+    public const string DesktopMigrationMilestone2 = "desktop-ui-migration-milestone-2";
+    public const string DesktopMigrationMilestone3 = "desktop-ui-migration-milestone-3";
+    public const string DesktopMigrationMilestone4 = "desktop-ui-migration-milestone-4";
 
     /* Auth Team */
-    public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
-    public const string EmailVerification = "email-verification";
-    public const string BrowserExtensionLoginApproval = "pm-14938-browser-extension-login-approvals";
-    public const string SetInitialPasswordRefactor = "pm-16117-set-initial-password-refactor";
-    public const string ChangeExistingPasswordRefactor = "pm-16117-change-existing-password-refactor";
     public const string Otp6Digits = "pm-18612-otp-6-digits";
-    public const string FailedTwoFactorEmail = "pm-24425-send-2fa-failed-email";
-    public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
-    public const string PM23174ManageAccountRecoveryPermissionDrivesTheNeedToSetMasterPassword =
-        "pm-23174-manage-account-recovery-permission-drives-the-need-to-set-master-password";
+    public const string PM2035PasskeyUnlock = "pm-2035-passkey-unlock";
+    public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
+    public const string PrefetchPasswordPrelogin = "pm-23801-prefetch-password-prelogin";
+    public const string SafariAccountSwitching = "pm-5594-safari-account-switching";
+    public const string PM27086_UpdateAuthenticationApisForInputPassword = "pm-27086-update-authentication-apis-for-input-password";
+    public const string ChangeEmailNewAuthenticationApis = "pm-30811-change-email-new-authentication-apis";
+    public const string PM31088_MasterPasswordServiceEmitSalt = "pm-31088-master-password-service-emit-salt";
+    public const string PM32413_MultiClientPasswordManagement = "pm-32413-multi-client-password-management";
+    public const string DevicesLastActivityDate = "pm-4516-devices-add-last-activity-date";
+    public const string PM34210_DesktopAddDevices = "pm-34210-desktop-add-devices";
 
     /* Autofill Team */
-    public const string IdpAutoSubmitLogin = "idp-auto-submit-login";
-    public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
-    public const string InlineMenuFieldQualification = "inline-menu-field-qualification";
-    public const string InlineMenuPositioningImprovements = "inline-menu-positioning-improvements";
-    public const string SSHAgent = "ssh-agent";
+    public const string SSHAgentV2 = "ssh-agent-v2";
     public const string SSHVersionCheckQAOverride = "ssh-version-check-qa-override";
-    public const string GenerateIdentityFillScriptRefactor = "generate-identity-fill-script-refactor";
-    public const string DelayFido2PageScriptInitWithinMv2 = "delay-fido2-page-script-init-within-mv2";
-    public const string NotificationBarAddLoginImprovements = "notification-bar-add-login-improvements";
-    public const string BlockBrowserInjectionsByDomain = "block-browser-injections-by-domain";
     public const string NotificationRefresh = "notification-refresh";
-    public const string EnableNewCardCombinedExpiryAutofill = "enable-new-card-combined-expiry-autofill";
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
-    public const string InlineMenuTotp = "inline-menu-totp";
     public const string WindowsDesktopAutotype = "windows-desktop-autotype";
+    public const string WindowsDesktopAutotypeGA = "windows-desktop-autotype-ga";
+    public const string FillAssistTargetingRules = "fill-assist-targeting-rules";
+    public const string NotificationUndeterminedCipherScenarioLogic = "undetermined-cipher-scenario-logic";
 
     /* Billing Team */
-    public const string TrialPayment = "PM-8163-trial-payment";
-    public const string PM17772_AdminInitiatedSponsorships = "pm-17772-admin-initiated-sponsorships";
-    public const string UsePricingService = "use-pricing-service";
-    public const string PM19422_AllowAutomaticTaxUpdates = "pm-19422-allow-automatic-tax-updates";
-    public const string PM21821_ProviderPortalTakeover = "pm-21821-provider-portal-takeover";
-    public const string PM22415_TaxIDWarnings = "pm-22415-tax-id-warnings";
-    public const string PM25379_UseNewOrganizationMetadataStructure = "pm-25379-use-new-organization-metadata-structure";
-    public const string PM24996ImplementUpgradeFromFreeDialog = "pm-24996-implement-upgrade-from-free-dialog";
     public const string PM24032_NewNavigationPremiumUpgradeButton = "pm-24032-new-navigation-premium-upgrade-button";
     public const string PM23713_PremiumBadgeOpensNewPremiumUpgradeDialog = "pm-23713-premium-badge-opens-new-premium-upgrade-dialog";
-    public const string PremiumUpgradeNewDesign = "pm-24033-updat-premium-subscription-page";
+    public const string PM26793_FetchPremiumPriceFromPricingService = "pm-26793-fetch-premium-price-from-pricing-service";
+
+
+    public const string PM29594_UpdateIndividualSubscriptionPage = "pm-29594-update-individual-subscription-page";
+    public const string PM29108_EnablePersonalDiscounts = "pm-29108-enable-personal-discounts";
+    public const string PM29593_PremiumToOrganizationUpgrade = "pm-29593-premium-to-organization-upgrade";
+    public const string PM32581_UseUpdateOrganizationSubscriptionCommand = "pm-32581-use-update-organization-subscription-command";
+    public const string PM32645_DeferPriceMigrationToRenewal = "pm-32645-defer-price-migration-to-renewal";
 
     /* Key Management Team */
-    public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
-    public const string PM4154BulkEncryptionService = "PM-4154-bulk-encryption-service";
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
     public const string Argon2Default = "argon2-default";
-    public const string UserkeyRotationV2 = "userkey-rotation-v2";
-    public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
-    public const string UserSdkForDecryption = "use-sdk-for-decryption";
-    public const string PM17987_BlockType0 = "pm-17987-block-type-0";
+    public const string EnrollAeadOnKeyRotation = "enroll-aead-on-key-rotation";
     public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
     public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
-    public const string WindowsBiometricsV2 = "pm-25373-windows-biometrics-v2";
     public const string LinuxBiometricsV2 = "pm-26340-linux-biometrics-v2";
     public const string NoLogoutOnKdfChange = "pm-23995-no-logout-on-kdf-change";
     public const string DisableType0Decryption = "pm-25174-disable-type-0-decryption";
+    public const string ConsolidatedSessionTimeoutComponent = "pm-26056-consolidated-session-timeout-component";
+    public const string V2RegistrationTDEJIT = "pm-27279-v2-registration-tde-jit";
+    public const string EnableAccountEncryptionV2KeyConnectorRegistration = "enable-account-encryption-v2-key-connector-registration";
+    public const string SdkKeyRotation = "pm-30144-sdk-key-rotation";
+    public const string UnlockViaSdk = "unlock-via-sdk";
+    public const string UseSdkForKeyConnectorMigration = "use-sdk-for-key-connector-migration";
+    public const string UseUnlockServiceForPasswordLogin = "use-unlock-service-for-password-login";
+    public const string UseUnlockServiceForKeyConnectorLogin = "use-unlock-service-for-key-connector-login";
+    public const string NoLogoutOnKeyUpgradeRotation = "pm-31050-no-logout-key-upgrade-rotation";
+    public const string EnableAccountEncryptionV2JitPasswordRegistration = "enable-account-encryption-v2-jit-password-registration";
 
     /* Mobile Team */
     public const string AndroidImportLoginsFlow = "import-logins-flow";
@@ -210,36 +242,71 @@ public static class FeatureFlagKeys
     public const string MobileErrorReporting = "mobile-error-reporting";
     public const string AndroidChromeAutofill = "android-chrome-autofill";
     public const string UserManagedPrivilegedApps = "pm-18970-user-managed-privileged-apps";
-    public const string SendAccess = "pm-19394-send-access-control";
     public const string CxpImportMobile = "cxp-import-mobile";
     public const string CxpExportMobile = "cxp-export-mobile";
+    public const string DeviceAuthKey = "pm-27581-device-auth-key";
+    public const string PremiumUpgradePath = "pm-31697-premium-upgrade-path";
+    public const string MobileCardScanner = "pm-34171-card-scanner";
 
     /* Platform Team */
-    public const string IpcChannelFramework = "ipc-channel-framework";
-    public const string PushNotificationsWhenLocked = "pm-19388-push-notifications-when-locked";
-    public const string PushNotificationsWhenInactive = "pm-25130-receive-push-notifications-for-inactive-users";
+    public const string WebPush = "web-push";
+    public const string ContentScriptIpcFramework = "content-script-ipc-channel-framework";
+    public const string WebAuthnRelatedOrigins = "pm-30529-webauthn-related-origins";
+    public const string ElectronStorageCache = "pm-32783-electron-storage-cache";
+    public const string AttachmentUploadProgress = "pm-34410-attachment-upload-progress";
 
     /* Tools Team */
-    public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
+    /// <summary>
+    /// Enable this flag to share the send view used by the web and browser clients
+    /// on the desktop client.
+    /// </summary>
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
+    public const string UseChromiumImporter = "pm-23982-chromium-importer";
+    public const string ChromiumImporterWithABE = "pm-25855-chromium-importer-abe";
+    public const string SendUIRefresh = "pm-28175-send-ui-refresh";
+    public const string SendEmailOTP = "pm-19051-send-email-verification";
+    public const string SendControls = "pm-31885-send-controls";
+    public const string SdkSendsApi = "pm-30110-sdk-sends-api";
 
     /* Vault Team */
-    public const string PM8851_BrowserOnboardingNudge = "pm-8851-browser-onboarding-nudge";
-    public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
     public const string CipherKeyEncryption = "cipher-key-encryption";
     public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
-    public const string EndUserNotifications = "pm-10609-end-user-notifications";
+
+    public const string PM28190CipherSharingOpsToSdk = "pm-28190-cipher-sharing-ops-to-sdk";
     public const string PhishingDetection = "phishing-detection";
-    public const string RemoveCardItemTypePolicy = "pm-16442-remove-card-item-type-policy";
     public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
-    public const string PM19315EndUserActivationMvp = "pm-19315-end-user-activation-mvp";
     public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
+    public const string PM23904_RiskInsightsForPremium = "pm-23904-risk-insights-for-premium";
+    public const string PM25083_AutofillConfirmFromSearch = "pm-25083-autofill-confirm-from-search";
+    public const string VaultLoadingSkeletons = "pm-25081-vault-skeleton-loaders";
+    public const string BrowserPremiumSpotlight = "pm-23384-browser-premium-spotlight";
+    public const string MigrateMyVaultToMyItems = "pm-20558-migrate-myvault-to-myitems";
+    public const string PM27632_CipherCrudOperationsToSdk = "pm-27632-cipher-crud-operations-to-sdk";
+    public const string PM30521_AutofillButtonViewLoginScreen = "pm-30521-autofill-button-view-login-screen";
+    public const string PM32180_PremiumUpsellAccountAge = "pm-32180-premium-upsell-account-age";
+    public const string PM29438_WelcomeDialogWithExtensionPrompt = "pm-29438-welcome-dialog-with-extension-prompt";
+    public const string PM29438_DialogWithExtensionPromptAccountAge = "pm-29438-dialog-with-extension-prompt-account-age";
+    public const string PM31039_ItemActionInExtension = "pm-31039-item-action-in-extension";
+    public const string PM29437_WelcomeDialogNoExtPrompt = "pm-29437-welcome-dialog-no-ext-prompt";
+    public const string PM31948_OrgUserNotificationBanner = "pm-31948-org-user-notification-banner";
+    public const string PM32009_NewItemTypes = "pm-32009-new-item-types";
+    public const string PM34500_StrictCipherDecryption = "pm-34500-strict-cipher-decryption";
+    public const string PM28091_AddCopyAndQuickLaunchActions = "pm-28091-add-copy-and-quick-launch-actions";
 
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
 
     /* DIRT Team */
-    public const string PM22887_RiskInsightsActivityTab = "pm-22887-risk-insights-activity-tab";
+    public const string EventManagementForBlumira = "event-management-for-blumira";
+    public const string EventManagementForDataDogAndCrowdStrike = "event-management-for-datadog-and-crowdstrike";
+    public const string EventDiagnosticLogging = "pm-27666-siem-event-log-debugging";
+    public const string EventManagementForHuntress = "event-management-for-huntress";
+    public const string Milestone11AppPageImprovements = "pm-30538-dirt-milestone-11-app-page-improvements";
+    public const string AccessIntelligenceTrendChart = "pm-26961-access-intelligence-trend-chart";
+    public const string AccessIntelligenceNewArchitecture = "pm-31936-access-intelligence-new-architecture";
+
+    /* UIF Team */
+    public const string RouterFocusManagement = "router-focus-management";
 
     public static List<string> GetAllKeys()
     {

@@ -65,7 +65,7 @@ public class EmailTokenProvider : IUserTwoFactorTokenProvider<User>
         }
 
         var code = Encoding.UTF8.GetString(cachedValue);
-        var valid = string.Equals(token, code);
+        var valid = CoreHelpers.FixedTimeEquals(token, code);
         if (valid)
         {
             await _distributedCache.RemoveAsync(cacheKey);

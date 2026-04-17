@@ -6,12 +6,16 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -39,9 +43,12 @@ public class SyncController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly ICurrentContext _currentContext;
     private readonly Version _sshKeyCipherMinimumVersion = new(Constants.SSHKeyCipherMinimumVersion);
+    private readonly Version _bankAccountCipherMinimumVersion = new(Constants.BankAccountCipherMinimumVersion);
     private readonly IFeatureService _featureService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
+    private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
+    private readonly IUserAccountKeysQuery _userAccountKeysQuery;
 
     public SyncController(
         IUserService userService,
@@ -57,7 +64,9 @@ public class SyncController : Controller
         ICurrentContext currentContext,
         IFeatureService featureService,
         IApplicationCacheService applicationCacheService,
-        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+        IWebAuthnCredentialRepository webAuthnCredentialRepository,
+        IUserAccountKeysQuery userAccountKeysQuery)
     {
         _userService = userService;
         _folderRepository = folderRepository;
@@ -73,6 +82,8 @@ public class SyncController : Controller
         _featureService = featureService;
         _applicationCacheService = applicationCacheService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
+        _webAuthnCredentialRepository = webAuthnCredentialRepository;
+        _userAccountKeysQuery = userAccountKeysQuery;
     }
 
     [HttpGet("")]
@@ -95,7 +106,7 @@ public class SyncController : Controller
 
         var folders = await _folderRepository.GetManyByUserIdAsync(user.Id);
         var allCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, withOrganizations: hasEnabledOrgs);
-        var ciphers = FilterSSHKeys(allCiphers);
+        var ciphers = FilterUnsupportedCipherTypes(allCiphers);
         var sends = await _sendRepository.GetManyByUserIdAsync(user.Id);
 
         IEnumerable<CollectionDetails> collections = null;
@@ -114,23 +125,61 @@ public class SyncController : Controller
         var organizationClaimingActiveUser = await _userService.GetOrganizationsClaimingUserAsync(user.Id);
         var organizationIdsClaimingActiveUser = organizationClaimingActiveUser.Select(o => o.Id);
 
-        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var organizationAbilities = await GetOrganizationAbilitiesAsync(ciphers);
+        var webAuthnCredentials = _featureService.IsEnabled(FeatureFlagKeys.PM2035PasskeyUnlock)
+            ? await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id)
+            : [];
 
-        var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
+        UserAccountKeysData userAccountKeys = null;
+        // JIT TDE users and some broken/old users may not have a private key.
+        if (!string.IsNullOrWhiteSpace(user.PrivateKey))
+        {
+            userAccountKeys = await _userAccountKeysQuery.Run(user);
+        }
+
+        var response = new SyncResponseModel(_globalSettings, user, userAccountKeys, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
             organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
-            folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends);
+            folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends, webAuthnCredentials);
         return response;
     }
 
-    private ICollection<CipherDetails> FilterSSHKeys(ICollection<CipherDetails> ciphers)
+    private async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync(ICollection<CipherDetails> ciphers)
     {
-        if (_currentContext.ClientVersion >= _sshKeyCipherMinimumVersion || _featureService.IsEnabled(FeatureFlagKeys.SSHVersionCheckQAOverride))
+        var orgIds = ciphers
+            .Where(c => c.OrganizationId.HasValue)
+            .Select(c => c.OrganizationId!.Value)
+            .Distinct()
+            .ToList();
+
+        if (orgIds.Count == 0)
         {
-            return ciphers;
+            return new Dictionary<Guid, OrganizationAbility>();
         }
-        else
+
+        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync(orgIds);
+
+        return organizationAbilities;
+    }
+
+    private ICollection<CipherDetails> FilterUnsupportedCipherTypes(ICollection<CipherDetails> ciphers)
+    {
+        var unsupportedTypes = new List<Core.Vault.Enums.CipherType>();
+
+        if ((_currentContext.ClientVersion == null || _currentContext.ClientVersion < _sshKeyCipherMinimumVersion)
+            && !_featureService.IsEnabled(FeatureFlagKeys.SSHVersionCheckQAOverride))
         {
-            return ciphers.Where(c => c.Type != Core.Vault.Enums.CipherType.SSHKey).ToList();
+            unsupportedTypes.Add(Core.Vault.Enums.CipherType.SSHKey);
         }
+
+        if (!_featureService.IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes)
+            || _currentContext.ClientVersion == null
+            || _currentContext.ClientVersion < _bankAccountCipherMinimumVersion)
+        {
+            unsupportedTypes.Add(Core.Vault.Enums.CipherType.BankAccount);
+        }
+
+        return unsupportedTypes.Count == 0
+            ? ciphers
+            : ciphers.Where(c => !unsupportedTypes.Contains(c.Type)).ToList();
     }
 }

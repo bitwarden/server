@@ -6,6 +6,39 @@ namespace Bit.Core.Utilities;
 
 public static class KdfSettingsValidator
 {
+    /// <summary>
+    /// Validates that authentication and unlock data have matching KDF settings and salts,
+    /// then validates the KDF settings themselves.
+    /// </summary>
+    public static IEnumerable<ValidationResult> ValidateAuthenticationAndUnlockData(
+        MasterPasswordAuthenticationData authentication,
+        MasterPasswordUnlockData unlock)
+    {
+        // Currently KDF settings are not saved separately for authentication and unlock and must therefore be equal
+        if (!authentication.Kdf.Equals(unlock.Kdf))
+        {
+            yield return new ValidationResult(
+                "KDF settings must be equal for authentication and unlock.",
+                [nameof(authentication.Kdf)]);
+            // KDF settings diverge; remaining validation is not meaningful
+            yield break;
+        }
+
+        // Salt must be equal for authentication and unlock to prevent de-synced salt value
+        if (authentication.Salt != unlock.Salt)
+        {
+            yield return new ValidationResult(
+                "Invalid master password salt.",
+                [nameof(authentication.Salt)]);
+        }
+
+        foreach (var validationResult in Validate(authentication.Kdf))
+        {
+            yield return validationResult;
+        }
+    }
+
+    // PM-28143 - Remove below when fixing ticket
     public static IEnumerable<ValidationResult> Validate(KdfType kdfType, int kdfIterations, int? kdfMemory, int? kdfParallelism)
     {
         switch (kdfType)

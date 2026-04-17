@@ -28,6 +28,8 @@ public class SecretUpdateRequestModel : IValidatableObject
 
     public SecretAccessPoliciesRequestsModel AccessPoliciesRequests { get; set; }
 
+    public bool ValueChanged { get; set; } = false;
+
     public Secret ToSecret(Secret secret)
     {
         secret.Key = Key;

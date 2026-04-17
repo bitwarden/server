@@ -1,19 +1,29 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.Net;
+﻿using System.Net;
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
+using Bit.Core;
+using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Errors;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities.Commands;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
+using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using static Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Errors.ErrorMapper;
 
 namespace Bit.Api.AdminConsole.Public.Controllers;
 
@@ -24,45 +34,57 @@ public class MembersController : Controller
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IGroupRepository _groupRepository;
     private readonly IOrganizationService _organizationService;
-    private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
     private readonly IUpdateOrganizationUserCommand _updateOrganizationUserCommand;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
-    private readonly IApplicationCacheService _applicationCacheService;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
+    private readonly IRevokeOrganizationUserCommand _revokeOrganizationUserCommandV2;
+    private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
+    private readonly IFeatureService _featureService;
+    private readonly IInviteOrganizationUsersCommand _inviteOrganizationUsersCommand;
+    private readonly IPricingClient _pricingClient;
+    private readonly TimeProvider _timeProvider;
 
     public MembersController(
         IOrganizationUserRepository organizationUserRepository,
         IGroupRepository groupRepository,
         IOrganizationService organizationService,
-        IUserService userService,
         ICurrentContext currentContext,
         IUpdateOrganizationUserCommand updateOrganizationUserCommand,
         IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
-        IApplicationCacheService applicationCacheService,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         IOrganizationRepository organizationRepository,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
-        IResendOrganizationInviteCommand resendOrganizationInviteCommand)
+        IResendOrganizationInviteCommand resendOrganizationInviteCommand,
+        IRevokeOrganizationUserCommand revokeOrganizationUserCommandV2,
+        IRestoreOrganizationUserCommand restoreOrganizationUserCommand,
+        IFeatureService featureService,
+        IInviteOrganizationUsersCommand inviteOrganizationUsersCommand,
+        IPricingClient pricingClient,
+        TimeProvider timeProvider)
     {
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
         _organizationService = organizationService;
-        _userService = userService;
         _currentContext = currentContext;
         _updateOrganizationUserCommand = updateOrganizationUserCommand;
         _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
-        _applicationCacheService = applicationCacheService;
         _paymentService = paymentService;
         _organizationRepository = organizationRepository;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
+        _revokeOrganizationUserCommandV2 = revokeOrganizationUserCommandV2;
+        _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
+        _featureService = featureService;
+        _inviteOrganizationUsersCommand = inviteOrganizationUsersCommand;
+        _pricingClient = pricingClient;
+        _timeProvider = timeProvider;
     }
 
     /// <summary>
@@ -78,7 +100,7 @@ public class MembersController : Controller
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<IActionResult> Get(Guid id)
     {
-        var (orgUser, collections) = await _organizationUserRepository.GetDetailsByIdWithCollectionsAsync(id);
+        var (orgUser, collections) = await _organizationUserRepository.GetDetailsByIdWithSharedCollectionsAsync(id);
         if (orgUser == null || orgUser.OrganizationId != _currentContext.OrganizationId)
         {
             return new NotFoundResult();
@@ -115,19 +137,18 @@ public class MembersController : Controller
     /// </summary>
     /// <remarks>
     /// Returns a list of your organization's members.
-    /// Member objects listed in this call do not include information about their associated collections.
+    /// Member objects listed in this call include information about their associated collections.
     /// </remarks>
     [HttpGet]
     [ProducesResponseType(typeof(ListResponseModel<MemberResponseModel>), (int)HttpStatusCode.OK)]
     public async Task<IActionResult> List()
     {
-        var organizationUserUserDetails = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(_currentContext.OrganizationId.Value);
-        // TODO: Get all CollectionUser associations for the organization and marry them up here for the response.
+        var organizationUserUserDetails = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(_currentContext.OrganizationId!.Value, includeSharedCollections: true);
 
         var orgUsersTwoFactorIsEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUserUserDetails);
         var memberResponses = organizationUserUserDetails.Select(u =>
         {
-            return new MemberResponseModel(u, orgUsersTwoFactorIsEnabled.FirstOrDefault(tuple => tuple.user == u).twoFactorIsEnabled, null);
+            return new MemberResponseModel(u, orgUsersTwoFactorIsEnabled.FirstOrDefault(tuple => tuple.user == u).twoFactorIsEnabled, u.Collections);
         });
         var response = new ListResponseModel<MemberResponseModel>(memberResponses);
         return new JsonResult(response);
@@ -155,13 +176,44 @@ public class MembersController : Controller
         }
 
         var invite = model.ToOrganizationUserInvite();
+        if (_featureService.IsEnabled(FeatureFlagKeys.PublicMembersInviteRefactor))
+        {
+            return await PostInviteUserAsync_vNext(model, organization!, hasStandaloneSecretsManager);
+        }
 
         invite.AccessSecretsManager = hasStandaloneSecretsManager;
 
-        var user = await _organizationService.InviteUserAsync(_currentContext.OrganizationId.Value, null,
+        var user = await _organizationService.InviteUserAsync(_currentContext.OrganizationId!.Value, null,
             systemUser: null, invite, model.ExternalId);
         var response = new MemberResponseModel(user, invite.Collections);
         return new JsonResult(response);
+    }
+
+    private async Task<IActionResult> PostInviteUserAsync_vNext(
+        MemberCreateRequestModel model,
+        Core.AdminConsole.Entities.Organization organization,
+        bool hasStandaloneSecretsManager)
+    {
+        var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+        var inviteOrganization = new InviteOrganization(organization, plan);
+        var request = model.ToInviteRequest(inviteOrganization, hasStandaloneSecretsManager, Guid.Empty, _timeProvider.GetUtcNow());
+
+        var result = await _inviteOrganizationUsersCommand.InviteImportedOrganizationUsersAsync(request);
+
+        switch (result)
+        {
+            case Success<InviteOrganizationUsersResponse> success:
+                var user = success.Value.InvitedUsers.First();
+                var collections = model.Collections?.Select(c => c.ToCollectionAccessSelection()).ToList();
+                var response = new MemberResponseModel(user, collections);
+                return new JsonResult(response);
+            case Failure<InviteOrganizationUsersResponse> { Error.Message: NoUsersToInviteError.Code }:
+                throw new BadRequestException("This user has already been invited.");
+            case Failure<InviteOrganizationUsersResponse> failure:
+                throw MapToBitException(failure.Error);
+            default:
+                throw new InvalidOperationException();
+        }
     }
 
     /// <summary>
@@ -188,12 +240,12 @@ public class MembersController : Controller
         var updatedUser = model.ToOrganizationUser(existingUser);
         var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection()).ToList();
         await _updateOrganizationUserCommand.UpdateUserAsync(updatedUser, existingUserType, null, associations, model.Groups);
-        MemberResponseModel response = null;
+        MemberResponseModel response;
         if (existingUser.UserId.HasValue)
         {
             var existingUserDetails = await _organizationUserRepository.GetDetailsByIdAsync(id);
-            response = new MemberResponseModel(existingUserDetails,
-                await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(existingUserDetails), associations);
+            response = new MemberResponseModel(existingUserDetails!,
+                await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(existingUserDetails!), associations);
         }
         else
         {
@@ -242,7 +294,7 @@ public class MembersController : Controller
         {
             return new NotFoundResult();
         }
-        await _removeOrganizationUserCommand.RemoveUserAsync(_currentContext.OrganizationId.Value, id, null);
+        await _removeOrganizationUserCommand.RemoveUserAsync(_currentContext.OrganizationId!.Value, id, null);
         return new OkResult();
     }
 
@@ -264,7 +316,62 @@ public class MembersController : Controller
         {
             return new NotFoundResult();
         }
-        await _resendOrganizationInviteCommand.ResendInviteAsync(_currentContext.OrganizationId.Value, null, id);
+        await _resendOrganizationInviteCommand.ResendInviteAsync(_currentContext.OrganizationId!.Value, null, id);
+        return new OkResult();
+    }
+
+    /// <summary>
+    /// Revoke a member's access to an organization.
+    /// </summary>
+    /// <param name="id">The ID of the member to be revoked.</param>
+    [HttpPost("{id}/revoke")]
+    [ProducesResponseType((int)HttpStatusCode.OK)]
+    [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
+    [ProducesResponseType((int)HttpStatusCode.NotFound)]
+    public async Task<IActionResult> Revoke(Guid id)
+    {
+        var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
+        if (organizationUser == null || organizationUser.OrganizationId != _currentContext.OrganizationId)
+        {
+            return new NotFoundResult();
+        }
+
+        var request = new RevokeOrganizationUsersRequest(
+            _currentContext.OrganizationId!.Value,
+            [id],
+            new SystemUser(EventSystemUser.PublicApi)
+        );
+
+        var results = await _revokeOrganizationUserCommandV2.RevokeUsersAsync(request);
+        var result = results.Single();
+
+        return result.Result.Match<IActionResult>(
+            error => new BadRequestObjectResult(new ErrorResponseModel(error.Message)),
+            _ => new OkResult()
+        );
+    }
+
+    /// <summary>
+    /// Restore a member.
+    /// </summary>
+    /// <remarks>
+    /// Restores a previously revoked member of the organization.
+    /// </remarks>
+    /// <param name="id">The identifier of the member to be restored.</param>
+    [HttpPost("{id}/restore")]
+    [ProducesResponseType((int)HttpStatusCode.OK)]
+    [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
+    [ProducesResponseType((int)HttpStatusCode.NotFound)]
+    public async Task<IActionResult> Restore(Guid id)
+    {
+        var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
+        if (organizationUser == null || organizationUser.OrganizationId != _currentContext.OrganizationId)
+        {
+            return new NotFoundResult();
+        }
+
+        await _restoreOrganizationUserCommand.RestoreUserAsync(organizationUser, EventSystemUser.PublicApi);
+
         return new OkResult();
     }
 }

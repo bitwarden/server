@@ -1,8 +1,10 @@
 @using Bit.Admin.Enums;
+@using Bit.Core;
 
 @inject SignInManager<IdentityUser> SignInManager
 @inject Bit.Core.Settings.GlobalSettings GlobalSettings
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
+@inject Bit.Core.Services.IFeatureService FeatureService
 
 @{
     var canViewUsers = AccessControlService.UserHasPermission(Permission.User_List_View);
@@ -13,12 +15,11 @@
     var canPromoteAdmin = AccessControlService.UserHasPermission(Permission.Tools_PromoteAdmin);
     var canPromoteProviderServiceUser = AccessControlService.UserHasPermission(Permission.Tools_PromoteProviderServiceUser);
     var canGenerateLicense = AccessControlService.UserHasPermission(Permission.Tools_GenerateLicenseFile);
-    var canManageStripeSubscriptions = AccessControlService.UserHasPermission(Permission.Tools_ManageStripeSubscriptions);
     var canProcessStripeEvents = AccessControlService.UserHasPermission(Permission.Tools_ProcessStripeEvents);
-    var canMigrateProviders = AccessControlService.UserHasPermission(Permission.Tools_MigrateProviders);
+    var enablePersonalDiscounts = FeatureService.IsEnabled(FeatureFlagKeys.PM29108_EnablePersonalDiscounts);
 
     var canViewTools = canChargeBraintree || canCreateTransaction || canPromoteAdmin || canPromoteProviderServiceUser ||
-                        canGenerateLicense || canManageStripeSubscriptions;
+                        canGenerateLicense;
 }
 
 <!DOCTYPE html>
@@ -65,6 +66,14 @@
                                     <a class="nav-link" asp-controller="Providers" asp-action="Index">Providers</a>
                                 </li>
                             }
+                            @if (canCreateTransaction && enablePersonalDiscounts)
+                            {
+                                <li class="nav-item" active-controller="SubscriptionDiscounts">
+                                    <a class="nav-link" asp-controller="SubscriptionDiscounts" asp-action="Index">
+                                        Discounts
+                                    </a>
+                                </li>
+                            }
                             @if (canViewTools)
                             {
                                 <li class="nav-item dropdown" active-controller="tools">
@@ -103,22 +112,10 @@
                                                 Generate License
                                             </a>
                                         }
-                                        @if (canManageStripeSubscriptions)
-                                        {
-                                            <a class="dropdown-item" asp-controller="Tools" asp-action="StripeSubscriptions">
-                                                Manage Stripe Subscriptions
-                                            </a>
-                                        }
                                          @if (canProcessStripeEvents)
                                         {
                                             <a class="dropdown-item" asp-controller="ProcessStripeEvents" asp-action="Index">
                                                 Process Stripe Events
-                                            </a>
-                                        }
-                                        @if (canMigrateProviders)
-                                        {
-                                            <a class="dropdown-item" asp-controller="MigrateProviders" asp-action="index">
-                                                Migrate Providers
                                             </a>
                                         }
                                     </ul>

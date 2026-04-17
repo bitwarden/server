@@ -17,6 +17,7 @@ using static StripeConstants;
 
 public class UpdateBillingAddressCommandTests
 {
+    private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly ISubscriberService _subscriberService = Substitute.For<ISubscriberService>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly UpdateBillingAddressCommand _command;
@@ -24,6 +25,7 @@ public class UpdateBillingAddressCommandTests
     public UpdateBillingAddressCommandTests()
     {
         _command = new UpdateBillingAddressCommand(
+            _featureService,
             Substitute.For<ILogger<UpdateBillingAddressCommand>>(),
             _subscriberService,
             _stripeAdapter);
@@ -73,9 +75,9 @@ public class UpdateBillingAddressCommandTests
             }
         };
 
-        _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions")
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock")
         )).Returns(customer);
 
         var result = await _command.Run(organization, input);
@@ -84,7 +86,7 @@ public class UpdateBillingAddressCommandTests
         var output = result.AsT0;
         Assert.Equivalent(input, output);
 
-        await _stripeAdapter.Received(1).SubscriptionUpdateAsync(organization.GatewaySubscriptionId,
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options => options.AutomaticTax.Enabled == true));
     }
 
@@ -131,9 +133,9 @@ public class UpdateBillingAddressCommandTests
             }
         };
 
-        _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions")
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock")
         )).Returns(customer);
 
         var result = await _command.Run(organization, input);
@@ -144,7 +146,7 @@ public class UpdateBillingAddressCommandTests
 
         await _subscriberService.Received(1).CreateStripeCustomer(organization);
 
-        await _stripeAdapter.Received(1).SubscriptionUpdateAsync(organization.GatewaySubscriptionId,
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options => options.AutomaticTax.Enabled == true));
     }
 
@@ -192,9 +194,12 @@ public class UpdateBillingAddressCommandTests
             }
         };
 
-        _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+        _stripeAdapter.GetCustomerAsync(organization.GatewayCustomerId)
+            .Returns(new Customer { TaxExempt = TaxExempt.None });
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions", "tax_ids") &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock", "tax_ids") &&
             options.TaxExempt == TaxExempt.None
         )).Returns(customer);
 
@@ -204,7 +209,7 @@ public class UpdateBillingAddressCommandTests
         var output = result.AsT0;
         Assert.Equivalent(input, output);
 
-        await _stripeAdapter.Received(1).SubscriptionUpdateAsync(organization.GatewaySubscriptionId,
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options => options.AutomaticTax.Enabled == true));
     }
 
@@ -260,9 +265,12 @@ public class UpdateBillingAddressCommandTests
             }
         };
 
-        _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+        _stripeAdapter.GetCustomerAsync(organization.GatewayCustomerId)
+            .Returns(new Customer { TaxExempt = TaxExempt.None });
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions", "tax_ids") &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock", "tax_ids") &&
             options.TaxExempt == TaxExempt.None
         )).Returns(customer);
 
@@ -272,10 +280,10 @@ public class UpdateBillingAddressCommandTests
         var output = result.AsT0;
         Assert.Equivalent(input, output);
 
-        await _stripeAdapter.Received(1).SubscriptionUpdateAsync(organization.GatewaySubscriptionId,
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options => options.AutomaticTax.Enabled == true));
 
-        await _stripeAdapter.Received(1).TaxIdDeleteAsync(customer.Id, "tax_id_123");
+        await _stripeAdapter.Received(1).DeleteTaxIdAsync(customer.Id, "tax_id_123");
     }
 
     [Fact]
@@ -322,9 +330,12 @@ public class UpdateBillingAddressCommandTests
             }
         };
 
-        _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+        _stripeAdapter.GetCustomerAsync(organization.GatewayCustomerId)
+            .Returns(new Customer { TaxExempt = TaxExempt.None });
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions", "tax_ids") &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock", "tax_ids") &&
             options.TaxExempt == TaxExempt.Reverse
         )).Returns(customer);
 
@@ -334,7 +345,70 @@ public class UpdateBillingAddressCommandTests
         var output = result.AsT0;
         Assert.Equivalent(input, output);
 
-        await _stripeAdapter.Received(1).SubscriptionUpdateAsync(organization.GatewaySubscriptionId,
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(options => options.AutomaticTax.Enabled == true));
+    }
+
+    [Fact]
+    public async Task Run_SwissBusinessOrganization_MakesCorrectInvocations_ReturnsBillingAddress()
+    {
+        var organization = new Organization
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        };
+
+        var input = new BillingAddress
+        {
+            Country = "CH",
+            PostalCode = "3001",
+            Line1 = "Bundesgasse 1",
+            Line2 = string.Empty,
+            City = "Bern",
+            State = "BE"
+        };
+
+        var customer = new Customer
+        {
+            Address = new Address
+            {
+                Country = "CH",
+                PostalCode = "3001",
+                Line1 = "Bundesgasse 1",
+                Line2 = string.Empty,
+                City = "Bern",
+                State = "BE"
+            },
+            Subscriptions = new StripeList<Subscription>
+            {
+                Data =
+                [
+                    new Subscription
+                    {
+                        Id = organization.GatewaySubscriptionId,
+                        AutomaticTax = new SubscriptionAutomaticTax { Enabled = false }
+                    }
+                ]
+            }
+        };
+
+        _stripeAdapter.GetCustomerAsync(organization.GatewayCustomerId)
+            .Returns(new Customer { TaxExempt = TaxExempt.None });
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+            options.Address.Matches(input) &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock", "tax_ids") &&
+            options.TaxExempt == TaxExempt.None
+        )).Returns(customer);
+
+        var result = await _command.Run(organization, input);
+
+        Assert.True(result.IsT0);
+        var output = result.AsT0;
+        Assert.Equivalent(input, output);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options => options.AutomaticTax.Enabled == true));
     }
 
@@ -384,14 +458,17 @@ public class UpdateBillingAddressCommandTests
             }
         };
 
-        _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+        _stripeAdapter.GetCustomerAsync(organization.GatewayCustomerId)
+            .Returns(new Customer { TaxExempt = TaxExempt.None });
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions", "tax_ids") &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock", "tax_ids") &&
             options.TaxExempt == TaxExempt.Reverse
         )).Returns(customer);
 
         _stripeAdapter
-            .TaxIdCreateAsync(customer.Id,
+            .CreateTaxIdAsync(customer.Id,
                 Arg.Is<TaxIdCreateOptions>(options => options.Type == TaxIdType.EUVAT))
             .Returns(new TaxId { Type = TaxIdType.EUVAT, Value = "ESA12345678" });
 
@@ -401,11 +478,376 @@ public class UpdateBillingAddressCommandTests
         var output = result.AsT0;
         Assert.Equivalent(input with { TaxId = new TaxID(TaxIdType.EUVAT, "ESA12345678") }, output);
 
-        await _stripeAdapter.Received(1).SubscriptionUpdateAsync(organization.GatewaySubscriptionId,
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options => options.AutomaticTax.Enabled == true));
 
-        await _stripeAdapter.Received(1).TaxIdCreateAsync(organization.GatewayCustomerId, Arg.Is<TaxIdCreateOptions>(
+        await _stripeAdapter.Received(1).CreateTaxIdAsync(organization.GatewayCustomerId, Arg.Is<TaxIdCreateOptions>(
             options => options.Type == TaxIdType.SpanishNIF &&
                        options.Value == input.TaxId.Value));
+    }
+
+    [Fact]
+    public async Task Run_BusinessOrganization_UpdatingWithSameTaxId_DeletesBeforeCreating()
+    {
+        var organization = new Organization
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        };
+
+        var input = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345",
+            Line1 = "123 Main St.",
+            Line2 = "Suite 100",
+            City = "New York",
+            State = "NY",
+            TaxId = new TaxID("us_ein", "987654321")
+        };
+
+        var existingTaxId = new TaxId { Id = "tax_id_123", Type = "us_ein", Value = "987654321" };
+
+        var customer = new Customer
+        {
+            Address = new Address
+            {
+                Country = "US",
+                PostalCode = "12345",
+                Line1 = "123 Main St.",
+                Line2 = "Suite 100",
+                City = "New York",
+                State = "NY"
+            },
+            Id = organization.GatewayCustomerId,
+            Subscriptions = new StripeList<Subscription>
+            {
+                Data =
+                [
+                    new Subscription
+                    {
+                        Id = organization.GatewaySubscriptionId,
+                        AutomaticTax = new SubscriptionAutomaticTax { Enabled = false }
+                    }
+                ]
+            },
+            TaxIds = new StripeList<TaxId>
+            {
+                Data = [existingTaxId]
+            }
+        };
+
+        _stripeAdapter.GetCustomerAsync(organization.GatewayCustomerId)
+            .Returns(new Customer { TaxExempt = TaxExempt.None });
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+            options.Address.Matches(input) &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock", "tax_ids") &&
+            options.TaxExempt == TaxExempt.None
+        )).Returns(customer);
+
+        var newTaxId = new TaxId { Id = "tax_id_456", Type = "us_ein", Value = "987654321" };
+        _stripeAdapter.CreateTaxIdAsync(customer.Id, Arg.Is<TaxIdCreateOptions>(
+            options => options.Type == "us_ein" && options.Value == "987654321"
+        )).Returns(newTaxId);
+
+        var result = await _command.Run(organization, input);
+
+        Assert.True(result.IsT0);
+        var output = result.AsT0;
+        Assert.Equivalent(input, output);
+
+        // Verify that deletion happens before creation
+        Received.InOrder(() =>
+        {
+            _stripeAdapter.DeleteTaxIdAsync(customer.Id, existingTaxId.Id);
+            _stripeAdapter.CreateTaxIdAsync(customer.Id, Arg.Any<TaxIdCreateOptions>());
+        });
+
+        await _stripeAdapter.Received(1).DeleteTaxIdAsync(customer.Id, existingTaxId.Id);
+        await _stripeAdapter.Received(1).CreateTaxIdAsync(customer.Id, Arg.Is<TaxIdCreateOptions>(
+            options => options.Type == "us_ein" && options.Value == "987654321"));
+    }
+
+    [Fact]
+    public async Task Run_SwissBusinessOrganization_WithReverse_CorrectsTaxExemptToNone()
+    {
+        // CH is a direct-tax country — "reverse" is not preserved. A customer moving from a
+        // non-direct-tax country (where "reverse" was correctly set) to Switzerland should have
+        // their tax_exempt corrected to "none".
+        var organization = new Organization
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        };
+
+        var input = new BillingAddress
+        {
+            Country = "CH",
+            PostalCode = "3001",
+            Line1 = "Bundesgasse 1",
+            Line2 = string.Empty,
+            City = "Bern",
+            State = "BE"
+        };
+
+        var customer = new Customer
+        {
+            Address = new Address
+            {
+                Country = "CH",
+                PostalCode = "3001",
+                Line1 = "Bundesgasse 1",
+                Line2 = string.Empty,
+                City = "Bern",
+                State = "BE"
+            },
+            Subscriptions = new StripeList<Subscription>
+            {
+                Data =
+                [
+                    new Subscription
+                    {
+                        Id = organization.GatewaySubscriptionId,
+                        AutomaticTax = new SubscriptionAutomaticTax { Enabled = true }
+                    }
+                ]
+            }
+        };
+
+        _stripeAdapter.GetCustomerAsync(organization.GatewayCustomerId)
+            .Returns(new Customer { TaxExempt = TaxExempt.Reverse });
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+            options.Address.Matches(input) &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock", "tax_ids") &&
+            options.TaxExempt == TaxExempt.None
+        )).Returns(customer);
+
+        var result = await _command.Run(organization, input);
+
+        Assert.True(result.IsT0);
+        var output = result.AsT0;
+        Assert.Equivalent(input, output);
+
+        await _stripeAdapter.Received(1).UpdateCustomerAsync(organization.GatewayCustomerId,
+            Arg.Is<CustomerUpdateOptions>(options => options.TaxExempt == TaxExempt.None));
+    }
+
+    [Fact]
+    public async Task Run_BusinessOrganizationWithExemptStatus_PreservesExempt()
+    {
+        var organization = new Organization
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        };
+
+        var input = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345",
+            Line1 = "123 Main St.",
+            City = "New York",
+            State = "NY"
+        };
+
+        var customer = new Customer
+        {
+            Address = new Address
+            {
+                Country = "US",
+                PostalCode = "12345",
+                Line1 = "123 Main St.",
+                City = "New York",
+                State = "NY"
+            },
+            Subscriptions = new StripeList<Subscription>
+            {
+                Data =
+                [
+                    new Subscription
+                    {
+                        Id = organization.GatewaySubscriptionId,
+                        AutomaticTax = new SubscriptionAutomaticTax { Enabled = true }
+                    }
+                ]
+            }
+        };
+
+        _stripeAdapter.GetCustomerAsync(organization.GatewayCustomerId)
+            .Returns(new Customer { TaxExempt = TaxExempt.Exempt });
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+            options.Address.Matches(input) &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock", "tax_ids") &&
+            options.TaxExempt == TaxExempt.Exempt
+        )).Returns(customer);
+
+        var result = await _command.Run(organization, input);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).UpdateCustomerAsync(organization.GatewayCustomerId,
+            Arg.Is<CustomerUpdateOptions>(options => options.TaxExempt == TaxExempt.Exempt));
+    }
+
+    [Fact]
+    public async Task Run_PersonalOrganization_FlagOn_SchedulePresent_UpdatesSchedulePhasesAndDefaultSettings()
+    {
+        var organization = new Organization
+        {
+            PlanType = PlanType.FamiliesAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        };
+
+        var input = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345",
+            Line1 = "123 Main St.",
+            City = "New York",
+            State = "NY"
+        };
+
+        var phase1Start = DateTime.UtcNow.AddDays(-10);
+        var phase1End = DateTime.UtcNow.AddDays(5);
+        var phase2End = DateTime.UtcNow.AddDays(370);
+
+        var customer = new Customer
+        {
+            Address = new Address { Country = "US", PostalCode = "12345", Line1 = "123 Main St.", City = "New York", State = "NY" },
+            Subscriptions = new StripeList<Subscription>
+            {
+                Data =
+                [
+                    new Subscription
+                    {
+                        Id = organization.GatewaySubscriptionId,
+                        CustomerId = organization.GatewayCustomerId,
+                        AutomaticTax = new SubscriptionAutomaticTax { Enabled = false }
+                    }
+                ]
+            }
+        };
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+            options.Address.Matches(input) &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock")
+        )).Returns(customer);
+
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data =
+                [
+                    new SubscriptionSchedule
+                    {
+                        Id = "sub_sched_123",
+                        SubscriptionId = organization.GatewaySubscriptionId,
+                        Status = SubscriptionScheduleStatus.Active,
+                        Phases = new List<SubscriptionSchedulePhase>
+                        {
+                            new()
+                            {
+                                StartDate = phase1Start,
+                                EndDate = phase1End,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_old", Quantity = 1 }],
+                                Discounts = [],
+                                ProrationBehavior = "none"
+                            },
+                            new()
+                            {
+                                StartDate = phase1End,
+                                EndDate = phase2End,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_new", Quantity = 1 }],
+                                Discounts = [new SubscriptionSchedulePhaseDiscount { CouponId = "milestone-3" }],
+                                ProrationBehavior = "none"
+                            }
+                        }
+                    }
+                ]
+            });
+
+        var result = await _command.Run(organization, input);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            Arg.Is("sub_sched_123"),
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.DefaultSettings.AutomaticTax.Enabled == true &&
+                o.Phases.Count == 2 &&
+                o.Phases[0].AutomaticTax.Enabled == true &&
+                o.Phases[0].Items[0].Price == "price_old" &&
+                o.Phases[1].AutomaticTax.Enabled == true &&
+                o.Phases[1].Items[0].Price == "price_new" &&
+                o.Phases[1].Discounts[0].Coupon == "milestone-3"));
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task Run_PersonalOrganization_FlagOn_NoSchedule_UpdatesSubscriptionDirectly()
+    {
+        var organization = new Organization
+        {
+            PlanType = PlanType.FamiliesAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        };
+
+        var input = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345",
+            Line1 = "123 Main St.",
+            City = "New York",
+            State = "NY"
+        };
+
+        var customer = new Customer
+        {
+            Address = new Address { Country = "US", PostalCode = "12345", Line1 = "123 Main St.", City = "New York", State = "NY" },
+            Subscriptions = new StripeList<Subscription>
+            {
+                Data =
+                [
+                    new Subscription
+                    {
+                        Id = organization.GatewaySubscriptionId,
+                        CustomerId = organization.GatewayCustomerId,
+                        AutomaticTax = new SubscriptionAutomaticTax { Enabled = false }
+                    }
+                ]
+            }
+        };
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+            options.Address.Matches(input) &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock")
+        )).Returns(customer);
+
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = new List<SubscriptionSchedule>() });
+
+        var result = await _command.Run(organization, input);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionScheduleAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(options => options.AutomaticTax.Enabled == true));
     }
 }
