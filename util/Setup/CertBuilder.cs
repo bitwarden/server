@@ -39,7 +39,7 @@ public class CertBuilder
                 }
                 else if (_context.App.ReadQuestion("Do you want to generate a self-signed SSL certificate?"))
                 {
-                    Directory.CreateDirectory($"{_context.App.RootDirectory}/ssl/self/{_context.Install.Domain}/");
+                    var directory = Directory.CreateDirectory($"{_context.App.RootDirectory}/ssl/self/{_context.Install.Domain}/");
                     Helpers.WriteLine(_context, "Generating self signed SSL certificate.");
                     _context.Config.Ssl = true;
                     _context.Install.Trusted = false;
@@ -58,8 +58,8 @@ public class CertBuilder
                             "-sha256",
                             "-nodes",
                             "-days", "36500",
-                            "-keyout", $"/bitwarden/ssl/self/{_context.Install.Domain}/private.key",
-                            "-out", $"/bitwarden/ssl/self/{_context.Install.Domain}/certificate.crt",
+                            "-keyout", $"{directory.FullName}/private.key",
+                            "-out", $"{directory.FullName}/certificate.crt",
                             "-reqexts", "SAN",
                             "-extensions", "SAN",
                             "-config", opensslConfigPath,
@@ -74,13 +74,12 @@ public class CertBuilder
         {
             _context.Install.Trusted = true;
             _context.Install.DiffieHellman = true;
-            var directory = $"{_context.App.RootDirectory}/letsencrypt/live/{_context.Install.Domain}/";
-            Directory.CreateDirectory(directory);
+            var directory = Directory.CreateDirectory($"{_context.App.RootDirectory}/letsencrypt/live/{_context.Install.Domain}/");
             Helpers.Exec(
                 "openssl",
                 [
                     "dhparam",
-                    "-out", $"{directory}/dhparam.pem",
+                    "-out", $"{directory.FullName}/dhparam.pem",
                     "2048",
                 ]);
         }
