@@ -63,6 +63,7 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @UsePhishingBlocker BIT = 0,
     @UseDisableSmAdsForUsers BIT = 0,
     @UseMyItems BIT = 0,
+    @UseInviteLinks BIT = 0,
     @ExemptFromBillingAutomation BIT = 0
 AS
 BEGIN
@@ -135,6 +136,7 @@ BEGIN
         [MaxStorageGbIncreased] = @MaxStorageGb,
         [UseDisableSmAdsForUsers] = @UseDisableSmAdsForUsers,
         [UseMyItems] = @UseMyItems,
+        [UseInviteLinks] = @UseInviteLinks,
         [ExemptFromBillingAutomation] = @ExemptFromBillingAutomation
     WHERE
         [Id] = @Id;
