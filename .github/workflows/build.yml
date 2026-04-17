@@ -248,6 +248,8 @@ jobs:
           if [[ "${IMAGE_TAG}" == "dev" ]]; then
             SHORT_SHA=$(git rev-parse --short "${SHA}")
             TAGS=$TAGS",${_AZ_REGISTRY}/${PROJECT_NAME}:dev-${SHORT_SHA}"
+            TAGS=$TAGS",${_GHCR_REGISTRY}/${PROJECT_NAME}:dev"
+            TAGS=$TAGS",${_GHCR_REGISTRY}/${PROJECT_NAME}:dev-${SHORT_SHA}"
           fi
 
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
