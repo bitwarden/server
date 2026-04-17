@@ -1,4 +1,4 @@
-namespace Bit.Core.Auth.UserFeatures.WebAuthnLogin;
+﻿namespace Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 
 /// <summary>
 /// Enforces single-use semantics for WebAuthn assertion challenges per the W3C WebAuthn
