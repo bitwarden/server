@@ -185,7 +185,7 @@ public class Program
                     "-in", $"{application.RootDirectory}/identity/identity.pfx",
                     "-nocerts",
                     "-nodes",
-                    "-out identity.key",
+                    "-out", "identity.key",
                     "-passin", $"pass:{_context.Install.IdentityCertPassword}",
                 ],
                 returnStdout: false,
