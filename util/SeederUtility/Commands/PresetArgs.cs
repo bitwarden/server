@@ -2,6 +2,12 @@
 
 namespace Bit.SeederUtility.Commands;
 
+public enum OutputFormat
+{
+    Text,
+    Json,
+}
+
 /// <summary>
 /// CLI argument model for the preset command.
 /// Supports loading presets from embedded resources.
@@ -14,6 +20,14 @@ public class PresetArgs : IArgumentModel
     [Option('l', "list", Description = "List all available presets and fixtures")]
     public bool List { get; set; }
 
+    [Option('o', "output", Description = "Output format for --list: text or json (default: text)")]
+    public string? Output { get; set; }
+
+    public OutputFormat GetOutputFormat() =>
+        string.IsNullOrWhiteSpace(Output)
+            ? OutputFormat.Text
+            : Enum.Parse<OutputFormat>(Output, ignoreCase: true);
+
     [Option("mangle", Description = "Enable mangling for test isolation")]
     public bool Mangle { get; set; }
 
@@ -25,6 +39,12 @@ public class PresetArgs : IArgumentModel
 
     public void Validate()
     {
+        if (!string.IsNullOrWhiteSpace(Output)
+            && !Enum.TryParse<OutputFormat>(Output, ignoreCase: true, out _))
+        {
+            throw new ArgumentException($"Unrecognized output format '{Output}'. Allowed: text, json.");
+        }
+
         if (List)
         {
             return;

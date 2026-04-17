@@ -7,7 +7,11 @@ public class Program
 {
     private static int Main(string[] args)
     {
-        PrintBanner();
+        // Skip the banner when stdout is piped or redirected
+        if (!Console.IsOutputRedirected)
+        {
+            PrintBanner();
+        }
 
         return new AppRunner<Program>()
             .Run(args);
