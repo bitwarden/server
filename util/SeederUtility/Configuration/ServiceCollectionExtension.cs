@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Utilities;
 using Bit.Seeder.Services;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.DataProtection;
@@ -25,7 +26,11 @@ public static class ServiceCollectionExtension
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
         services.TryAddSingleton<ISeedReader, SeedReader>();
 
-        services.AddDataProtection().SetApplicationName("Bitwarden");
+        var dpBuilder = services.AddDataProtection().SetApplicationName("Bitwarden");
+        if (CoreHelpers.SettingHasValue(globalSettings.DataProtection.Directory))
+        {
+            dpBuilder.PersistKeysToFileSystem(new DirectoryInfo(globalSettings.DataProtection.Directory));
+        }
 
         services.AddDatabaseRepositories(globalSettings);
 

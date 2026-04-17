@@ -14,6 +14,9 @@ public class PresetArgs : IArgumentModel
     [Option('l', "list", Description = "List all available presets and fixtures")]
     public bool List { get; set; }
 
+    [Option("json", Description = "Output list as JSON (use with --list)")]
+    public bool Json { get; set; }
+
     [Option("mangle", Description = "Enable mangling for test isolation")]
     public bool Mangle { get; set; }
 

@@ -1,0 +1,136 @@
+name: Build Seeded Database Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      preset:
+        description: "Preset name to build (leave empty to build all organization presets)"
+        required: false
+        type: string
+      database:
+        description: "Database type to build (leave empty to build all)"
+        required: false
+        type: choice
+        options:
+          - ""
+          - postgres
+          - mariadb
+          - mssql
+          - sqlite
+  schedule:
+    - cron: "0 2 * * 0" # Every Sunday at 2am UTC
+
+env:
+  _AZ_REGISTRY: bitwardenprod.azurecr.io
+
+jobs:
+  setup:
+    name: Determine build matrix
+    runs-on: ubuntu-22.04
+    outputs:
+      presets: ${{ steps.matrix.outputs.presets }}
+      databases: ${{ steps.matrix.outputs.databases }}
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v4.1.0
+
+      - name: Restore and build SeederUtility
+        run: |
+          dotnet restore util/SeederUtility/SeederUtility.csproj
+          dotnet build util/SeederUtility/SeederUtility.csproj --no-restore
+
+      - name: Determine matrix
+        id: matrix
+        working-directory: util/SeederUtility
+        run: |
+          # Presets
+          if [[ -n "${{ inputs.preset }}" ]]; then
+            presets='["${{ inputs.preset }}"]'
+          else
+            presets=$(dotnet run --no-build -- preset --list --json | jq -c '.organization')
+          fi
+
+          # Databases
+          if [[ -n "${{ inputs.database }}" ]]; then
+            databases='["${{ inputs.database }}"]'
+          else
+            databases='["postgres","mariadb","mssql","sqlite"]'
+          fi
+
+          echo "presets=${presets}" >> "$GITHUB_OUTPUT"
+          echo "databases=${databases}" >> "$GITHUB_OUTPUT"
+          echo "Preset matrix:   ${presets}"
+          echo "Database matrix: ${databases}"
+
+  build:
+    name: ${{ matrix.database }} / ${{ matrix.preset }}
+    needs: setup
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        preset: ${{ fromJson(needs.setup.outputs.presets) }}
+        database: ${{ fromJson(needs.setup.outputs.databases) }}
+      fail-fast: false
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v4.1.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.7.1
+
+      - name: Set up QEMU (for cross-platform builds)
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.1.0
+
+      - name: Write data protection key
+        env:
+          DP_KEY_XML: ${{ secrets.SEEDER_DP_KEY_XML }}
+        run: |
+          mkdir -p "$HOME/.aspnet/DataProtection-Keys"
+          echo "${DP_KEY_XML}" > \
+            "$HOME/.aspnet/DataProtection-Keys/key-9aa06f19-9afe-414b-8791-189be3b5650f.xml"
+          mkdir -p util/SeederUtility/docker/dp-keys
+          echo "${DP_KEY_XML}" > \
+            util/SeederUtility/docker/dp-keys/key-9aa06f19-9afe-414b-8791-189be3b5650f.xml
+
+      - name: Log in to Azure
+        uses: bitwarden/gh-actions/azure-login@main
+        with:
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
+
+      - name: Log in to ACR
+        run: az acr login -n bitwardenprod
+
+      - name: Build and push seeded image
+        env:
+          PUSH: "true"
+          REGISTRY: ${{ env._AZ_REGISTRY }}
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          GIT_SHA="${GIT_SHA:0:7}" \
+          bash util/SeederUtility/scripts/build-seeded-image.sh \
+            "${{ matrix.preset }}" \
+            "${{ matrix.database }}"
+
+      - name: Job summary
+        if: always()
+        run: |
+          TAG="${{ matrix.preset }}"
+          TAG="${TAG//./-}"
+          DB="${{ matrix.database }}"
+          SHA="${{ github.sha }}"
+          echo "### ${DB} / ${{ matrix.preset }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "| | |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Stable** | \`${{ env._AZ_REGISTRY }}/shot/seeded-${DB}:${TAG}\` |" \
+            >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Versioned** | \`${{ env._AZ_REGISTRY }}/shot/seeded-${DB}:${TAG}-${SHA:0:7}\` |" \
+            >> "$GITHUB_STEP_SUMMARY"
