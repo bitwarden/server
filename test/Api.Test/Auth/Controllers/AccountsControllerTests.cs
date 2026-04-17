@@ -34,7 +34,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IUserService _userService;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IPolicyService _policyService;
-    private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
+    private readonly IFinishSsoJitProvisionMasterPasswordCommand _finishSsoJitProvisionMasterPasswordCommand;
     private readonly ISetInitialMasterPasswordCommandV1 _setInitialMasterPasswordCommandV1;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly ITdeSetPasswordCommand _tdeSetPasswordCommand;
@@ -52,7 +52,7 @@ public class AccountsControllerTests : IDisposable
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _providerUserRepository = Substitute.For<IProviderUserRepository>();
         _policyService = Substitute.For<IPolicyService>();
-        _setInitialMasterPasswordCommand = Substitute.For<ISetInitialMasterPasswordCommand>();
+        _finishSsoJitProvisionMasterPasswordCommand = Substitute.For<IFinishSsoJitProvisionMasterPasswordCommand>();
         _setInitialMasterPasswordCommandV1 = Substitute.For<ISetInitialMasterPasswordCommandV1>();
         _twoFactorIsEnabledQuery = Substitute.For<ITwoFactorIsEnabledQuery>();
         _tdeSetPasswordCommand = Substitute.For<ITdeSetPasswordCommand>();
@@ -69,7 +69,7 @@ public class AccountsControllerTests : IDisposable
             _providerUserRepository,
             _userService,
             _policyService,
-            _setInitialMasterPasswordCommand,
+            _finishSsoJitProvisionMasterPasswordCommand,
             _setInitialMasterPasswordCommandV1,
             _tdeSetPasswordCommand,
             _tdeOffboardingPasswordCommand,
@@ -870,15 +870,15 @@ public class AccountsControllerTests : IDisposable
         // Arrange
         UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
+        _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
             .Returns(Task.CompletedTask);
 
         // Act
         await _sut.PostSetPasswordAsync(setInitialPasswordRequestModel);
 
         // Assert
-        await _setInitialMasterPasswordCommand.Received(1)
-            .SetInitialMasterPasswordAsync(
+        await _finishSsoJitProvisionMasterPasswordCommand.Received(1)
+            .FinishProvisionAsync(
                 Arg.Is<User>(u => u == user),
                 Arg.Is<SetInitialMasterPasswordDataModel>(d =>
                     d.MasterPasswordAuthentication != null &&
@@ -935,7 +935,7 @@ public class AccountsControllerTests : IDisposable
         // Arrange
         UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
+        _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
             .Returns(Task.FromException(new Exception("Setting password failed")));
 
         // Act & Assert

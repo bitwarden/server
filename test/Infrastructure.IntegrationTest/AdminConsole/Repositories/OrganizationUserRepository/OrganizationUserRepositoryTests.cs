@@ -290,7 +290,8 @@ public class OrganizationUserRepositoryTests
             Kdf = KdfType.PBKDF2_SHA256,
             KdfIterations = 1,
             KdfMemory = 2,
-            KdfParallelism = 3
+            KdfParallelism = 3,
+            MasterPasswordSalt = "master-salt1"
         });
 
         var user2 = await userRepository.CreateAsync(new User
@@ -302,7 +303,8 @@ public class OrganizationUserRepositoryTests
             Kdf = KdfType.Argon2id,
             KdfIterations = 4,
             KdfMemory = 5,
-            KdfParallelism = 6
+            KdfParallelism = 6,
+            MasterPasswordSalt = "master-salt2"
         });
 
         var organization = await organizationRepository.CreateAsync(new Organization
@@ -352,7 +354,8 @@ public class OrganizationUserRepositoryTests
             r.KdfMemory == 2 &&
             r.KdfParallelism == 3 &&
             r.ResetPasswordKey == "resetpasswordkey1" &&
-            r.EncryptedPrivateKey == "privatekey");
+            r.EncryptedPrivateKey == "privatekey" &&
+            r.MasterPasswordSalt == "master-salt1");
         Assert.Contains(recoveryDetails, r =>
             r.OrganizationUserId == orgUser2.Id &&
             r.Kdf == KdfType.Argon2id &&
@@ -360,7 +363,8 @@ public class OrganizationUserRepositoryTests
             r.KdfMemory == 5 &&
             r.KdfParallelism == 6 &&
             r.ResetPasswordKey == "resetpasswordkey2" &&
-            r.EncryptedPrivateKey == "privatekey");
+            r.EncryptedPrivateKey == "privatekey" &&
+            r.MasterPasswordSalt == "master-salt2");
     }
 
     [DatabaseTheory, DatabaseData]
@@ -614,6 +618,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(organization.UseOrganizationDomains, result.UseOrganizationDomains);
         Assert.Equal(organization.UseAdminSponsoredFamilies, result.UseAdminSponsoredFamilies);
         Assert.Equal(organization.UseAutomaticUserConfirmation, result.UseAutomaticUserConfirmation);
+        Assert.Equal(orgUser1.RevocationReason, result.RevocationReason);
     }
 
     [Theory, DatabaseData]
@@ -999,10 +1004,11 @@ public class OrganizationUserRepositoryTests
             Id = CoreHelpers.GenerateComb(),
             OrganizationId = organization.Id,
             UserId = user2.Id,
-            Status = OrganizationUserStatusType.Invited,
+            Status = OrganizationUserStatusType.Revoked,
             Type = OrganizationUserType.User,
             ResetPasswordKey = "resetpasswordkey2",
-            AccessSecretsManager = true
+            AccessSecretsManager = true,
+            RevocationReason = RevocationReason.TwoFactorPolicyNonCompliance
         });
 
         var responseModel = await organizationUserRepository.GetManyDetailsByOrganizationAsync_vNext(organization.Id, includeGroups: false, includeSharedCollections: false);
@@ -1018,6 +1024,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(orgUser1.Type, user1Result.Type);
         Assert.Equal(organization.Id, user1Result.OrganizationId);
         Assert.Equal(user1.Id, user1Result.UserId);
+        Assert.Null(user1Result.RevocationReason);
         Assert.Empty(user1Result.Groups);
         Assert.Empty(user1Result.Collections);
 
@@ -1029,6 +1036,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(orgUser2.Type, user2Result.Type);
         Assert.Equal(organization.Id, user2Result.OrganizationId);
         Assert.Equal(user2.Id, user2Result.UserId);
+        Assert.Equal(RevocationReason.TwoFactorPolicyNonCompliance, user2Result.RevocationReason);
         Assert.Empty(user2Result.Groups);
         Assert.Empty(user2Result.Collections);
     }

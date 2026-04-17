@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using Bit.Api.Tools.Utilities;
 using Bit.Core.Exceptions;
@@ -10,7 +7,6 @@ using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
-
 using static System.StringSplitOptions;
 
 namespace Bit.Api.Tools.Models.Request;
@@ -41,14 +37,14 @@ public class SendRequestModel
     /// </summary>
     [EncryptedString]
     [EncryptedStringLength(1000)]
-    public string Name { get; set; }
+    public string? Name { get; set; }
 
     /// <summary>
     /// Notes for the send. This is only visible to the owner of the send.
     /// </summary>
     [EncryptedString]
     [EncryptedStringLength(1000)]
-    public string Notes { get; set; }
+    public string? Notes { get; set; }
 
     /// <summary>
     /// A base64-encoded byte array containing the Send's encryption key. This key is
@@ -57,7 +53,7 @@ public class SendRequestModel
     [Required]
     [EncryptedString]
     [EncryptedStringLength(1000)]
-    public string Key { get; set; }
+    public required string Key { get; set; }
 
     /// <summary>
     /// The maximum number of times a send can be accessed before it expires.
@@ -74,8 +70,8 @@ public class SendRequestModel
 
     /// <summary>
     /// The date after which a send may be automatically deleted from the server.
-    /// When this is <see langword="null" />, the send may be deleted after it has
-    /// exceeded the global send timeout limit.
+    /// The server enforces a maximum of 31 days from creation. A background job
+    /// deletes sends once this date has passed.
     /// </summary>
     [Required]
     public DateTime? DeletionDate { get; set; }
@@ -84,26 +80,26 @@ public class SendRequestModel
     /// Contains file metadata uploaded with the send.
     /// The file content is uploaded separately.
     /// </summary>
-    public SendFileModel File { get; set; }
+    public SendFileModel? File { get; set; }
 
     /// <summary>
     /// Contains text data uploaded with the send.
     /// </summary>
-    public SendTextModel Text { get; set; }
+    public SendTextModel? Text { get; set; }
 
     /// <summary>
     /// Base64-encoded byte array of a password hash that grants access to the send.
     /// Mutually exclusive with <see cref="Emails"/>.
     /// </summary>
     [StringLength(1000)]
-    public string Password { get; set; }
+    public string? Password { get; set; }
 
     /// <summary>
     /// Comma-separated list of emails that may access the send using OTP
     /// authentication. Mutually exclusive with <see cref="Password"/>.
     /// </summary>
     [StringLength(4000)]
-    public string Emails { get; set; }
+    public string? Emails { get; set; }
 
     /// <summary>
     /// When <see langword="true"/>, send access is disabled.
@@ -126,11 +122,7 @@ public class SendRequestModel
     /// <returns>The send object</returns>
     public Send ToSend(Guid userId, ISendAuthorizationService sendAuthorizationService)
     {
-        var send = new Send
-        {
-            Type = Type,
-            UserId = (Guid?)userId
-        };
+        var send = new Send { Type = Type, UserId = (Guid?)userId };
         send = UpdateSend(send, sendAuthorizationService);
         return send;
     }
@@ -146,12 +138,8 @@ public class SendRequestModel
     {
         // FIXME: This method does two things: creates a send and a send file data.
         //        It should only do one thing.
-        var send = ToSendBase(new Send
-        {
-            Type = Type,
-            UserId = (Guid?)userId
-        }, sendAuthorizationService);
-        var data = new SendFileData(Name, Notes, fileName);
+        var send = ToSendBase(new Send { Type = Type, UserId = (Guid?)userId }, sendAuthorizationService);
+        var data = new SendFileData(Name ?? string.Empty, Notes, fileName);
         return (send, data);
     }
 
@@ -167,8 +155,10 @@ public class SendRequestModel
         switch (existingSend.Type)
         {
             case SendType.File:
-                var fileData = JsonSerializer.Deserialize<SendFileData>(existingSend.Data);
-                fileData.Name = Name;
+                // See Send.cs property definition for Data, it can safely be assumed non-null
+                var fileData = JsonSerializer.Deserialize<SendFileData>(existingSend.Data!) ??
+                               throw new JsonException("Failed to deserialize send file data.");
+                fileData.Name = Name ?? string.Empty;
                 fileData.Notes = Notes;
                 existingSend.Data = JsonSerializer.Serialize(fileData, JsonHelpers.IgnoreWritingNull);
                 break;
@@ -178,6 +168,7 @@ public class SendRequestModel
             default:
                 throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");
         }
+
         return existingSend;
     }
 
@@ -195,8 +186,9 @@ public class SendRequestModel
         if (ExpirationDate.HasValue && ExpirationDate.Value <= nowPlus1Minute)
         {
             throw new BadRequestException("You cannot create a Send that is already expired. " +
-                "Adjust the expiration date and try again.");
+                                          "Adjust the expiration date and try again.");
         }
+
         ValidateEdit();
     }
 
@@ -217,25 +209,29 @@ public class SendRequestModel
             if (DeletionDate.Value <= nowPlus1Minute)
             {
                 throw new BadRequestException("You cannot have a Send with a deletion date in the past. " +
-                    "Adjust the deletion date and try again.");
+                                              "Adjust the deletion date and try again.");
             }
+
             if (DeletionDate.Value > now.AddDays(31))
             {
                 throw new BadRequestException("You cannot have a Send with a deletion date that far " +
-                    "into the future. Adjust the Deletion Date to a value less than 31 days from now " +
-                    "and try again.");
+                                              "into the future. Adjust the Deletion Date to a value less than 31 days from now " +
+                                              "and try again.");
             }
         }
+
         if (ExpirationDate.HasValue)
         {
             if (ExpirationDate.Value <= nowPlus1Minute)
             {
                 throw new BadRequestException("You cannot have a Send with an expiration date in the past. " +
-                    "Adjust the expiration date and try again.");
+                                              "Adjust the expiration date and try again.");
             }
-            if (ExpirationDate.Value > DeletionDate.Value)
+
+            if (DeletionDate.HasValue && ExpirationDate.Value > DeletionDate.Value)
             {
-                throw new BadRequestException("You cannot have a Send with an expiration date greater than the deletion date. " +
+                throw new BadRequestException(
+                    "You cannot have a Send with an expiration date greater than the deletion date. " +
                     "Adjust the expiration date and try again.");
             }
         }
@@ -245,7 +241,7 @@ public class SendRequestModel
     {
         existingSend.Key = Key;
         existingSend.ExpirationDate = ExpirationDate;
-        existingSend.DeletionDate = DeletionDate.Value;
+        existingSend.DeletionDate = DeletionDate!.Value;
         existingSend.MaxAccessCount = MaxAccessCount;
         existingSend.Disabled = Disabled.GetValueOrDefault();
         existingSend.HideEmail = HideEmail.GetValueOrDefault();
@@ -268,7 +264,7 @@ public class SendRequestModel
                     existingSend.Password = null;
                     break;
                 case Core.Tools.Enums.AuthType.Password:
-                    existingSend.Password = authorizationService.HashPassword(Password);
+                    existingSend.Password = authorizationService.HashPassword(Password!);
                     existingSend.Emails = null;
                     break;
                 case Core.Tools.Enums.AuthType.None:
@@ -312,9 +308,11 @@ public class SendRequestModel
         return existingSend;
     }
 
+    // Only called from the SendType.Text branch of UpdateSend, Text is required by client and not null
     private SendTextData ToSendTextData()
     {
-        return new SendTextData(Name, Notes, Text.Text, Text.Hidden);
+        var text = Text ?? throw new ArgumentNullException(nameof(Text), "Text is required for text sends.");
+        return new SendTextData(Name ?? string.Empty, Notes, text.Text, text.Hidden);
     }
 }
 

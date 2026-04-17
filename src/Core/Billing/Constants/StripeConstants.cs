@@ -90,6 +90,9 @@ public static class StripeConstants
         public const string RetiredBraintreeCustomerId = "btCustomerId_old";
         public const string UserId = "userId";
         public const string StorageReconciled2025 = "storage_reconciled_2025";
+        public const string OriginatingPlatform = "originatingPlatform";
+        public const string OriginatingAppVersion = "originatingAppVersion";
+        public const string TrialInitiationPath = "trialInitiationPath";
     }
 
     public static class PaymentBehavior
@@ -208,5 +211,28 @@ public static class StripeConstants
         };
     }
 
+    public static class CheckoutSession
+    {
+        public static class Modes
+        {
+            public const string Subscription = "subscription";
+            public const string Payment = "payment";
+            public const string Setup = "setup";
+        }
+
+        // https://docs.stripe.com/api/checkout/sessions/create#create_checkout_session-customer_update-address
+        // Determines whether the customer's address should be updated during checkout session or not.
+        public static class CustomerUpdateAddressOptions
+        {
+            public const string Auto = "auto";
+            public const string Never = "never";
+        }
+
+        public static class Platforms
+        {
+            public const string Ios = "ios";
+            public const string Android = "android";
+        }
+    }
 
 }
