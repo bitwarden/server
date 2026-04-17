@@ -11,4 +11,5 @@ public class TrialSendVerificationEmailRequestModel : RegisterSendVerificationEm
     public ProductTierType ProductTier { get; set; }
     public IEnumerable<ProductType> Products { get; set; }
     public int? TrialLength { get; set; }
+    public bool PaymentOptional { get; set; } = false;
 }
