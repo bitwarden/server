@@ -1,6 +1,8 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.AdminConsole.Authorization.Providers.Requirements;
 using Bit.Api.AdminConsole.Models.Request.Providers;
 using Bit.Api.AdminConsole.Models.Response.Providers;
 using Bit.Api.Models.Response;
@@ -48,23 +50,19 @@ public class ProviderOrganizationsController : Controller
     }
 
     [HttpGet("")]
+    [Authorize<ProviderUserRequirement>]
     public async Task<ListResponseModel<ProviderOrganizationOrganizationDetailsResponseModel>> Get(Guid providerId)
     {
-        if (!_currentContext.AccessProviderOrganizations(providerId))
-        {
-            throw new NotFoundException();
-        }
-
         var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId);
         var responses = providerOrganizations.Select(o => new ProviderOrganizationOrganizationDetailsResponseModel(o));
         return new ListResponseModel<ProviderOrganizationOrganizationDetailsResponseModel>(responses);
     }
 
     [HttpPost("add")]
+    [Authorize<ProviderAdminRequirement>]
     public async Task Add(Guid providerId, [FromBody] ProviderOrganizationAddRequestModel model)
     {
-        if (!_currentContext.ManageProviderOrganizations(providerId) ||
-            !await _currentContext.OrganizationOwner(model.OrganizationId))
+        if (!await _currentContext.OrganizationOwner(model.OrganizationId))
         {
             throw new NotFoundException();
         }
@@ -74,17 +72,13 @@ public class ProviderOrganizationsController : Controller
 
     [HttpPost("")]
     [SelfHosted(NotSelfHostedOnly = true)]
+    [Authorize<ProviderAdminRequirement>]
     public async Task<ProviderOrganizationResponseModel> Post(Guid providerId, [FromBody] ProviderOrganizationCreateRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
         {
             throw new UnauthorizedAccessException();
-        }
-
-        if (!_currentContext.ManageProviderOrganizations(providerId))
-        {
-            throw new NotFoundException();
         }
 
         var organizationSignup = model.OrganizationCreateRequest.ToOrganizationSignup(user);
@@ -94,13 +88,9 @@ public class ProviderOrganizationsController : Controller
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize<ProviderAdminRequirement>]
     public async Task Delete(Guid providerId, Guid id)
     {
-        if (!_currentContext.ManageProviderOrganizations(providerId))
-        {
-            throw new NotFoundException();
-        }
-
         var provider = await _providerRepository.GetByIdAsync(providerId);
 
         var providerOrganization = await _providerOrganizationRepository.GetByIdAsync(id);
@@ -115,6 +105,7 @@ public class ProviderOrganizationsController : Controller
 
     [HttpPost("{id:guid}/delete")]
     [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
+    [Authorize<ProviderAdminRequirement>]
     public async Task PostDelete(Guid providerId, Guid id)
     {
         await Delete(providerId, id);
