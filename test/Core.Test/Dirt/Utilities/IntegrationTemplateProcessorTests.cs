@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using Bit.Core.Dirt.Utilities;
 using Bit.Core.Models.Data;
