@@ -110,6 +110,7 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
         UseDisableSmAdsForUsers = org.UseDisableSmAdsForUsers;
         UsePhishingBlocker = org.UsePhishingBlocker;
         UseMyItems = org.UseMyItems;
+        ExemptFromBillingAutomation = org.ExemptFromBillingAutomation;
 
         _plans = plans;
     }
@@ -205,6 +206,8 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
     public bool UseAutomaticUserConfirmation { get; set; }
     [Display(Name = "Create My Items for organization ownership")]
     public bool UseMyItems { get; set; }
+    [Display(Name = "Exempt From Billing Automation")]
+    public bool ExemptFromBillingAutomation { get; set; }
     /**
      * Creates a Plan[] object for use in Javascript
      * This is mapped manually below to provide some type safety in case the plan objects change
@@ -340,6 +343,7 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
         existingOrganization.UseDisableSmAdsForUsers = UseDisableSmAdsForUsers;
         existingOrganization.UsePhishingBlocker = UsePhishingBlocker;
         existingOrganization.UseMyItems = UseMyItems;
+        existingOrganization.ExemptFromBillingAutomation = ExemptFromBillingAutomation;
         return existingOrganization;
     }
 

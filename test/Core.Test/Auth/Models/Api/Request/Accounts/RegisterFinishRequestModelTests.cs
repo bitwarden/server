@@ -358,6 +358,60 @@ public class RegisterFinishRequestModelTests
     }
 
     [Fact]
+    public void Validate_WhenKdfMismatchBetweenAuthAndUnlock_ReturnsKdfEqualityError()
+    {
+        var model = new RegisterFinishRequestModel
+        {
+            Email = "user@example.com",
+            UserAsymmetricKeys = new KeysRequestModel { PublicKey = "pk", EncryptedPrivateKey = "sk" },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = AuthConstants.PBKDF2_ITERATIONS.Default },
+                MasterKeyWrappedUserKey = "wrapped",
+                Salt = "salt"
+            },
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = new KdfRequestModel { KdfType = KdfType.Argon2id, Iterations = 3, Memory = 64, Parallelism = 4 },
+                MasterPasswordAuthenticationHash = "auth-hash",
+                Salt = "salt"
+            },
+            EmailVerificationToken = "token"
+        };
+
+        var results = Validate(model);
+
+        Assert.Contains(results, r => r.ErrorMessage == "KDF settings must be equal for authentication and unlock.");
+    }
+
+    [Fact]
+    public void Validate_WhenSaltMismatchBetweenAuthAndUnlock_ReturnsSaltEqualityError()
+    {
+        var model = new RegisterFinishRequestModel
+        {
+            Email = "user@example.com",
+            UserAsymmetricKeys = new KeysRequestModel { PublicKey = "pk", EncryptedPrivateKey = "sk" },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = AuthConstants.PBKDF2_ITERATIONS.Default },
+                MasterKeyWrappedUserKey = "wrapped",
+                Salt = "salt-unlock"
+            },
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = AuthConstants.PBKDF2_ITERATIONS.Default },
+                MasterPasswordAuthenticationHash = "auth-hash",
+                Salt = "salt-auth"
+            },
+            EmailVerificationToken = "token"
+        };
+
+        var results = Validate(model);
+
+        Assert.Contains(results, r => r.ErrorMessage == "Invalid master password salt.");
+    }
+
+    [Fact]
     public void Validate_WhenNoValidRegistrationTokenProvided_ReturnsTokenErrorOnly()
     {
         var model = new RegisterFinishRequestModel

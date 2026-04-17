@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Commands;
+﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
@@ -132,7 +133,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
 
         customer = await ReconcileBillingLocationAsync(customer, subscriptionPurchase.BillingAddress);
 
-        var subscription = await CreateSubscriptionAsync(user.Id, customer, premiumPlan, subscriptionPurchase.AdditionalStorageGb > 0 ? subscriptionPurchase.AdditionalStorageGb : null, validatedCoupons);
+        var subscription = await CreateSubscriptionAsync(user.Id, customer, premiumPlan, subscriptionPurchase.AdditionalStorageGb > 0 ? subscriptionPurchase.AdditionalStorageGb : null, validatedCoupons, subscriptionPurchase.FromMarketing);
 
         subscriptionPurchase.PaymentMethod.Switch(
             tokenized =>
@@ -312,7 +313,8 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         Customer customer,
         Pricing.Premium.Plan premiumPlan,
         int? storage,
-        IReadOnlyList<string> validatedCoupons)
+        IReadOnlyList<string> validatedCoupons,
+        string? fromMarketing)
     {
 
         var subscriptionItemOptionsList = new List<SubscriptionItemOptions>
@@ -346,7 +348,10 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             Items = subscriptionItemOptionsList,
             Metadata = new Dictionary<string, string>
             {
-                [MetadataKeys.UserId] = userId.ToString()
+                [MetadataKeys.UserId] = userId.ToString(),
+                [MetadataKeys.TrialInitiationPath] = fromMarketing == MarketingInitiativeConstants.Premium
+                    ? "marketing-initiated"
+                    : "product-initiated"
             },
             PaymentBehavior = usingPayPal
                 ? PaymentBehavior.DefaultIncomplete

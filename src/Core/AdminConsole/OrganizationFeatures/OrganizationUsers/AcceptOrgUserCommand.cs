@@ -232,9 +232,15 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         var policyRequirement = await _policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(
             user.Id);
 
+        // Ensure that the user is not already in the list of organization users
+        if (!allOrgUsers.Any(x => x.OrganizationId == orgUser.OrganizationId && x.UserId == user.Id))
+        {
+            allOrgUsers.Add(orgUser);
+        }
+
         var error = (await _automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser.OrganizationId,
-                    allOrgUsers.Append(orgUser),
+                    allOrgUsers,
                     user),
                 policyRequirement))
             .Match(

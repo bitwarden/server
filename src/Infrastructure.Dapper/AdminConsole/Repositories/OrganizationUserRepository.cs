@@ -561,24 +561,12 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
     public async Task RevokeAsync(Guid id)
     {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.ExecuteAsync(
-                $"[{Schema}].[{Table}_Deactivate]",
-                new { Id = id },
-                commandType: CommandType.StoredProcedure);
-        }
+        await RevokeManyAsync([id]);
     }
 
     public async Task RestoreAsync(Guid id, OrganizationUserStatusType status)
     {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.ExecuteAsync(
-                $"[{Schema}].[{Table}_Activate]",
-                new { Id = id, Status = status },
-                commandType: CommandType.StoredProcedure);
-        }
+        await RestoreManyAsync([id], status);
     }
 
     public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId, PolicyType policyType)
@@ -633,16 +621,30 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds)
+    public async Task RevokeManyAsync(IEnumerable<Guid> organizationUserIds, RevocationReason? reason = null)
     {
         await using var connection = new SqlConnection(ConnectionString);
 
         await connection.ExecuteAsync(
-            "[dbo].[OrganizationUser_SetStatusForUsersByGuidIdArray]",
+            "[dbo].[OrganizationUser_RevokeMany]",
             new
             {
                 OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP(),
-                Status = OrganizationUserStatusType.Revoked
+                RevocationReason = (byte?)reason
+            },
+            commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task RestoreManyAsync(IEnumerable<Guid> organizationUserIds, OrganizationUserStatusType status)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        await connection.ExecuteAsync(
+            "[dbo].[OrganizationUser_RestoreMany]",
+            new
+            {
+                OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP(),
+                Status = status
             },
             commandType: CommandType.StoredProcedure);
     }

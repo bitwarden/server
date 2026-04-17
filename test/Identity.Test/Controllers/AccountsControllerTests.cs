@@ -953,8 +953,9 @@ public class AccountsControllerTests : IDisposable
         // Act
         var results = model.Validate(ctx).ToList();
 
-        // Assert mismatched auth/unlock is allowed
-        Assert.Empty(results);
+        // Assert mismatched auth/unlock KDF settings are rejected
+        Assert.Single(results);
+        Assert.Equal("KDF settings must be equal for authentication and unlock.", results[0].ErrorMessage);
     }
 
     [Theory, BitAutoData]
@@ -1004,8 +1005,9 @@ public class AccountsControllerTests : IDisposable
         // Act
         var results = model.Validate(ctx).ToList();
 
-        // Assert mismatched salts between auth/unlock are allowed
-        Assert.Empty(results);
+        // Assert mismatched salts between auth/unlock are rejected
+        Assert.Single(results);
+        Assert.Equal("Invalid master password salt.", results[0].ErrorMessage);
     }
 
     [Theory, BitAutoData]

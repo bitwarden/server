@@ -63,7 +63,7 @@ public class RevokeOrganizationUserCommand(
             return;
         }
 
-        await organizationUserRepository.RevokeManyByIdAsync(validUsers.Select(u => u.Id));
+        await organizationUserRepository.RevokeManyAsync(validUsers.Select(u => u.Id));
     }
 
     private async Task LogRevokedOrganizationUsersAsync(

@@ -15,29 +15,11 @@ namespace Bit.Api.Test.AdminConsole.Controllers;
 public class ProviderOrganizationsControllerTests
 {
     [Theory, BitAutoData]
-    public async Task Add_NotProviderAdmin_ThrowsNotFound(
-        Guid providerId,
-        ProviderOrganizationAddRequestModel model,
-        SutProvider<ProviderOrganizationsController> sutProvider)
-    {
-        sutProvider.GetDependency<ICurrentContext>().ManageProviderOrganizations(providerId)
-            .Returns(false);
-
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Add(providerId, model));
-
-        await sutProvider.GetDependency<IProviderService>().DidNotReceiveWithAnyArgs()
-            .AddOrganization(default, default, default);
-    }
-
-    [Theory, BitAutoData]
     public async Task Add_NotOrgOwner_ThrowsNotFound(
         Guid providerId,
         ProviderOrganizationAddRequestModel model,
         SutProvider<ProviderOrganizationsController> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().ManageProviderOrganizations(providerId)
-            .Returns(true);
-
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(model.OrganizationId)
             .Returns(false);
 
@@ -53,9 +35,6 @@ public class ProviderOrganizationsControllerTests
         ProviderOrganizationAddRequestModel model,
         SutProvider<ProviderOrganizationsController> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().ManageProviderOrganizations(providerId)
-            .Returns(true);
-
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(model.OrganizationId)
             .Returns(true);
 
