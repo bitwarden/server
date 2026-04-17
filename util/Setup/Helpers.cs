@@ -129,16 +129,20 @@ public static class Helpers
         process.OutputDataReceived += (_, e) =>
         {
             if (!returnStdout || e.Data == null) return;
-            result.Append(e.Data);
+            result.AppendLine(e.Data);
         };
 
         process.ErrorDataReceived += (_, e) =>
         {
             if (!returnStderr || e.Data == null) return;
-            result.Append(e.Data);
+            result.AppendLine(e.Data);
         };
 
         process.Start();
+
+        if (returnStdout) process.BeginOutputReadLine();
+        if (returnStderr) process.BeginErrorReadLine();
+
         process.WaitForExit();
 
         return result.ToString();
