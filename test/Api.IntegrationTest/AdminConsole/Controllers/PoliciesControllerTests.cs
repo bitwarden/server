@@ -30,12 +30,6 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     public PoliciesControllerTests(ApiApplicationFactory factory)
     {
         _factory = factory;
-        _factory.SubstituteService<Core.Services.IFeatureService>(featureService =>
-        {
-            featureService
-                .IsEnabled("pm-19467-create-default-location")
-                .Returns(true);
-        });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
