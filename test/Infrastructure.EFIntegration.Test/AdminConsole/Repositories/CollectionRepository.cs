@@ -7,6 +7,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
+using SqlAdminConsoleRepo = Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 
 namespace Bit.Infrastructure.EFIntegration.Test.AdminConsole.Repositories;
 
@@ -20,7 +21,7 @@ public class CollectionRepositoryTests
         CollectionCompare equalityComparer,
         List<EfRepo.CollectionRepository> suts,
         List<EfRepo.OrganizationRepository> efOrganizationRepos,
-        SqlRepo.CollectionRepository sqlCollectionRepo,
+        SqlAdminConsoleRepo.CollectionRepository sqlCollectionRepo,
         SqlRepo.OrganizationRepository sqlOrganizationRepo
         )
     {
