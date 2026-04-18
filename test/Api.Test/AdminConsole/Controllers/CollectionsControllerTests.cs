@@ -1,7 +1,8 @@
 ﻿using System.Security.Claims;
-using Bit.Api.Controllers;
+using Bit.Api.AdminConsole.Authorization.Collections;
+using Bit.Api.AdminConsole.Controllers;
+using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.Models.Request;
-using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;

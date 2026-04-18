@@ -4,7 +4,7 @@
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Core.Entities;
 
-namespace Bit.Api.Models.Public.Request;
+namespace Bit.Api.AdminConsole.Models.Public.Request;
 
 public class CollectionUpdateRequestModel : CollectionBaseModel
 {
