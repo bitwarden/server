@@ -46,6 +46,8 @@ PolicyRequirementQuery (implements IPolicyRequirementQuery)
          └─ Create(IEnumerable<PolicyDetails>) → T : IPolicyRequirement
 ```
 
+### Example code flow
+
 ```csharp
 // Consumer calls:
 var requirement = await _policyRequirementQuery.GetAsync<DisableSendPolicyRequirement>(userId);
