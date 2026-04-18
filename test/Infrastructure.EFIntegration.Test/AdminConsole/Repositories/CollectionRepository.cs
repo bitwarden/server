@@ -8,7 +8,7 @@ using Xunit;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
-namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
+namespace Bit.Infrastructure.EFIntegration.Test.AdminConsole.Repositories;
 
 [EfCollectionCustomize]
 public class CollectionRepositoryTests
