@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[User_ReadBySsoUserOrganizationIdExternalId]
+CREATE OR ALTER PROCEDURE [dbo].[User_ReadBySsoUserOrganizationIdExternalId]
     @OrganizationId UNIQUEIDENTIFIER,
     @ExternalId NVARCHAR(300)
 AS
