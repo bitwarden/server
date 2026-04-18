@@ -5,11 +5,11 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
-using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Collections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationCollections;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Collections;
 
 public class UpdateCollectionCommand : IUpdateCollectionCommand
 {
@@ -80,7 +80,7 @@ public class UpdateCollectionCommand : IUpdateCollectionCommand
 
         collection.RevisionDate = _timeProvider.GetUtcNow().UtcDateTime;
         await _collectionRepository.ReplaceAsync(collection, org.UseGroups ? groupsList : null, usersList);
-        await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Updated);
+        await _eventService.LogCollectionEventAsync(collection, EventType.Collection_Updated);
 
         return collection;
     }

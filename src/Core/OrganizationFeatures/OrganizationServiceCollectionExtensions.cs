@@ -27,8 +27,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationC
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.SelfRevokeUser;
 using Bit.Core.Models.Business.Tokenables;
-using Bit.Core.OrganizationFeatures.OrganizationCollections;
-using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Collections;
+using Bit.Core.AdminConsole.OrganizationFeatures.Collections.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
