@@ -46,6 +46,26 @@ PolicyRequirementQuery (implements IPolicyRequirementQuery)
          └─ Create(IEnumerable<PolicyDetails>) → T : IPolicyRequirement
 ```
 
+```csharp
+// Consumer calls:
+var requirement = await _policyRequirementQuery.GetAsync<DisableSendPolicyRequirement>(userId);
+
+// Internally:
+// 1. PolicyRequirementQuery finds DisableSendPolicyRequirementFactory
+// 2. Queries: policyRepository.GetPolicyDetailsByUserIdsAndPolicyType([userId], PolicyType.DisableSend)
+// 3. For each PolicyDetails row: factory.Enforce(row)
+//    → filters out Owners, Admins, Invited/Revoked members, and provider users
+// 4. factory.Create(filteredRows)
+//    → DisableSendPolicyRequirement { DisableSend = filteredRows.Any() }
+// 5. Returns: DisableSendPolicyRequirement { DisableSend = true }
+
+// Consumer enforces:
+if (requirement.DisableSend)
+{
+    throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
+}
+```
+
 ### Key types
 
 | Type                              | Role                                                                                                           |
@@ -80,28 +100,6 @@ A user may be a member of multiple organizations, each with the same policy enab
 | Any-present                 | Any applicable policy → feature is disabled                |
 | OR aggregation              | Boolean flags set if any organization enables them         |
 | Per-organization dictionary | `{ organizationId → setting }` for per-organization lookup |
-
-### Data flow example
-
-```csharp
-// Consumer calls:
-var requirement = await _policyRequirementQuery.GetAsync<DisableSendPolicyRequirement>(userId);
-
-// Internally:
-// 1. PolicyRequirementQuery finds DisableSendPolicyRequirementFactory
-// 2. Queries: policyRepository.GetPolicyDetailsByUserIdsAndPolicyType([userId], PolicyType.DisableSend)
-// 3. For each PolicyDetails row: factory.Enforce(row)
-//    → filters out Owners, Admins, Invited/Revoked members, and provider users
-// 4. factory.Create(filteredRows)
-//    → DisableSendPolicyRequirement { DisableSend = filteredRows.Any() }
-// 5. Returns: DisableSendPolicyRequirement { DisableSend = true }
-
-// Consumer enforces:
-if (requirement.DisableSend)
-{
-    throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
-}
-```
 
 ## How to Add a New Policy Requirement
 
