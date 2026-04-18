@@ -1,4 +1,4 @@
-using System.Collections.Frozen;
+﻿using System.Collections.Frozen;
 using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
@@ -8,10 +8,12 @@ namespace Bit.Unified;
 public class AssemblyRoutingConvention : IControllerModelConvention
 {
     private readonly FrozenDictionary<Assembly, string> _services;
+    private readonly ILogger _logger;
 
-    public AssemblyRoutingConvention(IEnumerable<IApplicationConfigurator> services)
+    public AssemblyRoutingConvention(IEnumerable<IApplicationConfigurator> services, ILogger logger)
     {
         _services = services.ToFrozenDictionary(s => s.AppAssembly, s => s.RoutePrefix);
+        _logger = logger;
     }
 
     public void Apply(ControllerModel controller)
@@ -19,6 +21,7 @@ public class AssemblyRoutingConvention : IControllerModelConvention
         if (!_services.TryGetValue(controller.ControllerType.Assembly, out var prefix))
         {
             // TODO: Should we warn?
+            _logger.LogWarning("Controller {ControllerType} belongs in an assembly that is not configured", controller.ControllerType.FullName);
             return;
         }
 
@@ -29,7 +32,7 @@ public class AssemblyRoutingConvention : IControllerModelConvention
         {
             throw new NotImplementedException("What does this look like.");
         }
-        
+
         foreach (var selector in controller.Selectors)
         {
             if (selector.AttributeRouteModel is not null)

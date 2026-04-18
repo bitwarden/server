@@ -1,5 +1,6 @@
-using Bit.Core.Settings;
+﻿using Bit.Core.Settings;
 using Bit.Unified;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,7 +24,6 @@ IEnumerable<IApplicationConfigurator> services = [
             startup.Configure(
                 builder,
                 app.Environment,
-                app.Lifetime,
                 app.Services.GetRequiredService<GlobalSettings>(),
                 app.Services.GetRequiredService<ILoggerFactory>().CreateLogger<Bit.Identity.Startup>()
             );
@@ -39,24 +39,35 @@ IEnumerable<IApplicationConfigurator> services = [
             startup.Configure(
                 builder,
                 app.Environment,
-                app.Lifetime,
                 app.Services.GetRequiredService<GlobalSettings>(),
                 app.Services.GetRequiredService<ILoggerFactory>().CreateLogger<Bit.Api.Startup>()
             );
         }
     ),
+    // Bootstrap Admin
+    new ApplicationConfigurator<Bit.Admin.Startup>(
+        "admin",
+        new Bit.Admin.Startup(builder.Environment, builder.Configuration),
+        static (startup, builder, services) => startup.ConfigureServices(services),
+        static (startup, app, builder) =>
+        {
+            startup.Configure(
+                builder,
+                app.Environment,
+                app.Services.GetRequiredService<GlobalSettings>()
+            );
+        }
+    )
 ];
 
-var mvcBuilder = builder.Services.AddMvcCore(options =>
-{
-    options.Conventions.Add(new AssemblyRoutingConvention(services));
-});
-
-// foreach (var service in services)
-// {
-//     // Make sure the controllers for this service are available
-//     mvcBuilder.AddApplicationPart(service.GetType().Assembly);
-// }
+builder.Services.AddOptions<MvcOptions>()
+    .Configure<ILoggerFactory>((options, loggerFactory) =>
+    {
+        options.Conventions.Add(new AssemblyRoutingConvention(
+            services,
+            loggerFactory.CreateLogger("Bitwarden.Unified")
+        ));
+    });
 
 // TODO: Place happy path overrides here
 
@@ -72,17 +83,27 @@ var app = builder.Build();
 var globalSettings = app.Services.GetRequiredService<GlobalSettings>();
 
 // TODO: Middleware
-foreach (var service in services)
+// foreach (var service in services)
+// {
+//     app.MapWhen(
+//         c => c.Request.Path.StartsWithSegments("/" + service.RoutePrefix),
+//         builder =>
+//         {
+//             // Map their specific middleware
+//             service.Configure(app, builder);
+//         }
+//     );
+// }
+
+app.MapGet("/endpoints", (EndpointDataSource endpoints, ILoggerFactory loggerFactory) =>
 {
-    app.MapWhen(
-        c => c.Request.Path.StartsWithSegments("/" + service.RoutePrefix), 
-        builder =>
-        {
-            // Map their specific middleware
-            service.Configure(app, builder);
-        }
-    );
-}
+    var logger = loggerFactory.CreateLogger("Bitwarden.Unified");
+    foreach (var e in endpoints.Endpoints.OfType<RouteEndpoint>().Select(e => e.RoutePattern.RawText))
+    {
+        logger.LogWarning("Endpoint: {Route}", e);
+    }
+    return TypedResults.NoContent();
+});
 
 // foreach (var service in services)
 // {
@@ -90,10 +111,8 @@ foreach (var service in services)
 //     service.MapEndpoints(group);
 // }
 
-// TODO: Test a controller that is 100% convention based
-app.MapControllerRoute(
-    "default",
-    "{prefix}/{controller=Home}/{action=Index}/{id?}"
-);
+app.MapControllers();
 
 app.Run();
+
+public partial class Program;
