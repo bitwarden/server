@@ -1,12 +1,12 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Collections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationCollections;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Collections;
 
 public class DeleteCollectionCommand : IDeleteCollectionCommand
 {
@@ -35,7 +35,7 @@ public class DeleteCollectionCommand : IDeleteCollectionCommand
 
         try
         {
-            await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Deleted, DateTime.UtcNow);
+            await _eventService.LogCollectionEventAsync(collection, EventType.Collection_Deleted, DateTime.UtcNow);
         }
         catch (Exception ex)
         {
@@ -52,7 +52,7 @@ public class DeleteCollectionCommand : IDeleteCollectionCommand
 
     public async Task DeleteManyAsync(IEnumerable<Collection> collections)
     {
-        if (collections.Any(c => c.Type == Enums.CollectionType.DefaultUserCollection))
+        if (collections.Any(c => c.Type == CollectionType.DefaultUserCollection))
         {
             throw new BadRequestException("You cannot delete collections with the type as DefaultUserCollection.");
         }
@@ -61,7 +61,7 @@ public class DeleteCollectionCommand : IDeleteCollectionCommand
 
         try
         {
-            await _eventService.LogCollectionEventsAsync(collections.Select(c => (c, Enums.EventType.Collection_Deleted, (DateTime?)DateTime.UtcNow)));
+            await _eventService.LogCollectionEventsAsync(collections.Select(c => (c, EventType.Collection_Deleted, (DateTime?)DateTime.UtcNow)));
         }
         catch (Exception ex)
         {

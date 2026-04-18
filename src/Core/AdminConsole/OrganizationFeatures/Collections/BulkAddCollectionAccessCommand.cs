@@ -3,11 +3,11 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
-using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Collections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationCollections;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Collections;
 
 public class BulkAddCollectionAccessCommand : IBulkAddCollectionAccessCommand
 {

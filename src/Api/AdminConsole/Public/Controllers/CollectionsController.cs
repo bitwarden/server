@@ -7,7 +7,7 @@ using Bit.Api.AdminConsole.Models.Public.Response;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Context;
 using Bit.Core.Enums;
-using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Collections.Interfaces;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
