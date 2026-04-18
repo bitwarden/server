@@ -2,8 +2,9 @@
 #nullable disable
 
 using AutoMapper;
+using Bit.Infrastructure.EntityFramework.Models;
 
-namespace Bit.Infrastructure.EntityFramework.Models;
+namespace Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 
 public class CollectionGroup : Core.Entities.CollectionGroup
 {
