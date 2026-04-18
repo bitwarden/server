@@ -1,9 +1,11 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Api.AdminConsole.Models.Request;
+using Bit.Api.AdminConsole.Models.Response;
+using Bit.Api.AdminConsole.Authorization.Collections;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
-using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -16,7 +18,7 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Controllers;
+namespace Bit.Api.AdminConsole.Controllers;
 
 [Route("organizations/{orgId}/collections")]
 [Authorize("Application")]

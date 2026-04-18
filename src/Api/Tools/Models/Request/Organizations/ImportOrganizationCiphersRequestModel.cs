@@ -1,4 +1,5 @@
-﻿using Bit.Api.Models.Request;
+﻿using Bit.Api.AdminConsole.Models.Request;
+using Bit.Api.Models.Request;
 using Bit.Api.Vault.Models.Request;
 
 namespace Bit.Api.Tools.Models.Request.Organizations;
