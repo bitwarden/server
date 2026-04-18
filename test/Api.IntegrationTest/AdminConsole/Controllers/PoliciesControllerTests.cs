@@ -13,7 +13,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Test.Common.Helpers;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
@@ -30,12 +29,6 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     public PoliciesControllerTests(ApiApplicationFactory factory)
     {
         _factory = factory;
-        _factory.SubstituteService<Core.Services.IFeatureService>(featureService =>
-        {
-            featureService
-                .IsEnabled("pm-19467-create-default-location")
-                .Returns(true);
-        });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
