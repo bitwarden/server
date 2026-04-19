@@ -4,7 +4,6 @@ using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Repositories;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.Services;
@@ -18,7 +17,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandler
 public class SendControlsSyncPolicyEvent(
     IPolicyRepository policyRepository,
     TimeProvider timeProvider,
-    IOrganizationUserRepository organizationUserRepository,
     ISendRepository sendRepository) : IOnPolicyPostUpdateEvent, IPolicyValidationEvent
 {
     public PolicyType Type => PolicyType.SendControls;
@@ -44,7 +42,7 @@ public class SendControlsSyncPolicyEvent(
             enabled: postUpsertedPolicyState.Enabled && sendControlsPolicyData.DisableHideEmail,
             policyData: sendOptionsData);
 
-        await SetDisabledForSendsByPolicyAsync(postUpsertedPolicyState, sendControlsPolicyData);
+        await UpdateSendsByPolicyAsync(postUpsertedPolicyState, sendControlsPolicyData);
     }
 
     private async Task UpsertLegacyPolicyAsync<T>(
@@ -82,57 +80,38 @@ public class SendControlsSyncPolicyEvent(
         return Task.FromResult(string.Empty);
     }
 
-    private async Task SetDisabledForSendsByPolicyAsync(Policy postUpsertedPolicyState, SendControlsPolicyData sendControlsPolicyData)
+    private async Task UpdateSendsByPolicyAsync(Policy postUpsertedPolicyState, SendControlsPolicyData sendControlsPolicyData)
     {
-        var orgUsers = await organizationUserRepository.GetManyByOrganizationAsync(postUpsertedPolicyState.OrganizationId, null);
-        var orgUserIds = orgUsers.Where(w => w.UserId != null).Select(s => s.UserId!.Value).ToList();
-        var enabled = new List<Guid>();
-        var enabledSendUserIds = new List<Guid>();
-        var disabled = new List<Guid>();
-        var disabledSendUserIds = new List<Guid>();
-        foreach (var userId in orgUserIds)
+        var orgSendIds = await sendRepository.GetIdsByOrganizationIdAsync(postUpsertedPolicyState.OrganizationId);
+        foreach (var sendIdsChunk in orgSendIds.Chunk(50))
         {
-            var userSends = await sendRepository.GetManyByUserIdAsync(userId);
-            var userHadSendsEnabled = false;
-            var userHadSendsDisabled = false;
-            foreach (var userSend in userSends)
+            var enabled = new List<Guid>();
+            var disabled = new List<Guid>();
+            var sendsChunk = await sendRepository.GetManyByIdsAsync(sendIdsChunk);
+            foreach (var send in sendsChunk)
             {
-                // If the policy is no longer in effect then re-enable all Sends
-                if (!postUpsertedPolicyState.Enabled)
+                if (
+                    // If the policy is disabled then we want to re-enable any Sends that were previously disabled
+                    postUpsertedPolicyState.Enabled && 
+                    (sendControlsPolicyData.DisableSend ||
+                    (sendControlsPolicyData.DisableHideEmail && (send.HideEmail ?? false)) ||
+                    (sendControlsPolicyData.WhoCanAccess == SendWhoCanAccessType.PasswordProtected && send.AuthType != AuthType.Password) ||
+                    (sendControlsPolicyData.WhoCanAccess == SendWhoCanAccessType.SpecificPeople && send.AuthType != AuthType.Email) ||
+                    (sendControlsPolicyData.WhoCanAccess == SendWhoCanAccessType.SpecificPeople && !SendValidationService.SendAllEmailsHaveAllowedDomains(send.Emails, sendControlsPolicyData.AllowedDomains))))
                 {
-                    enabled.Add(userSend.Id);
-                    userHadSendsEnabled = true;
-
-                } else if (
-                    sendControlsPolicyData.DisableSend ||
-                    (sendControlsPolicyData.DisableHideEmail && (userSend.HideEmail ?? false)) ||
-                    (sendControlsPolicyData.WhoCanAccess == SendWhoCanAccessType.PasswordProtected && userSend.AuthType != AuthType.Password) ||
-                    (sendControlsPolicyData.WhoCanAccess == SendWhoCanAccessType.SpecificPeople && userSend.AuthType != AuthType.Email) ||
-                    (sendControlsPolicyData.WhoCanAccess == SendWhoCanAccessType.SpecificPeople && !SendValidationService.SendAllEmailsHaveAllowedDomains(userSend.Emails, sendControlsPolicyData.AllowedDomains)))
-                {
-                    disabled.Add(userSend.Id);
-                    userHadSendsDisabled = true;
+                    disabled.Add(send.Id);
                 } else
                 {
-                    enabled.Add(userSend.Id);
-                    userHadSendsEnabled = true;
+                    enabled.Add(send.Id);
                 }
             }
-            if (userHadSendsEnabled)
-            {
-                enabledSendUserIds.Add(userId);
+            if (enabled.Count > 0) {
+                await sendRepository.UpdateManyDisabledAsync(enabled, false);
             }
-            if (userHadSendsDisabled)
+            if (disabled.Count > 0)
             {
-                disabledSendUserIds.Add(userId);
+                await sendRepository.UpdateManyDisabledAsync(disabled, true);
             }
-        }
-        if (enabled.Count > 0) {
-            await sendRepository.UpdateManyDisabledAsync(enabled, false, enabledSendUserIds);
-        }
-        if (disabled.Count > 0)
-        {
-            await sendRepository.UpdateManyDisabledAsync(disabled, true, disabledSendUserIds);
         }
     }
 }

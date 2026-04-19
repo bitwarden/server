@@ -188,7 +188,7 @@ public class SendControlsSyncPolicyEventTests
         
         await sutProvider.GetDependency<ISendRepository>()
             .Received(1)
-            .UpdateManyDisabledAsync(Arg.Is<List<Guid>>(l => l.Count() == 2), true, Arg.Is<List<Guid>>(l => l.Count() == 1 && l.Contains(orgUserId)));
+            .UpdateManyDisabledAsync(Arg.Is<List<Guid>>(l => l.Count() == 2), true);
     }
 
     [Theory, BitAutoData]
@@ -233,6 +233,6 @@ public class SendControlsSyncPolicyEventTests
         
         await sutProvider.GetDependency<ISendRepository>()
             .Received(1)
-            .UpdateManyDisabledAsync(Arg.Is<List<Guid>>(l => l.Count() == 1), false, Arg.Is<List<Guid>>(l => l.Count() == 1 && l.Contains(orgUserId)));
+            .UpdateManyDisabledAsync(Arg.Is<List<Guid>>(l => l.Count() == 1), false);
     }
 }

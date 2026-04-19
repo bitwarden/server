@@ -48,6 +48,18 @@ public interface ISendRepository : IRepository<Send, Guid>
     /// </summary>
     /// <param name="ids">A list of Send IDs to update</param>
     /// <param name="disabled">The value to set the 'Disabled' field to</param>
-    /// <param name="userIds">A list of UserIds to bump the account revision time for</param>
-    Task UpdateManyDisabledAsync(IEnumerable<Guid> ids, bool disabled, IEnumerable<Guid> userIds);
+    Task UpdateManyDisabledAsync(IEnumerable<Guid> ids, bool disabled);
+
+    /// <summary>
+    /// Fetches the IDs of all <see cref="Send"/>ss of all Users that are members of an Organization
+    /// </summary>
+    /// <param name="organizationId">The ID of the organization to fetch Sends for</param>
+    Task<IEnumerable<Guid>> GetIdsByOrganizationIdAsync(Guid organizationId);
+
+    /// <summary>
+    /// Load <see cref="Send"/>s in bulk by IDs
+    /// </summary>
+    /// <param name="ids">The IDs of the <see cref="Send"/>ss to load</param>
+    /// <returns></returns>
+    Task<ICollection<Send>> GetManyByIdsAsync(IEnumerable<Guid> ids);
 }
