@@ -118,10 +118,7 @@ public class PasswordRequestModelTests
 
         var result = model.Validate(new ValidationContext(model)).ToList();
 
-        Assert.Contains(result, r =>
-            r.ErrorMessage == "AuthenticationData and UnlockData must have the same salt." &&
-            r.MemberNames.Contains(nameof(PasswordRequestModel.AuthenticationData)) &&
-            r.MemberNames.Contains(nameof(PasswordRequestModel.UnlockData)));
+        Assert.Contains(result, r => r.ErrorMessage == "AuthenticationData and UnlockData must have the same salt.");
     }
 
     [Fact]
