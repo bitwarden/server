@@ -125,14 +125,12 @@ public class AccountsControllerTests : IDisposable
     public async Task PostPasswordPrelogin_WhenUserExists_ReturnsNewFieldsAlignedWithLegacy_Argon2()
     {
         var email = "user@example.com";
-        var storedSalt = "stored-master-password-salt";
         var userKdfInfo = new UserKdfInformation
         {
             Kdf = KdfType.Argon2id,
             KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default,
             KdfMemory = AuthConstants.ARGON2_MEMORY.Default,
-            KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default,
-            MasterPasswordSalt = storedSalt
+            KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default
         };
         _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(userKdfInfo);
 
@@ -151,24 +149,8 @@ public class AccountsControllerTests : IDisposable
         Assert.Equal(response.KdfMemory, response.KdfSettings!.Memory);
         Assert.Equal(response.KdfParallelism, response.KdfSettings!.Parallelism);
 
-        // Salt comes from the stored MasterPasswordSalt on the user record, not the request email
-        Assert.Equal(storedSalt, response.Salt);
-    }
-
-    [Fact]
-    public async Task PostPasswordPrelogin_WhenUserExists_WithNullMasterPasswordSalt_ReturnsNullSalt()
-    {
-        var userKdfInfo = new UserKdfInformation
-        {
-            Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
-            MasterPasswordSalt = null
-        };
-        _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(userKdfInfo);
-
-        var response = await _sut.PostPasswordPrelogin(new PasswordPreloginRequestModel { Email = "user@example.com" });
-
-        Assert.Null(response.Salt);
+        // Salt is set to the input email during migration
+        Assert.Equal(email, response.Salt);
     }
 
     [Fact]
@@ -971,8 +953,9 @@ public class AccountsControllerTests : IDisposable
         // Act
         var results = model.Validate(ctx).ToList();
 
-        // Assert mismatched auth/unlock is allowed
-        Assert.Empty(results);
+        // Assert mismatched auth/unlock KDF settings are rejected
+        Assert.Single(results);
+        Assert.Equal("KDF settings must be equal for authentication and unlock.", results[0].ErrorMessage);
     }
 
     [Theory, BitAutoData]
@@ -1022,8 +1005,9 @@ public class AccountsControllerTests : IDisposable
         // Act
         var results = model.Validate(ctx).ToList();
 
-        // Assert mismatched salts between auth/unlock are allowed
-        Assert.Empty(results);
+        // Assert mismatched salts between auth/unlock are rejected
+        Assert.Single(results);
+        Assert.Equal("Invalid master password salt.", results[0].ErrorMessage);
     }
 
     [Theory, BitAutoData]
