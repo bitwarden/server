@@ -2,6 +2,7 @@
 
 using AutoMapper;
 using Bit.Core.KeyManagement.UserKey;
+using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -67,6 +68,43 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
         {
             var dbContext = GetDatabaseContext(scope);
             var results = await dbContext.Sends.Where(s => s.UserId == userId).ToListAsync();
+            return Mapper.Map<List<Core.Tools.Entities.Send>>(results);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ICollection<Core.Tools.Entities.Send>> GetManyByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var results = await dbContext.Sends.Where(s => s.OrganizationId == organizationId).ToListAsync();
+            return Mapper.Map<List<Core.Tools.Entities.Send>>(results);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ICollection<Core.Tools.Entities.Send>> GetManyFileSendsByUserIdAsync(Guid userId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var results = await dbContext.Sends
+                .Where(s => s.UserId == userId && s.Type == SendType.File)
+                .ToListAsync();
+            return Mapper.Map<List<Core.Tools.Entities.Send>>(results);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ICollection<Core.Tools.Entities.Send>> GetManyFileSendsByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var results = await dbContext.Sends
+                .Where(s => s.OrganizationId == organizationId && s.Type == SendType.File)
+                .ToListAsync();
             return Mapper.Map<List<Core.Tools.Entities.Send>>(results);
         }
     }
