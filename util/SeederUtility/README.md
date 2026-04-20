@@ -2,6 +2,8 @@
 
 A CLI wrapper around the Seeder library for generating test data in a Bitwarden database.
 
+**Not sure what to run?** See [Scenarios](../Seeder/Seeds/docs/scenarios/README.md) — problem-oriented guides that map common tasks to commands.
+
 ## Getting Started
 
 Build and run from the `util/SeederUtility` directory:
@@ -11,73 +13,58 @@ dotnet build
 dotnet run -- <command> [options]
 ```
 
-**Login Credentials:** All seeded users use password `asdfasdfasdf` by default (override with `--password`). The owner email is `owner@<domain>`.
+**Login Credentials:** All seeded users use password `asdfasdfasdf` by default (override with `--password`). For org presets the owner email is `owner@<domain>`; for individual presets the email comes from the preset's `user.email` field. For the `individual` command with `--first-name`/`--last-name`, the email is `{first}.{last}@individual.example`; without names, a random Faker identity is generated and mangling is auto-enabled.
 
 ## Commands
 
 ### `organization` - Seed an Organization
 
+Full control over the org shape via CLI flags — user count, domain, structure, region, density, and plan type. Reach for this when you need flexibility the preset catalog doesn't offer, including orgs with no vault data (every preset includes ciphers).
+
 ```bash
+# Small org with vault data
+dotnet run -- organization -n SmallOrg -d small.example -u 3 -c 10 -g 5 -o Traditional --mangle
+
 # Users only — no vault data
 dotnet run -- organization -n MyOrgNoCiphers -u 100 -d myorg-no-ciphers.example
 
-# 10,000 users for load testing
-dotnet run -- organization -n LargeOrgNoCiphers -u 10000 -d large-org-no-ciphers.example
-
-# With vault data (ciphers, groups, collections)
-dotnet run -- organization -n SmallOrg -d small.example -u 3 -c 10 -g 5 -o Traditional -m
-
-# Mid-size Traditional org with realistic status mix
-dotnet run -- organization -n MidOrg -d mid.example -u 50 -c 1000 -g 15 -o Traditional -m
-
-# Large Modern org
-dotnet run -- organization -n LargeOrg -d large.example -u 500 -c 10000 -g 85 -o Modern -m
-
-# Stress test — massive Spotify-style org
-dotnet run -- organization -n StressOrg -d stress.example -u 8000 -c 100000 -g 125 -o Spotify -m
-
-# Regional data variants
-dotnet run -- organization -n EuropeOrg -d europe.example -u 10 -c 100 -g 5 --region Europe
-dotnet run -- organization -n ApacOrg -d apac.example -u 17 -c 600 -g 12 --region AsiaPacific
-
-# With ID mangling for test isolation
-dotnet run -- organization -n IsolatedOrg -d isolated.example -u 5 -c 25 -g 4 -o Spotify --mangle
-
 # With custom password and plan type
-dotnet run -- organization -n CustomPwOrg -d custom-password-05.example -u 10 -c 100 -g 3 --password "MyTestPassword1" --plan-type teams-annually
-
-# Free plan org
-dotnet run -- organization -n FreeOrg -d free.example -u 1 -c 10 -g 1 --plan-type free
-
-# Teams plan org
-dotnet run -- organization -n TeamsOrg -d teams.example -u 20 -c 200 -g 5 --plan-type teams-annually
-
-# Production-realistic KDF iterations (600k) for e2e auth testing
-dotnet run -- organization -n E2eOrg -d e2e.example -u 5 -c 25 --kdf-iterations 600000 --mangle
+dotnet run -- organization -n CustomOrg -d custom.example -u 10 -c 100 -g 3 --password "MyTestPassword1" --plan-type teams-annually
 ```
 
-### `seed` - Fixture-Based Seeding
+Additional flags include `--region`, `--kdf-iterations`, and `--plan-type`. Run `dotnet run -- organization --help` for the full list.
+
+### `individual` - Seed an Individual User
+
+Full control over the user via CLI flags — subscription tier, identity, and optional vault data. Reach for this when you need a named user with a predictable email or a personal vault with generated items; the individual presets create bare accounts with no vault data.
 
 ```bash
-# List available presets and fixtures
-dotnet run -- seed --list
+# Named user — predictable email (john.doe@individual.example)
+dotnet run -- individual --subscription free --first-name John --last-name Doe
 
-# Load the Dunder Mifflin preset (58 users, 14 groups, 15 collections, ciphers)
-dotnet run -- seed --preset qa.dunder-mifflin-enterprise-full
+# Premium named user with personal vault (~75 ciphers, 5 folders)
+dotnet run -- individual --subscription premium --first-name Jane --last-name Smith --vault
 
-# Zero Knowledge Labs — 429 users, named folders, favorites
-dotnet run -- seed --preset qa.zero-knowledge-labs-enterprise --mangle
+# Random name — mangling auto-enabled
+dotnet run -- individual --subscription premium --vault
+```
 
-# Load with ID mangling for test isolation
-dotnet run -- seed --preset qa.dunder-mifflin-enterprise-full --mangle
+### `preset` - Fixture-Based Seeding
 
-dotnet run -- seed --preset qa.stark-free-basic --mangle
+Loads a named configuration from the embedded catalog. Presets are curated JSON fixtures with specific users, groups, collections, and cipher relationships — the same data every time. Reach for this when you need a known, reproducible scenario rather than generated data.
+
+```bash
+# List available presets
+dotnet run -- preset --list
+
+# QA preset with known users and relationships
+dotnet run -- preset --name qa.enterprise-basic --mangle
 
 # Scale preset for performance testing
-dotnet run -- seed --preset scale.xs-central-perk --mangle
+dotnet run -- preset --name scale.md-balanced-sterling-cooper --mangle
 
-dotnet run -- seed --preset qa.dunder-mifflin-enterprise-full --password "MyTestPassword1" --mangle
-
-# Override KDF iterations for a preset (overrides preset's kdfIterations value)
-dotnet run -- seed --preset qa.enterprise-basic --kdf-iterations 600000 --mangle
+# Individual user preset
+dotnet run -- preset --name individual.premium --mangle
 ```
+
+For the full preset catalog, see [presets.md](../Seeder/Seeds/docs/presets.md).

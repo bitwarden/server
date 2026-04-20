@@ -65,7 +65,7 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     /// <summary>
     /// The last date the OrganizationUser entry was updated.
     /// </summary>
-    public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
+    public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
     /// <summary>
     /// A json blob representing the <see cref="Bit.Core.Models.Data.Permissions"/> of the OrganizationUser if they
     /// are a Custom user role (i.e. the <see cref="OrganizationUserType"/> is Custom). MAY be NULL if they are not
@@ -80,6 +80,11 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     /// True if the User has access to Secrets Manager for this Organization, false otherwise.
     /// </summary>
     public bool AccessSecretsManager { get; set; }
+    /// <summary>
+    /// The reason a user is revoked. Null if the user is not revoked, or was revoked before
+    /// revocation reasons were tracked.
+    /// </summary>
+    public RevocationReason? RevocationReason { get; set; }
 
     /// <summary>
     /// Checks whether the given reset password key is non-null and non-whitespace.

@@ -5,6 +5,7 @@ using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
+using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
@@ -18,6 +19,7 @@ public interface IUpdateBillingAddressCommand
 }
 
 public class UpdateBillingAddressCommand(
+    IFeatureService featureService,
     ILogger<UpdateBillingAddressCommand> logger,
     ISubscriberService subscriberService,
     IStripeAdapter stripeAdapter) : BaseBillingCommand<UpdateBillingAddressCommand>(logger), IUpdateBillingAddressCommand
@@ -58,7 +60,7 @@ public class UpdateBillingAddressCommand(
                         City = billingAddress.City,
                         State = billingAddress.State
                     },
-                    Expand = ["subscriptions"]
+                    Expand = ["subscriptions", "subscriptions.data.test_clock"]
                 });
 
         await EnableAutomaticTaxAsync(subscriber, customer);
@@ -84,7 +86,7 @@ public class UpdateBillingAddressCommand(
                     City = billingAddress.City,
                     State = billingAddress.State
                 },
-                Expand = ["subscriptions", "tax_ids"],
+                Expand = ["subscriptions", "subscriptions.data.test_clock", "tax_ids"],
                 TaxExempt = determinedTaxExemptStatus
             });
 
@@ -136,6 +138,70 @@ public class UpdateBillingAddressCommand(
 
             if (subscription is { AutomaticTax.Enabled: false })
             {
+                if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+                {
+                    var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
+                        new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
+
+                    var activeSchedule = schedules.Data.FirstOrDefault(s =>
+                        s.SubscriptionId == subscription.Id
+                        && s.Status == StripeConstants.SubscriptionScheduleStatus.Active);
+
+                    if (activeSchedule != null)
+                    {
+                        var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+                        var phases = new List<SubscriptionSchedulePhaseOptions>();
+
+                        for (var i = 0; i < activeSchedule.Phases.Count; i++)
+                        {
+                            var phase = activeSchedule.Phases[i];
+
+                            if (phase.EndDate <= now)
+                            {
+                                continue;
+                            }
+
+                            var discountConsumed = i > 0 && activeSchedule.Phases[i - 1].EndDate <= now;
+
+                            phases.Add(new SubscriptionSchedulePhaseOptions
+                            {
+                                StartDate = phase.StartDate,
+                                EndDate = phase.EndDate,
+                                Items = phase.Items.Select(item => new SubscriptionSchedulePhaseItemOptions
+                                {
+                                    Price = item.PriceId,
+                                    Quantity = item.Quantity
+                                }).ToList(),
+                                Discounts = discountConsumed
+                                    ? []
+                                    : phase.Discounts?.Select(d => new SubscriptionSchedulePhaseDiscountOptions
+                                    {
+                                        Coupon = d.CouponId
+                                    }).ToList(),
+                                ProrationBehavior = phase.ProrationBehavior,
+                                AutomaticTax = new SubscriptionSchedulePhaseAutomaticTaxOptions
+                                {
+                                    Enabled = true
+                                }
+                            });
+                        }
+
+                        await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
+                            new SubscriptionScheduleUpdateOptions
+                            {
+                                DefaultSettings = new SubscriptionScheduleDefaultSettingsOptions
+                                {
+                                    AutomaticTax = new SubscriptionScheduleDefaultSettingsAutomaticTaxOptions
+                                    {
+                                        Enabled = true
+                                    }
+                                },
+                                Phases = phases
+                            });
+                        return;
+                    }
+                }
+
                 await stripeAdapter.UpdateSubscriptionAsync(subscriber.GatewaySubscriptionId,
                     new SubscriptionUpdateOptions
                     {

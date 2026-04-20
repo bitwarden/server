@@ -1,57 +1,61 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
+﻿using System.Text.Json;
+using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Azure.Storage.Blobs.Specialized;
 using Azure.Storage.Sas;
 using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Models.Data;
+using Bit.Core.Tools.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Tools.Services;
 
-public class AzureSendFileStorageService : ISendFileStorageService
+public class AzureSendFileStorageService(
+    GlobalSettings globalSettings,
+    ISendRepository sendRepository,
+    ILogger<AzureSendFileStorageService> logger) : ISendFileStorageService
 {
     public const string FilesContainerName = "sendfiles";
     private static readonly TimeSpan _downloadLinkLiveTime = TimeSpan.FromMinutes(1);
-    private readonly BlobServiceClient _blobServiceClient;
-    private readonly ILogger<AzureSendFileStorageService> _logger;
-    private BlobContainerClient _sendFilesContainerClient;
+    private readonly BlobServiceClient _blobServiceClient = new(globalSettings.Send.ConnectionString);
+    private readonly ISendRepository _sendRepository = sendRepository;
+
+    private readonly ILogger<AzureSendFileStorageService> _logger = logger;
+
+    /*
+     * When this file was made nullable, multiple instances of ! were introduced asserting that
+     * _sendFilesContainerClient abd the blobClient it is used to construct are not null.
+     *
+     * See InitAsync() at end of file which is responsible for assigning value asynchronously ensuring
+     * _sendFilesContainerClient and blobClient are not null.
+     */
+    private BlobContainerClient? _sendFilesContainerClient;
 
     public FileUploadType FileUploadType => FileUploadType.Azure;
 
     public static string SendIdFromBlobName(string blobName) => blobName.Split('/')[0];
     public static string BlobName(Send send, string fileId) => $"{send.Id}/{fileId}";
 
-    public AzureSendFileStorageService(
-        GlobalSettings globalSettings,
-        ILogger<AzureSendFileStorageService> logger)
-    {
-        _blobServiceClient = new BlobServiceClient(globalSettings.Send.ConnectionString);
-        _logger = logger;
-    }
-
     public async Task UploadNewFileAsync(Stream stream, Send send, string fileId)
     {
         await InitAsync();
 
-        var blobClient = _sendFilesContainerClient.GetBlobClient(BlobName(send, fileId));
+        var blobClient = _sendFilesContainerClient!.GetBlobClient(BlobName(send, fileId));
 
         var metadata = new Dictionary<string, string>();
         if (send.UserId.HasValue)
         {
             metadata.Add("userId", send.UserId.Value.ToString());
         }
-        else
+        else if (send.OrganizationId.HasValue)
         {
             metadata.Add("organizationId", send.OrganizationId.Value.ToString());
         }
 
-        var headers = new BlobHttpHeaders
-        {
-            ContentDisposition = $"attachment; filename=\"{fileId}\""
-        };
+        var headers = new BlobHttpHeaders { ContentDisposition = $"attachment; filename=\"{fileId}\"" };
 
         await blobClient.UploadAsync(stream, new BlobUploadOptions { Metadata = metadata, HttpHeaders = headers });
     }
@@ -61,24 +65,28 @@ public class AzureSendFileStorageService : ISendFileStorageService
     public async Task DeleteBlobAsync(string blobName)
     {
         await InitAsync();
-        var blobClient = _sendFilesContainerClient.GetBlobClient(blobName);
+        var blobClient = _sendFilesContainerClient!.GetBlobClient(blobName);
         await blobClient.DeleteIfExistsAsync();
     }
 
     public async Task DeleteFilesForOrganizationAsync(Guid organizationId)
     {
         await InitAsync();
+        var sends = await _sendRepository.GetManyFileSendsByOrganizationIdAsync(organizationId);
+        await DeleteBlobsForSendsAsync(sends);
     }
 
     public async Task DeleteFilesForUserAsync(Guid userId)
     {
         await InitAsync();
+        var sends = await _sendRepository.GetManyFileSendsByUserIdAsync(userId);
+        await DeleteBlobsForSendsAsync(sends);
     }
 
     public async Task<string> GetSendFileDownloadUrlAsync(Send send, string fileId)
     {
         await InitAsync();
-        var blobClient = _sendFilesContainerClient.GetBlobClient(BlobName(send, fileId));
+        var blobClient = _sendFilesContainerClient!.GetBlobClient(BlobName(send, fileId));
         var sasUri = blobClient.GenerateSasUri(BlobSasPermissions.Read, DateTime.UtcNow.Add(_downloadLinkLiveTime));
         return sasUri.ToString();
     }
@@ -86,8 +94,9 @@ public class AzureSendFileStorageService : ISendFileStorageService
     public async Task<string> GetSendFileUploadUrlAsync(Send send, string fileId)
     {
         await InitAsync();
-        var blobClient = _sendFilesContainerClient.GetBlobClient(BlobName(send, fileId));
-        var sasUri = blobClient.GenerateSasUri(BlobSasPermissions.Create | BlobSasPermissions.Write, DateTime.UtcNow.Add(_downloadLinkLiveTime));
+        var blobClient = _sendFilesContainerClient!.GetBlobClient(BlobName(send, fileId));
+        var sasUri = blobClient.GenerateSasUri(BlobSasPermissions.Create | BlobSasPermissions.Write,
+            DateTime.UtcNow.Add(_downloadLinkLiveTime));
         return sasUri.ToString();
     }
 
@@ -95,7 +104,7 @@ public class AzureSendFileStorageService : ISendFileStorageService
     {
         await InitAsync();
 
-        var blobClient = _sendFilesContainerClient.GetBlobClient(BlobName(send, fileId));
+        var blobClient = _sendFilesContainerClient!.GetBlobClient(BlobName(send, fileId));
 
         try
         {
@@ -106,20 +115,18 @@ public class AzureSendFileStorageService : ISendFileStorageService
             {
                 metadata["userId"] = send.UserId.Value.ToString();
             }
-            else
+            else if (send.OrganizationId.HasValue)
             {
                 metadata["organizationId"] = send.OrganizationId.Value.ToString();
             }
+
             await blobClient.SetMetadataAsync(metadata);
 
-            var headers = new BlobHttpHeaders
-            {
-                ContentDisposition = $"attachment; filename=\"{fileId}\""
-            };
+            var headers = new BlobHttpHeaders { ContentDisposition = $"attachment; filename=\"{fileId}\"" };
             await blobClient.SetHttpHeadersAsync(headers);
 
             var length = blobProperties.Value.ContentLength;
-            var valid = minimum <= length || length <= maximum;
+            var valid = minimum <= length && length <= maximum;
 
             return (valid, length);
         }
@@ -127,6 +134,58 @@ public class AzureSendFileStorageService : ISendFileStorageService
         {
             _logger.LogError(ex, $"A storage operation failed in {nameof(ValidateFileAsync)}");
             return (false, -1);
+        }
+    }
+
+    private async Task DeleteBlobsForSendsAsync(ICollection<Send> fileSends)
+    {
+        var blobUris = new List<Uri>();
+
+        foreach (var send in fileSends)
+        {
+            try
+            {
+                var data = send.Data != null
+                    ? JsonSerializer.Deserialize<SendFileData>(send.Data)
+                    : null;
+                if (data?.Id != null)
+                {
+                    var blobClient = _sendFilesContainerClient!.GetBlobClient(BlobName(send, data.Id));
+                    blobUris.Add(blobClient.Uri);
+                }
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(Constants.BypassFiltersEventId, ex,
+                    "Failed to deserialize Send {SendId} data; blob may be orphaned.", send.Id);
+            }
+        }
+
+        if (blobUris.Count == 0)
+        {
+            return;
+        }
+
+        var blobBatchClient = _blobServiceClient.GetBlobBatchClient();
+
+        foreach (var batch in blobUris.Chunk(256))
+        {
+            try
+            {
+                await blobBatchClient.DeleteBlobsAsync(batch);
+            }
+            catch (AggregateException ex)
+            {
+                _logger.LogError(Constants.BypassFiltersEventId, ex,
+                    "One or more blob deletions failed in a batch of {Count} blobs. The following URIs may be orphaned: {BlobUris}",
+                    batch.Length, string.Join<Uri>(", ", batch));
+            }
+            catch (RequestFailedException ex)
+            {
+                _logger.LogError(Constants.BypassFiltersEventId, ex,
+                    "Batch blob deletion request failed for {Count} blobs. The following URIs may be orphaned: {BlobUris}",
+                    batch.Length, string.Join<Uri>(", ", batch));
+            }
         }
     }
 

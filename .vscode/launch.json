@@ -34,6 +34,22 @@
             "stopAll": true
         },
         {
+            "name": "Admin, API, Identity, Billing",
+            "configurations": [
+                "run-Admin",
+                "run-API",
+                "run-Identity",
+                "run-Billing"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "AA_compounds",
+                "order": 4
+            },
+            "preLaunchTask": "buildIdentityApiAdminBilling",
+            "stopAll": true
+        },
+        {
             "name": "API, Identity, SSO",
             "configurations": [
                 "run-API",
@@ -43,7 +59,7 @@
             "presentation": {
                 "hidden": false,
                 "group": "AA_compounds",
-                "order": 4
+                "order": 5
             },
             "preLaunchTask": "buildIdentityApiSso",
             "stopAll": true
@@ -64,7 +80,7 @@
             "presentation": {
                 "hidden": false,
                 "group": "AA_compounds",
-                "order": 5
+                "order": 6
             },
             "preLaunchTask": "buildFullServer",
             "stopAll": true
@@ -86,7 +102,7 @@
             "presentation": {
                 "hidden": false,
                 "group": "AA_compounds",
-                "order": 6
+                "order": 7
             },
             "preLaunchTask": "buildFullServerWithSeederApi",
             "stopAll": true

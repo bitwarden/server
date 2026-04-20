@@ -10,7 +10,6 @@ using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
@@ -32,7 +31,7 @@ public class PoliciesController : Controller
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IPolicyRepository _policyRepository;
-    private readonly IVNextSavePolicyCommand _vNextSavePolicyCommand;
+    private readonly ISavePolicyCommand _savePolicyCommand;
     private readonly IPolicyQuery _policyQuery;
 
     public PoliciesController(IPolicyRepository policyRepository,
@@ -41,7 +40,7 @@ public class PoliciesController : Controller
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
         IOrganizationRepository organizationRepository,
-        IVNextSavePolicyCommand vNextSavePolicyCommand,
+        ISavePolicyCommand savePolicyCommand,
         IPolicyQuery policyQuery)
     {
         _policyRepository = policyRepository;
@@ -50,7 +49,7 @@ public class PoliciesController : Controller
         _organizationRepository = organizationRepository;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
-        _vNextSavePolicyCommand = vNextSavePolicyCommand;
+        _savePolicyCommand = savePolicyCommand;
         _policyQuery = policyQuery;
     }
 
@@ -69,11 +68,16 @@ public class PoliciesController : Controller
 
     [HttpGet("")]
     [Authorize<ManagePoliciesRequirement>]
-    public async Task<ListResponseModel<PolicyResponseModel>> GetAll(Guid orgId)
+    public async Task<ListResponseModel<PolicyStatusResponseModel>> GetAll(string orgId)
     {
-        var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgId);
+        var orgIdGuid = new Guid(orgId);
+        if (!await _currentContext.ManagePolicies(orgIdGuid))
+        {
+            throw new NotFoundException();
+        }
 
-        return new ListResponseModel<PolicyResponseModel>(policies.Select(p => new PolicyResponseModel(p)));
+        var policies = await _policyQuery.GetAllAsync(orgIdGuid);
+        return new ListResponseModel<PolicyStatusResponseModel>(policies.Select(p => new PolicyStatusResponseModel(p)));
     }
 
     [AllowAnonymous]
@@ -130,9 +134,13 @@ public class PoliciesController : Controller
 
     [HttpPut("{type}")]
     [Authorize<ManagePoliciesRequirement>]
-    public async Task<PolicyResponseModel> Put(Guid orgId, PolicyType type, [FromBody] PolicyRequestModel model)
+    public async Task<PolicyResponseModel> Put(Guid orgId, PolicyType type, [FromBody] SavePolicyRequest model)
     {
-        return await PutVNext(orgId, type, new SavePolicyRequest { Policy = model });
+        var savePolicyRequest = await model.ToSavePolicyModelAsync(orgId, type, _currentContext);
+
+        var policy = await _savePolicyCommand.SaveAsync(savePolicyRequest);
+
+        return new PolicyResponseModel(policy);
     }
 
     [HttpPut("{type}/vnext")]
@@ -141,7 +149,7 @@ public class PoliciesController : Controller
     {
         var savePolicyRequest = await model.ToSavePolicyModelAsync(orgId, type, _currentContext);
 
-        var policy = await _vNextSavePolicyCommand.SaveAsync(savePolicyRequest);
+        var policy = await _savePolicyCommand.SaveAsync(savePolicyRequest);
 
         return new PolicyResponseModel(policy);
     }
