@@ -2,12 +2,10 @@
 
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Errors;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.Utilities.Commands;
-using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -29,8 +27,7 @@ public class PostUserCommand(
     IScimContext scimContext,
     IFeatureService featureService,
     IInviteOrganizationUsersCommand inviteOrganizationUsersCommand,
-    TimeProvider timeProvider,
-    IPricingClient pricingClient)
+    TimeProvider timeProvider)
     : IPostUserCommand
 {
     public async Task<OrganizationUserUserDetails?> PostUserAsync(Guid organizationId, ScimUserRequestModel model)
@@ -55,15 +52,13 @@ public class PostUserCommand(
             throw new NotFoundException();
         }
 
-        var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
-
         var request = model.ToRequest(
             scimProvider: scimProvider,
-            inviteOrganization: new InviteOrganization(organization, plan),
+            organization: organization,
             performedAt: timeProvider.GetUtcNow());
 
         var orgUsers = await organizationUserRepository
-            .GetManyDetailsByOrganizationAsync(request.InviteOrganization.OrganizationId);
+            .GetManyDetailsByOrganizationAsync(request.Organization.Id);
 
         if (orgUsers.Any(existingUser =>
                 request.Invites.First().Email.Equals(existingUser.Email, StringComparison.OrdinalIgnoreCase) ||

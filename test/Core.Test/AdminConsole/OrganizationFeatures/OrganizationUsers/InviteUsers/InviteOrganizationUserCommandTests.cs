@@ -13,6 +13,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.Commands;
 using Bit.Core.AdminConsole.Utilities.Errors;
 using Bit.Core.AdminConsole.Utilities.Validation;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -50,6 +51,11 @@ public class InviteOrganizationUserCommandTests
         user.Email = address.Address;
 
         var inviteOrganization = new InviteOrganization(organization, new FreePlan());
+        organization.PlanType = inviteOrganization.Plan.Type;
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlan(organization.PlanType)
+            .Returns(inviteOrganization.Plan);
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
@@ -62,9 +68,9 @@ public class InviteOrganizationUserCommandTests
                     externalId: externalId,
                     accessSecretsManager: true)
             ],
-            inviteOrganization: inviteOrganization,
+            organization: organization,
             performedBy: Guid.Empty,
-            timeProvider.GetUtcNow());
+            performedAt: timeProvider.GetUtcNow());
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .SelectKnownEmailsAsync(organization.Id, Arg.Any<IEnumerable<string>>(), false)
@@ -104,6 +110,11 @@ public class InviteOrganizationUserCommandTests
         orgUser.Email = address.Address;
 
         var inviteOrganization = new InviteOrganization(organization, new FreePlan());
+        organization.PlanType = inviteOrganization.Plan.Type;
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlan(organization.PlanType)
+            .Returns(inviteOrganization.Plan);
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
@@ -116,9 +127,9 @@ public class InviteOrganizationUserCommandTests
                     externalId: externalId,
                     accessSecretsManager: true)
             ],
-            inviteOrganization: inviteOrganization,
+            organization: organization,
             performedBy: Guid.Empty,
-            timeProvider.GetUtcNow());
+            performedAt: timeProvider.GetUtcNow());
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .SelectKnownEmailsAsync(organization.Id, Arg.Any<IEnumerable<string>>(), false)
@@ -174,6 +185,11 @@ public class InviteOrganizationUserCommandTests
         user.Email = address.Address;
 
         var inviteOrganization = new InviteOrganization(organization, new FreePlan());
+        organization.PlanType = inviteOrganization.Plan.Type;
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlan(organization.PlanType)
+            .Returns(inviteOrganization.Plan);
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
@@ -186,9 +202,9 @@ public class InviteOrganizationUserCommandTests
                     externalId: externalId,
                     accessSecretsManager: true)
             ],
-            inviteOrganization: inviteOrganization,
+            organization: organization,
             performedBy: Guid.Empty,
-            timeProvider.GetUtcNow());
+            performedAt: timeProvider.GetUtcNow());
 
         var validationRequest = GetInviteValidationRequestMock(request, inviteOrganization, organization);
 
@@ -249,6 +265,11 @@ public class InviteOrganizationUserCommandTests
         ownerDetails.Type = OrganizationUserType.Owner;
 
         var inviteOrganization = new InviteOrganization(organization, new FreePlan());
+        organization.PlanType = inviteOrganization.Plan.Type;
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlan(organization.PlanType)
+            .Returns(inviteOrganization.Plan);
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
@@ -261,9 +282,9 @@ public class InviteOrganizationUserCommandTests
                     externalId: externalId,
                     accessSecretsManager: true)
             ],
-            inviteOrganization: inviteOrganization,
+            organization: organization,
             performedBy: Guid.Empty,
-            timeProvider.GetUtcNow());
+            performedAt: timeProvider.GetUtcNow());
 
         var orgUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
 
@@ -325,6 +346,11 @@ public class InviteOrganizationUserCommandTests
         ownerDetails.Type = OrganizationUserType.Owner;
 
         var inviteOrganization = new InviteOrganization(organization, new Enterprise2019Plan(true));
+        organization.PlanType = inviteOrganization.Plan.Type;
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlan(organization.PlanType)
+            .Returns(inviteOrganization.Plan);
 
         var request = new InviteOrganizationUsersRequest(
             invites:
@@ -338,9 +364,9 @@ public class InviteOrganizationUserCommandTests
                     externalId: externalId,
                     accessSecretsManager: true)
             ],
-            inviteOrganization: inviteOrganization,
+            organization: organization,
             performedBy: Guid.Empty,
-            timeProvider.GetUtcNow());
+            performedAt: timeProvider.GetUtcNow());
 
         var orgUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
 
@@ -403,6 +429,11 @@ public class InviteOrganizationUserCommandTests
         ownerDetails.Type = OrganizationUserType.Owner;
 
         var inviteOrganization = new InviteOrganization(organization, new FreePlan());
+        organization.PlanType = inviteOrganization.Plan.Type;
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlan(organization.PlanType)
+            .Returns(inviteOrganization.Plan);
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
@@ -415,9 +446,9 @@ public class InviteOrganizationUserCommandTests
                     externalId: externalId,
                     accessSecretsManager: true)
             ],
-            inviteOrganization: inviteOrganization,
+            organization: organization,
             performedBy: Guid.Empty,
-            timeProvider.GetUtcNow());
+            performedAt: timeProvider.GetUtcNow());
 
         var passwordManagerUpdate = new PasswordManagerSubscriptionUpdate(inviteOrganization, organization.Seats.Value, 1);
 
@@ -481,6 +512,11 @@ public class InviteOrganizationUserCommandTests
         ownerDetails.Type = OrganizationUserType.Owner;
 
         var inviteOrganization = new InviteOrganization(organization, new FreePlan());
+        organization.PlanType = inviteOrganization.Plan.Type;
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlan(organization.PlanType)
+            .Returns(inviteOrganization.Plan);
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
@@ -493,9 +529,9 @@ public class InviteOrganizationUserCommandTests
                     externalId: externalId,
                     accessSecretsManager: true)
             ],
-            inviteOrganization: inviteOrganization,
+            organization: organization,
             performedBy: Guid.Empty,
-            timeProvider.GetUtcNow());
+            performedAt: timeProvider.GetUtcNow());
 
         var secretsManagerSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, inviteOrganization.Plan, true)
             .AdjustSeats(request.Invites.Count(x => x.AccessSecretsManager));
@@ -555,6 +591,11 @@ public class InviteOrganizationUserCommandTests
         ownerDetails.Type = OrganizationUserType.Owner;
 
         var inviteOrganization = new InviteOrganization(organization, new FreePlan());
+        organization.PlanType = inviteOrganization.Plan.Type;
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlan(organization.PlanType)
+            .Returns(inviteOrganization.Plan);
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
@@ -567,9 +608,9 @@ public class InviteOrganizationUserCommandTests
                     externalId: externalId,
                     accessSecretsManager: true)
             ],
-            inviteOrganization: inviteOrganization,
+            organization: organization,
             performedBy: Guid.Empty,
-            timeProvider.GetUtcNow());
+            performedAt: timeProvider.GetUtcNow());
 
         var secretsManagerSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, inviteOrganization.Plan, true)
             .AdjustSeats(request.Invites.Count(x => x.AccessSecretsManager));
@@ -654,6 +695,11 @@ public class InviteOrganizationUserCommandTests
         providerOrganization.OrganizationId = organization.Id;
 
         var inviteOrganization = new InviteOrganization(organization, new FreePlan());
+        organization.PlanType = inviteOrganization.Plan.Type;
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlan(organization.PlanType)
+            .Returns(inviteOrganization.Plan);
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
@@ -666,9 +712,9 @@ public class InviteOrganizationUserCommandTests
                     externalId: externalId,
                     accessSecretsManager: true)
             ],
-            inviteOrganization: inviteOrganization,
+            organization: organization,
             performedBy: Guid.Empty,
-            timeProvider.GetUtcNow());
+            performedAt: timeProvider.GetUtcNow());
 
         var secretsManagerSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, inviteOrganization.Plan, true)
             .AdjustSeats(request.Invites.Count(x => x.AccessSecretsManager));
@@ -753,6 +799,11 @@ public class InviteOrganizationUserCommandTests
         providerOrganization.OrganizationId = organization.Id;
 
         var inviteOrganization = new InviteOrganization(organization, new Enterprise2019Plan(true));
+        organization.PlanType = inviteOrganization.Plan.Type;
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlan(organization.PlanType)
+            .Returns(inviteOrganization.Plan);
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
@@ -765,9 +816,9 @@ public class InviteOrganizationUserCommandTests
                     externalId: externalId,
                     accessSecretsManager: true)
             ],
-            inviteOrganization: inviteOrganization,
+            organization: organization,
             performedBy: Guid.Empty,
-            timeProvider.GetUtcNow());
+            performedAt: timeProvider.GetUtcNow());
 
         var secretsManagerSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, inviteOrganization.Plan, true)
             .AdjustSeats(request.Invites.Count(x => x.AccessSecretsManager));
@@ -847,6 +898,11 @@ public class InviteOrganizationUserCommandTests
         ownerDetails.Type = OrganizationUserType.Owner;
 
         var inviteOrganization = new InviteOrganization(organization, new Enterprise2019Plan(true));
+        organization.PlanType = inviteOrganization.Plan.Type;
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlan(organization.PlanType)
+            .Returns(inviteOrganization.Plan);
 
         var request = new InviteOrganizationUsersRequest(
             invites:
@@ -860,9 +916,9 @@ public class InviteOrganizationUserCommandTests
                     externalId: externalId,
                     accessSecretsManager: true)
             ],
-            inviteOrganization: inviteOrganization,
+            organization: organization,
             performedBy: Guid.Empty,
-            timeProvider.GetUtcNow());
+            performedAt: timeProvider.GetUtcNow());
 
         var orgUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
 
@@ -926,6 +982,11 @@ public class InviteOrganizationUserCommandTests
         ownerDetails.Type = OrganizationUserType.Owner;
 
         var inviteOrganization = new InviteOrganization(organization, new Enterprise2019Plan(true));
+        organization.PlanType = inviteOrganization.Plan.Type;
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlan(organization.PlanType)
+            .Returns(inviteOrganization.Plan);
 
         var request = new InviteOrganizationUsersRequest(
             invites:
@@ -939,9 +1000,9 @@ public class InviteOrganizationUserCommandTests
                     externalId: externalId,
                     accessSecretsManager: true)
             ],
-            inviteOrganization: inviteOrganization,
+            organization: organization,
             performedBy: Guid.Empty,
-            timeProvider.GetUtcNow());
+            performedAt: timeProvider.GetUtcNow());
 
         var orgUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
 

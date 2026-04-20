@@ -3,7 +3,6 @@ using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
 using Bit.Core;
-using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
@@ -14,7 +13,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.Commands;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
-using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -46,7 +44,6 @@ public class MembersController : Controller
     private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
     private readonly IFeatureService _featureService;
     private readonly IInviteOrganizationUsersCommand _inviteOrganizationUsersCommand;
-    private readonly IPricingClient _pricingClient;
     private readonly TimeProvider _timeProvider;
 
     public MembersController(
@@ -65,7 +62,6 @@ public class MembersController : Controller
         IRestoreOrganizationUserCommand restoreOrganizationUserCommand,
         IFeatureService featureService,
         IInviteOrganizationUsersCommand inviteOrganizationUsersCommand,
-        IPricingClient pricingClient,
         TimeProvider timeProvider)
     {
         _organizationUserRepository = organizationUserRepository;
@@ -83,7 +79,6 @@ public class MembersController : Controller
         _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
         _featureService = featureService;
         _inviteOrganizationUsersCommand = inviteOrganizationUsersCommand;
-        _pricingClient = pricingClient;
         _timeProvider = timeProvider;
     }
 
@@ -194,9 +189,7 @@ public class MembersController : Controller
         Core.AdminConsole.Entities.Organization organization,
         bool hasStandaloneSecretsManager)
     {
-        var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
-        var inviteOrganization = new InviteOrganization(organization, plan);
-        var request = model.ToInviteRequest(inviteOrganization, hasStandaloneSecretsManager, Guid.Empty, _timeProvider.GetUtcNow());
+        var request = model.ToInviteRequest(organization, hasStandaloneSecretsManager, Guid.Empty, _timeProvider.GetUtcNow());
 
         var result = await _inviteOrganizationUsersCommand.InviteImportedOrganizationUsersAsync(request);
 
