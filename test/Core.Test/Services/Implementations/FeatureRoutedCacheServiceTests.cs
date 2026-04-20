@@ -315,12 +315,15 @@ public class FeatureRoutedCacheServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetOrganizationAbilitiesAsync_ReturnsOnlyMatchingAbilities(
+    public async Task GetOrganizationAbilitiesAsync_WhenFlagOff_ReturnsFromInMemoryService(
         SutProvider<FeatureRoutedCacheService> sutProvider,
         OrganizationAbility matchedAbility,
         OrganizationAbility unmatchedAbility)
     {
         // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.OrgAbilityExtendedCache)
+            .Returns(false);
         var allAbilities = new Dictionary<Guid, OrganizationAbility>
         {
             [matchedAbility.Id] = matchedAbility,
@@ -336,14 +339,52 @@ public class FeatureRoutedCacheServiceTests
         // Assert
         Assert.Single(result);
         Assert.Equal(matchedAbility, result[matchedAbility.Id]);
+        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
+            .Received(1)
+            .GetOrganizationAbilitiesAsync();
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .DidNotReceiveWithAnyArgs()
+            .GetOrganizationAbilitiesAsync(default);
     }
 
     [Theory, BitAutoData]
-    public async Task GetOrganizationAbilitiesAsync_WhenDuplicateIdsProvided_DoesNotThrowAndReturnsSingleEntry(
+    public async Task GetOrganizationAbilitiesAsync_WhenFlagOn_ReturnsFromExtendedCacheService(
         SutProvider<FeatureRoutedCacheService> sutProvider,
         OrganizationAbility ability)
     {
         // Arrange
+        var orgIds = new[] { ability.Id };
+        var expectedResult = new Dictionary<Guid, OrganizationAbility> { [ability.Id] = ability };
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.OrgAbilityExtendedCache)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilitiesAsync(orgIds)
+            .Returns(expectedResult);
+
+        // Act
+        var result = await sutProvider.Sut.GetOrganizationAbilitiesAsync(orgIds);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(ability, result[ability.Id]);
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .Received(1)
+            .GetOrganizationAbilitiesAsync(orgIds);
+        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
+            .DidNotReceiveWithAnyArgs()
+            .GetOrganizationAbilitiesAsync();
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationAbilitiesAsync_WhenFlagOff_WhenDuplicateIdsProvided_DoesNotThrowAndReturnsSingleEntry(
+        SutProvider<FeatureRoutedCacheService> sutProvider,
+        OrganizationAbility ability)
+    {
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.OrgAbilityExtendedCache)
+            .Returns(false);
         var allAbilities = new Dictionary<Guid, OrganizationAbility> { [ability.Id] = ability };
         sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .GetOrganizationAbilitiesAsync()
@@ -357,13 +398,15 @@ public class FeatureRoutedCacheServiceTests
         Assert.Equal(ability, result[ability.Id]);
     }
 
-
     [Theory, BitAutoData]
-    public async Task GetOrganizationAbilitiesAsync_WhenNoIdsMatched_ReturnsEmptyDictionary(
+    public async Task GetOrganizationAbilitiesAsync_WhenFlagOff_WhenNoIdsMatched_ReturnsEmptyDictionary(
         SutProvider<FeatureRoutedCacheService> sutProvider,
         Guid missingOrgId)
     {
         // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.OrgAbilityExtendedCache)
+            .Returns(false);
         sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .GetOrganizationAbilitiesAsync()
             .Returns(new Dictionary<Guid, OrganizationAbility>());
