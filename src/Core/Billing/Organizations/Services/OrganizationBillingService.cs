@@ -214,7 +214,7 @@ public class OrganizationBillingService(
             {
                 ["organizationId"] = organization.Id.ToString(),
                 ["region"] = globalSettings.BaseServiceUri.CloudRegion
-                    }
+            }
         };
 
         var braintreeCustomerId = "";
