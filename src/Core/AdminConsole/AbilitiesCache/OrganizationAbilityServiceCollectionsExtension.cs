@@ -8,5 +8,5 @@ public static class OrganizationAbilityServiceCollectionsExtension
     public static IServiceCollection AddOrganizationAbilityCache(this IServiceCollection serviceCollection,
         GlobalSettings globalSettings) =>
         serviceCollection.AddExtendedCache(ExtendedOrganizationAbilityCacheConstants.CacheName, globalSettings)
-            .AddScoped<IOrganizationAbilityCacheService, ExtendedOrganizationAbilityCacheService>();
+            .AddSingleton<IOrganizationAbilityCacheService, ExtendedOrganizationAbilityCacheService>();
 }

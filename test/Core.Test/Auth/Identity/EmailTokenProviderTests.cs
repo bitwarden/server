@@ -1,5 +1,4 @@
-﻿using Bit.Core;
-using Bit.Core.Auth.Identity.TokenProviders;
+﻿using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -9,6 +8,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using Xunit;
+
+namespace Bit.Core.Test.Auth.Identity;
 
 [SutProviderCustomize]
 public class EmailTokenProviderTests

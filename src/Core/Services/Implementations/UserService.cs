@@ -31,6 +31,7 @@ using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
@@ -70,6 +71,7 @@ public class UserService : UserManager<User>, IUserService
     private readonly IPricingClient _pricingClient;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
     private readonly ISubscriberService _subscriberService;
+    private readonly ISendFileStorageService _sendFileStorageService;
 
     public UserService(
         IUserRepository userRepository,
@@ -103,7 +105,8 @@ public class UserService : UserManager<User>, IUserService
         IPolicyRequirementQuery policyRequirementQuery,
         IPricingClient pricingClient,
         IHasPremiumAccessQuery hasPremiumAccessQuery,
-        ISubscriberService subscriberService)
+        ISubscriberService subscriberService,
+        ISendFileStorageService sendFileStorageService)
         : base(
               store,
               optionsAccessor,
@@ -142,6 +145,7 @@ public class UserService : UserManager<User>, IUserService
         _pricingClient = pricingClient;
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
         _subscriberService = subscriberService;
+        _sendFileStorageService = sendFileStorageService;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -238,6 +242,7 @@ public class UserService : UserManager<User>, IUserService
                     var orgCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(org.Id);
                     if (orgCount <= 1)
                     {
+                        await _sendFileStorageService.DeleteFilesForUserAsync(user.Id);
                         await _organizationRepository.DeleteAsync(org);
                         deletedOrg = true;
                     }
@@ -282,6 +287,7 @@ public class UserService : UserManager<User>, IUserService
             catch (BillingException) { }
         }
 
+        await _sendFileStorageService.DeleteFilesForUserAsync(user.Id);
         await _userRepository.DeleteAsync(user);
         await _pushService.PushLogOutAsync(user.Id);
         return IdentityResult.Success;
