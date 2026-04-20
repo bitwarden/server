@@ -33,10 +33,6 @@ public class GetManyConfirmedAcceptedByUserIdAsyncTests
 
         // Assert
         Assert.Contains(results, p => p.Id == policy.Id);
-
-        // Annul
-        await organizationRepository.DeleteAsync(organization);
-        await userRepository.DeleteAsync(user);
     }
 
     [Theory, DatabaseData]
@@ -62,10 +58,6 @@ public class GetManyConfirmedAcceptedByUserIdAsyncTests
 
         // Assert
         Assert.Contains(results, p => p.Id == policy.Id);
-
-        // Annul
-        await organizationRepository.DeleteAsync(organization);
-        await userRepository.DeleteAsync(user);
     }
 
     [Theory, DatabaseData]
@@ -102,11 +94,6 @@ public class GetManyConfirmedAcceptedByUserIdAsyncTests
         // Assert
         Assert.Contains(results, p => p.Id == confirmedPolicy.Id);
         Assert.Contains(results, p => p.Id == acceptedPolicy.Id);
-
-        // Annul
-        await organizationRepository.DeleteAsync(confirmedOrg);
-        await organizationRepository.DeleteAsync(acceptedOrg);
-        await userRepository.DeleteAsync(user);
     }
 
     [Theory, DatabaseData]
@@ -139,10 +126,6 @@ public class GetManyConfirmedAcceptedByUserIdAsyncTests
 
         // Assert
         Assert.DoesNotContain(results, p => p.Id == policy.Id);
-
-        // Annul
-        await organizationRepository.DeleteAsync(organization);
-        await userRepository.DeleteAsync(user);
     }
 
     [Theory, DatabaseData]
@@ -168,10 +151,6 @@ public class GetManyConfirmedAcceptedByUserIdAsyncTests
 
         // Assert
         Assert.DoesNotContain(results, p => p.Id == policy.Id);
-
-        // Annul
-        await organizationRepository.DeleteAsync(organization);
-        await userRepository.DeleteAsync(user);
     }
 
     [Theory, DatabaseData]
@@ -199,9 +178,5 @@ public class GetManyConfirmedAcceptedByUserIdAsyncTests
 
         // Assert
         Assert.DoesNotContain(results, p => p.Id == policy.Id);
-
-        // Annul
-        await organizationRepository.DeleteAsync(organization);
-        await userRepository.DeleteManyAsync([targetUser, otherUser]);
     }
 }

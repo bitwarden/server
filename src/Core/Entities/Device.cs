@@ -43,6 +43,12 @@ public class Device : ITableObject<Guid>
     /// </summary>
     public bool Active { get; set; } = true;
 
+    /// <summary>
+    /// The last time this device was logged in on or had a token refresh. Null if the device has not
+    /// authenticated since activity tracking was introduced.
+    /// </summary>
+    public DateTime? LastActivityDate { get; internal set; } = DateTime.UtcNow;
+
     public void SetNewId()
     {
         Id = CoreHelpers.GenerateComb();
