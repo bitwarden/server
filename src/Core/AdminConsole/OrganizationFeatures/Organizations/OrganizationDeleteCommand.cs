@@ -7,6 +7,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tools.Services;
 using Bit.Core.Vault.Services;
 using Microsoft.Extensions.Logging;
 
@@ -21,6 +22,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
     private readonly ICipherService _cipherService;
     private readonly ISubscriberService _subscriberService;
     private readonly IFeatureService _featureService;
+    private readonly ISendFileStorageService _sendFileStorageService;
     private readonly ILogger<OrganizationDeleteCommand> _logger;
 
     public OrganizationDeleteCommand(
@@ -31,6 +33,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
         ICipherService cipherService,
         ISubscriberService subscriberService,
         IFeatureService featureService,
+        ISendFileStorageService sendFileStorageService,
         ILogger<OrganizationDeleteCommand> logger)
     {
         _applicationCacheService = applicationCacheService;
@@ -40,6 +43,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
         _cipherService = cipherService;
         _subscriberService = subscriberService;
         _featureService = featureService;
+        _sendFileStorageService = sendFileStorageService;
         _logger = logger;
     }
 
@@ -70,6 +74,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
             }
         }
 
+        await _sendFileStorageService.DeleteFilesForOrganizationAsync(organization.Id);
         await _cipherService.DeleteAttachmentsForOrganizationAsync(organization.Id);
         await _organizationRepository.DeleteAsync(organization);
         await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
