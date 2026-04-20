@@ -63,7 +63,7 @@ for ($i = 0; $i -lt $total; $i++) {
     if (-not $DryRun) {
         dotnet run --project $seederProject -- $command @cliArgs
         if ($LASTEXITCODE -ne 0) {
-            Write-Error "Seed '$label' failed with exit code $LASTEXITCODE."
+            [Console]::Error.WriteLine("Seed '$label' failed with exit code $LASTEXITCODE.")
             exit $LASTEXITCODE
         }
     }

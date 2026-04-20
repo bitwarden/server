@@ -6,7 +6,7 @@
       "subscription": "free",
       "firstName": "Jane",
       "lastName": "Doe",
-      "email": "jane@bitwarden.pw"
+      "email": "jane@bw.test"
     }
   },
   {
@@ -16,7 +16,7 @@
       "subscription": "premium",
       "firstName": "John",
       "lastName": "Doe",
-      "email": "john@bitwarden.pw"
+      "email": "john@bw.test"
     }
   },
   {
