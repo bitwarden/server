@@ -48,24 +48,30 @@ public class CertBuilder
                         $"\n[SAN]\nsubjectAltName=DNS:{_context.Install.Domain}\nbasicConstraints=CA:true";
                     var opensslConfigPath = Path.GetTempFileName();
 
-                    File.WriteAllText(opensslConfigPath, opensslConfig);
-                    Helpers.Exec(
-                        "openssl",
-                        [
-                            "req",
-                            "-x509",
-                            "-newkey", "rsa:4096",
-                            "-sha256",
-                            "-nodes",
-                            "-days", "36500",
-                            "-keyout", $"{directory.FullName}/private.key",
-                            "-out", $"{directory.FullName}/certificate.crt",
-                            "-reqexts", "SAN",
-                            "-extensions", "SAN",
-                            "-config", opensslConfigPath,
-                            "-subj", $"/C=US/ST=California/L=Santa Barbara/O=Bitwarden Inc./OU=Bitwarden/CN={_context.Install.Domain}",
-                        ]);
-                    File.Delete(opensslConfigPath);
+                    try
+                    {
+                        File.WriteAllText(opensslConfigPath, opensslConfig);
+                        Helpers.Exec(
+                            "openssl",
+                            [
+                                "req",
+                                "-x509",
+                                "-newkey", "rsa:4096",
+                                "-sha256",
+                                "-nodes",
+                                "-days", "36500",
+                                "-keyout", $"{directory.FullName}/private.key",
+                                "-out", $"{directory.FullName}/certificate.crt",
+                                "-reqexts", "SAN",
+                                "-extensions", "SAN",
+                                "-config", opensslConfigPath,
+                                "-subj", $"/C=US/ST=California/L=Santa Barbara/O=Bitwarden Inc./OU=Bitwarden/CN={_context.Install.Domain}",
+                            ]);
+                    }
+                    finally
+                    {
+                        File.Delete(opensslConfigPath);
+                    }
                 }
             }
         }
