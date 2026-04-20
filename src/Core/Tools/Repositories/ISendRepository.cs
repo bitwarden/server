@@ -62,4 +62,12 @@ public interface ISendRepository : IRepository<Send, Guid>
     /// <param name="ids">The IDs of the <see cref="Send"/>ss to load</param>
     /// <returns></returns>
     Task<ICollection<Send>> GetManyByIdsAsync(IEnumerable<Guid> ids);
+
+    /// <summary>
+    /// Update <see cref="Send"/> deletion dates in bulk by IDs
+    /// </summary>
+    /// <param name="ids">The IDs of the <see cref="Send"/>s to update</param>
+    /// <param name="deletionHours">The number of hours after the <see cref="Send"/>s' creation dates to set the deletion date</param>
+    /// <returns></returns>
+    Task UpdateManyDeletionDatesByIdsAsync(IEnumerable<Guid> ids, int deletionHours);
 }
