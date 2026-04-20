@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Tools.Enums;
 
 namespace Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 
@@ -13,4 +14,6 @@ public class SendControlsPolicyData : IPolicyDataModel
     [Display(Name = "AllowedDomains")]
     [StringLength(1000)]
     public string? AllowedDomains { get; set; }
+    [Display(Name = "RestrictSendType")]
+    public SendType? RestrictSendType { get; set; }
 }
