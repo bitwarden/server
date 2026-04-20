@@ -15,6 +15,7 @@ public interface IGlobalSettings
     string LicenseCertificatePassword { get; set; }
     int OrganizationInviteExpirationHours { get; set; }
     bool DisableUserRegistration { get; set; }
+    bool SuppressOnboardingInterstitials { get; set; }
     bool EnableNewDeviceVerification { get; set; }
     IInstallationSettings Installation { get; set; }
     IFileStorageSettings Attachment { get; set; }
