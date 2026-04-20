@@ -52,7 +52,7 @@ public class PasswordRequestModelTests
     [Fact]
     public void Validate_WhenBothAuthAndUnlockPresent_WithMismatchedKdf_ReturnsError()
     {
-        // Arrange
+        // Request model enforces matching KDF settings between AuthenticationData and UnlockData.
         var model = new PasswordRequestModel
         {
             MasterPasswordHash = "masterPasswordHash",
@@ -73,24 +73,24 @@ public class PasswordRequestModelTests
                 Kdf = new KdfRequestModel
                 {
                     KdfType = KdfType.PBKDF2_SHA256,
-                    Iterations = 650000 // Different iterations
+                    Iterations = 650000
                 },
                 MasterKeyWrappedUserKey = "wrappedKey",
                 Salt = "salt"
             }
         };
 
-        // Act
         var result = model.Validate(new ValidationContext(model)).ToList();
 
-        // Assert
-        Assert.Contains(result, r => r.ErrorMessage != null && r.ErrorMessage.Contains("KDF settings must be equal"));
+        Assert.Contains(result, r =>
+            r.ErrorMessage == "AuthenticationData and UnlockData must have the same KDF configuration." &&
+            r.MemberNames.Contains(nameof(PasswordRequestModel.AuthenticationData)) &&
+            r.MemberNames.Contains(nameof(PasswordRequestModel.UnlockData)));
     }
 
     [Fact]
     public void Validate_WhenBothAuthAndUnlockPresent_WithMismatchedSalt_ReturnsError()
     {
-        // Arrange
         var kdf = new KdfRequestModel
         {
             KdfType = KdfType.PBKDF2_SHA256,
@@ -112,25 +112,65 @@ public class PasswordRequestModelTests
             {
                 Kdf = kdf,
                 MasterKeyWrappedUserKey = "wrappedKey",
-                Salt = "salt2" // Different salt
+                Salt = "salt2"
             }
         };
 
-        // Act
         var result = model.Validate(new ValidationContext(model)).ToList();
 
-        // Assert
-        Assert.Contains(result, r => r.ErrorMessage != null && r.ErrorMessage.Contains("Invalid master password salt."));
+        Assert.Contains(result, r =>
+            r.ErrorMessage == "AuthenticationData and UnlockData must have the same salt." &&
+            r.MemberNames.Contains(nameof(PasswordRequestModel.AuthenticationData)) &&
+            r.MemberNames.Contains(nameof(PasswordRequestModel.UnlockData)));
     }
 
     [Fact]
-    public void Validate_WhenBothAuthAndUnlockPresent_WithInvalidKdf_ReturnsError()
+    public void Validate_WhenBothAuthAndUnlockPresent_WithMismatchedKdfAndSalt_ReturnsBothErrors()
     {
-        // Arrange
+        var model = new PasswordRequestModel
+        {
+            MasterPasswordHash = "masterPasswordHash",
+            NewMasterPasswordHash = "newHash",
+            Key = "key",
+            AuthenticationData = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = new KdfRequestModel
+                {
+                    KdfType = KdfType.PBKDF2_SHA256,
+                    Iterations = 600000
+                },
+                MasterPasswordAuthenticationHash = "authHash",
+                Salt = "salt1"
+            },
+            UnlockData = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = new KdfRequestModel
+                {
+                    KdfType = KdfType.Argon2id,
+                    Iterations = 3,
+                    Memory = 64,
+                    Parallelism = 4
+                },
+                MasterKeyWrappedUserKey = "wrappedKey",
+                Salt = "salt2"
+            }
+        };
+
+        var result = model.Validate(new ValidationContext(model)).ToList();
+
+        Assert.Contains(result, r => r.ErrorMessage == "AuthenticationData and UnlockData must have the same KDF configuration.");
+        Assert.Contains(result, r => r.ErrorMessage == "AuthenticationData and UnlockData must have the same salt.");
+    }
+
+    [Fact]
+    public void Validate_WhenBothAuthAndUnlockPresent_WithBelowMinimumKdf_NoError()
+    {
+        // Regression guard: legacy users with sub-minimum KDF settings must be able to change
+        // their master password. KDF strength is enforced only on /accounts/kdf (ChangeKdfCommand).
         var kdf = new KdfRequestModel
         {
             KdfType = KdfType.PBKDF2_SHA256,
-            Iterations = 1 // Too low
+            Iterations = 1
         };
 
         var model = new PasswordRequestModel
@@ -152,11 +192,9 @@ public class PasswordRequestModelTests
             }
         };
 
-        // Act
         var result = model.Validate(new ValidationContext(model)).ToList();
 
-        // Assert
-        Assert.Contains(result, r => r.ErrorMessage != null && r.ErrorMessage.Contains("KDF iterations must be between"));
+        Assert.DoesNotContain(result, r => r.ErrorMessage != null && r.ErrorMessage.Contains("KDF iterations must be between"));
     }
 
     [Fact]

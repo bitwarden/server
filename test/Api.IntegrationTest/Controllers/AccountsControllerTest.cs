@@ -382,7 +382,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("The model state is invalid", content);
+        Assert.Contains("KDF settings are invalid.", content);
     }
 
     [Fact]
