@@ -160,7 +160,7 @@ public class PasswordRequestModelTests
     public void Validate_WhenBothAuthAndUnlockPresent_WithBelowMinimumKdf_NoError()
     {
         // Regression guard: legacy users with sub-minimum KDF settings must be able to change
-        // their master password. KDF strength is enforced only on /accounts/kdf (ChangeKdfCommand).
+        // their master password. KDF strength is enforced in the commands for registration / kdf change
         var kdf = new KdfRequestModel
         {
             KdfType = KdfType.PBKDF2_SHA256,
