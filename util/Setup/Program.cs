@@ -96,6 +96,11 @@ public class Program
         if (_context.Parameters.TryGetValue("domain", out var domain))
         {
             _context.Install.Domain = domain.ToLowerInvariant();
+            if (Uri.CheckHostName(_context.Install.Domain) != UriHostNameType.Dns)
+            {
+                Helpers.WriteError("Domain is invalid. A valid domain name is required (e.g. bitwarden.example.com).");
+                return;
+            }
         }
         if (_context.Parameters.TryGetValue("dbname", out var database))
         {
