@@ -1,4 +1,4 @@
-namespace Bit.Seeder.Pipeline;
+﻿namespace Bit.Seeder.Pipeline;
 
 /// <summary>
 /// Batches <see cref="PhaseAdvanced"/> events so a sequential loop over N items emits at most ~100 events.

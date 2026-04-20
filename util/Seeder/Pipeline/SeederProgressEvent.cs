@@ -1,4 +1,4 @@
-namespace Bit.Seeder.Pipeline;
+﻿namespace Bit.Seeder.Pipeline;
 
 /// <summary>
 /// Events emitted by the seeder pipeline for progress reporting.

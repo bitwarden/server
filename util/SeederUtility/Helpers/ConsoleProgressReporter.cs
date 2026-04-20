@@ -1,4 +1,4 @@
-using Bit.Seeder.Options;
+﻿using Bit.Seeder.Options;
 using Bit.Seeder.Pipeline;
 using Spectre.Console;
 
