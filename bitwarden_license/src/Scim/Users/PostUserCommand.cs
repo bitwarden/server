@@ -12,6 +12,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Platform.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Context;
@@ -30,7 +31,8 @@ public class PostUserCommand(
     IFeatureService featureService,
     IInviteOrganizationUsersCommand inviteOrganizationUsersCommand,
     TimeProvider timeProvider,
-    IPricingClient pricingClient)
+    IPricingClient pricingClient,
+    ITransactionManager transactionManager)
     : IPostUserCommand
 {
     public async Task<OrganizationUserUserDetails?> PostUserAsync(Guid organizationId, ScimUserRequestModel model)
@@ -48,6 +50,8 @@ public class PostUserCommand(
         Guid organizationId,
         ScimProviderType scimProvider)
     {
+        await transactionManager.BeginTransactionAsync();
+
         var organization = await organizationRepository.GetByIdAsync(organizationId);
 
         if (organization is null)
