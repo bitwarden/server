@@ -24,6 +24,8 @@ internal sealed class GeneratePersonalCiphersStep(
     Distribution<PasswordStrength>? pwDist = null,
     DensityProfile? density = null) : IStep
 {
+    private const string Phase = "Creating personal ciphers";
+
     public void Execute(SeederContext context)
     {
         if (countPerUser == 0 && density?.PersonalCipherDistribution is null)
@@ -32,6 +34,7 @@ internal sealed class GeneratePersonalCiphersStep(
         }
 
         var generator = context.RequireGenerator();
+        var progress = context.GetProgress();
 
         var userDigests = context.Registry.UserDigests;
         var typeDistribution = typeDist ?? CipherTypeDistributions.Realistic;
@@ -67,26 +70,49 @@ internal sealed class GeneratePersonalCiphersStep(
 
         var userCiphers = new Cipher[userDigests.Count][];
 
-        Parallel.For(0, userDigests.Count, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, u =>
-        {
-            var userDigest = userDigests[u];
-            var localCount = userCounts[u];
-            var baseOffset = offsets[u];
-            var localCiphers = new Cipher[localCount];
+        progress?.Report(new PhaseStarted(Phase, expectedTotal));
+        var batchSize = Math.Max(1, expectedTotal / 100);
 
-            for (var i = 0; i < localCount; i++)
+        Parallel.For(
+            0,
+            userDigests.Count,
+            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+            localInit: () => 0,
+            body: (u, _, localTicked) =>
             {
-                var globalIndex = baseOffset + i;
-                var cipherType = typeDistribution.Select(globalIndex, expectedTotal);
-                var cipher = CipherComposer.Compose(globalIndex, cipherType, userDigest.SymmetricKey, companies, generator, passwordDistribution, userId: userDigest.UserId);
+                var userDigest = userDigests[u];
+                var localCount = userCounts[u];
+                var baseOffset = offsets[u];
+                var localCiphers = new Cipher[localCount];
 
-                CipherComposer.AssignFolder(cipher, userDigest.UserId, i, userFolderIds);
+                for (var i = 0; i < localCount; i++)
+                {
+                    var globalIndex = baseOffset + i;
+                    var cipherType = typeDistribution.Select(globalIndex, expectedTotal);
+                    var cipher = CipherComposer.Compose(globalIndex, cipherType, userDigest.SymmetricKey, companies, generator, passwordDistribution, userId: userDigest.UserId);
 
-                localCiphers[i] = cipher;
-            }
+                    CipherComposer.AssignFolder(cipher, userDigest.UserId, i, userFolderIds);
 
-            userCiphers[u] = localCiphers;
-        });
+                    localCiphers[i] = cipher;
+                }
+
+                userCiphers[u] = localCiphers;
+
+                localTicked += localCount;
+                if (progress is not null && localTicked >= batchSize)
+                {
+                    progress.Report(new PhaseAdvanced(Phase, localTicked));
+                    localTicked = 0;
+                }
+                return localTicked;
+            },
+            localFinally: localTicked =>
+            {
+                if (progress is not null && localTicked > 0)
+                {
+                    progress.Report(new PhaseAdvanced(Phase, localTicked));
+                }
+            });
 
         // Flatten jagged array into context lists
         var ciphers = new List<Cipher>(expectedTotal);
@@ -104,6 +130,8 @@ internal sealed class GeneratePersonalCiphersStep(
 
         context.Ciphers.AddRange(ciphers);
         context.Registry.CipherIds.AddRange(cipherIds);
+
+        progress?.Report(new PhaseCompleted(Phase));
     }
 
     private static int EstimateTotal(int userCount, Distribution<(int Min, int Max)> dist)

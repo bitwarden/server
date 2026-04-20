@@ -41,10 +41,11 @@ public class PresetCommand
     private static void RunOrganizationPreset(PresetArgs args)
     {
         using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
-        var recipe = new OrganizationRecipe(deps.ToDependencies());
 
         Console.WriteLine($"Seeding organization from preset '{args.Name}'...");
-        var result = recipe.Seed(args.Name!, args.Password, args.KdfIterations);
+        var result = ConsoleProgressReporter.RunWithProgress(
+            deps.ToDependencies(),
+            d => new OrganizationRecipe(d).Seed(args.Name!, args.Password, args.KdfIterations));
 
         ConsoleOutput.PrintRow("Organization", result.OrganizationId);
         if (result.OwnerEmail is not null)
@@ -67,10 +68,11 @@ public class PresetCommand
     private static void RunIndividualPreset(PresetArgs args)
     {
         using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
-        var recipe = new IndividualUserRecipe(deps.ToDependencies());
 
         Console.WriteLine($"Seeding individual user from preset '{args.Name}'...");
-        var result = recipe.Seed(args.Name!, args.Password, args.KdfIterations);
+        var result = ConsoleProgressReporter.RunWithProgress(
+            deps.ToDependencies(),
+            d => new IndividualUserRecipe(d).Seed(args.Name!, args.Password, args.KdfIterations));
 
         ConsoleOutput.PrintRow("User", result.UserId);
         if (result.Email is not null)
