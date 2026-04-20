@@ -414,7 +414,7 @@ public class PoliciesControllerTests
             .Returns(policy);
 
         // Act
-        var result = await sutProvider.Sut.Put(orgId, policy.Type, model.Policy);
+        var result = await sutProvider.Sut.Put(orgId, policy.Type, model);
 
         // Assert
         await sutProvider.GetDependency<ISavePolicyCommand>()
