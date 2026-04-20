@@ -112,6 +112,38 @@ internal static class EncryptedCipherDtoExtensions
         Fields = e.ToFields()
     };
 
+    internal static CipherDriversLicenseData ToDriversLicenseData(this EncryptedCipherDto e) => new()
+    {
+        Name = e.Name,
+        Notes = e.Notes,
+        FirstName = e.DriversLicense?.FirstName,
+        MiddleName = e.DriversLicense?.MiddleName,
+        LastName = e.DriversLicense?.LastName,
+        LicenseNumber = e.DriversLicense?.LicenseNumber,
+        IssuingCountry = e.DriversLicense?.IssuingCountry,
+        IssuingState = e.DriversLicense?.IssuingState,
+        ExpirationDate = e.DriversLicense?.ExpirationDate,
+        LicenseClass = e.DriversLicense?.LicenseClass,
+        Fields = e.ToFields()
+    };
+
+    internal static CipherPassportData ToPassportData(this EncryptedCipherDto e) => new()
+    {
+        Name = e.Name,
+        Notes = e.Notes,
+        Surname = e.Passport?.Surname,
+        GivenName = e.Passport?.GivenName,
+        DateOfBirth = e.Passport?.DateOfBirth,
+        Nationality = e.Passport?.Nationality,
+        PassportNumber = e.Passport?.PassportNumber,
+        PassportType = e.Passport?.PassportType,
+        IssuingCountry = e.Passport?.IssuingCountry,
+        IssuingAuthority = e.Passport?.IssuingAuthority,
+        IssueDate = e.Passport?.IssueDate,
+        ExpirationDate = e.Passport?.ExpirationDate,
+        Fields = e.ToFields()
+    };
+
     private static IEnumerable<CipherFieldData>? ToFields(this EncryptedCipherDto e) =>
         e.Fields?.Select(f => new CipherFieldData
         {
