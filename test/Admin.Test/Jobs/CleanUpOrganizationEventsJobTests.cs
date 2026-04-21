@@ -43,7 +43,7 @@ public class CleanUpOrganizationEventsJobTests
         await _sut.Execute(context);
 
         await _cleanupRepository.DidNotReceiveWithAnyArgs().GetNextPendingAsync();
-        await _eventRepository.DidNotReceiveWithAnyArgs().DeleteManyByOrganizationIdAsync(default, default);
+        await _eventRepository.DidNotReceiveWithAnyArgs().DeleteManyByOrganizationIdAsync(default);
     }
 
     [Fact]
@@ -55,7 +55,7 @@ public class CleanUpOrganizationEventsJobTests
         await _sut.Execute(context);
 
         await _cleanupRepository.DidNotReceiveWithAnyArgs().MarkStartedAsync(default);
-        await _eventRepository.DidNotReceiveWithAnyArgs().DeleteManyByOrganizationIdAsync(default, default);
+        await _eventRepository.DidNotReceiveWithAnyArgs().DeleteManyByOrganizationIdAsync(default);
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public class CleanUpOrganizationEventsJobTests
         var pending = CreatePending();
         _cleanupRepository.GetNextPendingAsync().Returns(pending);
         _eventRepository
-            .DeleteManyByOrganizationIdAsync(pending.OrganizationId, Arg.Any<int>())
+            .DeleteManyByOrganizationIdAsync(pending.OrganizationId)
             .Returns(2000, 2000, 500, 0);
         var context = CreateContext();
 
@@ -72,7 +72,7 @@ public class CleanUpOrganizationEventsJobTests
 
         await _cleanupRepository.Received(1).MarkStartedAsync(pending.Id);
         await _eventRepository.Received(4)
-            .DeleteManyByOrganizationIdAsync(pending.OrganizationId, Arg.Any<int>());
+            .DeleteManyByOrganizationIdAsync(pending.OrganizationId);
         await _cleanupRepository.Received(2).IncrementProgressAsync(pending.Id, 2000);
         await _cleanupRepository.Received(1).IncrementProgressAsync(pending.Id, 500);
         await _cleanupRepository.Received(1).MarkCompletedAsync(pending.Id);
@@ -87,7 +87,7 @@ public class CleanUpOrganizationEventsJobTests
 
         using var cts = new CancellationTokenSource();
         _eventRepository
-            .DeleteManyByOrganizationIdAsync(pending.OrganizationId, Arg.Any<int>())
+            .DeleteManyByOrganizationIdAsync(pending.OrganizationId)
             .Returns(_ =>
             {
                 cts.Cancel();
@@ -108,7 +108,7 @@ public class CleanUpOrganizationEventsJobTests
         var pending = CreatePending();
         _cleanupRepository.GetNextPendingAsync().Returns(pending);
         _eventRepository
-            .DeleteManyByOrganizationIdAsync(pending.OrganizationId, Arg.Any<int>())
+            .DeleteManyByOrganizationIdAsync(pending.OrganizationId)
             .Throws(new InvalidOperationException("boom"));
         var context = CreateContext();
 
@@ -118,6 +118,23 @@ public class CleanUpOrganizationEventsJobTests
         await _cleanupRepository.Received(1).MarkStartedAsync(pending.Id);
         await _cleanupRepository.Received(1).RecordErrorAsync(pending.Id, "boom");
         await _cleanupRepository.DidNotReceive().MarkCompletedAsync(pending.Id);
+    }
+
+    [Fact]
+    public async Task Execute_DeleteThrowsWithLongMessage_TruncatesErrorTo4000Chars()
+    {
+        var pending = CreatePending();
+        _cleanupRepository.GetNextPendingAsync().Returns(pending);
+        var longMessage = new string('x', 5000);
+        var expectedTruncated = longMessage[..4000];
+        _eventRepository
+            .DeleteManyByOrganizationIdAsync(pending.OrganizationId)
+            .Throws(new InvalidOperationException(longMessage));
+        var context = CreateContext();
+
+        await _sut.Execute(context);
+
+        await _cleanupRepository.Received(1).RecordErrorAsync(pending.Id, expectedTruncated);
     }
 
     private static OrganizationEventCleanup CreatePending() => new()

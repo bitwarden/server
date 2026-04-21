@@ -155,16 +155,35 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
             }, startDate, endDate, pageOptions);
     }
 
-    public async Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId, int batchSize)
+    public async Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId)
     {
-        using (var connection = new SqlConnection(ConnectionString))
+        // Sub-batch size stays below SQL Server's ~5,000-lock escalation threshold to
+        // avoid taking a table lock on [Event] while deletes run.
+        const int subBatchSize = 4_000;
+        const int targetPerCall = 50_000;
+
+        var totalDeleted = 0;
+
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.OpenAsync();
+
+        while (totalDeleted < targetPerCall)
         {
-            return await connection.ExecuteScalarAsync<int>(
+            var deleted = await connection.ExecuteScalarAsync<int>(
                 $"[{Schema}].[Event_DeleteByOrganizationIdBatch]",
-                new { OrganizationId = organizationId, BatchSize = batchSize },
+                new { OrganizationId = organizationId, BatchSize = subBatchSize },
                 commandType: CommandType.StoredProcedure,
                 commandTimeout: 3600);
+
+            if (deleted == 0)
+            {
+                break;
+            }
+
+            totalDeleted += deleted;
         }
+
+        return totalDeleted;
     }
 
     private async Task<PagedResult<IEvent>> GetManyAsync(string sprocName,

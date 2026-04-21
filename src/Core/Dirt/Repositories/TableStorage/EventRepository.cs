@@ -102,12 +102,11 @@ public class EventRepository : IEventRepository
         await CreateEventAsync(entity);
     }
 
-    public async Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId, int batchSize)
+    public async Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId)
     {
-        if (batchSize <= 0)
-        {
-            return 0;
-        }
+        // Azure Table Storage caps a single transaction at 100 ops; the outer cap
+        // bounds work per call so the background job can interleave other orgs.
+        const int targetPerCall = 100_000;
 
         var partitionKey = $"OrganizationId={organizationId}";
         var filter = $"PartitionKey eq '{partitionKey}'";
@@ -126,7 +125,7 @@ public class EventRepository : IEventRepository
                 totalDeleted += pending.Count;
                 pending.Clear();
 
-                if (totalDeleted >= batchSize)
+                if (totalDeleted >= targetPerCall)
                 {
                     return totalDeleted;
                 }

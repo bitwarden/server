@@ -255,8 +255,10 @@ public class EventRepository : Repository<Core.Entities.Event, Event, Guid>, IEv
         }
     }
 
-    public async Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId, int batchSize)
+    public async Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId)
     {
+        const int batchSize = 50_000;
+
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         return await dbContext.Events

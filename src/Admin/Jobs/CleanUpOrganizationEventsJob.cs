@@ -11,7 +11,6 @@ namespace Bit.Admin.Jobs;
 
 public class CleanUpOrganizationEventsJob : BaseJob
 {
-    private static readonly int _batchSize = 2000;
     private static readonly TimeSpan _runBudget = TimeSpan.FromMinutes(4);
 
     private readonly IOrganizationEventCleanupRepository _cleanupRepository;
@@ -58,7 +57,7 @@ public class CleanUpOrganizationEventsJob : BaseJob
             while (DateTime.UtcNow < deadline && !context.CancellationToken.IsCancellationRequested)
             {
                 deleted = await _eventRepository.DeleteManyByOrganizationIdAsync(
-                    pending.OrganizationId, _batchSize);
+                    pending.OrganizationId);
                 if (deleted == 0)
                 {
                     break;
