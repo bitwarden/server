@@ -63,8 +63,8 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @UsePhishingBlocker BIT = 0,
     @UseDisableSmAdsForUsers BIT = 0,
     @UseMyItems BIT = 0,
-    @UseInviteLinks BIT = 0,
-    @ExemptFromBillingAutomation BIT = 0
+    @ExemptFromBillingAutomation BIT = 0,
+    @UseInviteLinks BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -136,8 +136,8 @@ BEGIN
         [MaxStorageGbIncreased] = @MaxStorageGb,
         [UseDisableSmAdsForUsers] = @UseDisableSmAdsForUsers,
         [UseMyItems] = @UseMyItems,
-        [UseInviteLinks] = @UseInviteLinks,
-        [ExemptFromBillingAutomation] = @ExemptFromBillingAutomation
+        [ExemptFromBillingAutomation] = @ExemptFromBillingAutomation,
+        [UseInviteLinks] = @UseInviteLinks
     WHERE
         [Id] = @Id;
 END
