@@ -57,6 +57,7 @@ public class EventRepository : Repository<Core.Entities.Event, Event, Guid>, IEv
             else
             {
                 await dbContext.BulkCopyAsync(entityEvents);
+                await dbContext.SaveChangesAsync();
             }
         }
     }
