@@ -38,6 +38,12 @@ public class GroupRepository : Repository<AdminConsoleEntities.Group, Group, Gui
                 Manage = y.Manage,
             });
             await dbContext.CollectionGroups.AddRangeAsync(collectionGroups);
+            // Bump RevisionDate on all affected collections
+            var filteredCollectionIds = filteredCollections.Select(fc => fc.Id).ToHashSet();
+            foreach (var c in availableCollections.Where(a => filteredCollectionIds.Contains(a.Id)))
+            {
+                c.RevisionDate = grp.RevisionDate;
+            }
             await dbContext.SaveChangesAsync();
         }
     }
@@ -226,6 +232,20 @@ public class GroupRepository : Repository<AdminConsoleEntities.Group, Group, Gui
 
             dbContext.CollectionGroups.RemoveRange(
                 existingCollectionGroups.Where(cg => !requestedCollectionIds.Contains(cg.CollectionId)));
+
+            // Bump the revision date on all affected collections
+            var allAffectedCollectionIds = existingCollectionGroups.Select(cg => cg.CollectionId)
+                .Union(requestedCollections.Select(rc => rc.Id))
+                .Distinct()
+                .ToList();
+            var affectedCollections = await dbContext.Collections
+                .Where(c => c.OrganizationId == group.OrganizationId
+                    && allAffectedCollectionIds.Contains(c.Id))
+                .ToListAsync();
+            foreach (var c in affectedCollections)
+            {
+                c.RevisionDate = group.RevisionDate;
+            }
 
             await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(group.OrganizationId);
             await dbContext.SaveChangesAsync();

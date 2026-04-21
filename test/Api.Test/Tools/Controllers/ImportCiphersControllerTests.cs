@@ -738,7 +738,7 @@ public class ImportCiphersControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task PostImportOrganization_ImportWithNoCollectionsWithCreatePermissionsOnlySuccessAsync(
+    public async Task PostImportOrganization_ImportWithNoCollectionsWithCreatePermissionsOnly_ThrowsBadRequestAsync(
       SutProvider<ImportCiphersController> sutProvider,
       IFixture fixture,
       User user)
@@ -753,7 +753,7 @@ public class ImportCiphersControllerTests
 
         SetupUserService(sutProvider, user);
 
-        // Import model includes new and existing collection
+        // Import model with no collections — previously bypassed all authorization
         var request = new ImportOrganizationCiphersRequestModel
         {
             Collections = new List<CollectionWithIdRequestModel>().ToArray(),   // No collections
@@ -790,15 +790,16 @@ public class ImportCiphersControllerTests
             .GetManyByOrganizationIdAsync(orgId)
             .Returns(new List<Collection>());
 
-        // Act
-        // import ciphers only and no collections
-        // User has Create permissions
-        // expected to be successful
-        await sutProvider.Sut.PostImportOrganization(orgId.ToString(), request);
+        // Act & Assert
+        // With no collections and no AccessImportExport permission,
+        // the import should be rejected — empty collections must not bypass authorization
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.PostImportOrganization(orgId.ToString(), request));
 
-        // Assert
+        Assert.Equal("Not enough privileges to import into this organization.", exception.Message);
+
         await sutProvider.GetDependency<IImportCiphersCommand>()
-            .Received(1)
+            .DidNotReceive()
             .ImportIntoOrganizationalVaultAsync(
                 Arg.Any<List<Collection>>(),
                 Arg.Any<List<CipherDetails>>(),

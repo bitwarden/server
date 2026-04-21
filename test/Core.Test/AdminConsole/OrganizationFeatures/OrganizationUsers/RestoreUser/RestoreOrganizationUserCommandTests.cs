@@ -613,10 +613,6 @@ public class RestoreOrganizationUserCommandTests
         var user = new User { Id = organizationUser.UserId!.Value, Email = "test@bitwarden.com" };
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(organizationUser.UserId.Value).Returns(user);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-            .Returns(true);
-
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([new PolicyDetails { OrganizationId = organization.Id }]));
@@ -648,10 +644,6 @@ public class RestoreOrganizationUserCommandTests
         var user = new User { Id = organizationUser.UserId!.Value, Email = "test@bitwarden.com" };
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(organizationUser.UserId.Value).Returns(user);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-            .Returns(true);
-
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
@@ -682,10 +674,6 @@ public class RestoreOrganizationUserCommandTests
 
         var user = new User { Id = organizationUser.UserId!.Value, Email = "test@bitwarden.com" };
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(organizationUser.UserId.Value).Returns(user);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-            .Returns(true);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
@@ -1082,6 +1070,22 @@ public class RestoreOrganizationUserCommandTests
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<RequireTwoFactorPolicyRequirement>(Arg.Any<Guid>())
             .Returns(new RequireTwoFactorPolicyRequirement([]));
+
+        // Setup default empty AutomaticUserConfirmationPolicyRequirement (no auto-confirm restrictions)
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<Guid>())
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
+            .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(targetOrganizationUser.OrganizationId, [], null!)));
+
+        // Setup default user lookup — required when Email is null (previously-confirmed users reach
+        // CheckPoliciesBeforeRestoreAsync, which calls userRepository.GetByIdAsync and uses user.Id).
+        // Tests that need a specific User object override this after calling RestoreUser_Setup.
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(callInfo => new User { Id = callInfo.ArgAt<Guid>(0), Email = "test@example.com" });
     }
 
     private static void SetupOrganizationDataOwnershipPolicy(

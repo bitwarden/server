@@ -20,7 +20,8 @@ BEGIN
         [RevisionDate] DATETIME2(7),
         [Permissions] NVARCHAR(MAX),
         [ResetPasswordKey] VARCHAR(MAX),
-        [AccessSecretsManager] BIT
+        [AccessSecretsManager] BIT,
+        [RevocationReason] TINYINT NULL
     )
 
     INSERT INTO @OrganizationUserInput
@@ -37,7 +38,8 @@ BEGIN
         [RevisionDate],
         [Permissions],
         [ResetPasswordKey],
-        [AccessSecretsManager]
+        [AccessSecretsManager],
+        [RevocationReason]
     FROM OPENJSON(@jsonData)
     WITH (
         [Id] UNIQUEIDENTIFIER '$.Id',
@@ -52,7 +54,8 @@ BEGIN
         [RevisionDate] DATETIME2(7) '$.RevisionDate',
         [Permissions] NVARCHAR (MAX) '$.Permissions',
         [ResetPasswordKey] VARCHAR (MAX) '$.ResetPasswordKey',
-        [AccessSecretsManager] BIT '$.AccessSecretsManager'
+        [AccessSecretsManager] BIT '$.AccessSecretsManager',
+        [RevocationReason] TINYINT '$.RevocationReason'
     )
 
     -- Perform the update
@@ -70,7 +73,8 @@ BEGIN
         [RevisionDate] = OUI.[RevisionDate],
         [Permissions] = OUI.[Permissions],
         [ResetPasswordKey] = OUI.[ResetPasswordKey],
-        [AccessSecretsManager] = OUI.[AccessSecretsManager]
+        [AccessSecretsManager] = OUI.[AccessSecretsManager],
+        [RevocationReason] = OUI.[RevocationReason]
     FROM
         [dbo].[OrganizationUser] OU
     INNER JOIN
