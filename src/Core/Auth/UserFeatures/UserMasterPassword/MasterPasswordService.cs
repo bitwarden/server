@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
@@ -59,12 +60,8 @@ public class MasterPasswordService(
             return result.Errors.ToArray();
         }
 
-        // Set kdf data on the user
         user.Key = setInitialData.MasterPasswordUnlock.MasterKeyWrappedUserKey;
-        user.Kdf = setInitialData.MasterPasswordUnlock.Kdf.KdfType;
-        user.KdfIterations = setInitialData.MasterPasswordUnlock.Kdf.Iterations;
-        user.KdfMemory = setInitialData.MasterPasswordUnlock.Kdf.Memory;
-        user.KdfParallelism = setInitialData.MasterPasswordUnlock.Kdf.Parallelism;
+        SetKdfStateOnUser(user, setInitialData.MasterPasswordUnlock.Kdf);
 
         // Set salt on the user
         user.MasterPasswordSalt = setInitialData.MasterPasswordUnlock.Salt;
@@ -166,11 +163,7 @@ public class MasterPasswordService(
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         user.Key = updateExistingExistingData.MasterPasswordUnlock.MasterKeyWrappedUserKey;
-
-        user.Kdf = updateExistingExistingData.MasterPasswordUnlock.Kdf.KdfType;
-        user.KdfIterations = updateExistingExistingData.MasterPasswordUnlock.Kdf.Iterations;
-        user.KdfMemory = updateExistingExistingData.MasterPasswordUnlock.Kdf.Memory;
-        user.KdfParallelism = updateExistingExistingData.MasterPasswordUnlock.Kdf.Parallelism;
+        SetKdfStateOnUser(user, updateExistingExistingData.MasterPasswordUnlock.Kdf);
 
         // Always override the master password hint, even if it's null.
         user.MasterPasswordHint = updateExistingExistingData.MasterPasswordHint;
@@ -219,6 +212,18 @@ public class MasterPasswordService(
         }
 
         return IdentityResult.Success;
+    }
+
+    /// <summary>
+    /// Applies KDF parameters from the supplied <paramref name="kdf"/> to the <paramref name="user"/>.
+    /// Used by both initial-set and KDF-rotation paths.
+    /// </summary>
+    private static void SetKdfStateOnUser(User user, KdfSettings kdf)
+    {
+        user.Kdf = kdf.KdfType;
+        user.KdfIterations = kdf.Iterations;
+        user.KdfMemory = kdf.Memory;
+        user.KdfParallelism = kdf.Parallelism;
     }
 
     // A properly initialized or database-hydrated User should have at a minimum a non-default user ID.
