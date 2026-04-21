@@ -33,9 +33,6 @@ public class MasterPasswordAuthenticationDataRequestModel
             return false;
         }
 
-        return Kdf.KdfType == unlockData.Kdf.KdfType
-            && Kdf.Iterations == unlockData.Kdf.Iterations
-            && Kdf.Memory == unlockData.Kdf.Memory
-            && Kdf.Parallelism == unlockData.Kdf.Parallelism;
+        return Kdf.ToData().Equals(unlockData.Kdf.ToData());
     }
 }
