@@ -12,6 +12,7 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Organizations.Repositories;
 using Bit.Core.Billing.Pricing;
@@ -254,7 +255,7 @@ public class OrganizationsControllerTests : IDisposable
         Assert.Equal(response.Name, organizationUserOrganizationDetails.Name);
 
         await _addSecretsManagerSubscriptionCommand.Received(1)
-            .SignUpAsync(organization, model.AdditionalSmSeats, model.AdditionalServiceAccounts);
+            .RunAsync(organization, model.AdditionalSmSeats, model.AdditionalServiceAccounts);
         await _organizationUserRepository.Received(1).ReplaceAsync(Arg.Is<OrganizationUser>(orgUser =>
             orgUser.Id == organizationUser.Id && orgUser.AccessSecretsManager == true));
     }
@@ -293,7 +294,7 @@ public class OrganizationsControllerTests : IDisposable
         Assert.Equal(response.Name, organizationUserOrganizationDetails.Name);
 
         await _addSecretsManagerSubscriptionCommand.Received(1)
-            .SignUpAsync(organization, model.AdditionalSmSeats, model.AdditionalServiceAccounts);
+            .RunAsync(organization, model.AdditionalSmSeats, model.AdditionalServiceAccounts);
         await _organizationUserRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(Arg.Any<OrganizationUser>());
     }
 

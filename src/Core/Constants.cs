@@ -31,6 +31,9 @@ public static class Constants
 
     public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
     public const string SSHKeyCipherMinimumVersion = "2024.12.0";
+
+    // TODO: PM-34798 Update with actual version once the feature is implemented
+    public const string BankAccountCipherMinimumVersion = "2026.2.0";
     public const string DenyLegacyUserMinimumVersion = "2025.6.0";
 
     /// <summary>
@@ -159,12 +162,14 @@ public static class FeatureFlagKeys
     public const string PolicyRequirements = "pm-14439-policy-requirements";
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
     public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
-    public const string ScimRevokeV2 = "pm-32394-scim-revoke-put-v2";
-    public const string BulkReinviteUI = "pm-28416-bulk-reinvite-ux-improvements";
-    public const string RefactorOrgAcceptInit = "pm-33082-refactor-org-accept-init";
     public const string AdminResetTwoFactor = "pm-15489-reset-two-factor-account-recovery";
     public const string PublicMembersInviteRefactor = "pm-33398-refactor-members-invite-org-users-command";
     public const string GenerateInviteLink = "pm-32497-generate-invite-link";
+    public const string OrgAbilityExtendedCache = "pm-32104-org-ability-extended-cache";
+    public const string ProviderAbilityExtendedCache = "pm-32111-provider-ability-extended-cache";
+    public const string PolicyDrawers = "pm-34804-policy-drawers";
+    public const string PM35153CollectionSdkDecryption = "pm-35153-collection-sdk-decryption";
+    public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
@@ -182,6 +187,7 @@ public static class FeatureFlagKeys
     public const string ChangeEmailNewAuthenticationApis = "pm-30811-change-email-new-authentication-apis";
     public const string PM31088_MasterPasswordServiceEmitSalt = "pm-31088-master-password-service-emit-salt";
     public const string PM32413_MultiClientPasswordManagement = "pm-32413-multi-client-password-management";
+    public const string DevicesLastActivityDate = "pm-4516-devices-add-last-activity-date";
     public const string PM34210_DesktopAddDevices = "pm-34210-desktop-add-devices";
 
     /* Autofill Team */
@@ -195,14 +201,11 @@ public static class FeatureFlagKeys
     public const string NotificationUndeterminedCipherScenarioLogic = "undetermined-cipher-scenario-logic";
 
     /* Billing Team */
-    public const string TrialPayment = "PM-8163-trial-payment";
     public const string PM24032_NewNavigationPremiumUpgradeButton = "pm-24032-new-navigation-premium-upgrade-button";
     public const string PM23713_PremiumBadgeOpensNewPremiumUpgradeDialog = "pm-23713-premium-badge-opens-new-premium-upgrade-dialog";
     public const string PM26793_FetchPremiumPriceFromPricingService = "pm-26793-fetch-premium-price-from-pricing-service";
 
-    public const string PM26462_Milestone_3 = "pm-26462-milestone-3";
-    public const string PM28265_EnableReconcileAdditionalStorageJob = "pm-28265-enable-reconcile-additional-storage-job";
-    public const string PM28265_ReconcileAdditionalStorageJobEnableLiveMode = "pm-28265-reconcile-additional-storage-job-enable-live-mode";
+
     public const string PM29594_UpdateIndividualSubscriptionPage = "pm-29594-update-individual-subscription-page";
     public const string PM29108_EnablePersonalDiscounts = "pm-29108-enable-personal-discounts";
     public const string PM29593_PremiumToOrganizationUpgrade = "pm-29593-premium-to-organization-upgrade";
@@ -228,6 +231,7 @@ public static class FeatureFlagKeys
     public const string UseUnlockServiceForKeyConnectorLogin = "use-unlock-service-for-key-connector-login";
     public const string NoLogoutOnKeyUpgradeRotation = "pm-31050-no-logout-key-upgrade-rotation";
     public const string EnableAccountEncryptionV2JitPasswordRegistration = "enable-account-encryption-v2-jit-password-registration";
+    public const string EnableAccountEncryptionV2PasswordRegistration = "pm-27278-v2-password-registration";
 
     /* Mobile Team */
     public const string AndroidImportLoginsFlow = "import-logins-flow";
@@ -287,6 +291,8 @@ public static class FeatureFlagKeys
     public const string PM29437_WelcomeDialogNoExtPrompt = "pm-29437-welcome-dialog-no-ext-prompt";
     public const string PM31948_OrgUserNotificationBanner = "pm-31948-org-user-notification-banner";
     public const string PM32009_NewItemTypes = "pm-32009-new-item-types";
+    public const string PM34500_StrictCipherDecryption = "pm-34500-strict-cipher-decryption";
+    public const string PM28091_AddCopyAndQuickLaunchActions = "pm-28091-add-copy-and-quick-launch-actions";
 
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
@@ -299,6 +305,7 @@ public static class FeatureFlagKeys
     public const string EventManagementForHuntress = "event-management-for-huntress";
     public const string Milestone11AppPageImprovements = "pm-30538-dirt-milestone-11-app-page-improvements";
     public const string AccessIntelligenceTrendChart = "pm-26961-access-intelligence-trend-chart";
+    public const string AccessIntelligenceNewArchitecture = "pm-31936-access-intelligence-new-architecture";
 
     /* UIF Team */
     public const string RouterFocusManagement = "router-focus-management";

@@ -24,12 +24,14 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
@@ -69,6 +71,7 @@ public class UserService : UserManager<User>, IUserService
     private readonly IPricingClient _pricingClient;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
     private readonly ISubscriberService _subscriberService;
+    private readonly ISendFileStorageService _sendFileStorageService;
 
     public UserService(
         IUserRepository userRepository,
@@ -102,7 +105,8 @@ public class UserService : UserManager<User>, IUserService
         IPolicyRequirementQuery policyRequirementQuery,
         IPricingClient pricingClient,
         IHasPremiumAccessQuery hasPremiumAccessQuery,
-        ISubscriberService subscriberService)
+        ISubscriberService subscriberService,
+        ISendFileStorageService sendFileStorageService)
         : base(
               store,
               optionsAccessor,
@@ -141,6 +145,7 @@ public class UserService : UserManager<User>, IUserService
         _pricingClient = pricingClient;
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
         _subscriberService = subscriberService;
+        _sendFileStorageService = sendFileStorageService;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -237,6 +242,7 @@ public class UserService : UserManager<User>, IUserService
                     var orgCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(org.Id);
                     if (orgCount <= 1)
                     {
+                        await _sendFileStorageService.DeleteFilesForUserAsync(user.Id);
                         await _organizationRepository.DeleteAsync(org);
                         deletedOrg = true;
                     }
@@ -281,6 +287,7 @@ public class UserService : UserManager<User>, IUserService
             catch (BillingException) { }
         }
 
+        await _sendFileStorageService.DeleteFilesForUserAsync(user.Id);
         await _userRepository.DeleteAsync(user);
         await _pushService.PushLogOutAsync(user.Id);
         return IdentityResult.Success;
@@ -320,9 +327,22 @@ public class UserService : UserManager<User>, IUserService
         return await CreateAsync(user);
     }
 
-    public async Task<IdentityResult> CreateUserAsync(User user, string masterPasswordHash)
+    public async Task<IdentityResult> CreateUserAsync(User user, RegisterFinishData registerFinishData)
     {
-        return await CreateAsync(user, masterPasswordHash);
+        // TODO remove logic below after a compatibility period - once V2 accounts are fully supported
+        // https://bitwarden.atlassian.net/browse/PM-27326
+        if (!registerFinishData.IsV2Encryption())
+        {
+            return await CreateAsync(user, registerFinishData.MasterPasswordAuthenticationHash);
+        }
+
+        var result = await CreateAsync(user, registerFinishData.MasterPasswordAuthenticationHash);
+        if (result.Succeeded)
+        {
+            var setRegisterFinishUserDataTask = _userRepository.UpdateMasterPasswordUnlockData(user.Id, registerFinishData);
+            await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, registerFinishData.UserAccountKeysData, [setRegisterFinishUserDataTask]);
+        }
+        return result;
     }
 
     public async Task SendMasterPasswordHintAsync(string email)
@@ -414,11 +434,11 @@ public class UserService : UserManager<User>, IUserService
         user.Key = key;
         user.Email = newEmail;
         user.EmailVerified = true;
+        user.RevisionDate = user.AccountRevisionDate = now;
 
         // We need this to backfill the salt for now to keep the email and salt always in sync.
         user.MasterPasswordSalt = newEmail;
 
-        user.RevisionDate = user.AccountRevisionDate = now;
         user.LastEmailChangeDate = now;
         await _userRepository.ReplaceAsync(user);
 
@@ -435,6 +455,10 @@ public class UserService : UserManager<User>, IUserService
                 //if sync to strip fails, update email and securityStamp to previous
                 user.Key = previousState.Key;
                 user.Email = previousState.Email;
+
+                // We need this to backfill the salt for now to keep the email and salt always in sync.
+                user.MasterPasswordSalt = previousState.Email;
+
                 user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
                 user.MasterPassword = previousState.MasterPassword;
                 user.SecurityStamp = previousState.SecurityStamp;

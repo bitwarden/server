@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Api.Request;
+using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
@@ -150,15 +151,16 @@ public class RegisterFinishRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void ToUser_Returns_User(string email, string masterPasswordHash, string masterPasswordHint,
-        string userSymmetricKey, KeysRequestModel userAsymmetricKeys, KdfType kdf, int kdfIterations,
-        int? kdfMemory, int? kdfParallelism)
+    [SignatureKeyPairRequestModelCustomize]
+    public void ToData_Returns_ToData(string email, string masterPasswordHint, KdfRequestModel kdfRequest, string masterPasswordAuthenticationHash, AccountKeysRequestModel accountKeysRequest, string userSymmetricKey, KeysRequestModel userAsymmetricKeys, KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism)
     {
         // Arrange
-        var model = new RegisterFinishRequestModel
+        // V1 model and fields to be removed with
+        // https://bitwarden.atlassian.net/browse/PM-27326
+        var legacyModel = new RegisterFinishRequestModel
         {
             Email = email,
-            MasterPasswordHash = masterPasswordHash,
+            MasterPasswordHash = masterPasswordAuthenticationHash,
             MasterPasswordHint = masterPasswordHint,
             UserSymmetricKey = userSymmetricKey,
             UserAsymmetricKeys = userAsymmetricKeys,
@@ -167,21 +169,121 @@ public class RegisterFinishRequestModelTests
             KdfMemory = kdfMemory,
             KdfParallelism = kdfParallelism
         };
+        var newModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHint = masterPasswordHint,
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = kdfRequest,
+                MasterPasswordAuthenticationHash = masterPasswordAuthenticationHash,
+                Salt = email.ToLowerInvariant().Trim()
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = kdfRequest,
+                MasterKeyWrappedUserKey = userSymmetricKey,
+                Salt = email.ToLowerInvariant().Trim()
+            },
+            AccountKeys = accountKeysRequest
+        };
 
         // Act
-        var result = model.ToUser();
+        var legacyData = legacyModel.ToData();
+        var newData = newModel.ToData();
 
         // Assert
-        Assert.Equal(email, result.Email);
-        Assert.Equal(masterPasswordHint, result.MasterPasswordHint);
-        Assert.Equal(kdf, result.Kdf);
-        Assert.Equal(kdfIterations, result.KdfIterations);
-        Assert.Equal(kdfMemory, result.KdfMemory);
-        Assert.Equal(kdfParallelism, result.KdfParallelism);
-        Assert.Equal(userSymmetricKey, result.Key);
-        Assert.Equal(userAsymmetricKeys.PublicKey, result.PublicKey);
-        Assert.Equal(userAsymmetricKeys.EncryptedPrivateKey, result.PrivateKey);
-        Assert.Null(result.MasterPasswordSalt);
+        Assert.False(legacyData.IsV2Encryption());
+        Assert.Equal(legacyData.Kdf.KdfType, kdf);
+        Assert.Equal(legacyData.Kdf.Iterations, kdfIterations);
+        Assert.Equal(legacyData.Kdf.Memory, kdfMemory);
+        Assert.Equal(legacyData.Kdf.Parallelism, kdfParallelism);
+        Assert.Equal(legacyData.MasterKeyWrappedUserKey, userSymmetricKey);
+        Assert.Equal(legacyData.UserAccountKeysData.PublicKeyEncryptionKeyPairData.PublicKey, userAsymmetricKeys.PublicKey);
+        Assert.Equal(legacyData.UserAccountKeysData.PublicKeyEncryptionKeyPairData.WrappedPrivateKey, userAsymmetricKeys.EncryptedPrivateKey);
+        Assert.Equal(legacyData.MasterPasswordAuthenticationHash, masterPasswordAuthenticationHash);
+        Assert.Null(legacyData.Salt);
+
+
+        Assert.True(newData.IsV2Encryption());
+        Assert.Equal(newData.Kdf, kdfRequest.ToData());
+        Assert.Equal(newData.MasterKeyWrappedUserKey, userSymmetricKey);
+        Assert.Equal(newData.Salt, email.ToLowerInvariant());
+        Assert.Equal(newData.MasterPasswordAuthenticationHash, masterPasswordAuthenticationHash);
+        Assert.Equal(newData.UserAccountKeysData, accountKeysRequest.ToAccountKeysData());
+    }
+
+    [Theory]
+    [BitAutoData]
+    [SignatureKeyPairRequestModelCustomize]
+    public void ToUser_Returns_User(string email, string masterPasswordHint, AccountKeysRequestModel accountKeysRequest,
+        KdfRequestModel kdfRequest, string masterPasswordAuthenticationHash, string userSymmetricKey,
+        KeysRequestModel userAsymmetricKeys, KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism)
+    {
+        // Arrange
+        // V1 model and fields to be removed with
+        // https://bitwarden.atlassian.net/browse/PM-27326
+        var legacyModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordAuthenticationHash,
+            MasterPasswordHint = masterPasswordHint,
+            UserSymmetricKey = userSymmetricKey,
+            UserAsymmetricKeys = userAsymmetricKeys,
+            Kdf = kdf,
+            KdfIterations = kdfIterations,
+            KdfMemory = kdfMemory,
+            KdfParallelism = kdfParallelism
+        };
+        var newModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHint = masterPasswordHint,
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = kdfRequest,
+                MasterPasswordAuthenticationHash = masterPasswordAuthenticationHash,
+                Salt = email.ToLowerInvariant().Trim()
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = kdfRequest,
+                MasterKeyWrappedUserKey = userSymmetricKey,
+                Salt = email.ToLowerInvariant().Trim()
+            },
+            AccountKeys = accountKeysRequest
+        };
+
+        // Act
+        Assert.False(legacyModel.ToData().IsV2Encryption());
+        var legacyResult = legacyModel.ToUser(false);
+        Assert.True(newModel.ToData().IsV2Encryption());
+        var newResult = newModel.ToUser(true);
+
+        // Assert
+        Assert.Equal(email, legacyResult.Email);
+        Assert.Equal(masterPasswordHint, legacyResult.MasterPasswordHint);
+        Assert.Equal(kdf, legacyResult.Kdf);
+        Assert.Equal(kdfIterations, legacyResult.KdfIterations);
+        Assert.Equal(kdfMemory, legacyResult.KdfMemory);
+        Assert.Equal(kdfParallelism, legacyResult.KdfParallelism);
+        Assert.Equal(userSymmetricKey, legacyResult.Key);
+        Assert.Equal(userAsymmetricKeys.PublicKey, legacyResult.PublicKey);
+        Assert.Equal(userAsymmetricKeys.EncryptedPrivateKey, legacyResult.PrivateKey);
+        Assert.Null(legacyResult.MasterPasswordSalt);
+
+        // V2 expected fields
+        // all should be default/unset, with the exception of email and masterPasswordHint
+        Assert.Equal(email, newResult.Email);
+        Assert.Equal(masterPasswordHint, newResult.MasterPasswordHint);
+        Assert.Equal(KdfType.PBKDF2_SHA256, newResult.Kdf);
+        Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, newResult.KdfIterations);
+        Assert.Null(newResult.KdfMemory);
+        Assert.Null(newResult.KdfParallelism);
+        Assert.Null(newResult.Key);
+        Assert.Null(newResult.PublicKey);
+        Assert.Null(newResult.PrivateKey);
+        Assert.Null(newResult.MasterPasswordSalt);
     }
 
     [Theory]
@@ -208,7 +310,7 @@ public class RegisterFinishRequestModelTests
         };
 
         // Act
-        var resultUser = model.ToUser();
+        var resultUser = model.ToUser(false);
 
         // Assert
         Assert.Equal("explicit-salt-value", resultUser.MasterPasswordSalt);
@@ -355,6 +457,60 @@ public class RegisterFinishRequestModelTests
         var results = Validate(model);
 
         Assert.Empty(results);
+    }
+
+    [Fact]
+    public void Validate_WhenKdfMismatchBetweenAuthAndUnlock_ReturnsKdfEqualityError()
+    {
+        var model = new RegisterFinishRequestModel
+        {
+            Email = "user@example.com",
+            UserAsymmetricKeys = new KeysRequestModel { PublicKey = "pk", EncryptedPrivateKey = "sk" },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = AuthConstants.PBKDF2_ITERATIONS.Default },
+                MasterKeyWrappedUserKey = "wrapped",
+                Salt = "salt"
+            },
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = new KdfRequestModel { KdfType = KdfType.Argon2id, Iterations = 3, Memory = 64, Parallelism = 4 },
+                MasterPasswordAuthenticationHash = "auth-hash",
+                Salt = "salt"
+            },
+            EmailVerificationToken = "token"
+        };
+
+        var results = Validate(model);
+
+        Assert.Contains(results, r => r.ErrorMessage == "KDF settings must be equal for authentication and unlock.");
+    }
+
+    [Fact]
+    public void Validate_WhenSaltMismatchBetweenAuthAndUnlock_ReturnsSaltEqualityError()
+    {
+        var model = new RegisterFinishRequestModel
+        {
+            Email = "user@example.com",
+            UserAsymmetricKeys = new KeysRequestModel { PublicKey = "pk", EncryptedPrivateKey = "sk" },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = AuthConstants.PBKDF2_ITERATIONS.Default },
+                MasterKeyWrappedUserKey = "wrapped",
+                Salt = "salt-unlock"
+            },
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = AuthConstants.PBKDF2_ITERATIONS.Default },
+                MasterPasswordAuthenticationHash = "auth-hash",
+                Salt = "salt-auth"
+            },
+            EmailVerificationToken = "token"
+        };
+
+        var results = Validate(model);
+
+        Assert.Contains(results, r => r.ErrorMessage == "Invalid master password salt.");
     }
 
     [Fact]
