@@ -381,7 +381,7 @@ public class RegisterFinishRequestModelTests
 
         var results = Validate(model);
 
-        Assert.Contains(results, r => r.ErrorMessage == "KDF settings must be equal for authentication and unlock.");
+        Assert.Contains(results, r => r.ErrorMessage == "AuthenticationData and UnlockData must have the same KDF configuration.");
     }
 
     [Fact]
