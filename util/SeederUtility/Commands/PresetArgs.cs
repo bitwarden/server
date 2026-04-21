@@ -20,7 +20,7 @@ public class PresetArgs : IArgumentModel
     [Option('l', "list", Description = "List all available presets and fixtures")]
     public bool List { get; set; }
 
-    [Option('o', "output", Description = "Output format for --list: text or json (default: text)")]
+    [Option("output", Description = "Output format for --list: text or json (default: text)")]
     public string? Output { get; set; }
 
     public OutputFormat GetOutputFormat() =>
