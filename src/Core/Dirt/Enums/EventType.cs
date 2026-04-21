@@ -130,4 +130,10 @@ public enum EventType : int
     ServiceAccount_GroupRemoved = 2303,
     ServiceAccount_Created = 2304,
     ServiceAccount_Deleted = 2305,
+
+    PhishingBlocker_SiteAccessed = 2400,
+    PhishingBlocker_SiteExited = 2401,
+    PhishingBlocker_Bypassed = 2402,
+
+
 }
