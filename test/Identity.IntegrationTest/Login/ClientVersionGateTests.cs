@@ -37,14 +37,24 @@ public class ClientVersionGateTests : IClassFixture<IdentityApplicationFactory>
         var efUser = await db.Users.FirstAsync(u => u.Email == user.Email);
         efUser.PrivateKey = TestEncryptionConstants.V2PrivateKey;
         efUser.SecurityVersion = 2;
-        db.UserSignatureKeyPairs.Add(new Bit.Infrastructure.EntityFramework.Models.UserSignatureKeyPair
+        var preExistingKeyPair = await db.UserSignatureKeyPairs.Where(x => x.UserId == efUser.Id).FirstOrDefaultAsync();
+        if (preExistingKeyPair != null)
         {
-            Id = Core.Utilities.CoreHelpers.GenerateComb(),
-            UserId = efUser.Id,
-            SignatureAlgorithm = SignatureAlgorithm.Ed25519,
-            SigningKey = TestEncryptionConstants.V2WrappedSigningKey,
-            VerifyingKey = TestEncryptionConstants.V2VerifyingKey,
-        });
+            preExistingKeyPair.SignatureAlgorithm = SignatureAlgorithm.Ed25519;
+            preExistingKeyPair.SigningKey = TestEncryptionConstants.V2WrappedSigningKey;
+            preExistingKeyPair.VerifyingKey = TestEncryptionConstants.V2VerifyingKey;
+        }
+        else
+        {
+            db.UserSignatureKeyPairs.Add(new Bit.Infrastructure.EntityFramework.Models.UserSignatureKeyPair
+            {
+                Id = Core.Utilities.CoreHelpers.GenerateComb(),
+                UserId = efUser.Id,
+                SignatureAlgorithm = SignatureAlgorithm.Ed25519,
+                SigningKey = TestEncryptionConstants.V2WrappedSigningKey,
+                VerifyingKey = TestEncryptionConstants.V2VerifyingKey,
+            });
+        }
         await db.SaveChangesAsync();
 
         var context = await server.PostAsync("/connect/token",
@@ -87,14 +97,24 @@ public class ClientVersionGateTests : IClassFixture<IdentityApplicationFactory>
         var efUser = await db.Users.FirstAsync(u => u.Email == user.Email);
         efUser.PrivateKey = TestEncryptionConstants.V2PrivateKey;
         efUser.SecurityVersion = 2;
-        db.UserSignatureKeyPairs.Add(new Bit.Infrastructure.EntityFramework.Models.UserSignatureKeyPair
+        var preExistingKeyPair = await db.UserSignatureKeyPairs.Where(x => x.UserId == efUser.Id).FirstOrDefaultAsync();
+        if (preExistingKeyPair != null)
         {
-            Id = Core.Utilities.CoreHelpers.GenerateComb(),
-            UserId = efUser.Id,
-            SignatureAlgorithm = SignatureAlgorithm.Ed25519,
-            SigningKey = TestEncryptionConstants.V2WrappedSigningKey,
-            VerifyingKey = TestEncryptionConstants.V2VerifyingKey,
-        });
+            preExistingKeyPair.SignatureAlgorithm = SignatureAlgorithm.Ed25519;
+            preExistingKeyPair.SigningKey = TestEncryptionConstants.V2WrappedSigningKey;
+            preExistingKeyPair.VerifyingKey = TestEncryptionConstants.V2VerifyingKey;
+        }
+        else
+        {
+            db.UserSignatureKeyPairs.Add(new Bit.Infrastructure.EntityFramework.Models.UserSignatureKeyPair
+            {
+                Id = Core.Utilities.CoreHelpers.GenerateComb(),
+                UserId = efUser.Id,
+                SignatureAlgorithm = SignatureAlgorithm.Ed25519,
+                SigningKey = TestEncryptionConstants.V2WrappedSigningKey,
+                VerifyingKey = TestEncryptionConstants.V2VerifyingKey,
+            });
+        }
         await db.SaveChangesAsync();
 
         var context = await server.PostAsync("/connect/token",

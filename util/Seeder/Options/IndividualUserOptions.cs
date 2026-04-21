@@ -18,6 +18,11 @@ public record IndividualUserOptions
     public string? LastName { get; init; }
 
     /// <summary>
+    /// Optional email.
+    /// </summary>
+    public string? Email { get; init; }
+
+    /// <summary>
     /// Whether the user has a premium subscription (enables 1 GB storage).
     /// </summary>
     public bool Premium { get; init; }
