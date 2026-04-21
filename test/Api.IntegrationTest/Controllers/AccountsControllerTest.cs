@@ -307,7 +307,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Invalid master password salt.", content);
+        Assert.Contains("AuthenticationData and UnlockData must have the same salt.", content);
     }
 
     [Fact]
@@ -333,7 +333,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Invalid master password salt.", content);
+        Assert.Contains("AuthenticationData and UnlockData must have the same salt.", content);
     }
 
     [Fact]
@@ -359,7 +359,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("KDF settings must be equal for authentication and unlock.", content);
+        Assert.Contains("AuthenticationData and UnlockData must have the same KDF configuration.", content);
     }
 
     [Theory]
