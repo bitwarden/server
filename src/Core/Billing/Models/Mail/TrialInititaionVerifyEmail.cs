@@ -15,13 +15,23 @@ public class TrialInitiationVerifyEmail : RegisterVerifyEmail
     /// </summary>
     public new string Url
     {
-        get => $"{WebVaultUrl}/{Route}" +
-               $"?token={Token}" +
-               $"&email={Email}" +
-               $"&fromEmail=true" +
-               $"&productTier={(int)ProductTier}" +
-               $"&product={string.Join(",", Product.Select(p => (int)p))}" +
-               $"&trialLength={TrialLength}";
+        get
+        {
+            var url = $"{WebVaultUrl}/{Route}" +
+                      $"?token={Token}" +
+                      $"&email={Email}" +
+                      $"&fromEmail=true" +
+                      $"&productTier={(int)ProductTier}" +
+                      $"&product={string.Join(",", Product.Select(p => (int)p))}" +
+                      $"&trialLength={TrialLength}";
+
+            if (PaymentOptional)
+            {
+                url += "&paymentOptional=true";
+            }
+
+            return url;
+        }
     }
 
     public string VerifyYourEmailHTMLCopy =>
@@ -39,6 +49,8 @@ public class TrialInitiationVerifyEmail : RegisterVerifyEmail
     public IEnumerable<ProductType> Product { get; set; }
 
     public int TrialLength { get; set; }
+
+    public bool PaymentOptional { get; set; }
 
     /// <summary>
     /// Currently we only support one product type at a time, despite Product being a collection.

@@ -301,7 +301,8 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
     }
 
     public async Task CreateOrUpdateAccessForManyAsync(Guid organizationId, IEnumerable<Guid> collectionIds,
-        IEnumerable<CollectionAccessSelection> users, IEnumerable<CollectionAccessSelection> groups)
+        IEnumerable<CollectionAccessSelection> users, IEnumerable<CollectionAccessSelection> groups,
+        DateTime revisionDate)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -310,7 +311,14 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
             var results = await connection.ExecuteAsync(
                 $"[{Schema}].[Collection_CreateOrUpdateAccessForMany]",
-                new { OrganizationId = organizationId, CollectionIds = collectionIds.ToGuidIdArrayTVP(), Users = usersArray, Groups = groupsArray },
+                new
+                {
+                    OrganizationId = organizationId,
+                    CollectionIds = collectionIds.ToGuidIdArrayTVP(),
+                    Users = usersArray,
+                    Groups = groupsArray,
+                    RevisionDate = revisionDate
+                },
                 commandType: CommandType.StoredProcedure);
         }
     }

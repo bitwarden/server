@@ -269,6 +269,9 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             await dbContext.Notifications.Where(n => n.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
 
+            await dbContext.Sends.Where(s => s.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+
             // The below section are 3 SPROCS in SQL Server but are only called by here
             await dbContext.OrganizationApiKeys.Where(oa => oa.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();

@@ -151,6 +151,13 @@ BEGIN
     WHERE
         [OrganizationId] = @Id
 
+    -- Delete Organization Owned Sends
+    DELETE
+    FROM
+        [dbo].[Send]
+    WHERE
+        [OrganizationId] = @Id
+        
     -- Queue Organization Event log cleanup (processed asynchronously by background job)
     INSERT INTO [dbo].[OrganizationEventCleanup]
     (
