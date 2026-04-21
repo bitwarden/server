@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Dirt.Enums;
 using Xunit;
 
-namespace Bit.Core.Test.Services;
+namespace Bit.Core.Test.Dirt.Enums;
 
 public class IntegrationTypeTests
 {
