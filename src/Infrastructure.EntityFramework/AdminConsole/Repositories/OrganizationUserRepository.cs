@@ -541,6 +541,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                         UsesKeyConnector = ou.User != null && ou.User.UsesKeyConnector,
                         AccessSecretsManager = ou.AccessSecretsManager,
                         HasMasterPassword = ou.User != null && !string.IsNullOrWhiteSpace(ou.User.MasterPassword),
+                        RevocationReason = ou.RevocationReason,
 
                         // Project directly from navigation properties with conditional loading
                         Groups = includeGroups
@@ -788,38 +789,12 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
     public async Task RevokeAsync(Guid id)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            var orgUser = await dbContext.OrganizationUsers.FindAsync(id);
-            if (orgUser == null)
-            {
-                return;
-            }
-
-            orgUser.Status = OrganizationUserStatusType.Revoked;
-            await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdAsync(id);
-            await dbContext.SaveChangesAsync();
-        }
+        await RevokeManyAsync([id]);
     }
 
     public async Task RestoreAsync(Guid id, OrganizationUserStatusType status)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            var orgUser = await dbContext.OrganizationUsers
-                .FirstOrDefaultAsync(ou => ou.Id == id && ou.Status == OrganizationUserStatusType.Revoked);
-
-            if (orgUser == null)
-            {
-                return;
-            }
-
-            orgUser.Status = status;
-            await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdAsync(id);
-            await dbContext.SaveChangesAsync();
-        }
+        await RestoreManyAsync([id], status);
     }
 
     public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId, PolicyType policyType)
@@ -924,14 +899,31 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds)
+    public async Task RevokeManyAsync(IEnumerable<Guid> organizationUserIds, RevocationReason? reason = null)
     {
         using var scope = ServiceScopeFactory.CreateScope();
 
         var dbContext = GetDatabaseContext(scope);
 
         await dbContext.OrganizationUsers.Where(x => organizationUserIds.Contains(x.Id))
-            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, OrganizationUserStatusType.Revoked));
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(x => x.Status, OrganizationUserStatusType.Revoked)
+                .SetProperty(x => x.RevocationReason, reason));
+
+        await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(organizationUserIds);
+    }
+
+    public async Task RestoreManyAsync(IEnumerable<Guid> organizationUserIds, OrganizationUserStatusType status)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+
+        var dbContext = GetDatabaseContext(scope);
+
+        await dbContext.OrganizationUsers
+            .Where(x => organizationUserIds.Contains(x.Id) && x.Status == OrganizationUserStatusType.Revoked)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(x => x.Status, status)
+                .SetProperty(x => x.RevocationReason, (RevocationReason?)null));
 
         await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(organizationUserIds);
     }

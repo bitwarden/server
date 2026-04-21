@@ -10,6 +10,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Core.Tools.Services;
 using Bit.Core.Vault.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -147,5 +148,33 @@ public class OrganizationDeleteCommandTests
         await sutProvider.Sut.DeleteAsync(organization);
 
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).DeleteAsync(organization);
+    }
+
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task Delete_WithFileSends_DeletesFilesBeforeDbRecords(
+        Organization organization,
+        SutProvider<OrganizationDeleteCommand> sutProvider)
+    {
+        // Ensuring that the file is deleted first avoids the following situation:
+        // 1. DB row is deleted successfully
+        // 2. File blob fails to delete
+        // 3. File blob still exists but with no parent Send
+        var callOrder = new List<string>();
+        sutProvider.GetDependency<ISendFileStorageService>()
+            .DeleteFilesForOrganizationAsync(organization.Id)
+            .Returns(Task.CompletedTask)
+            .AndDoes(_ => callOrder.Add("file"));
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .DeleteAsync(organization)
+            .Returns(Task.CompletedTask)
+            .AndDoes(_ => callOrder.Add("db"));
+
+        await sutProvider.Sut.DeleteAsync(organization);
+
+        await sutProvider.GetDependency<ISendFileStorageService>()
+            .Received(1).DeleteFilesForOrganizationAsync(organization.Id);
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .Received(1).DeleteAsync(organization);
+        Assert.Equal(new[] { "file", "db" }, callOrder);
     }
 }

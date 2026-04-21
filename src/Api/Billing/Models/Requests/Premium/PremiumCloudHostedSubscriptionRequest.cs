@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Api.Billing.Models.Requests.Payment;
+using Bit.Core.Auth.Attributes;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Premium.Models;
 
@@ -18,6 +19,9 @@ public class PremiumCloudHostedSubscriptionRequest : IValidatableObject
 
     public string[]? Coupons { get; set; }
 
+    [MarketingInitiativeValidation]
+    public string? FromMarketing { get; set; }
+
     public PremiumSubscriptionPurchase ToDomain()
     {
         // Check if TokenizedPaymentMethod or NonTokenizedPaymentMethod is provided.
@@ -35,7 +39,8 @@ public class PremiumCloudHostedSubscriptionRequest : IValidatableObject
             PaymentMethod = paymentMethod,
             BillingAddress = billingAddress,
             AdditionalStorageGb = AdditionalStorageGb,
-            Coupons = Coupons
+            Coupons = Coupons,
+            FromMarketing = FromMarketing
         };
     }
 

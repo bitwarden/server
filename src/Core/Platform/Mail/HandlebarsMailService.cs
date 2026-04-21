@@ -101,7 +101,8 @@ public class HandlebarsMailService : IMailService
         string token,
         ProductTierType productTier,
         IEnumerable<ProductType> products,
-        int trialLength)
+        int trialLength,
+        bool paymentOptional = false)
     {
         var message = CreateDefaultMessage("Verify your email", email);
         var model = new TrialInitiationVerifyEmail
@@ -113,7 +114,8 @@ public class HandlebarsMailService : IMailService
             SiteName = _globalSettings.SiteName,
             ProductTier = productTier,
             Product = products,
-            TrialLength = trialLength
+            TrialLength = trialLength,
+            PaymentOptional = paymentOptional
         };
         await AddMessageContentAsync(message, "Billing.TrialInitiationVerifyEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);

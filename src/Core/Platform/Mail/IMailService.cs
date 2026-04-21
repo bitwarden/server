@@ -45,7 +45,8 @@ public interface IMailService
         string token,
         ProductTierType productTier,
         IEnumerable<ProductType> products,
-        int trialLength);
+        int trialLength,
+        bool paymentOptional = false);
     Task SendVerifyDeleteEmailAsync(string email, Guid userId, string token);
     Task SendCannotDeleteClaimedAccountEmailAsync(string email);
     Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail);

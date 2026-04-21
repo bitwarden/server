@@ -53,8 +53,8 @@ public class RevokeOrganizationUserCommandTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
-            .RevokeManyByIdAsync(Arg.Is<IEnumerable<Guid>>(ids =>
-                ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id)));
+            .RevokeManyAsync(Arg.Is<IEnumerable<Guid>>(ids =>
+                ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id)), null);
 
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
@@ -140,8 +140,8 @@ public class RevokeOrganizationUserCommandTests
         // Only the valid user should be revoked
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
-            .RevokeManyByIdAsync(Arg.Is<IEnumerable<Guid>>(ids =>
-                ids.Count() == 1 && ids.Contains(orgUser2.Id)));
+            .RevokeManyAsync(Arg.Is<IEnumerable<Guid>>(ids =>
+                ids.Count() == 1 && ids.Contains(orgUser2.Id)), null);
     }
 
     [Theory]

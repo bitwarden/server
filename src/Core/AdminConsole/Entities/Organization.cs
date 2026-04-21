@@ -150,6 +150,12 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// </summary>
     public bool UseMyItems { get; set; }
 
+    /// <summary>
+    /// When set to <see langword="true"/>, the organization is excluded from automated billing
+    /// lifecycle operations such as subscription cancellation and disabling for non-payment.
+    /// </summary>
+    public bool ExemptFromBillingAutomation { get; set; }
+
     public void SetNewId()
     {
         if (Id == default(Guid))

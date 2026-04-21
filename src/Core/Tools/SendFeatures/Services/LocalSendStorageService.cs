@@ -1,14 +1,22 @@
-﻿using Bit.Core.Enums;
+﻿using System.Text.Json;
+using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Models.Data;
+using Bit.Core.Tools.Repositories;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Tools.Services;
 
 public class LocalSendStorageService(
-    GlobalSettings globalSettings) : ISendFileStorageService
+    GlobalSettings globalSettings,
+    ISendRepository sendRepository,
+    ILogger<LocalSendStorageService> logger) : ISendFileStorageService
 {
     private readonly string _baseDirPath = globalSettings.Send.BaseDirectory;
     private readonly string _baseSendUrl = globalSettings.Send.BaseUrl;
+    private readonly ISendRepository _sendRepository = sendRepository;
+    private readonly ILogger<LocalSendStorageService> _logger = logger;
     private string RelativeFilePath(Send send, string fileID) => $"{send.Id}/{fileID}";
     private string FilePath(Send send, string fileID) => $"{_baseDirPath}/{RelativeFilePath(send, fileID)}";
     public FileUploadType FileUploadType => FileUploadType.Direct;
@@ -40,17 +48,42 @@ public class LocalSendStorageService(
     public async Task DeleteFilesForOrganizationAsync(Guid organizationId)
     {
         await InitAsync();
+        var sends = await _sendRepository.GetManyFileSendsByOrganizationIdAsync(organizationId);
+        await DeleteFilesForSendsAsync(sends);
     }
 
     public async Task DeleteFilesForUserAsync(Guid userId)
     {
         await InitAsync();
+        var sends = await _sendRepository.GetManyFileSendsByUserIdAsync(userId);
+        await DeleteFilesForSendsAsync(sends);
     }
 
     public async Task<string> GetSendFileDownloadUrlAsync(Send send, string fileId)
     {
         await InitAsync();
         return $"{_baseSendUrl}/{RelativeFilePath(send, fileId)}";
+    }
+
+    private async Task DeleteFilesForSendsAsync(ICollection<Send> sends)
+    {
+        foreach (var send in sends)
+        {
+            try
+            {
+                var data = send.Data != null
+                    ? JsonSerializer.Deserialize<SendFileData>(send.Data)
+                    : null;
+                if (data?.Id != null)
+                {
+                    await DeleteFileAsync(send, data.Id);
+                }
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex, "Failed to deserialize Send {SendId} data; blob may be orphaned.", send.Id);
+            }
+        }
     }
 
     private void DeleteFileIfExists(string path)
