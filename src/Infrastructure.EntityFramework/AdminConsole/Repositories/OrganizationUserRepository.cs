@@ -1057,6 +1057,20 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             await dbContext.SaveChangesAsync();
         };
     }
+
+    public async Task<ICollection<Core.Entities.OrganizationUser>> GetManyPendingAutoConfirmByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = from ou in dbContext.OrganizationUsers
+                        where ou.OrganizationId == organizationId &&
+                            ou.Type == OrganizationUserType.User &&
+                            ou.Status == OrganizationUserStatusType.Accepted
+                        select ou;
+            return Mapper.Map<List<Core.Entities.OrganizationUser>>(await query.ToListAsync());
+        }
+    }
 #nullable disable
 
 

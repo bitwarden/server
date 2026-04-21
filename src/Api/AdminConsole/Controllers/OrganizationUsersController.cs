@@ -76,6 +76,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
     private readonly IBulkResendOrganizationInvitesCommand _bulkResendOrganizationInvitesCommand;
     private readonly IAutomaticallyConfirmOrganizationUserCommand _automaticallyConfirmOrganizationUserCommand;
+    private readonly IBulkAutomaticallyConfirmOrganizationUsersCommand _bulkAutomaticallyConfirmOrganizationUsersCommand;
     private readonly V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand _revokeOrganizationUserCommandVNext;
     private readonly IConfirmOrganizationUserCommand _confirmOrganizationUserCommand;
     private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
@@ -115,6 +116,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IAdminRecoverAccountCommand adminRecoverAccountCommand,
         AccountRecoveryV2.IAdminRecoverAccountCommand adminRecoverAccountCommandV2,
         IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand,
+        IBulkAutomaticallyConfirmOrganizationUsersCommand bulkAutomaticallyConfirmOrganizationUsersCommand,
         V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext,
         ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand)
     {
@@ -142,6 +144,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
         _bulkResendOrganizationInvitesCommand = bulkResendOrganizationInvitesCommand;
         _automaticallyConfirmOrganizationUserCommand = automaticallyConfirmOrganizationUserCommand;
+        _bulkAutomaticallyConfirmOrganizationUsersCommand = bulkAutomaticallyConfirmOrganizationUsersCommand;
         _revokeOrganizationUserCommandVNext = revokeOrganizationUserCommandVNext;
         _confirmOrganizationUserCommand = confirmOrganizationUserCommand;
         _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
@@ -805,6 +808,57 @@ public class OrganizationUsersController : BaseAdminConsoleController
                 DefaultUserCollectionName = model.DefaultUserCollectionName,
                 PerformedBy = new StandardUser(userId.Value, await _currentContext.OrganizationOwner(orgId)),
             }));
+    }
+
+    [HttpGet("pending-auto-confirm")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<ListResponseModel<OrganizationUserPendingAutoConfirmResponseModel>> GetPendingAutoConfirmUsersAsync(Guid orgId)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.BulkAutoConfirmOnLogin))
+        {
+            throw new NotFoundException();
+        }
+
+        var pendingUsers = await _organizationUserRepository.GetManyPendingAutoConfirmByOrganizationIdAsync(orgId);
+        var responses = pendingUsers.Select(u => new OrganizationUserPendingAutoConfirmResponseModel(u));
+        return new ListResponseModel<OrganizationUserPendingAutoConfirmResponseModel>(responses);
+    }
+
+    [HttpPost("bulk-auto-confirm")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkAutomaticallyConfirmOrganizationUsersAsync(
+        Guid orgId,
+        [FromBody] OrganizationUserBulkConfirmRequestModel model)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.BulkAutoConfirmOnLogin))
+        {
+            throw new NotFoundException();
+        }
+
+        var userId = _userService.GetProperUserId(User);
+
+        if (userId is null || userId.Value == Guid.Empty)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var isOwner = await _currentContext.OrganizationOwner(orgId);
+        var actingUser = new StandardUser(userId.Value, isOwner);
+
+        var requests = model.Keys.Select(entry => new AutomaticallyConfirmOrganizationUserRequest
+        {
+            OrganizationId = orgId,
+            OrganizationUserId = entry.Id,
+            Key = entry.Key,
+            DefaultUserCollectionName = model.DefaultUserCollectionName,
+            PerformedBy = actingUser,
+        });
+
+        var results = await _bulkAutomaticallyConfirmOrganizationUsersCommand
+            .BulkAutomaticallyConfirmOrganizationUsersAsync(requests);
+
+        var responses = results.Select(r => new OrganizationUserBulkResponseModel(r.OrganizationUserId, r.Error ?? string.Empty));
+        return new ListResponseModel<OrganizationUserBulkResponseModel>(responses);
     }
 
     private async Task RestoreOrRevokeUserAsync(
