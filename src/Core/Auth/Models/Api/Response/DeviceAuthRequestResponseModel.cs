@@ -22,6 +22,7 @@ public class DeviceAuthRequestResponseModel : ResponseModel
             Type = deviceAuthDetails.Type,
             Identifier = deviceAuthDetails.Identifier,
             CreationDate = deviceAuthDetails.CreationDate,
+            LastActivityDate = deviceAuthDetails.LastActivityDate,
             IsTrusted = deviceAuthDetails.IsTrusted,
             EncryptedPublicKey = deviceAuthDetails.EncryptedPublicKey,
             EncryptedUserKey = deviceAuthDetails.EncryptedUserKey
@@ -44,6 +45,7 @@ public class DeviceAuthRequestResponseModel : ResponseModel
     public DeviceType Type { get; set; }
     public string Identifier { get; set; }
     public DateTime CreationDate { get; set; }
+    public DateTime? LastActivityDate { get; set; }
     public bool IsTrusted { get; set; }
     [EncryptedString]
     [EncryptedStringLength(2000)]
