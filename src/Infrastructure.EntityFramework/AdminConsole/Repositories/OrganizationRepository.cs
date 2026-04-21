@@ -11,6 +11,8 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
+using Bit.Infrastructure.EntityFramework.Dirt.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -281,11 +283,20 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .ToListAsync();
             sponsoredOrgs.ForEach(os => os.SponsoredOrganizationId = null);
 
+            // Queue Organization Event log cleanup (processed asynchronously by background job).
+            // Insert inside the same transaction as the org delete so rollback semantics match MSSQL.
+            dbContext.OrganizationEventCleanups.Add(new OrganizationEventCleanup
+            {
+                Id = CoreHelpers.GenerateComb(),
+                OrganizationId = organization.Id,
+                QueuedAt = DateTime.UtcNow,
+            });
+
             var orgEntity = await dbContext.FindAsync<Organization>(organization.Id);
             dbContext.Remove(orgEntity);
 
-            await organizationDeleteTransaction.CommitAsync();
             await dbContext.SaveChangesAsync();
+            await organizationDeleteTransaction.CommitAsync();
         }
     }
 

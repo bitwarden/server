@@ -1,4 +1,5 @@
-﻿using Azure.Data.Tables;
+﻿using Azure;
+using Azure.Data.Tables;
 using Bit.Core.Models.Data;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Settings;
@@ -99,6 +100,46 @@ public class EventRepository : IEventRepository
         }
 
         await CreateEventAsync(entity);
+    }
+
+    public async Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId, int batchSize)
+    {
+        if (batchSize <= 0)
+        {
+            return 0;
+        }
+
+        var partitionKey = $"OrganizationId={organizationId}";
+        var filter = $"PartitionKey eq '{partitionKey}'";
+        var select = new[] { "PartitionKey", "RowKey" };
+
+        var totalDeleted = 0;
+        var pending = new List<TableTransactionAction>(100);
+
+        await foreach (var entity in _tableClient.QueryAsync<TableEntity>(filter, select: select))
+        {
+            pending.Add(new TableTransactionAction(TableTransactionActionType.Delete, entity, ETag.All));
+
+            if (pending.Count == 100)
+            {
+                await _tableClient.SubmitTransactionAsync(pending);
+                totalDeleted += pending.Count;
+                pending.Clear();
+
+                if (totalDeleted >= batchSize)
+                {
+                    return totalDeleted;
+                }
+            }
+        }
+
+        if (pending.Count > 0)
+        {
+            await _tableClient.SubmitTransactionAsync(pending);
+            totalDeleted += pending.Count;
+        }
+
+        return totalDeleted;
     }
 
     public async Task CreateManyAsync(IEnumerable<IEvent>? e)

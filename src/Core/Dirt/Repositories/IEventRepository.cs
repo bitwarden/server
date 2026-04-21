@@ -32,4 +32,5 @@ public interface IEventRepository
     Task CreateManyAsync(IEnumerable<IEvent> e);
     Task<PagedResult<IEvent>> GetManyByOrganizationServiceAccountAsync(Guid organizationId, Guid serviceAccountId,
         DateTime startDate, DateTime endDate, PageOptions pageOptions);
+    Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId, int batchSize);
 }

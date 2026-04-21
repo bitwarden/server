@@ -255,6 +255,16 @@ public class EventRepository : Repository<Core.Entities.Event, Event, Guid>, IEv
         }
     }
 
+    public async Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId, int batchSize)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        return await dbContext.Events
+            .Where(e => e.OrganizationId == organizationId)
+            .Take(batchSize)
+            .ExecuteDeleteAsync();
+    }
+
     public async Task<PagedResult<IEvent>> GetManyByUserAsync(Guid userId, DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
         DateTime? beforeDate = null;

@@ -155,6 +155,18 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
             }, startDate, endDate, pageOptions);
     }
 
+    public async Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId, int batchSize)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            return await connection.ExecuteScalarAsync<int>(
+                $"[{Schema}].[Event_DeleteByOrganizationIdBatch]",
+                new { OrganizationId = organizationId, BatchSize = batchSize },
+                commandType: CommandType.StoredProcedure,
+                commandTimeout: 3600);
+        }
+    }
+
     private async Task<PagedResult<IEvent>> GetManyAsync(string sprocName,
         IDictionary<string, object?> sprocParams, DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
