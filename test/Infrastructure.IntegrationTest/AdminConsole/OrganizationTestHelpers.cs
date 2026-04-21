@@ -4,7 +4,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-
+using Bit.Core.Utilities;
 namespace Bit.Infrastructure.IntegrationTest.AdminConsole;
 
 /// <summary>
@@ -16,7 +16,7 @@ public static class OrganizationTestHelpers
 {
     public static Task<User> CreateTestUserAsync(this IUserRepository userRepository, string identifier = "test")
     {
-        var id = Guid.NewGuid();
+        var id = CoreHelpers.GenerateComb();
         return userRepository.CreateAsync(new User
         {
             Id = id,
@@ -34,7 +34,7 @@ public static class OrganizationTestHelpers
         int? seatCount = null,
         string identifier = "test")
     {
-        var id = Guid.NewGuid();
+        var id = CoreHelpers.GenerateComb();
         return organizationRepository.CreateAsync(new Organization
         {
             Name = $"{identifier}-{id}",

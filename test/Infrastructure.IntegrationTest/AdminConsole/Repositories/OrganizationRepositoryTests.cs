@@ -36,10 +36,6 @@ public class OrganizationRepositoryTests
         Assert.Equal(2, result.Count);
         Assert.Contains(result, org => org.Id == organization1.Id);
         Assert.Contains(result, org => org.Id == organization2.Id);
-
-        // Clean up
-        await organizationRepository.DeleteAsync(organization1);
-        await organizationRepository.DeleteAsync(organization2);
     }
 
     [Theory, DatabaseData]
@@ -212,9 +208,6 @@ public class OrganizationRepositoryTests
         Assert.Equal(organization.Id, updateResult.Id);
         Assert.True(updateResult.SyncSeats);
         Assert.Equal(requestDate.ToString("yyyy-MM-dd HH:mm:ss"), updateResult.RevisionDate.ToString("yyyy-MM-dd HH:mm:ss"));
-
-        // Annul
-        await sutRepository.DeleteAsync(organization);
     }
 
     [DatabaseData, Theory]
@@ -237,9 +230,6 @@ public class OrganizationRepositoryTests
         Assert.Equal(organization.Id, updateResult.Id);
         Assert.True(updateResult.SyncSeats);
         Assert.Equal(requestDate.ToString("yyyy-MM-dd HH:mm:ss"), updateResult.RevisionDate.ToString("yyyy-MM-dd HH:mm:ss"));
-
-        // Annul
-        await sutRepository.DeleteAsync(organization);
     }
 
     [DatabaseData, Theory]
@@ -260,9 +250,6 @@ public class OrganizationRepositoryTests
         Assert.Equal(organization.Id, updateResult.Id);
         Assert.True(updateResult.SyncSeats);
         Assert.Equal(requestDate.ToString("yyyy-MM-dd HH:mm:ss"), updateResult.RevisionDate.ToString("yyyy-MM-dd HH:mm:ss"));
-
-        // Annul
-        await sutRepository.DeleteAsync(organization);
     }
 
     [DatabaseData, Theory]
@@ -281,9 +268,6 @@ public class OrganizationRepositoryTests
         // Assert
         var result = (await sutRepository.GetOrganizationsForSubscriptionSyncAsync()).ToArray();
         Assert.Null(result.FirstOrDefault(x => x.Id == organization.Id));
-
-        // Annul
-        await sutRepository.DeleteAsync(organization);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -400,9 +384,6 @@ public class OrganizationRepositoryTests
         Assert.Equal(organization.UseDisableSmAdsForUsers, result.UseDisableSmAdsForUsers);
         Assert.Equal(organization.UsePhishingBlocker, result.UsePhishingBlocker);
         Assert.Equal(organization.UseMyItems, result.UseMyItems);
-
-        // Clean up
-        await organizationRepository.DeleteAsync(organization);
     }
 
     [Theory, DatabaseData]
