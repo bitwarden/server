@@ -362,9 +362,39 @@ public class GetBitwardenSubscriptionQueryTests
         var result = await _query.Run(user);
 
         Assert.NotNull(result);
-        Assert.NotNull(result.Cart.Discount);
-        Assert.Equal(BitwardenDiscountType.PercentOff, result.Cart.Discount.Type);
-        Assert.Equal(20, result.Cart.Discount.Value);
+        var discount = Assert.Single(result.Cart.Discounts);
+        Assert.Equal(BitwardenDiscountType.PercentOff, discount.Type);
+        Assert.Equal(20, discount.Value);
+    }
+
+    [Fact]
+    public async Task Run_WithCartLevelDiscountAndNullAppliesTo_IncludesDiscountInCart()
+    {
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active);
+        subscription.Customer.Discount = new Discount
+        {
+            Coupon = new Coupon
+            {
+                Valid = true,
+                PercentOff = 20,
+                AppliesTo = null
+            }
+        };
+        var premiumPlans = CreatePremiumPlans();
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(CreateInvoicePreview());
+
+        var result = await _query.Run(user);
+
+        Assert.NotNull(result);
+        var discount = Assert.Single(result.Cart.Discounts);
+        Assert.Equal(BitwardenDiscountType.PercentOff, discount.Type);
+        Assert.Equal(20, discount.Value);
     }
 
     [Fact]
@@ -600,15 +630,14 @@ public class GetBitwardenSubscriptionQueryTests
         var result = await _query.Run(user);
 
         Assert.NotNull(result);
-        // A Phase 2 coupon with no AppliesTo restriction is cart-level, so it surfaces on Cart.Discount.
-        Assert.NotNull(result.Cart.Discount);
-        Assert.Equal(BitwardenDiscountType.PercentOff, result.Cart.Discount.Type);
-        Assert.Equal(30, result.Cart.Discount.Value);
+        var cartDiscount = Assert.Single(result.Cart.Discounts);
+        Assert.Equal(BitwardenDiscountType.PercentOff, cartDiscount.Type);
+        Assert.Equal(30, cartDiscount.Value);
         Assert.Null(result.Cart.PasswordManager.Seats.Discount);
     }
 
     [Fact]
-    public async Task Run_WithCustomerLevelDiscountAndSchedulePhase2_BothFlowThrough_CustomerLevelWinsCart()
+    public async Task Run_WithCustomerLevelDiscountAndSchedulePhase2_BothFlowThroughCartDiscounts()
     {
         var user = CreateUser();
         var subscription = CreateSubscription(SubscriptionStatus.Active);
@@ -628,11 +657,7 @@ public class GetBitwardenSubscriptionQueryTests
         var result = await _query.Run(user);
 
         Assert.NotNull(result);
-        // Customer-level discount is added to the coupon list before Phase 2's coupons, so it
-        // wins the singular Cart.Discount slot. The Phase 2 coupon still flows into the tax
-        // estimate via the coupon-id list.
-        Assert.NotNull(result.Cart.Discount);
-        Assert.Equal(20, result.Cart.Discount.Value);
+        Assert.Equal(2, result.Cart.Discounts.Count);
         await _stripeAdapter.Received(1)
             .GetSubscriptionScheduleAsync("sub_sched_test", Arg.Any<SubscriptionScheduleGetOptions>());
     }
@@ -657,7 +682,7 @@ public class GetBitwardenSubscriptionQueryTests
         var result = await _query.Run(user);
 
         Assert.NotNull(result);
-        Assert.Null(result.Cart.Discount);
+        Assert.Empty(result.Cart.Discounts);
         Assert.Null(result.Cart.PasswordManager.Seats.Discount);
     }
 
@@ -702,9 +727,9 @@ public class GetBitwardenSubscriptionQueryTests
         var result = await _query.Run(user);
 
         Assert.NotNull(result);
-        Assert.NotNull(result.Cart.Discount);
-        Assert.Equal(BitwardenDiscountType.AmountOff, result.Cart.Discount.Type);
-        Assert.Equal(500, result.Cart.Discount.Value);
+        var cartDiscount = Assert.Single(result.Cart.Discounts);
+        Assert.Equal(BitwardenDiscountType.AmountOff, cartDiscount.Type);
+        Assert.Equal(500, cartDiscount.Value);
         Assert.Null(result.Cart.PasswordManager.Seats.Discount);
     }
 
@@ -731,9 +756,7 @@ public class GetBitwardenSubscriptionQueryTests
         var result = await _query.Run(user);
 
         Assert.NotNull(result);
-        // A Phase 2 coupon scoped to the seat product partitions to product-level and surfaces on
-        // the seat line item, not on Cart.Discount.
-        Assert.Null(result.Cart.Discount);
+        Assert.Empty(result.Cart.Discounts);
         Assert.NotNull(result.Cart.PasswordManager.Seats.Discount);
         Assert.Equal(BitwardenDiscountType.PercentOff, result.Cart.PasswordManager.Seats.Discount.Type);
         Assert.Equal(25, result.Cart.PasswordManager.Seats.Discount.Value);
@@ -759,7 +782,7 @@ public class GetBitwardenSubscriptionQueryTests
         var result = await _query.Run(user);
 
         Assert.NotNull(result);
-        Assert.Null(result.Cart.Discount);
+        Assert.Empty(result.Cart.Discounts);
         Assert.Null(result.Cart.PasswordManager.Seats.Discount);
     }
 
@@ -783,7 +806,7 @@ public class GetBitwardenSubscriptionQueryTests
         var result = await _query.Run(user);
 
         Assert.NotNull(result);
-        Assert.Null(result.Cart.Discount);
+        Assert.Empty(result.Cart.Discounts);
         Assert.Null(result.Cart.PasswordManager.Seats.Discount);
     }
 
@@ -922,8 +945,122 @@ public class GetBitwardenSubscriptionQueryTests
         var result = await _query.Run(user);
 
         Assert.NotNull(result);
-        Assert.Null(result.Cart.Discount);
+        Assert.Empty(result.Cart.Discounts);
         Assert.Null(result.Cart.PasswordManager.Seats.Discount);
+    }
+
+    [Fact]
+    public async Task Run_ActiveStatus_MultipleCartLevelDiscounts_ReturnsAllInCartDiscounts()
+    {
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active);
+        subscription.Customer.Discount = CreateDiscount(discountType: "cart");
+        subscription.Discounts =
+        [
+            new Discount
+            {
+                Coupon = new Coupon
+                {
+                    Valid = true,
+                    AmountOff = 500,
+                    AppliesTo = new CouponAppliesTo { Products = [] }
+                }
+            }
+        ];
+        var premiumPlans = CreatePremiumPlans();
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(CreateInvoicePreview());
+
+        var result = await _query.Run(user);
+
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Cart.Discounts.Count);
+    }
+
+    [Fact]
+    public async Task Run_ActiveStatus_NoCartLevelDiscounts_ReturnsEmptyCartDiscounts()
+    {
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active);
+        var premiumPlans = CreatePremiumPlans();
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(CreateInvoicePreview());
+
+        var result = await _query.Run(user);
+
+        Assert.NotNull(result);
+        Assert.Empty(result.Cart.Discounts);
+    }
+
+    [Fact]
+    public async Task Run_ActiveStatus_InvalidDiscountFiltered_NotIncluded()
+    {
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active);
+        subscription.Discounts =
+        [
+            new Discount
+            {
+                Coupon = new Coupon
+                {
+                    Valid = false,
+                    PercentOff = 15,
+                    AppliesTo = new CouponAppliesTo { Products = [] }
+                }
+            }
+        ];
+        var premiumPlans = CreatePremiumPlans();
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(CreateInvoicePreview());
+
+        var result = await _query.Run(user);
+
+        Assert.NotNull(result);
+        Assert.Empty(result.Cart.Discounts);
+    }
+
+    [Fact]
+    public async Task Run_ActiveStatus_ValidDiscountWithNoAmountOrPercent_NotIncluded()
+    {
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active);
+        subscription.Discounts =
+        [
+            new Discount
+            {
+                Coupon = new Coupon
+                {
+                    Valid = true,
+                    AmountOff = null,
+                    PercentOff = null,
+                    AppliesTo = new CouponAppliesTo { Products = [] }
+                }
+            }
+        ];
+        var premiumPlans = CreatePremiumPlans();
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(CreateInvoicePreview());
+
+        var result = await _query.Run(user);
+
+        Assert.NotNull(result);
+        Assert.Empty(result.Cart.Discounts);
     }
 
     #region Helper Methods

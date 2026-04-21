@@ -72,9 +72,9 @@ public record Cart
     public PlanCadenceType Cadence { get; init; }
 
     /// <summary>
-    /// An optional discount applied to the entire cart.
+    /// Discounts applied to the entire cart. Empty when no cart-level discount applies.
     /// </summary>
-    public BitwardenDiscount? Discount { get; init; }
+    public List<BitwardenDiscount> Discounts { get; init; } = [];
 
     /// <summary>
     /// The estimated tax for the cart.

@@ -108,7 +108,7 @@ public class GetBitwardenSubscriptionQuery(
             plans.Any(plan => plan.Storage.StripePriceId == item.Price.Id));
 
         var coupons = await GetRelevantCouponsAsync(subscription);
-        var (cartLevelCoupon, productLevelCoupons) = PartitionCouponsByScope(coupons);
+        var (cartLevelCoupons, productLevelCoupons) = PartitionCouponsByScope(coupons);
 
         var availablePlan = plans.First(plan => plan.Available);
         var onCurrentPricing = passwordManagerSeatsItem.Price.Id == availablePlan.Seat.StripePriceId;
@@ -155,7 +155,7 @@ public class GetBitwardenSubscriptionQuery(
                 AdditionalStorage = additionalStorage
             },
             Cadence = PlanCadenceType.Annually,
-            Discount = cartLevelCoupon,
+            Discounts = [.. cartLevelCoupons.Select(c => (BitwardenDiscount?)c).OfType<BitwardenDiscount>()],
             EstimatedTax = estimatedTax
         };
     }
@@ -250,7 +250,7 @@ public class GetBitwardenSubscriptionQuery(
         return coupons;
     }
 
-    private static (Coupon? CartLevel, List<Coupon> ProductLevel) PartitionCouponsByScope(
+    private static (List<Coupon> CartLevel, List<Coupon> ProductLevel) PartitionCouponsByScope(
         IEnumerable<Coupon> coupons)
     {
         var cartLevel = new List<Coupon>();
@@ -270,7 +270,7 @@ public class GetBitwardenSubscriptionQuery(
             }
         }
 
-        return (cartLevel.FirstOrDefault(), productLevel);
+        return (cartLevel, productLevel);
     }
 
     private async Task<List<Coupon>> GetSchedulePhase2CouponsAsync(Subscription subscription)
