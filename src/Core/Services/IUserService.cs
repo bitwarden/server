@@ -43,9 +43,7 @@ public interface IUserService
     Task<IdentityResult> DeleteAsync(User user, string token);
     Task SendDeleteConfirmationAsync(string email);
     Task UpdateLicenseAsync(User user, UserLicense license);
-    Task<string> AdjustStorageAsync(User user, short storageAdjustmentGb);
     Task CancelPremiumAsync(User user, bool? endOfPeriod = null);
-    Task ReinstatePremiumAsync(User user);
     Task EnablePremiumAsync(Guid userId, DateTime? expirationDate);
     Task DisablePremiumAsync(Guid userId, DateTime? expirationDate);
     Task UpdatePremiumExpirationAsync(Guid userId, DateTime? expirationDate);
