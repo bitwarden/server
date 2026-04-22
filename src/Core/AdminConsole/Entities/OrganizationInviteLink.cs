@@ -7,6 +7,12 @@ namespace Bit.Core.AdminConsole.Entities;
 public class OrganizationInviteLink : ITableObject<Guid>
 {
     public Guid Id { get; set; }
+    /// <summary>
+    /// A random, publicly shareable code used to identify the invite link.
+    /// Uses <see cref="Guid.NewGuid"/> rather than a sequential/comb GUID because this is not
+    /// a table identifier and therefore does not need index-friendly ordering. A comb GUID's embedded
+    /// timestamp would also make the code partially predictable.
+    /// </summary>
     public Guid Code { get; set; } = Guid.NewGuid();
     public Guid OrganizationId { get; set; }
     public string AllowedDomains { get; set; } = null!;
