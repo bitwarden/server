@@ -37,19 +37,9 @@ public class NotificationsApiPushEngine : BaseIdentityClientService, IPushEngine
 
     public async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid>? collectionIds)
     {
-        if (cipher.OrganizationId.HasValue)
-        {
-            var message = new SyncCipherPushNotification
-            {
-                Id = cipher.Id,
-                OrganizationId = cipher.OrganizationId,
-                RevisionDate = cipher.RevisionDate,
-                CollectionIds = collectionIds,
-            };
-
-            await SendMessageAsync(type, message, true);
-        }
-        else if (cipher.UserId.HasValue)
+        // Org cipher fan-out is handled upstream in MultiServicePushNotificationService,
+        // which resolves per-user access and calls PushAsync directly.
+        if (cipher.UserId.HasValue)
         {
             var message = new SyncCipherPushNotification
             {

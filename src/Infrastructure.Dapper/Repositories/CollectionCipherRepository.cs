@@ -71,6 +71,19 @@ public class CollectionCipherRepository : BaseRepository, ICollectionCipherRepos
         }
     }
 
+    public async Task<ICollection<Guid>> GetUserIdsByCollectionIdsAsync(IEnumerable<Guid> collectionIds)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<Guid>(
+                "[dbo].[CollectionCipher_ReadUserIdsByCollectionIds]",
+                new { CollectionIds = collectionIds.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
     public async Task UpdateCollectionsAsync(Guid cipherId, Guid userId, IEnumerable<Guid> collectionIds)
     {
         using (var connection = new SqlConnection(ConnectionString))
