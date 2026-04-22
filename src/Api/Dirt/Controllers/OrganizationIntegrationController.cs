@@ -14,14 +14,15 @@ public class OrganizationIntegrationController(
     ICreateOrganizationIntegrationCommand createCommand,
     IUpdateOrganizationIntegrationCommand updateCommand,
     IDeleteOrganizationIntegrationCommand deleteCommand,
-    IGetOrganizationIntegrationsQuery getQuery) : Controller
+    IGetOrganizationIntegrationsQuery getQuery,
+    ILogger<OrganizationIntegrationController> logger) : Controller
 {
     [HttpGet("")]
     public async Task<ActionResult<List<OrganizationIntegrationResponseModel>>> GetAsync(Guid organizationId)
     {
         if (!await HasPermission(organizationId))
         {
-            return UnprocessableEntity();
+            return NotFound();
         }
 
         var integrations = await getQuery.GetManyByOrganizationAsync(organizationId);
@@ -37,7 +38,7 @@ public class OrganizationIntegrationController(
     /// <param name="organizationId"></param>
     /// <param name="model"></param>
     /// <returns></returns>
-    /// <exception cref="UnprocessableEntityResult">Not enough permissions to access the organization.</exception>
+    /// <exception cref="UnauthorizedResult">Not enough permissions to access the organization.</exception>
     /// <exception cref="ConflictResult">When an integration of the same type already exists for the organization.</exception>
     [HttpPost("")]
     public async Task<ActionResult<OrganizationIntegrationResponseModel>> CreateAsync(Guid organizationId, [FromBody] OrganizationIntegrationRequestModel model)
@@ -49,7 +50,7 @@ public class OrganizationIntegrationController(
 
         if (!await HasPermission(organizationId))
         {
-            return UnprocessableEntity();
+            return NotFound();
         }
 
         var integration = model.ToOrganizationIntegration(organizationId);
@@ -60,9 +61,16 @@ public class OrganizationIntegrationController(
             return Conflict();
         }
 
-        var created = await createCommand.CreateAsync(integration);
-
-        return Ok(new OrganizationIntegrationResponseModel(created));
+        try
+        {
+            var created = await createCommand.CreateAsync(integration);
+            return Ok(new OrganizationIntegrationResponseModel(created));
+        }
+        catch (System.Exception e)
+        {   
+            logger.LogError(e, "Error creating organization integration for organization {OrganizationId} with type {IntegrationType}", organizationId, integration.Type);
+            return BadRequest();
+        }
     }
 
     [HttpPut("{integrationId:guid}")]
@@ -70,13 +78,21 @@ public class OrganizationIntegrationController(
     {
         if (!await HasPermission(organizationId))
         {
-            return UnprocessableEntity();
+            return NotFound();
         }
 
-        var integration = model.ToOrganizationIntegration(organizationId);
-        var updated = await updateCommand.UpdateAsync(organizationId, integrationId, integration);
-
-        return Ok(new OrganizationIntegrationResponseModel(updated));
+        try
+        {
+            var integration = model.ToOrganizationIntegration(organizationId);
+            var updated = await updateCommand.UpdateAsync(organizationId, integrationId, integration);
+    
+            return Ok(new OrganizationIntegrationResponseModel(updated));
+        }
+        catch (System.Exception e)
+        {
+            logger.LogError(e, "Error updating organization integration for organization {OrganizationId} with integration {IntegrationId}", organizationId, integrationId);
+            return BadRequest();
+        }
     }
 
     [HttpDelete("{integrationId:guid}")]
@@ -84,10 +100,18 @@ public class OrganizationIntegrationController(
     {
         if (!await HasPermission(organizationId))
         {
-            return UnprocessableEntity();
+            return NotFound();
         }
 
-        await deleteCommand.DeleteAsync(organizationId, integrationId);
+        try
+        {
+            await deleteCommand.DeleteAsync(organizationId, integrationId);
+        }
+        catch (System.Exception e)
+        {
+            logger.LogError(e, "Error deleting organization integration for organization {OrganizationId} with integration {IntegrationId}", organizationId, integrationId);
+            return BadRequest();
+        }
         return NoContent();
     }
 
