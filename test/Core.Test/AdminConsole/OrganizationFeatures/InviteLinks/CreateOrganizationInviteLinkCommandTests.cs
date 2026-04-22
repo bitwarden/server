@@ -2,6 +2,8 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -12,11 +14,23 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.InviteLinks;
 [SutProviderCustomize]
 public class CreateOrganizationInviteLinkCommandTests
 {
+    private static void SetupAbility(
+        SutProvider<CreateOrganizationInviteLinkCommand> sutProvider,
+        Guid organizationId,
+        bool useInviteLinks = true)
+    {
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { UseInviteLinks = useInviteLinks });
+    }
+
     [Theory, BitAutoData]
     public async Task CreateAsync_WithValidInput_Success(
         Guid organizationId,
         SutProvider<CreateOrganizationInviteLinkCommand> sutProvider)
     {
+        SetupAbility(sutProvider, organizationId);
+
         var request = new CreateOrganizationInviteLinkRequest
         {
             OrganizationId = organizationId,
@@ -50,6 +64,8 @@ public class CreateOrganizationInviteLinkCommandTests
         OrganizationInviteLink existingLink,
         SutProvider<CreateOrganizationInviteLinkCommand> sutProvider)
     {
+        SetupAbility(sutProvider, organizationId);
+
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
             .GetByOrganizationIdAsync(organizationId)
             .Returns(existingLink);
@@ -76,6 +92,8 @@ public class CreateOrganizationInviteLinkCommandTests
         Guid organizationId,
         SutProvider<CreateOrganizationInviteLinkCommand> sutProvider)
     {
+        SetupAbility(sutProvider, organizationId);
+
         var request = new CreateOrganizationInviteLinkRequest
         {
             OrganizationId = organizationId,
@@ -98,6 +116,8 @@ public class CreateOrganizationInviteLinkCommandTests
         Guid organizationId,
         SutProvider<CreateOrganizationInviteLinkCommand> sutProvider)
     {
+        SetupAbility(sutProvider, organizationId);
+
         var request = new CreateOrganizationInviteLinkRequest
         {
             OrganizationId = organizationId,
@@ -116,6 +136,8 @@ public class CreateOrganizationInviteLinkCommandTests
         Guid organizationId,
         SutProvider<CreateOrganizationInviteLinkCommand> sutProvider)
     {
+        SetupAbility(sutProvider, organizationId);
+
         var request = new CreateOrganizationInviteLinkRequest
         {
             OrganizationId = organizationId,
@@ -139,6 +161,8 @@ public class CreateOrganizationInviteLinkCommandTests
         Guid organizationId,
         SutProvider<CreateOrganizationInviteLinkCommand> sutProvider)
     {
+        SetupAbility(sutProvider, organizationId);
+
         var request = new CreateOrganizationInviteLinkRequest
         {
             OrganizationId = organizationId,
@@ -165,6 +189,8 @@ public class CreateOrganizationInviteLinkCommandTests
         Guid organizationId,
         SutProvider<CreateOrganizationInviteLinkCommand> sutProvider)
     {
+        SetupAbility(sutProvider, organizationId);
+
         var request = new CreateOrganizationInviteLinkRequest
         {
             OrganizationId = organizationId,
@@ -182,6 +208,8 @@ public class CreateOrganizationInviteLinkCommandTests
         Guid organizationId,
         SutProvider<CreateOrganizationInviteLinkCommand> sutProvider)
     {
+        SetupAbility(sutProvider, organizationId);
+
         var request = new CreateOrganizationInviteLinkRequest
         {
             OrganizationId = organizationId,
@@ -198,5 +226,55 @@ public class CreateOrganizationInviteLinkCommandTests
         Assert.Equal(2, deserializedDomains.Count);
         Assert.Contains("acme.com", deserializedDomains);
         Assert.Contains("example.com", deserializedDomains);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_WithoutUseInviteLinksAbility_ReturnsBadRequestError(
+        Guid organizationId,
+        SutProvider<CreateOrganizationInviteLinkCommand> sutProvider)
+    {
+        SetupAbility(sutProvider, organizationId, useInviteLinks: false);
+
+        var request = new CreateOrganizationInviteLinkRequest
+        {
+            OrganizationId = organizationId,
+            AllowedDomains = ["acme.com"],
+            EncryptedInviteKey = "encrypted-key",
+        };
+
+        var result = await sutProvider.Sut.CreateAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<InviteLinkNotAvailable>(result.AsError);
+
+        await sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_WithNullAbility_ReturnsBadRequestError(
+        Guid organizationId,
+        SutProvider<CreateOrganizationInviteLinkCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns((OrganizationAbility?)null);
+
+        var request = new CreateOrganizationInviteLinkRequest
+        {
+            OrganizationId = organizationId,
+            AllowedDomains = ["acme.com"],
+            EncryptedInviteKey = "encrypted-key",
+        };
+
+        var result = await sutProvider.Sut.CreateAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<InviteLinkNotAvailable>(result.AsError);
+
+        await sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(default!);
     }
 }
