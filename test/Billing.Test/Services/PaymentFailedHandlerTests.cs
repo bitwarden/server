@@ -77,10 +77,12 @@ public class PaymentFailedHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_PricingServiceThrows_BeyondAttemptLimit_HaltsPayRetries()
+    public async Task HandleAsync_PricingServiceThrows_BeyondAttemptLimit_FallsBackToDefaultPayRetries()
     {
-        // Fail-closed: if we can't determine whether the subscription is Premium,
-        // stop retrying rather than hammering Stripe with repeated pay attempts.
+        // On pricing-service uncertainty, fall back to the default behavior (keep retrying).
+        // The Premium-specific early-stop at attempt 3 is an exception that only applies
+        // when Premium status is positively confirmed — under uncertainty we shouldn't
+        // apply the exception and inadvertently delay pay retries for a non-Premium sub.
         var subscriptionId = "sub_123";
 
         var subscription = new Subscription
@@ -111,7 +113,7 @@ public class PaymentFailedHandlerTests
 
         await _sut.HandleAsync(new Event());
 
-        await _stripeEventUtilityService.DidNotReceive().AttemptToPayInvoiceAsync(Arg.Any<Invoice>(), Arg.Any<bool>());
+        await _stripeEventUtilityService.Received(1).AttemptToPayInvoiceAsync(invoice, Arg.Any<bool>());
     }
 
     [Fact]

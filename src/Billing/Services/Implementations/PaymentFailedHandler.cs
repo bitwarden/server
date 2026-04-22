@@ -53,9 +53,9 @@ public class PaymentFailedHandler : IPaymentFailedHandler
     // Identifies Premium subscriptions by matching the Password Manager seat Stripe price ID
     // against the set of known Premium plans from the pricing service. Matches on seat only —
     // storage is an add-on, not an identity signal — so this aligns with UpcomingInvoiceHandler's
-    // convention. Fails closed (returns true = "assume Premium, stop retrying") on pricing-service
-    // errors or empty plan lists so we don't hammer Stripe with pay retries when we can't
-    // determine status.
+    // convention. On pricing-service errors or empty plan lists, returns false ("not Premium")
+    // to preserve the default pay-retry behavior — the Premium-specific early-stop at attempt 3
+    // is an exception we can only apply when Premium status is positively confirmed.
     private async Task<bool> IsPremiumSubscriptionAsync(Subscription subscription)
     {
         List<Bit.Core.Billing.Pricing.Premium.Plan> premiumPlans;
@@ -66,9 +66,9 @@ public class PaymentFailedHandler : IPaymentFailedHandler
         catch (Exception ex)
         {
             _logger.LogError(ex,
-                "Failed to list Premium plans while evaluating subscription ({SubscriptionId}); halting pay retries",
+                "Failed to list Premium plans while evaluating subscription ({SubscriptionId}); continuing pay retries at default cadence",
                 subscription.Id);
-            return true;
+            return false;
         }
 
         var premiumSeatPriceIds = premiumPlans
@@ -79,9 +79,9 @@ public class PaymentFailedHandler : IPaymentFailedHandler
         if (premiumSeatPriceIds.Count == 0)
         {
             _logger.LogError(
-                "Pricing service returned no usable Premium seat price IDs while evaluating subscription ({SubscriptionId}); halting pay retries",
+                "Pricing service returned no usable Premium seat price IDs while evaluating subscription ({SubscriptionId}); continuing pay retries at default cadence",
                 subscription.Id);
-            return true;
+            return false;
         }
 
         return subscription.Items.Any(i => premiumSeatPriceIds.Contains(i.Price.Id));
