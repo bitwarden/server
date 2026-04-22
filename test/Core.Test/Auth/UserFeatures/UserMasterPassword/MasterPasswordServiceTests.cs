@@ -617,6 +617,49 @@ public class MasterPasswordServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task PrepareSetInitialOrUpdateExisting_PropagatesValidationErrors_WhenSetInitialPathFails(User user)
+    {
+        var error = new IdentityError { Code = "pwd-invalid", Description = "Password is too weak." };
+        var validator = Substitute.For<IPasswordValidator<User>>();
+        validator.ValidateAsync(Arg.Any<UserManager<User>>(), Arg.Any<User>(), Arg.Any<string>())
+            .Returns(IdentityResult.Failed(error));
+
+        var sutProvider = new SutProvider<MasterPasswordService>()
+            .WithFakeTimeProvider()
+            .SetDependency<IEnumerable<IPasswordValidator<User>>>(new[] { validator })
+            .Create();
+
+        user.MasterPassword = null;
+        user.Key = null;
+        user.MasterPasswordSalt = null;
+        user.UsesKeyConnector = false;
+
+        var (kdf, salt) = GetMatchingKdfAndSalt(user);
+        var data = new SetInitialOrUpdateExistingPasswordData
+        {
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Salt = salt,
+                MasterPasswordAuthenticationHash = "test-hash",
+                Kdf = kdf
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockData
+            {
+                Salt = salt,
+                MasterKeyWrappedUserKey = "wrapped-key",
+                Kdf = kdf
+            },
+            ValidatePassword = true,
+            RefreshStamp = false
+        };
+
+        var result = await sutProvider.Sut.PrepareSetInitialOrUpdateExistingMasterPasswordAsync(user, data);
+
+        Assert.True(result.IsT1);
+        Assert.NotEmpty(result.AsT1);
+    }
+
+    [Theory, BitAutoData]
     public async Task PrepareSetInitialOrUpdateExisting_ThrowsWhenUserNotHydrated(User user)
     {
         var sutProvider = CreateSutProvider();
@@ -838,18 +881,15 @@ public class MasterPasswordServiceTests
             user.UsesKeyConnector = false;
 
             var data = BuildSetInitialDataForUser(user);
-            sutProvider.GetDependency<IPasswordHasher<User>>()
-                .HashPassword(Arg.Any<User>(), Arg.Any<string>())
-                .Returns("server-hash");
 
             var result = sutProvider.Sut.BuildUpdateUserDelegateSetInitialMasterPassword(user, data);
 
             // The Build* tier returns a delegate — it must not persist directly.
             Assert.NotNull(result);
             sutProvider.GetDependency<IUserRepository>().DidNotReceive().ReplaceAsync(Arg.Any<User>());
-            // Hashing is eager at build time, not deferred.
+            // Hashing is deferred into the delegate (validate → hash → persist), not eager at build time.
             sutProvider.GetDependency<IPasswordHasher<User>>()
-                .Received()
+                .DidNotReceive()
                 .HashPassword(user, Arg.Any<string>());
         }
 

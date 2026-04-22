@@ -101,14 +101,6 @@ public class MasterPasswordService(
         EnsureUserIsHydrated(user);
         setInitialData.ValidateDataForUser(user);
 
-        // Hash the provided user master password authentication hash on the server side
-        var serverSideHashedMasterPasswordAuthenticationHash = _passwordHasher.HashPassword(user,
-            setInitialData.MasterPasswordAuthentication.MasterPasswordAuthenticationHash);
-
-        var setMasterPasswordTask = _userRepository.SetMasterPassword(user.Id,
-            setInitialData.MasterPasswordUnlock, serverSideHashedMasterPasswordAuthenticationHash,
-            setInitialData.MasterPasswordHint);
-
         return async (connection, transaction) =>
         {
             if (setInitialData.ValidatePassword)
@@ -130,7 +122,13 @@ public class MasterPasswordService(
                 user.SecurityStamp = Guid.NewGuid().ToString();
             }
 
-            await setMasterPasswordTask(connection, transaction);
+            // Hash the provided user master password authentication hash on the server side
+            var serverSideHashedMasterPasswordAuthenticationHash = _passwordHasher.HashPassword(user,
+                setInitialData.MasterPasswordAuthentication.MasterPasswordAuthenticationHash);
+
+            await _userRepository.SetMasterPassword(user.Id,
+                setInitialData.MasterPasswordUnlock, serverSideHashedMasterPasswordAuthenticationHash,
+                setInitialData.MasterPasswordHint)(connection, transaction);
         };
     }
 
