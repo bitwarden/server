@@ -18,10 +18,6 @@ public class AdminConsoleControllersAuthorizationTests
         typeof(OrganizationDomainController),
         typeof(OrganizationsController),
         typeof(OrganizationUsersController),
-        typeof(ProviderClientsController),
-        typeof(ProviderOrganizationsController),
-        typeof(ProvidersController),
-        typeof(ProviderUsersController)
     ];
 
     public static IEnumerable<object[]> GetAllAdminConsoleControllers()

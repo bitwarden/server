@@ -6,6 +6,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Queries.Interfaces;
@@ -45,7 +46,8 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IPolicyRequirementQuery policyRequirementQuery,
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
-        IClientVersionValidator clientVersionValidator)
+        IClientVersionValidator clientVersionValidator,
+        IBumpDeviceLastActivityDateCommand bumpDeviceLastActivityDateCommand)
         : base(
             userManager,
             userService,
@@ -66,7 +68,8 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             authRequestRepository,
             mailService,
             userAccountKeysQuery,
-            clientVersionValidator)
+            clientVersionValidator,
+            bumpDeviceLastActivityDateCommand)
     {
         _userManager = userManager;
         _currentContext = currentContext;

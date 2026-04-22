@@ -248,6 +248,8 @@ jobs:
           if [[ "${IMAGE_TAG}" == "dev" ]]; then
             SHORT_SHA=$(git rev-parse --short "${SHA}")
             TAGS=$TAGS",${_AZ_REGISTRY}/${PROJECT_NAME}:dev-${SHORT_SHA}"
+            TAGS=$TAGS",${_GHCR_REGISTRY}/${PROJECT_NAME}:dev"
+            TAGS=$TAGS",${_GHCR_REGISTRY}/${PROJECT_NAME}:dev-${SHORT_SHA}"
           fi
 
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
@@ -480,9 +482,7 @@ jobs:
 
   bitwarden-lite-build:
     name: Trigger Bitwarden lite build
-    if: |
-      github.event_name != 'pull_request'
-      && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-22.04
     needs: build-artifacts
     permissions:

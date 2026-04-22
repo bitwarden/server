@@ -1,6 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace Bit.Core.AdminConsole.Utilities;
+namespace Bit.Core.Dirt.Utilities;
 
 public static partial class IntegrationTemplateProcessor
 {

@@ -29,17 +29,17 @@ public class CertBuilder
 
             if (!skipSSL)
             {
-                _context.Config.Ssl = Helpers.ReadQuestion("Do you have a SSL certificate to use?");
+                _context.Config.Ssl = _context.App.ReadQuestion("Do you have a SSL certificate to use?");
                 if (_context.Config.Ssl)
                 {
-                    Directory.CreateDirectory($"/bitwarden/ssl/{_context.Install.Domain}/");
+                    Directory.CreateDirectory($"{_context.App.RootDirectory}/ssl/{_context.Install.Domain}/");
                     var message = "Make sure 'certificate.crt' and 'private.key' are provided in the \n" +
                                   "appropriate directory before running 'start' (see docs for info).";
                     Helpers.ShowBanner(_context, "NOTE", message);
                 }
-                else if (Helpers.ReadQuestion("Do you want to generate a self-signed SSL certificate?"))
+                else if (_context.App.ReadQuestion("Do you want to generate a self-signed SSL certificate?"))
                 {
-                    Directory.CreateDirectory($"/bitwarden/ssl/self/{_context.Install.Domain}/");
+                    Directory.CreateDirectory($"{_context.App.RootDirectory}/ssl/self/{_context.Install.Domain}/");
                     Helpers.WriteLine(_context, "Generating self signed SSL certificate.");
                     _context.Config.Ssl = true;
                     _context.Install.Trusted = false;
@@ -58,22 +58,22 @@ public class CertBuilder
         {
             _context.Install.Trusted = true;
             _context.Install.DiffieHellman = true;
-            Directory.CreateDirectory($"/bitwarden/letsencrypt/live/{_context.Install.Domain}/");
+            Directory.CreateDirectory($"{_context.App.RootDirectory}/letsencrypt/live/{_context.Install.Domain}/");
             Helpers.Exec($"openssl dhparam -out " +
-                $"/bitwarden/letsencrypt/live/{_context.Install.Domain}/dhparam.pem 2048");
+                $"{_context.App.RootDirectory}/letsencrypt/live/{_context.Install.Domain}/dhparam.pem 2048");
         }
         else if (_context.Config.Ssl && !_context.Install.SelfSignedCert)
         {
-            _context.Install.Trusted = Helpers.ReadQuestion("Is this a trusted SSL certificate " +
+            _context.Install.Trusted = _context.App.ReadQuestion("Is this a trusted SSL certificate " +
                 "(requires ca.crt, see docs)?");
         }
 
         Helpers.WriteLine(_context, "Generating key for IdentityServer.");
         _context.Install.IdentityCertPassword = Helpers.SecureRandomString(32, alpha: true, numeric: true);
-        Directory.CreateDirectory("/bitwarden/identity/");
+        Directory.CreateDirectory($"{_context.App.RootDirectory}/identity/");
         Helpers.Exec("openssl req -x509 -newkey rsa:4096 -sha256 -nodes -keyout identity.key " +
             "-out identity.crt -subj \"/CN=Bitwarden IdentityServer\" -days 36500");
-        Helpers.Exec("openssl pkcs12 -export -out /bitwarden/identity/identity.pfx -inkey identity.key " +
+        Helpers.Exec($"openssl pkcs12 -export -out {_context.App.RootDirectory}/identity/identity.pfx -inkey identity.key " +
             $"-in identity.crt -passout pass:{_context.Install.IdentityCertPassword}");
 
         Helpers.WriteLine(_context);
@@ -97,14 +97,14 @@ public class CertBuilder
 
     public void BuildForUpdater()
     {
-        if (_context.Config.EnableKeyConnector && !File.Exists("/bitwarden/key-connector/bwkc.pfx"))
+        if (_context.Config.EnableKeyConnector && !File.Exists($"{_context.App.RootDirectory}/key-connector/bwkc.pfx"))
         {
-            Directory.CreateDirectory("/bitwarden/key-connector/");
-            var keyConnectorCertPassword = Helpers.GetValueFromEnvFile("key-connector",
+            Directory.CreateDirectory($"{_context.App.RootDirectory}/key-connector/");
+            var keyConnectorCertPassword = Helpers.GetValueFromEnvFile(_context.App, "key-connector",
                 "keyConnectorSettings__certificate__filesystemPassword");
             Helpers.Exec("openssl req -x509 -newkey rsa:4096 -sha256 -nodes -keyout bwkc.key " +
                          "-out bwkc.crt -subj \"/CN=Bitwarden Key Connector\" -days 36500");
-            Helpers.Exec("openssl pkcs12 -export -out /bitwarden/key-connector/bwkc.pfx -inkey bwkc.key " +
+            Helpers.Exec($"openssl pkcs12 -export -out {_context.App.RootDirectory}/key-connector/bwkc.pfx -inkey bwkc.key " +
                          $"-in bwkc.crt -passout pass:{keyConnectorCertPassword}");
         }
     }
