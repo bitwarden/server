@@ -1,7 +1,7 @@
 ###############################################
 #                 Build stage                 #
 ###############################################
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0-bookworm-slim AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0-noble AS build
 
 # Docker buildx supplies these values
 ARG TARGETPLATFORM
@@ -42,14 +42,14 @@ RUN case "$TARGETPLATFORM" in \
     && if [ -n "$ARCH_PACKAGES" ]; then \
         apt-get update && apt-get install -y $ARCH_PACKAGES && rm -rf /var/lib/apt/lists/* ; \
     fi \
-    && echo "RUST_TARGET=${RUST_TARGET}" >> /etc/environment \
-    && echo "RID=${RID}" >> /etc/environment \
-    && . /etc/environment \
+    && echo "RUST_TARGET=${RUST_TARGET}" >> /etc/build-env \
+    && echo "RID=${RID}" >> /etc/build-env \
+    && . /etc/build-env \
     && rustup target add ${RUST_TARGET} \
     && echo "Rust target: ${RUST_TARGET}, .NET RID: ${RID}"
 
 # Configure Rust for cross-compilation with proper linkers
-RUN . /etc/environment \
+RUN . /etc/build-env \
     && mkdir -p /root/.cargo \
     && case "$TARGETPLATFORM" in \
     "linux/amd64") \
@@ -68,11 +68,11 @@ COPY . ./
 
 # Restore .NET dependencies
 WORKDIR /source/util/SeederApi
-RUN . /etc/environment && dotnet restore -r ${RID}
+RUN . /etc/build-env && dotnet restore -r ${RID}
 
 # Build the project with Rust support
 WORKDIR /source/util/SeederApi
-RUN . /etc/environment \
+RUN . /etc/build-env \
     && export CARGO_TARGET_DIR=/tmp/cargo_target \
     && export NoWarn="CA1305;CS1591" \
     && rustc --version \
