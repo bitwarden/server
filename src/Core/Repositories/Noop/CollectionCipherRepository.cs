@@ -27,6 +27,9 @@ public class CollectionCipherRepository : ICollectionCipherRepository
     public Task UpdateCollectionsForCiphersAsync(IEnumerable<Guid> cipherIds, Guid userId, Guid organizationId, IEnumerable<Guid> collectionIds)
         => Task.CompletedTask;
 
+    public Task<ICollection<Guid>> GetCollectionIdsByCipherIdAsync(Guid cipherId)
+        => Task.FromResult<ICollection<Guid>>([]);
+
     public Task<ICollection<Guid>> GetUserIdsByCollectionIdsAsync(IEnumerable<Guid> collectionIds)
         => Task.FromResult<ICollection<Guid>>([]);
 

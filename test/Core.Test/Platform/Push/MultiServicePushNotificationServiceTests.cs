@@ -153,11 +153,8 @@ public class MultiServicePushNotificationServiceTests
         };
 
         _collectionCipherRepository
-            .GetManyByOrganizationIdAsync(cipher.OrganizationId.Value)
-            .Returns([
-                new Core.Entities.CollectionCipher { CipherId = cipher.Id, CollectionId = collectionId },
-                new Core.Entities.CollectionCipher { CipherId = Guid.NewGuid(), CollectionId = Guid.NewGuid() },
-            ]);
+            .GetCollectionIdsByCipherIdAsync(cipher.Id)
+            .Returns([collectionId]);
 
         _collectionCipherRepository
             .GetUserIdsByCollectionIdsAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(collectionId)))
@@ -165,7 +162,8 @@ public class MultiServicePushNotificationServiceTests
 
         await _sut.PushCipherAsync(cipher, PushType.SyncLoginDelete, null);
 
-        await _collectionCipherRepository.Received(1).GetManyByOrganizationIdAsync(cipher.OrganizationId.Value);
+        await _collectionCipherRepository.Received(1).GetCollectionIdsByCipherIdAsync(cipher.Id);
+        await _collectionCipherRepository.Received(0).GetManyByOrganizationIdAsync(Arg.Any<Guid>());
         await _collectionCipherRepository
             .Received(1)
             .GetUserIdsByCollectionIdsAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(collectionId)));

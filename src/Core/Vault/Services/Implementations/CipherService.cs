@@ -1001,13 +1001,7 @@ public class CipherService : ICipherService
             return null;
         }
 
-        var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(cipher.OrganizationId.Value);
-
-        return collectionCiphers
-            .Where(collectionCipher => collectionCipher.CipherId == cipher.Id)
-            .Select(collectionCipher => collectionCipher.CollectionId)
-            .Distinct()
-            .ToList();
+        return await _collectionCipherRepository.GetCollectionIdsByCipherIdAsync(cipher.Id);
     }
 
     private async Task ValidateCipherCanBeShared(

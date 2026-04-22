@@ -16,6 +16,11 @@ public interface ICollectionCipherRepository
         IEnumerable<Guid> collectionIds);
 
     /// <summary>
+    /// Returns the collection IDs that the specified cipher belongs to.
+    /// </summary>
+    Task<ICollection<Guid>> GetCollectionIdsByCipherIdAsync(Guid cipherId);
+
+    /// <summary>
     /// Returns the distinct user IDs of all confirmed organization members who have access to any of the specified
     /// collections, either directly via <c>CollectionUser</c> or via group membership.
     /// </summary>
