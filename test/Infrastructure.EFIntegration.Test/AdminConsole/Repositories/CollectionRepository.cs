@@ -5,10 +5,10 @@ using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
-using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using EfAdminConsoleRepo = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
-using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
+using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using SqlAdminConsoleRepo = Bit.Infrastructure.Dapper.AdminConsole.Repositories;
+using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
 namespace Bit.Infrastructure.EFIntegration.Test.AdminConsole.Repositories;
 
