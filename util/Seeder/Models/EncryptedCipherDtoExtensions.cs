@@ -119,9 +119,12 @@ internal static class EncryptedCipherDtoExtensions
         FirstName = e.DriversLicense?.FirstName,
         MiddleName = e.DriversLicense?.MiddleName,
         LastName = e.DriversLicense?.LastName,
+        DateOfBirth = e.DriversLicense?.DateOfBirth,
         LicenseNumber = e.DriversLicense?.LicenseNumber,
         IssuingCountry = e.DriversLicense?.IssuingCountry,
         IssuingState = e.DriversLicense?.IssuingState,
+        IssueDate = e.DriversLicense?.IssueDate,
+        IssuingAuthority = e.DriversLicense?.IssuingAuthority,
         ExpirationDate = e.DriversLicense?.ExpirationDate,
         LicenseClass = e.DriversLicense?.LicenseClass,
         Fields = e.ToFields()
@@ -134,6 +137,8 @@ internal static class EncryptedCipherDtoExtensions
         Surname = e.Passport?.Surname,
         GivenName = e.Passport?.GivenName,
         DateOfBirth = e.Passport?.DateOfBirth,
+        Sex = e.Passport?.Sex,
+        BirthPlace = e.Passport?.BirthPlace,
         Nationality = e.Passport?.Nationality,
         PassportNumber = e.Passport?.PassportNumber,
         PassportType = e.Passport?.PassportType,
@@ -141,6 +146,7 @@ internal static class EncryptedCipherDtoExtensions
         IssuingAuthority = e.Passport?.IssuingAuthority,
         IssueDate = e.Passport?.IssueDate,
         ExpirationDate = e.Passport?.ExpirationDate,
+        NationalIdentificationNumber = e.Passport?.NationalIdentificationNumber,
         Fields = e.ToFields()
     };
 

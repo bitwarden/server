@@ -292,6 +292,9 @@ public class EncryptedDriversLicenseDto
     [JsonPropertyName("lastName")]
     public string? LastName { get; set; }
 
+    [JsonPropertyName("dateOfBirth")]
+    public string? DateOfBirth { get; set; }
+
     [JsonPropertyName("licenseNumber")]
     public string? LicenseNumber { get; set; }
 
@@ -300,6 +303,12 @@ public class EncryptedDriversLicenseDto
 
     [JsonPropertyName("issuingState")]
     public string? IssuingState { get; set; }
+
+    [JsonPropertyName("issueDate")]
+    public string? IssueDate { get; set; }
+
+    [JsonPropertyName("issuingAuthority")]
+    public string? IssuingAuthority { get; set; }
 
     [JsonPropertyName("expirationDate")]
     public string? ExpirationDate { get; set; }
@@ -318,6 +327,12 @@ public class EncryptedPassportDto
 
     [JsonPropertyName("dateOfBirth")]
     public string? DateOfBirth { get; set; }
+
+    [JsonPropertyName("sex")]
+    public string? Sex { get; set; }
+
+    [JsonPropertyName("birthPlace")]
+    public string? BirthPlace { get; set; }
 
     [JsonPropertyName("nationality")]
     public string? Nationality { get; set; }
@@ -339,4 +354,7 @@ public class EncryptedPassportDto
 
     [JsonPropertyName("expirationDate")]
     public string? ExpirationDate { get; set; }
+
+    [JsonPropertyName("nationalIdentificationNumber")]
+    public string? NationalIdentificationNumber { get; set; }
 }

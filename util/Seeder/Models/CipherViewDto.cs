@@ -371,6 +371,9 @@ public record DriversLicenseViewDto
     [JsonPropertyName("lastName")]
     public string? LastName { get; init; }
 
+    [JsonPropertyName("dateOfBirth")]
+    public string? DateOfBirth { get; init; }
+
     [JsonPropertyName("licenseNumber")]
     public string? LicenseNumber { get; init; }
 
@@ -379,6 +382,12 @@ public record DriversLicenseViewDto
 
     [JsonPropertyName("issuingState")]
     public string? IssuingState { get; init; }
+
+    [JsonPropertyName("issueDate")]
+    public string? IssueDate { get; init; }
+
+    [JsonPropertyName("issuingAuthority")]
+    public string? IssuingAuthority { get; init; }
 
     [JsonPropertyName("expirationDate")]
     public string? ExpirationDate { get; init; }
@@ -401,6 +410,12 @@ public record PassportViewDto
     [JsonPropertyName("dateOfBirth")]
     public string? DateOfBirth { get; init; }
 
+    [JsonPropertyName("sex")]
+    public string? Sex { get; init; }
+
+    [JsonPropertyName("birthPlace")]
+    public string? BirthPlace { get; init; }
+
     [JsonPropertyName("nationality")]
     public string? Nationality { get; init; }
 
@@ -421,4 +436,7 @@ public record PassportViewDto
 
     [JsonPropertyName("expirationDate")]
     public string? ExpirationDate { get; init; }
+
+    [JsonPropertyName("nationalIdentificationNumber")]
+    public string? NationalIdentificationNumber { get; init; }
 }

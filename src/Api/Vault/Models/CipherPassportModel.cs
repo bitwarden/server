@@ -12,6 +12,8 @@ public class CipherPassportModel
         Surname = data.Surname;
         GivenName = data.GivenName;
         DateOfBirth = data.DateOfBirth;
+        Sex = data.Sex;
+        BirthPlace = data.BirthPlace;
         Nationality = data.Nationality;
         PassportNumber = data.PassportNumber;
         PassportType = data.PassportType;
@@ -19,6 +21,7 @@ public class CipherPassportModel
         IssuingAuthority = data.IssuingAuthority;
         IssueDate = data.IssueDate;
         ExpirationDate = data.ExpirationDate;
+        NationalIdentificationNumber = data.NationalIdentificationNumber;
     }
 
     [EncryptedString]
@@ -32,6 +35,14 @@ public class CipherPassportModel
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string? DateOfBirth { get; set; }
+
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
+    public string? Sex { get; set; }
+
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
+    public string? BirthPlace { get; set; }
 
     [EncryptedString]
     [EncryptedStringLength(1000)]
@@ -60,4 +71,8 @@ public class CipherPassportModel
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string? ExpirationDate { get; set; }
+
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
+    public string? NationalIdentificationNumber { get; set; }
 }
