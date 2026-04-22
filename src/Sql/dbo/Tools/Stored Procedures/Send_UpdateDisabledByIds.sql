@@ -5,6 +5,8 @@ AS
 BEGIN
     SET NOCOUNT ON
 
+    DECLARE @UserIds [dbo].[GuidIdarray]
+
     -- Set field
     UPDATE
         [dbo].[Send]
@@ -13,15 +15,16 @@ BEGIN
         [RevisionDate] = GETUTCDATE()
     WHERE
         [Id] IN (SELECT * FROM @Ids)
+    
+    INSERT INTO @UserIds
+    SELECT DISTINCT
+        UserId
+    FROM
+        [dbo].[Send]
+    WHERE
+        [Id] IN (SELECT * FROM @Ids)
+        AND [UserId] IS NOT NULL
 
     -- Bump account revision dates
-    EXEC [dbo].[User_BumpManyAccountRevisionDates]
-    (
-        SELECT DISTINCT
-            UserId
-        FROM
-            [dbo].[Send]
-        WHERE
-            [Id] IN (SELECT * FROM @Ids)
-    )
+    EXEC [dbo].[User_BumpManyAccountRevisionDates] @UserIds
 END
