@@ -75,7 +75,7 @@ public class ImportCiphersController : Controller
         var collections = model.Collections.Select(c => c.ToCollection(orgId)).ToList();
 
         //An User is allowed to import if CanCreate Collections or has AccessToImportExport
-        var authorized = await CheckOrgImportPermission(collections, orgId);
+        var authorized = await CheckOrgImportPermissionAsync(collections, orgId);
         if (!authorized)
         {
             throw new BadRequestException("Not enough privileges to import into this organization.");
@@ -86,7 +86,7 @@ public class ImportCiphersController : Controller
         await _importCiphersCommand.ImportIntoOrganizationalVaultAsync(collections, ciphers, model.CollectionRelationships, userId);
     }
 
-    private async Task<bool> CheckOrgImportPermission(List<Collection> collections, Guid orgId)
+    private async Task<bool> CheckOrgImportPermissionAsync(List<Collection> collections, Guid orgId)
     {
         //Users are allowed to import if they have the AccessToImportExport permission
         if (await _currentContext.AccessImportExport(orgId))
@@ -100,12 +100,6 @@ public class ImportCiphersController : Controller
             (await _collectionRepository.GetManyByOrganizationIdAsync(orgId))
             .Select(c => c.Id)
             .ToHashSet();
-
-        // when there are no collections, then we can import
-        if (collections.Count == 0)
-        {
-            return true;
-        }
 
         // are we trying to import into existing collections?
         var existingCollections = collections.Where(tc => orgCollectionIds.Contains(tc.Id));
