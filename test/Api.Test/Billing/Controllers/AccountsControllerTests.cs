@@ -61,14 +61,14 @@ public class AccountsControllerTests : IDisposable
         UserLicense license)
     {
         // Arrange
-        subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount
+        subscriptionInfo.CustomerDiscounts = [new SubscriptionInfo.BillingCustomerDiscount
         {
             Id = TestMilestone2CouponId,
             Active = true,
             PercentOff = 20m,
             AmountOff = null,
             AppliesTo = new List<string> { "product1" }
-        };
+        }];
 
         var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
         _sut.ControllerContext = new ControllerContext
@@ -87,9 +87,9 @@ public class AccountsControllerTests : IDisposable
 
         // Assert
         Assert.NotNull(result);
-        Assert.NotNull(result.CustomerDiscount);
-        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, result.CustomerDiscount.Id);
-        Assert.Equal(20m, result.CustomerDiscount.PercentOff);
+        var discount = Assert.Single(result.CustomerDiscounts);
+        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, discount.Id);
+        Assert.Equal(20m, discount.PercentOff);
     }
 
     [Theory]
@@ -100,14 +100,14 @@ public class AccountsControllerTests : IDisposable
         UserLicense license)
     {
         // Arrange
-        subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount
+        subscriptionInfo.CustomerDiscounts = [new SubscriptionInfo.BillingCustomerDiscount
         {
             Id = "different-coupon-id", // Non-matching coupon ID
             Active = true,
             PercentOff = 20m,
             AmountOff = null,
             AppliesTo = new List<string> { "product1" }
-        };
+        }];
 
         var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
         _sut.ControllerContext = new ControllerContext
@@ -126,7 +126,7 @@ public class AccountsControllerTests : IDisposable
 
         // Assert
         Assert.NotNull(result);
-        Assert.Null(result.CustomerDiscount); // Should be null when coupon ID doesn't match
+        Assert.Empty(result.CustomerDiscounts); // Should be empty when coupon ID doesn't match
     }
 
     [Theory]
@@ -147,7 +147,7 @@ public class AccountsControllerTests : IDisposable
 
         // Assert
         Assert.NotNull(result);
-        Assert.Null(result.CustomerDiscount);
+        Assert.Empty(result.CustomerDiscounts);
         await _paymentService.DidNotReceive().GetSubscriptionAsync(Arg.Any<User>());
     }
 
@@ -171,7 +171,7 @@ public class AccountsControllerTests : IDisposable
 
         // Assert
         Assert.NotNull(result);
-        Assert.Null(result.CustomerDiscount); // Should be null when no gateway
+        Assert.Empty(result.CustomerDiscounts); // Should be empty when no gateway
         await _paymentService.DidNotReceive().GetSubscriptionAsync(Arg.Any<User>());
     }
 
@@ -183,14 +183,14 @@ public class AccountsControllerTests : IDisposable
         UserLicense license)
     {
         // Arrange
-        subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount
+        subscriptionInfo.CustomerDiscounts = [new SubscriptionInfo.BillingCustomerDiscount
         {
             Id = TestMilestone2CouponId,
             Active = false, // Inactive discount
             PercentOff = 20m,
             AmountOff = null,
             AppliesTo = new List<string> { "product1" }
-        };
+        }];
 
         var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
         _sut.ControllerContext = new ControllerContext
@@ -209,7 +209,7 @@ public class AccountsControllerTests : IDisposable
 
         // Assert
         Assert.NotNull(result);
-        Assert.Null(result.CustomerDiscount); // Should be null when discount is inactive
+        Assert.Empty(result.CustomerDiscounts); // Should be empty when discount is inactive
     }
 
     [Theory]
@@ -239,7 +239,7 @@ public class AccountsControllerTests : IDisposable
 
         var subscriptionInfo = new SubscriptionInfo
         {
-            CustomerDiscount = billingDiscount
+            CustomerDiscounts = [billingDiscount]
         };
 
         var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
@@ -259,21 +259,21 @@ public class AccountsControllerTests : IDisposable
 
         // Assert - Verify full pipeline conversion
         Assert.NotNull(result);
-        Assert.NotNull(result.CustomerDiscount);
+        var discount = Assert.Single(result.CustomerDiscounts);
 
         // Verify Stripe data correctly converted to API response
-        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, result.CustomerDiscount.Id);
-        Assert.True(result.CustomerDiscount.Active);
-        Assert.Equal(25m, result.CustomerDiscount.PercentOff);
+        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, discount.Id);
+        Assert.True(discount.Active);
+        Assert.Equal(25m, discount.PercentOff);
 
         // Verify cents-to-dollars conversion (1400 cents -> $14.00)
-        Assert.Equal(14.00m, result.CustomerDiscount.AmountOff);
+        Assert.Equal(14.00m, discount.AmountOff);
 
         // Verify AppliesTo products are preserved
-        Assert.NotNull(result.CustomerDiscount.AppliesTo);
-        Assert.Equal(2, result.CustomerDiscount.AppliesTo.Count());
-        Assert.Contains("prod_premium", result.CustomerDiscount.AppliesTo);
-        Assert.Contains("prod_families", result.CustomerDiscount.AppliesTo);
+        Assert.NotNull(discount.AppliesTo);
+        Assert.Equal(2, discount.AppliesTo.Count());
+        Assert.Contains("prod_premium", discount.AppliesTo);
+        Assert.Contains("prod_families", discount.AppliesTo);
     }
 
     [Theory]
@@ -314,7 +314,7 @@ public class AccountsControllerTests : IDisposable
         // This simulates what StripePaymentService returns
         var subscriptionInfo = new SubscriptionInfo
         {
-            CustomerDiscount = billingCustomerDiscount
+            CustomerDiscounts = [billingCustomerDiscount]
         };
 
         // Step 3: Set up controller dependencies
@@ -331,7 +331,7 @@ public class AccountsControllerTests : IDisposable
 
         // Act - Step 4: Call AccountsController.GetSubscriptionAsync
         // This exercises the complete pipeline:
-        // - Retrieves subscriptionInfo from paymentService (with discount from Stripe)
+        // - Retrieves subscriptionInfo from paymentService (with discounts from Stripe)
         // - Maps through SubscriptionInfo.BillingCustomerDiscount (already done above)
         // - Filters in SubscriptionResponseModel constructor (based on coupon ID, active status)
         // - Returns via AccountsController
@@ -339,27 +339,27 @@ public class AccountsControllerTests : IDisposable
 
         // Assert - Verify the complete pipeline worked end-to-end
         Assert.NotNull(result);
-        Assert.NotNull(result.CustomerDiscount);
+        var discount = Assert.Single(result.CustomerDiscounts);
 
         // Verify Stripe Discount → SubscriptionInfo.BillingCustomerDiscount mapping
         // (verified above, but confirming it made it through)
 
         // Verify SubscriptionInfo.BillingCustomerDiscount → SubscriptionResponseModel.BillingCustomerDiscount filtering
         // The filter should pass because:
-        // - subscription.CustomerDiscount != null
-        // - subscription.CustomerDiscount.Id == Milestone2SubscriptionDiscount
-        // - subscription.CustomerDiscount.Active = true
-        Assert.Equal(TestMilestone2CouponId, result.CustomerDiscount.Id);
-        Assert.True(result.CustomerDiscount.Active);
-        Assert.Equal(30m, result.CustomerDiscount.PercentOff);
-        Assert.Equal(20.00m, result.CustomerDiscount.AmountOff); // Verify cents-to-dollars conversion
+        // - subscription.CustomerDiscounts is not empty
+        // - discount.Id == Milestone2SubscriptionDiscount
+        // - discount.Active = true
+        Assert.Equal(TestMilestone2CouponId, discount.Id);
+        Assert.True(discount.Active);
+        Assert.Equal(30m, discount.PercentOff);
+        Assert.Equal(20.00m, discount.AmountOff); // Verify cents-to-dollars conversion
 
         // Verify AppliesTo products are preserved through the entire pipeline
-        Assert.NotNull(result.CustomerDiscount.AppliesTo);
-        Assert.Equal(3, result.CustomerDiscount.AppliesTo.Count());
-        Assert.Contains("prod_premium", result.CustomerDiscount.AppliesTo);
-        Assert.Contains("prod_families", result.CustomerDiscount.AppliesTo);
-        Assert.Contains("prod_teams", result.CustomerDiscount.AppliesTo);
+        Assert.NotNull(discount.AppliesTo);
+        Assert.Equal(3, discount.AppliesTo.Count());
+        Assert.Contains("prod_premium", discount.AppliesTo);
+        Assert.Contains("prod_families", discount.AppliesTo);
+        Assert.Contains("prod_teams", discount.AppliesTo);
 
         // Verify the payment service was called correctly
         await _paymentService.Received(1).GetSubscriptionAsync(user);
@@ -367,7 +367,7 @@ public class AccountsControllerTests : IDisposable
 
     [Theory]
     [BitAutoData]
-    public async Task GetSubscriptionAsync_IntegrationTest_MultipleDiscountsInSubscription_PrefersCustomerDiscount(
+    public async Task GetSubscriptionAsync_IntegrationTest_MultipleDiscountsInSubscription_FiltersToMatchingDiscount(
         User user,
         UserLicense license)
     {
@@ -406,9 +406,11 @@ public class AccountsControllerTests : IDisposable
 
         // Map through SubscriptionInfo.BillingCustomerDiscount
         var billingCustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(customerDiscount);
+        var billingSubscriptionDiscount1 = new SubscriptionInfo.BillingCustomerDiscount(subscriptionDiscount1);
+        var billingSubscriptionDiscount2 = new SubscriptionInfo.BillingCustomerDiscount(subscriptionDiscount2);
         var subscriptionInfo = new SubscriptionInfo
         {
-            CustomerDiscount = billingCustomerDiscount
+            CustomerDiscounts = [billingCustomerDiscount, billingSubscriptionDiscount1, billingSubscriptionDiscount2]
         };
 
         var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
@@ -425,11 +427,11 @@ public class AccountsControllerTests : IDisposable
         // Act
         var result = await _sut.GetSubscriptionAsync(_globalSettings, _paymentService);
 
-        // Assert - Should use customer discount, not subscription discounts
+        // Assert - Should filter to matching customer discount
         Assert.NotNull(result);
-        Assert.NotNull(result.CustomerDiscount);
-        Assert.Equal(TestMilestone2CouponId, result.CustomerDiscount.Id);
-        Assert.Equal(30m, result.CustomerDiscount.PercentOff);
+        var discount = Assert.Single(result.CustomerDiscounts);
+        Assert.Equal(TestMilestone2CouponId, discount.Id);
+        Assert.Equal(30m, discount.PercentOff);
     }
 
     [Theory]
@@ -459,7 +461,7 @@ public class AccountsControllerTests : IDisposable
         var billingCustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(stripeDiscount);
         var subscriptionInfo = new SubscriptionInfo
         {
-            CustomerDiscount = billingCustomerDiscount
+            CustomerDiscounts = [billingCustomerDiscount]
         };
 
         var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
@@ -478,10 +480,10 @@ public class AccountsControllerTests : IDisposable
 
         // Assert - Both values should be preserved through the pipeline
         Assert.NotNull(result);
-        Assert.NotNull(result.CustomerDiscount);
-        Assert.Equal(TestMilestone2CouponId, result.CustomerDiscount.Id);
-        Assert.Equal(25m, result.CustomerDiscount.PercentOff);
-        Assert.Equal(20.00m, result.CustomerDiscount.AmountOff); // Converted from cents
+        var discount = Assert.Single(result.CustomerDiscounts);
+        Assert.Equal(TestMilestone2CouponId, discount.Id);
+        Assert.Equal(25m, discount.PercentOff);
+        Assert.Equal(20.00m, discount.AmountOff); // Converted from cents
     }
 
     [Theory]
@@ -507,12 +509,12 @@ public class AccountsControllerTests : IDisposable
         var subscriptionInfo = new SubscriptionInfo
         {
             Subscription = billingSubscription,
-            CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount
+            CustomerDiscounts = [new SubscriptionInfo.BillingCustomerDiscount
             {
                 Id = TestMilestone2CouponId,
                 Active = true,
                 PercentOff = 20m
-            }
+            }]
         };
 
         var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
@@ -554,12 +556,12 @@ public class AccountsControllerTests : IDisposable
         var subscriptionInfo = new SubscriptionInfo
         {
             UpcomingInvoice = billingUpcomingInvoice,
-            CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount
+            CustomerDiscounts = [new SubscriptionInfo.BillingCustomerDiscount
             {
                 Id = TestMilestone2CouponId,
                 Active = true,
                 PercentOff = 20m
-            }
+            }]
         };
 
         var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
@@ -625,7 +627,7 @@ public class AccountsControllerTests : IDisposable
 
         var subscriptionInfo = new SubscriptionInfo
         {
-            CustomerDiscount = billingCustomerDiscount,
+            CustomerDiscounts = [billingCustomerDiscount],
             Subscription = billingSubscription,
             UpcomingInvoice = billingUpcomingInvoice
         };
@@ -648,12 +650,12 @@ public class AccountsControllerTests : IDisposable
         Assert.NotNull(result);
 
         // Verify discount
-        Assert.NotNull(result.CustomerDiscount);
-        Assert.Equal(TestMilestone2CouponId, result.CustomerDiscount.Id);
-        Assert.Equal(20m, result.CustomerDiscount.PercentOff);
-        Assert.Equal(10.00m, result.CustomerDiscount.AmountOff);
-        Assert.NotNull(result.CustomerDiscount.AppliesTo);
-        Assert.Equal(2, result.CustomerDiscount.AppliesTo.Count());
+        var discount = Assert.Single(result.CustomerDiscounts);
+        Assert.Equal(TestMilestone2CouponId, discount.Id);
+        Assert.Equal(20m, discount.PercentOff);
+        Assert.Equal(10.00m, discount.AmountOff);
+        Assert.NotNull(discount.AppliesTo);
+        Assert.Equal(2, discount.AppliesTo.Count());
 
         // Verify subscription
         Assert.NotNull(result.Subscription);
@@ -684,7 +686,7 @@ public class AccountsControllerTests : IDisposable
 
         // Assert - Should never include discount for self-hosted
         Assert.NotNull(result);
-        Assert.Null(result.CustomerDiscount);
+        Assert.Empty(result.CustomerDiscounts);
         await _paymentService.DidNotReceive().GetSubscriptionAsync(Arg.Any<User>());
     }
 
@@ -710,7 +712,7 @@ public class AccountsControllerTests : IDisposable
 
         // Assert - Should never include discount when no gateway
         Assert.NotNull(result);
-        Assert.Null(result.CustomerDiscount);
+        Assert.Empty(result.CustomerDiscounts);
         await _paymentService.DidNotReceive().GetSubscriptionAsync(Arg.Any<User>());
     }
 

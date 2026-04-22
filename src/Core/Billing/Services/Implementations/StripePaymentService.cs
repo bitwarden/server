@@ -647,19 +647,31 @@ public class StripePaymentService : IStripePaymentService
 
         subscriptionInfo.Subscription = new SubscriptionInfo.BillingSubscription(subscription);
 
-        // Discount selection priority:
-        // 1. Customer-level discount (applies to all subscriptions for the customer)
-        // 2. First subscription-level discount (if multiple exist, FirstOrDefault() selects the first one)
-        // Note: When multiple subscription-level discounts exist, only the first one is used.
-        // This matches Stripe's behavior where the first discount in the list is applied.
-        // Defensive null checks: Even though we expand "customer" and "discounts", external APIs
-        // may not always return the expected data structure, so we use null-safe operators.
-        var discount = subscription.Customer?.Discount ?? subscription.Discounts?.FirstOrDefault();
+        // Order: customer-level discount first, then subscription-level discounts (deduped by coupon ID).
+        var discounts = new List<SubscriptionInfo.BillingCustomerDiscount>();
 
-        if (discount != null)
+        if (subscription.Customer?.Discount != null)
         {
-            subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(discount);
+            discounts.Add(new SubscriptionInfo.BillingCustomerDiscount(subscription.Customer.Discount));
         }
+
+        if (subscription.Discounts != null)
+        {
+            foreach (var d in subscription.Discounts)
+            {
+                if (d.Coupon == null)
+                {
+                    continue;
+                }
+
+                if (discounts.All(existing => existing.Id != d.Coupon.Id))
+                {
+                    discounts.Add(new SubscriptionInfo.BillingCustomerDiscount(d));
+                }
+            }
+        }
+
+        subscriptionInfo.CustomerDiscounts = discounts;
 
         await ApplySchedulePhase2DataAsync(subscription, subscriptionInfo);
 
@@ -785,11 +797,27 @@ public class StripePaymentService : IStripePaymentService
                 subscriptionInfo.Subscription.Items = items;
             }
 
-            // Override discount with Phase 2 discount
-            var phase2Discount = phase2.Discounts?.FirstOrDefault();
-            if (phase2Discount?.Coupon != null)
+            // Override/add Phase 2 discounts
+            if (phase2.Discounts != null)
             {
-                subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(phase2Discount.Coupon);
+                foreach (var phase2Discount in phase2.Discounts)
+                {
+                    if (phase2Discount.Coupon == null)
+                    {
+                        continue;
+                    }
+
+                    var phase2BillingDiscount = new SubscriptionInfo.BillingCustomerDiscount(phase2Discount.Coupon);
+                    var existingIndex = subscriptionInfo.CustomerDiscounts.FindIndex(d => d.Id == phase2BillingDiscount.Id);
+                    if (existingIndex >= 0)
+                    {
+                        subscriptionInfo.CustomerDiscounts[existingIndex] = phase2BillingDiscount;
+                    }
+                    else
+                    {
+                        subscriptionInfo.CustomerDiscounts.Add(phase2BillingDiscount);
+                    }
+                }
             }
         }
         catch (StripeException ex)

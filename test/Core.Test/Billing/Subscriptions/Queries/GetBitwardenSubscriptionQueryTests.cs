@@ -362,9 +362,9 @@ public class GetBitwardenSubscriptionQueryTests
         var result = await _query.Run(user);
 
         Assert.NotNull(result);
-        Assert.NotNull(result.Cart.Discount);
-        Assert.Equal(BitwardenDiscountType.PercentOff, result.Cart.Discount.Type);
-        Assert.Equal(20, result.Cart.Discount.Value);
+        var discount = Assert.Single(result.Cart.Discounts);
+        Assert.Equal(BitwardenDiscountType.PercentOff, discount.Type);
+        Assert.Equal(20, discount.Value);
     }
 
     [Fact]
@@ -385,8 +385,8 @@ public class GetBitwardenSubscriptionQueryTests
         var result = await _query.Run(user);
 
         Assert.NotNull(result);
-        Assert.NotNull(result.Cart.PasswordManager.Seats.Discount);
-        Assert.Equal(BitwardenDiscountType.PercentOff, result.Cart.PasswordManager.Seats.Discount.Type);
+        var discount = Assert.Single(result.Cart.PasswordManager.Seats.Discounts);
+        Assert.Equal(BitwardenDiscountType.PercentOff, discount.Type);
     }
 
     [Fact]
@@ -600,10 +600,10 @@ public class GetBitwardenSubscriptionQueryTests
         var result = await _query.Run(user);
 
         Assert.NotNull(result);
-        Assert.Null(result.Cart.Discount);
-        Assert.NotNull(result.Cart.PasswordManager.Seats.Discount);
-        Assert.Equal(BitwardenDiscountType.PercentOff, result.Cart.PasswordManager.Seats.Discount.Type);
-        Assert.Equal(30, result.Cart.PasswordManager.Seats.Discount.Value);
+        Assert.Empty(result.Cart.Discounts);
+        var discount = Assert.Single(result.Cart.PasswordManager.Seats.Discounts);
+        Assert.Equal(BitwardenDiscountType.PercentOff, discount.Type);
+        Assert.Equal(30, discount.Value);
     }
 
     [Fact]
@@ -624,8 +624,8 @@ public class GetBitwardenSubscriptionQueryTests
         var result = await _query.Run(user);
 
         Assert.NotNull(result);
-        Assert.NotNull(result.Cart.Discount);
-        Assert.Equal(20, result.Cart.Discount.Value);
+        var discount = Assert.Single(result.Cart.Discounts);
+        Assert.Equal(20, discount.Value);
         await _stripeAdapter.DidNotReceive()
             .GetSubscriptionScheduleAsync(Arg.Any<string>(), Arg.Any<SubscriptionScheduleGetOptions>());
     }
@@ -650,8 +650,8 @@ public class GetBitwardenSubscriptionQueryTests
         var result = await _query.Run(user);
 
         Assert.NotNull(result);
-        Assert.Null(result.Cart.Discount);
-        Assert.Null(result.Cart.PasswordManager.Seats.Discount);
+        Assert.Empty(result.Cart.Discounts);
+        Assert.Empty(result.Cart.PasswordManager.Seats.Discounts);
     }
 
     [Fact]
@@ -673,8 +673,8 @@ public class GetBitwardenSubscriptionQueryTests
         var result = await _query.Run(user);
 
         Assert.NotNull(result);
-        Assert.Null(result.Cart.Discount);
-        Assert.Null(result.Cart.PasswordManager.Seats.Discount);
+        Assert.Empty(result.Cart.Discounts);
+        Assert.Empty(result.Cart.PasswordManager.Seats.Discounts);
     }
 
     [Fact]
@@ -697,10 +697,10 @@ public class GetBitwardenSubscriptionQueryTests
         var result = await _query.Run(user);
 
         Assert.NotNull(result);
-        Assert.Null(result.Cart.Discount);
-        Assert.NotNull(result.Cart.PasswordManager.Seats.Discount);
-        Assert.Equal(BitwardenDiscountType.AmountOff, result.Cart.PasswordManager.Seats.Discount.Type);
-        Assert.Equal(500, result.Cart.PasswordManager.Seats.Discount.Value);
+        Assert.Empty(result.Cart.Discounts);
+        var discount = Assert.Single(result.Cart.PasswordManager.Seats.Discounts);
+        Assert.Equal(BitwardenDiscountType.AmountOff, discount.Type);
+        Assert.Equal(500, discount.Value);
     }
 
     [Fact]
@@ -723,8 +723,8 @@ public class GetBitwardenSubscriptionQueryTests
         var result = await _query.Run(user);
 
         Assert.NotNull(result);
-        Assert.Null(result.Cart.Discount);
-        Assert.Null(result.Cart.PasswordManager.Seats.Discount);
+        Assert.Empty(result.Cart.Discounts);
+        Assert.Empty(result.Cart.PasswordManager.Seats.Discounts);
     }
 
     [Fact]
@@ -747,8 +747,8 @@ public class GetBitwardenSubscriptionQueryTests
         var result = await _query.Run(user);
 
         Assert.NotNull(result);
-        Assert.Null(result.Cart.Discount);
-        Assert.Null(result.Cart.PasswordManager.Seats.Discount);
+        Assert.Empty(result.Cart.Discounts);
+        Assert.Empty(result.Cart.PasswordManager.Seats.Discounts);
     }
 
     [Fact]
@@ -853,8 +853,35 @@ public class GetBitwardenSubscriptionQueryTests
         var result = await _query.Run(user);
 
         Assert.NotNull(result);
-        Assert.Null(result.Cart.Discount);
-        Assert.Null(result.Cart.PasswordManager.Seats.Discount);
+        Assert.Empty(result.Cart.Discounts);
+        Assert.Empty(result.Cart.PasswordManager.Seats.Discounts);
+    }
+
+    [Fact]
+    public async Task Run_WithMultipleCartLevelDiscounts_IncludesAllDiscountsInCart()
+    {
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active);
+        subscription.Customer.Discount = CreateDiscount(discountType: "cart");
+        var secondCartDiscount = new Discount
+        {
+            Coupon = new Coupon { Valid = true, PercentOff = 10, AppliesTo = new CouponAppliesTo { Products = [] } }
+        };
+        subscription.Discounts = [secondCartDiscount];
+        var premiumPlans = CreatePremiumPlans();
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(CreateInvoicePreview());
+
+        var result = await _query.Run(user);
+
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Cart.Discounts.Count);
+        Assert.Equal(20, result.Cart.Discounts[0].Value);
+        Assert.Equal(10, result.Cart.Discounts[1].Value);
     }
 
     #region Helper Methods
