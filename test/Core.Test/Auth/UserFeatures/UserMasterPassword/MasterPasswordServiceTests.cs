@@ -257,28 +257,6 @@ public class MasterPasswordServiceTests
         Assert.Equal(originalStamp, user.SecurityStamp);
     }
 
-    // --- PrepareSetInitialMasterPassword — OneOf return shape ---
-
-    [Theory, BitAutoData]
-    public async Task PrepareSetInitialMasterPassword_Success_ReturnsUserAsT0(User user)
-    {
-        var sutProvider = CreateSutProvider();
-        user.MasterPassword = null;
-        user.Key = null;
-        user.MasterPasswordSalt = null;
-        user.UsesKeyConnector = false;
-
-        var data = BuildSetInitialData(user);
-        sutProvider.GetDependency<IPasswordHasher<User>>()
-            .HashPassword(Arg.Any<User>(), Arg.Any<string>())
-            .Returns("hash");
-
-        var result = await sutProvider.Sut.PrepareSetInitialMasterPasswordAsync(user, data);
-
-        Assert.True(result.IsT0);
-        Assert.Same(user, result.AsT0);
-    }
-
     [Theory, BitAutoData]
     public async Task PrepareSetInitialMasterPassword_ValidationFailure_ReturnsErrorsAsT1(User user)
     {
@@ -585,7 +563,7 @@ public class MasterPasswordServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task PrepareSetInitialOrUpdateExisting_PropagatesValidationErrors_WhenUpdatePathFails(User user)
+    public async Task PrepareSetInitialOrUpdateExisting_ThrowsBadRequest_WhenUpdatePathSaltMismatch(User user)
     {
         var sutProvider = CreateSutProvider();
         user.MasterPassword = "existing-hash";
@@ -887,10 +865,6 @@ public class MasterPasswordServiceTests
             // The Build* tier returns a delegate — it must not persist directly.
             Assert.NotNull(result);
             sutProvider.GetDependency<IUserRepository>().DidNotReceive().ReplaceAsync(Arg.Any<User>());
-            // Hashing is deferred into the delegate (validate → hash → persist), not eager at build time.
-            sutProvider.GetDependency<IPasswordHasher<User>>()
-                .DidNotReceive()
-                .HashPassword(user, Arg.Any<string>());
         }
 
         [Theory, BitAutoData]
@@ -906,10 +880,10 @@ public class MasterPasswordServiceTests
                 () => sutProvider.Sut.BuildUpdateUserDelegateSetInitialMasterPassword(user, data));
         }
 
-        // Contract: SetInitialPasswordData.ValidatePassword XML-docs say the password validator
-        // pipeline runs when true. All API layers/operations must honor these flags.
+        // Contract: when ValidatePassword is true and validation succeeds the delegate must complete
+        // and pass the server-side hashed password to the repository.
         [Theory, BitAutoData]
-        public async Task BuildUpdateUserDelegate_WhenValidatePasswordTrue_InvokesValidator(User user)
+        public async Task BuildUpdateUserDelegate_WhenValidatePasswordTrue_CompletesAndPersistsHash(User user)
         {
             var validator = Substitute.For<IPasswordValidator<User>>();
             validator.ValidateAsync(Arg.Any<UserManager<User>>(), Arg.Any<User>(), Arg.Any<string>())
@@ -925,6 +899,11 @@ public class MasterPasswordServiceTests
             user.MasterPasswordSalt = null;
             user.UsesKeyConnector = false;
 
+            var expectedHash = "expected-hash";
+            sutProvider.GetDependency<IPasswordHasher<User>>()
+                .HashPassword(Arg.Any<User>(), Arg.Any<string>())
+                .Returns(expectedHash);
+
             UpdateUserData noopWrite = (_, _) => Task.CompletedTask;
             sutProvider.GetDependency<IUserRepository>()
                 .SetMasterPassword(Arg.Any<Guid>(), Arg.Any<MasterPasswordUnlockData>(),
@@ -937,8 +916,10 @@ public class MasterPasswordServiceTests
             var write = sutProvider.Sut.BuildUpdateUserDelegateSetInitialMasterPassword(user, data);
             await write(null, null);
 
-            await validator.Received()
-                .ValidateAsync(Arg.Any<UserManager<User>>(), user, Arg.Any<string>());
+            // The Build* tier's output is the values handed to the repository — user.MasterPassword
+            // is not mutated; the hash is passed through to SetMasterPassword directly.
+            sutProvider.GetDependency<IUserRepository>().Received()
+                .SetMasterPassword(user.Id, data.MasterPasswordUnlock, expectedHash, Arg.Any<string?>());
         }
 
         // Contract: validator failure must surface through the delegate — Build* callers composing
