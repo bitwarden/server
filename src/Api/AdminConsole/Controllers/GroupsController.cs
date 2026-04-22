@@ -7,6 +7,7 @@ using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
+using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
@@ -33,6 +34,7 @@ public class GroupsController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IUserService _userService;
+    private readonly IFeatureService _featureService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ICollectionRepository _collectionRepository;
 
@@ -47,6 +49,7 @@ public class GroupsController : Controller
         IAuthorizationService authorizationService,
         IApplicationCacheService applicationCacheService,
         IUserService userService,
+        IFeatureService featureService,
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
@@ -60,6 +63,7 @@ public class GroupsController : Controller
         _authorizationService = authorizationService;
         _applicationCacheService = applicationCacheService;
         _userService = userService;
+        _featureService = featureService;
         _organizationUserRepository = organizationUserRepository;
         _collectionRepository = collectionRepository;
     }
@@ -130,9 +134,10 @@ public class GroupsController : Controller
         if (model.Collections?.Any() == true)
         {
             var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(a => a.Id));
-            var authorized =
-                (await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.ModifyGroupAccess))
-                .Succeeded;
+            IAuthorizationRequirement requirement = _featureService.IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
+                ? CollectionGroupOperations.Create
+                : BulkCollectionOperations.ModifyGroupAccess;
+            var authorized = (await _authorizationService.AuthorizeAsync(User, collections, requirement)).Succeeded;
             if (!authorized)
             {
                 throw new NotFoundException();
@@ -172,18 +177,13 @@ public class GroupsController : Controller
             }
         }
 
-        // Authorization check:
-        // You must have authorization to ModifyUserAccess for all collections being saved
-        var postedCollections = await _collectionRepository
-            .GetManyByManyIdsAsync(model.Collections.Select(c => c.Id));
-        foreach (var collection in postedCollections)
+        if (_featureService.IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers))
         {
-            if (!(await _authorizationService.AuthorizeAsync(User, collection,
-                    BulkCollectionOperations.ModifyGroupAccess))
-                .Succeeded)
-            {
-                throw new NotFoundException();
-            }
+            await PutCollectionAccess_vNext(model, currentAccess);
+        }
+        else
+        {
+            await PutCollectionAccess(model);
         }
 
         // The client only sends collections that the saving user has permissions to edit.
@@ -195,8 +195,10 @@ public class GroupsController : Controller
         var readonlyCollectionIds = new HashSet<Guid>();
         foreach (var collection in currentCollections)
         {
-            if (!(await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyGroupAccess))
-                .Succeeded)
+            IAuthorizationRequirement requirement = _featureService.IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
+                ? CollectionGroupOperations.Update
+                : BulkCollectionOperations.ModifyGroupAccess;
+            if (!(await _authorizationService.AuthorizeAsync(User, collection, requirement)).Succeeded)
             {
                 readonlyCollectionIds.Add(collection.Id);
             }
@@ -289,5 +291,54 @@ public class GroupsController : Controller
     public async Task PostDeleteUser(Guid orgId, Guid id, Guid orgUserId)
     {
         await DeleteUser(orgId, id, orgUserId);
+    }
+
+    private async Task PutCollectionAccess_vNext(
+        GroupRequestModel model,
+        ICollection<Core.Models.Data.CollectionAccessSelection> currentAccess)
+    {
+        var (createIds, updateIds, deleteIds) = model.Collections.DiffAccessSelections(currentAccess);
+
+        var allCollections = await _collectionRepository.GetManyByManyIdsAsync(
+            createIds.Concat(updateIds).Concat(deleteIds));
+
+        await AuthorizeCollectionAccessAsync(
+            allCollections.Where(c => createIds.Contains(c.Id)).ToList(), CollectionGroupOperations.Create);
+        await AuthorizeCollectionAccessAsync(
+            allCollections.Where(c => updateIds.Contains(c.Id)).ToList(), CollectionGroupOperations.Update);
+        await AuthorizeCollectionAccessAsync(
+            allCollections.Where(c => deleteIds.Contains(c.Id)).ToList(), CollectionGroupOperations.Delete);
+    }
+
+    private async Task AuthorizeCollectionAccessAsync(
+        ICollection<Core.Entities.Collection> collections,
+        IAuthorizationRequirement requirement)
+    {
+        if (collections.Count == 0)
+        {
+            return;
+        }
+
+        if (!(await _authorizationService.AuthorizeAsync(User, collections, requirement)).Succeeded)
+        {
+            throw new NotFoundException();
+        }
+    }
+
+    private async Task PutCollectionAccess(GroupRequestModel model)
+    {
+        // Authorization check:
+        // You must have authorization to ModifyGroupAccess for all collections being saved
+        var postedCollections = await _collectionRepository
+            .GetManyByManyIdsAsync(model.Collections.Select(c => c.Id));
+        foreach (var collection in postedCollections)
+        {
+            if (!(await _authorizationService.AuthorizeAsync(User, collection,
+                    BulkCollectionOperations.ModifyGroupAccess))
+                .Succeeded)
+            {
+                throw new NotFoundException();
+            }
+        }
     }
 }

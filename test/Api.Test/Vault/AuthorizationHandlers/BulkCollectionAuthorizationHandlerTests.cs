@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -1343,6 +1344,60 @@ public class BulkCollectionAuthorizationHandlerTests
 
         // Expect: only calls the database once
         await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdAsync(Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanUpdateUsers_WithFeatureFlagEnabled_DoesNotHandle(
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization,
+        Guid actingUserId)
+    {
+        organization.Type = OrganizationUserType.Admin;
+        organization.Permissions = new Permissions();
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
+            .Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        ArrangeOrganizationAbility(sutProvider, organization, true, true);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.ModifyUserAccess },
+            new ClaimsPrincipal(),
+            collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanUpdateGroups_WithFeatureFlagEnabled_DoesNotHandle(
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization,
+        Guid actingUserId)
+    {
+        organization.Type = OrganizationUserType.Admin;
+        organization.Permissions = new Permissions();
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
+            .Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        ArrangeOrganizationAbility(sutProvider, organization, true, true);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.ModifyGroupAccess },
+            new ClaimsPrincipal(),
+            collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
     }
 
     private static void ArrangeOrganizationAbility(
