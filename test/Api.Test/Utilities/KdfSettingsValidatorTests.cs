@@ -76,7 +76,7 @@ public class KdfSettingsValidatorTests
         var results = KdfSettingsValidator.ValidateAuthenticationAndUnlockData(authentication, unlock).ToList();
 
         Assert.Single(results);
-        Assert.Equal("KDF settings must be equal for authentication and unlock.", results[0].ErrorMessage);
+        Assert.Equal("AuthenticationData and UnlockData must have the same KDF configuration.", results[0].ErrorMessage);
     }
 
     [Fact]
