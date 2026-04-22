@@ -75,15 +75,22 @@ public class MultiServicePushNotificationService : IPushNotificationService
     {
         if (cipher.OrganizationId.HasValue)
         {
-            var collectionIdList = collectionIds?.ToList() ?? [];
+            var collectionIdList = collectionIds?.Distinct().ToList() ?? [];
             if (collectionIdList.Count == 0)
             {
-                // Cannot fan out without collection IDs to determine which users have access.
-                return;
+                collectionIdList = await ResolveCollectionIdsAsync(cipher);
+                if (collectionIdList.Count == 0)
+                {
+                    Logger.LogWarning(
+                        "Skipping push notification for organization cipher {CipherId} in organization {OrganizationId} because no collection IDs were provided or found.",
+                        cipher.Id,
+                        cipher.OrganizationId.Value);
+                    return;
+                }
             }
 
             var userIds = await _collectionCipherRepository.GetUserIdsByCollectionIdsAsync(collectionIdList);
-            foreach (var userId in userIds)
+            var pushTasks = userIds.Select(userId =>
             {
                 var message = new SyncCipherPushNotification
                 {
@@ -94,7 +101,7 @@ public class MultiServicePushNotificationService : IPushNotificationService
                     CollectionIds = collectionIdList,
                 };
 
-                await PushToServices(s => s.PushAsync(new PushNotification<SyncCipherPushNotification>
+                return PushToServices(s => s.PushAsync(new PushNotification<SyncCipherPushNotification>
                 {
                     Type = pushType,
                     Target = NotificationTarget.User,
@@ -102,12 +109,31 @@ public class MultiServicePushNotificationService : IPushNotificationService
                     Payload = message,
                     ExcludeCurrentContext = true,
                 }));
-            }
+            });
+
+            await Task.WhenAll(pushTasks);
 
             return;
         }
 
         await PushToServices(s => s.PushCipherAsync(cipher, pushType, collectionIds));
+    }
+
+    private async Task<List<Guid>> ResolveCollectionIdsAsync(Cipher cipher)
+    {
+        if (!cipher.OrganizationId.HasValue)
+        {
+            return [];
+        }
+
+        var organizationCollectionCiphers = await _collectionCipherRepository
+            .GetManyByOrganizationIdAsync(cipher.OrganizationId.Value);
+
+        return organizationCollectionCiphers
+            .Where(collectionCipher => collectionCipher.CipherId == cipher.Id)
+            .Select(collectionCipher => collectionCipher.CollectionId)
+            .Distinct()
+            .ToList();
     }
 
     public Task PushAsync<T>(PushNotification<T> pushNotification) where T : class
