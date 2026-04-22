@@ -14,8 +14,7 @@ public class OrganizationIntegrationController(
     ICreateOrganizationIntegrationCommand createCommand,
     IUpdateOrganizationIntegrationCommand updateCommand,
     IDeleteOrganizationIntegrationCommand deleteCommand,
-    IGetOrganizationIntegrationsQuery getQuery,
-    ILogger<OrganizationIntegrationController> logger) : Controller
+    IGetOrganizationIntegrationsQuery getQuery) : Controller
 {
     [HttpGet("")]
     public async Task<ActionResult<List<OrganizationIntegrationResponseModel>>> GetAsync(Guid organizationId)
@@ -38,7 +37,7 @@ public class OrganizationIntegrationController(
     /// <param name="organizationId"></param>
     /// <param name="model"></param>
     /// <returns></returns>
-    /// <exception cref="UnauthorizedResult">Not enough permissions to access the organization.</exception>
+    /// <exception cref="NotFoundResult">Not enough permissions to access the organization.</exception>
     /// <exception cref="ConflictResult">When an integration of the same type already exists for the organization.</exception>
     [HttpPost("")]
     public async Task<ActionResult<OrganizationIntegrationResponseModel>> CreateAsync(Guid organizationId, [FromBody] OrganizationIntegrationRequestModel model)
@@ -61,16 +60,9 @@ public class OrganizationIntegrationController(
             return Conflict();
         }
 
-        try
-        {
-            var created = await createCommand.CreateAsync(integration);
-            return Ok(new OrganizationIntegrationResponseModel(created));
-        }
-        catch (System.Exception e)
-        {   
-            logger.LogError(e, "Error creating organization integration for organization {OrganizationId} with type {IntegrationType}", organizationId, integration.Type);
-            return BadRequest();
-        }
+        var created = await createCommand.CreateAsync(integration);
+        return Ok(new OrganizationIntegrationResponseModel(created));
+
     }
 
     [HttpPut("{integrationId:guid}")]
@@ -81,18 +73,9 @@ public class OrganizationIntegrationController(
             return NotFound();
         }
 
-        try
-        {
-            var integration = model.ToOrganizationIntegration(organizationId);
-            var updated = await updateCommand.UpdateAsync(organizationId, integrationId, integration);
-    
-            return Ok(new OrganizationIntegrationResponseModel(updated));
-        }
-        catch (System.Exception e)
-        {
-            logger.LogError(e, "Error updating organization integration for organization {OrganizationId} with integration {IntegrationId}", organizationId, integrationId);
-            return BadRequest();
-        }
+        var integration = model.ToOrganizationIntegration(organizationId);
+        var updated = await updateCommand.UpdateAsync(organizationId, integrationId, integration);
+        return Ok(new OrganizationIntegrationResponseModel(updated));
     }
 
     [HttpDelete("{integrationId:guid}")]
@@ -103,15 +86,7 @@ public class OrganizationIntegrationController(
             return NotFound();
         }
 
-        try
-        {
-            await deleteCommand.DeleteAsync(organizationId, integrationId);
-        }
-        catch (System.Exception e)
-        {
-            logger.LogError(e, "Error deleting organization integration for organization {OrganizationId} with integration {IntegrationId}", organizationId, integrationId);
-            return BadRequest();
-        }
+        await deleteCommand.DeleteAsync(organizationId, integrationId);
         return NoContent();
     }
 

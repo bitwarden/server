@@ -149,27 +149,6 @@ public class OrganizationIntegrationControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task CreateAsync_ExceptionThrown_ReturnsBadRequest(
-        SutProvider<OrganizationIntegrationController> sutProvider,
-        Guid organizationId)
-    {
-        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationOwner(organizationId)
-            .Returns(true);
-        sutProvider.GetDependency<ICreateOrganizationIntegrationCommand>()
-            .CanCreateAsync(Arg.Any<OrganizationIntegration>())
-            .Returns(true);
-        sutProvider.GetDependency<ICreateOrganizationIntegrationCommand>()
-            .CreateAsync(Arg.Any<OrganizationIntegration>())
-            .Returns(Task.FromException<OrganizationIntegration>(new Exception()));
-
-        var response = await sutProvider.Sut.CreateAsync(organizationId, _webhookRequestModel);
-
-        Assert.IsType<BadRequestResult>(response.Result);
-    }
-
-    [Theory, BitAutoData]
     public async Task DeleteAsync_AllParamsProvided_Succeeds(
         SutProvider<OrganizationIntegrationController> sutProvider,
         Guid organizationId,
@@ -221,25 +200,6 @@ public class OrganizationIntegrationControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteAsync_ExceptionThrown_ReturnsBadRequest(
-        SutProvider<OrganizationIntegrationController> sutProvider,
-        Guid organizationId,
-        Guid integrationId)
-    {
-        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationOwner(organizationId)
-            .Returns(true);
-        sutProvider.GetDependency<IDeleteOrganizationIntegrationCommand>()
-            .DeleteAsync(organizationId, integrationId)
-            .Returns(Task.FromException(new Exception()));
-
-        var response = await sutProvider.Sut.DeleteAsync(organizationId, integrationId);
-
-        Assert.IsType<BadRequestResult>(response);
-    }
-
-    [Theory, BitAutoData]
     public async Task UpdateAsync_AllParamsProvided_Succeeds(
         SutProvider<OrganizationIntegrationController> sutProvider,
         Guid organizationId,
@@ -286,24 +246,5 @@ public class OrganizationIntegrationControllerTests
         var response = await sutProvider.Sut.UpdateAsync(organizationId, integrationId, _webhookRequestModel);
 
         Assert.IsType<NotFoundResult>(response.Result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateAsync_ExceptionThrown_ReturnsBadRequest(
-        SutProvider<OrganizationIntegrationController> sutProvider,
-        Guid organizationId,
-        Guid integrationId)
-    {
-        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationOwner(organizationId)
-            .Returns(true);
-        sutProvider.GetDependency<IUpdateOrganizationIntegrationCommand>()
-            .UpdateAsync(organizationId, integrationId, Arg.Any<OrganizationIntegration>())
-            .Returns(Task.FromException<OrganizationIntegration>(new Exception()));
-
-        var response = await sutProvider.Sut.UpdateAsync(organizationId, integrationId, _webhookRequestModel);
-
-        Assert.IsType<BadRequestResult>(response.Result);
     }
 }
