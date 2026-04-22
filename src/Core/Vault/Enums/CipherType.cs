@@ -9,4 +9,5 @@ public enum CipherType : byte
     Card = 3,
     Identity = 4,
     SSHKey = 5,
+    BankAccount = 6,
 }

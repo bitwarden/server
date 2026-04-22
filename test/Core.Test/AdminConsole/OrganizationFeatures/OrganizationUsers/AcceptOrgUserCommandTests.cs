@@ -741,6 +741,49 @@ public class AcceptOrgUserCommandTests
 
     [Theory]
     [BitAutoData]
+    public async Task AcceptOrgUserAsync_WhenSsoPreProvisionedUserAlreadyInAllOrgUsers_DeduplicatesAndSucceeds(
+        SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+    {
+        // Arrange
+        // Simulate SSO pre-provisioning: orgUser already has UserId set and is returned by GetManyByUserAsync,
+        // meaning allOrgUsers already contains orgUser before the Append call.
+        orgUser.UserId = user.Id;
+        orgUser.OrganizationId = org.Id;
+
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+
+        // GetManyByUserAsync returns the same orgUser (SSO pre-provisioned)
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns(new List<OrganizationUser> { orgUser });
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([new PolicyDetails { OrganizationId = org.Id }]));
+
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+            .IsCompliantAsync(
+                Arg.Is<AutomaticUserConfirmationPolicyEnforcementRequest>(r =>
+                    r.AllOrganizationUsers.Count == 1 &&
+                    r.AllOrganizationUsers.Single().Id == orgUser.Id),
+                Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
+            .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser], user)));
+
+        // Act - should not throw even though the same orgUser was in allOrgUsers
+        var result = await sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService);
+
+        // Assert
+        Assert.NotNull(result);
+        await sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+            .Received(1)
+            .IsCompliantAsync(
+                Arg.Is<AutomaticUserConfirmationPolicyEnforcementRequest>(r => r.AllOrganizationUsers.Count == 1),
+                Arg.Any<AutomaticUserConfirmationPolicyRequirement>());
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task AcceptOrgUserAsync_WithAutoConfirmPolicyEnabled_DeletesEmergencyAccess(
         SutProvider<AcceptOrgUserCommand> sutProvider,
         User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)

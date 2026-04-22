@@ -64,6 +64,7 @@ SELECT
     [UseAutomaticUserConfirmation],
     [UsePhishingBlocker],
     [UseDisableSmAdsForUsers],
-    [UseMyItems]
+    [UseMyItems],
+    [ExemptFromBillingAutomation]
 FROM
     [dbo].[Organization]
