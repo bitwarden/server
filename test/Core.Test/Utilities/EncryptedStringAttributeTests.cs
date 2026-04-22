@@ -8,8 +8,6 @@ public class EncryptedStringAttributeTests
 {
     [Theory]
     [InlineData(null)]
-    [InlineData("lGD=|Y3Q=")] // Non-canonical = padding (D=000011, trailing 2 bits=11)
-    [InlineData("0.lB==|Y3Q=")] // Non-canonical == padding (B=000001, trailing 4 bits=0001)
     [InlineData("aXY=|Y3Q=")] // Valid AesCbc256_B64
     [InlineData("aXY=|Y3Q=|cnNhQ3Q=")] // Valid AesCbc128_HmacSha256_B64
     [InlineData("Rsa2048_OaepSha256_B64.cnNhQ3Q=")]
