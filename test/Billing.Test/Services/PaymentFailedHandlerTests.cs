@@ -1,7 +1,6 @@
-using Bit.Billing.Services;
+﻿using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Services;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stripe;

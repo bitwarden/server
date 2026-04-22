@@ -1,9 +1,8 @@
-using Bit.Billing.Services;
+﻿using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
