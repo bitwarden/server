@@ -1,6 +1,8 @@
 ﻿using Azure.Storage.Queues;
 using Bit.Core.Platform.Push;
 using Bit.Core.Platform.Push.Internal;
+using Bit.Core.Repositories;
+using Bit.Core.Repositories.Noop;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -14,7 +16,7 @@ public static class PushServiceCollectionExtensions
 {
     /// <summary>
     /// Adds a <see cref="IPushNotificationService"/> to the services that can be used to send push notifications to
-    /// end user devices. This method is safe to be ran multiple time provided <see cref="GlobalSettings"/> does not 
+    /// end user devices. This method is safe to be ran multiple time provided <see cref="GlobalSettings"/> does not
     /// change between calls.
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/> to add services to.</param>
@@ -26,6 +28,7 @@ public static class PushServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(globalSettings);
 
         services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<ICollectionCipherRepository, CollectionCipherRepository>();
         services.TryAddSingleton<IPushNotificationService, MultiServicePushNotificationService>();
 
         if (globalSettings.SelfHosted)
