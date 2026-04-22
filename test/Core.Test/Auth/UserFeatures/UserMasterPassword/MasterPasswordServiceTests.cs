@@ -866,6 +866,102 @@ public class MasterPasswordServiceTests
                 () => sutProvider.Sut.BuildUpdateUserDelegateSetInitialMasterPassword(user, data));
         }
 
+        // Contract: SetInitialPasswordData.ValidatePassword XML-docs say the password validator
+        // pipeline runs when true. All API layers/operations must honor these flags.
+        [Theory, BitAutoData]
+        public async Task BuildUpdateUserDelegate_WhenValidatePasswordTrue_InvokesValidator(User user)
+        {
+            var validator = Substitute.For<IPasswordValidator<User>>();
+            validator.ValidateAsync(Arg.Any<UserManager<User>>(), Arg.Any<User>(), Arg.Any<string>())
+                .Returns(IdentityResult.Success);
+
+            var sutProvider = new SutProvider<MasterPasswordService>()
+                .WithFakeTimeProvider()
+                .SetDependency<IEnumerable<IPasswordValidator<User>>>(new[] { validator })
+                .Create();
+
+            user.MasterPassword = null;
+            user.Key = null;
+            user.MasterPasswordSalt = null;
+            user.UsesKeyConnector = false;
+
+            UpdateUserData noopWrite = (_, _) => Task.CompletedTask;
+            sutProvider.GetDependency<IUserRepository>()
+                .SetMasterPassword(Arg.Any<Guid>(), Arg.Any<MasterPasswordUnlockData>(),
+                    Arg.Any<string>(), Arg.Any<string?>())
+                .Returns(noopWrite);
+
+            var data = BuildSetInitialDataForUser(user);
+            data.ValidatePassword = true;
+
+            var write = sutProvider.Sut.BuildUpdateUserDelegateSetInitialMasterPassword(user, data);
+            await write(null, null);
+
+            await validator.Received()
+                .ValidateAsync(Arg.Any<UserManager<User>>(), user, Arg.Any<string>());
+        }
+
+        // Contract: validator failure must surface through the delegate — Build* callers composing
+        // a batch transaction need the failure to roll the transaction back, not silently persist.
+        [Theory, BitAutoData]
+        public async Task BuildUpdateUserDelegate_WhenValidationFails_DelegateInvocationThrows(User user)
+        {
+            var error = new IdentityError { Code = "pwd-invalid", Description = "Password is too weak." };
+            var validator = Substitute.For<IPasswordValidator<User>>();
+            validator.ValidateAsync(Arg.Any<UserManager<User>>(), Arg.Any<User>(), Arg.Any<string>())
+                .Returns(IdentityResult.Failed(error));
+
+            var sutProvider = new SutProvider<MasterPasswordService>()
+                .WithFakeTimeProvider()
+                .SetDependency<IEnumerable<IPasswordValidator<User>>>(new[] { validator })
+                .Create();
+
+            user.MasterPassword = null;
+            user.Key = null;
+            user.MasterPasswordSalt = null;
+            user.UsesKeyConnector = false;
+
+            UpdateUserData noopWrite = (_, _) => Task.CompletedTask;
+            sutProvider.GetDependency<IUserRepository>()
+                .SetMasterPassword(Arg.Any<Guid>(), Arg.Any<MasterPasswordUnlockData>(),
+                    Arg.Any<string>(), Arg.Any<string?>())
+                .Returns(noopWrite);
+
+            var data = BuildSetInitialDataForUser(user);
+            data.ValidatePassword = true;
+
+            var write = sutProvider.Sut.BuildUpdateUserDelegateSetInitialMasterPassword(user, data);
+
+            await Assert.ThrowsAsync<BadRequestException>(() => write(null, null));
+        }
+
+        // Contract: SetInitialPasswordData.RefreshStamp XML-docs say SecurityStamp rotates when true.
+        // Prepare*/Save* honor this; Build* must too (rotation composed into the returned delegate).
+        [Theory, BitAutoData]
+        public async Task BuildUpdateUserDelegate_WhenRefreshStampTrue_RotatesSecurityStamp(User user)
+        {
+            var sutProvider = new SutProvider<MasterPasswordService>().WithFakeTimeProvider().Create();
+            user.MasterPassword = null;
+            user.Key = null;
+            user.MasterPasswordSalt = null;
+            user.UsesKeyConnector = false;
+            user.SecurityStamp = "original-stamp";
+
+            UpdateUserData noopWrite = (_, _) => Task.CompletedTask;
+            sutProvider.GetDependency<IUserRepository>()
+                .SetMasterPassword(Arg.Any<Guid>(), Arg.Any<MasterPasswordUnlockData>(),
+                    Arg.Any<string>(), Arg.Any<string?>())
+                .Returns(noopWrite);
+
+            var data = BuildSetInitialDataForUser(user);
+            data.RefreshStamp = true;
+
+            var write = sutProvider.Sut.BuildUpdateUserDelegateSetInitialMasterPassword(user, data);
+            await write(null, null);
+
+            Assert.NotEqual("original-stamp", user.SecurityStamp);
+        }
+
         private static SetInitialPasswordData BuildSetInitialDataForUser(User user)
         {
             var salt = user.GetMasterPasswordSalt();

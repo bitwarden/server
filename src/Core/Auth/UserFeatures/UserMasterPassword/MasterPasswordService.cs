@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Identity;
@@ -108,7 +109,29 @@ public class MasterPasswordService(
             setInitialData.MasterPasswordUnlock, serverSideHashedMasterPasswordAuthenticationHash,
             setInitialData.MasterPasswordHint);
 
-        return setMasterPasswordTask;
+        return async (connection, transaction) =>
+        {
+            if (setInitialData.ValidatePassword)
+            {
+                var validate = await ValidatePasswordInternalAsync(user,
+                    setInitialData.MasterPasswordAuthentication.MasterPasswordAuthenticationHash);
+                if (!validate.Succeeded)
+                {
+                    throw new BadRequestException(
+                        string.Join("; ", validate.Errors.Select(e => e.Description)));
+                }
+            }
+
+            if (setInitialData.RefreshStamp)
+            {
+                // TODO (PM-35501): IUserRepository.SetMasterPassword does not persist
+                // SecurityStamp (sproc + EF query both omit it). Rotation here is
+                // in-memory only until the primitive is extended.
+                user.SecurityStamp = Guid.NewGuid().ToString();
+            }
+
+            await setMasterPasswordTask(connection, transaction);
+        };
     }
 
     public async Task<OneOf<User, IdentityError[]>> PrepareUpdateExistingMasterPasswordAsync(
