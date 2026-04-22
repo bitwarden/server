@@ -7,11 +7,7 @@ public class Program
 {
     private static int Main(string[] args)
     {
-        // Skip the banner when stdout is piped or redirected
-        if (!Console.IsOutputRedirected)
-        {
-            PrintBanner();
-        }
+        PrintBanner();
 
         return new AppRunner<Program>()
             .Run(args);
@@ -77,13 +73,13 @@ public class Program
                     continue;
                 }
 
-                Console.WriteLine($"{color}{line[minIndent..]}{reset}");
+                Console.Error.WriteLine($"{color}{line[minIndent..]}{reset}");
             }
         }
 
-        Console.WriteLine($"  {bold}{cyan}╔══════════════════════════════════════════╗{reset}");
-        Console.WriteLine($"  {bold}{cyan}║            SEEDER    UTILITY             ║{reset}");
-        Console.WriteLine($"  {bold}{cyan}╚══════════════════════════════════════════╝{reset}");
+        Console.Error.WriteLine($"  {bold}{cyan}╔══════════════════════════════════════════╗{reset}");
+        Console.Error.WriteLine($"  {bold}{cyan}║            SEEDER    UTILITY             ║{reset}");
+        Console.Error.WriteLine($"  {bold}{cyan}╚══════════════════════════════════════════╝{reset}");
     }
 
     [Subcommand]
