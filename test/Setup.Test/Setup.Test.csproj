@@ -23,11 +23,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
-    <PackageReference Include="xunit.v3" Version="3.2.1" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="[18.0.1]" />
+    <PackageReference Include="xunit.v3" Version="[3.2.1]" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="[3.1.5]" />
     <PackageReference Include="NSubstitute" Version="$(NSubstituteVersion)" />
-    <PackageReference Include="Kralizek.AutoFixture.Extensions.MockHttp" Version="2.2.1" />
+    <PackageReference Include="Kralizek.AutoFixture.Extensions.MockHttp" Version="[2.2.1]" />
   </ItemGroup>
 
   <ItemGroup>
