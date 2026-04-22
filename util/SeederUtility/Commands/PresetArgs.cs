@@ -2,12 +2,6 @@
 
 namespace Bit.SeederUtility.Commands;
 
-public enum OutputFormat
-{
-    Text,
-    Json,
-}
-
 /// <summary>
 /// CLI argument model for the preset command.
 /// Supports loading presets from embedded resources.
