@@ -74,7 +74,6 @@
   </ItemGroup>
 
   <ItemGroup Label="Pinned transitive dependencies">
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="8.0.1" />
   </ItemGroup>
 
   <ItemGroup>
