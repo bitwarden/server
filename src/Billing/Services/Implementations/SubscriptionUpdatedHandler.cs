@@ -85,11 +85,17 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
         var currentPeriodEnd = subscription.GetCurrentPeriodEnd();
 
-        if (SubscriptionWentUnpaid(parsedEvent, subscription) ||
-            SubscriptionWentIncompleteExpired(parsedEvent, subscription))
+        if (SubscriptionWentUnpaid(parsedEvent, subscription))
         {
             await DisableSubscriberAsync(subscriberId, currentPeriodEnd);
             await SetSubscriptionToCancelAsync(subscription);
+        }
+        else if (SubscriptionWentIncompleteExpired(parsedEvent, subscription))
+        {
+            // Subscription is already terminal in Stripe; any attempt to
+            // schedule a cancel would be rejected and 500 the webhook,
+            // causing Stripe to retry and re-run DisableSubscriberAsync.
+            await DisableSubscriberAsync(subscriberId, currentPeriodEnd);
         }
         else if (SubscriptionBecameActive(parsedEvent, subscription))
         {
