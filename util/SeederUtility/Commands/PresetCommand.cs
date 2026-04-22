@@ -42,7 +42,7 @@ public class PresetCommand
     {
         using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
 
-        Console.WriteLine($"Seeding organization from preset '{args.Name}'...");
+        Console.Error.WriteLine($"Seeding organization from preset '{args.Name}'...");
         var result = ConsoleProgressReporter.RunWithProgress(
             deps.ToDependencies(),
             d => new OrganizationRecipe(d).Seed(args.Name!, args.Password, args.KdfIterations));
@@ -69,7 +69,7 @@ public class PresetCommand
     {
         using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
 
-        Console.WriteLine($"Seeding individual user from preset '{args.Name}'...");
+        Console.Error.WriteLine($"Seeding individual user from preset '{args.Name}'...");
         var result = ConsoleProgressReporter.RunWithProgress(
             deps.ToDependencies(),
             d => new IndividualUserRecipe(d).Seed(args.Name!, args.Password, args.KdfIterations));

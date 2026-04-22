@@ -68,12 +68,21 @@ internal sealed class ConsoleProgressReporter(ProgressContext ctx) : IProgress<S
     /// Runs <paramref name="seed"/> inside a Spectre progress context, wiring a reporter
     /// into <paramref name="deps"/>. The seeder's emitted events drive the live bars.
     /// </summary>
+    /// <remarks>
+    /// Progress output is written to stderr so stdout remains clean for downstream consumers
+    /// that pipe the final summary rows (org ID, counts, etc.) into other tools.
+    /// </remarks>
     internal static TResult RunWithProgress<TResult>(
         SeederDependencies deps,
         Func<SeederDependencies, TResult> seed)
     {
+        var console = AnsiConsole.Create(new AnsiConsoleSettings
+        {
+            Out = new AnsiConsoleOutput(Console.Error),
+        });
+
         TResult result = default!;
-        AnsiConsole.Progress()
+        console.Progress()
             .Columns(
                 new TaskDescriptionColumn(),
                 new ProgressBarColumn(),
