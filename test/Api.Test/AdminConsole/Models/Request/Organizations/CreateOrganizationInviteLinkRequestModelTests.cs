@@ -69,6 +69,40 @@ public class CreateOrganizationInviteLinkRequestModelTests
         Assert.Contains(results, r => r.ErrorMessage == "EncryptedOrgKey is not a valid encrypted string.");
     }
 
+    [Theory]
+    [InlineData("not a domain")]
+    [InlineData("<script>alert(1)</script>")]
+    [InlineData("double..dot.com")]
+    [InlineData("-starts-with-hyphen.com")]
+    [InlineData(" acme.com ")]
+    public void Validate_WithInvalidDomainFormat_ReturnsError(string invalidDomain)
+    {
+        var model = new CreateOrganizationInviteLinkRequestModel
+        {
+            AllowedDomains = [invalidDomain],
+            EncryptedInviteKey = _validEncryptedString,
+        };
+
+        var results = Validate(model);
+
+        Assert.Single(results);
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(model.AllowedDomains)));
+    }
+
+    [Fact]
+    public void Validate_WithMixedValidAndInvalidDomains_ReturnsOneErrorPerInvalidDomain()
+    {
+        var model = new CreateOrganizationInviteLinkRequestModel
+        {
+            AllowedDomains = ["acme.com", "not a domain", "<script>"],
+            EncryptedInviteKey = _validEncryptedString,
+        };
+
+        var results = Validate(model);
+
+        Assert.Equal(2, results.Count);
+    }
+
     private static List<ValidationResult> Validate(CreateOrganizationInviteLinkRequestModel model)
     {
         var results = new List<ValidationResult>();
