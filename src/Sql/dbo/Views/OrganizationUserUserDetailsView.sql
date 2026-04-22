@@ -17,7 +17,8 @@ SELECT
     OU.[Permissions],
     OU.[ResetPasswordKey],
     U.[UsesKeyConnector],
-    CASE WHEN U.[MasterPassword] IS NOT NULL THEN 1 ELSE 0 END AS HasMasterPassword
+    CASE WHEN U.[MasterPassword] IS NOT NULL THEN 1 ELSE 0 END AS HasMasterPassword,
+    OU.[RevocationReason]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN

@@ -7,7 +7,7 @@ Complete catalog of all seeder presets, organized by purpose. Use `--mangle` to 
 Test specific Bitwarden features. Fixture-based data for deterministic results.
 
 ```bash
-dotnet run -- seed --preset features.{name} --mangle
+dotnet run -- preset --name features.{name} --mangle
 ```
 
 | Preset            | Features Enabled                                   | Org Fixture      | Roster       | Ciphers   |
@@ -23,7 +23,7 @@ dotnet run -- seed --preset features.{name} --mangle
 Known users, groups, collections, and permissions you can point a client to.
 
 ```bash
-dotnet run -- seed --preset qa.{name} --mangle
+dotnet run -- preset --name qa.{name} --mangle
 ```
 
 | Preset                            | Org Fixture         | Roster                 | Ciphers                | Use Case                                    |
@@ -44,7 +44,7 @@ dotnet run -- seed --preset qa.{name} --mangle
 Production-calibrated presets with density modeling. Realistic relationship patterns (group membership, collection fan-out, permission distribution, cipher assignment) across 5 tiers.
 
 ```bash
-dotnet run -- seed --preset scale.{name} --mangle
+dotnet run -- preset --name scale.{name} --mangle
 ```
 
 | Preset                          | Tier | Archetype                   | Users  | Groups | Collections | Ciphers |
@@ -73,7 +73,7 @@ For per-preset expected values and verification queries, see [verification.md](v
 Individual user accounts with no organization. Useful for testing personal vault features.
 
 ```bash
-dotnet run -- seed --preset individual.{name} --mangle
+dotnet run -- preset --name individual.{name} --mangle
 ```
 
 | Preset        | Account Type | Folders                              | Ciphers                      | Assignments              |
@@ -90,7 +90,7 @@ dotnet run -- seed --preset individual.{name} --mangle
 Algorithm verification for seeder development. Not for general use.
 
 ```bash
-dotnet run -- seed --preset validation.{name} --mangle
+dotnet run -- preset --name validation.{name} --mangle
 ```
 
 | Preset                             | Tests                                                         |

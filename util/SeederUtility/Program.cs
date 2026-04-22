@@ -73,20 +73,20 @@ public class Program
                     continue;
                 }
 
-                Console.WriteLine($"{color}{line[minIndent..]}{reset}");
+                Console.Error.WriteLine($"{color}{line[minIndent..]}{reset}");
             }
         }
 
-        Console.WriteLine($"  {bold}{cyan}╔══════════════════════════════════════════╗{reset}");
-        Console.WriteLine($"  {bold}{cyan}║            SEEDER    UTILITY             ║{reset}");
-        Console.WriteLine($"  {bold}{cyan}╚══════════════════════════════════════════╝{reset}");
+        Console.Error.WriteLine($"  {bold}{cyan}╔══════════════════════════════════════════╗{reset}");
+        Console.Error.WriteLine($"  {bold}{cyan}║            SEEDER    UTILITY             ║{reset}");
+        Console.Error.WriteLine($"  {bold}{cyan}╚══════════════════════════════════════════╝{reset}");
     }
 
     [Subcommand]
     public OrganizationCommand Organization { get; set; } = null!;
 
     [Subcommand]
-    public SeedCommand Seed { get; set; } = null!;
+    public PresetCommand Preset { get; set; } = null!;
 
     [Subcommand]
     public IndividualCommand Individual { get; set; } = null!;

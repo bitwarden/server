@@ -11,7 +11,6 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
-using LinqToDB.Tools;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -177,7 +176,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 
         var query =
             from o in dbContext.Organizations
-            where o.PlanType.NotIn(disallowedPlanTypes) &&
+            where !disallowedPlanTypes.Contains(o.PlanType) &&
                   !dbContext.ProviderOrganizations.Any(po => po.OrganizationId == o.Id) &&
                   (string.IsNullOrWhiteSpace(name) || EF.Functions.Like(o.Name, $"%{name}%"))
             select o;
@@ -266,6 +265,9 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             await dbContext.NotificationStatuses.Where(ns => ns.Notification.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
             await dbContext.Notifications.Where(n => n.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+
+            await dbContext.Sends.Where(s => s.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
 
             // The below section are 3 SPROCS in SQL Server but are only called by here
@@ -400,7 +402,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                     organization.Seats > 0 &&
                     organization.Status == OrganizationStatusType.Created &&
                     !organization.UseSecretsManager &&
-                    organization.PlanType.In(planTypes)
+                    planTypes.Contains(organization.PlanType)
                 select organization;
 
             return await query.ToArrayAsync();

@@ -7,10 +7,12 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Braintree;
@@ -26,19 +28,22 @@ using static StripeConstants;
 
 public class SubscriberService(
     IBraintreeGateway braintreeGateway,
+    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<SubscriberService> logger,
     IOrganizationRepository organizationRepository,
+    IPriceIncreaseScheduler priceIncreaseScheduler,
     IProviderRepository providerRepository,
     IStripeAdapter stripeAdapter,
     IUserRepository userRepository) : ISubscriberService
 {
     public async Task CancelSubscription(
         ISubscriber subscriber,
-        OffboardingSurveyResponse offboardingSurveyResponse,
-        bool cancelImmediately)
+        bool cancelImmediately,
+        OffboardingSurveyResponse offboardingSurveyResponse = null)
     {
-        var subscription = await GetSubscriptionOrThrow(subscriber);
+        var subscription = await GetSubscriptionOrThrow(subscriber,
+            new SubscriptionGetOptions { Expand = ["test_clock"] });
 
         if (subscription.CanceledAt.HasValue ||
             subscription.Status == "canceled" ||
@@ -49,11 +54,6 @@ public class SubscriberService(
 
             throw new BillingException();
         }
-
-        var metadata = new Dictionary<string, string>
-        {
-            { "cancellingUserId", offboardingSurveyResponse.UserId.ToString() }
-        };
 
         List<string> validCancellationReasons = [
             "customer_service",
@@ -66,49 +66,31 @@ public class SubscriberService(
             "unused"
         ];
 
+        // Build once from survey — null when survey is absent (system-initiated cancellation)
+        var cancellationDetails = offboardingSurveyResponse != null
+            ? new SubscriptionCancellationDetailsOptions
+            {
+                Comment = offboardingSurveyResponse.Feedback,
+                Feedback = validCancellationReasons.Contains(offboardingSurveyResponse.Reason)
+                    ? offboardingSurveyResponse.Reason
+                    : null
+            }
+            : null;
+
+        var cancellingUserMetadata = offboardingSurveyResponse != null
+            ? new Dictionary<string, string>
+            {
+                { "cancellingUserId", offboardingSurveyResponse.UserId.ToString() }
+            }
+            : null;
+
         if (cancelImmediately)
         {
-            if (subscription.Metadata != null && subscription.Metadata.ContainsKey("organizationId"))
-            {
-                await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
-                {
-                    Metadata = metadata
-                });
-            }
-
-            var options = new SubscriptionCancelOptions
-            {
-                CancellationDetails = new SubscriptionCancellationDetailsOptions
-                {
-                    Comment = offboardingSurveyResponse.Feedback
-                }
-            };
-
-            if (validCancellationReasons.Contains(offboardingSurveyResponse.Reason))
-            {
-                options.CancellationDetails.Feedback = offboardingSurveyResponse.Reason;
-            }
-
-            await stripeAdapter.CancelSubscriptionAsync(subscription.Id, options);
+            await CancelSubscriptionImmediatelyAsync(subscription, cancellationDetails, cancellingUserMetadata);
         }
         else
         {
-            var options = new SubscriptionUpdateOptions
-            {
-                CancelAtPeriodEnd = true,
-                CancellationDetails = new SubscriptionCancellationDetailsOptions
-                {
-                    Comment = offboardingSurveyResponse.Feedback
-                },
-                Metadata = metadata
-            };
-
-            if (validCancellationReasons.Contains(offboardingSurveyResponse.Reason))
-            {
-                options.CancellationDetails.Feedback = offboardingSurveyResponse.Reason;
-            }
-
-            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, options);
+            await CancelSubscriptionAtPeriodEndAsync(subscription, cancellationDetails, cancellingUserMetadata);
         }
     }
 
@@ -245,6 +227,113 @@ public class SubscriberService(
         string? Max30Characters(string? input)
             => input?.Length <= 30 ? input : input?[..30];
     }
+
+    private async Task CancelSubscriptionImmediatelyAsync(
+        Subscription subscription,
+        SubscriptionCancellationDetailsOptions? cancellationDetails,
+        Dictionary<string, string>? cancellingUserMetadata)
+    {
+        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        {
+            var activeSchedule = await GetActiveScheduleAsync(subscription);
+            if (activeSchedule != null)
+            {
+                await priceIncreaseScheduler.Release(subscription.CustomerId, subscription.Id);
+            }
+        }
+
+        if (cancellingUserMetadata != null && subscription.Metadata.ContainsKey(MetadataKeys.OrganizationId))
+        {
+            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id,
+                new SubscriptionUpdateOptions { Metadata = cancellingUserMetadata });
+        }
+
+        var cancelOptions = new SubscriptionCancelOptions
+        {
+            CancellationDetails = cancellationDetails
+        };
+
+        await stripeAdapter.CancelSubscriptionAsync(subscription.Id, cancelOptions);
+    }
+
+    private async Task CancelSubscriptionAtPeriodEndAsync(
+        Subscription subscription,
+        SubscriptionCancellationDetailsOptions? cancellationDetails,
+        Dictionary<string, string>? cancellingUserMetadata)
+    {
+        var updateOptions = new SubscriptionUpdateOptions();
+
+        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        {
+            var activeSchedule = await GetActiveScheduleAsync(subscription);
+
+            if (activeSchedule is { Phases.Count: > 0 })
+            {
+                if (activeSchedule.Phases.Count > 2)
+                {
+                    logger.LogWarning(
+                        "{Service}: Subscription schedule ({ScheduleId}) has {PhaseCount} phases (expected 1-2), updating to only one phase for cancellation",
+                        GetType().Name, activeSchedule.Id, activeSchedule.Phases.Count);
+                }
+
+                logger.LogInformation(
+                    "{Service}: Active subscription schedule ({ScheduleId}) found for subscription ({SubscriptionId}), updating schedule phases",
+                    GetType().Name, activeSchedule.Id, subscription.Id);
+
+                var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+                var currentPhase = activeSchedule.Phases.FirstOrDefault(p => p.EndDate > now)
+                    ?? activeSchedule.Phases[^1];
+
+                await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
+                    new SubscriptionScheduleUpdateOptions
+                    {
+                        EndBehavior = SubscriptionScheduleEndBehavior.Cancel,
+                        Phases =
+                        [
+                            new SubscriptionSchedulePhaseOptions
+                            {
+                                StartDate = currentPhase.StartDate,
+                                EndDate = currentPhase.EndDate,
+                                Items = currentPhase.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
+                                {
+                                    Price = i.PriceId,
+                                    Quantity = i.Quantity
+                                }).ToList(),
+                                Discounts = currentPhase.StartDate <= now
+                                    ? []
+                                    : currentPhase.Discounts?.Select(d =>
+                                        new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),
+                                ProrationBehavior = ProrationBehavior.None,
+                                Metadata = cancellingUserMetadata
+                            }
+                        ]
+                    });
+                return;
+            }
+        }
+
+        updateOptions.CancelAtPeriodEnd = true;
+
+        if (cancellationDetails != null)
+        {
+            updateOptions.CancellationDetails = cancellationDetails;
+            updateOptions.Metadata = cancellingUserMetadata;
+        }
+
+        await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, updateOptions);
+
+    }
+
+    private async Task<SubscriptionSchedule?> GetActiveScheduleAsync(Subscription subscription)
+    {
+        var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
+            new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
+
+        return schedules.Data.FirstOrDefault(s =>
+            s.SubscriptionId == subscription.Id &&
+            s.Status == SubscriptionScheduleStatus.Active);
+    }
+
 #nullable disable
 
     public async Task<Customer> GetCustomer(

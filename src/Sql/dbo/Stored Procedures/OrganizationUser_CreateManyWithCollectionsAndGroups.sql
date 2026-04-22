@@ -1,0 +1,123 @@
+CREATE PROCEDURE [dbo].[OrganizationUser_CreateManyWithCollectionsAndGroups]
+    @organizationUserData NVARCHAR(MAX),
+    @collectionData NVARCHAR(MAX),
+    @groupData NVARCHAR(MAX),
+    @RevisionDate DATETIME2(7) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    INSERT INTO [dbo].[OrganizationUser]
+    (
+        [Id],
+        [OrganizationId],
+        [UserId],
+        [Email],
+        [Key],
+        [Status],
+        [Type],
+        [ExternalId],
+        [CreationDate],
+        [RevisionDate],
+        [Permissions],
+        [ResetPasswordKey],
+        [AccessSecretsManager],
+        [RevocationReason]
+    )
+    SELECT
+        OUI.[Id],
+        OUI.[OrganizationId],
+        OUI.[UserId],
+        OUI.[Email],
+        OUI.[Key],
+        OUI.[Status],
+        OUI.[Type],
+        OUI.[ExternalId],
+        OUI.[CreationDate],
+        OUI.[RevisionDate],
+        OUI.[Permissions],
+        OUI.[ResetPasswordKey],
+        OUI.[AccessSecretsManager],
+        OUI.[RevocationReason]
+    FROM
+        OPENJSON(@organizationUserData)
+                 WITH (
+                     [Id] UNIQUEIDENTIFIER '$.Id',
+                     [OrganizationId] UNIQUEIDENTIFIER '$.OrganizationId',
+                     [UserId] UNIQUEIDENTIFIER '$.UserId',
+                     [Email] NVARCHAR(256) '$.Email',
+                     [Key] VARCHAR(MAX) '$.Key',
+                     [Status] SMALLINT '$.Status',
+                     [Type] TINYINT '$.Type',
+                     [ExternalId] NVARCHAR(300) '$.ExternalId',
+                     [CreationDate] DATETIME2(7) '$.CreationDate',
+                     [RevisionDate] DATETIME2(7) '$.RevisionDate',
+                     [Permissions] NVARCHAR (MAX) '$.Permissions',
+                     [ResetPasswordKey] VARCHAR (MAX) '$.ResetPasswordKey',
+                     [AccessSecretsManager] BIT '$.AccessSecretsManager',
+                     [RevocationReason] TINYINT '$.RevocationReason'
+                     ) OUI
+
+    INSERT INTO [dbo].[GroupUser]
+    (
+        [OrganizationUserId],
+        [GroupId]
+    )
+    SELECT
+        OUG.OrganizationUserId,
+        OUG.GroupId
+    FROM
+        OPENJSON(@groupData)
+            WITH(
+                [OrganizationUserId] UNIQUEIDENTIFIER '$.OrganizationUserId',
+                [GroupId] UNIQUEIDENTIFIER '$.GroupId'
+            ) OUG
+
+    SELECT
+        OUC.[CollectionId],
+        OUC.[OrganizationUserId],
+        OUC.[ReadOnly],
+        OUC.[HidePasswords],
+        OUC.[Manage]
+    INTO #CollectionUserData
+    FROM
+        OPENJSON(@collectionData)
+            WITH(
+                [CollectionId] UNIQUEIDENTIFIER '$.CollectionId',
+                [OrganizationUserId] UNIQUEIDENTIFIER '$.OrganizationUserId',
+                [ReadOnly] BIT '$.ReadOnly',
+                [HidePasswords] BIT '$.HidePasswords',
+                [Manage] BIT '$.Manage'
+            ) OUC
+
+    INSERT INTO [dbo].[CollectionUser]
+    (
+        [CollectionId],
+        [OrganizationUserId],
+        [ReadOnly],
+        [HidePasswords],
+        [Manage]
+    )
+    SELECT
+        [CollectionId],
+        [OrganizationUserId],
+        [ReadOnly],
+        [HidePasswords],
+        [Manage]
+    FROM #CollectionUserData
+
+    -- Bump RevisionDate on all affected collections
+    IF @RevisionDate IS NOT NULL
+    BEGIN
+        UPDATE
+            C
+        SET
+            C.[RevisionDate] = @RevisionDate
+        FROM
+            [dbo].[Collection] C
+        INNER JOIN
+            #CollectionUserData CUD ON CUD.[CollectionId] = C.[Id]
+    END
+END
+go
+

@@ -53,6 +53,8 @@ public class CipherRequestModel
     [Obsolete("Use Data instead.")]
     public CipherSSHKeyModel SSHKey { get; set; }
 
+    [Obsolete("Use Data instead.")] public CipherBankAccountModel BankAccount { get; set; }
+
     /// <summary>
     /// JSON string containing cipher-specific data
     /// </summary>
@@ -119,6 +121,10 @@ public class CipherRequestModel
                     break;
                 case CipherType.SSHKey:
                     existingCipher.Data = JsonSerializer.Serialize(ToCipherSSHKeyData(), JsonHelpers.IgnoreWritingNull);
+                    break;
+                case CipherType.BankAccount:
+                    existingCipher.Data =
+                        JsonSerializer.Serialize(ToCipherBankAccountData(), JsonHelpers.IgnoreWritingNull);
                     break;
                 default:
                     throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");
@@ -293,6 +299,27 @@ public class CipherRequestModel
             PrivateKey = SSHKey.PrivateKey,
             PublicKey = SSHKey.PublicKey,
             KeyFingerprint = SSHKey.KeyFingerprint,
+        };
+    }
+
+    private CipherBankAccountData ToCipherBankAccountData()
+    {
+        return new CipherBankAccountData
+        {
+            Name = Name,
+            Notes = Notes,
+            Fields = Fields?.Select(f => f.ToCipherFieldData()),
+            PasswordHistory = PasswordHistory?.Select(ph => ph.ToCipherPasswordHistoryData()),
+            BankName = BankAccount.BankName,
+            NameOnAccount = BankAccount.NameOnAccount,
+            AccountType = BankAccount.AccountType,
+            AccountNumber = BankAccount.AccountNumber,
+            RoutingNumber = BankAccount.RoutingNumber,
+            BranchNumber = BankAccount.BranchNumber,
+            Pin = BankAccount.Pin,
+            SwiftCode = BankAccount.SwiftCode,
+            Iban = BankAccount.Iban,
+            BankContactPhone = BankAccount.BankContactPhone,
         };
     }
 
