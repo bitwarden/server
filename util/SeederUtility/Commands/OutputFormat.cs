@@ -1,4 +1,4 @@
-namespace Bit.SeederUtility.Commands;
+﻿namespace Bit.SeederUtility.Commands;
 
 public enum OutputFormat
 {
