@@ -2,12 +2,14 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
+using Bit.Core.Services;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 
 public class CreateOrganizationInviteLinkCommand(
     IOrganizationInviteLinkRepository organizationInviteLinkRepository,
+    IApplicationCacheService applicationCacheService,
     TimeProvider timeProvider)
     : ICreateOrganizationInviteLinkCommand
 {
@@ -16,6 +18,11 @@ public class CreateOrganizationInviteLinkCommand(
     public async Task<CommandResult<OrganizationInviteLink>> CreateAsync(
         CreateOrganizationInviteLinkRequest request)
     {
+        if (!await OrganizationHasInviteLinksAbilityAsync(request.OrganizationId))
+        {
+            return new InviteLinkNotAvailable();
+        }
+
         var sanitizedDomains = SanitizeDomains(request.AllowedDomains);
         if (sanitizedDomains.Count == 0)
         {
@@ -49,6 +56,12 @@ public class CreateOrganizationInviteLinkCommand(
         await organizationInviteLinkRepository.CreateAsync(inviteLink);
 
         return inviteLink;
+    }
+
+    private async Task<bool> OrganizationHasInviteLinksAbilityAsync(Guid organizationId)
+    {
+        var ability = await applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+        return ability is not null && ability.UseInviteLinks;
     }
 
     /// <summary>
