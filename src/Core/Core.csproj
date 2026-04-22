@@ -50,7 +50,7 @@
     <PackageReference Include="Microsoft.Extensions.Caching.Cosmos" Version="[1.8.0]" />
     <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="[8.0.10]" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="[8.0.0]" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="[8.0.0]" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="[8.0.1]" />
     <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="[8.0.10]" />
     <PackageReference Include="OneOf" Version="[3.0.271]" />
     <PackageReference Include="SendGrid" Version="[9.29.3]" />
@@ -74,7 +74,7 @@
   </ItemGroup>
 
   <ItemGroup Label="Pinned transitive dependencies">
-    <PackageReference Include="System.Text.Json" Version="[8.0.5]" />
+    <PackageReference Include="System.Text.Json" Version="[9.0.14]" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="[8.0.1]" />
   </ItemGroup>
 
