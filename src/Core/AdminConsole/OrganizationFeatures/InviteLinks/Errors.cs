@@ -8,8 +8,5 @@ public record InviteLinkAlreadyExists()
 public record InviteLinkDomainsRequired()
     : BadRequestError("At least one allowed domain is required.");
 
-public record InviteLinkInvalidDomains(IEnumerable<string> InvalidDomains)
-    : BadRequestError($"One or more domains are invalid: {string.Join(", ", InvalidDomains)}.");
-
 public record InviteLinkNotAvailable()
     : BadRequestError("Your organization's plan does not support invite links.");
