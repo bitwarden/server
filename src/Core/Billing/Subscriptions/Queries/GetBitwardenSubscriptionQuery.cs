@@ -244,6 +244,8 @@ public class GetBitwardenSubscriptionQuery(
         {
             switch (discount)
             {
+                // A null AppliesTo means "no product restrictions" — treat as cart-level (bug fix:
+                // previously these fell through the switch and were silently dropped).
                 case { Coupon.AppliesTo: null }:
                 case { Coupon.AppliesTo.Products: null or { Count: 0 } }:
                     cartLevel.Add(discount);
@@ -306,6 +308,11 @@ public class GetBitwardenSubscriptionQuery(
         }
     }
 
+    /// <summary>
+    /// Resolves discounts for a cart item. Product-level discounts take precedence; schedule
+    /// (Phase 2) discounts are only used as a fallback when no product-level discount applies.
+    /// This mirrors the previous single-discount behavior (<c>productDiscount ?? scheduleDiscount</c>).
+    /// </summary>
     private static List<BitwardenDiscount> GetCartItemDiscounts(
         List<Discount> productLevelDiscounts,
         SubscriptionItem subscriptionItem,
