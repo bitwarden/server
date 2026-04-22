@@ -73,11 +73,11 @@ public class LicensingService : ILicensingService
         if (_globalSettings.SelfHosted)
         {
             X509Certificate2 devCert = null;
-            X509Certificate2 prodCert = CoreHelpers.GetEmbeddedCertificateAsync("licensing.cer").GetAwaiter().GetResult();
+            X509Certificate2 prodCert = CoreHelpers.GetEmbeddedCertificateAsync("licensing.cer", null).GetAwaiter().GetResult();
 
             if (environment.IsDevelopment())
             {
-                devCert = CoreHelpers.GetEmbeddedCertificateAsync("licensing_dev.cer").GetAwaiter().GetResult();
+                devCert = CoreHelpers.GetEmbeddedCertificateAsync("licensing_dev.cer", null).GetAwaiter().GetResult();
                 _creationCertificate = devCert;
                 // All self host envs accept prod cert. Creation cert added below to handle dev self-hosts
                 _verificationCertificates.Add(prodCert);
@@ -90,7 +90,7 @@ public class LicensingService : ILicensingService
             // non-production environments can use dev cert-generated licenses
             if (!environment.IsProduction())
             {
-                devCert ??= CoreHelpers.GetEmbeddedCertificateAsync("licensing_dev.cer").GetAwaiter().GetResult();
+                devCert ??= CoreHelpers.GetEmbeddedCertificateAsync("licensing_dev.cer", null).GetAwaiter().GetResult();
                 _verificationCertificates.Add(devCert);
             }
         }

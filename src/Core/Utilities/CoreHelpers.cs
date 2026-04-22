@@ -144,7 +144,7 @@ public static class CoreHelpers
         return X509CertificateLoader.LoadPkcs12FromFile(file, password);
     }
 
-    public async static Task<X509Certificate2> GetEmbeddedCertificateAsync(string file)
+    public async static Task<X509Certificate2> GetEmbeddedCertificateAsync(string file, string password)
     {
         var assembly = typeof(CoreHelpers).GetTypeInfo().Assembly;
         using (var s = assembly.GetManifestResourceStream($"Bit.Core.{file}")!)
