@@ -1,8 +1,8 @@
-﻿using Bit.Api.AdminConsole.Public.Models.Request;
+﻿using Bit.Api.AdminConsole.Models.Public.Request;
+using Bit.Api.AdminConsole.Models.Public.Response;
+using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
-using Bit.Api.AdminConsole.Models.Public.Request;
-using Bit.Api.AdminConsole.Models.Public.Response;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
