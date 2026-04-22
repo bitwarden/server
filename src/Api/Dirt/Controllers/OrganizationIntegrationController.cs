@@ -21,7 +21,7 @@ public class OrganizationIntegrationController(
     {
         if (!await HasPermission(organizationId))
         {
-            return Forbid();
+            return UnprocessableEntity();
         }
 
         var integrations = await getQuery.GetManyByOrganizationAsync(organizationId);
@@ -37,7 +37,7 @@ public class OrganizationIntegrationController(
     /// <param name="organizationId"></param>
     /// <param name="model"></param>
     /// <returns></returns>
-    /// <exception cref="ForbidResult">Not enough permissions to access the organization.</exception>
+    /// <exception cref="UnprocessableEntityResult">Not enough permissions to access the organization.</exception>
     /// <exception cref="ConflictResult">When an integration of the same type already exists for the organization.</exception>
     [HttpPost("")]
     public async Task<ActionResult<OrganizationIntegrationResponseModel>> CreateAsync(Guid organizationId, [FromBody] OrganizationIntegrationRequestModel model)
@@ -49,7 +49,7 @@ public class OrganizationIntegrationController(
 
         if (!await HasPermission(organizationId))
         {
-            return Forbid();
+            return UnprocessableEntity();
         }
 
         var integration = model.ToOrganizationIntegration(organizationId);
@@ -70,7 +70,7 @@ public class OrganizationIntegrationController(
     {
         if (!await HasPermission(organizationId))
         {
-            return Forbid();
+            return UnprocessableEntity();
         }
 
         var integration = model.ToOrganizationIntegration(organizationId);
@@ -84,7 +84,7 @@ public class OrganizationIntegrationController(
     {
         if (!await HasPermission(organizationId))
         {
-            return Forbid();
+            return UnprocessableEntity();
         }
 
         await deleteCommand.DeleteAsync(organizationId, integrationId);

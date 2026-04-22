@@ -34,7 +34,7 @@ public class OrganizationIntegrationControllerTests
             .Returns(false);
 
         var result = await sutProvider.Sut.GetAsync(organizationId);
-        Assert.IsType<ForbidResult>(result.Result);
+        Assert.IsType<UnprocessableEntityResult>(result.Result);
     }
 
     [Theory, BitAutoData]
@@ -145,7 +145,7 @@ public class OrganizationIntegrationControllerTests
 
         var response = await sutProvider.Sut.CreateAsync(organizationId, _webhookRequestModel);
 
-        Assert.IsType<ForbidResult>(response.Result);
+        Assert.IsType<UnprocessableEntityResult>(response.Result);
     }
 
     [Theory, BitAutoData]
@@ -196,7 +196,7 @@ public class OrganizationIntegrationControllerTests
 
         var response = await sutProvider.Sut.DeleteAsync(organizationId, integrationId);
 
-        Assert.IsType<ForbidResult>(response);
+        Assert.IsType<UnprocessableEntityResult>(response);
     }
 
     [Theory, BitAutoData]
@@ -245,6 +245,6 @@ public class OrganizationIntegrationControllerTests
 
         var response = await sutProvider.Sut.UpdateAsync(organizationId, integrationId, _webhookRequestModel);
 
-        Assert.IsType<ForbidResult>(response.Result);
+        Assert.IsType<UnprocessableEntityResult>(response.Result);
     }
 }
