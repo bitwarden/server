@@ -107,16 +107,18 @@ public class AccessPoliciesControllerTests
     [BitAutoData]
     public async Task GetServiceAccountsPotentialGrantees_HasAccessNoPotentialGrantees_ReturnsEmptyList(
         SutProvider<AccessPoliciesController> sutProvider,
-        Guid id)
+        Guid id,
+        Guid userId)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
+        sutProvider.GetDependency<IAccessClientQuery>()
+            .GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), id)
+            .Returns((AccessClientType.User, userId));
 
         var result = await sutProvider.Sut.GetServiceAccountsPotentialGranteesAsync(id);
 
         await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
-            .GetManyByOrganizationIdWriteAccessAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)),
-                Arg.Any<Guid>(),
-                Arg.Any<AccessClientType>());
+            .GetManyByOrganizationIdWriteAccessAsync(id, userId, AccessClientType.User);
 
         Assert.Empty(result.Data);
     }
@@ -126,9 +128,13 @@ public class AccessPoliciesControllerTests
     public async Task GetServiceAccountsPotentialGranteesAsync_Success(
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
+        Guid userId,
         ServiceAccount serviceAccount)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
+        sutProvider.GetDependency<IAccessClientQuery>()
+            .GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), id)
+            .Returns((AccessClientType.User, userId));
         sutProvider.GetDependency<IServiceAccountRepository>()
             .GetManyByOrganizationIdWriteAccessAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>())
             .ReturnsForAnyArgs(new List<ServiceAccount> { serviceAccount });
@@ -136,9 +142,7 @@ public class AccessPoliciesControllerTests
         var result = await sutProvider.Sut.GetServiceAccountsPotentialGranteesAsync(id);
 
         await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
-            .GetManyByOrganizationIdWriteAccessAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)),
-                Arg.Any<Guid>(),
-                Arg.Any<AccessClientType>());
+            .GetManyByOrganizationIdWriteAccessAsync(id, userId, AccessClientType.User);
 
         Assert.NotEmpty(result.Data);
     }
@@ -161,16 +165,18 @@ public class AccessPoliciesControllerTests
     [BitAutoData]
     public async Task GetProjectPotentialGrantees_HasAccessNoPotentialGrantees_ReturnsEmptyList(
         SutProvider<AccessPoliciesController> sutProvider,
-        Guid id)
+        Guid id,
+        Guid userId)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
+        sutProvider.GetDependency<IAccessClientQuery>()
+            .GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), id)
+            .Returns((AccessClientType.User, userId));
 
         var result = await sutProvider.Sut.GetProjectPotentialGranteesAsync(id);
 
         await sutProvider.GetDependency<IProjectRepository>().Received(1)
-            .GetManyByOrganizationIdWriteAccessAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)),
-                Arg.Any<Guid>(),
-                Arg.Any<AccessClientType>());
+            .GetManyByOrganizationIdWriteAccessAsync(id, userId, AccessClientType.User);
 
         Assert.Empty(result.Data);
     }
@@ -180,9 +186,13 @@ public class AccessPoliciesControllerTests
     public async Task GetProjectPotentialGrantees_Success(
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
+        Guid userId,
         Project project)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
+        sutProvider.GetDependency<IAccessClientQuery>()
+            .GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), id)
+            .Returns((AccessClientType.User, userId));
         sutProvider.GetDependency<IProjectRepository>()
             .GetManyByOrganizationIdWriteAccessAsync(default, default, default)
             .ReturnsForAnyArgs(new List<Project> { project });
@@ -190,9 +200,7 @@ public class AccessPoliciesControllerTests
         var result = await sutProvider.Sut.GetProjectPotentialGranteesAsync(id);
 
         await sutProvider.GetDependency<IProjectRepository>().Received(1)
-            .GetManyByOrganizationIdWriteAccessAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)),
-                Arg.Any<Guid>(),
-                Arg.Any<AccessClientType>());
+            .GetManyByOrganizationIdWriteAccessAsync(id, userId, AccessClientType.User);
 
         Assert.NotEmpty(result.Data);
     }
