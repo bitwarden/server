@@ -70,7 +70,7 @@ public class ProgramTests
             var baseDir = Path.Join(tempDir.FullName, "ssl", "self", "example.com");
             var certFile = new FileInfo(Path.Join(baseDir, "certificate.crt"));
             Assert.True(certFile.Exists);
-            var cert = new X509Certificate2(certFile.FullName);
+            var cert = X509CertificateLoader.LoadCertificateFromFile(certFile.FullName);
 
             var hundredYearsFromNow = DateTime.Now.AddDays(36500);
 
