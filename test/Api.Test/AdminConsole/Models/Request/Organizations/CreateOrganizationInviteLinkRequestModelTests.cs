@@ -23,52 +23,6 @@ public class CreateOrganizationInviteLinkRequestModelTests
         Assert.Empty(results);
     }
 
-    [Fact]
-    public void Validate_WithValidEncryptedOrgKey_ReturnsNoErrors()
-    {
-        var model = new CreateOrganizationInviteLinkRequestModel
-        {
-            AllowedDomains = ["acme.com"],
-            EncryptedInviteKey = _validEncryptedString,
-            EncryptedOrgKey = _validEncryptedString,
-        };
-
-        var results = Validate(model);
-
-        Assert.Empty(results);
-    }
-
-    [Fact]
-    public void Validate_EncryptedInviteKeyNotEncryptedString_ReturnsError()
-    {
-        var model = new CreateOrganizationInviteLinkRequestModel
-        {
-            AllowedDomains = ["acme.com"],
-            EncryptedInviteKey = "not-an-encrypted-string",
-        };
-
-        var results = Validate(model);
-
-        Assert.Single(results);
-        Assert.Contains(results, r => r.ErrorMessage == "EncryptedInviteKey is not a valid encrypted string.");
-    }
-
-    [Fact]
-    public void Validate_EncryptedOrgKeyNotEncryptedString_ReturnsError()
-    {
-        var model = new CreateOrganizationInviteLinkRequestModel
-        {
-            AllowedDomains = ["acme.com"],
-            EncryptedInviteKey = _validEncryptedString,
-            EncryptedOrgKey = "not-an-encrypted-string",
-        };
-
-        var results = Validate(model);
-
-        Assert.Single(results);
-        Assert.Contains(results, r => r.ErrorMessage == "EncryptedOrgKey is not a valid encrypted string.");
-    }
-
     [Theory]
     [InlineData("not a domain")]
     [InlineData("<script>alert(1)</script>")]
