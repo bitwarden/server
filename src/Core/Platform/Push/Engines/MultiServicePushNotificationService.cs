@@ -126,14 +126,10 @@ public class MultiServicePushNotificationService : IPushNotificationService
             return [];
         }
 
-        var organizationCollectionCiphers = await _collectionCipherRepository
-            .GetManyByOrganizationIdAsync(cipher.OrganizationId.Value);
+        var collectionIds = await _collectionCipherRepository
+            .GetCollectionIdsByCipherIdAsync(cipher.Id);
 
-        return organizationCollectionCiphers
-            .Where(collectionCipher => collectionCipher.CipherId == cipher.Id)
-            .Select(collectionCipher => collectionCipher.CollectionId)
-            .Distinct()
-            .ToList();
+        return [.. collectionIds];
     }
 
     public Task PushAsync<T>(PushNotification<T> pushNotification) where T : class
