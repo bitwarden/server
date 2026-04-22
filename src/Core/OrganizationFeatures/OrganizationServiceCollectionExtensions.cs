@@ -47,6 +47,7 @@ using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using AccountRecoveryV2 = Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
 using V1_RevokeUsersCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1;
@@ -192,7 +193,7 @@ public static class OrganizationServiceCollectionExtensions
 
     private static void AddOrganizationInviteLinkCommands(this IServiceCollection services)
     {
-        services.AddScoped<ICreateOrganizationInviteLinkCommand, CreateOrganizationInviteLinkCommand>();
+        services.TryAddScoped<ICreateOrganizationInviteLinkCommand, CreateOrganizationInviteLinkCommand>();
     }
 
     private static void AddOrganizationDomainCommandsQueries(this IServiceCollection services)
