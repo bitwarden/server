@@ -294,6 +294,9 @@ public static class FeatureFlagKeys
     public const string PM34500_StrictCipherDecryption = "pm-34500-strict-cipher-decryption";
     public const string PM28091_AddCopyAndQuickLaunchActions = "pm-28091-add-copy-and-quick-launch-actions";
 
+    /* Secrets Manager Team */
+    public const string SecretsVersioning = "sm-1587-secrets-versioning";
+
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
 
