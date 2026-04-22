@@ -4,8 +4,8 @@ namespace Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
 
 public class SetInitialOrUpdateExistingPasswordData
 {
-    public required MasterPasswordAuthenticationData MasterPasswordAuthentication { get; set; }
     public required MasterPasswordUnlockData MasterPasswordUnlock { get; set; }
+    public required MasterPasswordAuthenticationData MasterPasswordAuthentication { get; set; }
 
     /// <summary>
     /// When <c>true</c>, runs the new password hash through the registered
@@ -25,8 +25,8 @@ public class SetInitialOrUpdateExistingPasswordData
 
     public SetInitialPasswordData ToSetInitialData() => new()
     {
-        MasterPasswordAuthentication = MasterPasswordAuthentication,
         MasterPasswordUnlock = MasterPasswordUnlock,
+        MasterPasswordAuthentication = MasterPasswordAuthentication,
         ValidatePassword = ValidatePassword,
         RefreshStamp = RefreshStamp,
         MasterPasswordHint = MasterPasswordHint
@@ -34,8 +34,8 @@ public class SetInitialOrUpdateExistingPasswordData
 
     public UpdateExistingPasswordData ToUpdateExistingData() => new()
     {
-        MasterPasswordAuthentication = MasterPasswordAuthentication,
         MasterPasswordUnlock = MasterPasswordUnlock,
+        MasterPasswordAuthentication = MasterPasswordAuthentication,
         ValidatePassword = ValidatePassword,
         RefreshStamp = RefreshStamp,
         MasterPasswordHint = MasterPasswordHint

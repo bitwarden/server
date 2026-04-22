@@ -6,8 +6,8 @@ namespace Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
 
 public class SetInitialPasswordData
 {
-    public required MasterPasswordAuthenticationData MasterPasswordAuthentication { get; set; }
     public required MasterPasswordUnlockData MasterPasswordUnlock { get; set; }
+    public required MasterPasswordAuthenticationData MasterPasswordAuthentication { get; set; }
 
     /// <summary>
     /// When <c>true</c>, runs the new password hash through the registered
@@ -61,7 +61,7 @@ public class SetInitialPasswordData
         // is null, and a mismatch here would make the user un-decryptable on next login. Centralized
         // here so both TDE and SSO JIT initial-SET flows enforce the same rule. This check is
         // removed in Stage 3 when PM-28143 feature flag clears and independent salts are safe.
-        MasterPasswordAuthentication.ValidateSaltUnchangedForUser(user);
         MasterPasswordUnlock.ValidateSaltUnchangedForUser(user);
+        MasterPasswordAuthentication.ValidateSaltUnchangedForUser(user);
     }
 }

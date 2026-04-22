@@ -6,8 +6,8 @@ namespace Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
 
 public class UpdateExistingPasswordAndKdfData
 {
-    public required MasterPasswordAuthenticationData MasterPasswordAuthentication { get; set; }
     public required MasterPasswordUnlockData MasterPasswordUnlock { get; set; }
+    public required MasterPasswordAuthenticationData MasterPasswordAuthentication { get; set; }
 
     /// <summary>
     /// When <c>true</c>, runs the new password hash through the registered
@@ -49,7 +49,7 @@ public class UpdateExistingPasswordAndKdfData
         // Do not validate if kdf is the same here on the user because we are changing it.
 
         // Validate Salt is unchanged for user
-        MasterPasswordAuthentication.ValidateSaltUnchangedForUser(user);
         MasterPasswordUnlock.ValidateSaltUnchangedForUser(user);
+        MasterPasswordAuthentication.ValidateSaltUnchangedForUser(user);
     }
 }

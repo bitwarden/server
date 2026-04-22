@@ -48,16 +48,16 @@ public class MasterPasswordServiceTests
         };
         return new SetInitialPasswordData
         {
-            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
-            {
-                Salt = salt,
-                MasterPasswordAuthenticationHash = "test-hash",
-                Kdf = kdf
-            },
             MasterPasswordUnlock = new MasterPasswordUnlockData
             {
                 Salt = salt,
                 MasterKeyWrappedUserKey = "wrapped-key",
+                Kdf = kdf
+            },
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Salt = salt,
+                MasterPasswordAuthenticationHash = "test-hash",
                 Kdf = kdf
             },
             MasterPasswordHint = hint,
@@ -72,16 +72,16 @@ public class MasterPasswordServiceTests
         var (kdf, salt) = GetMatchingKdfAndSalt(user);
         return new UpdateExistingPasswordData
         {
-            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
-            {
-                Salt = salt,
-                MasterPasswordAuthenticationHash = "test-hash",
-                Kdf = kdf
-            },
             MasterPasswordUnlock = new MasterPasswordUnlockData
             {
                 Salt = salt,
                 MasterKeyWrappedUserKey = "wrapped-key",
+                Kdf = kdf
+            },
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Salt = salt,
+                MasterPasswordAuthenticationHash = "test-hash",
                 Kdf = kdf
             },
             MasterPasswordHint = hint,
@@ -103,16 +103,16 @@ public class MasterPasswordServiceTests
         };
         return new UpdateExistingPasswordAndKdfData
         {
-            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
-            {
-                Salt = salt,
-                MasterPasswordAuthenticationHash = "test-hash",
-                Kdf = kdf
-            },
             MasterPasswordUnlock = new MasterPasswordUnlockData
             {
                 Salt = salt,
                 MasterKeyWrappedUserKey = "wrapped-key",
+                Kdf = kdf
+            },
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Salt = salt,
+                MasterPasswordAuthenticationHash = "test-hash",
                 Kdf = kdf
             },
             MasterPasswordHint = hint,
@@ -210,16 +210,16 @@ public class MasterPasswordServiceTests
         };
         var data = new SetInitialPasswordData
         {
-            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
-            {
-                Salt = salt,
-                MasterPasswordAuthenticationHash = "test-hash",
-                Kdf = kdf
-            },
             MasterPasswordUnlock = new MasterPasswordUnlockData
             {
                 Salt = salt,
                 MasterKeyWrappedUserKey = "wrapped-key",
+                Kdf = kdf
+            },
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Salt = salt,
+                MasterPasswordAuthenticationHash = "test-hash",
                 Kdf = kdf
             },
             ValidatePassword = false,
@@ -498,16 +498,16 @@ public class MasterPasswordServiceTests
         };
         var data = new SetInitialOrUpdateExistingPasswordData
         {
-            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
-            {
-                Salt = salt,
-                MasterPasswordAuthenticationHash = "test-hash",
-                Kdf = kdf
-            },
             MasterPasswordUnlock = new MasterPasswordUnlockData
             {
                 Salt = salt,
                 MasterKeyWrappedUserKey = "wrapped-key",
+                Kdf = kdf
+            },
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Salt = salt,
+                MasterPasswordAuthenticationHash = "test-hash",
                 Kdf = kdf
             },
             ValidatePassword = false,
@@ -535,16 +535,16 @@ public class MasterPasswordServiceTests
         var (kdf, salt) = GetMatchingKdfAndSalt(user);
         var data = new SetInitialOrUpdateExistingPasswordData
         {
-            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
-            {
-                Salt = salt,
-                MasterPasswordAuthenticationHash = "test-hash",
-                Kdf = kdf
-            },
             MasterPasswordUnlock = new MasterPasswordUnlockData
             {
                 Salt = salt,
                 MasterKeyWrappedUserKey = "wrapped-key",
+                Kdf = kdf
+            },
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Salt = salt,
+                MasterPasswordAuthenticationHash = "test-hash",
                 Kdf = kdf
             },
             ValidatePassword = false,
@@ -574,16 +574,16 @@ public class MasterPasswordServiceTests
         var wrongSalt = "wrong-salt-value";
         var data = new SetInitialOrUpdateExistingPasswordData
         {
-            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
-            {
-                Salt = wrongSalt,
-                MasterPasswordAuthenticationHash = "test-hash",
-                Kdf = kdf
-            },
             MasterPasswordUnlock = new MasterPasswordUnlockData
             {
                 Salt = wrongSalt,
                 MasterKeyWrappedUserKey = "wrapped-key",
+                Kdf = kdf
+            },
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Salt = wrongSalt,
+                MasterPasswordAuthenticationHash = "test-hash",
                 Kdf = kdf
             },
             ValidatePassword = false,
@@ -615,16 +615,16 @@ public class MasterPasswordServiceTests
         var (kdf, salt) = GetMatchingKdfAndSalt(user);
         var data = new SetInitialOrUpdateExistingPasswordData
         {
-            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
-            {
-                Salt = salt,
-                MasterPasswordAuthenticationHash = "test-hash",
-                Kdf = kdf
-            },
             MasterPasswordUnlock = new MasterPasswordUnlockData
             {
                 Salt = salt,
                 MasterKeyWrappedUserKey = "wrapped-key",
+                Kdf = kdf
+            },
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Salt = salt,
+                MasterPasswordAuthenticationHash = "test-hash",
                 Kdf = kdf
             },
             ValidatePassword = true,
@@ -646,16 +646,16 @@ public class MasterPasswordServiceTests
         var (kdf, salt) = GetMatchingKdfAndSalt(user);
         var data = new SetInitialOrUpdateExistingPasswordData
         {
-            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
-            {
-                Salt = salt,
-                MasterPasswordAuthenticationHash = "test-hash",
-                Kdf = kdf
-            },
             MasterPasswordUnlock = new MasterPasswordUnlockData
             {
                 Salt = salt,
                 MasterKeyWrappedUserKey = "wrapped-key",
+                Kdf = kdf
+            },
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Salt = salt,
+                MasterPasswordAuthenticationHash = "test-hash",
                 Kdf = kdf
             },
             ValidatePassword = false,
@@ -797,16 +797,16 @@ public class MasterPasswordServiceTests
         };
         var data = new UpdateExistingPasswordAndKdfData
         {
-            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
-            {
-                Salt = "wrong-salt",
-                MasterPasswordAuthenticationHash = "test-hash",
-                Kdf = kdf
-            },
             MasterPasswordUnlock = new MasterPasswordUnlockData
             {
                 Salt = salt,
                 MasterKeyWrappedUserKey = "wrapped-key",
+                Kdf = kdf
+            },
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Salt = "wrong-salt",
+                MasterPasswordAuthenticationHash = "test-hash",
                 Kdf = kdf
             },
             ValidatePassword = false,
@@ -995,16 +995,16 @@ public class MasterPasswordServiceTests
             };
             return new SetInitialPasswordData
             {
-                MasterPasswordAuthentication = new MasterPasswordAuthenticationData
-                {
-                    Salt = salt,
-                    MasterPasswordAuthenticationHash = "test-hash",
-                    Kdf = kdf
-                },
                 MasterPasswordUnlock = new MasterPasswordUnlockData
                 {
                     Salt = salt,
                     MasterKeyWrappedUserKey = "wrapped-key",
+                    Kdf = kdf
+                },
+                MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+                {
+                    Salt = salt,
+                    MasterPasswordAuthenticationHash = "test-hash",
                     Kdf = kdf
                 },
                 ValidatePassword = false,
@@ -1046,16 +1046,16 @@ public class MasterPasswordServiceTests
             };
             return new SetInitialPasswordData
             {
-                MasterPasswordAuthentication = new MasterPasswordAuthenticationData
-                {
-                    Salt = salt,
-                    MasterPasswordAuthenticationHash = "hash",
-                    Kdf = kdf
-                },
                 MasterPasswordUnlock = new MasterPasswordUnlockData
                 {
                     Salt = salt,
                     MasterKeyWrappedUserKey = "wrapped-key",
+                    Kdf = kdf
+                },
+                MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+                {
+                    Salt = salt,
+                    MasterPasswordAuthenticationHash = "hash",
                     Kdf = kdf
                 }
             };
@@ -1135,16 +1135,16 @@ public class MasterPasswordServiceTests
             // Authentication salt is wrong; Unlock salt is correct.
             var data = new SetInitialPasswordData
             {
-                MasterPasswordAuthentication = new MasterPasswordAuthenticationData
-                {
-                    Salt = "wrong-auth-salt",
-                    MasterPasswordAuthenticationHash = "hash",
-                    Kdf = kdf
-                },
                 MasterPasswordUnlock = new MasterPasswordUnlockData
                 {
                     Salt = correctSalt,
                     MasterKeyWrappedUserKey = "wrapped-key",
+                    Kdf = kdf
+                },
+                MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+                {
+                    Salt = "wrong-auth-salt",
+                    MasterPasswordAuthenticationHash = "hash",
                     Kdf = kdf
                 }
             };
@@ -1167,16 +1167,16 @@ public class MasterPasswordServiceTests
             // Unlock salt is wrong; Authentication salt is correct.
             var data = new SetInitialPasswordData
             {
-                MasterPasswordAuthentication = new MasterPasswordAuthenticationData
-                {
-                    Salt = correctSalt,
-                    MasterPasswordAuthenticationHash = "hash",
-                    Kdf = kdf
-                },
                 MasterPasswordUnlock = new MasterPasswordUnlockData
                 {
                     Salt = "wrong-unlock-salt",
                     MasterKeyWrappedUserKey = "wrapped-key",
+                    Kdf = kdf
+                },
+                MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+                {
+                    Salt = correctSalt,
+                    MasterPasswordAuthenticationHash = "hash",
                     Kdf = kdf
                 }
             };
@@ -1218,16 +1218,16 @@ public class MasterPasswordServiceTests
             };
             return new UpdateExistingPasswordData
             {
-                MasterPasswordAuthentication = new MasterPasswordAuthenticationData
-                {
-                    Salt = salt,
-                    MasterPasswordAuthenticationHash = "hash",
-                    Kdf = kdf
-                },
                 MasterPasswordUnlock = new MasterPasswordUnlockData
                 {
                     Salt = salt,
                     MasterKeyWrappedUserKey = "wrapped-key",
+                    Kdf = kdf
+                },
+                MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+                {
+                    Salt = salt,
+                    MasterPasswordAuthenticationHash = "hash",
                     Kdf = kdf
                 }
             };
@@ -1320,16 +1320,16 @@ public class MasterPasswordServiceTests
             };
             return new UpdateExistingPasswordAndKdfData
             {
-                MasterPasswordAuthentication = new MasterPasswordAuthenticationData
-                {
-                    Salt = salt,
-                    MasterPasswordAuthenticationHash = "hash",
-                    Kdf = newKdf
-                },
                 MasterPasswordUnlock = new MasterPasswordUnlockData
                 {
                     Salt = salt,
                     MasterKeyWrappedUserKey = "wrapped-key",
+                    Kdf = newKdf
+                },
+                MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+                {
+                    Salt = salt,
+                    MasterPasswordAuthenticationHash = "hash",
                     Kdf = newKdf
                 }
             };

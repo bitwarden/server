@@ -92,8 +92,8 @@ public interface IMasterPasswordService
     /// </param>
     /// <param name="setInitialPasswordData">
     /// Cryptographic and authentication data required to set the initial password, including
-    /// <c>MasterPasswordAuthentication</c> (hashed credential used for login),
     /// <c>MasterPasswordUnlock</c> (KDF parameters and wrapped user key),
+    /// <c>MasterPasswordAuthentication</c> (hashed credential used for login),
     /// and control flags <c>ValidatePassword</c> and <c>RefreshStamp</c>.
     /// </param>
     /// <returns>
@@ -156,7 +156,7 @@ public interface IMasterPasswordService
     /// </param>
     /// <param name="updateExistingData">
     /// Cryptographic and authentication data for the updated password, including
-    /// <c>MasterPasswordAuthentication</c>, <c>MasterPasswordUnlock</c>,
+    /// <c>MasterPasswordUnlock</c>, <c>MasterPasswordAuthentication</c>,
     /// and control flags <c>ValidatePassword</c> and <c>RefreshStamp</c>.
     /// </param>
     /// <returns>
@@ -177,7 +177,7 @@ public interface IMasterPasswordService
     /// </param>
     /// <param name="updateExistingExistingData">
     /// Cryptographic and authentication data for the updated password and KDF parameters,
-    /// including <c>MasterPasswordAuthentication</c>, <c>MasterPasswordUnlock</c>,
+    /// including <c>MasterPasswordUnlock</c>, <c>MasterPasswordAuthentication</c>,
     /// and control flags <c>ValidatePassword</c> and <c>RefreshStamp</c>.
     /// </param>
     /// <returns>
