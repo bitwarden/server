@@ -22,8 +22,7 @@ public class OrganizationInviteLink : ITableObject<Guid>
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
 
     public IEnumerable<string> GetAllowedDomains() =>
-        JsonSerializer.Deserialize<IEnumerable<string>>(AllowedDomains)
-        ?? throw new JsonException("Failed to deserialize AllowedDomains.");
+        JsonSerializer.Deserialize<IEnumerable<string>>(AllowedDomains) ?? [];
 
     public void SetAllowedDomains(IEnumerable<string> domains) =>
         AllowedDomains = JsonSerializer.Serialize(domains);
