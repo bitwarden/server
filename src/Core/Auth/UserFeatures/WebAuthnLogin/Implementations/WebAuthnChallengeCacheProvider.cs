@@ -7,7 +7,7 @@ namespace Bit.Core.Auth.UserFeatures.WebAuthnLogin.Implementations;
 internal class WebAuthnChallengeCacheProvider(
     [FromKeyedServices("persistent")] IDistributedCache distributedCache) : IWebAuthnChallengeCacheProvider
 {
-    private const string _cacheKeyPrefix = "WebAuthnLoginAssertion_";
+    private const string _cacheKeyPrefix = "WebAuthnAssertion_";
     private static readonly DistributedCacheEntryOptions _cacheOptions = new()
     {
         AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(17)
