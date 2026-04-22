@@ -151,7 +151,7 @@ public static class CoreHelpers
         using (var ms = new MemoryStream())
         {
             await s.CopyToAsync(ms);
-            return X509CertificateLoader.LoadCertificate(ms.ToArray());
+            return X509CertificateLoader.LoadPkcs12(ms.ToArray(), password);
         }
     }
 
