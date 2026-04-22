@@ -95,12 +95,18 @@ public class GroupRepositoryTests
         var orgUserIds = new List<Guid>([orgUser1.Id, orgUser2.Id, orgUser3.Id]);
         var group = await groupRepository.CreateTestGroupAsync(org);
 
+        var expectedRevisionDate = DateTime.UtcNow.AddMinutes(10);
+
         // Act
-        await groupRepository.AddGroupUsersByIdAsync(group.Id, orgUserIds);
+        await groupRepository.AddGroupUsersByIdAsync(group.Id, orgUserIds, expectedRevisionDate);
 
         // Assert
         var actual = await groupRepository.GetManyUserIdsByIdAsync(group.Id);
         Assert.Equal(orgUserIds!.Order(), actual.Order());
+
+        var actualGroup = await groupRepository.GetByIdAsync(group.Id);
+        Assert.NotNull(actualGroup);
+        Assert.Equal(expectedRevisionDate, actualGroup.RevisionDate, TimeSpan.FromMilliseconds(10));
     }
 
     [DatabaseTheory, DatabaseData]
@@ -123,12 +129,12 @@ public class GroupRepositoryTests
         var group = await groupRepository.CreateTestGroupAsync(org);
 
         // Add user 2 to the group already, make sure this is executed correctly before proceeding
-        await groupRepository.UpdateUsersAsync(group.Id, [orgUser2.Id]);
+        await groupRepository.UpdateUsersAsync(group.Id, [orgUser2.Id], DateTime.UtcNow);
         var existingUsers = await groupRepository.GetManyUserIdsByIdAsync(group.Id);
         Assert.Equal([orgUser2.Id], existingUsers);
 
         // Act
-        await groupRepository.AddGroupUsersByIdAsync(group.Id, orgUserIds);
+        await groupRepository.AddGroupUsersByIdAsync(group.Id, orgUserIds, DateTime.UtcNow);
 
         // Assert - group should contain all users
         var actual = await groupRepository.GetManyUserIdsByIdAsync(group.Id);
@@ -159,7 +165,7 @@ public class GroupRepositoryTests
         var group = await groupRepository.CreateTestGroupAsync(org);
 
         // Act
-        await groupRepository.AddGroupUsersByIdAsync(group.Id, orgUserIds);
+        await groupRepository.AddGroupUsersByIdAsync(group.Id, orgUserIds, DateTime.UtcNow);
 
         // Assert
         var actual = await groupRepository.GetManyUserIdsByIdAsync(group.Id);
@@ -188,7 +194,7 @@ public class GroupRepositoryTests
         var group = await groupRepository.CreateTestGroupAsync(org);
 
         // Act
-        await groupRepository.AddGroupUsersByIdAsync(group.Id, orgUserIds);
+        await groupRepository.AddGroupUsersByIdAsync(group.Id, orgUserIds, DateTime.UtcNow);
 
         // Assert
         var actual = await groupRepository.GetManyUserIdsByIdAsync(group.Id);
@@ -196,4 +202,60 @@ public class GroupRepositoryTests
         Assert.Contains(orgUser1.Id, actual);
         Assert.Contains(orgUser2.Id, actual);
     }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task UpdateUsersAsync_BumpsGroupRevisionDate(
+        IGroupRepository groupRepository,
+        IUserRepository userRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        // Arrange
+        var user1 = await userRepository.CreateTestUserAsync("user1");
+        var user2 = await userRepository.CreateTestUserAsync("user2");
+
+        var org = await organizationRepository.CreateTestOrganizationAsync();
+        var orgUser1 = await organizationUserRepository.CreateTestOrganizationUserAsync(org, user1);
+        var orgUser2 = await organizationUserRepository.CreateTestOrganizationUserAsync(org, user2);
+        var group = await groupRepository.CreateTestGroupAsync(org);
+
+        var expectedRevisionDate = DateTime.UtcNow.AddMinutes(10);
+
+        // Act
+        await groupRepository.UpdateUsersAsync(group.Id, [orgUser1.Id, orgUser2.Id], expectedRevisionDate);
+
+        // Assert
+        var actualGroup = await groupRepository.GetByIdAsync(group.Id);
+        Assert.NotNull(actualGroup);
+        Assert.Equal(expectedRevisionDate, actualGroup.RevisionDate, TimeSpan.FromMilliseconds(10));
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task DeleteUserAsync_BumpsGroupRevisionDate(
+        IGroupRepository groupRepository,
+        IUserRepository userRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        var org = await organizationRepository.CreateTestOrganizationAsync();
+        var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(org, user);
+        var group = await groupRepository.CreateTestGroupAsync(org);
+
+        await groupRepository.UpdateUsersAsync(group.Id, [orgUser.Id], DateTime.UtcNow);
+        var existingUsers = await groupRepository.GetManyUserIdsByIdAsync(group.Id);
+        Assert.Equal([orgUser.Id], existingUsers);
+
+        var expectedRevisionDate = DateTime.UtcNow.AddMinutes(10);
+
+        // Act
+        await groupRepository.DeleteUserAsync(group.Id, orgUser.Id, expectedRevisionDate);
+
+        // Assert
+        var actualGroup = await groupRepository.GetByIdAsync(group.Id);
+        Assert.NotNull(actualGroup);
+        Assert.Equal(expectedRevisionDate, actualGroup.RevisionDate, TimeSpan.FromMilliseconds(10));
+    }
+
 }

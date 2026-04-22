@@ -121,6 +121,18 @@ BEGIN
             [dbo].[Collection] C
         INNER JOIN
             @CollectionIds CI ON C.[Id] = CI.[Id]
+
+        -- Bump the revision date on all affected groups
+        UPDATE
+            G
+        SET
+            G.[RevisionDate] = @RevisionDate
+        FROM
+            [dbo].[Group] G
+        INNER JOIN
+            @Groups GR ON G.[Id] = GR.[Id]
+        WHERE
+            G.[OrganizationId] = @OrganizationId
     END
 
     EXEC [dbo].[User_BumpAccountRevisionDateByCollectionIds] @CollectionIds, @OrganizationId
