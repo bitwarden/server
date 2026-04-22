@@ -410,9 +410,8 @@ public class CoreHelpersTests
     {
         var protector = new TestDataProtector(string.Format(unprotectedTokenTemplate, CoreHelpers.ToEpocMilliseconds(creationTime)));
 
-        // TestDataProtector ignores the decoded bytes; value just needs to be valid base64url
-        var token = CoreHelpers.Base64UrlEncode(Encoding.UTF8.GetBytes("protected_token"));
-        Assert.Equal(isValid, CoreHelpers.TokenIsValid(firstPart, protector, token, userEmail, id, expirationInHours));
+        var protectedToken = CoreHelpers.Base64UrlEncode(Encoding.UTF8.GetBytes("protected_token"));
+        Assert.Equal(isValid, CoreHelpers.TokenIsValid(firstPart, protector, protectedToken, userEmail, id, expirationInHours));
     }
 
     private class TestDataProtector : IDataProtector
