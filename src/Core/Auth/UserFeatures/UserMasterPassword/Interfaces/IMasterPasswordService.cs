@@ -11,11 +11,11 @@ namespace Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 /// Provides consistent validation, password hashing, and timestamp management across every
 /// flow that establishes or updates a user's master password.
 ///
-/// <strong>Compositional, not orchestrating.</strong> This service handles CRUD-like mutations
+/// Compositional, not orchestrating. This service handles CRUD-like mutations
 /// only. Business logic (e.g., authorization checks, org validation, push notifications, event
 /// logging) remains a caller responsibility.
 ///
-/// <para><strong>Three persistence tiers:</strong></para>
+/// <para>Three persistence tiers:</para>
 /// <list type="bullet">
 ///   <item>
 ///     <c>Prepare*</c> Modifies the <see cref="User"/> object in memory only. The caller
@@ -36,24 +36,27 @@ namespace Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 ///   </item>
 /// </list>
 ///
-/// <para><strong>Set vs Update contract:</strong></para>
-/// <list type="bullet">
+/// <para>Set vs Update contract:</para>
+/// <list type="table">
 ///   <item>
-///     <strong>SET (initial):</strong> Client sends all data (hash, salt, KDF). Server sets all
+///     <term>SET (initial)</term>
+///     <description>Client sends all data (hash, salt, KDF). Server sets all
 ///     fields. Stage 1 caveat: server enforces <c>salt == email.ToLowerInvariant().Trim()</c>
-///     (PM-28143 removes this in Stage 3).
+///     (PM-28143 removes this in Stage 3).</description>
 ///   </item>
 ///   <item>
-///     <strong>UPDATE (hash only):</strong> Client sends all data. Server validates KDF and salt
-///     are unchanged, updates only the hash and wrapped user key.
+///     <term>UPDATE (hash only)</term>
+///     <description>Client sends all data. Server validates KDF and salt
+///     are unchanged, updates only the hash and wrapped user key.</description>
 ///   </item>
 ///   <item>
-///     <strong>UPDATE (KDF):</strong> Client sends all data. Server validates salt is unchanged,
-///     updates hash, KDF, and wrapped user key.
+///     <term>UPDATE (KDF)</term>
+///     <description>Client sends all data. Server validates salt is unchanged,
+///     updates hash, KDF, and wrapped user key.</description>
 ///   </item>
 /// </list>
 ///
-/// <para><strong>Source of truth:</strong> On SET, the client is the source of truth. On UPDATE,
+/// <para>Source of truth: On SET, the client is the source of truth. On UPDATE,
 /// the server is the source of truth for fields that must not change — it validates the client's
 /// values match what's stored before applying the update.</para>
 /// </summary>
