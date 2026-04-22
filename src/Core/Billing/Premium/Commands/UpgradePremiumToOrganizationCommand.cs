@@ -244,6 +244,7 @@ public class UpgradePremiumToOrganizationCommand(
             MaxStorageGb = targetPlan.PasswordManager.BaseStorageGb,
             UsePolicies = targetPlan.HasPolicies,
             UseMyItems = targetPlan.HasMyItems,
+            UseInviteLinks = targetPlan.HasInviteLinks,
             UseSso = targetPlan.HasSso,
             UseGroups = targetPlan.HasGroups,
             UseEvents = targetPlan.HasEvents,
