@@ -177,7 +177,9 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
 
-        var originalSecret = secret;
+        var originalValue = secret.Value;
+        var valueRevisionDate = secret.RevisionDate;
+
         var updatedSecret = updateRequest.ToSecret(secret);
         var authorizationResult = await _authorizationService.AuthorizeAsync(User, updatedSecret, SecretOperations.Update);
         if (!authorizationResult.Succeeded)
@@ -229,8 +231,8 @@ public class SecretsController : Controller
             var secretVersion = new SecretVersion
             {
                 SecretId = id,
-                Value = originalSecret.Value,
-                VersionDate = originalSecret.CreationDate,
+                Value = originalValue,
+                VersionDate = valueRevisionDate,
                 EditorServiceAccountId = editorServiceAccountId,
                 EditorOrganizationUserId = editorOrganizationUserId
             };
