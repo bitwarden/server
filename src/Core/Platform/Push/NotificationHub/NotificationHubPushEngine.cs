@@ -44,16 +44,9 @@ public class NotificationHubPushEngine : IPushEngine, IPushRelayer
 
     public async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid>? collectionIds)
     {
-        if (cipher.OrganizationId.HasValue)
-        {
-            // We cannot send org pushes since access logic is much more complicated than just the fact that they belong
-            // to the organization. Potentially we could blindly send to just users that have the access all permission
-            // device registration needs to be more granular to handle that appropriately. A more brute force approach could
-            // me to send "full sync" push to all org users, but that has the potential to DDOS the API in bursts.
-
-            // await SendPayloadToOrganizationAsync(cipher.OrganizationId.Value, type, message, true);
-        }
-        else if (cipher.UserId.HasValue)
+        // Org cipher fan-out is handled upstream in MultiServicePushNotificationService,
+        // which resolves per-user access and calls PushAsync directly.
+        if (cipher.UserId.HasValue)
         {
             var message = new SyncCipherPushNotification
             {
