@@ -446,4 +446,258 @@ public class EmergencyAccessRepositoriesTests
         Assert.Null(record.GranteeName);
         Assert.Null(record.GranteeAvatarColor);
     }
+
+    /// <summary>
+    /// Verifies GetExpiredRecoveriesAsync only returns records whose wait period has elapsed.
+    /// </summary>
+    [DatabaseTheory, DatabaseData]
+    public async Task GetExpiredRecoveriesAsync_ReturnsOnly_ExpiredRecoveries(
+        IUserRepository userRepository,
+        IEmergencyAccessRepository emergencyAccessRepository)
+    {
+        // Arrange
+        var grantor = await userRepository.CreateAsync(new User
+        {
+            Name = "Grantor",
+            Email = $"test+grantor{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var grantee = await userRepository.CreateAsync(new User
+        {
+            Name = "Grantee",
+            Email = $"test+grantee{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        // Record 1: expired — initiated 10 days ago with 5-day wait (should be returned)
+        var expired = await emergencyAccessRepository.CreateAsync(new EmergencyAccess
+        {
+            GrantorId = grantor.Id,
+            GranteeId = grantee.Id,
+            Status = EmergencyAccessStatusType.RecoveryInitiated,
+            WaitTimeDays = 5,
+            RecoveryInitiatedDate = DateTime.UtcNow.AddDays(-10),
+        });
+
+        // Record 2: not yet expired — initiated now with 30-day wait (should NOT be returned)
+        await emergencyAccessRepository.CreateAsync(new EmergencyAccess
+        {
+            GrantorId = grantor.Id,
+            GranteeId = grantee.Id,
+            Status = EmergencyAccessStatusType.RecoveryInitiated,
+            WaitTimeDays = 30,
+            RecoveryInitiatedDate = DateTime.UtcNow,
+        });
+
+        // Record 3: null RecoveryInitiatedDate (should NOT be returned)
+        await emergencyAccessRepository.CreateAsync(new EmergencyAccess
+        {
+            GrantorId = grantor.Id,
+            GranteeId = grantee.Id,
+            Status = EmergencyAccessStatusType.RecoveryInitiated,
+            WaitTimeDays = 1,
+            RecoveryInitiatedDate = null,
+        });
+
+        // Record 4: wrong status — expired date but Confirmed status (should NOT be returned)
+        await emergencyAccessRepository.CreateAsync(new EmergencyAccess
+        {
+            GrantorId = grantor.Id,
+            GranteeId = grantee.Id,
+            Status = EmergencyAccessStatusType.Confirmed,
+            WaitTimeDays = 1,
+            RecoveryInitiatedDate = DateTime.UtcNow.AddDays(-10),
+        });
+
+        // Act
+        var results = await emergencyAccessRepository.GetExpiredRecoveriesAsync();
+
+        // Assert — only the expired RecoveryInitiated record should be returned
+        var resultIds = results.Select(r => r.Id).ToHashSet();
+        Assert.Contains(expired.Id, resultIds);
+        // The other 3 records must not appear
+        Assert.DoesNotContain(results, r => r.Id != expired.Id
+            && r.GrantorId == grantor.Id);
+    }
+
+    /// <summary>
+    /// Verifies GetExpiredRecoveriesAsync returns empty when no recoveries have elapsed.
+    /// </summary>
+    [DatabaseTheory, DatabaseData]
+    public async Task GetExpiredRecoveriesAsync_ReturnsEmpty_WhenNoneExpired(
+        IUserRepository userRepository,
+        IEmergencyAccessRepository emergencyAccessRepository)
+    {
+        // Arrange
+        var grantor = await userRepository.CreateAsync(new User
+        {
+            Name = "Grantor",
+            Email = $"test+grantor{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var grantee = await userRepository.CreateAsync(new User
+        {
+            Name = "Grantee",
+            Email = $"test+grantee{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var ea = await emergencyAccessRepository.CreateAsync(new EmergencyAccess
+        {
+            GrantorId = grantor.Id,
+            GranteeId = grantee.Id,
+            Status = EmergencyAccessStatusType.RecoveryInitiated,
+            WaitTimeDays = 30,
+            RecoveryInitiatedDate = DateTime.UtcNow,
+        });
+
+        // Act
+        var results = await emergencyAccessRepository.GetExpiredRecoveriesAsync();
+
+        // Assert — the record's wait period hasn't elapsed, so it must not appear
+        Assert.DoesNotContain(results, r => r.Id == ea.Id);
+    }
+
+    /// <summary>
+    /// Verifies GetManyToNotifyAsync only returns records that are within 1 day of expiry
+    /// AND whose last notification was more than 24 hours ago.
+    /// </summary>
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyToNotifyAsync_ReturnsOnly_EligibleNotifications(
+        IUserRepository userRepository,
+        IEmergencyAccessRepository emergencyAccessRepository)
+    {
+        // Arrange
+        var grantor = await userRepository.CreateAsync(new User
+        {
+            Name = "Grantor",
+            Email = $"test+grantor{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var grantee = await userRepository.CreateAsync(new User
+        {
+            Name = "Grantee",
+            Email = $"test+grantee{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        // Record 1: eligible — within notification window and last notified >24h ago
+        // WaitTimeDays=5, initiated 5 days ago → (5-1)=4 days after initiation is the
+        // notification threshold, which is 1 day ago → eligible.
+        // LastNotificationDate 2 days ago → >24h → eligible.
+        var eligible = await emergencyAccessRepository.CreateAsync(new EmergencyAccess
+        {
+            GrantorId = grantor.Id,
+            GranteeId = grantee.Id,
+            Status = EmergencyAccessStatusType.RecoveryInitiated,
+            WaitTimeDays = 5,
+            RecoveryInitiatedDate = DateTime.UtcNow.AddDays(-5),
+            LastNotificationDate = DateTime.UtcNow.AddDays(-2),
+        });
+
+        // Record 2: too recently notified — in window but LastNotificationDate is now
+        await emergencyAccessRepository.CreateAsync(new EmergencyAccess
+        {
+            GrantorId = grantor.Id,
+            GranteeId = grantee.Id,
+            Status = EmergencyAccessStatusType.RecoveryInitiated,
+            WaitTimeDays = 5,
+            RecoveryInitiatedDate = DateTime.UtcNow.AddDays(-5),
+            LastNotificationDate = DateTime.UtcNow,
+        });
+
+        // Record 3: not in notification window — initiated recently with long wait
+        await emergencyAccessRepository.CreateAsync(new EmergencyAccess
+        {
+            GrantorId = grantor.Id,
+            GranteeId = grantee.Id,
+            Status = EmergencyAccessStatusType.RecoveryInitiated,
+            WaitTimeDays = 30,
+            RecoveryInitiatedDate = DateTime.UtcNow,
+            LastNotificationDate = DateTime.UtcNow.AddDays(-2),
+        });
+
+        // Record 4: null RecoveryInitiatedDate (should NOT be returned)
+        await emergencyAccessRepository.CreateAsync(new EmergencyAccess
+        {
+            GrantorId = grantor.Id,
+            GranteeId = grantee.Id,
+            Status = EmergencyAccessStatusType.RecoveryInitiated,
+            WaitTimeDays = 1,
+            RecoveryInitiatedDate = null,
+            LastNotificationDate = DateTime.UtcNow.AddDays(-2),
+        });
+
+        // Record 5: wrong status — eligible dates but Confirmed status (should NOT be returned)
+        await emergencyAccessRepository.CreateAsync(new EmergencyAccess
+        {
+            GrantorId = grantor.Id,
+            GranteeId = grantee.Id,
+            Status = EmergencyAccessStatusType.Confirmed,
+            WaitTimeDays = 5,
+            RecoveryInitiatedDate = DateTime.UtcNow.AddDays(-5),
+            LastNotificationDate = DateTime.UtcNow.AddDays(-2),
+        });
+
+        // Act
+        var results = await emergencyAccessRepository.GetManyToNotifyAsync();
+
+        // Assert — only the eligible record should be returned
+        var resultIds = results.Select(r => r.Id).ToHashSet();
+        Assert.Contains(eligible.Id, resultIds);
+        Assert.DoesNotContain(results, r => r.Id != eligible.Id
+            && r.GrantorId == grantor.Id);
+    }
+
+    /// <summary>
+    /// Verifies GetManyToNotifyAsync excludes records with null LastNotificationDate.
+    /// </summary>
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyToNotifyAsync_ExcludesRecords_WithNullLastNotificationDate(
+        IUserRepository userRepository,
+        IEmergencyAccessRepository emergencyAccessRepository)
+    {
+        // Arrange
+        var grantor = await userRepository.CreateAsync(new User
+        {
+            Name = "Grantor",
+            Email = $"test+grantor{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var grantee = await userRepository.CreateAsync(new User
+        {
+            Name = "Grantee",
+            Email = $"test+grantee{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        // Record with null LastNotificationDate — should not be returned
+        var ea = await emergencyAccessRepository.CreateAsync(new EmergencyAccess
+        {
+            GrantorId = grantor.Id,
+            GranteeId = grantee.Id,
+            Status = EmergencyAccessStatusType.RecoveryInitiated,
+            WaitTimeDays = 1,
+            RecoveryInitiatedDate = DateTime.UtcNow.AddDays(-10),
+            LastNotificationDate = null,
+        });
+
+        // Act
+        var results = await emergencyAccessRepository.GetManyToNotifyAsync();
+
+        // Assert
+        Assert.DoesNotContain(results, r => r.Id == ea.Id);
+    }
 }

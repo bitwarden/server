@@ -1,9 +1,6 @@
-﻿using AutoMapper;
-using Bit.Core.Entities;
-using Bit.Infrastructure.EntityFramework.Repositories;
+﻿using Bit.Seeder.Models;
 using Bit.Seeder.Options;
 using Bit.Seeder.Services;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Seeder.Pipeline;
@@ -11,20 +8,17 @@ namespace Bit.Seeder.Pipeline;
 /// <summary>
 /// Orchestrates recipe-based seeding by coordinating the Pipeline infrastructure.
 /// </summary>
-internal sealed class RecipeOrchestrator(DatabaseContext db, IMapper mapper)
+internal sealed class RecipeOrchestrator(SeederDependencies deps)
 {
     /// <summary>
     /// Executes a preset by registering its recipe, building a service provider, and running all steps.
     /// </summary>
     /// <param name="presetName">Name of the embedded preset (e.g., "dunder-mifflin-full")</param>
-    /// <param name="passwordHasher">Password hasher for user creation</param>
-    /// <param name="manglerService">Mangler service for test isolation</param>
     /// <param name="password">Optional password for all seeded accounts</param>
+    /// <param name="kdfIterations">Optional KDF iteration count. Defaults to 5,000 for fast seeding.</param>
     /// <returns>Execution result with organization ID and entity counts</returns>
-    internal ExecutionResult Execute(
+    internal PipelineExecutionResult Execute(
         string presetName,
-        IPasswordHasher<User> passwordHasher,
-        IManglerService manglerService,
         string? password = null,
         int? kdfIterations = null)
     {
@@ -36,38 +30,32 @@ internal sealed class RecipeOrchestrator(DatabaseContext db, IMapper mapper)
         var effectiveKdf = kdfIterations ?? preset.KdfIterations ?? 5_000;
 
         var services = new ServiceCollection();
-        services.AddSingleton(passwordHasher);
-        services.AddSingleton(manglerService);
+        services.AddSingleton(deps.PasswordHasher);
+        services.AddSingleton(deps.ManglerService);
         services.AddSingleton<ISeedReader>(reader);
         services.AddSingleton(new SeederSettings(password, effectiveKdf));
-        services.AddSingleton(db);
+        services.AddSingleton(deps.Db);
 
         PresetLoader.RegisterRecipe(presetName, reader, services);
 
-        using var serviceProvider = services.BuildServiceProvider();
-        var committer = new BulkCommitter(db, mapper);
-        var executor = new RecipeExecutor(presetName, serviceProvider, committer);
-
-        return executor.Execute();
+        return BuildAndExecute(presetName, services);
     }
 
     /// <summary>
     /// Executes a recipe built programmatically from CLI options.
     /// </summary>
-    internal ExecutionResult Execute(
-        OrganizationVaultOptions options,
-        IPasswordHasher<User> passwordHasher,
-        IManglerService manglerService)
+    internal PipelineExecutionResult Execute(OrganizationVaultOptions options)
     {
         var services = new ServiceCollection();
-        services.AddSingleton(passwordHasher);
-        services.AddSingleton(manglerService);
+        services.AddSingleton(deps.PasswordHasher);
+        services.AddSingleton(deps.ManglerService);
         services.AddSingleton(new SeederSettings(options.Password, options.KdfIterations));
 
         var recipeName = "from-options";
         var builder = services.AddRecipe(recipeName);
 
         builder.CreateOrganization(options.Name, options.Domain, options.Users + 1, options.PlanType);
+        builder.AddOrganizationApiKey();
         builder.AddOwner();
         builder.WithGenerator(options.Domain);
         builder.AddUsers(options.Users, options.RealisticStatusMix);
@@ -98,50 +86,49 @@ internal sealed class RecipeOrchestrator(DatabaseContext db, IMapper mapper)
 
         builder.Validate();
 
-        using var serviceProvider = services.BuildServiceProvider();
-        var committer = new BulkCommitter(db, mapper);
-        var executor = new RecipeExecutor(recipeName, serviceProvider, committer);
-
-        return executor.Execute();
+        return BuildAndExecute(recipeName, services);
     }
 
     /// <summary>
-    /// Lists all available embedded presets and fixtures.
+    /// Executes a recipe for an individual user built programmatically from CLI options.
     /// </summary>
-    /// <returns>Available presets grouped by category</returns>
-    internal static AvailableSeeds ListAvailable()
+    internal PipelineExecutionResult Execute(IndividualUserOptions options)
     {
-        var seedReader = new SeedReader();
-        var all = seedReader.ListAvailable();
+        var firstName = options.FirstName ?? new Bogus.Faker().Name.FirstName();
+        var lastName = options.LastName ?? new Bogus.Faker().Name.LastName();
+        var email = options.Email ?? $"{firstName}.{lastName}@individual.example".ToLowerInvariant();
 
-        var presets = all.Where(n => n.StartsWith("presets."))
-            .Select(n => n["presets.".Length..])
-            .ToList();
+        var premium = options.Premium;
+        var maxStorageGb = premium ? (short)1 : (short)0;
 
-        var fixtures = all.Where(n => !n.StartsWith("presets."))
-            .GroupBy(n => n.Split('.')[0])
-            .ToDictionary(
-                g => g.Key,
-                g => (IReadOnlyList<string>)g.ToList());
+        var services = new ServiceCollection();
+        services.AddSingleton(deps.PasswordHasher);
+        services.AddSingleton(deps.ManglerService);
+        services.AddSingleton(new SeederSettings(options.Password, options.KdfIterations));
 
-        return new AvailableSeeds(presets, fixtures);
+        var recipeName = "individual-from-options";
+        var builder = services.AddRecipe(recipeName);
+
+        builder.CreateIndividualUser(email, premium, maxStorageGb);
+        builder.WithGenerator("individual.example");
+
+        if (options.GenerateVault)
+        {
+            builder.AddNamedFolders(["Social", "Finance", "Work", "Shopping", "Entertainment"]);
+            builder.AddPersonalCiphers(75);
+        }
+
+        builder.Validate();
+
+        return BuildAndExecute(recipeName, services);
     }
+
+    private PipelineExecutionResult BuildAndExecute(string recipeName, ServiceCollection services)
+    {
+        using var serviceProvider = services.BuildServiceProvider();
+        var committer = new BulkCommitter(deps.Db, deps.Mapper);
+        var executor = new RecipeExecutor(recipeName, serviceProvider, committer);
+        return executor.Execute();
+    }
+
 }
-
-/// <summary>
-/// Result of pipeline execution with organization ID and entity counts.
-/// </summary>
-internal record ExecutionResult(
-    Guid OrganizationId,
-    string? OwnerEmail,
-    int UsersCount,
-    int GroupsCount,
-    int CollectionsCount,
-    int CiphersCount);
-
-/// <summary>
-/// Available presets and fixtures grouped by category.
-/// </summary>
-internal record AvailableSeeds(
-    IReadOnlyList<string> Presets,
-    IReadOnlyDictionary<string, IReadOnlyList<string>> Fixtures);

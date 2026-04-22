@@ -95,11 +95,13 @@ jobs:
           - project_name: Sso
     steps:
       - name: Print environment
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
           whoami
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
-          echo "Dry Run: ${{ inputs.dry_run }}"
+          echo "Dry Run: $DRY_RUN" 
 
       - name: Set up project name
         id: setup
@@ -111,7 +113,7 @@ jobs:
 
       ########## GHCR ##########
       - name: Log in to GHCR
-        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}

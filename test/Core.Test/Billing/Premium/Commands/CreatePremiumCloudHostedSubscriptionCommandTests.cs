@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing;
+﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Billing;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
@@ -1356,6 +1357,86 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
             Arg.Any<User>(), Arg.Any<IReadOnlyList<string>>(), Arg.Any<DiscountTierType>());
         await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(opts =>
             opts.Discounts == null));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_WithMarketingFromMarketing_SetsMarketingInitiatedMetadata(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Arrange
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+        user.Email = "test@example.com";
+        paymentMethod.Type = TokenizablePaymentMethodType.Card;
+        paymentMethod.Token = "card_token_123";
+
+        var subscriptionPurchase = new PremiumSubscriptionPurchase
+        {
+            PaymentMethod = paymentMethod,
+            BillingAddress = billingAddress,
+            AdditionalStorageGb = 0,
+            Coupons = null,
+            FromMarketing = MarketingInitiativeConstants.Premium
+        };
+
+        var mockCustomer = CreateMockCustomer();
+        var mockSubscription = CreateMockActiveSubscription();
+
+        SubscriptionCreateOptions? capturedOptions = null;
+        _stripeAdapter.CreateCustomerAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Do<SubscriptionCreateOptions>(opts => capturedOptions = opts))
+            .Returns(mockSubscription);
+
+        // Act
+        var result = await _command.Run(user, subscriptionPurchase);
+
+        // Assert
+        Assert.True(result.IsT0);
+        Assert.NotNull(capturedOptions);
+        Assert.Equal("marketing-initiated", capturedOptions.Metadata[StripeConstants.MetadataKeys.TrialInitiationPath]);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_WithoutFromMarketing_SetsProductInitiatedMetadata(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Arrange
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+        user.Email = "test@example.com";
+        paymentMethod.Type = TokenizablePaymentMethodType.Card;
+        paymentMethod.Token = "card_token_123";
+
+        var subscriptionPurchase = new PremiumSubscriptionPurchase
+        {
+            PaymentMethod = paymentMethod,
+            BillingAddress = billingAddress,
+            AdditionalStorageGb = 0,
+            Coupons = null,
+            FromMarketing = null
+        };
+
+        var mockCustomer = CreateMockCustomer();
+        var mockSubscription = CreateMockActiveSubscription();
+
+        SubscriptionCreateOptions? capturedOptions = null;
+        _stripeAdapter.CreateCustomerAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Do<SubscriptionCreateOptions>(opts => capturedOptions = opts))
+            .Returns(mockSubscription);
+
+        // Act
+        var result = await _command.Run(user, subscriptionPurchase);
+
+        // Assert
+        Assert.True(result.IsT0);
+        Assert.NotNull(capturedOptions);
+        Assert.Equal("product-initiated", capturedOptions.Metadata[StripeConstants.MetadataKeys.TrialInitiationPath]);
     }
 
     [Theory, BitAutoData]

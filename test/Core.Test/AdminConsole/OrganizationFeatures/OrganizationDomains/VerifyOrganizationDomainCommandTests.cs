@@ -2,8 +2,8 @@
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -182,7 +182,7 @@ public class VerifyOrganizationDomainCommandTests
 
         _ = await sutProvider.Sut.UserVerifyOrganizationDomainAsync(domain);
 
-        await sutProvider.GetDependency<IVNextSavePolicyCommand>()
+        await sutProvider.GetDependency<ISavePolicyCommand>()
             .Received(1)
             .SaveAsync(Arg.Is<SavePolicyModel>(x => x.PolicyUpdate.Type == PolicyType.SingleOrg &&
                                                     x.PolicyUpdate.OrganizationId == domain.OrganizationId &&
@@ -192,7 +192,7 @@ public class VerifyOrganizationDomainCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UserVerifyOrganizationDomainAsync_UsesVNextSavePolicyCommand(
+    public async Task UserVerifyOrganizationDomainAsync_SavesPolicy(
         OrganizationDomain domain, Guid userId, SutProvider<VerifyOrganizationDomainCommand> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationDomainRepository>()
@@ -208,7 +208,7 @@ public class VerifyOrganizationDomainCommandTests
 
         _ = await sutProvider.Sut.UserVerifyOrganizationDomainAsync(domain);
 
-        await sutProvider.GetDependency<IVNextSavePolicyCommand>()
+        await sutProvider.GetDependency<ISavePolicyCommand>()
             .Received(1)
             .SaveAsync(Arg.Is<SavePolicyModel>(m =>
                 m.PolicyUpdate.Type == PolicyType.SingleOrg &&
@@ -235,7 +235,7 @@ public class VerifyOrganizationDomainCommandTests
 
         _ = await sutProvider.Sut.UserVerifyOrganizationDomainAsync(domain);
 
-        await sutProvider.GetDependency<IVNextSavePolicyCommand>()
+        await sutProvider.GetDependency<ISavePolicyCommand>()
             .DidNotReceive()
             .SaveAsync(Arg.Any<SavePolicyModel>());
     }
