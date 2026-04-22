@@ -109,7 +109,7 @@ public class CipherService : ICipherService
             await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_Created);
 
             // push
-            await _pushService.PushSyncCipherCreateAsync(cipher, null);
+            await _pushService.PushSyncCipherCreateAsync(cipher, collectionIds);
         }
         else
         {
@@ -163,7 +163,7 @@ public class CipherService : ICipherService
             }
 
             // push
-            await _pushService.PushSyncCipherCreateAsync(cipher, null);
+            await _pushService.PushSyncCipherCreateAsync(cipher, collectionIds);
         }
         else
         {
@@ -424,12 +424,14 @@ public class CipherService : ICipherService
             throw new BadRequestException("You do not have permissions to delete this.");
         }
 
+        var collectionIds = await GetCollectionIdsForPushAsync(cipherDetails);
+
         await _cipherRepository.DeleteAsync(cipherDetails);
         await _attachmentStorageService.DeleteAttachmentsForCipherAsync(cipherDetails.Id);
         await _eventService.LogCipherEventAsync(cipherDetails, EventType.Cipher_Deleted);
 
         // push
-        await _pushService.PushSyncCipherDeleteAsync(cipherDetails);
+        await _pushService.PushCipherAsync(cipherDetails, PushType.SyncLoginDelete, collectionIds);
     }
 
     public async Task DeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId, Guid? organizationId = null, bool orgAdmin = false)
@@ -990,6 +992,22 @@ public class CipherService : ICipherService
         }
 
         return storageBytesRemaining;
+    }
+
+    private async Task<ICollection<Guid>> GetCollectionIdsForPushAsync(Cipher cipher)
+    {
+        if (!cipher.OrganizationId.HasValue)
+        {
+            return null;
+        }
+
+        var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(cipher.OrganizationId.Value);
+
+        return collectionCiphers
+            .Where(collectionCipher => collectionCipher.CipherId == cipher.Id)
+            .Select(collectionCipher => collectionCipher.CollectionId)
+            .Distinct()
+            .ToList();
     }
 
     private async Task ValidateCipherCanBeShared(

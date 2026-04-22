@@ -103,6 +103,7 @@ public class MultiServicePushNotificationServiceTests
         await _collectionCipherRepository
             .Received(1)
             .GetUserIdsByCollectionIdsAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(collectionId)));
+        await _collectionCipherRepository.Received(0).GetManyByOrganizationIdAsync(Arg.Any<Guid>());
 
         // PushAsync is called per-user on each engine (2 users × 2 engines = 4 calls)
         await _fakeEngine1
@@ -139,8 +140,10 @@ public class MultiServicePushNotificationServiceTests
     }
 
     [Fact]
-    public async Task PushCipherAsync_OrgCipher_NoCollectionIds_DoesNotNotify()
+    public async Task PushCipherAsync_OrgCipher_NoCollectionIds_ResolvesCollections_AndNotifies()
     {
+        var userId = Guid.NewGuid();
+        var collectionId = Guid.NewGuid();
         var cipher = new Cipher
         {
             Id = Guid.NewGuid(),
@@ -149,11 +152,40 @@ public class MultiServicePushNotificationServiceTests
             RevisionDate = DateTime.UtcNow,
         };
 
+        _collectionCipherRepository
+            .GetManyByOrganizationIdAsync(cipher.OrganizationId.Value)
+            .Returns([
+                new Core.Entities.CollectionCipher { CipherId = cipher.Id, CollectionId = collectionId },
+                new Core.Entities.CollectionCipher { CipherId = Guid.NewGuid(), CollectionId = Guid.NewGuid() },
+            ]);
+
+        _collectionCipherRepository
+            .GetUserIdsByCollectionIdsAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(collectionId)))
+            .Returns([userId]);
+
         await _sut.PushCipherAsync(cipher, PushType.SyncLoginDelete, null);
 
-        await _collectionCipherRepository.Received(0).GetUserIdsByCollectionIdsAsync(Arg.Any<IEnumerable<Guid>>());
-        await _fakeEngine1.Received(0).PushAsync(Arg.Any<PushNotification<SyncCipherPushNotification>>());
-        await _fakeEngine2.Received(0).PushAsync(Arg.Any<PushNotification<SyncCipherPushNotification>>());
+        await _collectionCipherRepository.Received(1).GetManyByOrganizationIdAsync(cipher.OrganizationId.Value);
+        await _collectionCipherRepository
+            .Received(1)
+            .GetUserIdsByCollectionIdsAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(collectionId)));
+
+        await _fakeEngine1
+            .Received(1)
+            .PushAsync(Arg.Is<PushNotification<SyncCipherPushNotification>>(n =>
+                n.Type == PushType.SyncLoginDelete &&
+                n.Target == NotificationTarget.User &&
+                n.TargetId == userId &&
+                n.Payload.OrganizationId == cipher.OrganizationId &&
+                n.Payload.CollectionIds != null &&
+                n.Payload.CollectionIds.Contains(collectionId)));
+
+        await _fakeEngine2
+            .Received(1)
+            .PushAsync(Arg.Is<PushNotification<SyncCipherPushNotification>>(n =>
+                n.Type == PushType.SyncLoginDelete &&
+                n.Target == NotificationTarget.User &&
+                n.TargetId == userId));
     }
 
 #endif
