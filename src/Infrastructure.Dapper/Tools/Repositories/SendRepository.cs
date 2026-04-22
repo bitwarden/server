@@ -224,6 +224,15 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
         return sends;
     }
 
+    public async Task UpdateManyDeletionDatesByIdsAsync(IEnumerable<Guid> ids, int deletionHours)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        await connection.ExecuteAsync(
+            $"[{Schema}].[Send_UpdateDeletionDatesByIds]",
+            new { Ids = ids.ToGuidIdArrayTVP(), DeletionHours = deletionHours },
+            commandType: CommandType.StoredProcedure);
+    }
+
     private async Task ProtectDataAndSaveAsync(Send send, Func<Task> saveTask)
     {
         if (send == null)

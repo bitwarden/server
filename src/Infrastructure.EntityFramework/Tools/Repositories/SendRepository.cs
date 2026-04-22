@@ -156,6 +156,20 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
         return Mapper.Map<List<Guid>>(orgUserSendIds);
     }
 
+    public async Task UpdateManyDeletionDatesByIdsAsync(IEnumerable<Guid> ids, int deletionHours)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var sends = dbContext.Sends.Where(s => ids.Contains(s.Id));
+        await sends.ExecuteUpdateAsync(setters => setters
+            .SetProperty(s => s.DeletionDate, s => s.CreationDate.AddHours(deletionHours))
+            .SetProperty(s => s.RevisionDate, DateTime.UtcNow)
+        );
+        var userIds = await sends.Select(s => s.User.Id).ToArrayAsync() ?? [];
+        await dbContext.UserBumpManyAccountRevisionDatesAsync(userIds);
+        await dbContext.SaveChangesAsync();
+    }
+
     public async Task<ICollection<Core.Tools.Entities.Send>> GetManyByIdsAsync(IEnumerable<Guid> ids)
     {
         using var scope = ServiceScopeFactory.CreateScope();
