@@ -5,9 +5,9 @@ using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Services;
 using NSubstitute;
 using Xunit;
@@ -35,6 +35,12 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
                 .IsEnabled(FeatureFlagKeys.GenerateInviteLink)
                 .Returns(true);
         });
+        _factory.SubstituteService<IApplicationCacheService>(cacheService =>
+        {
+            cacheService
+                .GetOrganizationAbilityAsync(Arg.Any<Guid>())
+                .Returns(new OrganizationAbility { UseInviteLinks = true });
+        });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
@@ -61,7 +67,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
     }
 
     [Fact]
-    public async Task Create_AsOwner_ReturnsCreated()
+    public async Task CreateThenGet_AsOwner_ReturnsCreatedAndOk()
     {
         var request = new CreateOrganizationInviteLinkRequestModel
         {
@@ -69,22 +75,29 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
             EncryptedInviteKey = _validEncryptedKey,
         };
 
-        var response = await _client.PostAsJsonAsync(
+        static void AssertInviteLink(OrganizationInviteLinkResponseModel? content, Organization organization)
+        {
+            Assert.NotNull(content);
+            Assert.NotEqual(Guid.Empty, content.Id);
+            Assert.NotEqual(Guid.Empty, content.Code);
+            Assert.Equal(organization.Id, content.OrganizationId);
+            Assert.Equal(["acme.com", "example.com"], content.AllowedDomains);
+            Assert.Equal(_validEncryptedKey, content.EncryptedInviteKey);
+        }
+
+        var createResponse = await _client.PostAsJsonAsync(
             $"/organizations/{_organization.Id}/invite-link", request);
 
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
 
-        var content = await response.Content.ReadFromJsonAsync<OrganizationInviteLinkResponseModel>();
-        Assert.NotNull(content);
-        Assert.NotEqual(Guid.Empty, content.Id);
-        Assert.NotEqual(Guid.Empty, content.Code);
-        Assert.Equal(_organization.Id, content.OrganizationId);
-        Assert.Equal(["acme.com", "example.com"], content.AllowedDomains);
-        Assert.Equal(_validEncryptedKey, content.EncryptedInviteKey);
+        var created = await createResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkResponseModel>();
+        AssertInviteLink(created, _organization);
 
-        var repository = _factory.GetService<IOrganizationInviteLinkRepository>();
-        var persisted = await repository.GetByOrganizationIdAsync(_organization.Id);
-        Assert.NotNull(persisted);
-        Assert.Equal(content.Id, persisted.Id);
+        var getResponse = await _client.GetAsync($"/organizations/{_organization.Id}/invite-link");
+
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+
+        var content = await getResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkResponseModel>();
+        AssertInviteLink(content, _organization);
     }
 }
