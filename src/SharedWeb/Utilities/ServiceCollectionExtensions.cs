@@ -21,6 +21,7 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Services.Implementations;
 using Bit.Core.Auth.UserFeatures;
+using Bit.Core.Auth.UserFeatures.Devices;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess;
 using Bit.Core.Auth.UserFeatures.PasswordValidation;
 using Bit.Core.Billing.Providers.Services;
@@ -166,6 +167,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEventService, EventService>();
         services.AddScoped<IEmergencyAccessService, EmergencyAccessService>();
         services.AddSingleton<IDeviceService, DeviceService>();
+        services.AddDeviceServices();
         services.AddScoped<ISsoConfigService, SsoConfigService>();
         services.AddScoped<IAuthRequestService, AuthRequestService>();
         services.AddScoped<IDuoUniversalTokenService, DuoUniversalTokenService>();
@@ -293,9 +295,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDnsResolverService, DnsResolverService>();
         services.AddOptionality();
         services.AddTokenizers();
-
         services.AddScoped<IApplicationCacheService, FeatureRoutedCacheService>();
         services.AddOrganizationAbilityCache(globalSettings);
+        services.AddProviderAbilityCache(globalSettings);
 
         if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
             CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
@@ -479,10 +481,6 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services, IWebHostEnvironment env, GlobalSettings globalSettings)
     {
         var builder = services.AddDataProtection().SetApplicationName("Bitwarden");
-        if (env.IsDevelopment())
-        {
-            return;
-        }
 
         if (globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.DataProtection.Directory))
         {
@@ -503,9 +501,13 @@ public static class ServiceCollectionExtensions
                     "dataprotection.pfx", globalSettings.DataProtection.CertificatePassword)
                     .GetAwaiter().GetResult();
             }
-            builder
-                .PersistKeysToAzureBlobStorage(globalSettings.Storage.ConnectionString, "aspnet-dataprotection", "keys.xml")
-                .ProtectKeysWithCertificate(dataProtectionCert);
+
+            if (!env.IsDevelopment())
+            {
+                builder
+                    .PersistKeysToAzureBlobStorage(globalSettings.Storage.ConnectionString, "aspnet-dataprotection", "keys.xml")
+                    .ProtectKeysWithCertificate(dataProtectionCert);
+            }
         }
     }
 
