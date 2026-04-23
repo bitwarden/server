@@ -4,6 +4,7 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -72,6 +73,40 @@ public class OrganizationInviteLinksControllerTests
 
         var jsonResult = Assert.IsType<JsonHttpResult<Bit.Core.Models.Api.ErrorResponseModel>>(result);
         Assert.Equal(StatusCodes.Status409Conflict, jsonResult.StatusCode);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Get_WhenLinkExists_ReturnsOkWithModel(
+        Guid orgId,
+        OrganizationInviteLink inviteLink,
+        SutProvider<OrganizationInviteLinksController> sutProvider)
+    {
+        inviteLink.OrganizationId = orgId;
+
+        sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
+            .GetByOrganizationIdAsync(orgId)
+            .Returns(inviteLink);
+
+        var result = await sutProvider.Sut.Get(orgId);
+
+        var okResult = Assert.IsType<Ok<OrganizationInviteLinkResponseModel>>(result);
+        Assert.NotNull(okResult.Value);
+        Assert.Equal(inviteLink.Id, okResult.Value.Id);
+        Assert.Equal(orgId, okResult.Value.OrganizationId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Get_WhenNoLinkExists_ReturnsNotFound(
+        Guid orgId,
+        SutProvider<OrganizationInviteLinksController> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
+            .GetByOrganizationIdAsync(orgId)
+            .Returns((OrganizationInviteLink?)null);
+
+        var result = await sutProvider.Sut.Get(orgId);
+
+        Assert.IsType<NotFound>(result);
     }
 
     [Theory, BitAutoData]
