@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Services;
 using NSubstitute;
 using Xunit;
@@ -34,6 +35,12 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
             featureService
                 .IsEnabled(FeatureFlagKeys.GenerateInviteLink)
                 .Returns(true);
+        });
+        _factory.SubstituteService<IApplicationCacheService>(cacheService =>
+        {
+            cacheService
+                .GetOrganizationAbilityAsync(Arg.Any<Guid>())
+                .Returns(new OrganizationAbility { UseInviteLinks = true });
         });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
