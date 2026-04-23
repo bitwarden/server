@@ -178,7 +178,7 @@ public interface IMasterPasswordService
     /// must not be a Key Connector user. Salt must be unchanged. Validated via
     /// <see cref="UpdateExistingPasswordAndKdfData.ValidateDataForUser"/>.
     /// </param>
-    /// <param name="updateExistingExistingData">
+    /// <param name="updateExistingData">
     /// Cryptographic and authentication data for the updated password and KDF parameters,
     /// including <c>MasterPasswordUnlock</c>, <c>MasterPasswordAuthentication</c>,
     /// and control flags <c>ValidatePassword</c> and <c>RefreshStamp</c>.
@@ -187,7 +187,7 @@ public interface IMasterPasswordService
     /// On success, the modified <see cref="User"/>. On failure, an array of
     /// <see cref="IdentityError"/> describing validation failures.
     /// </returns>
-    Task<OneOf<User, IdentityError[]>> SaveUpdateExistingMasterPasswordAndKdfAsync(User user, UpdateExistingPasswordAndKdfData updateExistingExistingData);
+    Task<OneOf<User, IdentityError[]>> SaveUpdateExistingMasterPasswordAndKdfAsync(User user, UpdateExistingPasswordAndKdfData updateExistingData);
 
     /// <summary>
     /// Applies a new master password over the user's existing one and persists the updated user

@@ -183,10 +183,10 @@ public class MasterPasswordService(
 
     public async Task<OneOf<User, IdentityError[]>> SaveUpdateExistingMasterPasswordAndKdfAsync(
         User user,
-        UpdateExistingPasswordAndKdfData updateExistingExistingData)
+        UpdateExistingPasswordAndKdfData updateExistingData)
     {
         EnsureUserIsHydrated(user);
-        updateExistingExistingData.ValidateDataForUser(user);
+        updateExistingData.ValidateDataForUser(user);
 
         // Note: Keep "unlock and authenticate" pattern in mind.
         // We name "unlock" first as a naming convention,
@@ -196,20 +196,20 @@ public class MasterPasswordService(
         // Authentication is the mechanism for validation, unlock is the capability. 
         var result = await UpdateExistingPasswordHashAsync(
             user,
-            updateExistingExistingData.MasterPasswordAuthentication.MasterPasswordAuthenticationHash,
-            updateExistingExistingData.ValidatePassword,
-            updateExistingExistingData.RefreshStamp);
+            updateExistingData.MasterPasswordAuthentication.MasterPasswordAuthenticationHash,
+            updateExistingData.ValidatePassword,
+            updateExistingData.RefreshStamp);
 
         if (!result.Succeeded)
         {
             return result.Errors.ToArray();
         }
 
-        user.Key = updateExistingExistingData.MasterPasswordUnlock.MasterKeyWrappedUserKey;
-        SetKdfStateOnUser(user, updateExistingExistingData.MasterPasswordUnlock.Kdf);
+        user.Key = updateExistingData.MasterPasswordUnlock.MasterKeyWrappedUserKey;
+        SetKdfStateOnUser(user, updateExistingData.MasterPasswordUnlock.Kdf);
 
         // Always override the master password hint, even if it's null
-        user.MasterPasswordHint = updateExistingExistingData.MasterPasswordHint;
+        user.MasterPasswordHint = updateExistingData.MasterPasswordHint;
 
         // Update time markers on the user
         var now = _timeProvider.GetUtcNow().UtcDateTime;
