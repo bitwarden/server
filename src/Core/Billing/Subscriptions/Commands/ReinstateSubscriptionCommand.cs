@@ -48,7 +48,7 @@ public class ReinstateSubscriptionCommand(
                     CommandName, subscription.Id);
 
                 // Clear pending cancellation and flag BEFORE attaching a schedule.
-                // Stripe blocks direct subscription updates once a schedule is attached.
+                // Stripe discourages direct subscription updates once a schedule is attached as it can create inconsistencies in phases.
                 await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
                 {
                     CancelAtPeriodEnd = false,
