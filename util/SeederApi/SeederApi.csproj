@@ -2,7 +2,6 @@
 
     <PropertyGroup>
         <UserSecretsId>bitwarden-seeder-api</UserSecretsId>
-        <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
