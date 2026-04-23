@@ -13,7 +13,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Test.Common.Helpers;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
@@ -30,12 +29,6 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     public PoliciesControllerTests(ApiApplicationFactory factory)
     {
         _factory = factory;
-        _factory.SubstituteService<Core.Services.IFeatureService>(featureService =>
-        {
-            featureService
-                .IsEnabled("pm-19467-create-default-location")
-                .Returns(true);
-        });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
@@ -215,13 +208,16 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     {
         // Arrange
         var policyType = PolicyType.MasterPassword;
-        var request = new PolicyRequestModel
+        var request = new SavePolicyRequest
         {
-            Enabled = true,
-            Data = new Dictionary<string, object>
+            Policy = new PolicyRequestModel
             {
-                { "minLength", "not a number" }, // Wrong type - should be int
-                { "requireUpper", true }
+                Enabled = true,
+                Data = new Dictionary<string, object>
+                {
+                    { "minLength", "not a number" }, // Wrong type - should be int
+                    { "requireUpper", true }
+                }
             }
         };
 
@@ -240,12 +236,15 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     {
         // Arrange
         var policyType = PolicyType.SendOptions;
-        var request = new PolicyRequestModel
+        var request = new SavePolicyRequest
         {
-            Enabled = true,
-            Data = new Dictionary<string, object>
+            Policy = new PolicyRequestModel
             {
-                { "disableHideEmail", "not a boolean" } // Wrong type - should be bool
+                Enabled = true,
+                Data = new Dictionary<string, object>
+                {
+                    { "disableHideEmail", "not a boolean" } // Wrong type - should be bool
+                }
             }
         };
 
@@ -262,12 +261,15 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     {
         // Arrange
         var policyType = PolicyType.ResetPassword;
-        var request = new PolicyRequestModel
+        var request = new SavePolicyRequest
         {
-            Enabled = true,
-            Data = new Dictionary<string, object>
+            Policy = new PolicyRequestModel
             {
-                { "autoEnrollEnabled", 123 } // Wrong type - should be bool
+                Enabled = true,
+                Data = new Dictionary<string, object>
+                {
+                    { "autoEnrollEnabled", 123 } // Wrong type - should be bool
+                }
             }
         };
 
@@ -362,10 +364,13 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     {
         // Arrange
         var policyType = PolicyType.SingleOrg;
-        var request = new PolicyRequestModel
+        var request = new SavePolicyRequest
         {
-            Enabled = true,
-            Data = null
+            Policy = new PolicyRequestModel
+            {
+                Enabled = true,
+                Data = null
+            }
         };
 
         // Act
@@ -404,12 +409,15 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     {
         // Arrange
         var policyType = PolicyType.MasterPassword;
-        var request = new PolicyRequestModel
+        var request = new SavePolicyRequest
         {
-            Enabled = true,
-            Data = new Dictionary<string, object>
+            Policy = new PolicyRequestModel
             {
-                { "minLength", 129 }
+                Enabled = true,
+                Data = new Dictionary<string, object>
+                {
+                    { "minLength", 129 }
+                }
             }
         };
 
@@ -426,12 +434,15 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     {
         // Arrange
         var policyType = PolicyType.MasterPassword;
-        var request = new PolicyRequestModel
+        var request = new SavePolicyRequest
         {
-            Enabled = true,
-            Data = new Dictionary<string, object>
+            Policy = new PolicyRequestModel
             {
-                { "minComplexity", 5 }
+                Enabled = true,
+                Data = new Dictionary<string, object>
+                {
+                    { "minComplexity", 5 }
+                }
             }
         };
 
@@ -562,10 +573,13 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         // Re-authenticate as the owner of Org A
         await _loginHelper.LoginAsync(_ownerEmail);
 
-        var request = new PolicyRequestModel
+        var request = new SavePolicyRequest
         {
-            Enabled = true,
-            Data = null
+            Policy = new PolicyRequestModel
+            {
+                Enabled = true,
+                Data = null
+            }
         };
 
         // Act - Enable Single Org policy on Org A

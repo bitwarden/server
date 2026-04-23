@@ -94,6 +94,7 @@ public static class StripeConstants
         public const string StorageReconciled2025 = "storage_reconciled_2025";
         public const string OriginatingPlatform = "originatingPlatform";
         public const string OriginatingAppVersion = "originatingAppVersion";
+        public const string TrialInitiationPath = "trialInitiationPath";
     }
 
     public static class PaymentBehavior
