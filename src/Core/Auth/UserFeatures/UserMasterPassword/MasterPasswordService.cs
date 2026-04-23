@@ -51,10 +51,12 @@ public class MasterPasswordService(
         EnsureUserIsHydrated(user);
         setInitialData.ValidateDataForUser(user);
 
-        // Note: Keep "unlock then authenticate" pattern in mind.
-        // This is a purposeful inversion of that principle:
-        // Authentication is derivative of unlock, and is the mechanism for validation;
-        // eager validation keeps the logic easier to reason about, so it is performed first.
+        // Note: Keep "unlock and authenticate" pattern in mind.
+        // We name "unlock" first as a naming convention,
+        // e.g., MatherPasswordUnlockAndAuthenticationDataModel. 
+        // The two are complimentary, but mechanically Authenticate comes first.
+        // Eager validation keeps the logic easier to reason about. 
+        // Authentication is the mechanism for validation, unlock is the capability. 
         var result = await UpdateExistingPasswordHashAsync(
             user,
             setInitialData.MasterPasswordAuthentication.MasterPasswordAuthenticationHash,
@@ -107,10 +109,12 @@ public class MasterPasswordService(
 
         return async (connection, transaction) =>
         {
-            // Note: Keep "unlock then authenticate" pattern in mind.
-            // This is a purposeful inversion of that principle:
-            // Authentication is derivative of unlock, and is the mechanism for validation;
-            // eager validation keeps the logic easier to reason about, so it is performed first.
+            // Note: Keep "unlock and authenticate" pattern in mind.
+            // We name "unlock" first as a naming convention,
+            // e.g., MatherPasswordUnlockAndAuthenticationDataModel. 
+            // The two are complimentary, but mechanically Authenticate comes first.
+            // Eager validation keeps the logic easier to reason about. 
+            // Authentication is the mechanism for validation, unlock is the capability. 
             if (setInitialData.ValidatePassword)
             {
                 var validate = await ValidatePasswordInternalAsync(user,
@@ -147,10 +151,12 @@ public class MasterPasswordService(
         EnsureUserIsHydrated(user);
         updateExistingData.ValidateDataForUser(user);
 
-        // Note: Keep "unlock then authenticate" pattern in mind.
-        // This is a purposeful inversion of that principle:
-        // Authentication is derivative of unlock, and is the mechanism for validation;
-        // eager validation keeps the logic easier to reason about, so it is performed first.
+        // Note: Keep "unlock and authenticate" pattern in mind.
+        // We name "unlock" first as a naming convention,
+        // e.g., MatherPasswordUnlockAndAuthenticationDataModel. 
+        // The two are complimentary, but mechanically Authenticate comes first.
+        // Eager validation keeps the logic easier to reason about. 
+        // Authentication is the mechanism for validation, unlock is the capability. 
         var result = await UpdateExistingPasswordHashAsync(
             user,
             updateExistingData.MasterPasswordAuthentication.MasterPasswordAuthenticationHash,
@@ -182,10 +188,12 @@ public class MasterPasswordService(
         EnsureUserIsHydrated(user);
         updateExistingExistingData.ValidateDataForUser(user);
 
-        // Note: Keep "unlock then authenticate" pattern in mind.
-        // This is a purposeful inversion of that principle:
-        // Authentication is derivative of unlock, and is the mechanism for validation;
-        // eager validation keeps the logic easier to reason about, so it is performed first.
+        // Note: Keep "unlock and authenticate" pattern in mind.
+        // We name "unlock" first as a naming convention,
+        // e.g., MatherPasswordUnlockAndAuthenticationDataModel. 
+        // The two are complimentary, but mechanically Authenticate comes first.
+        // Eager validation keeps the logic easier to reason about. 
+        // Authentication is the mechanism for validation, unlock is the capability. 
         var result = await UpdateExistingPasswordHashAsync(
             user,
             updateExistingExistingData.MasterPasswordAuthentication.MasterPasswordAuthenticationHash,
