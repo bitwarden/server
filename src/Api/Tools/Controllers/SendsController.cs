@@ -70,6 +70,10 @@ public class SendsController : Controller
 
     [AllowAnonymous]
     [HttpPost("access/{id}")]
+    [ProducesResponseType<SendAccessResponseModel>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Access(string id, [FromBody] SendAccessRequestModel model)
     {
         // Uncomment whenever we want to require the `send-id` header
@@ -122,6 +126,10 @@ public class SendsController : Controller
 
     [AllowAnonymous]
     [HttpPost("{encodedSendId}/access/file/{fileId}")]
+    [ProducesResponseType<SendFileDownloadDataResponseModel>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetSendFileDownloadData(string encodedSendId,
         string fileId, [FromBody] SendAccessRequestModel model)
     {
@@ -231,6 +239,9 @@ public class SendsController : Controller
 
     [Authorize(Policy = Policies.Send)]
     [HttpPost("access/")]
+    [ProducesResponseType<SendAccessResponseModel>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AccessUsingAuth()
     {
         var guid = User.GetSendId();
@@ -278,6 +289,9 @@ public class SendsController : Controller
 
     [Authorize(Policy = Policies.Send)]
     [HttpPost("access/file/{fileId}")]
+    [ProducesResponseType<SendFileDownloadDataResponseModel>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetSendFileDownloadDataUsingAuth(string fileId)
     {
         var sendId = User.GetSendId();

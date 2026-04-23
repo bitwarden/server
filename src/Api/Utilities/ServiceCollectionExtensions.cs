@@ -62,6 +62,21 @@ public static class ServiceCollectionExtensions
                 identityTokenUrl: "https://identity.bitwarden.eu/connect/token",
                 serverDescription: "EU server");
 
+            // Security scheme for send access token endpoints (V2). The x-explicit-bearer-token
+            // extension signals the SDK code generator to emit an explicit Bearer token parameter
+            // instead of injecting the user session token via middleware.
+            config.AddSecurityDefinition("send-access-bearer", new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT",
+                Description = "Send access token obtained from /connect/token using the send_access grant.",
+                Extensions = new Dictionary<string, IOpenApiExtension>
+                {
+                    { "x-explicit-bearer-token", new JsonNodeExtension(true) }
+                }
+            });
+
             config.DescribeAllParametersInCamelCase();
             // config.UseReferencedDefinitionsForEnums();
 
