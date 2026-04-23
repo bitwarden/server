@@ -94,7 +94,8 @@ public class SendControlsSyncPolicyEvent(
                     (sendControlsPolicyData.DisableHideEmail && (send.HideEmail ?? false)) ||
                     (sendControlsPolicyData.WhoCanAccess == SendWhoCanAccessType.PasswordProtected && send.AuthType != AuthType.Password) ||
                     (sendControlsPolicyData.WhoCanAccess == SendWhoCanAccessType.SpecificPeople && send.AuthType != AuthType.Email) ||
-                    (sendControlsPolicyData.WhoCanAccess == SendWhoCanAccessType.SpecificPeople && !SendValidationService.SendAllEmailsHaveAllowedDomains(send.Emails, sendControlsPolicyData.AllowedDomains))))
+                    (sendControlsPolicyData.WhoCanAccess == SendWhoCanAccessType.SpecificPeople && !SendValidationService.SendAllEmailsHaveAllowedDomains(send.Emails, sendControlsPolicyData.AllowedDomains)) ||
+                    (sendControlsPolicyData.RestrictSendType != null && send.Type != sendControlsPolicyData.RestrictSendType)))
                 {
                     disabled.Add(send.Id);
                 } else
