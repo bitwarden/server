@@ -14,33 +14,7 @@ public class MasterPasswordPolicyRequirement : IPolicyRequirement
     /// <summary>
     /// The combined Master Password policy options enforced against the user, or null if no policy applies.
     /// </summary>
-    public MasterPasswordPolicyData? EnforcedOptions { get; }
-
-    public MasterPasswordPolicyRequirement(IEnumerable<PolicyDetails> policyDetails)
-    {
-        var policies = policyDetails.ToList();
-        if (policies.Count == 0)
-        {
-            return;
-        }
-
-        var enforcedOptions = new MasterPasswordPolicyData();
-        foreach (var policy in policies)
-        {
-            enforcedOptions.CombineWith(policy.GetDataModel<MasterPasswordPolicyData>());
-        }
-
-        // Only assign EnforcedOptions if at least one field has a meaningful value.
-        // A policy saved with no options set produces an all-null MasterPasswordPolicyData,
-        // and callers rely on EnforcedOptions == null to mean "no policy enforced".
-        if (enforcedOptions.MinComplexity.HasValue || enforcedOptions.MinLength.HasValue ||
-            (enforcedOptions.RequireLower ?? false) || (enforcedOptions.RequireUpper ?? false) ||
-            (enforcedOptions.RequireNumbers ?? false) || (enforcedOptions.RequireSpecial ?? false) ||
-            (enforcedOptions.EnforceOnLogin ?? false))
-        {
-            EnforcedOptions = enforcedOptions;
-        }
-    }
+    public MasterPasswordPolicyData? EnforcedOptions { get; init; }
 }
 
 /// <summary>
@@ -54,5 +28,26 @@ public class MasterPasswordPolicyRequirementFactory : BasePolicyRequirementFacto
     public override PolicyType PolicyType => PolicyType.MasterPassword;
 
     public override MasterPasswordPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
-        => new(policyDetails);
+    {
+        var combined = policyDetails
+            .Select(p => p.GetDataModel<MasterPasswordPolicyData>())
+            .Aggregate(new MasterPasswordPolicyData(), (result, data) =>
+            {
+                result.CombineWith(data);
+                return result;
+            });
+
+        // Only set EnforcedOptions if at least one field has a meaningful value.
+        // A policy saved with no options set produces an all-null MasterPasswordPolicyData,
+        // and callers rely on EnforcedOptions == null to mean "no policy enforced".
+        var hasAnyOption = combined.MinComplexity.HasValue || combined.MinLength.HasValue ||
+            (combined.RequireLower ?? false) || (combined.RequireUpper ?? false) ||
+            (combined.RequireNumbers ?? false) || (combined.RequireSpecial ?? false) ||
+            (combined.EnforceOnLogin ?? false);
+
+        return new MasterPasswordPolicyRequirement
+        {
+            EnforcedOptions = hasAnyOption ? combined : null
+        };
+    }
 }

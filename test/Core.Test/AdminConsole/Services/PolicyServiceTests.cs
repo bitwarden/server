@@ -126,10 +126,7 @@ public class PolicyServiceTests
     public async Task GetMasterPasswordPolicyForUserAsync_ReturnsEnforcedOptions(User user, SutProvider<PolicyService> sutProvider)
     {
         var enforcedOptions = new MasterPasswordPolicyData { MinLength = 12, RequireUpper = true };
-        var requirement = new MasterPasswordPolicyRequirement(
-        [
-            new PolicyDetails { PolicyType = PolicyType.MasterPassword, PolicyData = System.Text.Json.JsonSerializer.Serialize(enforcedOptions) }
-        ]);
+        var requirement = new MasterPasswordPolicyRequirement { EnforcedOptions = enforcedOptions };
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsyncVNext<MasterPasswordPolicyRequirement>(user.Id)
@@ -145,7 +142,7 @@ public class PolicyServiceTests
     [Theory, BitAutoData]
     public async Task GetMasterPasswordPolicyForUserAsync_WithNoPolicies_ReturnsNull(User user, SutProvider<PolicyService> sutProvider)
     {
-        var requirement = new MasterPasswordPolicyRequirement([]);
+        var requirement = new MasterPasswordPolicyRequirement();
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsyncVNext<MasterPasswordPolicyRequirement>(user.Id)
