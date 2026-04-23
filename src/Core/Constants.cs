@@ -199,6 +199,7 @@ public static class FeatureFlagKeys
     public const string WindowsDesktopAutotypeGA = "windows-desktop-autotype-ga";
     public const string FillAssistTargetingRules = "fill-assist-targeting-rules";
     public const string NotificationUndeterminedCipherScenarioLogic = "undetermined-cipher-scenario-logic";
+    public const string EnableAutofillTriage = "enable-autofill-triage";
 
     /* Billing Team */
     public const string PM24032_NewNavigationPremiumUpgradeButton = "pm-24032-new-navigation-premium-upgrade-button";
