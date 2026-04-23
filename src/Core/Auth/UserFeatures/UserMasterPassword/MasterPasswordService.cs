@@ -93,9 +93,9 @@ public class MasterPasswordService(
             return result.AsT1;
         }
 
-        await _userRepository.ReplaceAsync(user);
+        await _userRepository.ReplaceAsync(result.AsT0);
 
-        return user;
+        return result.AsT0;
     }
 
     public UpdateUserData BuildUpdateUserDelegateSetInitialMasterPassword(
@@ -225,9 +225,9 @@ public class MasterPasswordService(
             return result.AsT1;
         }
 
-        await _userRepository.ReplaceAsync(user);
+        await _userRepository.ReplaceAsync(result.AsT0);
 
-        return user;
+        return result.AsT0;
     }
 
     private async Task<IdentityResult> UpdateExistingPasswordHashAsync(User user, string newPassword,
