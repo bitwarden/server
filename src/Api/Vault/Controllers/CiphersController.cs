@@ -18,7 +18,6 @@ using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Authorization.Permissions;
 using Bit.Core.Vault.Commands.Interfaces;
@@ -1609,15 +1608,20 @@ public class CiphersController : Controller
                     try
                     {
                         var blobName = eventGridEvent.Subject.Split($"{AzureAttachmentStorageService.EventGridEnabledContainerName}/blobs/")[1];
-                        var (cipherId, organizationId, attachmentId) = AzureAttachmentStorageService.IdentifiersFromBlobName(blobName);
+                        var (cipherId, _, attachmentId) = AzureAttachmentStorageService.IdentifiersFromBlobName(blobName);
                         var cipher = await _cipherRepository.GetByIdAsync(new Guid(cipherId));
                         var attachments = cipher?.GetAttachments() ?? new Dictionary<string, CipherAttachment.MetaData>();
 
                         if (cipher == null || !attachments.TryGetValue(attachmentId, out var attachment) || attachment.Validated)
                         {
-                            if (_attachmentStorageService is AzureSendFileStorageService azureFileStorageService)
+                            if (_attachmentStorageService.FileUploadType == FileUploadType.Azure)
                             {
-                                await azureFileStorageService.DeleteBlobAsync(blobName);
+                                await _attachmentStorageService.DeleteAttachmentAsync(new Guid(cipherId),
+                                    new CipherAttachment.MetaData
+                                    {
+                                        AttachmentId = attachmentId,
+                                        ContainerName = AzureAttachmentStorageService.EventGridEnabledContainerName,
+                                    });
                             }
 
                             return;
