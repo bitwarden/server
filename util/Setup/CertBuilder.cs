@@ -56,16 +56,24 @@ public class CertBuilder
                             [
                                 "req",
                                 "-x509",
-                                "-newkey", "rsa:4096",
+                                "-newkey",
+                                "rsa:4096",
                                 "-sha256",
                                 "-nodes",
-                                "-days", "36500",
-                                "-keyout", $"{directory.FullName}/private.key",
-                                "-out", $"{directory.FullName}/certificate.crt",
-                                "-reqexts", "SAN",
-                                "-extensions", "SAN",
-                                "-config", opensslConfigPath,
-                                "-subj", $"/C=US/ST=California/L=Santa Barbara/O=Bitwarden Inc./OU=Bitwarden/CN={_context.Install.Domain}",
+                                "-days",
+                                "36500",
+                                "-keyout",
+                                $"{directory.FullName}/private.key",
+                                "-out",
+                                $"{directory.FullName}/certificate.crt",
+                                "-reqexts",
+                                "SAN",
+                                "-extensions",
+                                "SAN",
+                                "-config",
+                                opensslConfigPath,
+                                "-subj",
+                                $"/C=US/ST=California/L=Santa Barbara/O=Bitwarden Inc./OU=Bitwarden/CN={_context.Install.Domain}",
                             ]);
                     }
                     finally
@@ -85,7 +93,8 @@ public class CertBuilder
                 "openssl",
                 [
                     "dhparam",
-                    "-out", $"{directory.FullName}/dhparam.pem",
+                    "-out",
+                    $"{directory.FullName}/dhparam.pem",
                     "2048",
                 ]);
         }
@@ -103,23 +112,32 @@ public class CertBuilder
             [
                 "req",
                 "-x509",
-                "-newkey", "rsa:4096",
+                "-newkey",
+                "rsa:4096",
                 "-sha256",
                 "-nodes",
-                "-keyout", "identity.key",
-                "-out", "identity.crt",
-                "-subj", "/CN=Bitwarden IdentityServer",
-                "-days", "36500",
+                "-keyout",
+                "identity.key",
+                "-out",
+                "identity.crt",
+                "-subj",
+                "/CN=Bitwarden IdentityServer",
+                "-days",
+                "36500",
             ]);
         Helpers.Exec(
             "openssl",
             [
                 "pkcs12",
                 "-export",
-                "-out", $"{_context.App.RootDirectory}/identity/identity.pfx",
-                "-inkey", "identity.key",
-                "-in", "identity.crt",
-                "-passout", $"pass:{_context.Install.IdentityCertPassword}",
+                "-out",
+                $"{_context.App.RootDirectory}/identity/identity.pfx",
+                "-inkey",
+                "identity.key",
+                "-in",
+                "identity.crt",
+                "-passout",
+                $"pass:{_context.Install.IdentityCertPassword}",
             ]);
 
         Helpers.WriteLine(_context);
@@ -153,23 +171,32 @@ public class CertBuilder
                 [
                     "req",
                     "-x509",
-                    "-newkey", "rsa:4096",
+                    "-newkey",
+                    "rsa:4096",
                     "-sha256",
                     "-nodes",
-                    "-keyout", "bwkc.key",
-                    "-out", "bwkc.crt",
-                    "-subj", "/CN=Bitwarden Key Connector",
-                    "-days", "36500",
+                    "-keyout",
+                    "bwkc.key",
+                    "-out",
+                    "bwkc.crt",
+                    "-subj",
+                    "/CN=Bitwarden Key Connector",
+                    "-days",
+                    "36500",
                 ]);
             Helpers.Exec(
                 "openssl",
                 [
                     "pkcs12",
                     "-export",
-                    "-out", $"{_context.App.RootDirectory}/key-connector/bwkc.pfx",
-                    "-inkey", "bwkc.key",
-                    "-in", "bwkc.crt",
-                    "-passout", $"pass:{keyConnectorCertPassword}"
+                    "-out",
+                    $"{_context.App.RootDirectory}/key-connector/bwkc.pfx",
+                    "-inkey",
+                    "bwkc.key",
+                    "-in",
+                    "bwkc.crt",
+                    "-passout",
+                    $"pass:{keyConnectorCertPassword}"
                 ]);
         }
     }
