@@ -127,12 +127,11 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<bool> ConfirmOrganizationUserAsync(AcceptedOrganizationUserToConfirm organizationUserToConfirm);
 
     /// <summary>
-    /// Returns all organization users with <see cref="OrganizationUserStatusType.Accepted"/> status
-    /// and <see cref="OrganizationUserType.User"/> type for the given organization.
-    /// Used by the bulk auto-confirm on login sweep.
+    /// Returns all organization users with the given <paramref name="status"/> for the given organization.
     /// </summary>
     /// <param name="organizationId">The organization to search within.</param>
-    Task<ICollection<OrganizationUser>> GetManyPendingAutoConfirmByOrganizationIdAsync(Guid organizationId);
+    /// <param name="status">The status to filter by.</param>
+    Task<ICollection<OrganizationUser>> GetManyByOrganizationIdWithStatusAsync(Guid organizationId, OrganizationUserStatusType status);
 
     /// <summary>
     /// Returns the OrganizationUserUserDetails if found.

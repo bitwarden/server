@@ -744,18 +744,16 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         };
     }
 
-    public async Task<ICollection<OrganizationUser>> GetManyPendingAutoConfirmByOrganizationIdAsync(Guid organizationId)
+    public async Task<ICollection<OrganizationUser>> GetManyByOrganizationIdWithStatusAsync(Guid organizationId, OrganizationUserStatusType status)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationUser>(
                 "[dbo].[OrganizationUser_ReadByOrganizationId]",
-                new { OrganizationId = organizationId, Type = (short)OrganizationUserType.User },
+                new { OrganizationId = organizationId, Type = (short?)null, Status = (short)status },
                 commandType: CommandType.StoredProcedure);
 
-            return results
-                .Where(ou => ou.Status == OrganizationUserStatusType.Accepted)
-                .ToList();
+            return results.ToList();
         }
     }
 }

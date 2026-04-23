@@ -1058,15 +1058,14 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         };
     }
 
-    public async Task<ICollection<Core.Entities.OrganizationUser>> GetManyPendingAutoConfirmByOrganizationIdAsync(Guid organizationId)
+    public async Task<ICollection<Core.Entities.OrganizationUser>> GetManyByOrganizationIdWithStatusAsync(Guid organizationId, OrganizationUserStatusType status)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             var query = from ou in dbContext.OrganizationUsers
                         where ou.OrganizationId == organizationId &&
-                            ou.Type == OrganizationUserType.User &&
-                            ou.Status == OrganizationUserStatusType.Accepted
+                            ou.Status == status
                         select ou;
             return Mapper.Map<List<Core.Entities.OrganizationUser>>(await query.ToListAsync());
         }

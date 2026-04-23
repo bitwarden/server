@@ -812,34 +812,26 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpGet("pending-auto-confirm")]
     [Authorize<ManageUsersRequirement>]
+    [RequireFeature(FeatureFlagKeys.BulkAutoConfirmOnLogin)]
     public async Task<ListResponseModel<OrganizationUserPendingAutoConfirmResponseModel>> GetPendingAutoConfirmUsersAsync(Guid orgId)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.BulkAutoConfirmOnLogin))
-        {
-            throw new NotFoundException();
-        }
-
-        var pendingUsers = await _organizationUserRepository.GetManyPendingAutoConfirmByOrganizationIdAsync(orgId);
+        var pendingUsers = await _organizationUserRepository.GetManyByOrganizationIdWithStatusAsync(orgId, OrganizationUserStatusType.Accepted);
         var responses = pendingUsers.Select(u => new OrganizationUserPendingAutoConfirmResponseModel(u));
         return new ListResponseModel<OrganizationUserPendingAutoConfirmResponseModel>(responses);
     }
 
     [HttpPost("bulk-auto-confirm")]
     [Authorize<ManageUsersRequirement>]
-    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkAutomaticallyConfirmOrganizationUsersAsync(
+    [RequireFeature(FeatureFlagKeys.BulkAutoConfirmOnLogin)]
+    public async Task<IResult> BulkAutomaticallyConfirmOrganizationUsersAsync(
         Guid orgId,
         [FromBody] OrganizationUserBulkConfirmRequestModel model)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.BulkAutoConfirmOnLogin))
-        {
-            throw new NotFoundException();
-        }
-
         var userId = _userService.GetProperUserId(User);
 
         if (userId is null || userId.Value == Guid.Empty)
         {
-            throw new UnauthorizedAccessException();
+            return Error.NotFound();
         }
 
         var isOwner = await _currentContext.OrganizationOwner(orgId);
@@ -858,7 +850,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
             .BulkAutomaticallyConfirmOrganizationUsersAsync(requests);
 
         var responses = results.Select(r => new OrganizationUserBulkResponseModel(r.OrganizationUserId, r.Error ?? string.Empty));
-        return new ListResponseModel<OrganizationUserBulkResponseModel>(responses);
+        return TypedResults.Ok(new ListResponseModel<OrganizationUserBulkResponseModel>(responses));
     }
 
     private async Task RestoreOrRevokeUserAsync(
