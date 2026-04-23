@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # Script for generating and installing the Bitwarden development certificates on Linux.
 
+# Get the dev directory (parent of helpers)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEV_DIR="$(dirname "$SCRIPT_DIR")"
+
+cd "$DEV_DIR"
+
 IDENTITY_SERVER_KEY=identity_server_dev.key
 IDENTITY_SERVER_CERT=identity_server_dev.crt
 IDENTITY_SERVER_CN="Bitwarden Identity Server Dev"
@@ -18,7 +24,6 @@ else
   echo 'Error: Update manager for CA certificates not found!'
   exit 1
 fi
-
 
 openssl req -x509 -newkey rsa:4096 -sha256 -nodes -days 3650 \
     -keyout $IDENTITY_SERVER_KEY \
