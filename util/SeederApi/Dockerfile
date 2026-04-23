@@ -89,7 +89,7 @@ RUN . /etc/build-env \
 ###############################################
 #                  App stage                  #
 ###############################################
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-azurelinux3.0-distroless-extra AS app
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-azurelinux3.0-distroless-extra AS app
 
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
