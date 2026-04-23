@@ -566,6 +566,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             // TODO (PM-35501): Persist SecurityStamp so the rotation done in
             // MasterPasswordService.BuildUpdateUserDelegateSetInitialMasterPassword
             // is persisted.
+            // userEntity.LastPasswordChangeDate = timestamp; This needs adding in PM-34905
             await dbContext.SaveChangesAsync();
         };
     }
