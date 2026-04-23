@@ -119,7 +119,17 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
                                where ou.Status == Core.Enums.OrganizationUserStatusType.Confirmed && ou.UserId != null
                                select ou.UserId!.Value;
 
-            return await directUserIds.Union(groupUserIds).ToListAsync();
+            var orgLevelUserIds = from cc in dbContext.CollectionCiphers
+                                  where collectionIdList.Contains(cc.CollectionId)
+                                  join c in dbContext.Collections on cc.CollectionId equals c.Id
+                                  join ou in dbContext.OrganizationUsers on c.OrganizationId equals ou.OrganizationId
+                                  where ou.Status == Core.Enums.OrganizationUserStatusType.Confirmed
+                                      && ou.UserId != null
+                                      && (ou.Type == OrganizationUserType.Owner
+                                          || ou.Type == OrganizationUserType.Admin)
+                                  select ou.UserId!.Value;
+
+            return await directUserIds.Union(groupUserIds).Union(orgLevelUserIds).ToListAsync();
         }
     }
 
