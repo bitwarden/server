@@ -1,7 +1,9 @@
 ﻿using Bit.Core.Enums;
-using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
+using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
-namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
+namespace Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.Queries;
 
 /// <summary>
 /// Returns all Collections that a user is assigned to in an organization, either directly or via a group.
