@@ -96,6 +96,11 @@ public class Program
         if (_context.Parameters.TryGetValue("domain", out var domain))
         {
             _context.Install.Domain = domain.ToLowerInvariant();
+            if (Uri.CheckHostName(_context.Install.Domain) != UriHostNameType.Dns)
+            {
+                Helpers.WriteError("Domain is invalid. A valid domain name is required (e.g. bitwarden.example.com).");
+                return;
+            }
         }
         if (_context.Parameters.TryGetValue("dbname", out var database))
         {
@@ -159,19 +164,65 @@ public class Program
         // a new cert and bag to replace the old Identity.pfx.  This fixes an issue that came up as a result of
         // moving the project to .NET 5.
         _context.Install.IdentityCertPassword = Helpers.GetValueFromEnvFile(_context.App, "global", "globalSettings__identityServer__certificatePassword");
-        var certCountString = Helpers.Exec($"openssl pkcs12 -nokeys -info -in {application.RootDirectory}/identity/identity.pfx " +
-            $"-passin pass:{_context.Install.IdentityCertPassword} 2> /dev/null | grep -c \"\\-----BEGIN CERTIFICATE----\"", true);
-        if (int.TryParse(certCountString, out var certCount) && certCount > 1)
+        var certOutput = Helpers.Exec(
+            "openssl",
+            [
+                "pkcs12",
+                "-nokeys",
+                "-info",
+                "-in", $"{application.RootDirectory}/identity/identity.pfx",
+                "-passin", $"pass:{_context.Install.IdentityCertPassword}",
+            ],
+            returnStdout: true,
+            returnStderr: false);
+
+        var certCount = certOutput
+            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+            .Count(line => line.Contains("-----BEGIN CERTIFICATE-----"));
+
+        if (certCount > 1)
         {
             // Extract key from identity.pfx
-            Helpers.Exec($"openssl pkcs12 -in {application.RootDirectory}/identity/identity.pfx -nocerts -nodes -out identity.key " +
-                $"-passin pass:{_context.Install.IdentityCertPassword} > /dev/null 2>&1");
+            Helpers.Exec(
+                "openssl",
+                [
+                    "pkcs12",
+                    "-in", $"{application.RootDirectory}/identity/identity.pfx",
+                    "-nocerts",
+                    "-nodes",
+                    "-out", "identity.key",
+                    "-passin", $"pass:{_context.Install.IdentityCertPassword}",
+                ],
+                returnStdout: false,
+                returnStderr: false);
+
             // Extract certificate from identity.pfx
-            Helpers.Exec($"openssl pkcs12 -in {application.RootDirectory}/identity/identity.pfx -clcerts -nokeys -out identity.crt " +
-                $"-passin pass:{_context.Install.IdentityCertPassword} > /dev/null 2>&1");
+            Helpers.Exec(
+                "openssl",
+                [
+                    "pkcs12",
+                    "-in", $"{application.RootDirectory}/identity/identity.pfx",
+                    "-clcerts",
+                    "-nokeys",
+                    "-out", "identity.crt",
+                    "-passin", $"pass:{_context.Install.IdentityCertPassword}",
+                ],
+                returnStdout: false,
+                returnStderr: false);
+
             // Create new PKCS12 bag with certificate and key
-            Helpers.Exec($"openssl pkcs12 -export -out {application.RootDirectory}/identity/identity.pfx -inkey identity.key " +
-                $"-in identity.crt -passout pass:{_context.Install.IdentityCertPassword} > /dev/null 2>&1");
+            Helpers.Exec(
+                "openssl",
+                [
+                    "pkcs12",
+                    "-export",
+                    "-out", $"{application.RootDirectory}/identity/identity.pfx",
+                    "-inkey", "identity.key",
+                    "-in", $"identity.crt",
+                    "-passout", $"pass:{_context.Install.IdentityCertPassword}"
+                ],
+                returnStdout: false,
+                returnStderr: false);
         }
 
         if (_context.Parameters.ContainsKey("db"))
