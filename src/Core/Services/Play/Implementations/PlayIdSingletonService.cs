@@ -35,7 +35,7 @@ public class PlayIdSingletonService(IHttpContextAccessor httpContextAccessor, IH
 
     public bool InPlay(out string playId)
     {
-        if (hostEnvironment.IsDevelopment())
+        if (!hostEnvironment.IsProduction())
         {
             return Current.InPlay(out playId);
         }

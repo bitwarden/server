@@ -23,7 +23,8 @@ public class SendTrialInitiationEmailForRegistrationCommand(
         bool receiveMarketingEmails,
         ProductTierType productTier,
         IEnumerable<ProductType> products,
-        int trialLength)
+        int trialLength,
+        bool paymentOptional = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(email, nameof(email));
 
@@ -49,7 +50,7 @@ public class SendTrialInitiationEmailForRegistrationCommand(
             trialLength = 7;
         }
 
-        await mailService.SendTrialInitiationSignupEmailAsync(userExists, email, token, productTier, products, trialLength);
+        await mailService.SendTrialInitiationSignupEmailAsync(userExists, email, token, productTier, products, trialLength, paymentOptional);
 
         return null;
     }

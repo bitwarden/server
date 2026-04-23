@@ -151,6 +151,13 @@ BEGIN
     WHERE
         [OrganizationId] = @Id
 
+    -- Delete Organization Owned Sends
+    DELETE
+    FROM
+        [dbo].[Send]
+    WHERE
+        [OrganizationId] = @Id
+
     DELETE
     FROM
         [dbo].[Organization]
