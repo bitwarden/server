@@ -22,9 +22,9 @@ public record CartItem
     public required decimal Cost { get; init; }
 
     /// <summary>
-    /// Discounts applied specifically to this cart item.
+    /// An optional discount applied specifically to this cart item.
     /// </summary>
-    public List<BitwardenDiscount> Discounts { get; init; } = [];
+    public BitwardenDiscount? Discount { get; init; }
 }
 
 public record PasswordManagerCartItems
@@ -72,9 +72,9 @@ public record Cart
     public PlanCadenceType Cadence { get; init; }
 
     /// <summary>
-    /// Discounts applied to the entire cart.
+    /// An optional discount applied to the entire cart.
     /// </summary>
-    public List<BitwardenDiscount> Discounts { get; init; } = [];
+    public BitwardenDiscount? Discount { get; init; }
 
     /// <summary>
     /// The estimated tax for the cart.
