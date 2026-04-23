@@ -17,7 +17,7 @@ public class WebAuthnChallengeCacheProviderTests
     {
         // Arrange
         var challenge = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
-        var expectedKey = $"WebAuthnLoginAssertion_{CoreHelpers.Base64UrlEncode(challenge)}";
+        var expectedKey = $"WebAuthnAssertion_{CoreHelpers.Base64UrlEncode(challenge)}";
 
         sutProvider.GetDependency<IDistributedCache>()
             .GetAsync(expectedKey, Arg.Any<CancellationToken>())
@@ -44,7 +44,7 @@ public class WebAuthnChallengeCacheProviderTests
     {
         // Arrange
         var challenge = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
-        var expectedKey = $"WebAuthnLoginAssertion_{CoreHelpers.Base64UrlEncode(challenge)}";
+        var expectedKey = $"WebAuthnAssertion_{CoreHelpers.Base64UrlEncode(challenge)}";
 
         sutProvider.GetDependency<IDistributedCache>()
             .GetAsync(expectedKey, Arg.Any<CancellationToken>())
