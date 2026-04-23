@@ -51,6 +51,10 @@ public class MasterPasswordService(
         EnsureUserIsHydrated(user);
         setInitialData.ValidateDataForUser(user);
 
+        // Note: Keep "unlock then authenticate" pattern in mind.
+        // This is a purposeful inversion of that principle:
+        // Authentication is derivative of unlock, and is the mechanism for validation;
+        // eager validation keeps the logic easier to reason about, so it is performed first.
         var result = await UpdateExistingPasswordHashAsync(
             user,
             setInitialData.MasterPasswordAuthentication.MasterPasswordAuthenticationHash,
@@ -67,7 +71,7 @@ public class MasterPasswordService(
         // Set salt on the user
         user.MasterPasswordSalt = setInitialData.MasterPasswordUnlock.Salt;
 
-        // Always override the master password hint, even if it's null.
+        // Always override the master password hint, even if it's null
         user.MasterPasswordHint = setInitialData.MasterPasswordHint;
 
         // Update time markers on the user
@@ -103,6 +107,10 @@ public class MasterPasswordService(
 
         return async (connection, transaction) =>
         {
+            // Note: Keep "unlock then authenticate" pattern in mind.
+            // This is a purposeful inversion of that principle:
+            // Authentication is derivative of unlock, and is the mechanism for validation;
+            // eager validation keeps the logic easier to reason about, so it is performed first.
             if (setInitialData.ValidatePassword)
             {
                 var validate = await ValidatePasswordInternalAsync(user,
@@ -139,6 +147,10 @@ public class MasterPasswordService(
         EnsureUserIsHydrated(user);
         updateExistingData.ValidateDataForUser(user);
 
+        // Note: Keep "unlock then authenticate" pattern in mind.
+        // This is a purposeful inversion of that principle:
+        // Authentication is derivative of unlock, and is the mechanism for validation;
+        // eager validation keeps the logic easier to reason about, so it is performed first.
         var result = await UpdateExistingPasswordHashAsync(
             user,
             updateExistingData.MasterPasswordAuthentication.MasterPasswordAuthenticationHash,
@@ -150,13 +162,13 @@ public class MasterPasswordService(
             return result.Errors.ToArray();
         }
 
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
-
         user.Key = updateExistingData.MasterPasswordUnlock.MasterKeyWrappedUserKey;
 
-        // Always override the master password hint, even if it's null.
+        // Always override the master password hint, even if it's null
         user.MasterPasswordHint = updateExistingData.MasterPasswordHint;
 
+        // Update time markers on the user
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         user.LastPasswordChangeDate = now;
         user.RevisionDate = user.AccountRevisionDate = now;
 
@@ -170,6 +182,10 @@ public class MasterPasswordService(
         EnsureUserIsHydrated(user);
         updateExistingExistingData.ValidateDataForUser(user);
 
+        // Note: Keep "unlock then authenticate" pattern in mind.
+        // This is a purposeful inversion of that principle:
+        // Authentication is derivative of unlock, and is the mechanism for validation;
+        // eager validation keeps the logic easier to reason about, so it is performed first.
         var result = await UpdateExistingPasswordHashAsync(
             user,
             updateExistingExistingData.MasterPasswordAuthentication.MasterPasswordAuthenticationHash,
@@ -181,14 +197,14 @@ public class MasterPasswordService(
             return result.Errors.ToArray();
         }
 
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
-
         user.Key = updateExistingExistingData.MasterPasswordUnlock.MasterKeyWrappedUserKey;
         SetKdfStateOnUser(user, updateExistingExistingData.MasterPasswordUnlock.Kdf);
 
-        // Always override the master password hint, even if it's null.
+        // Always override the master password hint, even if it's null
         user.MasterPasswordHint = updateExistingExistingData.MasterPasswordHint;
 
+        // Update time markers on the user
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         user.LastPasswordChangeDate = now;
         user.LastKdfChangeDate = now;
         user.RevisionDate = user.AccountRevisionDate = now;

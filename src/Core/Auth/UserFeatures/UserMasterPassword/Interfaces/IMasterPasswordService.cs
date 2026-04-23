@@ -7,7 +7,7 @@ using OneOf;
 namespace Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 
 /// <summary>
-/// Centralized mutation point for all master password set, change, and rotate operations.
+/// Centralized mutation point for all master password set and update operations.
 /// Provides consistent validation, password hashing, and timestamp management across every
 /// flow that establishes or updates a user's master password.
 ///
@@ -170,8 +170,8 @@ public interface IMasterPasswordService
 
     /// <summary>
     /// Applies a new master password and updated KDF parameters over the user's existing ones
-    /// and persists the updated user to the database. Salt must remain unchanged; KDF is
-    /// intentionally allowed to change. Use for KDF rotation flows.
+    /// and persists the updated user to the database. Salt must remain unchanged; KDF 
+    /// validation is intentionally skipped. Use for KDF rotation flows.
     /// </summary>
     /// <param name="user">
     /// The user object to mutate and persist. Must already have a master password;
