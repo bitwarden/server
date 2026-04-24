@@ -122,11 +122,13 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
             var orgLevelUserIds = from cc in dbContext.CollectionCiphers
                                   where collectionIdList.Contains(cc.CollectionId)
                                   join c in dbContext.Collections on cc.CollectionId equals c.Id
+                                  join o in dbContext.Organizations on c.OrganizationId equals o.Id
                                   join ou in dbContext.OrganizationUsers on c.OrganizationId equals ou.OrganizationId
                                   where ou.Status == Core.Enums.OrganizationUserStatusType.Confirmed
                                       && ou.UserId != null
                                       && (ou.Type == OrganizationUserType.Owner
                                           || ou.Type == OrganizationUserType.Admin)
+                                      && o.AllowAdminAccessToAllCollectionItems
                                   select ou.UserId!.Value;
 
             return await directUserIds.Union(groupUserIds).Union(orgLevelUserIds).ToListAsync();
