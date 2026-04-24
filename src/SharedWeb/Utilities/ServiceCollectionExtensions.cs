@@ -52,6 +52,7 @@ using Bit.Core.Services.Mail;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Tools.ImportFeatures;
+using Bit.Core.Tools.ReceiveFeatures;
 using Bit.Core.Tools.SendFeatures;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
@@ -180,6 +181,7 @@ public static class ServiceCollectionExtensions
         services.AddPlatformServices();
         services.AddImportServices();
         services.AddSendServices();
+        services.AddReceiveServices();
     }
 
     public static void AddTokenizers(this IServiceCollection services)
@@ -357,14 +359,17 @@ public static class ServiceCollectionExtensions
         if (CoreHelpers.SettingHasValue(globalSettings.Send.ConnectionString))
         {
             services.AddSingleton<ISendFileStorageService, AzureSendFileStorageService>();
+            services.AddSingleton<IReceiveFileStorageService, AzureReceiveFileStorageService>();
         }
         else if (CoreHelpers.SettingHasValue(globalSettings.Send.BaseDirectory))
         {
             services.AddSingleton<ISendFileStorageService, LocalSendStorageService>();
+            services.AddSingleton<IReceiveFileStorageService, NoopReceiveFileStorageService>();
         }
         else
         {
             services.AddSingleton<ISendFileStorageService, NoopSendFileStorageService>();
+            services.AddSingleton<IReceiveFileStorageService, NoopReceiveFileStorageService>();
         }
     }
 
