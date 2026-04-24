@@ -70,11 +70,7 @@ public class SendsController : Controller
 
     [AllowAnonymous]
     [HttpPost("access/{id}")]
-    [ProducesResponseType<SendAccessResponseModel>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Access(string id, [FromBody] SendAccessRequestModel model)
+    public async Task<SendAccessResponseModel> Access(string id, [FromBody] SendAccessRequestModel model)
     {
         // Uncomment whenever we want to require the `send-id` header
         //if (!_currentContext.HttpContext.Request.Headers.ContainsKey("Send-Id") ||
@@ -100,7 +96,7 @@ public class SendsController : Controller
             await _sendAuthorizationService.AccessAsync(send, model.Password);
         if (sendAuthResult.Equals(SendAccessResult.PasswordRequired))
         {
-            return new UnauthorizedResult();
+            throw new UnauthorizedAccessException();
         }
 
         if (sendAuthResult.Equals(SendAccessResult.PasswordInvalid))
@@ -121,7 +117,7 @@ public class SendsController : Controller
             sendResponse.CreatorIdentifier = creator.Email;
         }
 
-        return new ObjectResult(sendResponse);
+        return sendResponse;
     }
 
     [AllowAnonymous]

@@ -96,8 +96,7 @@ public class SendsControllerTests : IDisposable
         _userService.GetUserByIdAsync(Arg.Any<Guid>()).Returns(user);
 
         var request = new SendAccessRequestModel();
-        var actionResult = await _sut.Access(accessId, request);
-        var response = (actionResult as ObjectResult)?.Value as SendAccessResponseModel;
+        var response = await _sut.Access(accessId, request);
 
         Assert.NotNull(response);
         Assert.Null(response.CreatorIdentifier);
@@ -341,8 +340,7 @@ public class SendsControllerTests : IDisposable
         _sendAuthorizationService.AccessAsync(send, "pwd123").Returns(SendAccessResult.Granted);
 
         var request = new SendAccessRequestModel();
-        var actionResult = await _sut.Access(accessId, request);
-        var response = (actionResult as ObjectResult)?.Value as SendAccessResponseModel;
+        var response = await _sut.Access(accessId, request);
 
         Assert.NotNull(response);
         Assert.Equal(authType, response.AuthType);
