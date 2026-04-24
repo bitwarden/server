@@ -1,12 +1,9 @@
 ﻿using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Context;
-using Bit.Core.Enums;
-using Bit.Core.Models;
 using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -41,31 +38,6 @@ public class RelayPushEngine : BaseIdentityClientService, IPushEngine
     {
         _deviceRepository = deviceRepository;
         _httpContextAccessor = httpContextAccessor;
-    }
-
-    public async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid>? collectionIds)
-    {
-        // Org cipher fan-out is handled upstream in MultiServicePushNotificationService,
-        // which resolves per-user access and calls PushAsync directly.
-        if (cipher.UserId.HasValue)
-        {
-            var message = new SyncCipherPushNotification
-            {
-                Id = cipher.Id,
-                UserId = cipher.UserId,
-                OrganizationId = cipher.OrganizationId,
-                RevisionDate = cipher.RevisionDate,
-            };
-
-            await PushAsync(new PushNotification<SyncCipherPushNotification>
-            {
-                Type = type,
-                Target = NotificationTarget.User,
-                TargetId = cipher.UserId.Value,
-                Payload = message,
-                ExcludeCurrentContext = true,
-            });
-        }
     }
 
     public async Task PushAsync<T>(PushNotification<T> pushNotification)

@@ -5,7 +5,6 @@ using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -28,23 +27,6 @@ public class AzureQueuePushEngine : IPushEngine
         if (globalSettings.Installation.Id == Guid.Empty)
         {
             logger.LogWarning("Installation ID is not set. Push notifications for installations will not work.");
-        }
-    }
-
-    public async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid>? collectionIds)
-    {
-        // Org cipher fan-out is handled upstream in MultiServicePushNotificationService,
-        // which resolves per-user access and calls PushAsync directly.
-        if (cipher.UserId.HasValue)
-        {
-            var message = new SyncCipherPushNotification
-            {
-                Id = cipher.Id,
-                UserId = cipher.UserId,
-                RevisionDate = cipher.RevisionDate,
-            };
-
-            await SendMessageAsync(type, message, true);
         }
     }
 

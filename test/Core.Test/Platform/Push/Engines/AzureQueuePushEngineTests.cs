@@ -60,31 +60,29 @@ public class AzureQueuePushEngineTests
             {
                 ["Id"] = cipher.Id,
                 ["UserId"] = cipher.UserId,
+                ["CollectionIds"] = new JsonArray(collectionId),
                 ["RevisionDate"] = cipher.RevisionDate,
             },
             ["ContextId"] = _deviceIdentifier,
         };
 
         await VerifyNotificationAsync(
-            async sut => await sut.PushSyncCipherCreateAsync(cipher, [collectionId]),
+            async sut => await sut.PushAsync(new PushNotification<SyncCipherPushNotification>
+            {
+                Type = PushType.SyncCipherCreate,
+                Target = NotificationTarget.User,
+                TargetId = userId,
+                Payload = new SyncCipherPushNotification
+                {
+                    Id = cipher.Id,
+                    UserId = cipher.UserId,
+                    OrganizationId = cipher.OrganizationId,
+                    RevisionDate = cipher.RevisionDate,
+                    CollectionIds = [collectionId],
+                },
+                ExcludeCurrentContext = true,
+            }),
             expectedPayload
-        );
-    }
-
-    [Fact]
-    public async Task PushSyncCipherCreateAsync_OrgCipher_DoesNotSendMessage()
-    {
-        // Org cipher fan-out is handled by MultiServicePushNotificationService; the engine should not send.
-        var cipher = new Cipher
-        {
-            Id = Guid.NewGuid(),
-            UserId = null,
-            OrganizationId = Guid.Parse("b9a3fcb4-2447-45c1-aad2-24de43c88c44"),
-            RevisionDate = DateTime.UtcNow,
-        };
-
-        await VerifyNoNotificationAsync(
-            async sut => await sut.PushSyncCipherCreateAsync(cipher, [Guid.NewGuid()])
         );
     }
 
@@ -109,39 +107,35 @@ public class AzureQueuePushEngineTests
             {
                 ["Id"] = cipher.Id,
                 ["UserId"] = cipher.UserId,
+                ["CollectionIds"] = new JsonArray(collectionId),
                 ["RevisionDate"] = cipher.RevisionDate,
             },
             ["ContextId"] = _deviceIdentifier,
         };
 
         await VerifyNotificationAsync(
-            async sut => await sut.PushSyncCipherUpdateAsync(cipher, [collectionId]),
+            async sut => await sut.PushAsync(new PushNotification<SyncCipherPushNotification>
+            {
+                Type = PushType.SyncCipherUpdate,
+                Target = NotificationTarget.User,
+                TargetId = userId,
+                Payload = new SyncCipherPushNotification
+                {
+                    Id = cipher.Id,
+                    UserId = cipher.UserId,
+                    OrganizationId = cipher.OrganizationId,
+                    RevisionDate = cipher.RevisionDate,
+                    CollectionIds = [collectionId],
+                },
+                ExcludeCurrentContext = true,
+            }),
             expectedPayload
-        );
-    }
-
-    [Fact]
-    public async Task PushSyncCipherUpdateAsync_OrgCipher_DoesNotSendMessage()
-    {
-        // Org cipher fan-out is handled by MultiServicePushNotificationService; the engine should not send.
-        var cipher = new Cipher
-        {
-            Id = Guid.NewGuid(),
-            UserId = null,
-            OrganizationId = Guid.Parse("b9a3fcb4-2447-45c1-aad2-24de43c88c44"),
-            RevisionDate = DateTime.UtcNow,
-        };
-
-        await VerifyNoNotificationAsync(
-            async sut => await sut.PushSyncCipherUpdateAsync(cipher, [Guid.NewGuid()])
         );
     }
 
     [Fact]
     public async Task PushSyncCipherDeleteAsync_SendsExpectedResponse()
     {
-        var collectionId = Guid.NewGuid();
-
         var cipher = new Cipher
         {
             Id = Guid.NewGuid(),
@@ -163,7 +157,21 @@ public class AzureQueuePushEngineTests
         };
 
         await VerifyNotificationAsync(
-            async sut => await sut.PushSyncCipherDeleteAsync(cipher),
+            async sut => await sut.PushAsync(new PushNotification<SyncCipherPushNotification>
+            {
+                Type = PushType.SyncLoginDelete,
+                Target = NotificationTarget.User,
+                TargetId = cipher.UserId!.Value,
+                Payload = new SyncCipherPushNotification
+                {
+                    Id = cipher.Id,
+                    UserId = cipher.UserId,
+                    OrganizationId = cipher.OrganizationId,
+                    RevisionDate = cipher.RevisionDate,
+                    CollectionIds = null,
+                },
+                ExcludeCurrentContext = true,
+            }),
             expectedPayload
         );
     }

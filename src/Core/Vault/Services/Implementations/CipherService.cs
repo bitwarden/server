@@ -31,6 +31,7 @@ public class CipherService : ICipherService
     private readonly ICollectionCipherRepository _collectionCipherRepository;
     private readonly ISecurityTaskRepository _securityTaskRepository;
     private readonly IPushNotificationService _pushService;
+    private readonly ICipherSyncPushService _cipherSyncPushService;
     private readonly IAttachmentStorageService _attachmentStorageService;
     private readonly IEventService _eventService;
     private readonly IUserService _userService;
@@ -51,6 +52,7 @@ public class CipherService : ICipherService
         ICollectionCipherRepository collectionCipherRepository,
         ISecurityTaskRepository securityTaskRepository,
         IPushNotificationService pushService,
+        ICipherSyncPushService cipherSyncPushService,
         IAttachmentStorageService attachmentStorageService,
         IEventService eventService,
         IUserService userService,
@@ -69,6 +71,7 @@ public class CipherService : ICipherService
         _collectionCipherRepository = collectionCipherRepository;
         _securityTaskRepository = securityTaskRepository;
         _pushService = pushService;
+        _cipherSyncPushService = cipherSyncPushService;
         _attachmentStorageService = attachmentStorageService;
         _eventService = eventService;
         _userService = userService;
@@ -106,7 +109,7 @@ public class CipherService : ICipherService
             await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_Created);
 
             // push
-            await _pushService.PushSyncCipherCreateAsync(cipher, collectionIds ?? Array.Empty<Guid>());
+            await _cipherSyncPushService.PushSyncCipherCreateAsync(cipher, collectionIds ?? Array.Empty<Guid>());
         }
         else
         {
@@ -116,7 +119,7 @@ public class CipherService : ICipherService
             await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_Updated);
 
             // push
-            await _pushService.PushSyncCipherUpdateAsync(cipher, collectionIds ?? Array.Empty<Guid>());
+            await _cipherSyncPushService.PushSyncCipherUpdateAsync(cipher, collectionIds ?? Array.Empty<Guid>());
         }
     }
 
@@ -163,7 +166,7 @@ public class CipherService : ICipherService
             }
 
             // push
-            await _pushService.PushSyncCipherCreateAsync(cipher, collectionIds ?? Array.Empty<Guid>());
+            await _cipherSyncPushService.PushSyncCipherCreateAsync(cipher, collectionIds ?? Array.Empty<Guid>());
         }
         else
         {
@@ -174,7 +177,7 @@ public class CipherService : ICipherService
             await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_Updated);
 
             // push
-            await _pushService.PushSyncCipherUpdateAsync(cipher, collectionIds ?? Array.Empty<Guid>());
+            await _cipherSyncPushService.PushSyncCipherUpdateAsync(cipher, collectionIds ?? Array.Empty<Guid>());
         }
     }
 
@@ -227,7 +230,7 @@ public class CipherService : ICipherService
         cipher.RevisionDate = DateTime.UtcNow;
         await _cipherRepository.ReplaceAsync((CipherDetails)cipher);
 
-        await _pushService.PushSyncCipherUpdateAsync(cipher, Array.Empty<Guid>());
+        await _cipherSyncPushService.PushSyncCipherUpdateAsync(cipher, Array.Empty<Guid>());
 
         return (attachmentId, uploadUrl);
     }
@@ -282,7 +285,7 @@ public class CipherService : ICipherService
         await _cipherRepository.ReplaceAsync((CipherDetails)cipher);
 
         // push
-        await _pushService.PushSyncCipherUpdateAsync(cipher, Array.Empty<Guid>());
+        await _cipherSyncPushService.PushSyncCipherUpdateAsync(cipher, Array.Empty<Guid>());
     }
 
     public async Task CreateAttachmentShareAsync(Cipher cipher, Stream stream, string fileName, string key,
@@ -436,7 +439,7 @@ public class CipherService : ICipherService
         await _eventService.LogCipherEventAsync(cipherDetails, EventType.Cipher_Deleted);
 
         // push
-        await _pushService.PushCipherAsync(cipherDetails, PushType.SyncLoginDelete, collectionIds);
+        await _cipherSyncPushService.PushSyncCipherDeleteAsync(cipherDetails, collectionIds);
     }
 
     public async Task DeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId, Guid? organizationId = null, bool orgAdmin = false)
@@ -661,7 +664,7 @@ public class CipherService : ICipherService
         }
 
         // push
-        await _pushService.PushSyncCipherUpdateAsync(cipher, collectionIds);
+        await _cipherSyncPushService.PushSyncCipherUpdateAsync(cipher, collectionIds);
     }
 
     public async Task<IEnumerable<CipherDetails>> ShareManyAsync(IEnumerable<(CipherDetails cipher, DateTime? lastKnownRevisionDate)> cipherInfos,
@@ -729,7 +732,7 @@ public class CipherService : ICipherService
         await _eventService.LogCipherEventAsync(cipher, EventType.Cipher_UpdatedCollections);
 
         // push
-        await _pushService.PushSyncCipherUpdateAsync(cipher, collectionIds);
+        await _cipherSyncPushService.PushSyncCipherUpdateAsync(cipher, collectionIds);
     }
 
     public async Task SoftDeleteAsync(CipherDetails cipherDetails, Guid deletingUserId, bool orgAdmin = false)
@@ -752,7 +755,7 @@ public class CipherService : ICipherService
         await _eventService.LogCipherEventAsync(cipherDetails, EventType.Cipher_SoftDeleted);
 
         // push
-        await _pushService.PushSyncCipherUpdateAsync(cipherDetails, Array.Empty<Guid>());
+        await _cipherSyncPushService.PushSyncCipherUpdateAsync(cipherDetails, Array.Empty<Guid>());
     }
 
     public async Task SoftDeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId, Guid? organizationId, bool orgAdmin)
@@ -807,7 +810,7 @@ public class CipherService : ICipherService
         await _eventService.LogCipherEventAsync(cipherDetails, EventType.Cipher_Restored);
 
         // push
-        await _pushService.PushSyncCipherUpdateAsync(cipherDetails, Array.Empty<Guid>());
+        await _cipherSyncPushService.PushSyncCipherUpdateAsync(cipherDetails, Array.Empty<Guid>());
     }
 
     public async Task<ICollection<CipherOrganizationDetails>> RestoreManyAsync(IEnumerable<Guid> cipherIds, Guid restoringUserId, Guid? organizationId = null, bool orgAdmin = false)
@@ -932,7 +935,7 @@ public class CipherService : ICipherService
         }
 
         // push
-        await _pushService.PushSyncCipherUpdateAsync(cipher, Array.Empty<Guid>());
+        await _cipherSyncPushService.PushSyncCipherUpdateAsync(cipher, Array.Empty<Guid>());
 
         return new DeleteAttachmentResponseData(cipher);
     }
