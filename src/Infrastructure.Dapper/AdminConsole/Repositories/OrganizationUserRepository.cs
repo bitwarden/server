@@ -715,6 +715,23 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         return rowCount > 0;
     }
 
+    public async Task<ICollection<Guid>> ConfirmManyOrganizationUsersAsync(
+        IEnumerable<AcceptedOrganizationUserToConfirm> usersToConfirm)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var confirmedIds = await connection.QueryAsync<Guid>(
+            $"[{Schema}].[OrganizationUser_ConfirmByIds]",
+            new
+            {
+                UsersToConfirm = usersToConfirm.ToOrganizationUserToConfirmArrayTVP(),
+                RevisionDate = DateTime.UtcNow
+            },
+            commandType: CommandType.StoredProcedure);
+
+        return confirmedIds.ToList();
+    }
+
     public async Task<OrganizationUserUserDetails?> GetDetailsByOrganizationIdUserIdAsync(Guid organizationId, Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))

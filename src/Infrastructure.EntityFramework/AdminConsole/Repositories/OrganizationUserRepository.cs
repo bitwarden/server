@@ -1022,6 +1022,37 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
     }
 
+    public async Task<ICollection<Guid>> ConfirmManyOrganizationUsersAsync(
+        IEnumerable<AcceptedOrganizationUserToConfirm> usersToConfirm)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        await using var dbContext = GetDatabaseContext(scope);
+
+        var usersToConfirmList = usersToConfirm.ToList();
+        var orgUserIds = usersToConfirmList.Select(u => u.OrganizationUserId).ToList();
+        var keyByOrgUserId = usersToConfirmList.ToDictionary(u => u.OrganizationUserId, u => u.Key);
+
+        var confirmedIds = await dbContext.OrganizationUsers
+            .Where(ou => orgUserIds.Contains(ou.Id) && ou.Status == OrganizationUserStatusType.Accepted)
+            .Select(ou => ou.Id)
+            .ToListAsync();
+
+        if (confirmedIds.Count == 0)
+        {
+            return confirmedIds;
+        }
+
+        await dbContext.OrganizationUsers
+            .Where(ou => confirmedIds.Contains(ou.Id))
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(ou => ou.Status, OrganizationUserStatusType.Confirmed)
+                .SetProperty(ou => ou.Key, ou => keyByOrgUserId[ou.Id]));
+
+        await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(confirmedIds);
+
+        return confirmedIds;
+    }
+
 #nullable enable
 
     public async Task<OrganizationUserUserDetails?> GetDetailsByOrganizationIdUserIdAsync(Guid organizationId, Guid userId)

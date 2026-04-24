@@ -127,6 +127,21 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<bool> ConfirmOrganizationUserAsync(AcceptedOrganizationUserToConfirm organizationUserToConfirm);
 
     /// <summary>
+    /// Confirms multiple organization users in a single database operation. Only users that are
+    /// currently in the <c>Accepted</c> state will be updated; rows in any other state are skipped.
+    ///
+    /// This is an idempotent operation.
+    /// </summary>
+    /// <param name="usersToConfirm">The collection of accepted organization users to confirm.</param>
+    /// <returns>
+    /// The IDs of the organization users that were actually updated (i.e. those that were in the
+    /// <c>Accepted</c> state and are now <c>Confirmed</c>). Users that were already confirmed or in
+    /// any other state are excluded from the result.
+    /// </returns>
+    Task<ICollection<Guid>> ConfirmManyOrganizationUsersAsync(
+        IEnumerable<AcceptedOrganizationUserToConfirm> usersToConfirm);
+
+    /// <summary>
     /// Returns all organization users with the given <paramref name="status"/> for the given organization.
     /// </summary>
     /// <param name="organizationId">The organization to search within.</param>

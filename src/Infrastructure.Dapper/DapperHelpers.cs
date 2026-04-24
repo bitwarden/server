@@ -3,6 +3,7 @@ using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Reflection;
+using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Dapper;
@@ -158,6 +159,23 @@ public static class DapperHelpers
     public static DataTable ToGuidIdArrayTVP(this IEnumerable<Guid> ids)
     {
         return ids.ToArrayTVP("GuidId");
+    }
+
+    public static DataTable ToOrganizationUserToConfirmArrayTVP(
+        this IEnumerable<AcceptedOrganizationUserToConfirm> usersToConfirm)
+    {
+        var table = new DataTable();
+        table.SetTypeName("[dbo].[OrganizationUserToConfirmArray]");
+        table.Columns.Add("Id", typeof(Guid));
+        table.Columns.Add("UserId", typeof(Guid));
+        table.Columns.Add("Key", typeof(string));
+
+        foreach (var user in usersToConfirm)
+        {
+            table.Rows.Add(user.OrganizationUserId, user.UserId, user.Key);
+        }
+
+        return table;
     }
 
     public static DataTable ToTwoGuidIdArrayTVP(this IEnumerable<(Guid id1, Guid id2)> values)
