@@ -90,10 +90,17 @@ public class SubscriptionResponseModel : ResponseModel
     public BillingCustomerDiscount[] CustomerDiscounts { get; set; } = [];
     public UserLicense? License { get; set; }
     public DateTime? Expiration { get; set; }
+
+    /// <summary>
+    /// Determines whether the Milestone 2 discount should be included in the response.
+    /// </summary>
+    /// <param name="customerDiscount">The customer discount from subscription info, if any.</param>
+    /// <returns>True if the discount should be included; false otherwise.</returns>
     private static bool ShouldIncludeDiscount(
-        SubscriptionInfo.BillingCustomerDiscount customerDiscount)
+        SubscriptionInfo.BillingCustomerDiscount? customerDiscount)
     {
-        return customerDiscount.Id == StripeConstants.CouponIDs.Milestone2SubscriptionDiscount &&
+        return customerDiscount != null &&
+               customerDiscount.Id == StripeConstants.CouponIDs.Milestone2SubscriptionDiscount &&
                customerDiscount.Active;
     }
 }

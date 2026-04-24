@@ -87,9 +87,9 @@ public class AccountsControllerTests : IDisposable
 
         // Assert
         Assert.NotNull(result);
-        Assert.NotNull(result.CustomerDiscount);
-        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, result.CustomerDiscount.Id);
-        Assert.Equal(20m, result.CustomerDiscount.PercentOff);
+        var discount = Assert.Single(result.CustomerDiscounts);
+        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, discount.Id);
+        Assert.Equal(20m, discount.PercentOff);
     }
 
     [Theory]
@@ -126,7 +126,7 @@ public class AccountsControllerTests : IDisposable
 
         // Assert
         Assert.NotNull(result);
-        Assert.Null(result.CustomerDiscount); // Should be null when coupon ID doesn't match
+        Assert.Empty(result.CustomerDiscounts); // Should be empty when coupon ID doesn't match
     }
 
     [Theory]
@@ -147,7 +147,7 @@ public class AccountsControllerTests : IDisposable
 
         // Assert
         Assert.NotNull(result);
-        Assert.Null(result.CustomerDiscount);
+        Assert.Empty(result.CustomerDiscounts);
         await _paymentService.DidNotReceive().GetSubscriptionAsync(Arg.Any<User>());
     }
 
@@ -171,7 +171,7 @@ public class AccountsControllerTests : IDisposable
 
         // Assert
         Assert.NotNull(result);
-        Assert.Null(result.CustomerDiscount); // Should be null when no gateway
+        Assert.Empty(result.CustomerDiscounts); // Should be empty when no gateway
         await _paymentService.DidNotReceive().GetSubscriptionAsync(Arg.Any<User>());
     }
 
@@ -209,7 +209,7 @@ public class AccountsControllerTests : IDisposable
 
         // Assert
         Assert.NotNull(result);
-        Assert.Null(result.CustomerDiscount); // Should be null when discount is inactive
+        Assert.Empty(result.CustomerDiscounts); // Should be empty when discount is inactive
     }
 
     [Theory]
@@ -259,21 +259,21 @@ public class AccountsControllerTests : IDisposable
 
         // Assert - Verify full pipeline conversion
         Assert.NotNull(result);
-        Assert.NotNull(result.CustomerDiscount);
+        var discount = Assert.Single(result.CustomerDiscounts);
 
         // Verify Stripe data correctly converted to API response
-        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, result.CustomerDiscount.Id);
-        Assert.True(result.CustomerDiscount.Active);
-        Assert.Equal(25m, result.CustomerDiscount.PercentOff);
+        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, discount.Id);
+        Assert.True(discount.Active);
+        Assert.Equal(25m, discount.PercentOff);
 
         // Verify cents-to-dollars conversion (1400 cents -> $14.00)
-        Assert.Equal(14.00m, result.CustomerDiscount.AmountOff);
+        Assert.Equal(14.00m, discount.AmountOff);
 
         // Verify AppliesTo products are preserved
-        Assert.NotNull(result.CustomerDiscount.AppliesTo);
-        Assert.Equal(2, result.CustomerDiscount.AppliesTo.Count());
-        Assert.Contains("prod_premium", result.CustomerDiscount.AppliesTo);
-        Assert.Contains("prod_families", result.CustomerDiscount.AppliesTo);
+        Assert.NotNull(discount.AppliesTo);
+        Assert.Equal(2, discount.AppliesTo.Count());
+        Assert.Contains("prod_premium", discount.AppliesTo);
+        Assert.Contains("prod_families", discount.AppliesTo);
     }
 
     [Theory]
@@ -339,7 +339,7 @@ public class AccountsControllerTests : IDisposable
 
         // Assert - Verify the complete pipeline worked end-to-end
         Assert.NotNull(result);
-        Assert.NotNull(result.CustomerDiscount);
+        var discount = Assert.Single(result.CustomerDiscounts);
 
         // Verify Stripe Discount → SubscriptionInfo.BillingCustomerDiscount mapping
         // (verified above, but confirming it made it through)
@@ -349,17 +349,17 @@ public class AccountsControllerTests : IDisposable
         // - subscription.CustomerDiscounts is not empty
         // - discount.Id == Milestone2SubscriptionDiscount
         // - discount.Active = true
-        Assert.Equal(TestMilestone2CouponId, result.CustomerDiscount.Id);
-        Assert.True(result.CustomerDiscount.Active);
-        Assert.Equal(30m, result.CustomerDiscount.PercentOff);
-        Assert.Equal(20.00m, result.CustomerDiscount.AmountOff); // Verify cents-to-dollars conversion
+        Assert.Equal(TestMilestone2CouponId, discount.Id);
+        Assert.True(discount.Active);
+        Assert.Equal(30m, discount.PercentOff);
+        Assert.Equal(20.00m, discount.AmountOff); // Verify cents-to-dollars conversion
 
         // Verify AppliesTo products are preserved through the entire pipeline
-        Assert.NotNull(result.CustomerDiscount.AppliesTo);
-        Assert.Equal(3, result.CustomerDiscount.AppliesTo.Count());
-        Assert.Contains("prod_premium", result.CustomerDiscount.AppliesTo);
-        Assert.Contains("prod_families", result.CustomerDiscount.AppliesTo);
-        Assert.Contains("prod_teams", result.CustomerDiscount.AppliesTo);
+        Assert.NotNull(discount.AppliesTo);
+        Assert.Equal(3, discount.AppliesTo.Count());
+        Assert.Contains("prod_premium", discount.AppliesTo);
+        Assert.Contains("prod_families", discount.AppliesTo);
+        Assert.Contains("prod_teams", discount.AppliesTo);
 
         // Verify the payment service was called correctly
         await _paymentService.Received(1).GetSubscriptionAsync(user);
@@ -427,9 +427,9 @@ public class AccountsControllerTests : IDisposable
 
         // Assert - Should use customer discount, not subscription discounts
         Assert.NotNull(result);
-        Assert.NotNull(result.CustomerDiscount);
-        Assert.Equal(TestMilestone2CouponId, result.CustomerDiscount.Id);
-        Assert.Equal(30m, result.CustomerDiscount.PercentOff);
+        var discount = Assert.Single(result.CustomerDiscounts);
+        Assert.Equal(TestMilestone2CouponId, discount.Id);
+        Assert.Equal(30m, discount.PercentOff);
     }
 
     [Theory]
@@ -478,10 +478,10 @@ public class AccountsControllerTests : IDisposable
 
         // Assert - Both values should be preserved through the pipeline
         Assert.NotNull(result);
-        Assert.NotNull(result.CustomerDiscount);
-        Assert.Equal(TestMilestone2CouponId, result.CustomerDiscount.Id);
-        Assert.Equal(25m, result.CustomerDiscount.PercentOff);
-        Assert.Equal(20.00m, result.CustomerDiscount.AmountOff); // Converted from cents
+        var discount = Assert.Single(result.CustomerDiscounts);
+        Assert.Equal(TestMilestone2CouponId, discount.Id);
+        Assert.Equal(25m, discount.PercentOff);
+        Assert.Equal(20.00m, discount.AmountOff); // Converted from cents
     }
 
     [Theory]
@@ -648,12 +648,12 @@ public class AccountsControllerTests : IDisposable
         Assert.NotNull(result);
 
         // Verify discount
-        Assert.NotNull(result.CustomerDiscount);
-        Assert.Equal(TestMilestone2CouponId, result.CustomerDiscount.Id);
-        Assert.Equal(20m, result.CustomerDiscount.PercentOff);
-        Assert.Equal(10.00m, result.CustomerDiscount.AmountOff);
-        Assert.NotNull(result.CustomerDiscount.AppliesTo);
-        Assert.Equal(2, result.CustomerDiscount.AppliesTo.Count());
+        var discount = Assert.Single(result.CustomerDiscounts);
+        Assert.Equal(TestMilestone2CouponId, discount.Id);
+        Assert.Equal(20m, discount.PercentOff);
+        Assert.Equal(10.00m, discount.AmountOff);
+        Assert.NotNull(discount.AppliesTo);
+        Assert.Equal(2, discount.AppliesTo.Count());
 
         // Verify subscription
         Assert.NotNull(result.Subscription);
@@ -684,7 +684,7 @@ public class AccountsControllerTests : IDisposable
 
         // Assert - Should never include discount for self-hosted
         Assert.NotNull(result);
-        Assert.Null(result.CustomerDiscount);
+        Assert.Empty(result.CustomerDiscounts);
         await _paymentService.DidNotReceive().GetSubscriptionAsync(Arg.Any<User>());
     }
 
@@ -710,7 +710,7 @@ public class AccountsControllerTests : IDisposable
 
         // Assert - Should never include discount when no gateway
         Assert.NotNull(result);
-        Assert.Null(result.CustomerDiscount);
+        Assert.Empty(result.CustomerDiscounts);
         await _paymentService.DidNotReceive().GetSubscriptionAsync(Arg.Any<User>());
     }
 
