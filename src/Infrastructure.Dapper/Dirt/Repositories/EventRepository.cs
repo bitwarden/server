@@ -157,33 +157,12 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
 
     public async Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId)
     {
-        // Sub-batch size stays below SQL Server's ~5,000-lock escalation threshold to
-        // avoid taking a table lock on [Event] while deletes run.
-        const int subBatchSize = 4_000;
-        const int targetPerCall = 50_000;
-
-        var totalDeleted = 0;
-
         await using var connection = new SqlConnection(ConnectionString);
         await connection.OpenAsync();
-
-        while (totalDeleted < targetPerCall)
-        {
-            var deleted = await connection.ExecuteScalarAsync<int>(
-                $"[{Schema}].[Event_DeleteByOrganizationIdBatch]",
-                new { OrganizationId = organizationId, BatchSize = subBatchSize },
-                commandType: CommandType.StoredProcedure,
-                commandTimeout: 3600);
-
-            if (deleted == 0)
-            {
-                break;
-            }
-
-            totalDeleted += deleted;
-        }
-
-        return totalDeleted;
+        return await connection.ExecuteAsync(
+            $"DELETE FROM [{Schema}].[Event] WHERE [OrganizationId] = @OrganizationId",
+            new { OrganizationId = organizationId },
+            commandTimeout: 3600);
     }
 
     private async Task<PagedResult<IEvent>> GetManyAsync(string sprocName,

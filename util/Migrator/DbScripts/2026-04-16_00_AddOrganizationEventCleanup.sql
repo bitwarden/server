@@ -138,24 +138,6 @@ BEGIN
 END
 GO
 
--- Stored Procedures: Event_DeleteByOrganizationIdBatch
-CREATE OR ALTER PROCEDURE [dbo].[Event_DeleteByOrganizationIdBatch]
-    @OrganizationId UNIQUEIDENTIFIER,
-    @BatchSize INT
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    DELETE TOP (@BatchSize)
-    FROM
-        [dbo].[Event]
-    WHERE
-        [OrganizationId] = @OrganizationId
-
-    SELECT @@ROWCOUNT
-END
-GO
-
 -- Stored Procedures: Organization_DeleteById (queue cleanup row inside the delete transaction)
 CREATE OR ALTER PROCEDURE [dbo].[Organization_DeleteById]
     @Id UNIQUEIDENTIFIER

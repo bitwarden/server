@@ -157,20 +157,6 @@ BEGIN
         [dbo].[Send]
     WHERE
         [OrganizationId] = @Id
-        
-    -- Queue Organization Event log cleanup (processed asynchronously by background job)
-    INSERT INTO [dbo].[OrganizationEventCleanup]
-    (
-        [Id],
-        [OrganizationId],
-        [QueuedAt]
-    )
-    VALUES
-    (
-        NEWID(),
-        @Id,
-        SYSUTCDATETIME()
-    )
 
     DELETE
     FROM

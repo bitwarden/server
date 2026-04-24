@@ -18,6 +18,15 @@ public class OrganizationEventCleanupRepository :
     {
     }
 
+    async Task IOrganizationEventCleanupRepository.CreateAsync(OrganizationEventCleanup cleanup)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var entity = Mapper.Map<Dirt.Models.OrganizationEventCleanup>(cleanup);
+        await dbContext.OrganizationEventCleanups.AddAsync(entity);
+        await dbContext.SaveChangesAsync();
+    }
+
     public async Task<OrganizationEventCleanup?> GetNextPendingAsync()
     {
         using var scope = ServiceScopeFactory.CreateScope();

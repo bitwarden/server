@@ -20,6 +20,17 @@ public class OrganizationEventCleanupRepository : BaseRepository, IOrganizationE
         : base(connectionString, readOnlyConnectionString)
     { }
 
+    public async Task CreateAsync(OrganizationEventCleanup cleanup)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                "[dbo].[OrganizationEventCleanup_Create]",
+                new { cleanup.Id, cleanup.OrganizationId, cleanup.QueuedAt },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
     public async Task<OrganizationEventCleanup?> GetNextPendingAsync()
     {
         using (var connection = new SqlConnection(ConnectionString))

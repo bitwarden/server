@@ -6,6 +6,7 @@ namespace Bit.Core.Dirt.Repositories;
 
 public interface IOrganizationEventCleanupRepository
 {
+    Task CreateAsync(OrganizationEventCleanup cleanup);
     Task<OrganizationEventCleanup?> GetNextPendingAsync();
     Task MarkStartedAsync(Guid id);
     Task IncrementProgressAsync(Guid id, long delta);
