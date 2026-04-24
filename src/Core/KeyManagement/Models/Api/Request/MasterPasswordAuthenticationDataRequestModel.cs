@@ -25,4 +25,14 @@ public class MasterPasswordAuthenticationDataRequestModel
             Salt = Salt
         };
     }
+
+    public bool HasSameKdfConfiguration(MasterPasswordUnlockDataRequestModel unlockData)
+    {
+        if (unlockData == null)
+        {
+            return false;
+        }
+
+        return Kdf.ToData().Equals(unlockData.Kdf.ToData());
+    }
 }

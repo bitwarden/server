@@ -223,6 +223,8 @@ public class CipherService : ICipherService
         });
         cipher.AddAttachment(attachmentId, data);
 
+        await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_AttachmentCreated);
+
         // Update the revision date when an attachment is added
         cipher.RevisionDate = DateTime.UtcNow;
         await _cipherRepository.ReplaceAsync((CipherDetails)cipher);
@@ -262,7 +264,6 @@ public class CipherService : ICipherService
             };
 
             await _cipherRepository.UpdateAttachmentAsync(attachment);
-            await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_AttachmentCreated);
             cipher.AddAttachment(attachmentId, data);
 
             if (!await ValidateCipherAttachmentFile(cipher, data))
@@ -276,6 +277,8 @@ public class CipherService : ICipherService
             await _attachmentStorageService.DeleteAttachmentAsync(cipher.Id, data);
             throw;
         }
+
+        await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_AttachmentCreated);
 
         // Update the revision date when an attachment is added
         cipher.RevisionDate = DateTime.UtcNow;
