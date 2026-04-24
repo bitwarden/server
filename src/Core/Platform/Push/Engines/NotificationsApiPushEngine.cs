@@ -3,7 +3,6 @@ using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -33,24 +32,6 @@ public class NotificationsApiPushEngine : BaseIdentityClientService, IPushEngine
             logger)
     {
         _httpContextAccessor = httpContextAccessor;
-    }
-
-    public async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid>? collectionIds)
-    {
-        // Org cipher fan-out is handled upstream in MultiServicePushNotificationService,
-        // which resolves per-user access and calls PushAsync directly.
-        if (cipher.UserId.HasValue)
-        {
-            var message = new SyncCipherPushNotification
-            {
-                Id = cipher.Id,
-                UserId = cipher.UserId,
-                RevisionDate = cipher.RevisionDate,
-                CollectionIds = collectionIds,
-            };
-
-            await SendMessageAsync(type, message, true);
-        }
     }
 
     private async Task SendMessageAsync<T>(PushType type, T payload, bool excludeCurrentContext)

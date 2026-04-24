@@ -33,15 +33,6 @@ public interface IPushNotificationService
     ILogger Logger { get; }
 
     #region Legacy method, to be removed soon.
-    Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
-        => PushCipherAsync(cipher, PushType.SyncCipherCreate, collectionIds);
-
-    Task PushSyncCipherUpdateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
-        => PushCipherAsync(cipher, PushType.SyncCipherUpdate, collectionIds);
-
-    Task PushSyncCipherDeleteAsync(Cipher cipher)
-        => PushCipherAsync(cipher, PushType.SyncLoginDelete, null);
-
     Task PushSyncFolderCreateAsync(Folder folder)
         => PushAsync(new PushNotification<SyncFolderPushNotification>
         {
@@ -430,8 +421,6 @@ public interface IPushNotificationService
             ExcludeCurrentContext = false,
         });
     #endregion
-
-    Task PushCipherAsync(Cipher cipher, PushType pushType, IEnumerable<Guid>? collectionIds);
 
     /// <summary>
     /// Pushes a notification to devices based on the settings given to us in <see cref="PushNotification{T}"/>.

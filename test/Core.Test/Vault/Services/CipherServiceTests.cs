@@ -325,7 +325,7 @@ public class CipherServiceTests
         var cipherRepository = sutProvider.GetDependency<ICipherRepository>();
         cipherRepository.ReplaceAsync(cipher, collectionIds).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        var pushNotificationService = sutProvider.GetDependency<IPushNotificationService>();
+        var cipherSyncPushService = sutProvider.GetDependency<ICipherSyncPushService>();
 
         var v0AttachmentId = Guid.NewGuid().ToString();
         var anotherAttachmentId = Guid.NewGuid().ToString();
@@ -383,7 +383,7 @@ public class CipherServiceTests
                 c.GetAttachments()[v0AttachmentId].FileName == "AFileNameRe-EncryptedWithOrgKey")
             , collectionIds);
 
-        await pushNotificationService.Received(1).PushSyncCipherUpdateAsync(cipher, collectionIds);
+        await cipherSyncPushService.Received(1).PushSyncCipherUpdateAsync(cipher, collectionIds);
     }
 
     [Theory]
@@ -804,7 +804,7 @@ public class CipherServiceTests
 
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().UpsertAsync(default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCipherEventAsync(default, default);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushSyncCipherUpdateAsync(default, default);
+        await sutProvider.GetDependency<ICipherSyncPushService>().DidNotReceiveWithAnyArgs().PushSyncCipherUpdateAsync(default, default);
     }
 
     [Theory]
@@ -828,7 +828,7 @@ public class CipherServiceTests
         Assert.Contains("do not have permissions", exception.Message);
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().UpsertAsync(default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCipherEventAsync(default, default);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushSyncCipherUpdateAsync(default, default);
+        await sutProvider.GetDependency<ICipherSyncPushService>().DidNotReceiveWithAnyArgs().PushSyncCipherUpdateAsync(default, default);
     }
 
     [Theory]
@@ -845,7 +845,7 @@ public class CipherServiceTests
         Assert.NotEqual(DateTime.UtcNow, cipherDetails.RevisionDate);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).UpsertAsync(cipherDetails);
         await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventAsync(cipherDetails, EventType.Cipher_Restored);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncCipherUpdateAsync(cipherDetails, null);
+        await sutProvider.GetDependency<ICipherSyncPushService>().Received(1).PushSyncCipherUpdateAsync(cipherDetails, Array.Empty<Guid>());
     }
 
     [Theory]
@@ -876,7 +876,7 @@ public class CipherServiceTests
         Assert.NotEqual(DateTime.UtcNow, cipherDetails.RevisionDate);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).UpsertAsync(cipherDetails);
         await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventAsync(cipherDetails, EventType.Cipher_Restored);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncCipherUpdateAsync(cipherDetails, null);
+        await sutProvider.GetDependency<ICipherSyncPushService>().Received(1).PushSyncCipherUpdateAsync(cipherDetails, Array.Empty<Guid>());
     }
 
     [Theory]
@@ -907,7 +907,7 @@ public class CipherServiceTests
         Assert.Contains("do not have permissions", exception.Message);
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().UpsertAsync(default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCipherEventAsync(default, default);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushSyncCipherUpdateAsync(default, default);
+        await sutProvider.GetDependency<ICipherSyncPushService>().DidNotReceiveWithAnyArgs().PushSyncCipherUpdateAsync(default, default);
     }
 
 
@@ -1314,8 +1314,8 @@ public class CipherServiceTests
         await sutProvider.GetDependency<ICipherRepository>().Received(1).DeleteAsync(cipherDetails);
         await sutProvider.GetDependency<IAttachmentStorageService>().Received(1).DeleteAttachmentsForCipherAsync(cipherDetails.Id);
         await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventAsync(cipherDetails, EventType.Cipher_Deleted);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushCipherAsync(cipherDetails, PushType.SyncLoginDelete, null);
+        await sutProvider.GetDependency<ICipherSyncPushService>().Received(1)
+            .PushSyncCipherDeleteAsync(cipherDetails, null);
     }
 
 
@@ -1342,9 +1342,10 @@ public class CipherServiceTests
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default);
         await sutProvider.GetDependency<IAttachmentStorageService>().DidNotReceiveWithAnyArgs().DeleteAttachmentsForCipherAsync(default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCipherEventAsync(default, default);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs()
-            .PushCipherAsync(default, default, default);
+        await sutProvider.GetDependency<ICipherSyncPushService>().DidNotReceiveWithAnyArgs()
+            .PushSyncCipherDeleteAsync(default, default);
     }
+
 
     [Theory]
     [OrganizationCipherCustomize]
@@ -1357,8 +1358,8 @@ public class CipherServiceTests
         await sutProvider.GetDependency<ICipherRepository>().Received(1).DeleteAsync(cipherDetails);
         await sutProvider.GetDependency<IAttachmentStorageService>().Received(1).DeleteAttachmentsForCipherAsync(cipherDetails.Id);
         await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventAsync(cipherDetails, EventType.Cipher_Deleted);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushCipherAsync(cipherDetails, PushType.SyncLoginDelete, Arg.Any<ICollection<Guid>>());
+        await sutProvider.GetDependency<ICipherSyncPushService>().Received(1)
+            .PushSyncCipherDeleteAsync(cipherDetails, Arg.Any<ICollection<Guid>>());
     }
 
     [Theory]
@@ -1387,8 +1388,8 @@ public class CipherServiceTests
         await sutProvider.GetDependency<ICipherRepository>().Received(1).DeleteAsync(cipherDetails);
         await sutProvider.GetDependency<IAttachmentStorageService>().Received(1).DeleteAttachmentsForCipherAsync(cipherDetails.Id);
         await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventAsync(cipherDetails, EventType.Cipher_Deleted);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushCipherAsync(cipherDetails, PushType.SyncLoginDelete, Arg.Any<ICollection<Guid>>());
+        await sutProvider.GetDependency<ICipherSyncPushService>().Received(1)
+            .PushSyncCipherDeleteAsync(cipherDetails, Arg.Any<ICollection<Guid>>());
     }
 
     [Theory]
@@ -1419,8 +1420,8 @@ public class CipherServiceTests
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default);
         await sutProvider.GetDependency<IAttachmentStorageService>().DidNotReceiveWithAnyArgs().DeleteAttachmentsForCipherAsync(default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCipherEventAsync(default, default);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs()
-            .PushCipherAsync(default, default, default);
+        await sutProvider.GetDependency<ICipherSyncPushService>().DidNotReceiveWithAnyArgs()
+            .PushSyncCipherDeleteAsync(default, default);
     }
 
     [Theory]
@@ -1739,7 +1740,7 @@ public class CipherServiceTests
         Assert.Equal(cipherDetails.RevisionDate, cipherDetails.DeletedDate);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).UpsertAsync(cipherDetails);
         await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventAsync(cipherDetails, EventType.Cipher_SoftDeleted);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncCipherUpdateAsync(cipherDetails, null);
+        await sutProvider.GetDependency<ICipherSyncPushService>().Received(1).PushSyncCipherUpdateAsync(cipherDetails, Array.Empty<Guid>());
     }
 
 
@@ -1786,7 +1787,7 @@ public class CipherServiceTests
 
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceive().UpsertAsync(Arg.Any<Cipher>());
         await sutProvider.GetDependency<IEventService>().DidNotReceive().LogCipherEventAsync(Arg.Any<Cipher>(), Arg.Any<EventType>());
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive().PushSyncCipherUpdateAsync(Arg.Any<Cipher>(), Arg.Any<IEnumerable<Guid>>());
+        await sutProvider.GetDependency<ICipherSyncPushService>().DidNotReceive().PushSyncCipherUpdateAsync(Arg.Any<Cipher>(), Arg.Any<IEnumerable<Guid>>());
     }
 
     [Theory]
@@ -1801,7 +1802,7 @@ public class CipherServiceTests
 
         await sutProvider.GetDependency<ICipherRepository>().Received(1).UpsertAsync(cipherDetails);
         await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventAsync(cipherDetails, EventType.Cipher_SoftDeleted);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncCipherUpdateAsync(cipherDetails, null);
+        await sutProvider.GetDependency<ICipherSyncPushService>().Received(1).PushSyncCipherUpdateAsync(cipherDetails, Array.Empty<Guid>());
     }
 
     [Theory]
@@ -1832,7 +1833,7 @@ public class CipherServiceTests
         Assert.Equal(cipherDetails.RevisionDate, cipherDetails.DeletedDate);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).UpsertAsync(cipherDetails);
         await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventAsync(cipherDetails, EventType.Cipher_SoftDeleted);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncCipherUpdateAsync(cipherDetails, null);
+        await sutProvider.GetDependency<ICipherSyncPushService>().Received(1).PushSyncCipherUpdateAsync(cipherDetails, Array.Empty<Guid>());
     }
 
     [Theory]
@@ -1863,7 +1864,7 @@ public class CipherServiceTests
         Assert.Contains("do not have permissions", exception.Message);
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().UpsertAsync(default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCipherEventAsync(default, default);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushSyncCipherUpdateAsync(default, default);
+        await sutProvider.GetDependency<ICipherSyncPushService>().DidNotReceiveWithAnyArgs().PushSyncCipherUpdateAsync(default, default);
     }
 
     [Theory]

@@ -159,6 +159,7 @@ public static class ServiceCollectionExtensions
     public static void AddBaseServices(this IServiceCollection services, IGlobalSettings globalSettings)
     {
         services.AddScoped<ICipherService, CipherService>();
+        services.TryAddScoped<ICipherSyncPushService, CipherSyncPushService>();
         services.AddUserServices(globalSettings);
         services.AddTrialInitiationServices();
         services.AddOrganizationServices(globalSettings);
