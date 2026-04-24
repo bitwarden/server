@@ -50,6 +50,8 @@ Skills and agents that touch vault data, authentication, or cryptography must us
   Avoid team-persona framing. Describe the domain and its constraints; the team is an implementation detail.
 - **Short and specific.**
   2,000 words of general advice isn't a skill.
+- **Active voice, direct language.**
+  "Invoke this skill when..." — not "This skill may be invoked when..."
 - **Reviewed like code.**
   Teams of domain experts own `.claude/` in their areas — they're the ones shaping how Claude behaves for everyone who works there, so treat changes with the same seriousness as source.
 
@@ -65,7 +67,34 @@ Skills and agents that touch vault data, authentication, or cryptography must us
   "Write good tests" isn't repo-specific.
   "Our integration tests must hit a real database because…" is.
 
-## Before you open the PR
+## Building a contribution
 
-- Run pre-commit checks.
-- For content you plan to promote to `bitwarden/ai-plugins`, run its validator scripts from a checkout of that repo: `./scripts/validate-plugin-structure.sh` and `./scripts/validate-marketplace.sh`. Repo-local skills and agents don't need these. If you have the `plugin-dev` marketplace installed in Claude Code, the `plugin-validator` and `skill-reviewer` agents give deeper feedback.
+The Claude Code ecosystem moves fast — last session's habits may already be out of date. Here's the workflow we follow.
+
+### 1. Start with the canonical docs
+
+A quick refresh before you begin goes a long way — the rules shift more often than you'd think:
+
+- [How Claude Code Works](https://code.claude.com/docs/en/how-claude-code-works) — the mental model.
+- [Best Practices for Claude Code](https://code.claude.com/docs/en/best-practices) — what Anthropic recommends.
+- [Extend Claude Code](https://code.claude.com/docs/en/features-overview) — what you can build (skills, agents, commands, hooks).
+
+### 2. Survey the landscape
+
+A quick skim of both goes a long way:
+
+- This repo's [`.claude/`](.) tree.
+- [`bitwarden/ai-plugins`](https://github.com/bitwarden/ai-plugins).
+
+Try to match the voice you see. "Invoke when the user asks to X" — not "This skill may be invoked when X." Direct, active, specific. Your contribution should read like the neighbors.
+
+### 3. Build iteratively
+
+When you're authoring a skill, start with `/skill-creator:skill-creator`. It runs an iterative loop — draft → test against evals → review outputs → refine — with benchmark stats and a side-by-side reviewer. You end up with a skill that's been exercised against concrete inputs before you open the PR.
+
+For agents, commands, hooks, and `CLAUDE.md` entries, start from an existing one in the repo and adapt it. No need to invent a new structure when a neighbor already solves the shape problem.
+
+### 4. Validate before you push
+
+- Run a local Bitwarden Claude Code review with `/bitwarden-code-review:code-review-local` — it writes findings to files so you can fix them before pushing, without posting anything to GitHub.
+- When you raise the PR, apply the `ai-review` label. Our reusable GitHub workflow watches for it and runs a Claude Code review automatically; without the label, the review doesn't fire.
