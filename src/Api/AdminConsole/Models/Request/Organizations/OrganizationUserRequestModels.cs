@@ -133,3 +133,11 @@ public class ResetPasswordWithOrgIdRequestModel : OrganizationUserResetPasswordE
     [Required]
     public Guid OrganizationId { get; set; }
 }
+
+public class OrganizationUserChangeEmailRequestModel
+{
+    [Required]
+    [EmailAddress]
+    [StringLength(256)]
+    public string NewEmail { get; set; }
+}
