@@ -10,7 +10,7 @@ using OneOf;
 
 namespace Bit.Core.Auth.UserFeatures.UserMasterPassword;
 
-public class MasterPasswordService(
+internal class MasterPasswordService(
     IUserRepository userRepository,
     TimeProvider timeProvider,
     IPasswordHasher<User> passwordHasher,
