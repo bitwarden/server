@@ -66,7 +66,7 @@ public class MasterPasswordServiceTests
         };
     }
 
-    private static UpdateExistingPasswordData BuildUpdateExistingData(User user, string? hint = null,
+    private static UpdateExistingPasswordData BuildUpdateExistingPasswordData(User user, string? hint = null,
         bool validatePassword = false)
     {
         var (kdf, salt) = GetMatchingKdfAndSalt(user);
@@ -90,7 +90,7 @@ public class MasterPasswordServiceTests
         };
     }
 
-    private static UpdateExistingPasswordAndKdfData BuildUpdateExistingAndKdfData(User user,
+    private static UpdateExistingPasswordAndKdfData BuildUpdateExistingPasswordAndKdfData(User user,
         KdfSettings? newKdf = null, string? hint = null, bool validatePassword = false)
     {
         var salt = user.GetMasterPasswordSalt();
@@ -258,7 +258,7 @@ public class MasterPasswordServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task PrepareSetInitialMasterPassword_ValidationFailure_ReturnsErrorsAsT1(User user)
+    public async Task PrepareSetInitialMasterPassword_ValidationFailure_ReturnsErrorsAsArrayOfIdentityError(User user)
     {
         var error = new IdentityError { Code = "test", Description = "test error" };
         var validator = Substitute.For<IPasswordValidator<User>>();
@@ -354,7 +354,7 @@ public class MasterPasswordServiceTests
         user.MasterPassword = "existing-hash";
         user.UsesKeyConnector = false;
 
-        var data = BuildUpdateExistingData(user);
+        var data = BuildUpdateExistingPasswordData(user);
         var expectedHash = "new-server-hash";
         sutProvider.GetDependency<IPasswordHasher<User>>()
             .HashPassword(user, data.MasterPasswordAuthentication.MasterPasswordAuthenticationHash)
@@ -380,7 +380,7 @@ public class MasterPasswordServiceTests
         user.MasterPassword = "existing-hash";
         user.UsesKeyConnector = false;
 
-        var data = BuildUpdateExistingData(user, hint: hint);
+        var data = BuildUpdateExistingPasswordData(user, hint: hint);
         sutProvider.GetDependency<IPasswordHasher<User>>()
             .HashPassword(Arg.Any<User>(), Arg.Any<string>())
             .Returns("hash");
@@ -398,7 +398,7 @@ public class MasterPasswordServiceTests
         user.Id = default;
         user.MasterPassword = "existing-hash";
 
-        var data = BuildUpdateExistingData(user);
+        var data = BuildUpdateExistingPasswordData(user);
 
         await Assert.ThrowsAsync<ArgumentException>(
             () => sutProvider.Sut.PrepareUpdateExistingMasterPasswordAsync(user, data));
@@ -422,7 +422,7 @@ public class MasterPasswordServiceTests
         user.MasterPassword = "existing-hash";
         user.UsesKeyConnector = false;
 
-        var data = BuildUpdateExistingData(user, validatePassword: true);
+        var data = BuildUpdateExistingPasswordData(user, validatePassword: true);
 
         var result = await sutProvider.Sut.PrepareUpdateExistingMasterPasswordAsync(user, data);
 
@@ -439,7 +439,7 @@ public class MasterPasswordServiceTests
         user.MasterPassword = "existing-hash";
         user.UsesKeyConnector = false;
 
-        var data = BuildUpdateExistingData(user);
+        var data = BuildUpdateExistingPasswordData(user);
         sutProvider.GetDependency<IPasswordHasher<User>>()
             .HashPassword(Arg.Any<User>(), Arg.Any<string>())
             .Returns("new-hash");
@@ -467,7 +467,7 @@ public class MasterPasswordServiceTests
         user.MasterPassword = "existing-hash";
         user.UsesKeyConnector = false;
 
-        var data = BuildUpdateExistingData(user, validatePassword: true);
+        var data = BuildUpdateExistingPasswordData(user, validatePassword: true);
 
         var result = await sutProvider.Sut.SaveUpdateExistingMasterPasswordAsync(user, data);
 
@@ -675,7 +675,7 @@ public class MasterPasswordServiceTests
         user.MasterPassword = "existing-hash";
         user.UsesKeyConnector = false;
 
-        var data = BuildUpdateExistingAndKdfData(user);
+        var data = BuildUpdateExistingPasswordAndKdfData(user);
         sutProvider.GetDependency<IPasswordHasher<User>>()
             .HashPassword(Arg.Any<User>(), Arg.Any<string>())
             .Returns("new-hash");
@@ -709,7 +709,7 @@ public class MasterPasswordServiceTests
             Memory = 64,
             Parallelism = 4
         };
-        var data = BuildUpdateExistingAndKdfData(user, newKdf: newKdf);
+        var data = BuildUpdateExistingPasswordAndKdfData(user, newKdf: newKdf);
         sutProvider.GetDependency<IPasswordHasher<User>>()
             .HashPassword(Arg.Any<User>(), Arg.Any<string>())
             .Returns("new-hash");
@@ -741,7 +741,7 @@ public class MasterPasswordServiceTests
             Memory = null,
             Parallelism = null
         };
-        var data = BuildUpdateExistingAndKdfData(user, newKdf: newKdf);
+        var data = BuildUpdateExistingPasswordAndKdfData(user, newKdf: newKdf);
         sutProvider.GetDependency<IPasswordHasher<User>>()
             .HashPassword(Arg.Any<User>(), Arg.Any<string>())
             .Returns("new-hash");
@@ -771,7 +771,7 @@ public class MasterPasswordServiceTests
         user.MasterPassword = "existing-hash";
         user.UsesKeyConnector = false;
 
-        var data = BuildUpdateExistingAndKdfData(user, validatePassword: true);
+        var data = BuildUpdateExistingPasswordAndKdfData(user, validatePassword: true);
 
         var result = await sutProvider.Sut.SaveUpdateExistingMasterPasswordAndKdfAsync(user, data);
 
@@ -823,7 +823,7 @@ public class MasterPasswordServiceTests
         var sutProvider = CreateSutProvider();
         user.MasterPassword = null;
 
-        var data = BuildUpdateExistingAndKdfData(user);
+        var data = BuildUpdateExistingPasswordAndKdfData(user);
 
         await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveUpdateExistingMasterPasswordAndKdfAsync(user, data));
