@@ -16,25 +16,25 @@ When unsure, keep it here. Promoting up to `ai-plugins` later is easier than pul
 
 ### 1. Scope — where does it apply?
 
-This is a monorepo. At session start, Claude loads every `CLAUDE.md` it finds by walking up from the working directory. `CLAUDE.md` files below the working directory — and nested `.claude/skills/` directories — are discovered lazily, only when Claude reads a file in that subtree. Use that hierarchy:
+This is a monorepo. Claude loads every `CLAUDE.md` and `CLAUDE.local.md` by [walking up from the working directory](https://code.claude.com/docs/en/memory#how-claude-md-files-load) — looking in each ancestor directly, not in a nested `.claude/` subdirectory. Files below the working directory (including nested `.claude/skills/`) are loaded lazily when Claude reads into that subtree. Use that hierarchy:
 
 - **Applies everywhere in this repo** → root `CLAUDE.md` or `.claude/skills/`
 - **Applies only within one app, library, utility, or subtree** → nested `CLAUDE.md` or `.claude/skills/` in that directory
 
 Push rules as deep as they'll go — keeping app-specific rules local saves context for everyone else's sessions, not just yours.
 
-For rules that should apply only to certain file types (e.g., all `*Controller.cs` files), use `.claude/rules/<name>.md` with a `paths:` frontmatter glob instead of a nested `CLAUDE.md`.
+For rules that should apply only to certain file types (e.g., all `*Controller.cs` files), use [`.claude/rules/<name>.md` with a `paths:` frontmatter glob](https://code.claude.com/docs/en/memory#organize-rules-with-claude/rules/) instead of a nested `CLAUDE.md`.
 
 ### 2. Shape — how should Claude use it?
 
-| You want to…                                            | Use                                                                            |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| State a rule Claude must always follow in its scope     | `CLAUDE.md`                                                                    |
-| State a rule that applies only to certain file globs    | `.claude/rules/<name>.md` with `paths:` frontmatter                            |
-| Teach a procedure Claude invokes on demand              | `.claude/skills/<name>/SKILL.md`                                               |
-| Give Claude a specialized subagent with its own context | `.claude/agents/<name>.md` (YAML frontmatter; `name` + `description` required) |
-| Add a user-invocable slash command                      | `.claude/commands/<name>.md`                                                   |
-| Trigger a shell script on a Claude Code event           | script in `.claude/hooks/`, registered in `.claude/settings.local.json`        |
+| You want to…                                            | Use                                                                                              |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| State a rule Claude must always follow in its scope     | `CLAUDE.md`                                                                                      |
+| State a rule that applies only to certain file globs    | `.claude/rules/<name>.md` with `paths:` frontmatter                                              |
+| Teach a procedure Claude invokes on demand              | `.claude/skills/<name>/SKILL.md`                                                                 |
+| Give Claude a specialized subagent with its own context | `.claude/agents/<name>.md` (YAML frontmatter; `name` + `description` required)                   |
+| Add a user-invocable slash command                      | `.claude/commands/<name>.md`                                                                     |
+| Trigger a shell script on a Claude Code event           | _We have them, but no strict project enforcement yet — register yours in `settings.local.json`._ |
 
 Rule of thumb: **if Claude only needs it sometimes, it's a skill.** Once a `CLAUDE.md` loads, it stays in context for the rest of the session — keep each one lean, especially the root.
 
