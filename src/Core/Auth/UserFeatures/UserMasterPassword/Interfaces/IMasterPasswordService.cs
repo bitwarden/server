@@ -67,6 +67,19 @@ internal interface IMasterPasswordService
     /// <see cref="PrepareSetInitialMasterPasswordAsync"/> or
     /// <see cref="PrepareUpdateExistingMasterPasswordAsync"/> accordingly.
     /// Prepares the <paramref name="user"/> object in memory only.
+    ///
+    /// <para>
+    /// Use when: composing a set-initial or update-existing mutation with other operations
+    /// before saving, and the caller does not need to select the path explicitly — dispatch
+    /// is determined by the user's current master password state.
+    /// </para>
+    ///
+    /// <para>
+    /// Constraints: Delegated to the dispatched method; see
+    /// <see cref="PrepareSetInitialMasterPasswordAsync"/> or
+    /// <see cref="PrepareUpdateExistingMasterPasswordAsync"/>.
+    /// </para>
+    ///
     /// </summary>
     /// <param name="user">
     /// The user object to mutate. Whether the user already has a master password determines
@@ -85,8 +98,21 @@ internal interface IMasterPasswordService
     Task<OneOf<User, IdentityError[]>> PrepareSetInitialOrUpdateExistingMasterPasswordAsync(User user, SetInitialOrUpdateExistingPasswordData setOrUpdatePasswordData);
 
     /// <summary>
-    /// Applies a new initial master password to the <paramref name="user"/> object in memory only. 
-    /// Use for flows that must compose this mutation with other operations inside a larger transaction.
+    /// Applies a new initial master password to the <paramref name="user"/> object in memory only.
+    /// 
+    /// <para>
+    /// Use when: composing this mutation with other operations inside a larger transaction.
+    /// </para>
+    /// 
+    /// <para>
+    /// Constraints:
+    /// <list type="bullet">
+    ///   <item>User must not already have a master password.</item>
+    ///   <item>User must have no existing <c>Key</c> or <c>MasterPasswordSalt</c>.</item>
+    ///   <item>User must not be a Key Connector user.</item>
+    /// </list>
+    /// </para>
+    /// 
     /// </summary>
     /// <param name="user">
     /// The user object to mutate. Must not already have a master password; must have no existing
@@ -106,14 +132,28 @@ internal interface IMasterPasswordService
     Task<OneOf<User, IdentityError[]>> PrepareSetInitialMasterPasswordAsync(User user, SetInitialPasswordData setInitialPasswordData);
 
     /// <summary>
-    /// Note: This is to be used in the future when a TDE user wants to set a password with self-service.
-    ///
     /// Applies a new initial master password to the <paramref name="user"/> object and persists
-    /// the updated user. Use when no external transaction coordination is needed.
+    /// the updated user.
+    ///
+    /// <para>
+    /// Use when: a TDE user wants to set a password via self-service and no external transaction
+    /// coordination is needed. Note: intended for future use.
+    /// </para>
+    ///
+    /// <para>
+    /// Constraints (see also <see cref="PrepareSetInitialMasterPasswordAsync"/>):
+    /// <list type="bullet">
+    ///   <item>User must not already have a master password.</item>
+    ///   <item>User must have no existing <c>Key</c> or <c>MasterPasswordSalt</c>.</item>
+    ///   <item>User must not be a Key Connector user.</item>
+    /// </list>
+    /// </para>
+    ///
     /// </summary>
     /// <param name="user">
-    /// The user object to mutate and persist. Subject to the same preconditions as
-    /// <see cref="PrepareSetInitialMasterPasswordAsync"/>.
+    /// The user object to mutate and persist. Must not already have a master password; must have no
+    /// existing <c>Key</c> or <c>MasterPasswordSalt</c>; must not be a Key Connector user.
+    /// Validated via <see cref="SetInitialPasswordData.ValidateDataForUser"/>.
     /// </param>
     /// <param name="setInitialPasswordData">
     /// Cryptographic and authentication data required to set the initial password. See
@@ -129,12 +169,29 @@ internal interface IMasterPasswordService
     /// Returns a deferred database write (as an <see cref="UpdateUserData"/> delegate) for setting
     /// the initial master password. The delegate is intended to be passed to
     /// <see cref="IUserRepository.UpdateUserDataAsync"/>, which executes all supplied delegates
-    /// within a single SQL transaction. Composing this delegate with others (e.g. cryptographic key
-    /// writes) ensures every write succeeds or the entire batch rolls back atomically, a guarantee
+    /// within a single SQL transaction.
+    ///
+    /// <para>
+    /// Use when: the password set is part of a larger transactional write that must succeed or fail
+    /// atomically (e.g., TDE key + password in a single SQL transaction). Composing this delegate
+    /// with others ensures every write succeeds or the entire batch rolls back, a guarantee
     /// <see cref="SaveSetInitialMasterPasswordAsync"/> cannot provide on its own.
+    /// </para>
+    ///
+    /// <para>
+    /// Constraints (applied when the returned delegate is invoked; see also <see cref="PrepareSetInitialMasterPasswordAsync"/>):
+    /// <list type="bullet">
+    ///   <item>User must not already have a master password.</item>
+    ///   <item>User must have no existing <c>Key</c> or <c>MasterPasswordSalt</c>.</item>
+    ///   <item>User must not be a Key Connector user.</item>
+    /// </list>
+    /// </para>
+    ///
     /// </summary>
     /// <param name="user">
-    /// The user whose initial master password state will be written when the returned delegate is invoked.
+    /// The user whose initial master password state will be written when the returned delegate is
+    /// invoked. Must not already have a master password; must have no existing <c>Key</c> or
+    /// <c>MasterPasswordSalt</c>; must not be a Key Connector user.
     /// </param>
     /// <param name="setInitialPasswordData">
     /// Cryptographic and authentication data required to set the initial password. See
@@ -149,7 +206,20 @@ internal interface IMasterPasswordService
     /// <summary>
     /// Applies a new master password over the user's existing one, mutating the
     /// <paramref name="user"/> object in memory only.
-    /// Use for flows that must compose this mutation with other operations inside a larger transaction.
+    ///
+    /// <para>
+    /// Use when: composing this mutation with other operations inside a larger transaction.
+    /// </para>
+    ///
+    /// <para>
+    /// Constraints:
+    /// <list type="bullet">
+    ///   <item>User must already have a master password.</item>
+    ///   <item>User must not be a Key Connector user.</item>
+    ///   <item>KDF parameters and salt must be unchanged relative to the values in <paramref name="updateExistingData"/>.</item>
+    /// </list>
+    /// </para>
+    ///
     /// </summary>
     /// <param name="user">
     /// The user object to mutate. Must already have a master password;
@@ -170,8 +240,21 @@ internal interface IMasterPasswordService
 
     /// <summary>
     /// Applies a new master password and updated KDF parameters over the user's existing ones
-    /// and persists the updated user to the database. Salt must remain unchanged; KDF 
-    /// validation is intentionally skipped. Use for KDF rotation flows.
+    /// and persists the updated user to the database. KDF validation is intentionally skipped.
+    ///
+    /// <para>
+    /// Use when: rotating KDF parameters.
+    /// </para>
+    ///
+    /// <para>
+    /// Constraints:
+    /// <list type="bullet">
+    ///   <item>User must already have a master password.</item>
+    ///   <item>User must not be a Key Connector user.</item>
+    ///   <item>Salt must be unchanged.</item>
+    /// </list>
+    /// </para>
+    ///
     /// </summary>
     /// <param name="user">
     /// The user object to mutate and persist. Must already have a master password;
@@ -191,11 +274,27 @@ internal interface IMasterPasswordService
 
     /// <summary>
     /// Applies a new master password over the user's existing one and persists the updated user
-    /// to the database. Use when no external transaction coordination is needed.
+    /// to the database.
+    ///
+    /// <para>
+    /// Use when: no external transaction coordination is needed.
+    /// </para>
+    ///
+    /// <para>
+    /// Constraints (see also <see cref="PrepareUpdateExistingMasterPasswordAsync"/>):
+    /// <list type="bullet">
+    ///   <item>User must already have a master password.</item>
+    ///   <item>User must not be a Key Connector user.</item>
+    ///   <item>KDF parameters and salt must be unchanged relative to the values in <paramref name="updateExistingData"/>.</item>
+    /// </list>
+    /// </para>
+    ///
     /// </summary>
     /// <param name="user">
-    /// The user object to mutate and persist. Subject to the same preconditions as
-    /// <see cref="PrepareUpdateExistingMasterPasswordAsync"/>.
+    /// The user object to mutate and persist. Must already have a master password;
+    /// must not be a Key Connector user. KDF parameters and salt must be unchanged relative to the
+    /// values in <paramref name="updateExistingData"/>. Validated via
+    /// <see cref="UpdateExistingPasswordData.ValidateDataForUser"/>.
     /// </param>
     /// <param name="updateExistingData">
     /// Cryptographic and authentication data for the updated password. See
