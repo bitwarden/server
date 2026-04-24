@@ -299,7 +299,7 @@ public class OrganizationsController(
         }
 
         var subscriptionInfo = await paymentService.GetSubscriptionAsync(organization);
-        if (subscriptionInfo?.CustomerDiscounts.Any(d => d.Id == StripeConstants.CouponIDs.SecretsManagerStandalone) != true)
+        if (subscriptionInfo.CustomerDiscounts.Any(d => d.Id != StripeConstants.CouponIDs.SecretsManagerStandalone))
         {
             return organization;
         }

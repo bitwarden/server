@@ -29,10 +29,8 @@ public class SubscriptionResponseModel : ResponseModel
         License = license;
         Expiration = License.Expires;
 
-        CustomerDiscounts = subscription.CustomerDiscounts
-            .Where(ShouldIncludeDiscount)
-            .Select(d => new BillingCustomerDiscount(d))
-            .ToArray();
+        var matchingDiscount = subscription.CustomerDiscounts.FirstOrDefault(ShouldIncludeDiscount);
+        CustomerDiscount = matchingDiscount != null ? new BillingCustomerDiscount(matchingDiscount) : null;
     }
 
     /// <param name="user">The user entity containing storage and premium subscription information</param>
@@ -63,10 +61,8 @@ public class SubscriptionResponseModel : ResponseModel
             Expiration = License.Expires;
         }
 
-        CustomerDiscounts = (subscription?.CustomerDiscounts ?? [])
-            .Where(ShouldIncludeDiscount)
-            .Select(d => new BillingCustomerDiscount(d))
-            .ToArray();
+        var matchingDiscount = (subscription?.CustomerDiscounts ?? []).FirstOrDefault(ShouldIncludeDiscount);
+        CustomerDiscount = matchingDiscount != null ? new BillingCustomerDiscount(matchingDiscount) : null;
     }
 
     public SubscriptionResponseModel(User user, UserLicense? license = null)
@@ -88,10 +84,26 @@ public class SubscriptionResponseModel : ResponseModel
     public short? MaxStorageGb { get; set; }
     public BillingSubscriptionUpcomingInvoice? UpcomingInvoice { get; set; }
     public BillingSubscription? Subscription { get; set; }
-    public BillingCustomerDiscount[] CustomerDiscounts { get; set; } = [];
+    /// <summary>
+    /// Customer discount information from Stripe for the Milestone 2 subscription discount.
+    /// Only includes the specific Milestone 2 coupon when it's active.
+    /// This is for display purposes only and does not affect Stripe's automatic discount application.
+    /// <para>
+    /// Null when:
+    /// - There is no active discount
+    /// - The discount coupon ID doesn't match the Milestone 2 coupon
+    /// - The instance is self-hosted
+    /// </para>
+    /// </summary>
+    public BillingCustomerDiscount? CustomerDiscount { get; set; }
     public UserLicense? License { get; set; }
     public DateTime? Expiration { get; set; }
 
+    /// <summary>
+    /// Determines whether the Milestone 2 discount should be included in the response.
+    /// </summary>
+    /// <param name="customerDiscount">The customer discount from subscription info, if any.</param>
+    /// <returns>True if the discount should be included; false otherwise.</returns>
     private static bool ShouldIncludeDiscount(
         SubscriptionInfo.BillingCustomerDiscount customerDiscount)
     {

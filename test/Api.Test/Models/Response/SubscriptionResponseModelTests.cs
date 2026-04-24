@@ -34,18 +34,18 @@ public class SubscriptionResponseModelTests
         var result = new SubscriptionResponseModel(user, subscriptionInfo, license);
 
         // Assert
-        var discount = Assert.Single(result.CustomerDiscounts);
-        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, discount.Id);
-        Assert.True(discount.Active);
-        Assert.Equal(20m, discount.PercentOff);
-        Assert.Null(discount.AmountOff);
-        Assert.NotNull(discount.AppliesTo);
-        Assert.Single(discount.AppliesTo);
+        Assert.NotNull(result.CustomerDiscount);
+        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, result.CustomerDiscount.Id);
+        Assert.True(result.CustomerDiscount.Active);
+        Assert.Equal(20m, result.CustomerDiscount.PercentOff);
+        Assert.Null(result.CustomerDiscount.AmountOff);
+        Assert.NotNull(result.CustomerDiscount.AppliesTo);
+        Assert.Single(result.CustomerDiscount.AppliesTo);
     }
 
     [Theory]
     [BitAutoData]
-    public void Constructor_IncludeMilestone2DiscountTrueNonMatchingCouponId_ReturnsEmpty(
+    public void Constructor_IncludeMilestone2DiscountTrueNonMatchingCouponId_ReturnsNull(
         User user,
         UserLicense license)
     {
@@ -66,12 +66,12 @@ public class SubscriptionResponseModelTests
         var result = new SubscriptionResponseModel(user, subscriptionInfo, license);
 
         // Assert
-        Assert.Empty(result.CustomerDiscounts);
+        Assert.Null(result.CustomerDiscount);
     }
 
     [Theory]
     [BitAutoData]
-    public void Constructor_EmptyCustomerDiscounts_ReturnsEmpty(
+    public void Constructor_EmptyCustomerDiscounts_ReturnsNull(
         User user,
         UserLicense license)
     {
@@ -82,7 +82,7 @@ public class SubscriptionResponseModelTests
         var result = new SubscriptionResponseModel(user, subscriptionInfo, license);
 
         // Assert
-        Assert.Empty(result.CustomerDiscounts);
+        Assert.Null(result.CustomerDiscount);
     }
 
     [Theory]
@@ -108,15 +108,15 @@ public class SubscriptionResponseModelTests
         var result = new SubscriptionResponseModel(user, subscriptionInfo, license);
 
         // Assert
-        var discount = Assert.Single(result.CustomerDiscounts);
-        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, discount.Id);
-        Assert.Null(discount.PercentOff);
-        Assert.Equal(14.00m, discount.AmountOff);
+        Assert.NotNull(result.CustomerDiscount);
+        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, result.CustomerDiscount.Id);
+        Assert.Null(result.CustomerDiscount.PercentOff);
+        Assert.Equal(14.00m, result.CustomerDiscount.AmountOff);
     }
 
     [Theory]
     [BitAutoData]
-    public void Constructor_NullDiscountIdIncludeMilestone2DiscountTrue_ReturnsEmpty(
+    public void Constructor_NullDiscountIdIncludeMilestone2DiscountTrue_ReturnsNull(
         User user,
         UserLicense license)
     {
@@ -137,12 +137,12 @@ public class SubscriptionResponseModelTests
         var result = new SubscriptionResponseModel(user, subscriptionInfo, license);
 
         // Assert
-        Assert.Empty(result.CustomerDiscounts);
+        Assert.Null(result.CustomerDiscount);
     }
 
     [Theory]
     [BitAutoData]
-    public void Constructor_MatchingCouponIdInactiveDiscount_ReturnsEmpty(
+    public void Constructor_MatchingCouponIdInactiveDiscount_ReturnsNull(
         User user,
         UserLicense license)
     {
@@ -163,7 +163,7 @@ public class SubscriptionResponseModelTests
         var result = new SubscriptionResponseModel(user, subscriptionInfo, license);
 
         // Assert
-        Assert.Empty(result.CustomerDiscounts);
+        Assert.Null(result.CustomerDiscount);
     }
 
     [Theory]
@@ -184,7 +184,7 @@ public class SubscriptionResponseModelTests
         Assert.Equal((short)10, result.MaxStorageGb);
         Assert.Equal(user.PremiumExpirationDate, result.Expiration);
         Assert.Null(result.License);
-        Assert.Empty(result.CustomerDiscounts);
+        Assert.Null(result.CustomerDiscount);
     }
 
     [Theory]
@@ -202,7 +202,7 @@ public class SubscriptionResponseModelTests
         Assert.NotNull(result.License);
         Assert.Equal(license, result.License);
         Assert.Equal(1.0, result.StorageGb);
-        Assert.Empty(result.CustomerDiscounts);
+        Assert.Null(result.CustomerDiscount);
     }
 
     [Theory]
@@ -218,7 +218,7 @@ public class SubscriptionResponseModelTests
         // Assert
         Assert.Null(result.StorageName);
         Assert.Equal(0, result.StorageGb);
-        Assert.Empty(result.CustomerDiscounts);
+        Assert.Null(result.CustomerDiscount);
     }
 
     [Theory]
@@ -230,7 +230,7 @@ public class SubscriptionResponseModelTests
 
         // Assert
         Assert.Null(result.License);
-        Assert.Empty(result.CustomerDiscounts);
+        Assert.Null(result.CustomerDiscount);
     }
 
     [Theory]
@@ -257,12 +257,12 @@ public class SubscriptionResponseModelTests
         var result = new SubscriptionResponseModel(user, subscriptionInfo, license);
 
         // Assert - Both values should be preserved
-        var discount = Assert.Single(result.CustomerDiscounts);
-        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, discount.Id);
-        Assert.Equal(25m, discount.PercentOff);
-        Assert.Equal(20.00m, discount.AmountOff);
-        Assert.NotNull(discount.AppliesTo);
-        Assert.Single(discount.AppliesTo);
+        Assert.NotNull(result.CustomerDiscount);
+        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, result.CustomerDiscount.Id);
+        Assert.Equal(25m, result.CustomerDiscount.PercentOff);
+        Assert.Equal(20.00m, result.CustomerDiscount.AmountOff);
+        Assert.NotNull(result.CustomerDiscount.AppliesTo);
+        Assert.Single(result.CustomerDiscount.AppliesTo);
     }
 
     [Theory]
@@ -271,7 +271,7 @@ public class SubscriptionResponseModelTests
         User user,
         UserLicense license)
     {
-        // Arrange - Test with Subscription, UpcomingInvoice, and CustomerDiscounts
+        // Arrange - Test with Subscription, UpcomingInvoice, and CustomerDiscount
         var stripeSubscription = new Subscription
         {
             Id = "sub_test123",
@@ -311,10 +311,10 @@ public class SubscriptionResponseModelTests
         Assert.Equal(15.00m, result.UpcomingInvoice.Amount);
         Assert.NotNull(result.UpcomingInvoice.Date);
 
-        var discount = Assert.Single(result.CustomerDiscounts);
-        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, discount.Id);
-        Assert.True(discount.Active);
-        Assert.Equal(20m, discount.PercentOff);
+        Assert.NotNull(result.CustomerDiscount);
+        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, result.CustomerDiscount.Id);
+        Assert.True(result.CustomerDiscount.Active);
+        Assert.Equal(20m, result.CustomerDiscount.PercentOff);
     }
 
     [Theory]
@@ -342,6 +342,6 @@ public class SubscriptionResponseModelTests
         // Assert - Null Subscription and UpcomingInvoice should be handled gracefully
         Assert.Null(result.Subscription);
         Assert.Null(result.UpcomingInvoice);
-        Assert.Single(result.CustomerDiscounts);
+        Assert.NotNull(result.CustomerDiscount);
     }
 }
