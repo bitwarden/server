@@ -10,6 +10,7 @@ using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
@@ -71,6 +72,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IDeleteClaimedOrganizationUserAccountCommand _deleteClaimedOrganizationUserAccountCommand;
     private readonly IGetOrganizationUsersClaimedStatusQuery _getOrganizationUsersClaimedStatusQuery;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IPolicyQuery _policyQuery;
     private readonly IFeatureService _featureService;
     private readonly IPricingClient _pricingClient;
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
@@ -118,7 +120,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand,
         IBulkAutomaticallyConfirmOrganizationUsersCommand bulkAutomaticallyConfirmOrganizationUsersCommand,
         V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext,
-        ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand)
+        ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand,
+        IPolicyQuery policyQuery)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -139,6 +142,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _deleteClaimedOrganizationUserAccountCommand = deleteClaimedOrganizationUserAccountCommand;
         _getOrganizationUsersClaimedStatusQuery = getOrganizationUsersClaimedStatusQuery;
         _policyRequirementQuery = policyRequirementQuery;
+        _policyQuery = policyQuery;
         _featureService = featureService;
         _pricingClient = pricingClient;
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
@@ -815,6 +819,18 @@ public class OrganizationUsersController : BaseAdminConsoleController
     [RequireFeature(FeatureFlagKeys.BulkAutoConfirmOnLogin)]
     public async Task<ListResponseModel<OrganizationUserPendingAutoConfirmResponseModel>> GetPendingAutoConfirmUsersAsync(Guid orgId)
     {
+        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
+        if (orgAbility is not { UseAutomaticUserConfirmation: true })
+        {
+            return new ListResponseModel<OrganizationUserPendingAutoConfirmResponseModel>([]);
+        }
+
+        var autoConfirmPolicy = await _policyQuery.RunAsync(orgId, PolicyType.AutomaticUserConfirmation);
+        if (!autoConfirmPolicy.Enabled)
+        {
+            return new ListResponseModel<OrganizationUserPendingAutoConfirmResponseModel>([]);
+        }
+
         var pendingUsers = await _organizationUserRepository.GetManyByOrganizationIdWithStatusAsync(orgId, OrganizationUserStatusType.Accepted);
         var responses = pendingUsers.Select(u => new OrganizationUserPendingAutoConfirmResponseModel(u));
         return new ListResponseModel<OrganizationUserPendingAutoConfirmResponseModel>(responses);
