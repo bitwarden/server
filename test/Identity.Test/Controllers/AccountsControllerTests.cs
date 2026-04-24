@@ -193,7 +193,7 @@ public class AccountsControllerTests : IDisposable
         Assert.Equal(response.KdfMemory, response.KdfSettings!.Memory);
         Assert.Equal(response.KdfParallelism, response.KdfSettings!.Parallelism);
 
-        // Salt is set to the input email during migration
+        // With no HMAC key, GetIndexForInputHash returns 0
         Assert.Equal(email, response.Salt);
     }
 
@@ -235,10 +235,24 @@ public class AccountsControllerTests : IDisposable
         Assert.Equal(response.KdfMemory, response.KdfSettings!.Memory);
         Assert.Equal(response.KdfParallelism, response.KdfSettings!.Parallelism);
 
-        // Salt is set deterministically based on the HMAC of email + ":salt"
-        var saltOptions = new string?[] { email, null };
-        var expectedSaltIndex = EnumerationProtectionHelpers.GetIndexForInputHash(defaultKey, email + ":salt", saltOptions.Length);
+        // Salt is set deterministically based on the HMAC of the normalized email + ":salt"
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+        var saltOptions = new string?[] { normalizedEmail, null };
+        var expectedSaltIndex = EnumerationProtectionHelpers.GetIndexForInputHash(defaultKey, normalizedEmail + ":salt", saltOptions.Length);
         Assert.Equal(saltOptions[expectedSaltIndex], response.Salt);
+    }
+
+    [Fact]
+    public async Task PostPasswordPrelogin_WhenUserDoesNotExist_ReturnsSaltIndependentOfInputCasing()
+    {
+        var defaultKey = "my-secret-key"u8.ToArray();
+        SetDefaultKdfHmacKey(defaultKey);
+        _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult<UserKdfInformation?>(null));
+
+        var lowercase = await _sut.PostPasswordPrelogin(new PasswordPreloginRequestModel { Email = "test@example.com" });
+        var mixedCase = await _sut.PostPasswordPrelogin(new PasswordPreloginRequestModel { Email = "TEST@EXAMPLE.COM" });
+
+        Assert.Equal(lowercase.Salt, mixedCase.Salt);
     }
 
     [Theory]

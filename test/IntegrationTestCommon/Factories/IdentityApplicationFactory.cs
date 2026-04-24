@@ -1,7 +1,6 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Globalization;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -14,6 +13,7 @@ using Bit.Core.Services;
 using Bit.Identity;
 using Bit.Identity.IdentityServer;
 using Bit.Identity.IdentityServer.RequestValidators;
+using Bit.Identity.Models.Request.Accounts;
 using Bit.Test.Common.Helpers;
 using LinqToDB;
 using Microsoft.AspNetCore.Hosting;
@@ -81,6 +81,11 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         return await Server.PostAsync("/accounts/register/verification-email-clicked", JsonContent.Create(model));
     }
 
+    public async Task<HttpContext> PostPreloginAsync(PasswordPreloginRequestModel model)
+    {
+        return await Server.PostAsync("/accounts/prelogin/password", JsonContent.Create(model));
+    }
+
     public async Task<(string Token, string RefreshToken)> TokenFromPasswordAsync(
         string username,
         string password,
@@ -94,8 +99,16 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
 
         using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = body.RootElement;
+        // to satisfy the nullability analysis, we have to assert the presence of these properties
+        Debug.Assert(root.TryGetProperty("access_token", out var accessToken));
+        var accessTokenString = accessToken.GetString();
+        Debug.Assert(accessTokenString != null);
 
-        return (root.GetProperty("access_token").GetString(), root.GetProperty("refresh_token").GetString());
+        Debug.Assert(root.TryGetProperty("refresh_token", out var refreshToken));
+        var refreshTokenString = refreshToken.GetString();
+        Debug.Assert(refreshTokenString != null);
+
+        return (accessTokenString, refreshTokenString);
     }
 
     public async Task<HttpContext> ContextFromPasswordAsync(
@@ -110,7 +123,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         {
             { "scope", "api offline_access" },
             { "client_id", clientId },
-            { "deviceType", ((int)deviceType).ToString() },
+            { "deviceType", ((int)deviceType).ToString(CultureInfo.InvariantCulture) },
             { "deviceIdentifier", deviceIdentifier },
             { "deviceName", deviceName },
             { "grant_type", "password" },
@@ -135,7 +148,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         {
             { "scope", "api offline_access" },
             { "client_id", clientId },
-            { "deviceType", ((int)deviceType).ToString() },
+            { "deviceType", ((int)deviceType).ToString(CultureInfo.InvariantCulture) },
             { "deviceIdentifier", deviceIdentifier },
             { "deviceName", deviceName },
             { "grant_type", "password" },
@@ -157,7 +170,11 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = body.RootElement;
 
-        return root.GetProperty("access_token").GetString();
+        Debug.Assert(root.TryGetProperty("access_token", out var accessToken));
+        var accessTokenString = accessToken.GetString();
+        Debug.Assert(accessTokenString != null);
+
+        return accessTokenString;
     }
 
     public async Task<HttpContext> ContextFromAccessTokenAsync(Guid clientId, string clientSecret,
@@ -170,7 +187,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
                 { "client_id", clientId.ToString() },
                 { "client_secret", clientSecret },
                 { "grant_type", "client_credentials" },
-                { "deviceType", ((int)deviceType).ToString() }
+                { "deviceType", ((int)deviceType).ToString(CultureInfo.InvariantCulture) }
             }));
 
         return context;
@@ -183,8 +200,11 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
 
         using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = body.RootElement;
+        Debug.Assert(root.TryGetProperty("access_token", out var accessToken));
+        var accessTokenString = accessToken.GetString();
+        Debug.Assert(accessTokenString != null);
 
-        return root.GetProperty("access_token").GetString();
+        return accessTokenString;
     }
 
     public async Task<HttpContext> ContextFromOrganizationApiKeyAsync(string clientId, string clientSecret,
@@ -197,7 +217,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
                 { "client_id", clientId },
                 { "client_secret", clientSecret },
                 { "grant_type", "client_credentials" },
-                { "deviceType", ((int)deviceType).ToString() }
+                { "deviceType", ((int)deviceType).ToString(CultureInfo.InvariantCulture) }
             }));
         return context;
     }
@@ -292,6 +312,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
 
             if (encKeyPair != null)
             {
+                Debug.Assert(keys.PublicKeyEncryptionKeyPair != null, "PublicKeyEncryptionKeyPair must be provided when encKeyPair is not null");
                 encKeyPair = new PublicKeyEncryptionKeyPairRequestModel
                 {
                     WrappedPrivateKey = DefaultEncryptedString,
@@ -302,6 +323,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
 
             if (sigKeyPair != null)
             {
+                Debug.Assert(keys.SignatureKeyPair != null, "SignatureKeyPair must be provided when sigKeyPair is not null");
                 sigKeyPair = new SignatureKeyPairRequestModel
                 {
                     SignatureAlgorithm = "ed25519",
