@@ -21,4 +21,8 @@
     <ProjectReference Include="..\Migrator\Migrator.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Setup.Test" />
+  </ItemGroup>
+
 </Project>
