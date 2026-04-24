@@ -346,9 +346,12 @@ public class CipherRequestModel
             FirstName = DriversLicense.FirstName,
             MiddleName = DriversLicense.MiddleName,
             LastName = DriversLicense.LastName,
+            DateOfBirth = DriversLicense.DateOfBirth,
             LicenseNumber = DriversLicense.LicenseNumber,
             IssuingCountry = DriversLicense.IssuingCountry,
             IssuingState = DriversLicense.IssuingState,
+            IssueDate = DriversLicense.IssueDate,
+            IssuingAuthority = DriversLicense.IssuingAuthority,
             ExpirationDate = DriversLicense.ExpirationDate,
             LicenseClass = DriversLicense.LicenseClass,
         };
@@ -365,6 +368,8 @@ public class CipherRequestModel
             Surname = Passport.Surname,
             GivenName = Passport.GivenName,
             DateOfBirth = Passport.DateOfBirth,
+            Sex = Passport.Sex,
+            BirthPlace = Passport.BirthPlace,
             Nationality = Passport.Nationality,
             PassportNumber = Passport.PassportNumber,
             PassportType = Passport.PassportType,
@@ -372,6 +377,7 @@ public class CipherRequestModel
             IssuingAuthority = Passport.IssuingAuthority,
             IssueDate = Passport.IssueDate,
             ExpirationDate = Passport.ExpirationDate,
+            NationalIdentificationNumber = Passport.NationalIdentificationNumber,
         };
     }
 

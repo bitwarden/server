@@ -23,9 +23,12 @@ public class CipherRequestModelTests
                 FirstName = "2.firstName|encrypted",
                 MiddleName = "2.middleName|encrypted",
                 LastName = "2.lastName|encrypted",
+                DateOfBirth = "2.dateOfBirth|encrypted",
                 LicenseNumber = "2.licenseNumber|encrypted",
                 IssuingCountry = "2.issuingCountry|encrypted",
                 IssuingState = "2.issuingState|encrypted",
+                IssueDate = "2.issueDate|encrypted",
+                IssuingAuthority = "2.issuingAuthority|encrypted",
                 ExpirationDate = "2.expirationDate|encrypted",
                 LicenseClass = "2.licenseClass|encrypted",
             }
@@ -42,9 +45,12 @@ public class CipherRequestModelTests
         Assert.Equal("2.firstName|encrypted", data.FirstName);
         Assert.Equal("2.middleName|encrypted", data.MiddleName);
         Assert.Equal("2.lastName|encrypted", data.LastName);
+        Assert.Equal("2.dateOfBirth|encrypted", data.DateOfBirth);
         Assert.Equal("2.licenseNumber|encrypted", data.LicenseNumber);
         Assert.Equal("2.issuingCountry|encrypted", data.IssuingCountry);
         Assert.Equal("2.issuingState|encrypted", data.IssuingState);
+        Assert.Equal("2.issueDate|encrypted", data.IssueDate);
+        Assert.Equal("2.issuingAuthority|encrypted", data.IssuingAuthority);
         Assert.Equal("2.expirationDate|encrypted", data.ExpirationDate);
         Assert.Equal("2.licenseClass|encrypted", data.LicenseClass);
     }
@@ -74,8 +80,11 @@ public class CipherRequestModelTests
         Assert.Null(data.FirstName);
         Assert.Null(data.MiddleName);
         Assert.Null(data.LastName);
+        Assert.Null(data.DateOfBirth);
         Assert.Null(data.IssuingCountry);
         Assert.Null(data.IssuingState);
+        Assert.Null(data.IssueDate);
+        Assert.Null(data.IssuingAuthority);
         Assert.Null(data.ExpirationDate);
         Assert.Null(data.LicenseClass);
     }
@@ -117,6 +126,8 @@ public class CipherRequestModelTests
                 Surname = "2.surname|encrypted",
                 GivenName = "2.givenName|encrypted",
                 DateOfBirth = "2.dateOfBirth|encrypted",
+                Sex = "2.sex|encrypted",
+                BirthPlace = "2.birthPlace|encrypted",
                 Nationality = "2.nationality|encrypted",
                 PassportNumber = "2.passportNumber|encrypted",
                 PassportType = "2.passportType|encrypted",
@@ -124,6 +135,7 @@ public class CipherRequestModelTests
                 IssuingAuthority = "2.issuingAuthority|encrypted",
                 IssueDate = "2.issueDate|encrypted",
                 ExpirationDate = "2.expirationDate|encrypted",
+                NationalIdentificationNumber = "2.nationalIdentificationNumber|encrypted",
             }
         };
 
@@ -138,6 +150,8 @@ public class CipherRequestModelTests
         Assert.Equal("2.surname|encrypted", data.Surname);
         Assert.Equal("2.givenName|encrypted", data.GivenName);
         Assert.Equal("2.dateOfBirth|encrypted", data.DateOfBirth);
+        Assert.Equal("2.sex|encrypted", data.Sex);
+        Assert.Equal("2.birthPlace|encrypted", data.BirthPlace);
         Assert.Equal("2.nationality|encrypted", data.Nationality);
         Assert.Equal("2.passportNumber|encrypted", data.PassportNumber);
         Assert.Equal("2.passportType|encrypted", data.PassportType);
@@ -145,6 +159,7 @@ public class CipherRequestModelTests
         Assert.Equal("2.issuingAuthority|encrypted", data.IssuingAuthority);
         Assert.Equal("2.issueDate|encrypted", data.IssueDate);
         Assert.Equal("2.expirationDate|encrypted", data.ExpirationDate);
+        Assert.Equal("2.nationalIdentificationNumber|encrypted", data.NationalIdentificationNumber);
     }
 
     [Fact]
@@ -172,12 +187,15 @@ public class CipherRequestModelTests
         Assert.Null(data.Surname);
         Assert.Null(data.GivenName);
         Assert.Null(data.DateOfBirth);
+        Assert.Null(data.Sex);
+        Assert.Null(data.BirthPlace);
         Assert.Null(data.Nationality);
         Assert.Null(data.PassportType);
         Assert.Null(data.IssuingCountry);
         Assert.Null(data.IssuingAuthority);
         Assert.Null(data.IssueDate);
         Assert.Null(data.ExpirationDate);
+        Assert.Null(data.NationalIdentificationNumber);
     }
 
     [Fact]
