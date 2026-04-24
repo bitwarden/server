@@ -114,7 +114,8 @@ public class CollectionCipherRepositoryTests
             Name = "Test Org",
             PlanType = PlanType.EnterpriseAnnually,
             Plan = "Enterprise",
-            BillingEmail = "billing@example.com"
+            BillingEmail = "billing@example.com",
+            AllowAdminAccessToAllCollectionItems = true,
         });
 
         _ = await organizationUserRepository.CreateAsync(new OrganizationUser

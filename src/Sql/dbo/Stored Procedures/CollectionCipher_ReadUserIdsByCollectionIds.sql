@@ -32,5 +32,5 @@ BEGIN
     WHERE OU.[OrganizationId] = COL.[OrganizationId]
         AND OU.[Status] = 2 -- Confirmed
         AND OU.[Type] IN (0, 1) -- Owner/Admin
-        AND O.[AllowAdminAccessToAllCollectionItems] = 12
+        AND O.[AllowAdminAccessToAllCollectionItems] = 1
 END
