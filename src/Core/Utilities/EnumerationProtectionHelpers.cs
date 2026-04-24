@@ -20,7 +20,7 @@ public static class EnumerationProtectionHelpers
         }
         else
         {
-            // Compute the HMAC hash of the salt
+            // Compute the HMAC hash of the input string
             var hmacMessage = Encoding.UTF8.GetBytes(inputString.Trim().ToLowerInvariant());
             using var hmac = new System.Security.Cryptography.HMACSHA256(hmacKey);
             var hmacHash = hmac.ComputeHash(hmacMessage);

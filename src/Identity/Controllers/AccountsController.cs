@@ -236,11 +236,12 @@ public class AccountsController : Controller
 
     private UserKdfInformation GetDefaultKdf(string email)
     {
-        var kdfIndex = EnumerationProtectionHelpers.GetIndexForInputHash(_defaultKdfHmacKey, email, _defaultKdfResults.Count);
-        // PM-31702: In the future we may need to generate a deterministic random salt, for the time being we will email and null.
-        var saltOptions = new string?[] { email, null };
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+        var kdfIndex = EnumerationProtectionHelpers.GetIndexForInputHash(_defaultKdfHmacKey, normalizedEmail, _defaultKdfResults.Count);
+        // PM-31702: In the future we may need to generate a deterministic random salt, for the time being we will use email and null.
+        var saltOptions = new string?[] { normalizedEmail, null };
         // we add the suffix ":salt" so the calculated index is independent of the kdfIndex calculation.
-        var saltIndex = EnumerationProtectionHelpers.GetIndexForInputHash(_defaultKdfHmacKey, email + ":salt", saltOptions.Length);
+        var saltIndex = EnumerationProtectionHelpers.GetIndexForInputHash(_defaultKdfHmacKey, normalizedEmail + ":salt", saltOptions.Length);
 
         // deep copy to avoid thread issues with the static list
         var result = new UserKdfInformation()
