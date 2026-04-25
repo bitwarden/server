@@ -53,6 +53,7 @@ public class ProfileOrganizationResponseModelTests
             UseOrganizationDomains = organization.UseOrganizationDomains,
             UseAdminSponsoredFamilies = organization.UseAdminSponsoredFamilies,
             UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation,
+            ExemptFromBillingAutomation = organization.ExemptFromBillingAutomation,
             SelfHost = organization.SelfHost,
             Seats = organization.Seats,
             MaxCollections = organization.MaxCollections,
@@ -148,5 +149,6 @@ public class ProfileOrganizationResponseModelTests
         Assert.Equal(organizationDetails.FamilySponsorshipValidUntil, result.FamilySponsorshipValidUntil);
         Assert.True(result.IsAdminInitiated);
         Assert.False(result.FamilySponsorshipAvailable);
+        Assert.Equal(organization.ExemptFromBillingAutomation, result.ExemptFromBillingAutomation);
     }
 }

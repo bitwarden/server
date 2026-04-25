@@ -50,6 +50,7 @@ public class ProfileProviderOrganizationResponseModelTests
             UseOrganizationDomains = organization.UseOrganizationDomains,
             UseAdminSponsoredFamilies = organization.UseAdminSponsoredFamilies,
             UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation,
+            ExemptFromBillingAutomation = organization.ExemptFromBillingAutomation,
             SelfHost = organization.SelfHost,
             Seats = organization.Seats,
             MaxCollections = organization.MaxCollections,
@@ -127,5 +128,6 @@ public class ProfileProviderOrganizationResponseModelTests
         Assert.False(result.Permissions.ManageUsers);
         Assert.False(result.ResetPasswordEnrolled);
         Assert.False(result.AccessSecretsManager);
+        Assert.Equal(organization.ExemptFromBillingAutomation, result.ExemptFromBillingAutomation);
     }
 }
