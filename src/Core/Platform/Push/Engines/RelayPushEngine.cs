@@ -43,6 +43,11 @@ public class RelayPushEngine : BaseIdentityClientService, IPushEngine
     public async Task PushAsync<T>(PushNotification<T> pushNotification)
         where T : class
     {
+        if (pushNotification.NonMobileOnly == true)
+        {
+            return;
+        }
+
         var deviceIdentifier = _httpContextAccessor.HttpContext
             ?.RequestServices.GetService<ICurrentContext>()
             ?.DeviceIdentifier;

@@ -83,7 +83,7 @@ public class CipherSyncPushServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task PushSyncCipherCreateAsync_OrgCipher_FlagOff_NoPush(
+    public async Task PushSyncCipherCreateAsync_OrgCipher_FlagOff_SendsNonMobileOrgBroadcast(
         SutProvider<CipherSyncPushService> sutProvider, Cipher cipher, Guid collectionId)
     {
         cipher.OrganizationId = Guid.NewGuid();
@@ -96,8 +96,14 @@ public class CipherSyncPushServiceTests
         await sutProvider.Sut.PushSyncCipherCreateAsync(cipher, [collectionId]);
 
         await sutProvider.GetDependency<IPushNotificationService>()
-            .DidNotReceiveWithAnyArgs()
-            .PushAsync(Arg.Any<PushNotification<SyncCipherPushNotification>>());
+            .Received(1)
+            .PushAsync(Arg.Is<PushNotification<SyncCipherPushNotification>>(n =>
+                n.Type == PushType.SyncCipherCreate &&
+                n.Target == NotificationTarget.Organization &&
+                n.TargetId == cipher.OrganizationId!.Value &&
+                n.NonMobileOnly == true &&
+                n.Payload.Id == cipher.Id &&
+                n.Payload.OrganizationId == cipher.OrganizationId));
     }
 
     [Theory, BitAutoData]
