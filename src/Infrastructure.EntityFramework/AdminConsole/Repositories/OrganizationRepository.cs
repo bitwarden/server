@@ -140,7 +140,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 UseAutomaticUserConfirmation = e.UseAutomaticUserConfirmation,
                 UseDisableSmAdsForUsers = e.UseDisableSmAdsForUsers,
                 UsePhishingBlocker = e.UsePhishingBlocker,
-                UseMyItems = e.UseMyItems
+                UseMyItems = e.UseMyItems,
+                UseInviteLinks = e.UseInviteLinks
             }).ToListAsync();
         }
     }
