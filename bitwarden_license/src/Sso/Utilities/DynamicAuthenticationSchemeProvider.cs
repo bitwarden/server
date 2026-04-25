@@ -406,7 +406,7 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
         if (!string.IsNullOrWhiteSpace(config.IdpX509PublicCert))
         {
             var cert = CoreHelpers.Base64UrlDecode(config.IdpX509PublicCert);
-            idp.SigningKeys.AddConfiguredKey(new X509Certificate2(cert));
+            idp.SigningKeys.AddConfiguredKey(X509CertificateLoader.LoadCertificate(cert));
         }
         idp.ArtifactResolutionServiceUrls.Clear();
         // This must happen last since it calls Validate() internally.
