@@ -21,13 +21,22 @@ public class OrganizationReportRepository :
         IMapper mapper) : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.OrganizationReports)
     { }
 
-    public async Task<OrganizationReport> GetLatestByOrganizationIdAsync(Guid organizationId)
+    public async Task<OrganizationReport> GetLatestByOrganizationIdAsync(Guid organizationId, bool filterByValidated = false)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var result = await dbContext.OrganizationReports
-                .Where(p => p.OrganizationId == organizationId)
+
+            IQueryable<Models.OrganizationReport> query = dbContext.OrganizationReports
+                .Where(p => p.OrganizationId == organizationId);
+
+            if (filterByValidated)
+            {
+                query = query.Where(p => p.ReportFile != null
+                    && p.ReportFile.Contains("\"Validated\":true"));
+            }
+
+            var result = await query
                 .OrderByDescending(p => p.RevisionDate)
                 .Take(1)
                 .FirstOrDefaultAsync();
@@ -105,48 +114,6 @@ public class OrganizationReportRepository :
                 .ToListAsync();
 
             return results;
-        }
-    }
-
-    public async Task<OrganizationReportDataResponse> GetReportDataAsync(Guid reportId)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-
-            var result = await dbContext.OrganizationReports
-                .Where(p => p.Id == reportId)
-                .Select(p => new OrganizationReportDataResponse
-                {
-                    ReportData = p.ReportData
-                })
-                .FirstOrDefaultAsync();
-
-            return result;
-        }
-    }
-
-    public async Task<OrganizationReport> UpdateReportDataAsync(Guid organizationId, Guid reportId, string reportData)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-
-            // Update only ReportData and RevisionDate
-            await dbContext.OrganizationReports
-                .Where(p => p.Id == reportId && p.OrganizationId == organizationId)
-                .UpdateAsync(p => new Models.OrganizationReport
-                {
-                    ReportData = reportData,
-                    RevisionDate = DateTime.UtcNow
-                });
-
-            // Return the updated report
-            var updatedReport = await dbContext.OrganizationReports
-                .Where(p => p.Id == reportId)
-                .FirstOrDefaultAsync();
-
-            return Mapper.Map<OrganizationReport>(updatedReport);
         }
     }
 
