@@ -19,13 +19,21 @@ public class GetOrganizationReportQuery : IGetOrganizationReportQuery
         _logger = logger;
     }
 
-    public async Task<OrganizationReport> GetOrganizationReportAsync(Guid reportId)
+    public async Task<OrganizationReport> GetLatestOrganizationReportAsync(Guid organizationId)
     {
-        if (reportId == Guid.Empty)
+        _logger.LogInformation(Constants.BypassFiltersEventId, "Fetching latest organization report for organization {organizationId}", organizationId);
+        var result = await _organizationReportRepo.GetLatestByOrganizationIdAsync(organizationId);
+
+        if (result == null)
         {
-            throw new BadRequestException("Id of report is required.");
+            throw new NotFoundException($"No report found for organization: {organizationId}");
         }
 
+        return result;
+    }
+
+    public async Task<OrganizationReport> GetOrganizationReportAsync(Guid reportId)
+    {
         _logger.LogInformation(Constants.BypassFiltersEventId, "Fetching organization reports for organization by Id: {reportId}", reportId);
 
         var results = await _organizationReportRepo.GetByIdAsync(reportId);
@@ -36,16 +44,5 @@ public class GetOrganizationReportQuery : IGetOrganizationReportQuery
         }
 
         return results;
-    }
-
-    public async Task<OrganizationReport> GetLatestOrganizationReportAsync(Guid organizationId)
-    {
-        if (organizationId == Guid.Empty)
-        {
-            throw new BadRequestException("OrganizationId is required.");
-        }
-
-        _logger.LogInformation(Constants.BypassFiltersEventId, "Fetching latest organization report for organization {organizationId}", organizationId);
-        return await _organizationReportRepo.GetLatestByOrganizationIdAsync(organizationId);
     }
 }

@@ -303,6 +303,7 @@ public static class FeatureFlagKeys
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
 
     /* DIRT Team */
+    public const string AccessIntelligenceVersion2 = "pm-31920-access-intelligence-azure-file-storage";
     public const string EventManagementForBlumira = "event-management-for-blumira";
     public const string EventManagementForDataDogAndCrowdStrike = "event-management-for-datadog-and-crowdstrike";
     public const string EventDiagnosticLogging = "pm-27666-siem-event-log-debugging";
