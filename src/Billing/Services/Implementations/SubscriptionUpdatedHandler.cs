@@ -85,8 +85,15 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
         var currentPeriodEnd = subscription.GetCurrentPeriodEnd();
 
-        if (SubscriptionWentUnpaid(parsedEvent, subscription) ||
-            SubscriptionWentIncompleteExpired(parsedEvent, subscription))
+        if (SubscriptionWentUnpaid(parsedEvent, subscription))
+        {
+            if (!await SkipUnpaidBillingAutomationsForExemptOrganizationAsync(subscriberId))
+            {
+                await DisableSubscriberAsync(subscriberId, currentPeriodEnd);
+                await SetSubscriptionToCancelAsync(subscription);
+            }
+        }
+        else if (SubscriptionWentIncompleteExpired(parsedEvent, subscription))
         {
             await DisableSubscriberAsync(subscriberId, currentPeriodEnd);
             await SetSubscriptionToCancelAsync(subscription);
@@ -130,7 +137,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         } && currentSubscription is
         {
             Status: SubscriptionStatus.Unpaid,
-            LatestInvoice.BillingReason: BillingReasons.SubscriptionCreate or BillingReasons.SubscriptionCycle
+            LatestInvoice.BillingReason: BillingReasons.SubscriptionCycle
         };
 
     private static bool SubscriptionWentIncompleteExpired(
@@ -188,6 +195,31 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                     await _providerService.UpdateAsync(provider);
                 }
             });
+
+    private Task<bool> SkipUnpaidBillingAutomationsForExemptOrganizationAsync(SubscriberId subscriberId) =>
+        subscriberId.Match(
+            _ => Task.FromResult(false),
+            async organizationId =>
+            {
+                var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
+
+                if (organization is not { Enabled: true, ExemptFromBillingAutomation: true })
+                {
+                    return false;
+                }
+
+                // PM-31781: skip automations but set exempt to false so they aren't skipped forever
+                organization.ExemptFromBillingAutomation = false;
+                organization.RevisionDate = DateTime.UtcNow;
+                await _organizationRepository.ReplaceAsync(organization);
+
+                _logger.LogInformation(
+                    "Skipping billing automations for exempt organization ({OrganizationId}). Exemption has been cleared",
+                    organizationId.Value);
+
+                return true;
+            },
+            _ => Task.FromResult(false));
 
     private Task EnableSubscriberAsync(SubscriberId subscriberId, DateTime? currentPeriodEnd) =>
         subscriberId.Match(

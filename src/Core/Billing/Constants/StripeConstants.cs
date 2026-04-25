@@ -14,8 +14,10 @@ public static class StripeConstants
 
     public static class BillingReasons
     {
+        public const string AutomaticPendingInvoiceItemInvoice = "automatic_pending_invoice_item_invoice";
         public const string SubscriptionCreate = "subscription_create";
         public const string SubscriptionCycle = "subscription_cycle";
+        public const string SubscriptionUpdate = "subscription_update";
     }
 
     public static class CollectionMethod
