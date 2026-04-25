@@ -125,7 +125,8 @@ public class AdminRecoverAccountCommand(
                     new RevokeOrganizationUsersRequest(
                         o.OrganizationId,
                         [new OrganizationUserUserDetails { Id = o.OrganizationUserId, OrganizationId = o.OrganizationId }],
-                        new SystemUser(EventSystemUser.TwoFactorDisabled)));
+                        new SystemUser(EventSystemUser.TwoFactorDisabled),
+                        RevocationReason.TwoFactorPolicyNonCompliance));
                 await mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(), user.Email);
             }).ToArray();
 

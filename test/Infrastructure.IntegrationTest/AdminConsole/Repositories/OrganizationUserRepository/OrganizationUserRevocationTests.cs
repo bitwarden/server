@@ -34,7 +34,7 @@ public class OrganizationUserRevocationTests
     }
 
     [Theory, DatabaseData]
-    public async Task RevokeManyAsync_WithNullReason_SetsStatusOnly(
+    public async Task RevokeManyAsync_WithManualReason_SetsStatusAndReason(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
         IUserRepository userRepository)
@@ -45,12 +45,12 @@ public class OrganizationUserRevocationTests
         var orgUser = await organizationUserRepository.CreateConfirmedTestOrganizationUserAsync(organization, user);
 
         // Act
-        await organizationUserRepository.RevokeManyAsync([orgUser.Id]);
+        await organizationUserRepository.RevokeManyAsync([orgUser.Id], RevocationReason.Manual);
 
         // Assert
         var updated = await organizationUserRepository.GetByIdAsync(orgUser.Id);
         Assert.Equal(OrganizationUserStatusType.Revoked, updated!.Status);
-        Assert.Null(updated.RevocationReason);
+        Assert.Equal(RevocationReason.Manual, updated.RevocationReason);
     }
 
     [Theory, DatabaseData]
