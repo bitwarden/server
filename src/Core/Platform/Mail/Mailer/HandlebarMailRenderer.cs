@@ -139,6 +139,45 @@ public class HandlebarMailRenderer : IMailRenderer
         var titleContactUsTextLayoutSource = await ReadSourceAsync(assembly, "Bit.Core.MailTemplates.Handlebars.Layouts.TitleContactUs.text.hbs");
         handlebars.RegisterTemplate("TitleContactUsTextLayout", titleContactUsTextLayoutSource);
 
+        // Register custom helpers used by mail templates.
+        handlebars.RegisterHelper("date", (writer, context, parameters) =>
+        {
+            if (parameters.Length == 0 || parameters[0] is not DateTime)
+            {
+                writer.WriteSafeString(string.Empty);
+                return;
+            }
+            if (parameters.Length > 1 && parameters[1] is string format)
+            {
+                writer.WriteSafeString(((DateTime)parameters[0]).ToString(format));
+            }
+            else
+            {
+                writer.WriteSafeString(((DateTime)parameters[0]).ToString());
+            }
+        });
+
+        handlebars.RegisterHelper("usd", (writer, context, parameters) =>
+        {
+            if (parameters.Length == 0 || parameters[0] is not decimal)
+            {
+                writer.WriteSafeString(string.Empty);
+                return;
+            }
+            writer.WriteSafeString(((decimal)parameters[0]).ToString("C"));
+        });
+
+        handlebars.RegisterHelper("eq", (context, arguments) =>
+        {
+            if (arguments.Length != 2)
+            {
+                return false;
+            }
+            var value1 = arguments[0]?.ToString();
+            var value2 = arguments[1]?.ToString();
+            return string.Equals(value1, value2, StringComparison.OrdinalIgnoreCase);
+        });
+
         return handlebars;
     }
 }

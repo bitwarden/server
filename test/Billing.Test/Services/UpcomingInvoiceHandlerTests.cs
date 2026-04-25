@@ -15,6 +15,7 @@ using Bit.Core.Entities;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2019Renewal;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2020Renewal;
 using Bit.Core.Models.Mail.Billing.Renewal.Premium;
+using Bit.Core.Models.Mail.Provider.ProviderInvoiceUpcoming;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
@@ -814,14 +815,15 @@ public class UpcomingInvoiceHandlerTests
             Arg.Is<SubscriptionUpdateOptions>(o => o.AutomaticTax.Enabled == true));
 
         // Verify provider invoice email was sent
-        await _mailService.Received(1).SendProviderInvoiceUpcoming(
-            Arg.Is<IEnumerable<string>>(e => e.Contains("provider@example.com")),
-            Arg.Is<decimal>(amount => amount == invoice.AmountDue / 100M),
-            Arg.Is<DateTime>(dueDate => dueDate == invoice.NextPaymentAttempt.Value),
-            Arg.Is<List<string>>(items => items.Count == invoice.Lines.Data.Count),
-            Arg.Is<string>(s => s == subscription.CollectionMethod),
-            Arg.Is<bool>(b => b == true),
-            Arg.Is<string>(s => s == $"{paymentMethod.Brand} ending in {paymentMethod.Last4}"));
+        await _mailer.Received(1).SendEmail(
+            Arg.Is<ProviderInvoiceUpcomingMail>(m =>
+                m.ToEmails.Contains("provider@example.com") &&
+                m.View.AmountDue == invoice.AmountDue / 100M &&
+                m.View.DueDate == invoice.NextPaymentAttempt.Value &&
+                m.View.Items.Count == invoice.Lines.Data.Count &&
+                m.View.CollectionMethod == subscription.CollectionMethod &&
+                m.View.HasPaymentMethod == true &&
+                m.View.PaymentMethodDescription == $"{paymentMethod.Brand} ending in {paymentMethod.Last4}"));
     }
 
     [Fact]
@@ -1336,14 +1338,7 @@ public class UpcomingInvoiceHandlerTests
         await _providerRepository.Received(1).GetByIdAsync(_providerId);
 
         // Verify no provider emails were sent
-        await _mailService.DidNotReceive().SendProviderInvoiceUpcoming(
-            Arg.Any<IEnumerable<string>>(),
-            Arg.Any<decimal>(),
-            Arg.Any<DateTime>(),
-            Arg.Any<List<string>>(),
-            Arg.Any<string>(),
-            Arg.Any<bool>(),
-            Arg.Any<string>());
+        await _mailer.DidNotReceive().SendEmail(Arg.Any<ProviderInvoiceUpcomingMail>());
     }
 
     [Fact]

@@ -1,0 +1,131 @@
+<mjml>
+    <mj-head>
+        <mj-include path="../../components/head.mjml" />
+    </mj-head>
+
+    <mj-body css-class="border-fix">
+        <mj-wrapper css-class="border-fix" padding="20px 20px 0px 20px">
+            <mj-bw-simple-hero />
+        </mj-wrapper>
+
+        <mj-wrapper padding="0px 20px 0px 20px">
+            <!-- Heading and intro text — diverges based on CollectionMethod -->
+            <mj-section background-color="#fff" padding="15px 10px 10px 10px">
+                <mj-column>
+                    <mj-text>
+                        {{#if (eq CollectionMethod "send_invoice")}}
+                        <div style="font-weight: 600; font-size: 24px; line-height: 32px; margin: 0 0 8px 0;">
+                            Your subscription will renew soon
+                        </div>
+                        <div>
+                            On <strong>{{date DueDate 'MMMM dd, yyyy'}}</strong> we'll send you an invoice with a
+                            summary of the charges including tax.
+                        </div>
+                        {{else}}
+                        <div style="font-weight: 600; font-size: 24px; line-height: 32px; margin: 0 0 8px 0;">
+                            Your subscription will renew on {{date DueDate 'MMMM dd, yyyy'}}
+                        </div>
+                        {{#if HasPaymentMethod}}
+                        <div>
+                            To avoid any interruption in service, please ensure your
+                            {{PaymentMethodDescription}} can be charged for the following amount:
+                        </div>
+                        {{else}}
+                        <div>
+                            To avoid any interruption in service, please add a payment method
+                            that can be charged for the following amount:
+                        </div>
+                        {{/if}}
+                        {{/if}}
+                    </mj-text>
+                </mj-column>
+            </mj-section>
+
+            <!-- Amount due — only shown for non-invoice collection -->
+            <mj-raw>{{#unless (eq CollectionMethod "send_invoice")}}</mj-raw>
+            <mj-section background-color="#fff" padding="0 10px">
+                <mj-column>
+                    <mj-text font-size="32px" font-weight="bold" padding="0 15px 20px">
+                        {{usd AmountDue}}
+                    </mj-text>
+                </mj-column>
+            </mj-section>
+            <mj-raw>{{/unless}}</mj-raw>
+
+            <!-- Line items — only for non-invoice with items -->
+            <mj-raw>{{#if Items}}</mj-raw>
+            <mj-raw>{{#unless (eq CollectionMethod "send_invoice")}}</mj-raw>
+            <mj-section background-color="#fff" padding="0 10px 10px 10px">
+                <mj-column>
+                    <mj-text padding="0 15px">
+                        <strong>Summary Of Charges</strong>
+                        <div style="border-bottom: 1px solid #ddd; margin: 5px 0 10px 0; padding-bottom: 5px;"></div>
+                        {{#each Items}}
+                        <div>{{this}}</div>
+                        {{/each}}
+                    </mj-text>
+                </mj-column>
+            </mj-section>
+            <mj-raw>{{/unless}}</mj-raw>
+            <mj-raw>{{/if}}</mj-raw>
+
+            <!-- Invoice-only: pay by due date message -->
+            <mj-raw>{{#if (eq CollectionMethod "send_invoice")}}</mj-raw>
+            <mj-section background-color="#fff" padding="0 10px">
+                <mj-column>
+                    <mj-text padding="0 15px 20px">
+                        To avoid any interruption in service for you or your clients, please pay the invoice by the due
+                        date, or contact Bitwarden Customer Support to sign up for auto-pay.
+                    </mj-text>
+                </mj-column>
+            </mj-section>
+            <mj-raw>{{/if}}</mj-raw>
+
+            <!-- Non-invoice: update payment method CTA -->
+            <mj-raw>{{#unless (eq CollectionMethod "send_invoice")}}</mj-raw>
+            <mj-section background-color="#fff" padding="0 10px 10px 10px">
+                <mj-column>
+                    <mj-button href="{{{UpdateBillingInfoUrl}}}" border-radius="25px">
+                        Update payment method
+                    </mj-button>
+                </mj-column>
+            </mj-section>
+            <mj-raw>{{/unless}}</mj-raw>
+
+            <!-- Invoice-only: contact support CTA -->
+            <mj-raw>{{#if (eq CollectionMethod "send_invoice")}}</mj-raw>
+            <mj-section background-color="#fff" padding="0 10px 10px 10px">
+                <mj-column>
+                    <mj-button href="{{{ContactUrl}}}" border-radius="25px">
+                        Contact Bitwarden Support
+                    </mj-button>
+                </mj-column>
+            </mj-section>
+            <mj-raw>{{/if}}</mj-raw>
+
+            <!-- Help center footer — both paths show this -->
+            <mj-section background-color="#fff" padding="0 10px 20px 10px">
+                <mj-column>
+                    <mj-text font-size="14px" line-height="20px" padding="0 15px">
+                        For assistance managing your subscription, please visit
+                        <a href="https://bitwarden.com/help/update-billing-info" class="link">
+                            <strong>the Help Center</strong>
+                        </a>
+                        or
+                        <a href="https://bitwarden.com/contact/" class="link">
+                            <strong>contact Bitwarden Customer Support</strong>
+                        </a>.
+                    </mj-text>
+                </mj-column>
+            </mj-section>
+        </mj-wrapper>
+
+        <!-- Learn More -->
+        <mj-wrapper padding="0px 20px 10px 20px">
+            <mj-bw-learn-more-footer />
+        </mj-wrapper>
+
+        <!-- Footer -->
+        <mj-include path="../../components/footer.mjml" />
+    </mj-body>
+</mjml>
