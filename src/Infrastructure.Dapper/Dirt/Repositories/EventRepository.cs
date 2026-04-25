@@ -155,6 +155,16 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
             }, startDate, endDate, pageOptions);
     }
 
+    public async Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.OpenAsync();
+        return await connection.ExecuteAsync(
+            $"DELETE FROM [{Schema}].[Event] WHERE [OrganizationId] = @OrganizationId",
+            new { OrganizationId = organizationId },
+            commandTimeout: 3600);
+    }
+
     private async Task<PagedResult<IEvent>> GetManyAsync(string sprocName,
         IDictionary<string, object?> sprocParams, DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {

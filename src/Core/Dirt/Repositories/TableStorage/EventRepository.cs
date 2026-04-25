@@ -1,4 +1,5 @@
-﻿using Azure.Data.Tables;
+﻿using Azure;
+using Azure.Data.Tables;
 using Bit.Core.Models.Data;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Settings;
@@ -99,6 +100,49 @@ public class EventRepository : IEventRepository
         }
 
         await CreateEventAsync(entity);
+    }
+
+    public async Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId)
+    {
+        // Azure Table Storage caps a single transaction at 100 ops; the outer cap
+        // bounds work per call so the background job can interleave other orgs.
+        const int batchSize = 100;
+        const int maxBatchesPerCall = 18_000;
+
+        var partitionKey = $"OrganizationId={organizationId}";
+        var filter = $"PartitionKey eq '{partitionKey}'";
+        var select = new[] { "PartitionKey", "RowKey" };
+
+        var pending = new List<TableTransactionAction>(batchSize);
+        var batchTasks = new List<Task>(maxBatchesPerCall);
+        // totalDeleted is counted optimistically before transactions complete; if Task.WhenAll
+        // throws the count may be inflated, but the outer cleanup loop will retry harmlessly.
+        var totalDeleted = 0;
+
+        await foreach (var entity in _tableClient.QueryAsync<TableEntity>(filter, select: select))
+        {
+            pending.Add(new TableTransactionAction(TableTransactionActionType.Delete, entity, ETag.All));
+
+            if (pending.Count == batchSize)
+            {
+                var batch = pending.ToList();
+                pending.Clear();
+                totalDeleted += batch.Count;
+                batchTasks.Add(_tableClient.SubmitTransactionAsync(batch));
+
+                if (batchTasks.Count >= maxBatchesPerCall)
+                    break;
+            }
+        }
+
+        if (pending.Count > 0)
+        {
+            totalDeleted += pending.Count;
+            batchTasks.Add(_tableClient.SubmitTransactionAsync(pending));
+        }
+
+        await Task.WhenAll(batchTasks);
+        return totalDeleted;
     }
 
     public async Task CreateManyAsync(IEnumerable<IEvent>? e)
