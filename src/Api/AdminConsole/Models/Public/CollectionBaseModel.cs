@@ -3,7 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Api.Models.Public;
+namespace Bit.Api.AdminConsole.Models.Public;
 
 public abstract class CollectionBaseModel
 {

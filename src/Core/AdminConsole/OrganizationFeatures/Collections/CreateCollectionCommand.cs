@@ -1,15 +1,15 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.AdminConsole.OrganizationFeatures.Collections.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
-using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationCollections;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Collections;
 
 public class CreateCollectionCommand : ICreateCollectionCommand
 {
@@ -72,7 +72,7 @@ public class CreateCollectionCommand : ICreateCollectionCommand
         }
 
         await _collectionRepository.CreateAsync(collection, org.UseGroups ? groupsList : null, usersList);
-        await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Created);
+        await _eventService.LogCollectionEventAsync(collection, EventType.Collection_Created);
 
         return collection;
     }
