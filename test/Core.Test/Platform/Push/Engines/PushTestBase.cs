@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Context;
 using Bit.Core.Enums;
+using Bit.Core.Models;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.NotificationCenter.Enums;
 using Bit.Core.Platform.Push;
@@ -35,9 +36,6 @@ public class EngineWrapper(IPushEngine pushEngine, FakeTimeProvider fakeTimeProv
 
     public Task PushAsync<T>(PushNotification<T> pushNotification) where T : class
         => pushEngine.PushAsync(pushNotification);
-
-    public Task PushCipherAsync(Cipher cipher, PushType pushType, IEnumerable<Guid>? collectionIds)
-        => pushEngine.PushCipherAsync(cipher, pushType, collectionIds);
 }
 
 public abstract class PushTestBase
@@ -113,7 +111,21 @@ public abstract class PushTestBase
         };
 
         await VerifyNotificationAsync(
-            async sut => await sut.PushSyncCipherCreateAsync(cipher, [collectionId]),
+            async sut => await sut.PushAsync(new PushNotification<SyncCipherPushNotification>
+            {
+                Type = PushType.SyncCipherCreate,
+                Target = NotificationTarget.User,
+                TargetId = cipher.UserId!.Value,
+                Payload = new SyncCipherPushNotification
+                {
+                    Id = cipher.Id,
+                    UserId = cipher.UserId,
+                    OrganizationId = cipher.OrganizationId,
+                    RevisionDate = cipher.RevisionDate,
+                    CollectionIds = [collectionId],
+                },
+                ExcludeCurrentContext = true,
+            }),
             GetPushSyncCipherCreatePayload(cipher, collectionId)
         );
     }
@@ -132,7 +144,21 @@ public abstract class PushTestBase
         };
 
         await VerifyNotificationAsync(
-            async sut => await sut.PushSyncCipherUpdateAsync(cipher, [collectionId]),
+            async sut => await sut.PushAsync(new PushNotification<SyncCipherPushNotification>
+            {
+                Type = PushType.SyncCipherUpdate,
+                Target = NotificationTarget.User,
+                TargetId = cipher.UserId!.Value,
+                Payload = new SyncCipherPushNotification
+                {
+                    Id = cipher.Id,
+                    UserId = cipher.UserId,
+                    OrganizationId = cipher.OrganizationId,
+                    RevisionDate = cipher.RevisionDate,
+                    CollectionIds = [collectionId],
+                },
+                ExcludeCurrentContext = true,
+            }),
             GetPushSyncCipherUpdatePayload(cipher, collectionId)
         );
     }
@@ -140,8 +166,6 @@ public abstract class PushTestBase
     [Fact]
     public async Task PushSyncCipherDeleteAsync_SendsExpectedResponse()
     {
-        var collectionId = Guid.NewGuid();
-
         var cipher = new Cipher
         {
             Id = Guid.NewGuid(),
@@ -151,7 +175,21 @@ public abstract class PushTestBase
         };
 
         await VerifyNotificationAsync(
-            async sut => await sut.PushSyncCipherDeleteAsync(cipher),
+            async sut => await sut.PushAsync(new PushNotification<SyncCipherPushNotification>
+            {
+                Type = PushType.SyncLoginDelete,
+                Target = NotificationTarget.User,
+                TargetId = cipher.UserId!.Value,
+                Payload = new SyncCipherPushNotification
+                {
+                    Id = cipher.Id,
+                    UserId = cipher.UserId,
+                    OrganizationId = cipher.OrganizationId,
+                    RevisionDate = cipher.RevisionDate,
+                    CollectionIds = null,
+                },
+                ExcludeCurrentContext = true,
+            }),
             GetPushSyncCipherDeletePayload(cipher)
         );
     }

@@ -56,7 +56,21 @@ public class NotificationHubPushNotificationServiceTests
         };
 
         await VerifyNotificationAsync(
-            async sut => await sut.PushSyncCipherCreateAsync(cipher, [collectionId]),
+            async sut => await sut.PushAsync(new PushNotification<SyncCipherPushNotification>
+            {
+                Type = PushType.SyncCipherCreate,
+                Target = NotificationTarget.User,
+                TargetId = userId,
+                Payload = new SyncCipherPushNotification
+                {
+                    Id = cipher.Id,
+                    UserId = cipher.UserId,
+                    OrganizationId = cipher.OrganizationId,
+                    RevisionDate = cipher.RevisionDate,
+                    CollectionIds = [collectionId],
+                },
+                ExcludeCurrentContext = true,
+            }),
             PushType.SyncCipherCreate,
             expectedPayload,
             $"(template:payload_userId:{userId} && !deviceIdentifier:{_deviceIdentifier})"
@@ -87,7 +101,21 @@ public class NotificationHubPushNotificationServiceTests
         };
 
         await VerifyNotificationAsync(
-            async sut => await sut.PushSyncCipherUpdateAsync(cipher, [collectionId]),
+            async sut => await sut.PushAsync(new PushNotification<SyncCipherPushNotification>
+            {
+                Type = PushType.SyncCipherUpdate,
+                Target = NotificationTarget.User,
+                TargetId = userId,
+                Payload = new SyncCipherPushNotification
+                {
+                    Id = cipher.Id,
+                    UserId = cipher.UserId,
+                    OrganizationId = cipher.OrganizationId,
+                    RevisionDate = cipher.RevisionDate,
+                    CollectionIds = [collectionId],
+                },
+                ExcludeCurrentContext = true,
+            }),
             PushType.SyncCipherUpdate,
             expectedPayload,
             $"(template:payload_userId:{userId} && !deviceIdentifier:{_deviceIdentifier})"
@@ -116,7 +144,21 @@ public class NotificationHubPushNotificationServiceTests
         };
 
         await VerifyNotificationAsync(
-            async sut => await sut.PushSyncCipherDeleteAsync(cipher),
+            async sut => await sut.PushAsync(new PushNotification<SyncCipherPushNotification>
+            {
+                Type = PushType.SyncLoginDelete,
+                Target = NotificationTarget.User,
+                TargetId = userId,
+                Payload = new SyncCipherPushNotification
+                {
+                    Id = cipher.Id,
+                    UserId = cipher.UserId,
+                    OrganizationId = cipher.OrganizationId,
+                    RevisionDate = cipher.RevisionDate,
+                    CollectionIds = null,
+                },
+                ExcludeCurrentContext = true,
+            }),
             PushType.SyncLoginDelete,
             expectedPayload,
             $"(template:payload_userId:{userId} && !deviceIdentifier:{_deviceIdentifier})"

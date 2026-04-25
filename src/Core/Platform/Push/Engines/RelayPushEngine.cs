@@ -1,12 +1,9 @@
 ﻿using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Context;
-using Bit.Core.Enums;
-using Bit.Core.Models;
 using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -43,41 +40,14 @@ public class RelayPushEngine : BaseIdentityClientService, IPushEngine
         _httpContextAccessor = httpContextAccessor;
     }
 
-    public async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid>? collectionIds)
-    {
-        if (cipher.OrganizationId.HasValue)
-        {
-            // We cannot send org pushes since access logic is much more complicated than just the fact that they belong
-            // to the organization. Potentially we could blindly send to just users that have the access all permission
-            // device registration needs to be more granular to handle that appropriately. A more brute force approach could
-            // me to send "full sync" push to all org users, but that has the potential to DDOS the API in bursts.
-
-            // await SendPayloadToOrganizationAsync(cipher.OrganizationId.Value, type, message, true);
-        }
-        else if (cipher.UserId.HasValue)
-        {
-            var message = new SyncCipherPushNotification
-            {
-                Id = cipher.Id,
-                UserId = cipher.UserId,
-                OrganizationId = cipher.OrganizationId,
-                RevisionDate = cipher.RevisionDate,
-            };
-
-            await PushAsync(new PushNotification<SyncCipherPushNotification>
-            {
-                Type = type,
-                Target = NotificationTarget.User,
-                TargetId = cipher.UserId.Value,
-                Payload = message,
-                ExcludeCurrentContext = true,
-            });
-        }
-    }
-
     public async Task PushAsync<T>(PushNotification<T> pushNotification)
         where T : class
     {
+        if (pushNotification.NonMobileOnly == true)
+        {
+            return;
+        }
+
         var deviceIdentifier = _httpContextAccessor.HttpContext
             ?.RequestServices.GetService<ICurrentContext>()
             ?.DeviceIdentifier;

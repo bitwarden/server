@@ -88,6 +88,54 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
         }
     }
 
+    public async Task<ICollection<Guid>> GetCollectionIdsByCipherIdAsync(Guid cipherId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            return await dbContext.CollectionCiphers
+                .Where(cc => cc.CipherId == cipherId)
+                .Select(cc => cc.CollectionId)
+                .ToListAsync();
+        }
+    }
+
+    public async Task<ICollection<Guid>> GetUserIdsByCollectionIdsAsync(IEnumerable<Guid> collectionIds)
+    {
+        var collectionIdList = collectionIds.ToList();
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            var directUserIds = from cu in dbContext.CollectionUsers
+                                where collectionIdList.Contains(cu.CollectionId)
+                                join ou in dbContext.OrganizationUsers on cu.OrganizationUserId equals ou.Id
+                                where ou.Status == Core.Enums.OrganizationUserStatusType.Confirmed && ou.UserId != null
+                                select ou.UserId!.Value;
+
+            var groupUserIds = from cg in dbContext.CollectionGroups
+                               where collectionIdList.Contains(cg.CollectionId)
+                               join gu in dbContext.GroupUsers on cg.GroupId equals gu.GroupId
+                               join ou in dbContext.OrganizationUsers on gu.OrganizationUserId equals ou.Id
+                               where ou.Status == Core.Enums.OrganizationUserStatusType.Confirmed && ou.UserId != null
+                               select ou.UserId!.Value;
+
+            var orgLevelUserIds = from cc in dbContext.CollectionCiphers
+                                  where collectionIdList.Contains(cc.CollectionId)
+                                  join c in dbContext.Collections on cc.CollectionId equals c.Id
+                                  join o in dbContext.Organizations on c.OrganizationId equals o.Id
+                                  join ou in dbContext.OrganizationUsers on c.OrganizationId equals ou.OrganizationId
+                                  where ou.Status == Core.Enums.OrganizationUserStatusType.Confirmed
+                                      && ou.UserId != null
+                                      && (ou.Type == OrganizationUserType.Owner
+                                          || ou.Type == OrganizationUserType.Admin)
+                                      && o.AllowAdminAccessToAllCollectionItems
+                                  select ou.UserId!.Value;
+
+            return await directUserIds.Union(groupUserIds).Union(orgLevelUserIds).ToListAsync();
+        }
+    }
+
     public async Task UpdateCollectionsAsync(Guid cipherId, Guid userId, IEnumerable<Guid> collectionIds)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
