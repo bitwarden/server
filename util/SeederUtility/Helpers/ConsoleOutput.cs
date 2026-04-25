@@ -27,15 +27,15 @@ internal static class ConsoleOutput
         }
 
         var map = deps.Mangler.GetMangleMap();
-        Console.WriteLine($"--- Mangled Data Map ({map.Count} entries) ---");
+        Console.Error.WriteLine($"--- Mangled Data Map ({map.Count} entries) ---");
         foreach (var (original, mangled) in map.Take(15))
         {
-            Console.WriteLine($"  {original} -> {mangled}");
+            Console.Error.WriteLine($"  {original} -> {mangled}");
         }
 
         if (map.Count > 15)
         {
-            Console.WriteLine($"  ... and {map.Count - 15} more");
+            Console.Error.WriteLine($"  ... and {map.Count - 15} more");
         }
     }
 }
