@@ -84,6 +84,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IAdminRecoverAccountCommand _adminRecoverAccountCommand;
     private readonly AccountRecoveryV2.IAdminRecoverAccountCommand _adminRecoverAccountCommandV2;
     private readonly ISelfRevokeOrganizationUserCommand _selfRevokeOrganizationUserCommand;
+    private readonly IChangeEmailForPasswordlessUserCommand _changeEmailForPasswordlessUserCommand;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -116,7 +117,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
         AccountRecoveryV2.IAdminRecoverAccountCommand adminRecoverAccountCommandV2,
         IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand,
         V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext,
-        ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand)
+        ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand,
+        IChangeEmailForPasswordlessUserCommand changeEmailForPasswordlessUserCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -150,6 +152,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _adminRecoverAccountCommand = adminRecoverAccountCommand;
         _adminRecoverAccountCommandV2 = adminRecoverAccountCommandV2;
         _selfRevokeOrganizationUserCommand = selfRevokeOrganizationUserCommand;
+        _changeEmailForPasswordlessUserCommand = changeEmailForPasswordlessUserCommand;
     }
 
     [HttpGet("{id}")]
@@ -549,6 +552,22 @@ public class OrganizationUsersController : BaseAdminConsoleController
         return TypedResults.BadRequest(ModelState);
     }
 #nullable disable
+
+    [HttpPut("{id}/changeEmailForPasswordlessUser")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<IResult> ChangeEmailForPasswordlessUser(
+        Guid orgId, Guid id,
+        [FromBody] OrganizationUserChangeEmailRequestModel model)
+    {
+        var targetOrganizationUser = await _organizationUserRepository.GetByIdAsync(id);
+        if (targetOrganizationUser == null || targetOrganizationUser.OrganizationId != orgId)
+        {
+            return TypedResults.NotFound();
+        }
+
+        await _changeEmailForPasswordlessUserCommand.ChangeEmailAsync(orgId, targetOrganizationUser, model.NewEmail);
+        return TypedResults.NoContent();
+    }
 
     [HttpDelete("{id}")]
     [Authorize<ManageUsersRequirement>]
