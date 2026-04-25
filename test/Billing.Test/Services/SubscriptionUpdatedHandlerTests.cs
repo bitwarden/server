@@ -330,7 +330,7 @@ public class SubscriptionUpdatedHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_IncompleteToIncompleteExpiredTransition_DisablesProviderAndSetsCancellation()
+    public async Task HandleAsync_IncompleteToIncompleteExpiredTransition_DisablesProvider()
     {
         // Arrange
         var providerId = Guid.NewGuid();
@@ -379,21 +379,18 @@ public class SubscriptionUpdatedHandlerTests
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert - Incomplete to IncompleteExpired should trigger disable and cancellation
+        // Assert - Incomplete to IncompleteExpired should disable the subscriber but
+        // must NOT call UpdateSubscriptionAsync: the subscription is already terminal
+        // and Stripe would reject the update, causing a 500-retry disable loop.
         Assert.False(provider.Enabled);
         await _providerService.Received(1).UpdateAsync(provider);
-        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
-            subscriptionId,
-            Arg.Is<SubscriptionUpdateOptions>(options =>
-                options.CancelAt.HasValue &&
-                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
-                options.ProrationBehavior == ProrationBehavior.None &&
-                options.CancellationDetails != null &&
-                options.CancellationDetails.Comment != null));
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(),
+            Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Fact]
-    public async Task HandleAsync_IncompleteToIncompleteExpiredUserSubscription_DisablesPremiumAndSetsCancellation()
+    public async Task HandleAsync_IncompleteToIncompleteExpiredUserSubscription_DisablesPremium()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -436,20 +433,16 @@ public class SubscriptionUpdatedHandlerTests
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert
+        // Assert - disables Premium but must NOT call UpdateSubscriptionAsync
+        // on the already-terminal subscription (would 500-retry and re-disable).
         await _userService.Received(1).DisablePremiumAsync(userId, currentPeriodEnd);
-        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
-            subscriptionId,
-            Arg.Is<SubscriptionUpdateOptions>(options =>
-                options.CancelAt.HasValue &&
-                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
-                options.ProrationBehavior == ProrationBehavior.None &&
-                options.CancellationDetails != null &&
-                options.CancellationDetails.Comment != null));
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(),
+            Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Fact]
-    public async Task HandleAsync_IncompleteToIncompleteExpiredOrganizationSubscription_DisablesOrganizationAndSetsCancellation()
+    public async Task HandleAsync_IncompleteToIncompleteExpiredOrganizationSubscription_DisablesOrganization()
     {
         // Arrange
         var organizationId = Guid.NewGuid();
@@ -504,17 +497,13 @@ public class SubscriptionUpdatedHandlerTests
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert
+        // Assert - disables organization but must NOT call UpdateSubscriptionAsync
+        // on the already-terminal subscription (would 500-retry and re-disable).
         await _organizationDisableCommand.Received(1).DisableAsync(organizationId, currentPeriodEnd);
         await _pushNotificationAdapter.Received(1).NotifyEnabledChangedAsync(organization);
-        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
-            subscriptionId,
-            Arg.Is<SubscriptionUpdateOptions>(options =>
-                options.CancelAt.HasValue &&
-                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
-                options.ProrationBehavior == ProrationBehavior.None &&
-                options.CancellationDetails != null &&
-                options.CancellationDetails.Comment != null));
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(),
+            Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Fact]
