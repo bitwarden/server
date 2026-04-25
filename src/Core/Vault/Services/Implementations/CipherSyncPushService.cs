@@ -42,6 +42,23 @@ public class CipherSyncPushService : ICipherSyncPushService
         {
             if (!_featureService.IsEnabled(FeatureFlagKeys.OrgCipherPushFanout))
             {
+                // Device registrations in Notification Hub and Relay are not collection-aware, so we cannot
+                // safely fan out to individual users on those mobile engines. Restrict to the non-mobile
+                // (SignalR) path, which routes by organizationId on the receiving end.
+                await _pushNotificationService.PushAsync(new PushNotification<SyncCipherPushNotification>
+                {
+                    Type = pushType,
+                    Target = NotificationTarget.Organization,
+                    TargetId = cipher.OrganizationId.Value,
+                    Payload = new SyncCipherPushNotification
+                    {
+                        Id = cipher.Id,
+                        OrganizationId = cipher.OrganizationId,
+                        RevisionDate = cipher.RevisionDate,
+                    },
+                    ExcludeCurrentContext = true,
+                    NonMobileOnly = true,
+                });
                 return;
             }
 

@@ -70,6 +70,11 @@ public class NotificationHubPushEngine : IPushEngine, IPushRelayer
     public async Task PushAsync<T>(PushNotification<T> pushNotification)
         where T : class
     {
+        if (pushNotification.NonMobileOnly == true)
+        {
+            return;
+        }
+
         var initialTag = pushNotification.Target switch
         {
             NotificationTarget.User => $"template:payload_userId:{pushNotification.TargetId}",
