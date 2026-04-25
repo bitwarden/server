@@ -39,6 +39,10 @@ public enum EventType : int
     Cipher_ClientCopiedBankAccountPin = 1120,
     Cipher_ClientToggledBankAccountNumberVisible = 1121,
     Cipher_ClientToggledBankAccountPinVisible = 1122,
+    Cipher_ClientCopiedLicenseNumber = 1123,
+    Cipher_ClientToggledLicenseNumberVisible = 1124,
+    Cipher_ClientCopiedPassportNumber = 1125,
+    Cipher_ClientToggledPassportNumberVisible = 1126,
 
     Collection_Created = 1300,
     Collection_Updated = 1301,
