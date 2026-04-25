@@ -152,7 +152,12 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
     {
         Subscription = subscription.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
         UpcomingInvoice = subscription.UpcomingInvoice != null ? new BillingSubscriptionUpcomingInvoice(subscription.UpcomingInvoice) : null;
-        CustomerDiscount = subscription.CustomerDiscount != null ? new BillingCustomerDiscount(subscription.CustomerDiscount) : null;
+        // All discounts passed through unfiltered. Unlike SubscriptionResponseModel (which filters
+        // to M2-only for the individual subscription page), organizations need visibility into all
+        // discount types including migration discounts (M3/Families) and SM standalone.
+        CustomerDiscounts = subscription.CustomerDiscounts
+            .Select(d => new BillingCustomerDiscount(d))
+            .ToArray();
         Expiration = DateTime.UtcNow.AddYears(1); // Not used, so just give it a value.
 
         if (hideSensitiveData)
@@ -210,7 +215,7 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
 
     public string StorageName { get; set; }
     public double? StorageGb { get; set; }
-    public BillingCustomerDiscount CustomerDiscount { get; set; }
+    public BillingCustomerDiscount[] CustomerDiscounts { get; set; } = [];
     public BillingSubscription Subscription { get; set; }
     public BillingSubscriptionUpcomingInvoice UpcomingInvoice { get; set; }
 

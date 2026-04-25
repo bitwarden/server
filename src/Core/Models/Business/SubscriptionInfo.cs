@@ -25,7 +25,7 @@ public class SubscriptionInfo
         return amountInCents.HasValue ? amountInCents.Value / StripeMinorUnitDivisor : null;
     }
 
-    public BillingCustomerDiscount? CustomerDiscount { get; set; }
+    public List<BillingCustomerDiscount> CustomerDiscounts { get; set; } = [];
     public BillingSubscription? Subscription { get; set; }
     public BillingUpcomingInvoice? UpcomingInvoice { get; set; }
 
