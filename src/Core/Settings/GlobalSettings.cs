@@ -42,6 +42,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual string OidcIdentityClientKey { get; set; }
     public virtual string HibpApiKey { get; set; }
     public virtual bool DisableUserRegistration { get; set; }
+    public virtual bool SuppressOnboardingInterstitials { get; set; }
     public virtual bool DisableEmailNewDevice { get; set; }
     public virtual bool EnableNewDeviceVerification { get; set; }
     public virtual bool EnableCloudCommunication { get; set; } = false;
