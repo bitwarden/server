@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[User_ReadBySsoUserOrganizationIdExternalId]
+CREATE OR ALTER PROCEDURE [dbo].[User_ReadBySsoUserOrganizationIdExternalId]
     @OrganizationId UNIQUEIDENTIFIER,
     @ExternalId NVARCHAR(300)
 AS
@@ -9,12 +9,13 @@ BEGIN
         U.*
     FROM
         [dbo].[UserView] U
-    INNER JOIN
+        INNER JOIN
         [dbo].[SsoUser] SU ON SU.[UserId] = U.[Id]
     WHERE
         (
             (@OrganizationId IS NULL AND SU.[OrganizationId] IS NULL)
-            OR (@OrganizationId IS NOT NULL AND SU.[OrganizationId] = @OrganizationId)
+        OR (@OrganizationId IS NOT NULL AND SU.[OrganizationId] = @OrganizationId)
         )
         AND SU.[ExternalId] = @ExternalId
 END
+GO
