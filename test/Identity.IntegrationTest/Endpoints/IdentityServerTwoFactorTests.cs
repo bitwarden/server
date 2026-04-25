@@ -20,7 +20,7 @@ using Bit.Test.Common.Helpers;
 using Duende.IdentityModel;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Stores;
-using LinqToDB;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using NSubstitute;
 using Xunit;
