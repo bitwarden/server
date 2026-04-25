@@ -4,6 +4,9 @@ using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Repositories;
+using Bit.Core.Tools.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 
@@ -13,7 +16,8 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandler
 /// </summary>
 public class SendControlsSyncPolicyEvent(
     IPolicyRepository policyRepository,
-    TimeProvider timeProvider) : IOnPolicyPostUpdateEvent
+    TimeProvider timeProvider,
+    ISendRepository sendRepository) : IOnPolicyPostUpdateEvent, IPolicyValidationEvent
 {
     public PolicyType Type => PolicyType.SendControls;
 
@@ -37,6 +41,8 @@ public class SendControlsSyncPolicyEvent(
             PolicyType.SendOptions,
             enabled: postUpsertedPolicyState.Enabled && sendControlsPolicyData.DisableHideEmail,
             policyData: sendOptionsData);
+
+        await UpdateSendsByPolicyAsync(postUpsertedPolicyState, sendControlsPolicyData);
     }
 
     private async Task UpsertLegacyPolicyAsync<T>(
@@ -59,5 +65,50 @@ public class SendControlsSyncPolicyEvent(
         policy.RevisionDate = timeProvider.GetUtcNow().UtcDateTime;
 
         await policyRepository.UpsertAsync(policy);
+    }
+
+    public Task<string> ValidateAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
+    {
+        var dataModel = policyRequest.PolicyUpdate.GetDataModel<SendControlsPolicyData>();
+        if (dataModel.AllowedDomains is not null && dataModel.WhoCanAccess != SendWhoCanAccessType.SpecificPeople)
+        {
+            return Task.FromResult("Allowed domains can only be set when the required access type is set to specific people");
+        }
+        return Task.FromResult(string.Empty);
+    }
+
+    private async Task UpdateSendsByPolicyAsync(Policy postUpsertedPolicyState, SendControlsPolicyData sendControlsPolicyData)
+    {
+        var orgSendIds = await sendRepository.GetIdsByOrganizationIdAsync(postUpsertedPolicyState.OrganizationId);
+        foreach (var sendIdsChunk in orgSendIds.Chunk(50))
+        {
+            var enabled = new List<Guid>();
+            var disabled = new List<Guid>();
+            var sendsChunk = await sendRepository.GetManyByIdsAsync(sendIdsChunk);
+            foreach (var send in sendsChunk)
+            {
+                if (
+                    // If the policy is disabled then we want to re-enable any Sends that were previously disabled
+                    postUpsertedPolicyState.Enabled && 
+                    (sendControlsPolicyData.DisableSend ||
+                    (sendControlsPolicyData.DisableHideEmail && (send.HideEmail ?? false)) ||
+                    (sendControlsPolicyData.WhoCanAccess == SendWhoCanAccessType.PasswordProtected && send.AuthType != AuthType.Password) ||
+                    (sendControlsPolicyData.WhoCanAccess == SendWhoCanAccessType.SpecificPeople && send.AuthType != AuthType.Email) ||
+                    (sendControlsPolicyData.WhoCanAccess == SendWhoCanAccessType.SpecificPeople && !SendValidationService.SendAllEmailsHaveAllowedDomains(send.Emails, sendControlsPolicyData.AllowedDomains))))
+                {
+                    disabled.Add(send.Id);
+                } else
+                {
+                    enabled.Add(send.Id);
+                }
+            }
+            if (enabled.Count > 0) {
+                await sendRepository.UpdateManyDisabledAsync(enabled, false);
+            }
+            if (disabled.Count > 0)
+            {
+                await sendRepository.UpdateManyDisabledAsync(disabled, true);
+            }
+        }
     }
 }

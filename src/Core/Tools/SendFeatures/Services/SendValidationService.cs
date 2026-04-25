@@ -1,7 +1,6 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 
-#nullable disable
-
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.Billing.Pricing;
@@ -10,6 +9,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Tools.Services;
 
@@ -48,13 +48,13 @@ public class SendValidationService : ISendValidationService
         }
 
         // Once data migration has run, query only SendControls
-        // var sendControlsTask = _policyRequirementQuery.GetAsync<SendControlsPolicyRequirement>(userId.Value);
+        var sendControlsTask = _policyRequirementQuery.GetAsync<SendControlsPolicyRequirement>(userId.Value);
         var disableSendTask = _policyRequirementQuery.GetAsync<DisableSendPolicyRequirement>(userId.Value);
         var sendOptionsTask = _policyRequirementQuery.GetAsync<SendOptionsPolicyRequirement>(userId.Value);
 
-        await Task.WhenAll(disableSendTask, sendOptionsTask);
+        await Task.WhenAll(sendControlsTask, disableSendTask, sendOptionsTask);
 
-        // var sendControlsRequirement = sendControlsTask.Result;
+        var sendControlsRequirement = sendControlsTask.Result;
         var disableSendRequirement = disableSendTask.Result;
         var sendOptionsRequirement = sendOptionsTask.Result;
 
@@ -68,14 +68,42 @@ public class SendValidationService : ISendValidationService
             throw new BadRequestException(
                 "Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
         }
+
+        var passwordRequired = sendControlsRequirement.WhoCanAccess == SendWhoCanAccessType.PasswordProtected;
+        var emailsRequired = sendControlsRequirement.WhoCanAccess == SendWhoCanAccessType.SpecificPeople;
+        if ((passwordRequired && send.Password == null) || (emailsRequired && send.Emails == null))
+        {
+            var requiredAccessControl = passwordRequired ? "password" : emailsRequired ? "email verification" : "(cannot determine required auth)";
+            throw new BadRequestException($"Due to an Enterprise Policy your Sends must be protected by {requiredAccessControl}");
+        }
+
+        if (emailsRequired && sendControlsRequirement.AllowedDomains != null)
+        {
+            if (!SendAllEmailsHaveAllowedDomains(send.Emails, sendControlsRequirement.AllowedDomains))
+            {
+                throw new BadRequestException($"Due to an Enterprise Policy your Sends must be protected by email verification and access granted only to the following domain(s): {sendControlsRequirement.AllowedDomains}");
+            }
+        }
     }
+
+    public static bool SendAllEmailsHaveAllowedDomains(string? emailsString, string? domainsString)
+    {
+        var domains = (domainsString ?? "").Split(",", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        var emails = (emailsString ?? "").Split(",", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        return emails.All(email => domains.Any(domain =>
+        {
+            var emailDomain = EmailValidation.GetDomain(email);
+            return emailDomain.Equals(domain, StringComparison.OrdinalIgnoreCase)
+                || emailDomain.EndsWith("." + domain, StringComparison.OrdinalIgnoreCase);
+        }));
+    } 
 
     public async Task<long> StorageRemainingForSendAsync(Send send)
     {
         var storageBytesRemaining = 0L;
         if (send.UserId.HasValue)
         {
-            var user = await _userRepository.GetByIdAsync(send.UserId.Value);
+            var user = await _userRepository.GetByIdAsync(send.UserId.Value) ?? throw new NotFoundException("Send user not found");
             if (!await _userService.CanAccessPremium(user))
             {
                 throw new BadRequestException("You must have premium status to use file Sends.");
@@ -110,7 +138,7 @@ public class SendValidationService : ISendValidationService
         }
         else if (send.OrganizationId.HasValue)
         {
-            var org = await _organizationRepository.GetByIdAsync(send.OrganizationId.Value);
+            var org = await _organizationRepository.GetByIdAsync(send.OrganizationId.Value) ?? throw new NotFoundException("Send organization not found");
             if (!org.MaxStorageGb.HasValue)
             {
                 throw new BadRequestException("This organization cannot use file sends.");
