@@ -9,6 +9,7 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.SecretsManager.Repositories.Noop;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -80,7 +81,7 @@ public class Startup
 
         // Services
         services.AddBaseServices(globalSettings);
-        services.AddDefaultServices(globalSettings);
+        services.AddDefaultServices(globalSettings, Configuration);
         services.AddDistributedCache(globalSettings);
         services.AddBillingOperations();
         services.AddCommercialCoreServices();
@@ -123,10 +124,14 @@ public class Startup
 
     public void Configure(
         IApplicationBuilder app,
-        IWebHostEnvironment env)
+        IWebHostEnvironment env,
+        GlobalSettings globalSettings)
     {
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
+
+        // Default Middleware
+        app.UseDefaultMiddleware(env, globalSettings, Configuration);
 
         if (env.IsDevelopment())
         {
