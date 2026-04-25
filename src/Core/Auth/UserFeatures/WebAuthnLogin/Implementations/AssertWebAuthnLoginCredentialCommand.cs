@@ -14,16 +14,27 @@ internal class AssertWebAuthnLoginCredentialCommand : IAssertWebAuthnLoginCreden
     private readonly IFido2 _fido2;
     private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IWebAuthnChallengeCacheProvider _webAuthnChallengeCache;
 
-    public AssertWebAuthnLoginCredentialCommand(IFido2 fido2, IWebAuthnCredentialRepository webAuthnCredentialRepository, IUserRepository userRepository)
+    public AssertWebAuthnLoginCredentialCommand(
+        IFido2 fido2,
+        IWebAuthnCredentialRepository webAuthnCredentialRepository,
+        IUserRepository userRepository,
+        IWebAuthnChallengeCacheProvider webAuthnChallengeCache)
     {
         _fido2 = fido2;
         _webAuthnCredentialRepository = webAuthnCredentialRepository;
         _userRepository = userRepository;
+        _webAuthnChallengeCache = webAuthnChallengeCache;
     }
 
     public async Task<(User, WebAuthnCredential)> AssertWebAuthnLoginCredential(AssertionOptions options, AuthenticatorAssertionRawResponse assertionResponse)
     {
+        if (!await _webAuthnChallengeCache.TryMarkChallengeAsUsedAsync(options.Challenge))
+        {
+            throw new BadRequestException("Invalid credential.");
+        }
+
         if (!GuidUtilities.TryParseBytes(assertionResponse.Response.UserHandle, out var userId))
         {
             throw new BadRequestException("Invalid credential.");
