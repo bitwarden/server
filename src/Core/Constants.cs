@@ -162,6 +162,8 @@ public static class FeatureFlagKeys
     public const string PolicyRequirements = "pm-14439-policy-requirements";
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
     public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
+    // TODO: Replace with the real LaunchDarkly feature flag key in pm-XXXXX-bulk-auto-confirm-on-login format once the flag is created.
+    public const string BulkAutoConfirmOnLogin = "bulk-auto-confirm-on-login";
     public const string AdminResetTwoFactor = "pm-15489-reset-two-factor-account-recovery";
     public const string PublicMembersInviteRefactor = "pm-33398-refactor-members-invite-org-users-command";
     public const string GenerateInviteLink = "pm-32497-generate-invite-link";
