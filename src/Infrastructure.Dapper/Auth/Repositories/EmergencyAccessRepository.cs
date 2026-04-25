@@ -178,6 +178,25 @@ public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEme
     }
 
     /// <inheritdoc />
+    public DatabaseTransactionAction SetStatusToAcceptedForKeyRegeneration(IEnumerable<EmergencyAccess> emergencyAccesses)
+    {
+        return async (connection, transaction) =>
+        {
+            var ids = emergencyAccesses.Select(ea => ea.Id).ToList();
+            if (ids.Count == 0)
+            {
+                return;
+            }
+
+            await connection!.ExecuteAsync(
+                "[dbo].[EmergencyAccess_SetStatusToAccepted]",
+                new { Ids = ids.ToGuidIdArrayTVP() },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+        };
+    }
+
+    /// <inheritdoc />
     public async Task DeleteManyAsync(ICollection<Guid> emergencyAccessIds)
     {
         using var connection = new SqlConnection(ConnectionString);

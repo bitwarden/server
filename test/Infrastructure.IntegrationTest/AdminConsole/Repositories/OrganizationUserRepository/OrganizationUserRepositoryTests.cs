@@ -1476,4 +1476,43 @@ public class OrganizationUserRepositoryTests
         // Assert
         Assert.False(result);
     }
+
+    [Theory, DatabaseData]
+    public async Task SetStatusToAcceptedForKeyRegeneration_ConfirmedUser_SetsToAcceptedAndClearsKey(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        Database database)
+    {
+        var user = await userRepository.CreateTestUserAsync();
+        var org = await organizationRepository.CreateTestOrganizationAsync();
+        var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(org, user);
+        orgUser.Key = "old-org-key";
+        await organizationUserRepository.ReplaceAsync(orgUser);
+
+        var action = organizationUserRepository.SetStatusToAcceptedForKeyRegeneration([orgUser]);
+        await DatabaseTransactionActionTestHelper.ExecuteAsync(database, action);
+
+        var updatedOrgUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
+        Assert.NotNull(updatedOrgUser);
+        Assert.Equal(OrganizationUserStatusType.Accepted, updatedOrgUser.Status);
+        Assert.Null(updatedOrgUser.Key);
+    }
+
+    [Theory, DatabaseData]
+    public async Task RemoveForKeyRegeneration_RevokedUser_DeletesUser(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        Database database)
+    {
+        var user = await userRepository.CreateTestUserAsync();
+        var org = await organizationRepository.CreateTestOrganizationAsync();
+        var orgUser = await organizationUserRepository.CreateRevokedTestOrganizationUserAsync(org, user);
+
+        var action = organizationUserRepository.RemoveForKeyRegeneration([orgUser]);
+        await DatabaseTransactionActionTestHelper.ExecuteAsync(database, action);
+
+        Assert.Null(await organizationUserRepository.GetByIdAsync(orgUser.Id));
+    }
 }

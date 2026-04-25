@@ -1058,6 +1058,81 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             await dbContext.SaveChangesAsync();
         };
     }
+
+    /// <inheritdoc />
+    public DatabaseTransactionAction SetStatusToAcceptedForKeyRegeneration(
+        IEnumerable<Core.Entities.OrganizationUser> organizationUsers)
+    {
+        return async (_, _) =>
+        {
+            var ids = organizationUsers.Select(ou => ou.Id).ToList();
+            if (ids.Count == 0)
+            {
+                return;
+            }
+
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetDatabaseContext(scope);
+            var utcNow = DateTime.UtcNow;
+
+            await dbContext.OrganizationUsers
+                .Where(ou => ids.Contains(ou.Id))
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(ou => ou.Status, OrganizationUserStatusType.Accepted)
+                    .SetProperty(ou => ou.Key, (string?)null)
+                    .SetProperty(ou => ou.RevisionDate, utcNow));
+
+            await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(ids);
+        };
+    }
+
+    /// <inheritdoc />
+    public DatabaseTransactionAction RemoveForKeyRegeneration(
+        IEnumerable<Core.Entities.OrganizationUser> organizationUsers)
+    {
+        return async (_, _) =>
+        {
+            var ids = organizationUsers.Select(ou => ou.Id).ToList();
+            if (ids.Count == 0)
+            {
+                return;
+            }
+
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetDatabaseContext(scope);
+
+            await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(ids);
+
+            await dbContext.CollectionUsers
+                .Where(cu => ids.Contains(cu.OrganizationUserId))
+                .ExecuteDeleteAsync();
+
+            await dbContext.GroupUsers
+                .Where(gu => ids.Contains(gu.OrganizationUserId))
+                .ExecuteDeleteAsync();
+
+            await dbContext.UserProjectAccessPolicy
+                .Where(ap => ids.Contains(ap.OrganizationUserId!.Value))
+                .ExecuteDeleteAsync();
+
+            await dbContext.UserServiceAccountAccessPolicy
+                .Where(ap => ids.Contains(ap.OrganizationUserId!.Value))
+                .ExecuteDeleteAsync();
+
+            await dbContext.UserSecretAccessPolicy
+                .Where(ap => ids.Contains(ap.OrganizationUserId!.Value))
+                .ExecuteDeleteAsync();
+
+            await dbContext.OrganizationSponsorships
+                .Where(os => ids.Contains(os.SponsoringOrganizationUserId))
+                .ExecuteDeleteAsync();
+
+            await dbContext.OrganizationUsers
+                .Where(ou => ids.Contains(ou.Id))
+                .ExecuteDeleteAsync();
+        };
+    }
+
 #nullable disable
 
 

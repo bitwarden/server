@@ -743,4 +743,42 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                 transaction: transaction);
         };
     }
+
+    /// <inheritdoc />
+    public DatabaseTransactionAction SetStatusToAcceptedForKeyRegeneration(IEnumerable<OrganizationUser> organizationUsers)
+    {
+        return async (connection, transaction) =>
+        {
+            var ids = organizationUsers.Select(ou => ou.Id).ToList();
+            if (ids.Count == 0)
+            {
+                return;
+            }
+
+            await connection!.ExecuteAsync(
+                "[dbo].[OrganizationUser_SetStatusToAccepted]",
+                new { OrganizationUserIds = ids.ToGuidIdArrayTVP() },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+        };
+    }
+
+    /// <inheritdoc />
+    public DatabaseTransactionAction RemoveForKeyRegeneration(IEnumerable<OrganizationUser> organizationUsers)
+    {
+        return async (connection, transaction) =>
+        {
+            var ids = organizationUsers.Select(ou => ou.Id).ToList();
+            if (ids.Count == 0)
+            {
+                return;
+            }
+
+            await connection!.ExecuteAsync(
+                "[dbo].[OrganizationUser_DeleteByIds]",
+                new { Ids = ids.ToGuidIdArrayTVP() },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+        };
+    }
 }
