@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.Auth.UserFeatures.UserEmail.Interfaces;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -7,7 +7,7 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+namespace Bit.Core.Auth.UserFeatures.UserEmail;
 
 public class ChangeEmailForPasswordlessUserCommand : IChangeEmailForPasswordlessUserCommand
 {
@@ -28,7 +28,7 @@ public class ChangeEmailForPasswordlessUserCommand : IChangeEmailForPasswordless
         _stripeSyncService = stripeSyncService;
     }
 
-    public async Task ChangeEmailAsync(Guid organizationId, OrganizationUser organizationUser, string newEmail)
+    public async Task ChangeOrganizationUserEmailAsync(Guid organizationId, OrganizationUser organizationUser, string newEmail)
     {
         var user = await _userRepository.GetByIdAsync(organizationUser.UserId!.Value)
             ?? throw new NotFoundException();

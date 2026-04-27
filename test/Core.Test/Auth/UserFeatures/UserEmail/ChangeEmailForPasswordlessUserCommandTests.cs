@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+using Bit.Core.Auth.UserFeatures.UserEmail;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -11,7 +11,7 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
 
-namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers;
+namespace Bit.Core.Test.Auth.UserFeatures.UserEmail;
 
 [SutProviderCustomize]
 public class ChangeEmailForPasswordlessUserCommandTests
@@ -39,7 +39,7 @@ public class ChangeEmailForPasswordlessUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ChangeEmailAsync_Success_UpdatesUserAndPushesLogout(
+    public async Task ChangeOrganizationUserEmailAsync_Success_UpdatesUserAndPushesLogout(
         OrganizationUser organizationUser,
         User user,
         OrganizationDomain claimedDomain,
@@ -50,7 +50,7 @@ public class ChangeEmailForPasswordlessUserCommandTests
         SetupValidScenario(organizationUser, user, claimedDomain, newEmail, sutProvider);
         user.Gateway = null;
 
-        await sutProvider.Sut.ChangeEmailAsync(organizationUser.OrganizationId, organizationUser, newEmail);
+        await sutProvider.Sut.ChangeOrganizationUserEmailAsync(organizationUser.OrganizationId, organizationUser, newEmail);
 
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushLogOutAsync(user.Id);
@@ -59,7 +59,7 @@ public class ChangeEmailForPasswordlessUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ChangeEmailAsync_UserHasMasterPassword_ThrowsBadRequest(
+    public async Task ChangeOrganizationUserEmailAsync_UserHasMasterPassword_ThrowsBadRequest(
         OrganizationUser organizationUser,
         User user,
         SutProvider<ChangeEmailForPasswordlessUserCommand> sutProvider)
@@ -70,11 +70,11 @@ public class ChangeEmailForPasswordlessUserCommandTests
             .Returns(user);
 
         await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ChangeEmailAsync(organizationUser.OrganizationId, organizationUser, "new@example.com"));
+            () => sutProvider.Sut.ChangeOrganizationUserEmailAsync(organizationUser.OrganizationId, organizationUser, "new@example.com"));
     }
 
     [Theory, BitAutoData]
-    public async Task ChangeEmailAsync_DomainNotClaimedByOrg_ThrowsBadRequest(
+    public async Task ChangeOrganizationUserEmailAsync_DomainNotClaimedByOrg_ThrowsBadRequest(
         OrganizationUser organizationUser,
         User user,
         string newEmail,
@@ -90,11 +90,11 @@ public class ChangeEmailForPasswordlessUserCommandTests
             .Returns((OrganizationDomain)null);
 
         await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ChangeEmailAsync(organizationUser.OrganizationId, organizationUser, newEmail));
+            () => sutProvider.Sut.ChangeOrganizationUserEmailAsync(organizationUser.OrganizationId, organizationUser, newEmail));
     }
 
     [Theory, BitAutoData]
-    public async Task ChangeEmailAsync_DomainNotVerified_ThrowsBadRequest(
+    public async Task ChangeOrganizationUserEmailAsync_DomainNotVerified_ThrowsBadRequest(
         OrganizationUser organizationUser,
         User user,
         string newEmail,
@@ -112,11 +112,11 @@ public class ChangeEmailForPasswordlessUserCommandTests
             .Returns(unverifiedDomain);
 
         await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ChangeEmailAsync(organizationUser.OrganizationId, organizationUser, newEmail));
+            () => sutProvider.Sut.ChangeOrganizationUserEmailAsync(organizationUser.OrganizationId, organizationUser, newEmail));
     }
 
     [Theory, BitAutoData]
-    public async Task ChangeEmailAsync_DuplicateEmail_ThrowsBadRequest(
+    public async Task ChangeOrganizationUserEmailAsync_DuplicateEmail_ThrowsBadRequest(
         OrganizationUser organizationUser,
         User user,
         User existingUser,
@@ -138,11 +138,11 @@ public class ChangeEmailForPasswordlessUserCommandTests
             .Returns(existingUser);
 
         await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ChangeEmailAsync(organizationUser.OrganizationId, organizationUser, newEmail));
+            () => sutProvider.Sut.ChangeOrganizationUserEmailAsync(organizationUser.OrganizationId, organizationUser, newEmail));
     }
 
     [Theory, BitAutoData]
-    public async Task ChangeEmailAsync_StripeSyncFails_RollsBackEmail(
+    public async Task ChangeOrganizationUserEmailAsync_StripeSyncFails_RollsBackEmail(
         OrganizationUser organizationUser,
         User user,
         OrganizationDomain claimedDomain,
@@ -160,7 +160,7 @@ public class ChangeEmailForPasswordlessUserCommandTests
             .ThrowsAsync(new Exception("Stripe error"));
 
         await Assert.ThrowsAsync<Exception>(
-            () => sutProvider.Sut.ChangeEmailAsync(organizationUser.OrganizationId, organizationUser, newEmail));
+            () => sutProvider.Sut.ChangeOrganizationUserEmailAsync(organizationUser.OrganizationId, organizationUser, newEmail));
 
         await sutProvider.GetDependency<IUserRepository>().Received(2).ReplaceAsync(user);
         Assert.Equal(originalEmail, user.Email);

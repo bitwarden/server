@@ -25,6 +25,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.UserEmail.Interfaces;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -565,7 +566,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
             return TypedResults.NotFound();
         }
 
-        await _changeEmailForPasswordlessUserCommand.ChangeEmailAsync(orgId, targetOrganizationUser, model.NewEmail);
+        await _changeEmailForPasswordlessUserCommand.ChangeOrganizationUserEmailAsync(orgId, targetOrganizationUser, model.NewEmail);
         return TypedResults.NoContent();
     }
 
