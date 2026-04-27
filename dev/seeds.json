@@ -1,0 +1,29 @@
+[
+  {
+    "label": "Jane Doe Free (individual, free)",
+    "command": "individual",
+    "args": {
+      "subscription": "free",
+      "firstName": "Jane",
+      "lastName": "Doe",
+      "email": "jane@bw.test"
+    }
+  },
+  {
+    "label": "John Doe (individual, premium)",
+    "command": "individual",
+    "args": {
+      "subscription": "premium",
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john@bw.test"
+    }
+  },
+  {
+    "label": "Enterprise Basic (qa.enterprise-basic preset)",
+    "command": "preset",
+    "args": {
+      "name": "qa.enterprise-basic"
+    }
+  }
+]

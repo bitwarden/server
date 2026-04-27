@@ -176,6 +176,7 @@ public static class FeatureFlagKeys
     public const string DesktopMigrationMilestone2 = "desktop-ui-migration-milestone-2";
     public const string DesktopMigrationMilestone3 = "desktop-ui-migration-milestone-3";
     public const string DesktopMigrationMilestone4 = "desktop-ui-migration-milestone-4";
+    public const string DesktopMigrationSettings = "desktop-ui-settings-dialog";
 
     /* Auth Team */
     public const string Otp6Digits = "pm-18612-otp-6-digits";
@@ -199,6 +200,7 @@ public static class FeatureFlagKeys
     public const string WindowsDesktopAutotypeGA = "windows-desktop-autotype-ga";
     public const string FillAssistTargetingRules = "fill-assist-targeting-rules";
     public const string NotificationUndeterminedCipherScenarioLogic = "undetermined-cipher-scenario-logic";
+    public const string EnableAutofillTriage = "enable-autofill-triage";
 
     /* Billing Team */
     public const string PM24032_NewNavigationPremiumUpgradeButton = "pm-24032-new-navigation-premium-upgrade-button";
@@ -231,6 +233,7 @@ public static class FeatureFlagKeys
     public const string UseUnlockServiceForKeyConnectorLogin = "use-unlock-service-for-key-connector-login";
     public const string NoLogoutOnKeyUpgradeRotation = "pm-31050-no-logout-key-upgrade-rotation";
     public const string EnableAccountEncryptionV2JitPasswordRegistration = "enable-account-encryption-v2-jit-password-registration";
+    public const string EnableAccountEncryptionV2PasswordRegistration = "pm-27278-v2-password-registration";
 
     /* Mobile Team */
     public const string AndroidImportLoginsFlow = "import-logins-flow";
@@ -292,6 +295,9 @@ public static class FeatureFlagKeys
     public const string PM32009_NewItemTypes = "pm-32009-new-item-types";
     public const string PM34500_StrictCipherDecryption = "pm-34500-strict-cipher-decryption";
     public const string PM28091_AddCopyAndQuickLaunchActions = "pm-28091-add-copy-and-quick-launch-actions";
+
+    /* Secrets Manager Team */
+    public const string SecretsVersioning = "sm-1587-secrets-versioning";
 
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
