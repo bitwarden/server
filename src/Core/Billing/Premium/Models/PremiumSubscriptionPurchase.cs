@@ -8,4 +8,5 @@ public record PremiumSubscriptionPurchase
     public required BillingAddress BillingAddress { get; init; }
     public short? AdditionalStorageGb { get; init; }
     public string[]? Coupons { get; init; }
+    public string? FromMarketing { get; init; }
 }

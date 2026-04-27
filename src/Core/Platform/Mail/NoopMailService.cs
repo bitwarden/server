@@ -37,7 +37,8 @@ public class NoopMailService : IMailService
         string token,
         ProductTierType productTier,
         IEnumerable<ProductType> products,
-        int trailLength)
+        int trailLength,
+        bool paymentOptional = false)
     {
         return Task.FromResult(0);
     }

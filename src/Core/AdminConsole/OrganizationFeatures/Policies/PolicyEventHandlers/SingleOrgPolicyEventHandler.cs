@@ -115,7 +115,10 @@ public class SingleOrgPolicyEventHandler : IPolicyValidationEvent, IOnPolicyPreU
                 uo.Status != OrganizationUserStatusType.Invited)).ToList();
 
         var commandResult = await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
-            new RevokeOrganizationUsersRequest(organizationId, usersToRevoke, performedBy));
+            new RevokeOrganizationUsersRequest(organizationId,
+                usersToRevoke,
+                performedBy,
+                RevocationReason.SingleOrgPolicyNonCompliance));
 
         if (commandResult.HasErrors)
         {

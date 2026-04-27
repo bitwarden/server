@@ -740,11 +740,72 @@ public class UpdatePremiumStorageCommandTests
         await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u => u.MaxStorageGb == 10));
     }
 
+    [Theory, BitAutoData]
+    public async Task Run_IncreaseStorage_WithSchedule_Phase2Active_UpdatesOnlyPhase2(User user)
+    {
+        user.Premium = true;
+        user.MaxStorageGb = 5;
+        user.Storage = 2L * 1024 * 1024 * 1024;
+        user.GatewaySubscriptionId = "sub_123";
+
+        var subscription = CreateMockSubscription("sub_123", 4);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var schedule = CreateMockSchedule("sub_123", hasStorage: true, storageQuantity: 4, phase2Active: true);
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        var result = await _command.Run(user, 9);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.Phases.Count == 1 &&
+                opts.Phases[0].Items.Any(i => i.Price == "price_premium_new" && i.Quantity == 1) &&
+                opts.Phases[0].Items.Any(i => i.Price == "price_storage" && i.Quantity == 9) &&
+                opts.Phases[0].Discounts != null && opts.Phases[0].Discounts.Count == 0));
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+        await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u => u.MaxStorageGb == 10));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_RemoveStorage_WithSchedule_Phase2Active_RemovesFromPhase2(User user)
+    {
+        user.Premium = true;
+        user.MaxStorageGb = 10;
+        user.Storage = 500L * 1024 * 1024;
+        user.GatewaySubscriptionId = "sub_123";
+
+        var subscription = CreateMockSubscription("sub_123", 9);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var schedule = CreateMockSchedule("sub_123", hasStorage: true, storageQuantity: 9, phase2Active: true);
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        var result = await _command.Run(user, 0);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.Phases.Count == 1 &&
+                opts.Phases[0].Items.All(i => i.Price != "price_storage")));
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+        await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u => u.MaxStorageGb == 1));
+    }
+
     private static SubscriptionSchedule CreateMockSchedule(
         string subscriptionId,
         bool hasStorage,
         int storageQuantity = 0,
-        bool singlePhase = false)
+        bool singlePhase = false,
+        bool phase2Active = false)
     {
         var phase1Items = new List<SubscriptionSchedulePhaseItem>
         {
@@ -756,12 +817,15 @@ public class UpdatePremiumStorageCommandTests
             phase1Items.Add(new SubscriptionSchedulePhaseItem { PriceId = "price_storage", Quantity = storageQuantity });
         }
 
+        var phase1Start = phase2Active ? DateTime.UtcNow.AddYears(-1) : DateTime.UtcNow;
+        var phase1End = phase2Active ? DateTime.UtcNow.AddDays(-1) : DateTime.UtcNow.AddYears(1);
+
         var phases = new List<SubscriptionSchedulePhase>
         {
             new()
             {
-                StartDate = DateTime.UtcNow,
-                EndDate = DateTime.UtcNow.AddYears(1),
+                StartDate = phase1Start,
+                EndDate = phase1End,
                 Items = phase1Items,
                 ProrationBehavior = ProrationBehavior.None
             }
@@ -781,7 +845,7 @@ public class UpdatePremiumStorageCommandTests
 
             phases.Add(new SubscriptionSchedulePhase
             {
-                StartDate = DateTime.UtcNow.AddYears(1),
+                StartDate = phase1End,
                 Items = phase2Items,
                 Discounts =
                 [

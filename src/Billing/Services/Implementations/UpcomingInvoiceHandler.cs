@@ -50,7 +50,7 @@ public class UpcomingInvoiceHandler(
 
         var customer =
             await stripeAdapter.GetCustomerAsync(invoice.CustomerId,
-                new CustomerGetOptions { Expand = ["subscriptions", "tax", "tax_ids"] });
+                new CustomerGetOptions { Expand = ["subscriptions", "subscriptions.data.test_clock", "tax", "tax_ids"] });
 
         var subscription = customer.Subscriptions.FirstOrDefault();
 
@@ -112,14 +112,11 @@ public class UpcomingInvoiceHandler(
 
         var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
-        var milestone3 = featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3);
-
         var subscriptionAligned = await AlignOrganizationSubscriptionConcernsAsync(
             organization,
             @event,
             subscription,
-            plan,
-            milestone3);
+            plan);
 
         /*
          * Subscription alignment sends out a different version of our Upcoming Invoice email, so we don't need to continue
@@ -210,17 +207,14 @@ public class UpcomingInvoiceHandler(
     /// <param name="event">The Stripe event associated with this operation.</param>
     /// <param name="subscription">The organization's subscription.</param>
     /// <param name="plan">The organization's current plan.</param>
-    /// <param name="milestone3">A flag indicating whether the third milestone is enabled.</param>
     /// <returns>Whether the operation resulted in an updated subscription.</returns>
     private async Task<bool> AlignOrganizationSubscriptionConcernsAsync(
         Organization organization,
         Event @event,
         Subscription subscription,
-        Plan plan,
-        bool milestone3)
+        Plan plan)
     {
-        // currently these are the only plans that need aligned and both require the same flag and share most of the logic
-        if (!milestone3 || plan.Type is not (PlanType.FamiliesAnnually2019 or PlanType.FamiliesAnnually2025))
+        if (plan.Type is not (PlanType.FamiliesAnnually2019 or PlanType.FamiliesAnnually2025))
         {
             return false;
         }
@@ -574,6 +568,47 @@ public class UpcomingInvoiceHandler(
 
             if (activeSchedule != null)
             {
+                var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+                var phases = new List<SubscriptionSchedulePhaseOptions>();
+
+                for (var i = 0; i < activeSchedule.Phases.Count; i++)
+                {
+                    var phase = activeSchedule.Phases[i];
+
+                    // Skip phases that have already completed
+                    if (phase.EndDate <= now)
+                    {
+                        continue;
+                    }
+
+                    // When a phase's predecessor has ended, the phase is already active and
+                    // its one-time migration discount has been applied and consumed.
+                    // Re-including it would cause Stripe to re-apply it.
+                    var discountConsumed = i > 0 && activeSchedule.Phases[i - 1].EndDate <= now;
+
+                    phases.Add(new SubscriptionSchedulePhaseOptions
+                    {
+                        StartDate = phase.StartDate,
+                        EndDate = phase.EndDate,
+                        Items = phase.Items.Select(item => new SubscriptionSchedulePhaseItemOptions
+                        {
+                            Price = item.PriceId,
+                            Quantity = item.Quantity
+                        }).ToList(),
+                        Discounts = discountConsumed
+                            ? []
+                            : phase.Discounts?.Select(d => new SubscriptionSchedulePhaseDiscountOptions
+                            {
+                                Coupon = d.CouponId
+                            }).ToList(),
+                        ProrationBehavior = phase.ProrationBehavior,
+                        AutomaticTax = new SubscriptionSchedulePhaseAutomaticTaxOptions
+                        {
+                            Enabled = true
+                        }
+                    });
+                }
+
                 await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
                     new SubscriptionScheduleUpdateOptions
                     {
@@ -583,7 +618,8 @@ public class UpcomingInvoiceHandler(
                             {
                                 Enabled = true
                             }
-                        }
+                        },
+                        Phases = phases
                     });
                 return;
             }

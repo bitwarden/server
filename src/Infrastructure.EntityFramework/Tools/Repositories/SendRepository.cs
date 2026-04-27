@@ -2,6 +2,7 @@
 
 using AutoMapper;
 using Bit.Core.KeyManagement.UserKey;
+using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -72,6 +73,43 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
     }
 
     /// <inheritdoc />
+    public async Task<ICollection<Core.Tools.Entities.Send>> GetManyByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var results = await dbContext.Sends.Where(s => s.OrganizationId == organizationId).ToListAsync();
+            return Mapper.Map<List<Core.Tools.Entities.Send>>(results);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ICollection<Core.Tools.Entities.Send>> GetManyFileSendsByUserIdAsync(Guid userId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var results = await dbContext.Sends
+                .Where(s => s.UserId == userId && s.Type == SendType.File)
+                .ToListAsync();
+            return Mapper.Map<List<Core.Tools.Entities.Send>>(results);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ICollection<Core.Tools.Entities.Send>> GetManyFileSendsByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var results = await dbContext.Sends
+                .Where(s => s.OrganizationId == organizationId && s.Type == SendType.File)
+                .ToListAsync();
+            return Mapper.Map<List<Core.Tools.Entities.Send>>(results);
+        }
+    }
+
+    /// <inheritdoc />
     public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid userId,
         IEnumerable<Core.Tools.Entities.Send> sends)
     {
@@ -114,7 +152,7 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var orgUsers = await dbContext.OrganizationUsers.Where(ou => ou.OrganizationId == organizationId).ToListAsync();
-        var orgUserSendIds = await dbContext.Sends.Where(s => orgUsers.Any(ou => ou.Id == s.UserId)).Select(s => s.Id).ToListAsync();
+        var orgUserSendIds = await dbContext.Sends.Where(s => orgUsers.Any(ou => ou.UserId == s.UserId)).Select(s => s.Id).ToListAsync();
         return Mapper.Map<List<Guid>>(orgUserSendIds);
     }
 

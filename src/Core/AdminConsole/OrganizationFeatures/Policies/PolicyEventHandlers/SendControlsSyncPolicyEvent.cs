@@ -53,12 +53,9 @@ public class SendControlsSyncPolicyEvent(
     {
         var existing = await policyRepository.GetByOrganizationIdTypeAsync(organizationId, type);
 
+        // Leave Id as default(Guid) for new policies so UpsertAsync routes to CreateAsync;
+        // pre-assigning an Id causes UpsertAsync to attempt an UPDATE that silently affects 0 rows.
         var policy = existing ?? new Policy { OrganizationId = organizationId, Type = type, };
-
-        if (existing == null)
-        {
-            policy.SetNewId();
-        }
 
         policy.Enabled = enabled;
         if (policyData != null)

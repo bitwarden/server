@@ -1,8 +1,6 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
@@ -23,6 +21,7 @@ public class ImportCiphersCommand : IImportCiphersCommand
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly ICurrentContext _currentContext;
 
     public ImportCiphersCommand(
         ICipherRepository cipherRepository,
@@ -31,7 +30,8 @@ public class ImportCiphersCommand : IImportCiphersCommand
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IPushNotificationService pushService,
-        IPolicyRequirementQuery policyRequirementQuery)
+        IPolicyRequirementQuery policyRequirementQuery,
+        ICurrentContext currentContext)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -40,6 +40,7 @@ public class ImportCiphersCommand : IImportCiphersCommand
         _collectionRepository = collectionRepository;
         _pushService = pushService;
         _policyRequirementQuery = policyRequirementQuery;
+        _currentContext = currentContext;
     }
 
     public async Task ImportIntoIndividualVaultAsync(
@@ -64,7 +65,7 @@ public class ImportCiphersCommand : IImportCiphersCommand
 
             if (cipher.UserId.HasValue && cipher.Favorite)
             {
-                cipher.Favorites = $"{{\"{cipher.UserId.ToString().ToUpperInvariant()}\":true}}";
+                cipher.Favorites = $"{{\"{cipher.UserId.ToString()!.ToUpperInvariant()}\":true}}";
             }
 
             if (cipher.UserId.HasValue && cipher.ArchivedDate.HasValue)
@@ -78,7 +79,7 @@ public class ImportCiphersCommand : IImportCiphersCommand
 
         //Assign id to the ones that don't exist in DB
         //Need to keep the list order to create the relationships
-        List<Folder> newFolders = new List<Folder>();
+        var newFolders = new List<Folder>();
         foreach (var folder in folders)
         {
             if (!userfoldersIds.Contains(folder.Id))
@@ -99,7 +100,7 @@ public class ImportCiphersCommand : IImportCiphersCommand
                 continue;
             }
 
-            cipher.Folders = $"{{\"{cipher.UserId.ToString().ToUpperInvariant()}\":" +
+            cipher.Folders = $"{{\"{cipher.UserId.ToString()!.ToUpperInvariant()}\":" +
                 $"\"{folder.Id.ToString().ToUpperInvariant()}\"}}";
         }
 
@@ -116,12 +117,31 @@ public class ImportCiphersCommand : IImportCiphersCommand
         IEnumerable<KeyValuePair<int, int>> collectionRelationships,
         Guid importingUserId)
     {
-        var org = collections.Count > 0 ?
-            await _organizationRepository.GetByIdAsync(collections[0].OrganizationId) :
-            await _organizationRepository.GetByIdAsync(ciphers.FirstOrDefault(c => c.OrganizationId.HasValue).OrganizationId.Value);
-        var importingOrgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, importingUserId);
+        var orgId = collections.Count > 0
+            ? collections[0].OrganizationId
+            : ciphers.FirstOrDefault(c => c.OrganizationId.HasValue)?.OrganizationId;
 
-        if (collections.Count > 0 && org != null && org.MaxCollections.HasValue)
+        if (orgId is null)
+        {
+            throw new BadRequestException("No organization ID found in the import data.");
+        }
+
+        var org = await _organizationRepository.GetByIdAsync(orgId.Value);
+        if (org is null)
+        {
+            throw new NotFoundException("Organization not found.");
+        }
+
+        var importingOrgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, importingUserId);
+        // A managed service provider is expected to be able to perform imports on behalf of a managed org
+        // In this situation importingOrgUser will be null, cross-check MSP status
+        if (importingOrgUser is null && !await _currentContext.ProviderUserForOrgAsync(org.Id))
+        {
+            throw new UnauthorizedAccessException(
+                "An organization import can only be performed by organization members or authorized providers");
+        }
+
+        if (collections.Count > 0 && org.MaxCollections.HasValue)
         {
             var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(org.Id);
             if (org.MaxCollections.Value < (collectionCount + collections.Count))

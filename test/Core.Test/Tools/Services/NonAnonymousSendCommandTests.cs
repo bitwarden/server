@@ -3,7 +3,6 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
-using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.CurrentContextFixtures;
 using Bit.Core.Test.Tools.AutoFixture.SendFixtures;
 using Bit.Core.Tools.Entities;
@@ -30,7 +29,6 @@ public class NonAnonymousSendCommandTests
     private readonly ISendFileStorageService _sendFileStorageService;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly ISendValidationService _sendValidationService;
-    private readonly IFeatureService _featureService;
     private readonly ICurrentContext _currentContext;
     private readonly ISendCoreHelperService _sendCoreHelperService;
     private readonly NonAnonymousSendCommand _nonAnonymousSendCommand;
@@ -42,7 +40,6 @@ public class NonAnonymousSendCommandTests
         _sendRepository = Substitute.For<ISendRepository>();
         _sendFileStorageService = Substitute.For<ISendFileStorageService>();
         _pushNotificationService = Substitute.For<IPushNotificationService>();
-        _featureService = Substitute.For<IFeatureService>();
         _sendValidationService = Substitute.For<ISendValidationService>();
         _currentContext = Substitute.For<ICurrentContext>();
         _sendCoreHelperService = Substitute.For<ISendCoreHelperService>();
@@ -291,9 +288,6 @@ public class NonAnonymousSendCommandTests
         _currentContext.ClientId.Returns("test-client");
         _currentContext.ClientVersion.Returns(Version.Parse("1.0.0"));
 
-        // Enable feature flag for policy requirements (vNext path)
-        _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
-
         // Act
         await _nonAnonymousSendCommand.SaveSendAsync(send);
 
@@ -331,9 +325,6 @@ public class NonAnonymousSendCommandTests
             UserId = userId,
             HideEmail = true
         };
-
-        // Enable feature flag for policy requirements (vNext path)
-        _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
 
         // Configure validation service to throw when DisableHideEmail policy applies in vNext implementation
         _sendValidationService.ValidateUserCanSaveAsync(userId, send)
@@ -374,9 +365,6 @@ public class NonAnonymousSendCommandTests
 
         var initialDate = DateTime.UtcNow.AddMinutes(-5);
         send.RevisionDate = initialDate;
-
-        // Enable feature flag for policy requirements (vNext path)
-        _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
 
         // Configure validation service to allow saves when HideEmail is false
         _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
@@ -1415,5 +1403,37 @@ public class NonAnonymousSendCommandTests
 
         // Assert
         Assert.True(result);
+    }
+
+    [Fact]
+    public async Task DeleteSendAsync_FileSend_DeletesFileBeforeDbRecord()
+    {
+        // Ensuring that the file is deleted first avoids the following situation:
+        // 1. DB row is deleted successfully
+        // 2. File blob fails to delete
+        // 3. File blob still exists but with no parent Send
+        var fileData = new SendFileData { Id = "file123", FileName = "test.txt", Size = 100 };
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(fileData),
+            UserId = Guid.NewGuid()
+        };
+
+        var callOrder = new List<string>();
+        _sendFileStorageService.DeleteFileAsync(send, fileData.Id)
+            .Returns(Task.CompletedTask)
+            .AndDoes(_ => callOrder.Add("file"));
+        _sendRepository.DeleteAsync(send)
+            .Returns(Task.CompletedTask)
+            .AndDoes(_ => callOrder.Add("db"));
+
+        await _nonAnonymousSendCommand.DeleteSendAsync(send);
+
+        await _sendFileStorageService.Received(1).DeleteFileAsync(send, fileData.Id);
+        await _sendRepository.Received(1).DeleteAsync(send);
+        await _pushNotificationService.Received(1).PushSyncSendDeleteAsync(send);
+        Assert.Equal(new[] { "file", "db" }, callOrder);
     }
 }

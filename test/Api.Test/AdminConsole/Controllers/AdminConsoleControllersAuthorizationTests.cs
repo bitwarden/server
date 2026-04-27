@@ -13,16 +13,11 @@ public class AdminConsoleControllersAuthorizationTests
     /// </summary>
     private static readonly HashSet<Type> _controllersNotYetMigrated =
     [
-        typeof(GroupsController),
         typeof(OrganizationAuthRequestsController),
         typeof(OrganizationConnectionsController),
         typeof(OrganizationDomainController),
         typeof(OrganizationsController),
         typeof(OrganizationUsersController),
-        typeof(ProviderClientsController),
-        typeof(ProviderOrganizationsController),
-        typeof(ProvidersController),
-        typeof(ProviderUsersController)
     ];
 
     public static IEnumerable<object[]> GetAllAdminConsoleControllers()

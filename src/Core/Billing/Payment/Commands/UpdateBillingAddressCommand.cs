@@ -60,7 +60,7 @@ public class UpdateBillingAddressCommand(
                         City = billingAddress.City,
                         State = billingAddress.State
                     },
-                    Expand = ["subscriptions"]
+                    Expand = ["subscriptions", "subscriptions.data.test_clock"]
                 });
 
         await EnableAutomaticTaxAsync(subscriber, customer);
@@ -86,7 +86,7 @@ public class UpdateBillingAddressCommand(
                     City = billingAddress.City,
                     State = billingAddress.State
                 },
-                Expand = ["subscriptions", "tax_ids"],
+                Expand = ["subscriptions", "subscriptions.data.test_clock", "tax_ids"],
                 TaxExempt = determinedTaxExemptStatus
             });
 
@@ -149,6 +149,43 @@ public class UpdateBillingAddressCommand(
 
                     if (activeSchedule != null)
                     {
+                        var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+                        var phases = new List<SubscriptionSchedulePhaseOptions>();
+
+                        for (var i = 0; i < activeSchedule.Phases.Count; i++)
+                        {
+                            var phase = activeSchedule.Phases[i];
+
+                            if (phase.EndDate <= now)
+                            {
+                                continue;
+                            }
+
+                            var discountConsumed = i > 0 && activeSchedule.Phases[i - 1].EndDate <= now;
+
+                            phases.Add(new SubscriptionSchedulePhaseOptions
+                            {
+                                StartDate = phase.StartDate,
+                                EndDate = phase.EndDate,
+                                Items = phase.Items.Select(item => new SubscriptionSchedulePhaseItemOptions
+                                {
+                                    Price = item.PriceId,
+                                    Quantity = item.Quantity
+                                }).ToList(),
+                                Discounts = discountConsumed
+                                    ? []
+                                    : phase.Discounts?.Select(d => new SubscriptionSchedulePhaseDiscountOptions
+                                    {
+                                        Coupon = d.CouponId
+                                    }).ToList(),
+                                ProrationBehavior = phase.ProrationBehavior,
+                                AutomaticTax = new SubscriptionSchedulePhaseAutomaticTaxOptions
+                                {
+                                    Enabled = true
+                                }
+                            });
+                        }
+
                         await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
                             new SubscriptionScheduleUpdateOptions
                             {
@@ -158,7 +195,8 @@ public class UpdateBillingAddressCommand(
                                     {
                                         Enabled = true
                                     }
-                                }
+                                },
+                                Phases = phases
                             });
                         return;
                     }

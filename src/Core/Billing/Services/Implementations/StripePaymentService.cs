@@ -804,16 +804,6 @@ public class StripePaymentService : IStripePaymentService
         }
     }
 
-    public async Task<string> AddSecretsManagerToSubscription(
-        Organization org,
-        StaticStore.Plan plan,
-        int additionalSmSeats,
-        int additionalServiceAccount) =>
-        await FinalizeSubscriptionChangeAsync(
-            org,
-            new SecretsManagerSubscribeUpdate(org, plan, additionalSmSeats, additionalServiceAccount),
-            true);
-
     public async Task<bool> HasSecretsManagerStandalone(Organization organization) =>
         await HasSecretsManagerStandaloneAsync(gatewayCustomerId: organization.GatewayCustomerId,
             organizationHasSecretsManager: organization.UseSecretsManager);

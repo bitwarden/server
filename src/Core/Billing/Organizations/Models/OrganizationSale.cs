@@ -61,14 +61,17 @@ public class OrganizationSale
 
     private static CustomerSetup GetCustomerSetup(OrganizationSignup signup)
     {
-        var customerSetup = new CustomerSetup
-        {
-            Coupons = signup.IsFromProvider
+        string[]? systemCoupons = signup.IsFromProvider
             // TODO: Remove when last of the legacy providers has been migrated.
             ? [StripeConstants.CouponIDs.LegacyMSPDiscount]
             : signup.IsFromSecretsManagerTrial
                 ? [StripeConstants.CouponIDs.SecretsManagerStandalone]
-                : signup.Coupons
+                : null;
+
+        var customerSetup = new CustomerSetup
+        {
+            SystemCoupons = systemCoupons,
+            DiscountCoupons = systemCoupons == null ? signup.Coupons : null
         };
 
         if (!signup.PaymentMethodType.HasValue)

@@ -91,8 +91,8 @@ public class EventService : IEventService
                 });
         }
 
-        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync();
         var providers = await _currentContext.ProviderMembershipAsync(_providerUserRepository, userId);
+        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync(providers.Select(provider => provider.Id));
         var providerEvents = providers.Where(o => CanUseProviderEvents(providerAbilities, o.Id))
             .Select(p => new EventMessage(_currentContext)
             {
@@ -382,9 +382,11 @@ public class EventService : IEventService
 
     public async Task LogProviderUsersEventAsync(IEnumerable<(ProviderUser, EventType, DateTime?)> events)
     {
-        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync();
+        var materializedEvents = events.ToList();
+        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync(
+            materializedEvents.Select(materializedEvent => materializedEvent.Item1.ProviderId));
         var eventMessages = new List<IEvent>();
-        foreach (var (providerUser, type, date) in events)
+        foreach (var (providerUser, type, date) in materializedEvents)
         {
             if (!CanUseProviderEvents(providerAbilities, providerUser.ProviderId))
             {
@@ -412,9 +414,11 @@ public class EventService : IEventService
 
     public async Task LogProviderOrganizationEventsAsync(IEnumerable<(ProviderOrganization, EventType, DateTime?)> events)
     {
-        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync();
+        var materializedEvents = events.ToList();
+        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync(
+            materializedEvents.Select(materializedEvent => materializedEvent.Item1.ProviderId));
         var eventMessages = new List<IEvent>();
-        foreach (var (providerOrganization, type, date) in events)
+        foreach (var (providerOrganization, type, date) in materializedEvents)
         {
             if (!CanUseProviderEvents(providerAbilities, providerOrganization.ProviderId))
             {

@@ -17,6 +17,10 @@ public class SubscriberId : OneOfBase<UserId, OrganizationId, ProviderId>
 {
     private SubscriberId(OneOf<UserId, OrganizationId, ProviderId> input) : base(input) { }
 
+    public bool IsUserId => IsT0;
+    public bool IsOrganizationId => IsT1;
+    public bool IsProviderId => IsT2;
+
     public static implicit operator SubscriberId(UserId value) => new(value);
     public static implicit operator SubscriberId(OrganizationId value) => new(value);
     public static implicit operator SubscriberId(ProviderId value) => new(value);

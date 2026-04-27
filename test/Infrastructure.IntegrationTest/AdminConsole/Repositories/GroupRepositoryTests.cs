@@ -1,4 +1,6 @@
-﻿using Bit.Core.AdminConsole.Repositories;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Xunit;
 
@@ -6,6 +8,74 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
 
 public class GroupRepositoryTests
 {
+    [DatabaseTheory, DatabaseData]
+    public async Task CreateAsync_WithCollections_CreatesGroupAccessAndBumpsCollectionRevisionDate(
+        IGroupRepository groupRepository,
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository)
+    {
+        var org = await organizationRepository.CreateTestOrganizationAsync();
+        var collection1 = await collectionRepository.CreateTestCollectionAsync(org);
+        var collection2 = await collectionRepository.CreateTestCollectionAsync(org);
+
+        var group = new Group { OrganizationId = org.Id, Name = "New Group", RevisionDate = DateTime.UtcNow.AddMinutes(10) };
+        await groupRepository.CreateAsync(group, [
+            new CollectionAccessSelection { Id = collection1.Id, Manage = true, HidePasswords = false, ReadOnly = false },
+            new CollectionAccessSelection { Id = collection2.Id, Manage = false, HidePasswords = true, ReadOnly = true },
+        ]);
+
+        var (actualGroup, actualCollections) = await groupRepository.GetByIdWithCollectionsAsync(group.Id);
+        Assert.NotNull(actualGroup);
+        Assert.Equal("New Group", actualGroup.Name);
+        Assert.Equal(2, actualCollections.Count);
+        Assert.Single(actualCollections, c => c.Id == collection1.Id && c.Manage && !c.HidePasswords && !c.ReadOnly);
+        Assert.Single(actualCollections, c => c.Id == collection2.Id && !c.Manage && c.HidePasswords && c.ReadOnly);
+
+        var (actualCollection1, _) = await collectionRepository.GetByIdWithAccessAsync(collection1.Id);
+        var (actualCollection2, _) = await collectionRepository.GetByIdWithAccessAsync(collection2.Id);
+        Assert.NotNull(actualCollection1);
+        Assert.NotNull(actualCollection2);
+        Assert.Equal(group.RevisionDate, actualCollection1.RevisionDate, TimeSpan.FromMilliseconds(10));
+        Assert.Equal(group.RevisionDate, actualCollection2.RevisionDate, TimeSpan.FromMilliseconds(10));
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task ReplaceAsync_WithCollections_UpdatesGroupAndBumpsCollectionRevisionDate(
+        IGroupRepository groupRepository,
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository)
+    {
+        // Arrange
+        var org = await organizationRepository.CreateTestOrganizationAsync();
+        var group = await groupRepository.CreateTestGroupAsync(org);
+        var collection1 = await collectionRepository.CreateTestCollectionAsync(org);
+        var collection2 = await collectionRepository.CreateTestCollectionAsync(org);
+
+        // Act
+        group.Name = "Updated Group Name";
+        group.RevisionDate = DateTime.UtcNow.AddMinutes(10);
+        await groupRepository.ReplaceAsync(group, [
+            new CollectionAccessSelection { Id = collection1.Id, Manage = true, HidePasswords = false, ReadOnly = false },
+            new CollectionAccessSelection { Id = collection2.Id, Manage = false, HidePasswords = true, ReadOnly = true },
+        ]);
+
+        // Assert
+        var (actualGroup, actualCollections) = await groupRepository.GetByIdWithCollectionsAsync(group.Id);
+        Assert.NotNull(actualGroup);
+        Assert.Equal("Updated Group Name", actualGroup.Name);
+
+        Assert.Equal(2, actualCollections.Count);
+        Assert.Single(actualCollections, c => c.Id == collection1.Id && c.Manage && !c.HidePasswords && !c.ReadOnly);
+        Assert.Single(actualCollections, c => c.Id == collection2.Id && !c.Manage && c.HidePasswords && c.ReadOnly);
+
+        var (actualCollection1, _) = await collectionRepository.GetByIdWithAccessAsync(collection1.Id);
+        var (actualCollection2, _) = await collectionRepository.GetByIdWithAccessAsync(collection2.Id);
+        Assert.NotNull(actualCollection1);
+        Assert.NotNull(actualCollection2);
+        Assert.Equal(group.RevisionDate, actualCollection1.RevisionDate, TimeSpan.FromMilliseconds(10));
+        Assert.Equal(group.RevisionDate, actualCollection2.RevisionDate, TimeSpan.FromMilliseconds(10));
+    }
+
     [DatabaseTheory, DatabaseData]
     public async Task AddGroupUsersByIdAsync_CreatesGroupUsers(
         IGroupRepository groupRepository,
