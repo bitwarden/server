@@ -2,12 +2,12 @@
 
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.Enums;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
 /// <summary>
 /// Policy requirements for the Master Password policy.
-/// Owners and Admins are exempt from this policy
 /// </summary>
 public class MasterPasswordPolicyRequirement : IPolicyRequirement
 {
@@ -19,13 +19,17 @@ public class MasterPasswordPolicyRequirement : IPolicyRequirement
 
 /// <summary>
 /// Factory for <see cref="MasterPasswordPolicyRequirement"/>.
-/// Owners and Admins are exempt from this policy, consistent with the client-side exemption.
-/// Invited and Revoked users are also exempt (inherited default from <see cref="BasePolicyRequirementFactory{T}"/>),
+/// Invited and Revoked users are exempt (inherited default from <see cref="BasePolicyRequirementFactory{T}"/>),
 /// which is intentional: master password requirements are enforced at login/unlock for active members only.
 /// </summary>
 public class MasterPasswordPolicyRequirementFactory : BasePolicyRequirementFactory<MasterPasswordPolicyRequirement>
 {
     public override PolicyType PolicyType => PolicyType.MasterPassword;
+
+    /// <summary>
+    /// No roles are exempt from the master password policy.
+    /// </summary>
+    protected override IEnumerable<OrganizationUserType> ExemptRoles { get; } = [];
 
     public override MasterPasswordPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
     {

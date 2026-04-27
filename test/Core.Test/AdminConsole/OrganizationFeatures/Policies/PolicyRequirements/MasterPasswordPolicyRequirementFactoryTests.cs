@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.Enums;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -11,6 +12,26 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyRequire
 [SutProviderCustomize]
 public class MasterPasswordPolicyRequirementFactoryTests
 {
+    [Theory]
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public void Enforce_EnforcesAgainstAllRoles(
+        OrganizationUserType userType,
+        SutProvider<MasterPasswordPolicyRequirementFactory> sutProvider)
+    {
+        var policy = new PolicyDetails
+        {
+            PolicyType = PolicyType.MasterPassword,
+            OrganizationUserType = userType,
+            OrganizationUserStatus = OrganizationUserStatusType.Confirmed
+        };
+
+        Assert.True(sutProvider.Sut.Enforce(policy));
+    }
+
+
     [Theory, BitAutoData]
     public void Create_WithNoPolicies_EnforcedOptionsIsNull(SutProvider<MasterPasswordPolicyRequirementFactory> sutProvider)
     {
