@@ -12,6 +12,7 @@ using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
+using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
@@ -404,9 +405,10 @@ public class OrganizationUsersController : BaseAdminConsoleController
         // If admins are not allowed access to all collections, you cannot add yourself to a group.
         // No error is thrown for this, we just don't update groups.
         var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
-        var groupsToSave = editingSelf && !organizationAbility.AllowAdminAccessToAllCollectionItems
-            ? null
-            : model.Groups;
+        var groupUserAssignment = new GroupUserAssignmentContext(orgId, [organizationUser.Id]);
+        var groupsToSave = (await _authorizationService.AuthorizeAsync(User, groupUserAssignment, GroupUserOperations.AssignUsers)).Succeeded
+            ? model.Groups
+            : null;
 
         // Authorization check:
         // If admins are not allowed access to all collections, you cannot add yourself to collections.
