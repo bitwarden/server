@@ -26,17 +26,7 @@ public class SendAccessBearerOperationFilter : IOperationFilter
         [
             new OpenApiSecurityRequirement
             {
-                {
-                    new OpenApiSecurityScheme
-                    {
-                        Reference = new OpenApiReference
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = "send-access-bearer"
-                        }
-                    },
-                    []
-                }
+                [new OpenApiSecuritySchemeReference("send-access-bearer")] = []
             }
         ];
     }
