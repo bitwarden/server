@@ -14,7 +14,7 @@ public interface ICreateOrganizationIntegrationConfigurationCommand
     /// <param name="integrationId">The unique identifier of the integration.</param>
     /// <param name="configuration">The configuration to create.</param>
     /// <returns>The created configuration.</returns>
-    /// <exception cref="Exceptions.NotFoundException">Thrown when the integration does not exist
+    /// <exception cref="Exceptions.BadRequestException">Thrown when the integration does not exist
     /// or does not belong to the specified organization.</exception>
     /// <exception cref="Exceptions.BadRequestException">Thrown when the configuration or filters
     /// are invalid for the integration type.</exception>
