@@ -64,6 +64,21 @@ public class UpdateExistingPasswordDataTests
     }
 
     [Fact]
+    public void ValidateDataForUser_Accepts_WhenUserHasLegacyBelowMinimumPbkdf2Iterations()
+    {
+        // Legacy users created before the 600k minimum was enforced (Dec 2023) retain their
+        // original iteration count. The password-only change path must accept their existing
+        // KDF unchanged — ValidateUnchangedForUser mirrors the stored values; KdfSettingsValidator
+        // is never called on this path.
+        var user = BuildValidUpdateUser();
+        user.KdfIterations = 100_000;
+        var data = BuildData(user); // mirrors user's existing 100k KDF back
+
+        // Should not throw
+        data.ValidateDataForUser(user);
+    }
+
+    [Fact]
     public void ValidateDataForUser_Throws_WhenUserHasNoMasterPassword()
     {
         var user = BuildValidUpdateUser();
@@ -106,5 +121,74 @@ public class UpdateExistingPasswordDataTests
         var data = BuildData(user, saltOverride: "wrong-salt");
 
         Assert.Throws<BadRequestException>(() => data.ValidateDataForUser(user));
+    }
+
+    [Theory]
+    [InlineData(true)]   // unlock salt wrong, authentication salt correct
+    [InlineData(false)]  // unlock salt correct, authentication salt wrong
+    public void ValidateDataForUser_Throws_WhenSaltMismatch_ValidatesBothFieldsIndependently(bool invalidateUnlockSaltInsteadOfAuthenticationSalt)
+    {
+        // One salt will always be invalid in these tests -- the flag signals which;
+        // either/both should create an exceptional case. 
+        var user = BuildValidUpdateUser();
+        var correctSalt = user.GetMasterPasswordSalt();
+        var kdf = new KdfSettings
+        {
+            KdfType = user.Kdf,
+            Iterations = user.KdfIterations,
+            Memory = user.KdfMemory,
+            Parallelism = user.KdfParallelism
+        };
+        var data = new UpdateExistingPasswordData
+        {
+            MasterPasswordUnlock = new MasterPasswordUnlockData
+            {
+                Salt = invalidateUnlockSaltInsteadOfAuthenticationSalt ? "wrong-salt" : correctSalt,
+                MasterKeyWrappedUserKey = "wrapped-key",
+                Kdf = kdf
+            },
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Salt = invalidateUnlockSaltInsteadOfAuthenticationSalt ? correctSalt : "wrong-salt",
+                MasterPasswordAuthenticationHash = "hash",
+                Kdf = kdf
+            }
+        };
+
+        Assert.Throws<BadRequestException>(() => data.ValidateDataForUser(user));
+    }
+
+    [Theory]
+    [InlineData(true)]   // unlock KDF wrong, authentication KDF correct
+    [InlineData(false)]  // unlock KDF correct, authentication KDF wrong
+    public void ValidateDataForUser_Throws_WhenKdfMismatch_ValidatesBothFieldsIndependently(bool unlockKdfIsWrong)
+    {
+        var user = BuildValidUpdateUser();
+        var correctSalt = user.GetMasterPasswordSalt();
+        var correctKdf = new KdfSettings
+        {
+            KdfType = user.Kdf,
+            Iterations = user.KdfIterations,
+            Memory = user.KdfMemory,
+            Parallelism = user.KdfParallelism
+        };
+        var wrongKdf = new KdfSettings { KdfType = KdfType.Argon2id, Iterations = 3, Memory = 64, Parallelism = 4 };
+        var data = new UpdateExistingPasswordData
+        {
+            MasterPasswordUnlock = new MasterPasswordUnlockData
+            {
+                Salt = correctSalt,
+                MasterKeyWrappedUserKey = "wrapped-key",
+                Kdf = unlockKdfIsWrong ? wrongKdf : correctKdf
+            },
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Salt = correctSalt,
+                MasterPasswordAuthenticationHash = "hash",
+                Kdf = unlockKdfIsWrong ? correctKdf : wrongKdf
+            }
+        };
+
+        Assert.Throws<ArgumentException>(() => data.ValidateDataForUser(user));
     }
 }

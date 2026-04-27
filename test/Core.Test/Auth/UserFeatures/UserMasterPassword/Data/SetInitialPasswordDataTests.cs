@@ -112,9 +112,13 @@ public class SetInitialPasswordDataTests
         Assert.Throws<BadRequestException>(() => data.ValidateDataForUser(user));
     }
 
-    [Fact]
-    public void ValidateDataForUser_Throws_WhenAuthenticationSaltMismatch_UnlockSaltCorrect()
+    [Theory]
+    [InlineData(true)]   // unlock salt wrong, authentication salt correct
+    [InlineData(false)]  // unlock salt correct, authentication salt wrong
+    public void ValidateDataForUser_Throws_WhenSaltMismatch_ValidatesBothFieldsIndependently(bool invalidateUnlockSaltInsteadOfAuthenticationSalt)
     {
+        // One salt will always be invalid in these tests -- the flag signals which;
+        // either/both should create an exceptional case.
         var user = BuildValidSetInitialUser();
         var correctSalt = user.GetMasterPasswordSalt();
         var kdf = new KdfSettings
@@ -124,50 +128,17 @@ public class SetInitialPasswordDataTests
             Memory = user.KdfMemory,
             Parallelism = user.KdfParallelism
         };
-        // Authentication salt is wrong; Unlock salt is correct.
         var data = new SetInitialPasswordData
         {
             MasterPasswordUnlock = new MasterPasswordUnlockData
             {
-                Salt = correctSalt,
+                Salt = invalidateUnlockSaltInsteadOfAuthenticationSalt ? "wrong-salt" : correctSalt,
                 MasterKeyWrappedUserKey = "wrapped-key",
                 Kdf = kdf
             },
             MasterPasswordAuthentication = new MasterPasswordAuthenticationData
             {
-                Salt = "wrong-auth-salt",
-                MasterPasswordAuthenticationHash = "hash",
-                Kdf = kdf
-            }
-        };
-
-        Assert.Throws<BadRequestException>(() => data.ValidateDataForUser(user));
-    }
-
-    [Fact]
-    public void ValidateDataForUser_Throws_WhenUnlockSaltMismatch_AuthenticationSaltCorrect()
-    {
-        var user = BuildValidSetInitialUser();
-        var correctSalt = user.GetMasterPasswordSalt();
-        var kdf = new KdfSettings
-        {
-            KdfType = user.Kdf,
-            Iterations = user.KdfIterations,
-            Memory = user.KdfMemory,
-            Parallelism = user.KdfParallelism
-        };
-        // Unlock salt is wrong; Authentication salt is correct.
-        var data = new SetInitialPasswordData
-        {
-            MasterPasswordUnlock = new MasterPasswordUnlockData
-            {
-                Salt = "wrong-unlock-salt",
-                MasterKeyWrappedUserKey = "wrapped-key",
-                Kdf = kdf
-            },
-            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
-            {
-                Salt = correctSalt,
+                Salt = invalidateUnlockSaltInsteadOfAuthenticationSalt ? correctSalt : "wrong-salt",
                 MasterPasswordAuthenticationHash = "hash",
                 Kdf = kdf
             }

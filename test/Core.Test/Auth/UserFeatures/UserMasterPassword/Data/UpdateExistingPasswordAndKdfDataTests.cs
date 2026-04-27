@@ -89,4 +89,33 @@ public class UpdateExistingPasswordAndKdfDataTests
 
         Assert.Throws<BadRequestException>(() => data.ValidateDataForUser(user));
     }
+
+    [Theory]
+    [InlineData(true)]   // unlock salt wrong, authentication salt correct
+    [InlineData(false)]  // unlock salt correct, authentication salt wrong
+    public void ValidateDataForUser_Throws_WhenSaltMismatch_ValidatesBothFieldsIndependently(bool invalidateUnlockSaltInsteadOfAuthenticationSalt)
+    {
+        // One salt will always be invalid in these tests -- the flag signals which;
+        // either/both should create an exceptional case.
+        var user = BuildValidUser();
+        var correctSalt = user.GetMasterPasswordSalt();
+        var newKdf = new KdfSettings { KdfType = KdfType.Argon2id, Iterations = 3, Memory = 64, Parallelism = 4 };
+        var data = new UpdateExistingPasswordAndKdfData
+        {
+            MasterPasswordUnlock = new MasterPasswordUnlockData
+            {
+                Salt = invalidateUnlockSaltInsteadOfAuthenticationSalt ? "wrong-salt" : correctSalt,
+                MasterKeyWrappedUserKey = "wrapped-key",
+                Kdf = newKdf
+            },
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Salt = invalidateUnlockSaltInsteadOfAuthenticationSalt ? correctSalt : "wrong-salt",
+                MasterPasswordAuthenticationHash = "hash",
+                Kdf = newKdf
+            }
+        };
+
+        Assert.Throws<BadRequestException>(() => data.ValidateDataForUser(user));
+    }
 }
