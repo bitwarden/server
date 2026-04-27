@@ -10,7 +10,8 @@
     @EncryptedUserKey VARCHAR(MAX) = NULL,
     @EncryptedPublicKey VARCHAR(MAX) = NULL,
     @EncryptedPrivateKey VARCHAR(MAX) = NULL,
-    @Active BIT = 1
+    @Active BIT = 1,
+    @LastActivityDate DATETIME2(7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -28,7 +29,18 @@ BEGIN
         [EncryptedUserKey] = @EncryptedUserKey,
         [EncryptedPublicKey] = @EncryptedPublicKey,
         [EncryptedPrivateKey] = @EncryptedPrivateKey,
-        [Active] = @Active
+        [Active] = @Active,
+        -- LastActivityDate only moves forward. Two scenarios could silently clobber a valid bump:
+        --   1. NULL passthrough: a general save that does not intend to touch LastActivityDate passes NULL
+        --      (the default); we must not overwrite an existing value with NULL.
+        --   2. Stale non-null overwrite: a thread that loaded the device before a concurrent bump fires
+        --      may call SaveAsync with an older date; we must not clobber the fresher DB value.
+        -- The CASE expression handles both: LastActivityDate is updated only when the incoming value is
+        -- strictly greater than the current DB value (ISNULL baseline of '1900-01-01' handles NULL DB values).
+        [LastActivityDate] = CASE
+            WHEN @LastActivityDate > ISNULL([LastActivityDate], '1900-01-01') THEN @LastActivityDate
+            ELSE [LastActivityDate]
+        END
     WHERE
         [Id] = @Id
 END

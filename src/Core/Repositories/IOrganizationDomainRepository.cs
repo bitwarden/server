@@ -10,7 +10,6 @@ public interface IOrganizationDomainRepository : IRepository<OrganizationDomain,
     Task<ICollection<OrganizationDomain>> GetClaimedDomainsByDomainNameAsync(string domainName);
     Task<ICollection<OrganizationDomain>> GetDomainsByOrganizationIdAsync(Guid orgId);
     Task<ICollection<OrganizationDomain>> GetManyByNextRunDateAsync(DateTime date);
-    Task<OrganizationDomainSsoDetailsData?> GetOrganizationDomainSsoDetailsAsync(string email);
     Task<IEnumerable<VerifiedOrganizationDomainSsoDetail>> GetVerifiedOrganizationDomainSsoDetailsAsync(string email);
     Task<IEnumerable<OrganizationDomain>> GetVerifiedDomainsByOrganizationIdsAsync(IEnumerable<Guid> organizationIds);
     Task<OrganizationDomain?> GetDomainByIdOrganizationIdAsync(Guid id, Guid organizationId);

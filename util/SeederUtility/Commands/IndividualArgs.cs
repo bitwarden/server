@@ -18,6 +18,9 @@ public class IndividualArgs : IArgumentModel
     [Option("last-name", Description = "Last name for the user (generates predictable email)")]
     public string? LastName { get; set; }
 
+    [Option("email", Description = "Email for the user")]
+    public string? Email { get; set; }
+
     [Option("vault", Description = "Generate ~75 personal ciphers and folders")]
     public bool Vault { get; set; } = false;
 
@@ -62,6 +65,7 @@ public class IndividualArgs : IArgumentModel
     {
         FirstName = FirstName,
         LastName = LastName,
+        Email = Email,
         Premium = string.Equals(Subscription, "premium", StringComparison.OrdinalIgnoreCase),
         GenerateVault = Vault,
         Password = Password,

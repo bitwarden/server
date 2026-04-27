@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Bit.Api.AdminConsole.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Xunit;
 
@@ -46,6 +47,13 @@ public class ControllerAuthorizationTestHelpersTests
     }
 
     [Fact]
+    public void AssertAllHttpMethodsHaveAuthorization_MethodWithNoopAuthorize_DoesNotThrow()
+    {
+        ControllerAuthorizationTestHelpers.AssertAllHttpMethodsHaveAuthorization(
+            typeof(ControllerWithNoopAuthorize));
+    }
+
+    [Fact]
     public void AssertAllHttpMethodsHaveAuthorization_ControllerWithNoHttpMethods_Throws()
     {
         var exception = Assert.Throws<Xunit.Sdk.FailException>(() =>
@@ -60,7 +68,7 @@ public class ControllerAuthorizationTestHelpersTests
     {
         [HttpGet]
         [CustomAuthorize]
-        public IActionResult Get() => Ok();
+        public OkResult Get() => Ok();
     }
 
     // Controller with class-level [Authorize] but methods missing method-level authorization
@@ -69,19 +77,19 @@ public class ControllerAuthorizationTestHelpersTests
     {
         [HttpGet("authorized")]
         [CustomAuthorize]
-        public IActionResult GetAuthorized() => Ok();
+        public OkResult GetAuthorized() => Ok();
 
         [HttpGet("unauthorized")]
-        public IActionResult GetUnauthorized() => Ok();
+        public OkResult GetUnauthorized() => Ok();
 
         [HttpPost("unauthorized")]
-        public IActionResult PostUnauthorized() => Ok();
+        public OkResult PostUnauthorized() => Ok();
 
         [HttpPut("unauthorized")]
-        public IActionResult PutUnauthorized() => Ok();
+        public OkResult PutUnauthorized() => Ok();
 
         // Non-HTTP method should be ignored
-        public IActionResult NonHttpMethod() => Ok();
+        public OkResult NonHttpMethod() => Ok();
     }
 
     // Controller with proper authorization on all methods
@@ -90,15 +98,15 @@ public class ControllerAuthorizationTestHelpersTests
     {
         [HttpGet("custom")]
         [CustomAuthorize]
-        public IActionResult GetWithCustom() => Ok();
+        public OkResult GetWithCustom() => Ok();
 
         [HttpPost("custom")]
         [CustomAuthorize]
-        public IActionResult PostWithCustom() => Ok();
+        public OkResult PostWithCustom() => Ok();
 
         [HttpDelete("custom")]
         [CustomAuthorize]
-        public IActionResult DeleteWithCustom() => Ok();
+        public OkResult DeleteWithCustom() => Ok();
     }
 
     // Controller with AllowAnonymous (which is valid method-level authorization)
@@ -107,22 +115,35 @@ public class ControllerAuthorizationTestHelpersTests
     {
         [HttpGet("anonymous")]
         [AllowAnonymous]
-        public IActionResult GetAnonymous() => Ok();
+        public OkResult GetAnonymous() => Ok();
 
         [HttpPost("protected")]
         [CustomAuthorize]
-        public IActionResult PostProtected() => Ok();
+        public OkResult PostProtected() => Ok();
 
         [HttpGet("mixed")]
         [AllowAnonymous]
-        public IActionResult GetMixed() => Ok();
+        public OkResult GetMixed() => Ok();
+    }
+
+    // Controller with [NoopAuthorize] on a method (authenticated, no additional authz)
+    [Authorize]
+    private class ControllerWithNoopAuthorize : ControllerBase
+    {
+        [HttpGet("noop")]
+        [NoopAuthorize]
+        public OkResult GetWithNoop() => Ok();
+
+        [HttpPost("protected")]
+        [CustomAuthorize]
+        public OkResult PostProtected() => Ok();
     }
 
     // Controller with no HTTP methods
     [Authorize]
     private class ControllerWithNoHttpMethods : ControllerBase
     {
-        public IActionResult NotAnHttpMethod() => Ok();
+        public OkResult NotAnHttpMethod() => Ok();
         public void AnotherNonHttpMethod() { }
     }
 

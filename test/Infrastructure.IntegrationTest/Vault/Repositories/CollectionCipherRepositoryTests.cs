@@ -73,12 +73,5 @@ public class CollectionCipherRepositoryTests
         Assert.Single(result);
         Assert.Equal(sharedCollection.Id, result.First().CollectionId);
         Assert.DoesNotContain(result, cc => cc.CollectionId == defaultUserCollection.Id);
-
-        // Cleanup
-        await cipherRepository.DeleteAsync(sharedCipher);
-        await cipherRepository.DeleteAsync(defaultCipher);
-        await collectionRepository.DeleteAsync(sharedCollection);
-        await collectionRepository.DeleteAsync(defaultUserCollection);
-        await organizationRepository.DeleteAsync(organization);
     }
 }

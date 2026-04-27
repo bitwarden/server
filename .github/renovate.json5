@@ -125,6 +125,7 @@
         "AutoMapper.Extensions.Microsoft.DependencyInjection",
         "AWSSDK.SimpleEmail",
         "AWSSDK.SQS",
+        "Azure.Storage.Blobs.Batch",
         "Handlebars.Net",
         "MailKit",
         "Microsoft.Azure.NotificationHubs",
@@ -176,7 +177,7 @@
     },
     {
       groupName: "Admin and SSO npm dependencies",
-      matchFileNames: ["src/Admin/package.json", "src/Sso/package.json"],
+      matchFileNames: ["src/Admin/package.json", "bitwarden_license/src/Sso/package.json"],
       matchUpdateTypes: ["minor", "patch"],
       description: "Admin & SSO npm packages",
       commitMessagePrefix: "[deps] Auth:",

@@ -9,7 +9,7 @@ namespace Bit.Setup;
 
 public class Context
 {
-    private const string ConfigPath = "/bitwarden/config.yml";
+    private string ConfigPath => $"{App.RootDirectory}/config.yml";
 
     // These track of old CSP default values to correct.
     // Do not change these values.
@@ -45,6 +45,8 @@ public class Context
         Jan2023ContentSecurityPolicy
     };
 
+    public required Application App { get; init; }
+
     public string[] Args { get; set; }
     public bool Quiet { get; set; }
     public bool Stub { get; set; }
@@ -69,7 +71,7 @@ public class Context
             Helpers.WriteLine(this, "No existing `config.yml` detected. Let's generate one.");
 
             // Looks like updating from older version. Try to create config file.
-            var url = Helpers.GetValueFromEnvFile("global", "globalSettings__baseServiceUri__vault");
+            var url = Helpers.GetValueFromEnvFile(App, "global", "globalSettings__baseServiceUri__vault");
             if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
             {
                 Helpers.WriteLine(this, "Unable to determine existing installation url.");
@@ -77,10 +79,10 @@ public class Context
             }
             Config.Url = url;
 
-            var push = Helpers.GetValueFromEnvFile("global", "globalSettings__pushRelayBaseUri");
+            var push = Helpers.GetValueFromEnvFile(App, "global", "globalSettings__pushRelayBaseUri");
             Config.PushNotifications = push != "REPLACE";
 
-            var composeFile = "/bitwarden/docker/docker-compose.yml";
+            var composeFile = $"{App.RootDirectory}/docker/docker-compose.yml";
             if (File.Exists(composeFile))
             {
                 var fileLines = File.ReadAllLines(composeFile);
@@ -118,7 +120,7 @@ public class Context
                 }
             }
 
-            var nginxFile = "/bitwarden/nginx/default.conf";
+            var nginxFile = $"{App.RootDirectory}/nginx/default.conf";
             if (File.Exists(nginxFile))
             {
                 var confContent = File.ReadAllText(nginxFile);
@@ -177,7 +179,7 @@ public class Context
             .WithEmissionPhaseObjectGraphVisitor(args => new CommentsObjectGraphVisitor(args.InnerVisitor))
             .Build();
         var yaml = serializer.Serialize(Config);
-        Directory.CreateDirectory("/bitwarden/");
+        Directory.CreateDirectory($"{App.RootDirectory}/");
         using (var sw = File.CreateText(ConfigPath))
         {
             sw.Write(yaml);
