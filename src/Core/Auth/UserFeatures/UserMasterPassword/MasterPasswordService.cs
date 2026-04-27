@@ -51,12 +51,6 @@ internal class MasterPasswordService(
         EnsureUserIsHydrated(user);
         setInitialData.ValidateDataForUser(user);
 
-        // Note: Keep "unlock and authenticate" pattern in mind.
-        // We name "unlock" first as a naming convention,
-        // e.g., MasterPasswordUnlockAndAuthenticationDataModel. 
-        // The two are complimentary, but mechanically Authenticate comes first.
-        // Eager validation keeps the logic easier to reason about. 
-        // Authentication is the mechanism for validation, unlock is the capability. 
         var result = await ApplyMasterPasswordAuthenticationHashAsync(
             user,
             setInitialData.MasterPasswordAuthentication.MasterPasswordAuthenticationHash,
@@ -113,12 +107,6 @@ internal class MasterPasswordService(
 
         return async (connection, transaction) =>
         {
-            // Note: Keep "unlock and authenticate" pattern in mind.
-            // We name "unlock" first as a naming convention,
-            // e.g., MasterPasswordUnlockAndAuthenticationDataModel. 
-            // The two are complimentary, but mechanically Authenticate comes first.
-            // Eager validation keeps the logic easier to reason about. 
-            // Authentication is the mechanism for validation, unlock is the capability. 
             if (setInitialData.ValidatePassword)
             {
                 var validate = await ValidatePasswordInternalAsync(user,
@@ -155,12 +143,6 @@ internal class MasterPasswordService(
         EnsureUserIsHydrated(user);
         updateExistingData.ValidateDataForUser(user);
 
-        // Note: Keep "unlock and authenticate" pattern in mind.
-        // We name "unlock" first as a naming convention,
-        // e.g., MasterPasswordUnlockAndAuthenticationDataModel. 
-        // The two are complimentary, but mechanically Authenticate comes first.
-        // Eager validation keeps the logic easier to reason about. 
-        // Authentication is the mechanism for validation, unlock is the capability. 
         var result = await ApplyMasterPasswordAuthenticationHashAsync(
             user,
             updateExistingData.MasterPasswordAuthentication.MasterPasswordAuthenticationHash,
@@ -196,12 +178,6 @@ internal class MasterPasswordService(
         EnsureUserIsHydrated(user);
         updateExistingData.ValidateDataForUser(user);
 
-        // Note: Keep "unlock and authenticate" pattern in mind.
-        // We name "unlock" first as a naming convention,
-        // e.g., MasterPasswordUnlockAndAuthenticationDataModel. 
-        // The two are complimentary, but mechanically Authenticate comes first.
-        // Eager validation keeps the logic easier to reason about. 
-        // Authentication is the mechanism for validation, unlock is the capability. 
         var result = await ApplyMasterPasswordAuthenticationHashAsync(
             user,
             updateExistingData.MasterPasswordAuthentication.MasterPasswordAuthenticationHash,
@@ -250,24 +226,42 @@ internal class MasterPasswordService(
         return result.AsT0;
     }
 
-    ///<summary>
-    ///Applies via hashing the <paramref name="newPassword"/> to the <paramref name="user"/>.
-    ///Optionally validates the password, flagged with <paramref name="validatePassword"/>.
-    ///Used by both initial-set and update master password paths.
+    /// <summary>
+    /// Server-side hashes the client-supplied master password authentication hash
+    /// (<paramref name="newAuthenticationHash"/>) and writes the result to
+    /// <see cref="Bit.Core.Entities.User.MasterPassword"/>.
+    /// <para>
+    /// The client derives the authentication hash from the salted plaintext master password via KDF before
+    /// transmission, so the plaintext never reaches the server. The server applies a second hash via
+    /// <see cref="Microsoft.AspNetCore.Identity.IPasswordHasher{TUser}"/>, meaning
+    /// <see cref="Bit.Core.Entities.User.MasterPassword"/> stores a hash-of-hash. At login, this
+    /// stored value is compared against a freshly client-derived hash to verify identity.
+    /// </para>
+    /// <para>
+    /// The authentication hash is distinct from the master password unlock material: both derive from
+    /// the same KDF pass over the salted user-provided plaintext, but unlock material (the master-key-wrapped user key,
+    /// salt, and KDF parameters) enables vault decryption client-side and is never validated server-side.
+    /// Authentication proves identity; unlock enables capability.
+    /// </para>
+    /// <para>
+    /// When <paramref name="validatePassword"/> is <c>true</c>, the hash is first run through the
+    /// registered password validator pipeline to enforce password policy before hashing.
+    /// </para>
+    /// <seealso href="https://bitwarden.com/help/bitwarden-security-white-paper/#hashing-key-derivation-and-encryption"/>
     /// </summary>
-    private async Task<IdentityResult> ApplyMasterPasswordAuthenticationHashAsync(User user, string newPassword,
+    private async Task<IdentityResult> ApplyMasterPasswordAuthenticationHashAsync(User user, string newAuthenticationHash,
         bool validatePassword = true)
     {
         if (validatePassword)
         {
-            var validate = await ValidatePasswordInternalAsync(user, newPassword);
+            var validate = await ValidatePasswordInternalAsync(user, newAuthenticationHash);
             if (!validate.Succeeded)
             {
                 return validate;
             }
         }
 
-        user.MasterPassword = _passwordHasher.HashPassword(user, newPassword);
+        user.MasterPassword = _passwordHasher.HashPassword(user, newAuthenticationHash);
 
         return IdentityResult.Success;
     }
