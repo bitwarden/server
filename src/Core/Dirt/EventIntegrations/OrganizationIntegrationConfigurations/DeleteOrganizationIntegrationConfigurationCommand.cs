@@ -21,12 +21,12 @@ public class DeleteOrganizationIntegrationConfigurationCommand(
         var integration = await integrationRepository.GetByIdAsync(integrationId);
         if (integration == null || integration.OrganizationId != organizationId)
         {
-            throw new NotFoundException();
+            throw new BadRequestException("Integration not found for this organization.");
         }
         var configuration = await configurationRepository.GetByIdAsync(configurationId);
         if (configuration is null || configuration.OrganizationIntegrationId != integrationId)
         {
-            throw new NotFoundException();
+            throw new BadRequestException("Configuration not found for this integration.");
         }
 
         await configurationRepository.DeleteAsync(configuration);
