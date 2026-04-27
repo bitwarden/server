@@ -57,7 +57,7 @@ internal class MasterPasswordService(
         // The two are complimentary, but mechanically Authenticate comes first.
         // Eager validation keeps the logic easier to reason about. 
         // Authentication is the mechanism for validation, unlock is the capability. 
-        var result = await UpdateExistingPasswordHashAsync(
+        var result = await ApplyPasswordHashAsync(
             user,
             setInitialData.MasterPasswordAuthentication.MasterPasswordAuthenticationHash,
             setInitialData.ValidatePassword,
@@ -68,7 +68,7 @@ internal class MasterPasswordService(
         }
 
         user.Key = setInitialData.MasterPasswordUnlock.MasterKeyWrappedUserKey;
-        SetKdfStateOnUser(user, setInitialData.MasterPasswordUnlock.Kdf);
+        ApplyKdfStateOnUser(user, setInitialData.MasterPasswordUnlock.Kdf);
 
         // Set salt on the user
         user.MasterPasswordSalt = setInitialData.MasterPasswordUnlock.Salt;
@@ -157,7 +157,7 @@ internal class MasterPasswordService(
         // The two are complimentary, but mechanically Authenticate comes first.
         // Eager validation keeps the logic easier to reason about. 
         // Authentication is the mechanism for validation, unlock is the capability. 
-        var result = await UpdateExistingPasswordHashAsync(
+        var result = await ApplyPasswordHashAsync(
             user,
             updateExistingData.MasterPasswordAuthentication.MasterPasswordAuthenticationHash,
             updateExistingData.ValidatePassword,
@@ -194,7 +194,7 @@ internal class MasterPasswordService(
         // The two are complimentary, but mechanically Authenticate comes first.
         // Eager validation keeps the logic easier to reason about. 
         // Authentication is the mechanism for validation, unlock is the capability. 
-        var result = await UpdateExistingPasswordHashAsync(
+        var result = await ApplyPasswordHashAsync(
             user,
             updateExistingData.MasterPasswordAuthentication.MasterPasswordAuthenticationHash,
             updateExistingData.ValidatePassword,
@@ -206,7 +206,7 @@ internal class MasterPasswordService(
         }
 
         user.Key = updateExistingData.MasterPasswordUnlock.MasterKeyWrappedUserKey;
-        SetKdfStateOnUser(user, updateExistingData.MasterPasswordUnlock.Kdf);
+        ApplyKdfStateOnUser(user, updateExistingData.MasterPasswordUnlock.Kdf);
 
         // Always override the master password hint, even if it's null
         user.MasterPasswordHint = updateExistingData.MasterPasswordHint;
@@ -238,7 +238,13 @@ internal class MasterPasswordService(
         return result.AsT0;
     }
 
-    private async Task<IdentityResult> UpdateExistingPasswordHashAsync(User user, string newPassword,
+    ///<summary>
+    ///Applies via hashing the <paramref name="newPassword"/> to the <paramref name="user"/>.
+    ///Optionally validates the password, flagged with <paramref name="validatePassword"/> 
+    ///and rotates the security stamp, flagged with <paramref name="refreshStamp"/>.
+    ///Used by both initial-set and update master password paths.
+    /// </summary>
+    private async Task<IdentityResult> ApplyPasswordHashAsync(User user, string newPassword,
         bool validatePassword = true, bool refreshStamp = true)
     {
         if (validatePassword)
@@ -263,7 +269,7 @@ internal class MasterPasswordService(
     /// Applies KDF parameters from the supplied <paramref name="kdf"/> to the <paramref name="user"/>.
     /// Used by both initial-set and KDF-rotation paths.
     /// </summary>
-    private static void SetKdfStateOnUser(User user, KdfSettings kdf)
+    private static void ApplyKdfStateOnUser(User user, KdfSettings kdf)
     {
         user.Kdf = kdf.KdfType;
         user.KdfIterations = kdf.Iterations;
