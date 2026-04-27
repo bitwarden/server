@@ -190,7 +190,7 @@ internal interface IMasterPasswordService
     /// </para>
     ///
     /// <para>
-    /// Constraints (applied when the returned delegate is invoked; see also <see cref="PrepareSetInitialMasterPasswordAsync"/>):
+    /// Constraints (see also <see cref="PrepareSetInitialMasterPasswordAsync"/>):
     /// <list type="bullet">
     ///   <item>User must not already have a master password.</item>
     ///   <item>User must have no existing <c>Key</c> or <c>MasterPasswordSalt</c>.</item>

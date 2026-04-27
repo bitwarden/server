@@ -53,7 +53,7 @@ internal class MasterPasswordService(
 
         // Note: Keep "unlock and authenticate" pattern in mind.
         // We name "unlock" first as a naming convention,
-        // e.g., MatherPasswordUnlockAndAuthenticationDataModel. 
+        // e.g., MasterPasswordUnlockAndAuthenticationDataModel. 
         // The two are complimentary, but mechanically Authenticate comes first.
         // Eager validation keeps the logic easier to reason about. 
         // Authentication is the mechanism for validation, unlock is the capability. 
@@ -111,7 +111,7 @@ internal class MasterPasswordService(
         {
             // Note: Keep "unlock and authenticate" pattern in mind.
             // We name "unlock" first as a naming convention,
-            // e.g., MatherPasswordUnlockAndAuthenticationDataModel. 
+            // e.g., MasterPasswordUnlockAndAuthenticationDataModel. 
             // The two are complimentary, but mechanically Authenticate comes first.
             // Eager validation keeps the logic easier to reason about. 
             // Authentication is the mechanism for validation, unlock is the capability. 
@@ -153,7 +153,7 @@ internal class MasterPasswordService(
 
         // Note: Keep "unlock and authenticate" pattern in mind.
         // We name "unlock" first as a naming convention,
-        // e.g., MatherPasswordUnlockAndAuthenticationDataModel. 
+        // e.g., MasterPasswordUnlockAndAuthenticationDataModel. 
         // The two are complimentary, but mechanically Authenticate comes first.
         // Eager validation keeps the logic easier to reason about. 
         // Authentication is the mechanism for validation, unlock is the capability. 
@@ -190,7 +190,7 @@ internal class MasterPasswordService(
 
         // Note: Keep "unlock and authenticate" pattern in mind.
         // We name "unlock" first as a naming convention,
-        // e.g., MatherPasswordUnlockAndAuthenticationDataModel. 
+        // e.g., MasterPasswordUnlockAndAuthenticationDataModel. 
         // The two are complimentary, but mechanically Authenticate comes first.
         // Eager validation keeps the logic easier to reason about. 
         // Authentication is the mechanism for validation, unlock is the capability. 
