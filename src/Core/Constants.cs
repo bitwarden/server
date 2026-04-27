@@ -176,6 +176,7 @@ public static class FeatureFlagKeys
     public const string DesktopMigrationMilestone2 = "desktop-ui-migration-milestone-2";
     public const string DesktopMigrationMilestone3 = "desktop-ui-migration-milestone-3";
     public const string DesktopMigrationMilestone4 = "desktop-ui-migration-milestone-4";
+    public const string DesktopMigrationSettings = "desktop-ui-settings-dialog";
 
     /* Auth Team */
     public const string Otp6Digits = "pm-18612-otp-6-digits";

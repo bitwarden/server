@@ -5,10 +5,12 @@ using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
+using EfAdminConsoleRepo = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
+using SqlAdminConsoleRepo = Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
-namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
+namespace Bit.Infrastructure.EFIntegration.Test.AdminConsole.Repositories;
 
 [EfCollectionCustomize]
 public class CollectionRepositoryTests
@@ -18,9 +20,9 @@ public class CollectionRepositoryTests
         Collection collection,
         Organization organization,
         CollectionCompare equalityComparer,
-        List<EfRepo.CollectionRepository> suts,
+        List<EfAdminConsoleRepo.CollectionRepository> suts,
         List<EfRepo.OrganizationRepository> efOrganizationRepos,
-        SqlRepo.CollectionRepository sqlCollectionRepo,
+        SqlAdminConsoleRepo.CollectionRepository sqlCollectionRepo,
         SqlRepo.OrganizationRepository sqlOrganizationRepo
         )
     {

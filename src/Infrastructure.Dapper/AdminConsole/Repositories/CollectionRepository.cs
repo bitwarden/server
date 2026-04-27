@@ -9,12 +9,13 @@ using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Infrastructure.Dapper.AdminConsole.Helpers;
+using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
 #nullable enable
 
-namespace Bit.Infrastructure.Dapper.Repositories;
+namespace Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 
 public class CollectionRepository : Repository<Collection, Guid>, ICollectionRepository
 {

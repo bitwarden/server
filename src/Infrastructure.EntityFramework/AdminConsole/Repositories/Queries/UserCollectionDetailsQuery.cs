@@ -1,7 +1,10 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 
-namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
+using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Infrastructure.EntityFramework.Repositories.Queries;
+
+namespace Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.Queries;
 
 public class UserCollectionDetailsQuery : IQuery<CollectionDetails>
 {

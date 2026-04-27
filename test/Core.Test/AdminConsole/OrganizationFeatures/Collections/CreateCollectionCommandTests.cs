@@ -13,7 +13,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationCollections;
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Collections;
 
 [SutProviderCustomize]
 [OrganizationCustomize]

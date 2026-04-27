@@ -10,7 +10,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationConnections;
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Collections;
 
 [SutProviderCustomize]
 public class DeleteCollectionCommandTests

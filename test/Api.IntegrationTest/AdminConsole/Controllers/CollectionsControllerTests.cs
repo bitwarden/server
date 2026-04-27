@@ -14,7 +14,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Xunit;
 
-namespace Bit.Api.IntegrationTest.Controllers.Public;
+namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
 
 public class CollectionsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
