@@ -4,6 +4,18 @@ using Bit.Core.KeyManagement.Models.Data;
 
 namespace Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
 
+/// <summary>
+/// Input data for setting an initial master password on a user who has none. Carries the
+/// cryptographic material, authentication credential, and control flags consumed by
+/// <see cref="Interfaces.IMasterPasswordService"/>.
+///
+/// <para>
+/// Use when: constructing a call to
+/// <see cref="Interfaces.IMasterPasswordService.PrepareSetInitialMasterPasswordAsync"/>,
+/// <see cref="Interfaces.IMasterPasswordService.SaveSetInitialMasterPasswordAsync"/>, or
+/// <see cref="Interfaces.IMasterPasswordService.BuildUpdateUserDelegateSetInitialMasterPassword"/>.
+/// </para>
+/// </summary>
 public class SetInitialPasswordData
 {
     public required MasterPasswordUnlockData MasterPasswordUnlock { get; set; }

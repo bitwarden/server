@@ -2,6 +2,17 @@
 
 namespace Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
 
+/// <summary>
+/// Combined input data covering both the set-initial and update-existing paths. Converts to
+/// <see cref="SetInitialPasswordData"/> or <see cref="UpdateExistingPasswordData"/> via
+/// <see cref="ToSetInitialData"/> or <see cref="ToUpdateExistingData"/>.
+///
+/// <para>
+/// Use when: constructing a call to
+/// <see cref="Interfaces.IMasterPasswordService.PrepareSetInitialOrUpdateExistingMasterPasswordAsync"/>,
+/// where the caller does not need to select the set-initial or update-existing path explicitly.
+/// </para>
+/// </summary>
 public class SetInitialOrUpdateExistingPasswordData
 {
     public required MasterPasswordUnlockData MasterPasswordUnlock { get; set; }
