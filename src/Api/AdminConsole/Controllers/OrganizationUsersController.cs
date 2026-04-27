@@ -554,6 +554,14 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 #nullable disable
 
+    /// <summary>
+    /// This is an example of how it should be used. This work should be done by AC and the purpose of this code is to
+    /// just flush out the contracts for how this endpoint will be used.
+    /// </summary>
+    /// <param name="orgId"></param>
+    /// <param name="id"></param>
+    /// <param name="model"></param>
+    /// <returns></returns>
     [HttpPut("{id}/changeEmailForPasswordlessUser")]
     [Authorize<ManageUsersRequirement>]
     public async Task<IResult> ChangeEmailForPasswordlessUser(
