@@ -1,85 +1,89 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
-using Bit.Core.Entities;
-using Bit.Core.Models.Api;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 
 namespace Bit.Api.AdminConsole.Attributes;
 
 /// <summary>
-/// Validates that the specified organization user belongs to the organization identified by the
-/// <c>orgId</c> or <c>organizationId</c> route parameter, and optionally injects the loaded
-/// <see cref="OrganizationUser"/> into the action method arguments.
+/// Binds a <see cref="Bit.Core.Entities.OrganizationUser"/> parameter by loading it from the database
+/// and validating that it belongs to the organization identified by the <c>orgId</c> or
+/// <c>organizationId</c> route parameter.
 /// </summary>
 /// <remarks>
-/// <para>The organization user is resolved from the route parameter named by
-/// <paramref name="organizationUserIdRouteParam"/> (default <c>"id"</c>). Its
-/// <see cref="OrganizationUser.OrganizationId"/> must match the organization route value.
-/// If validation fails, the request is short-circuited with an appropriate error response.</para>
-/// <para>The injected <see cref="OrganizationUser"/> parameter must be marked with
-/// <c>[BindNever]</c> to bypass model binding.</para>
+/// The organization user is resolved from the route parameter named by
+/// <see cref="OrganizationUserIdRouteParam"/> (default <c>"id"</c>). If the user is not found or
+/// does not belong to the organization, a <see cref="Bit.Core.Exceptions.NotFoundException"/> is thrown.
 /// </remarks>
 /// <example>
 /// <code><![CDATA[
-/// [HttpGet("{id}")]
-/// [InjectOrganizationUser]
-/// public async Task<IResult> GetAsync(Guid id, [BindNever] OrganizationUser organizationUser)
+/// [HttpPut("{id}/recover-account")]
+/// [Authorize<ManageAccountRecoveryRequirement>]
+/// public async Task<IResult> PutRecoverAccount(Guid orgId, Guid id,
+///     [FromBody] OrganizationUserResetPasswordRequestModel model,
+///     [InjectOrganizationUser] OrganizationUser targetOrganizationUser)
 ///
 /// [HttpPost("{organizationUserId}/accept")]
-/// [InjectOrganizationUser("organizationUserId")]
-/// public async Task<IResult> AcceptAsync(Guid organizationUserId, [BindNever] OrganizationUser organizationUser)
+/// public async Task<IResult> AcceptAsync(Guid organizationUserId,
+///     [InjectOrganizationUser("organizationUserId")] OrganizationUser organizationUser)
 /// ]]></code>
 /// </example>
-/// <param name="organizationUserIdRouteParam">
-/// Name of the route parameter containing the organization user ID. Defaults to <c>"id"</c>.
-/// </param>
-public class InjectOrganizationUserAttribute(string organizationUserIdRouteParam = "id") : ActionFilterAttribute
+[AttributeUsage(AttributeTargets.Parameter)]
+public sealed class InjectOrganizationUserAttribute(string organizationUserIdRouteParam = "id")
+    : ModelBinderAttribute(typeof(OrganizationUserModelBinder))
 {
-    public override async Task OnActionExecutionAsync(
-        ActionExecutingContext context,
-        ActionExecutionDelegate next)
+    /// <summary>
+    /// Name of the route parameter containing the organization user ID. Defaults to <c>"id"</c>.
+    /// </summary>
+    public string OrganizationUserIdRouteParam { get; } = organizationUserIdRouteParam;
+}
+
+/// <summary>
+/// Custom model binder that loads an <see cref="Bit.Core.Entities.OrganizationUser"/> from the database,
+/// validates that it belongs to the organization identified by the route, and binds it to the parameter.
+/// </summary>
+/// <remarks>
+/// This binder is used via the <see cref="InjectOrganizationUserAttribute"/>.
+/// </remarks>
+public class OrganizationUserModelBinder : IModelBinder
+{
+    public async Task BindModelAsync(ModelBindingContext bindingContext)
     {
+        var defaultMetadata = bindingContext.ModelMetadata as DefaultModelMetadata;
+        var attr = defaultMetadata?.Attributes.ParameterAttributes
+            ?.OfType<InjectOrganizationUserAttribute>()
+            .FirstOrDefault()
+            ?? new InjectOrganizationUserAttribute();
+
         Guid orgId;
         try
         {
-            orgId = context.HttpContext.GetOrganizationId();
+            orgId = bindingContext.HttpContext.GetOrganizationId();
         }
         catch (InvalidOperationException)
         {
-            context.Result = new BadRequestObjectResult(
-                new ErrorResponseModel("Route parameter 'orgId' or 'organizationId' is missing or invalid."));
-            return;
+            throw new BadRequestException("Route parameter 'orgId' or 'organizationId' is missing or invalid.");
         }
 
-        if (!context.RouteData.Values.TryGetValue(organizationUserIdRouteParam, out var orgUserIdRouteValue) ||
-            !Guid.TryParse(orgUserIdRouteValue?.ToString(), out var orgUserId))
+        var routeValues = bindingContext.ActionContext.RouteData.Values;
+        if (!routeValues.TryGetValue(attr.OrganizationUserIdRouteParam, out var idValue)
+            || !Guid.TryParse(idValue?.ToString(), out var orgUserId))
         {
-            context.Result = new BadRequestObjectResult(
-                new ErrorResponseModel($"Route parameter '{organizationUserIdRouteParam}' is missing or invalid."));
-            return;
+            throw new BadRequestException(
+                $"Route parameter '{attr.OrganizationUserIdRouteParam}' is missing or invalid.");
         }
 
-        var organizationUserRepository = context.HttpContext.RequestServices
+        var repo = bindingContext.HttpContext.RequestServices
             .GetRequiredService<IOrganizationUserRepository>();
 
-        var organizationUser = await organizationUserRepository.GetByIdAsync(orgUserId);
-
-        if (organizationUser == null || organizationUser.OrganizationId != orgId)
+        var organizationUser = await repo.GetByIdAsync(orgUserId);
+        if (organizationUser is null || organizationUser.OrganizationId != orgId)
         {
-            context.Result = new NotFoundObjectResult(
-                new ErrorResponseModel("Organization user not found."));
-            return;
+            throw new NotFoundException();
         }
 
-        var organizationUserParameter = context.ActionDescriptor.Parameters
-            .FirstOrDefault(p => p.ParameterType == typeof(OrganizationUser));
-
-        if (organizationUserParameter != null)
-        {
-            context.ActionArguments[organizationUserParameter.Name] = organizationUser;
-        }
-
-        await next();
+        bindingContext.Result = ModelBindingResult.Success(organizationUser);
     }
 }
