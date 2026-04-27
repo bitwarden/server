@@ -7,56 +7,67 @@ using OneOf;
 namespace Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 
 /// <summary>
-/// Centralized mutation point for all master password set and update operations.
+/// Shared service for all master password set and update operations.
 /// Provides consistent validation, password hashing, and timestamp management across every
 /// flow that establishes or updates a user's master password.
 ///
-/// Compositional, not orchestrating. This service handles CRUD-like mutations
+/// Compositional, not orchestrating. This service handles CRUD-like mutations and/or persistence
 /// only. Business logic (e.g., authorization checks, org validation, push notifications, event
 /// logging) remains a caller responsibility.
 ///
-/// <para>Three persistence tiers:</para>
+/// <para>
+/// What our verbs do:
+/// This surface has a 3-verb API.
+/// Choose between Prepare, Save, or Build; each has a consistent mutation/persistence
+/// opinion.
+/// </para>
 /// <list type="bullet">
 ///   <item>
-///     <c>Prepare*</c> Modifies the <see cref="User"/> object in memory only. The caller
-///     controls when and how persistence occurs. Use when composing additional mutations before
-///     saving (e.g. admin recovery flows that also clear 2FA or set <c>ForcePasswordReset</c>).
-///     Returns <c>OneOf&lt;User, IdentityError[]&gt;</c>.
+///     <term>Prepare</term> Modifies the <see cref="User"/> object in memory only. The caller
+///     controls when and how persistence occurs. Use when composing mutations before
+///     saving (e.g. admin recovery flows that also clear 2FA or set <see cref="User.ForcePasswordReset"/>).
+///     Returns <see cref="OneOf{T0, T1}"/> of <see cref="User"/>, array of <see cref="IdentityError"/>.
 ///   </item>
 ///   <item>
-///     <c>Save*</c> Prepares the mutation and persists to the database via
-///     <c>IUserRepository.ReplaceAsync</c>. Use for standalone operations where no
-///     further mutation is needed. Returns <c>OneOf&lt;User, IdentityError[]&gt;</c>.
+///     <term>Save</term> Prepares the mutation and persists to the database via
+///     <see cref="Bit.Core.Repositories.IRepository{T, TId}.ReplaceAsync"/>. Use for standalone operations where no
+///     further mutation is needed.
+///     Returns <see cref="OneOf{T0, T1}"/> of <see cref="User"/>, array of <see cref="IdentityError"/>.
 ///   </item>
 ///   <item>
-///     <c>Build*</c> Returns a deferred <see cref="UpdateUserData"/> delegate for
+///     <term>Build</term> Returns a deferred <see cref="UpdateUserData"/> delegate for
 ///     <see cref="IUserRepository.UpdateUserDataAsync"/> batch transactions. Use when the
 ///     password set is part of a larger transactional write that must succeed or fail atomically
 ///     (e.g. TDE key + password in a single SQL transaction)
 ///   </item>
 /// </list>
 ///
-/// <para>Set vs Update contract:</para>
-/// <list type="table">
+/// <para>
+/// When to choose an operation:
+/// Choose between Set (initial/new) and Update (existing); each has purpose-made validation
+/// and consistency constraints.
+/// </para>
+/// <list type="bullet">
 ///   <item>
-///     <term>SET (initial)</term>
+///     <term>Set</term>
 ///     <description>Client sends all data (hash, salt, KDF). Server sets all
 ///     fields. Stage 1 caveat: server enforces <c>salt == email.ToLowerInvariant().Trim()</c>
-///     (PM-28143 removes this in Stage 3).</description>
+///     (PM-28143 removes this in Stage 3). Use when creating a new user.</description>
 ///   </item>
 ///   <item>
-///     <term>UPDATE (hash only)</term>
+///     <term>Update (hash only)</term>
 ///     <description>Client sends all data. Server validates KDF and salt
-///     are unchanged, updates only the hash and wrapped user key.</description>
+///     are unchanged, updates only the hash and wrapped user key. Use when
+///     updating master password.</description>
 ///   </item>
 ///   <item>
-///     <term>UPDATE (KDF)</term>
-///     <description>Client sends all data. Server validates salt is unchanged,
-///     updates hash, KDF, and wrapped user key.</description>
+///     <term>Update (KDF)</term>
+///     <description>Client sends all data. Server validates salt is unchanged.
+///     Use when updating KDF settings and master key-wrapped user key.</description>
 ///   </item>
 /// </list>
 ///
-/// <para>Source of truth: On SET, the client is the source of truth. On UPDATE,
+/// <para>Source of truth: On Set, the client is the source of truth. On Update,
 /// the server is the source of truth for fields that must not change — it validates the client's
 /// values match what's stored before applying the update.</para>
 /// </summary>
