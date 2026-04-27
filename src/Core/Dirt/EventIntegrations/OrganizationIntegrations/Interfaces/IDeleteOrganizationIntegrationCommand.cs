@@ -10,7 +10,7 @@ public interface IDeleteOrganizationIntegrationCommand
     /// </summary>
     /// <param name="organizationId">The unique identifier of the organization.</param>
     /// <param name="integrationId">The unique identifier of the integration to delete.</param>
-    /// <exception cref="Exceptions.NotFoundException">Thrown when the integration does not exist
+    /// <exception cref="Exceptions.BadRequestException">Thrown when the integration does not exist
     /// or does not belong to the specified organization.</exception>
     Task DeleteAsync(Guid organizationId, Guid integrationId);
 }
