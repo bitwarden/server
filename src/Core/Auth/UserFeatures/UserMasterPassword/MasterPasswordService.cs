@@ -57,14 +57,18 @@ internal class MasterPasswordService(
         // The two are complimentary, but mechanically Authenticate comes first.
         // Eager validation keeps the logic easier to reason about. 
         // Authentication is the mechanism for validation, unlock is the capability. 
-        var result = await ApplyPasswordHashAsync(
+        var result = await ApplyMasterPasswordAuthenticationHashAsync(
             user,
             setInitialData.MasterPasswordAuthentication.MasterPasswordAuthenticationHash,
-            setInitialData.ValidatePassword,
-            setInitialData.RefreshStamp);
+            setInitialData.ValidatePassword);
         if (!result.Succeeded)
         {
             return result.Errors.ToArray();
+        }
+
+        if (setInitialData.RefreshStamp)
+        {
+            ApplyUserSecurityStampRotation(user);
         }
 
         user.Key = setInitialData.MasterPasswordUnlock.MasterKeyWrappedUserKey;
@@ -131,7 +135,7 @@ internal class MasterPasswordService(
                 // TODO (PM-35501): IUserRepository.SetMasterPassword does not persist
                 // SecurityStamp (sproc + EF query both omit it). Rotation here is
                 // in-memory only until the primitive is extended.
-                user.SecurityStamp = Guid.NewGuid().ToString();
+                ApplyUserSecurityStampRotation(user);
             }
 
             // Hash the provided user master password authentication hash on the server side
@@ -157,15 +161,19 @@ internal class MasterPasswordService(
         // The two are complimentary, but mechanically Authenticate comes first.
         // Eager validation keeps the logic easier to reason about. 
         // Authentication is the mechanism for validation, unlock is the capability. 
-        var result = await ApplyPasswordHashAsync(
+        var result = await ApplyMasterPasswordAuthenticationHashAsync(
             user,
             updateExistingData.MasterPasswordAuthentication.MasterPasswordAuthenticationHash,
-            updateExistingData.ValidatePassword,
-            updateExistingData.RefreshStamp);
+            updateExistingData.ValidatePassword);
 
         if (!result.Succeeded)
         {
             return result.Errors.ToArray();
+        }
+
+        if (updateExistingData.RefreshStamp)
+        {
+            ApplyUserSecurityStampRotation(user);
         }
 
         user.Key = updateExistingData.MasterPasswordUnlock.MasterKeyWrappedUserKey;
@@ -194,15 +202,19 @@ internal class MasterPasswordService(
         // The two are complimentary, but mechanically Authenticate comes first.
         // Eager validation keeps the logic easier to reason about. 
         // Authentication is the mechanism for validation, unlock is the capability. 
-        var result = await ApplyPasswordHashAsync(
+        var result = await ApplyMasterPasswordAuthenticationHashAsync(
             user,
             updateExistingData.MasterPasswordAuthentication.MasterPasswordAuthenticationHash,
-            updateExistingData.ValidatePassword,
-            updateExistingData.RefreshStamp);
+            updateExistingData.ValidatePassword);
 
         if (!result.Succeeded)
         {
             return result.Errors.ToArray();
+        }
+
+        if (updateExistingData.RefreshStamp)
+        {
+            ApplyUserSecurityStampRotation(user);
         }
 
         user.Key = updateExistingData.MasterPasswordUnlock.MasterKeyWrappedUserKey;
@@ -240,12 +252,11 @@ internal class MasterPasswordService(
 
     ///<summary>
     ///Applies via hashing the <paramref name="newPassword"/> to the <paramref name="user"/>.
-    ///Optionally validates the password, flagged with <paramref name="validatePassword"/> 
-    ///and rotates the security stamp, flagged with <paramref name="refreshStamp"/>.
+    ///Optionally validates the password, flagged with <paramref name="validatePassword"/>.
     ///Used by both initial-set and update master password paths.
     /// </summary>
-    private async Task<IdentityResult> ApplyPasswordHashAsync(User user, string newPassword,
-        bool validatePassword = true, bool refreshStamp = true)
+    private async Task<IdentityResult> ApplyMasterPasswordAuthenticationHashAsync(User user, string newPassword,
+        bool validatePassword = true)
     {
         if (validatePassword)
         {
@@ -257,12 +268,27 @@ internal class MasterPasswordService(
         }
 
         user.MasterPassword = _passwordHasher.HashPassword(user, newPassword);
-        if (refreshStamp)
-        {
-            user.SecurityStamp = Guid.NewGuid().ToString();
-        }
 
         return IdentityResult.Success;
+    }
+
+    /// <summary>
+    /// Rotates <see cref="Bit.Core.Entities.User.SecurityStamp"/> by replacing it with a new random value.
+    /// <para>
+    /// The security stamp is an opaque random identifier included as a claim in refresh tokens issued
+    /// by IdentityServer. On every token refresh, the claim value is compared against the user's current
+    /// stamp; a mismatch marks the token inactive and rejects the refresh. Rotating the stamp therefore
+    /// immediately invalidates all active sessions without requiring a password change.
+    /// </para>
+    /// <para>
+    /// Call this after any operation that changes the user's authentication credential or cryptographic
+    /// state — setting or updating a master password hash, rotating KDF parameters — where session
+    /// continuity is not intentionally preserved.
+    /// </para>
+    /// </summary>
+    private static void ApplyUserSecurityStampRotation(User user)
+    {
+        user.SecurityStamp = Guid.NewGuid().ToString();
     }
 
     /// <summary>
