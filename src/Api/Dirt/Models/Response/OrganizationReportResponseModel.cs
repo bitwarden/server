@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Models.Data;
+using Bit.Core.Enums;
 
 namespace Bit.Api.Dirt.Models.Response;
 
@@ -13,6 +14,7 @@ public class OrganizationReportResponseModel
     public string? ApplicationData { get; set; }
     public ReportFile? ReportFile { get; set; }
     public string? ReportFileDownloadUrl { get; set; }
+    public FileUploadType? FileUploadType { get; set; }
     public DateTime? CreationDate { get; set; }
     public DateTime? RevisionDate { get; set; }
 

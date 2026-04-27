@@ -56,6 +56,10 @@ public class OrganizationReportControllerTests
             .GetReportDataDownloadUrlAsync(expectedReport, Arg.Any<ReportFile>())
             .Returns(downloadUrl);
 
+        sutProvider.GetDependency<IOrganizationReportStorageService>()
+            .FileUploadType
+            .Returns(FileUploadType.Azure);
+
         // Act
         var result = await sutProvider.Sut.GetLatestOrganizationReportAsync(orgId);
 
@@ -63,6 +67,7 @@ public class OrganizationReportControllerTests
         var okResult = Assert.IsType<OkObjectResult>(result);
         var response = Assert.IsType<OrganizationReportResponseModel>(okResult.Value);
         Assert.Equal(downloadUrl, response.ReportFileDownloadUrl);
+        Assert.Equal(FileUploadType.Azure, response.FileUploadType);
     }
 
     [Theory, BitAutoData]
@@ -87,6 +92,7 @@ public class OrganizationReportControllerTests
         var okResult = Assert.IsType<OkObjectResult>(result);
         var response = Assert.IsType<OrganizationReportResponseModel>(okResult.Value);
         Assert.Null(response.ReportFileDownloadUrl);
+        Assert.Null(response.FileUploadType);
     }
 
     [Theory, BitAutoData]
@@ -315,6 +321,10 @@ public class OrganizationReportControllerTests
             .GetReportDataDownloadUrlAsync(expectedReport, Arg.Any<ReportFile>())
             .Returns(downloadUrl);
 
+        sutProvider.GetDependency<IOrganizationReportStorageService>()
+            .FileUploadType
+            .Returns(FileUploadType.Azure);
+
         // Act
         var result = await sutProvider.Sut.GetOrganizationReportAsync(orgId, reportId);
 
@@ -322,6 +332,7 @@ public class OrganizationReportControllerTests
         var okResult = Assert.IsType<OkObjectResult>(result);
         var response = Assert.IsType<OrganizationReportResponseModel>(okResult.Value);
         Assert.Equal(downloadUrl, response.ReportFileDownloadUrl);
+        Assert.Equal(FileUploadType.Azure, response.FileUploadType);
     }
 
     [Theory, BitAutoData]
@@ -348,6 +359,7 @@ public class OrganizationReportControllerTests
         var okResult = Assert.IsType<OkObjectResult>(result);
         var response = Assert.IsType<OrganizationReportResponseModel>(okResult.Value);
         Assert.Null(response.ReportFileDownloadUrl);
+        Assert.Null(response.FileUploadType);
     }
 
     [Theory, BitAutoData]

@@ -156,6 +156,7 @@ public class OrganizationReportsController : Controller
             if (fileData is { Validated: true })
             {
                 response.ReportFileDownloadUrl = await _storageService.GetReportDataDownloadUrlAsync(latestReport, fileData);
+                response.FileUploadType = _storageService.FileUploadType;
             }
         }
 
@@ -186,6 +187,7 @@ public class OrganizationReportsController : Controller
         if (fileData.Validated)
         {
             response.ReportFileDownloadUrl = await _storageService.GetReportDataDownloadUrlAsync(report, fileData);
+            response.FileUploadType = _storageService.FileUploadType;
         }
 
         return Ok(response);
