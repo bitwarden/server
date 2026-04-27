@@ -91,6 +91,8 @@ public class PolicyService : IPolicyService
     {
         switch (policyType)
         {
+            case PolicyType.MasterPassword:
+                return Array.Empty<OrganizationUserType>();
             case PolicyType.RequireSso:
                 // If 'EnforceSsoPolicyForAllUsers' is set to true then SSO policy applies to all user types otherwise it does not apply to Owner or Admin
                 if (_globalSettings.Sso.EnforceSsoPolicyForAllUsers)
