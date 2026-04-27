@@ -198,6 +198,11 @@ internal interface IMasterPasswordService
     /// </list>
     /// </para>
     ///
+    /// <para>
+    /// NOTE: This exists to support an existing pattern. Long-term preference is to be able to sunset this method
+    /// and lean on Prepare and Save verbs only. Please prefer those verbs if possible.
+    /// </para>
+    ///
     /// </summary>
     /// <param name="user">
     /// The user whose initial master password state will be written when the returned delegate is
