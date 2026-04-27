@@ -1482,7 +1482,8 @@ public class OrganizationUserRepositoryTests
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
-        Database database)
+        Database database,
+        IServiceProvider serviceProvider)
     {
         var user = await userRepository.CreateTestUserAsync();
         var org = await organizationRepository.CreateTestOrganizationAsync();
@@ -1491,7 +1492,7 @@ public class OrganizationUserRepositoryTests
         await organizationUserRepository.ReplaceAsync(orgUser);
 
         var action = organizationUserRepository.SetStatusToAcceptedForKeyRegeneration([orgUser]);
-        await DatabaseTransactionActionTestHelper.ExecuteAsync(database, action);
+        await DatabaseTransactionActionTestHelper.ExecuteAsync(database, action, serviceProvider);
 
         var updatedOrgUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
         Assert.NotNull(updatedOrgUser);
@@ -1504,14 +1505,15 @@ public class OrganizationUserRepositoryTests
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
-        Database database)
+        Database database,
+        IServiceProvider serviceProvider)
     {
         var user = await userRepository.CreateTestUserAsync();
         var org = await organizationRepository.CreateTestOrganizationAsync();
         var orgUser = await organizationUserRepository.CreateRevokedTestOrganizationUserAsync(org, user);
 
         var action = organizationUserRepository.RemoveForKeyRegeneration([orgUser]);
-        await DatabaseTransactionActionTestHelper.ExecuteAsync(database, action);
+        await DatabaseTransactionActionTestHelper.ExecuteAsync(database, action, serviceProvider);
 
         Assert.Null(await organizationUserRepository.GetByIdAsync(orgUser.Id));
     }

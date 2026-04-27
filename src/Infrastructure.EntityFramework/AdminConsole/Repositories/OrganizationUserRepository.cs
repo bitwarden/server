@@ -1063,7 +1063,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
     public DatabaseTransactionAction SetStatusToAcceptedForKeyRegeneration(
         IEnumerable<Core.Entities.OrganizationUser> organizationUsers)
     {
-        return async (_, _) =>
+        return async (connection, transaction) =>
         {
             var ids = organizationUsers.Select(ou => ou.Id).ToList();
             if (ids.Count == 0)
@@ -1072,7 +1072,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             }
 
             using var scope = ServiceScopeFactory.CreateScope();
-            var dbContext = GetDatabaseContext(scope);
+            var dbContext = GetTransactionalDatabaseContext(scope, connection, transaction);
             var utcNow = DateTime.UtcNow;
 
             await dbContext.OrganizationUsers
@@ -1090,7 +1090,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
     public DatabaseTransactionAction RemoveForKeyRegeneration(
         IEnumerable<Core.Entities.OrganizationUser> organizationUsers)
     {
-        return async (_, _) =>
+        return async (connection, transaction) =>
         {
             var ids = organizationUsers.Select(ou => ou.Id).ToList();
             if (ids.Count == 0)
@@ -1099,7 +1099,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             }
 
             using var scope = ServiceScopeFactory.CreateScope();
-            var dbContext = GetDatabaseContext(scope);
+            var dbContext = GetTransactionalDatabaseContext(scope, connection, transaction);
 
             await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(ids);
 

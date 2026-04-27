@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Data.Common;
+using System.Text.Json;
 using AutoMapper;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
@@ -29,6 +30,15 @@ public abstract class BaseEntityFrameworkRepository
     public DatabaseContext GetDatabaseContext(IServiceScope serviceScope)
     {
         return serviceScope.ServiceProvider.GetRequiredService<DatabaseContext>();
+    }
+
+    protected DatabaseContext GetTransactionalDatabaseContext(
+        IServiceScope scope, DbConnection connection, DbTransaction transaction)
+    {
+        var dbContext = GetDatabaseContext(scope);
+        dbContext.Database.SetDbConnection(connection);
+        dbContext.Database.UseTransaction(transaction);
+        return dbContext;
     }
 
     public void ClearChangeTracking()

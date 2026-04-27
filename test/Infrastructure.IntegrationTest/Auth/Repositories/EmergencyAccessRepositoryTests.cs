@@ -705,7 +705,8 @@ public class EmergencyAccessRepositoriesTests
     public async Task SetStatusToAcceptedForKeyRegeneration_AllApplicableStatuses_SetsToAcceptedAndClearsKey(
         IUserRepository userRepository,
         IEmergencyAccessRepository emergencyAccessRepository,
-        Database database)
+        Database database,
+        IServiceProvider serviceProvider)
     {
         var grantorUser = await userRepository.CreateAsync(new User
         {
@@ -747,7 +748,7 @@ public class EmergencyAccessRepositoriesTests
         }
 
         var action = emergencyAccessRepository.SetStatusToAcceptedForKeyRegeneration(emergencyAccesses);
-        await DatabaseTransactionActionTestHelper.ExecuteAsync(database, action);
+        await DatabaseTransactionActionTestHelper.ExecuteAsync(database, action, serviceProvider);
 
         foreach (var ea in emergencyAccesses)
         {

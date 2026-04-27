@@ -181,7 +181,7 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
     public DatabaseTransactionAction SetStatusToAcceptedForKeyRegeneration(
         IEnumerable<Core.Auth.Entities.EmergencyAccess> emergencyAccesses)
     {
-        return async (_, _) =>
+        return async (connection, transaction) =>
         {
             var ids = emergencyAccesses.Select(ea => ea.Id).ToList();
             if (ids.Count == 0)
@@ -190,7 +190,7 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
             }
 
             using var scope = ServiceScopeFactory.CreateScope();
-            var dbContext = GetDatabaseContext(scope);
+            var dbContext = GetTransactionalDatabaseContext(scope, connection, transaction);
             var utcNow = DateTime.UtcNow;
 
             await GetDbSet(dbContext)

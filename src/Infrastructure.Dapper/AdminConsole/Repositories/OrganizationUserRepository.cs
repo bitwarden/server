@@ -755,7 +755,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                 return;
             }
 
-            await connection!.ExecuteAsync(
+            await connection.ExecuteAsync(
                 "[dbo].[OrganizationUser_SetStatusToAccepted]",
                 new { OrganizationUserIds = ids.ToGuidIdArrayTVP() },
                 transaction: transaction,
@@ -774,7 +774,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                 return;
             }
 
-            await connection!.ExecuteAsync(
+            await connection.ExecuteAsync(
                 "[dbo].[OrganizationUser_DeleteByIds]",
                 new { Ids = ids.ToGuidIdArrayTVP() },
                 transaction: transaction,

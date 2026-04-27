@@ -188,7 +188,7 @@ public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEme
                 return;
             }
 
-            await connection!.ExecuteAsync(
+            await connection.ExecuteAsync(
                 "[dbo].[EmergencyAccess_SetStatusToAccepted]",
                 new { Ids = ids.ToGuidIdArrayTVP() },
                 transaction: transaction,

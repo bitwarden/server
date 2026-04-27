@@ -4,6 +4,7 @@ using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.EntityFramework.KeyManagement.Repositories;
@@ -21,7 +22,11 @@ public class UserAsymmetricKeysRepository : BaseEntityFrameworkRepository, IUser
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        var connection = dbContext.Database.GetDbConnection();
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        await dbContext.Database.UseTransactionAsync(transaction);
 
         var entity = await dbContext.Users.FindAsync(userAsymmetricKeys.UserId);
         if (entity != null)
@@ -36,7 +41,7 @@ public class UserAsymmetricKeysRepository : BaseEntityFrameworkRepository, IUser
 
         foreach (var action in updateDataActions)
         {
-            await action();
+            await action(connection, transaction);
         }
 
         await transaction.CommitAsync();
