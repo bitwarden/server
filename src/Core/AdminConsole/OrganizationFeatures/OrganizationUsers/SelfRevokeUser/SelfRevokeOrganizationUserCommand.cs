@@ -47,7 +47,7 @@ public class SelfRevokeOrganizationUserCommand(
             }
         }
 
-        await organizationUserRepository.RevokeAsync(organizationUser.Id);
+        await organizationUserRepository.RevokeAsync(organizationUser.Id, RevocationReason.OrganizationDataOwnershipPolicyNonCompliance);
         await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_SelfRevoked);
         await pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId!.Value);
 

@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization.Infrastructure;
 
-namespace Bit.Api.Vault.AuthorizationHandlers.Collections;
+namespace Bit.Api.AdminConsole.Authorization.Collections;
 
 public class BulkCollectionOperationRequirement : OperationAuthorizationRequirement { }
 
