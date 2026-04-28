@@ -95,7 +95,7 @@ public class SetInitialPasswordRequestModelTests
 
         // Assert
         Assert.Single(result);
-        Assert.Contains("KDF settings must be equal", result[0].ErrorMessage);
+        Assert.Contains("AuthenticationData and UnlockData must have the same KDF configuration", result[0].ErrorMessage);
         var memberNames = result[0].MemberNames.ToList();
         Assert.Single(memberNames);
         Assert.Contains("Kdf", memberNames);
