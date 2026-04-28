@@ -4,12 +4,13 @@ using Bit.Core.Utilities;
 
 namespace Bit.Api.AdminConsole.Models.Request.Organizations;
 
-public class CreateOrganizationInviteLinkRequestModel : IValidatableObject
+public class CreateOrganizationInviteLinkRequestModel
 {
     /// <summary>
     /// Email domains permitted to accept the invite link (e.g. <c>["acme.com"]</c>).
     /// </summary>
     [Required]
+    [ValidateSequence<DomainNameValidatorAttribute>]
     public required IEnumerable<string> AllowedDomains { get; set; }
 
     /// <summary>
@@ -24,20 +25,6 @@ public class CreateOrganizationInviteLinkRequestModel : IValidatableObject
     /// </summary>
     [EncryptedString]
     public string? EncryptedOrgKey { get; set; }
-
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-    {
-        var validator = new DomainNameValidatorAttribute();
-        foreach (var domain in AllowedDomains ?? [])
-        {
-            if (!validator.IsValid(domain))
-            {
-                yield return new ValidationResult(
-                    $"'{domain}' is not a valid domain name.",
-                    [nameof(AllowedDomains)]);
-            }
-        }
-    }
 
     public CreateOrganizationInviteLinkRequest ToCommandRequest(Guid organizationId) => new()
     {

@@ -44,7 +44,7 @@ public class CreateOrganizationInviteLinkRequestModelTests
     }
 
     [Fact]
-    public void Validate_WithMixedValidAndInvalidDomains_ReturnsOneErrorPerInvalidDomain()
+    public void Validate_WithMixedValidAndInvalidDomains_ReturnsError()
     {
         var model = new CreateOrganizationInviteLinkRequestModel
         {
@@ -54,7 +54,9 @@ public class CreateOrganizationInviteLinkRequestModelTests
 
         var results = Validate(model);
 
-        Assert.Equal(2, results.Count);
+        var error = Assert.Single(results);
+        Assert.Contains("'not a domain'", error.ErrorMessage);
+        Assert.Contains("'<script>'", error.ErrorMessage);
     }
 
     private static List<ValidationResult> Validate(CreateOrganizationInviteLinkRequestModel model)
