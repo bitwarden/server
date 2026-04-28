@@ -6,10 +6,9 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        var builder = CreateHostBuilder(args);
-
-        builder.Build().Run();
-
+        CreateHostBuilder(args)
+            .Build()
+            .Run();
     }
 
     public static IHostBuilder CreateHostBuilder(string[] args)

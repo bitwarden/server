@@ -6,7 +6,7 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        var builder = Host
+        Host
             .CreateDefaultBuilder(args)
             .UseBitwardenSdk()
             .ConfigureWebHostDefaults(webBuilder =>
@@ -17,8 +17,8 @@ public class Program
                 });
                 webBuilder.UseStartup<Startup>();
             })
-            .AddSerilogFileLogging();
-
-        builder.Build().Run();
+            .AddSerilogFileLogging()
+            .Build()
+            .Run();
     }
 }
