@@ -99,7 +99,7 @@ public class CreateOrganizationIntegrationConfigurationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task CreateAsync_IntegrationDoesNotExist_ThrowsNotFound(
+    public async Task CreateAsync_IntegrationDoesNotExist_ThrowsBadRequest(
         SutProvider<CreateOrganizationIntegrationConfigurationCommand> sutProvider,
         Guid organizationId,
         Guid integrationId,
@@ -109,7 +109,7 @@ public class CreateOrganizationIntegrationConfigurationCommandTests
             .GetByIdAsync(integrationId)
             .Returns((OrganizationIntegration)null);
 
-        await Assert.ThrowsAsync<NotFoundException>(
+        await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.CreateAsync(organizationId, integrationId, configuration));
 
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().DidNotReceive()
@@ -121,7 +121,7 @@ public class CreateOrganizationIntegrationConfigurationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task CreateAsync_IntegrationDoesNotBelongToOrganization_ThrowsNotFound(
+    public async Task CreateAsync_IntegrationDoesNotBelongToOrganization_ThrowsBadRequest(
         SutProvider<CreateOrganizationIntegrationConfigurationCommand> sutProvider,
         Guid organizationId,
         Guid integrationId,
@@ -135,7 +135,7 @@ public class CreateOrganizationIntegrationConfigurationCommandTests
             .GetByIdAsync(integrationId)
             .Returns(integration);
 
-        await Assert.ThrowsAsync<NotFoundException>(
+        await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.CreateAsync(organizationId, integrationId, configuration));
 
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().DidNotReceive()
