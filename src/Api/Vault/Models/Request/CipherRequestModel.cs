@@ -55,6 +55,10 @@ public class CipherRequestModel
 
     [Obsolete("Use Data instead.")] public CipherBankAccountModel BankAccount { get; set; }
 
+    [Obsolete("Use Data instead.")] public CipherDriversLicenseModel DriversLicense { get; set; }
+
+    [Obsolete("Use Data instead.")] public CipherPassportModel Passport { get; set; }
+
     /// <summary>
     /// JSON string containing cipher-specific data
     /// </summary>
@@ -125,6 +129,14 @@ public class CipherRequestModel
                 case CipherType.BankAccount:
                     existingCipher.Data =
                         JsonSerializer.Serialize(ToCipherBankAccountData(), JsonHelpers.IgnoreWritingNull);
+                    break;
+                case CipherType.DriversLicense:
+                    existingCipher.Data =
+                        JsonSerializer.Serialize(ToCipherDriversLicenseData(), JsonHelpers.IgnoreWritingNull);
+                    break;
+                case CipherType.Passport:
+                    existingCipher.Data =
+                        JsonSerializer.Serialize(ToCipherPassportData(), JsonHelpers.IgnoreWritingNull);
                     break;
                 default:
                     throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");
@@ -320,6 +332,52 @@ public class CipherRequestModel
             SwiftCode = BankAccount.SwiftCode,
             Iban = BankAccount.Iban,
             BankContactPhone = BankAccount.BankContactPhone,
+        };
+    }
+
+    private CipherDriversLicenseData ToCipherDriversLicenseData()
+    {
+        return new CipherDriversLicenseData
+        {
+            Name = Name,
+            Notes = Notes,
+            Fields = Fields?.Select(f => f.ToCipherFieldData()),
+            PasswordHistory = PasswordHistory?.Select(ph => ph.ToCipherPasswordHistoryData()),
+            FirstName = DriversLicense.FirstName,
+            MiddleName = DriversLicense.MiddleName,
+            LastName = DriversLicense.LastName,
+            DateOfBirth = DriversLicense.DateOfBirth,
+            LicenseNumber = DriversLicense.LicenseNumber,
+            IssuingCountry = DriversLicense.IssuingCountry,
+            IssuingState = DriversLicense.IssuingState,
+            IssueDate = DriversLicense.IssueDate,
+            IssuingAuthority = DriversLicense.IssuingAuthority,
+            ExpirationDate = DriversLicense.ExpirationDate,
+            LicenseClass = DriversLicense.LicenseClass,
+        };
+    }
+
+    private CipherPassportData ToCipherPassportData()
+    {
+        return new CipherPassportData
+        {
+            Name = Name,
+            Notes = Notes,
+            Fields = Fields?.Select(f => f.ToCipherFieldData()),
+            PasswordHistory = PasswordHistory?.Select(ph => ph.ToCipherPasswordHistoryData()),
+            Surname = Passport.Surname,
+            GivenName = Passport.GivenName,
+            DateOfBirth = Passport.DateOfBirth,
+            Sex = Passport.Sex,
+            BirthPlace = Passport.BirthPlace,
+            Nationality = Passport.Nationality,
+            PassportNumber = Passport.PassportNumber,
+            PassportType = Passport.PassportType,
+            IssuingCountry = Passport.IssuingCountry,
+            IssuingAuthority = Passport.IssuingAuthority,
+            IssueDate = Passport.IssueDate,
+            ExpirationDate = Passport.ExpirationDate,
+            NationalIdentificationNumber = Passport.NationalIdentificationNumber,
         };
     }
 
