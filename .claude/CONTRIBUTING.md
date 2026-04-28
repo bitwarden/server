@@ -78,6 +78,7 @@ A quick refresh before you begin goes a long way — the rules shift more often 
 - [How Claude Code Works](https://code.claude.com/docs/en/how-claude-code-works) — the mental model.
 - [Best Practices for Claude Code](https://code.claude.com/docs/en/best-practices) — what Anthropic recommends.
 - [Extend Claude Code](https://code.claude.com/docs/en/features-overview) — what you can build (skills, agents, commands, hooks).
+- [The Complete Guide to Building Skills for Claude](https://resources.anthropic.com/hubfs/The-Complete-Guide-to-Building-Skill-for-Claude.pdf) - a must read for skill building
 
 ### 2. Survey the landscape
 
