@@ -6,41 +6,53 @@ namespace Bit.AppHost;
 
 public static class BuilderExtensions
 {
+    /// <summary>
+    /// Configures the secrets setup executable resource.
+    /// </summary>
+    /// <param name="builder">The distributed application builder used to configure the secrets setup resource.</param>
+    /// <returns>>The configured resource builder for the secrets setup executable.</returns>
     public static IResourceBuilder<ExecutableResource> ConfigureSecrets(this IDistributedApplicationBuilder builder)
     {
-        // Setup secrets before starting services
-        var secretsScript = builder.Configuration["scripts:secretsSetup"] ?? throw new ArgumentNullException("setupSecretsScriptPath", "Missing setup secrets script path");
-        var pricingSecretsPath = builder.Configuration["pricingServiceSecretsPath"] ?? throw new ArgumentNullException("pricingServiceSecretsPath", "Missing secrets path");
-
-        //Pricing Secrets
-        builder
-            .AddExecutable("pricing-setup-secrets", "pwsh", pricingSecretsPath, "-File", secretsScript, "-clear")
-            .ExcludeFromManifest();
         return builder
-            .AddExecutable("setup-secrets", "pwsh", "../dev", "-File", secretsScript, "-clear")
+            .AddExecutable("setup-secrets", "pwsh", "../dev", "-File", builder.Required("Scripts:SecretsSetup"),
+                "-clear")
             .ExcludeFromManifest();
     }
 
-    public static IResourceBuilder<SqlServerDatabaseResource> AddSqlServerDatabaseResource(this IDistributedApplicationBuilder builder, bool isSelfHosted = false)
+    /// <summary>
+    /// Configures the migrations executable resource.
+    /// </summary>
+    /// <param name="builder">The distributed application builder used to configure the migrations resource.</param>
+    /// <returns>>The configured resource builder for the migrations executable.</returns>
+    public static IResourceBuilder<ExecutableResource> ConfigureMigrations(this IDistributedApplicationBuilder builder)
     {
-        var password = isSelfHosted
-            ? builder.Configuration["dev:selfHostOverride:globalSettings:sqlServer:password"]
-            : builder.Configuration["globalSettings:sqlServer:password"];
+        var migrationArgs = new List<string> { "-File", builder.Required("Scripts:DbMigration") };
+        if (builder.IsSelfHosted())
+            migrationArgs.Add("-self-hosted");
 
-        // Add MSSQL - retrieve password from connection string in secrets
-        var dbpassword = builder.AddParameter("dbPassword", password!, secret: true);
         return builder
-            .AddSqlServer("mssql", password: dbpassword, 1433)
-            .WithImage("mssql/server:2022-latest")
+            .AddExecutable("run-db-migrations", "pwsh", builder.Required("WorkingDirectory"), migrationArgs.ToArray());
+    }
+
+    public static IResourceBuilder<SqlServerDatabaseResource> AddSqlServerDatabaseResource(
+        this IDistributedApplicationBuilder builder)
+    {
+        var isSelfHosted = builder.IsSelfHosted();
+        var passwordKey = isSelfHosted ? "Database:SelfHostPassword" : "Database:Password";
+        if (!int.TryParse(builder.Required("Database:Port"), out var dbPort))
+            throw new InvalidOperationException("Invalid value for Database:Port.");
+        var dbPassword = builder.AddParameter("dbPassword", builder.Required(passwordKey), secret: true);
+        return builder
+            .AddSqlServer("mssql", password: dbPassword, dbPort)
+            .WithImage(builder.Required("Database:Image"))
             .WithLifetime(ContainerLifetime.Persistent)
             .WithDataVolume()
-            .AddDatabase("vault", isSelfHosted ? "self_host_dev" : "vault_dev");
+            .AddDatabase("vault-db", isSelfHosted ? "self_host_dev" : "vault_dev");
     }
 
     public static IResourceBuilder<AzureStorageResource> ConfigureAzurite(this IDistributedApplicationBuilder builder)
     {
-
-        // https://github.com/dotnet/aspire/discussions/5552
+        // For more information about this configuration: https://github.com/dotnet/aspire/discussions/5552
         var azurite = builder
             .AddAzureStorage("azurite").ConfigureInfrastructure(c =>
             {
@@ -56,101 +68,194 @@ public static class BuilderExtensions
             })
             .RunAsEmulator(c =>
             {
-                c.WithBlobPort(10000).
-                    WithQueuePort(10001).
-                    WithTablePort(10002);
+                c.WithBlobPort(10000)
+                    .WithQueuePort(10001)
+                    .WithTablePort(10002);
             });
 
-        var workingDirectory = builder.Configuration["workingDirectory"] ?? throw new ArgumentNullException("workingDirectory", "Missing working directory");
-
-        //Run Azurite setup
-        var azuriteSetupScript =
-            builder
-                .Configuration["scripts:azuriteSetup"]
-            ?? throw new ArgumentNullException("azuriteSetupScriptPath", "Missing azurite setup script path");
-
         builder
-            .AddExecutable("azurite-setup", "pwsh", workingDirectory, "-File", azuriteSetupScript)
+            .AddExecutable("azurite-setup", "pwsh", builder.Required("WorkingDirectory"), "-File",
+                builder.Required("Scripts:AzuriteSetup"))
             .WaitFor(azurite)
             .ExcludeFromManifest();
         return azurite;
     }
 
-    public static IResourceBuilder<NgrokResource> ConfigureNgrok(this IDistributedApplicationBuilder builder, (IResourceBuilder<ProjectResource>, string) tunnelResource)
+    public static IResourceBuilder<ContainerResource> ConfigureMailCatcher(this IDistributedApplicationBuilder builder)
     {
-        var authToken = builder
-            .AddParameter("ngrok-auth-token",
-                builder.Configuration["ngrokAuthToken"]
-                ?? throw new ArgumentNullException("ngrokAuthToken", "Missing ngrok auth token"),
-                secret: true);
+        var image = builder.Required("MailCatcher:Image");
+        var imageParts = image.Split(':');
+        var imageName = imageParts[0];
+        var imageTag = imageParts.Length > 1 ? imageParts[1] : "latest";
 
-        return builder.AddNgrok("billing-webhook-ngrok-endpoint", endpointPort: 59600)
-            .WithAuthToken(authToken)
-            .WithTunnelEndpoint(tunnelResource.Item1, tunnelResource.Item2)
-            .WithExplicitStart();
-    }
-
-    public static IResourceBuilder<ExecutableResource> ConfigureMigrations(this IDistributedApplicationBuilder builder, bool isSelfHosted)
-    {
-        var workingDirectory = builder.Configuration["workingDirectory"] ??
-                               throw new ArgumentNullException("workingDirectory", "Missing working directory");
-        var migrationArgs = new List<string>
-        {
-            "-File",
-            builder.Configuration["scripts:dbMigration"]
-            ?? throw new ArgumentNullException("migrationScriptPath", "Missing migration script path")
-        };
-        if (isSelfHosted)
-        {
-            migrationArgs.Add("-self-hosted");
-        }
+        if (!int.TryParse(builder.Required("MailCatcher:SmtpPort"), out var smtpPort))
+            throw new InvalidOperationException("Invalid value for MailCatcher:SmtpPort.");
+        if (!int.TryParse(builder.Required("MailCatcher:WebPort"), out var webPort))
+            throw new InvalidOperationException("Invalid value for MailCatcher:WebPort.");
 
         return builder
-            .AddExecutable("run-db-migrations", "pwsh", workingDirectory, migrationArgs.ToArray());
+            .AddContainer("mailcatcher", imageName, imageTag)
+            .WithLifetime(ContainerLifetime.Persistent)
+            .WithEndpoint(port: smtpPort, name: "smtp", targetPort: 1025)
+            .WithHttpEndpoint(port: webPort, name: "web", targetPort: webPort);
     }
 
-    public static IResourceBuilder<ProjectResource> AddBitwardenService<TProject>(
+    /// <summary>
+    /// Configures and initializes the essential services required for the distributed application,
+    /// including project-specific services such as admin, API, billing, identity, and notifications.
+    /// </summary>
+    /// <param name="builder">The distributed application builder used to configure resources and services.</param>
+    /// <param name="db">The SQL Server database resource builder.</param>
+    /// <param name="secretsSetup">The executable resource builder for configuring secrets.</param>
+    /// <param name="mail">The container resource builder for setting up the mail service.</param>
+    /// <param name="azurite">The Azure Storage resource builder used to configure Azurite storage services.</param>
+    /// <returns>A tuple containing resource builders for the admin, API, billing, identity, and notifications projects.</returns>
+    public static (
+        IResourceBuilder<ProjectResource> admin,
+        IResourceBuilder<ProjectResource> api,
+        IResourceBuilder<ProjectResource> billing,
+        IResourceBuilder<ProjectResource> identity,
+        IResourceBuilder<ProjectResource> notifications
+        ) ConfigureServices(
+            this IDistributedApplicationBuilder builder,
+            IResourceBuilder<SqlServerDatabaseResource> db,
+            IResourceBuilder<ExecutableResource> secretsSetup,
+            IResourceBuilder<ContainerResource> mail,
+            IResourceBuilder<AzureStorageResource> azurite)
+    {
+        var admin = builder.AddBitwardenService<Projects.Admin>(db, secretsSetup, mail, "admin");
+        var api = builder.AddBitwardenService<Projects.Api>(db, secretsSetup, mail, "api")
+            .WaitFor(azurite);
+        var billing = builder.AddBitwardenService<Projects.Billing>(db, secretsSetup, mail, "billing");
+        var identity = builder.AddBitwardenService<Projects.Identity>(db, secretsSetup, mail, "identity");
+        var notifications = builder.AddBitwardenService<Projects.Notifications>(db, secretsSetup, mail, "notifications")
+            .WaitFor(azurite);
+        builder.ConfigureAdditionalProjects(new Dictionary<string, IResourceBuilder<ProjectResource>>
+        {
+            ["admin"] = admin,
+            ["api"] = api,
+            ["billing"] = billing,
+            ["identity"] = identity,
+            ["notifications"] = notifications
+        });
+        return (admin, api, billing, identity, notifications);
+    }
+
+    /// <summary>
+    /// Configures additional projects specified in the configuration under "AdditionalProjects".
+    /// This allows for dynamic inclusion of projects without code changes, useful for testing or temporary additions.
+    /// </summary>
+    /// <param name="builder">The distributed application builder used to access configuration and add project resources.</param>
+    /// <param name="services">All registered services keyed by name; each additional project's ReferencedBy list selects which ones receive a reference.</param>
+    private static void ConfigureAdditionalProjects(this IDistributedApplicationBuilder builder,
+        IReadOnlyDictionary<string, IResourceBuilder<ProjectResource>> services)
+    {
+        // Add via user-secrets: dotnet user-secrets set "AdditionalProjects:<name>:Path" "<path/to/Project.csproj>"
+        foreach (var section in builder.Configuration.GetSection("AdditionalProjects").GetChildren())
+        {
+            var path = section["Path"];
+            if (string.IsNullOrWhiteSpace(path))
+                continue;
+
+            var project = builder.AddProject(section.Key, path);
+            var referencedBy = section.GetSection("ReferencedBy").GetChildren().Select(c => c.Value).ToHashSet();
+            foreach (var (_, service) in services.Where(s => referencedBy.Contains(s.Key)))
+                service.WithReference(project);
+        }
+    }
+
+    /// <summary>
+    /// Adds and configures a Bitwarden service of the specified project type. This includes linking the service to
+    /// necessary resources such as a database, secrets setup, and optionally a mail service based on the project's name.
+    /// </summary>
+    /// <param name="builder">The distributed application builder used to configure the service.</param>
+    /// <param name="db">The SQL Server database resource to link to the service.</param>
+    /// <param name="secretsSetup">The executable resource responsible for secrets setup.</param>
+    /// <param name="mail">The container resource representing the mail service, used conditionally for specific projects.</param>
+    /// <param name="name">The unique name of the Bitwarden service being added.</param>
+    /// <typeparam name="TProject">The type of project implementing the <see cref="IProjectMetadata"/> interface.</typeparam>
+    /// <returns>The configured resource builder for the Bitwarden project resource.</returns>
+    private static IResourceBuilder<ProjectResource> AddBitwardenService<TProject>(
         this IDistributedApplicationBuilder builder, IResourceBuilder<SqlServerDatabaseResource> db,
         IResourceBuilder<ExecutableResource> secretsSetup, IResourceBuilder<ContainerResource> mail, string name)
         where TProject : IProjectMetadata, new()
     {
+        // launchSettings provide the ports for the services
         var service = builder.AddProject<TProject>(name)
-            .WithHttpEndpoint(port: builder.GetBitwardenServicePort(name), name: $"{name}-http")
+            .WithEndpoint("http", e => e.Port = builder.GetBitwardenServicePort(name))
             .WithReference(db)
             .WaitFor(db)
             .WaitForCompletion(secretsSetup);
 
         if (name is "admin" or "identity" or "billing")
-        {
             service.WithReference(mail.GetEndpoint("smtp"));
-        }
 
         return service;
     }
 
-    public static IResourceBuilder<NodeAppResource> AddBitwardenNpmApp(this IDistributedApplicationBuilder builder,
+    private static int GetBitwardenServicePort(this IDistributedApplicationBuilder builder, string serviceName)
+    {
+        if (!int.TryParse(builder.Required($"Services:{serviceName}:BasePort"), out var basePort))
+            throw new InvalidOperationException($"Invalid port value for Services:{serviceName}:BasePort.");
+        return builder.IsSelfHosted() ? basePort + 1 : basePort;
+    }
+
+    /// <summary>
+    /// Retrieves a required configuration value and throws an exception if it's missing.
+    /// </summary>
+    /// <param name="builder"> An instance of <see cref="IDistributedApplicationBuilder"/>.</param>
+    /// <param name="key"> The configuration key to retrieve.</param>
+    /// <returns> The configuration value associated with the specified key.</returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    private static string Required(this IDistributedApplicationBuilder builder, string key) =>
+        builder.Configuration[key] ?? throw new InvalidOperationException($"Missing required configuration: {key}");
+
+    /// <summary>
+    /// Determines if the application is running in self-hosted mode.
+    /// </summary>
+    /// <param name="builder"> An instance of <see cref="IDistributedApplicationBuilder"/>.</param>
+    /// <returns> True if the application is self-hosted, otherwise false.</returns>
+    private static bool IsSelfHosted(this IDistributedApplicationBuilder builder) =>
+        builder.Configuration["SelfHost"]?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
+
+#if ENABLE_NODEJS_COMMUNITY_PLUGIN
+    public static void ConfigureWebFrontend(this IDistributedApplicationBuilder builder,
+        IResourceBuilder<ProjectResource> api)
+    {
+        if (!int.TryParse(builder.Required("WebFrontend:Port"), out var port))
+            throw new InvalidOperationException("Invalid value for WebFrontend:Port.");
+
+        builder
+            .AddBitwardenNpmApp("web-frontend", "web", api)
+            .WithHttpsEndpoint(port, port, "angular-http", isProxied: false)
+            .WithUrl(builder.Required("WebFrontend:Url"))
+            .WithExternalHttpEndpoints();
+    }
+
+    private static IResourceBuilder<NodeAppResource> AddBitwardenNpmApp(this IDistributedApplicationBuilder builder,
         string name, string path, IResourceBuilder<ProjectResource> api, string scriptName = "build:bit:watch")
     {
-        var clientsRelativePath = builder.Configuration["clientsRelativePath"] ??
-                                  throw new ArgumentNullException("clientsRelativePath", "Missing client relative path");
-
         return builder
-            .AddNpmApp(name, $"{clientsRelativePath}/{path}", scriptName)
+            .AddNpmApp(name, $"{builder.Required("ClientsPath")}/{path}", scriptName)
             .WithReference(api)
             .WaitFor(api)
             .WithExplicitStart();
     }
+#endif
 
-    public static int GetBitwardenServicePort(this IDistributedApplicationBuilder builder, string serviceName)
+#if ENABLE_NGROK_COMMUNITY_PLUGIN
+    public static void ConfigureNgrok(this IDistributedApplicationBuilder builder,
+        (IResourceBuilder<ProjectResource>, string) tunnelResource)
     {
-        var isSelfHosted = builder.Configuration["isSelfHosted"] == "true";
-        var configKey = isSelfHosted
-            ? $"dev:selfHostOverride:globalSettings:baseServiceUri:{serviceName}"
-            : $"globalSettings:baseServiceUri:{serviceName}";
+        var rawToken = builder.Configuration["NgrokAuthToken"];
+        if (string.IsNullOrWhiteSpace(rawToken))
+            return;
 
-        var uriString = builder.Configuration[configKey]
-                        ?? throw new InvalidOperationException($"Configuration value for '{configKey}' not found.");
-
-        return new Uri(uriString).Port;
+        var authToken = builder.AddParameter("ngrok-auth-token", rawToken, secret: true);
+        builder.AddNgrok("billing-webhook-ngrok-endpoint", endpointPort: 59600)
+            .WithAuthToken(authToken)
+            .WithTunnelEndpoint(tunnelResource.Item1, tunnelResource.Item2)
+            .WithExplicitStart();
     }
+#endif
 }
