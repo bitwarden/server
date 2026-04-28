@@ -1,8 +1,8 @@
 ﻿using Bit.Core.Entities;
 
-namespace Bit.Core.Auth.UserFeatures.UserEmail.Interfaces;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 
-public interface IChangeEmailForPasswordlessUserCommand
+public interface IChangeEmailForPasswordlessOrgUserCommand
 {
     Task ChangeOrganizationUserEmailAsync(Guid organizationId, OrganizationUser organizationUser, string newEmail);
 }

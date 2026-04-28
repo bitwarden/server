@@ -91,6 +91,6 @@ public static class UserServiceCollectionExtensions
 
     private static void AddUserEmailCommands(this IServiceCollection services)
     {
-        services.AddScoped<IChangeEmailForPasswordlessUserCommand, ChangeEmailForPasswordlessUserCommand>();
+        services.AddScoped<IChangeEmailCommand, ChangeEmailCommand>();
     }
 }

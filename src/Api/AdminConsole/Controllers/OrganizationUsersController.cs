@@ -25,7 +25,6 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
-using Bit.Core.Auth.UserFeatures.UserEmail.Interfaces;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -85,7 +84,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IAdminRecoverAccountCommand _adminRecoverAccountCommand;
     private readonly AccountRecoveryV2.IAdminRecoverAccountCommand _adminRecoverAccountCommandV2;
     private readonly ISelfRevokeOrganizationUserCommand _selfRevokeOrganizationUserCommand;
-    private readonly IChangeEmailForPasswordlessUserCommand _changeEmailForPasswordlessUserCommand;
+    private readonly IChangeEmailForPasswordlessOrgUserCommand _changeEmailForPasswordlessOrgUserCommand;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -119,7 +118,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand,
         V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext,
         ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand,
-        IChangeEmailForPasswordlessUserCommand changeEmailForPasswordlessUserCommand)
+        IChangeEmailForPasswordlessOrgUserCommand changeEmailForPasswordlessOrgUserCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -153,7 +152,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _adminRecoverAccountCommand = adminRecoverAccountCommand;
         _adminRecoverAccountCommandV2 = adminRecoverAccountCommandV2;
         _selfRevokeOrganizationUserCommand = selfRevokeOrganizationUserCommand;
-        _changeEmailForPasswordlessUserCommand = changeEmailForPasswordlessUserCommand;
+        _changeEmailForPasswordlessOrgUserCommand = changeEmailForPasswordlessOrgUserCommand;
     }
 
     [HttpGet("{id}")]
@@ -574,7 +573,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
             return TypedResults.NotFound();
         }
 
-        await _changeEmailForPasswordlessUserCommand.ChangeOrganizationUserEmailAsync(orgId, targetOrganizationUser, model.NewEmail);
+        await _changeEmailForPasswordlessOrgUserCommand.ChangeOrganizationUserEmailAsync(orgId, targetOrganizationUser, model.NewEmail);
         return TypedResults.NoContent();
     }
 
