@@ -34,16 +34,13 @@ public class SubscriptionDiscountService(
     }
 
     /// <inheritdoc />
-    public async Task<bool> ValidateDiscountEligibilityForUserAsync(User user, string coupon, DiscountTierType tierType)
+    public async Task<bool> ValidateDiscountEligibilityForUserAsync(User user, IReadOnlyList<string> couponIds, DiscountTierType tierType)
     {
-        var discount = await subscriptionDiscountRepository.GetByStripeCouponIdAsync(coupon);
-        if (discount == null || !IsDiscountActive(discount))
-        {
-            return false;
-        }
-
-        var tierEligibility = await GetTierEligibilityAsync(user, discount);
-        return tierEligibility is not null && tierEligibility[tierType];
+        var eligibleDiscounts = await GetEligibleDiscountsAsync(user);
+        var eligibilityByStripeCouponId = eligibleDiscounts.ToDictionary(d => d.Discount.StripeCouponId);
+        return couponIds.All(id =>
+            eligibilityByStripeCouponId.TryGetValue(id, out var eligibility) &&
+            eligibility.TierEligibility[tierType]);
     }
 
     /// <summary>
@@ -55,16 +52,5 @@ public class SubscriptionDiscountService(
     {
         var filter = discountAudienceFilterFactory.GetFilter(discount.AudienceType);
         return filter is not null ? await filter.IsUserEligible(user, discount) : null;
-    }
-
-    /// <summary>
-    /// Checks if a discount is currently active based on its start and end dates.
-    /// </summary>
-    /// <param name="discount">The discount to check.</param>
-    /// <returns><see langword="true"/> if the current time is within the discount's valid date range; otherwise, <see langword="false"/>.</returns>
-    private static bool IsDiscountActive(SubscriptionDiscount discount)
-    {
-        var now = DateTime.UtcNow;
-        return now >= discount.StartDate && now <= discount.EndDate;
     }
 }

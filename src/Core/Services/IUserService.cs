@@ -7,6 +7,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Business;
 using Microsoft.AspNetCore.Identity;
 
@@ -21,7 +22,7 @@ public interface IUserService
     Task<DateTime> GetAccountRevisionDateByIdAsync(Guid userId);
     Task SaveUserAsync(User user, bool push = false);
     Task<IdentityResult> CreateUserAsync(User user);
-    Task<IdentityResult> CreateUserAsync(User user, string masterPasswordHash);
+    Task<IdentityResult> CreateUserAsync(User user, RegisterFinishData registerFinishData);
     Task SendMasterPasswordHintAsync(string email);
     Task SendEmailVerificationAsync(User user);
     Task<IdentityResult> ConfirmEmailAsync(User user, string token);
@@ -32,7 +33,7 @@ public interface IUserService
     // TODO removed with https://bitwarden.atlassian.net/browse/PM-27328
     [Obsolete("Use ISetKeyConnectorKeyCommand instead. This method will be removed in a future version.")]
     Task<IdentityResult> SetKeyConnectorKeyAsync(User user, string key, string orgIdentifier);
-    Task<IdentityResult> ConvertToKeyConnectorAsync(User user);
+    Task<IdentityResult> ConvertToKeyConnectorAsync(User user, string keyConnectorKeyWrappedUserKey);
     Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType type, Guid orgId, Guid id, string newMasterPassword, string key);
     Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint);
     Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);

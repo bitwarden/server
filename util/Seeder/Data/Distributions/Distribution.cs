@@ -26,40 +26,68 @@ public sealed class Distribution<T>
 
     /// <summary>
     /// Selects a value deterministically based on index position within a total count.
-    /// Items 0 to (total * percentage1 - 1) get value1, and so on.
+    /// Remainder items go to buckets with the largest fractional parts,
+    /// not unconditionally to the last bucket.
     /// </summary>
     /// <param name="index">Zero-based index of the item.</param>
-    /// <param name="total">Total number of items being distributed. For best accuracy, use totals >= 100.</param>
+    /// <param name="total">Total number of items being distributed.</param>
     /// <returns>The value assigned to this index position.</returns>
     public T Select(int index, int total)
     {
         var cumulative = 0;
-        foreach (var (value, percentage) in _buckets)
+        foreach (var (value, count) in GetCounts(total))
         {
-            cumulative += (int)(total * percentage);
+            cumulative += count;
             if (index < cumulative)
             {
                 return value;
             }
         }
+
         return _buckets[^1].Value;
     }
 
     /// <summary>
     /// Returns all values with their calculated counts for a given total.
-    /// The last bucket receives any remainder from rounding.
+    /// Each bucket gets its truncated share, then the deficit is distributed one-at-a-time
+    /// to buckets with the largest fractional remainders.
+    /// Zero-weight buckets always receive exactly zero items.
     /// </summary>
     /// <param name="total">Total number of items to distribute.</param>
     /// <returns>Sequence of value-count pairs.</returns>
     public IEnumerable<(T Value, int Count)> GetCounts(int total)
     {
-        var remaining = total;
-        for (var i = 0; i < _buckets.Length - 1; i++)
+        var counts = new int[_buckets.Length];
+        var remainders = new double[_buckets.Length];
+        var allocated = 0;
+
+        for (var i = 0; i < _buckets.Length; i++)
         {
-            var count = (int)(total * _buckets[i].Percentage);
-            yield return (_buckets[i].Value, count);
-            remaining -= count;
+            var exact = total * _buckets[i].Percentage;
+            counts[i] = (int)exact;
+            remainders[i] = exact - counts[i];
+            allocated += counts[i];
         }
-        yield return (_buckets[^1].Value, remaining);
+
+        var deficit = total - allocated;
+        for (var d = 0; d < deficit; d++)
+        {
+            var bestIdx = 0;
+            for (var i = 1; i < remainders.Length; i++)
+            {
+                if (remainders[i] > remainders[bestIdx])
+                {
+                    bestIdx = i;
+                }
+            }
+
+            counts[bestIdx]++;
+            remainders[bestIdx] = -1.0;
+        }
+
+        for (var i = 0; i < _buckets.Length; i++)
+        {
+            yield return (_buckets[i].Value, counts[i]);
+        }
     }
 }

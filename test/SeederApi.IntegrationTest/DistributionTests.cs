@@ -172,4 +172,42 @@ public class DistributionTests
             Assert.Equal(first, second);
         }
     }
+
+    [Fact]
+    public void Select_ZeroWeightBucket_NeverSelected()
+    {
+        var distribution = new Distribution<string>(
+            ("Manage", 0.50),
+            ("ReadWrite", 0.40),
+            ("ReadOnly", 0.10),
+            ("HidePasswords", 0.0)
+        );
+
+        for (var i = 0; i < 7; i++)
+        {
+            Assert.NotEqual("HidePasswords", distribution.Select(i, 7));
+        }
+    }
+
+    [Fact]
+    public void GetCounts_SmallTotal_RemainderGoesToLargestFraction()
+    {
+        var distribution = new Distribution<string>(
+            ("A", 0.50),
+            ("B", 0.40),
+            ("C", 0.10),
+            ("D", 0.0)
+        );
+
+        var counts = distribution.GetCounts(7).ToList();
+
+        // Exact: A=3.5, B=2.8, C=0.7, D=0.0
+        // Floors: A=3, B=2, C=0, D=0 (sum=5, deficit=2)
+        // Remainders: A=0.5, B=0.8, C=0.7, D=0.0
+        // Deficit 1 → B (0.8), Deficit 2 → C (0.7)
+        Assert.Equal(("A", 3), counts[0]);
+        Assert.Equal(("B", 3), counts[1]);
+        Assert.Equal(("C", 1), counts[2]);
+        Assert.Equal(("D", 0), counts[3]);
+    }
 }

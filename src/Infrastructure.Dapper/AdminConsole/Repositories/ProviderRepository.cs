@@ -85,4 +85,16 @@ public class ProviderRepository : Repository<Provider, Guid>, IProviderRepositor
             return results.ToList();
         }
     }
+
+    public async Task<ProviderAbility?> GetAbilityAsync(Guid id)
+    {
+        await using var connection = new SqlConnection(ReadOnlyConnectionString);
+
+        var results = await connection.QueryAsync<ProviderAbility>(
+            "[dbo].[Provider_ReadAbilityById]",
+            new { Id = id },
+            commandType: CommandType.StoredProcedure);
+
+        return results.FirstOrDefault();
+    }
 }

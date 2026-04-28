@@ -177,24 +177,24 @@ public class SubscriptionDiscountServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateDiscountEligibilityForUserAsync_CouponNotFound_ReturnsFalse(
+    public async Task ValidateDiscountEligibilityForUserAsync_CouponNotInEligibleDiscounts_ReturnsFalse(
         User user,
         SutProvider<SubscriptionDiscountService> sutProvider)
     {
-        // Arrange
+        // Arrange — no active discounts, so the requested coupon won't be found
         sutProvider.GetDependency<ISubscriptionDiscountRepository>()
-            .GetByStripeCouponIdAsync("invalid")
-            .ReturnsNull();
+            .GetActiveDiscountsAsync()
+            .Returns([]);
 
         // Act
-        var result = await sutProvider.Sut.ValidateDiscountEligibilityForUserAsync(user, "invalid", DiscountTierType.Premium);
+        var result = await sutProvider.Sut.ValidateDiscountEligibilityForUserAsync(user, ["invalid"], DiscountTierType.Premium);
 
         // Assert
         Assert.False(result);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateDiscountEligibilityForUserAsync_CouponFound_UserIsEligible_ReturnsTrue(
+    public async Task ValidateDiscountEligibilityForUserAsync_CouponFound_TierEligible_ReturnsTrue(
         User user,
         SubscriptionDiscount discount,
         SutProvider<SubscriptionDiscountService> sutProvider)
@@ -205,8 +205,8 @@ public class SubscriptionDiscountServiceTests
         discount.EndDate = DateTime.UtcNow.AddDays(30);
 
         sutProvider.GetDependency<ISubscriptionDiscountRepository>()
-            .GetByStripeCouponIdAsync(discount.StripeCouponId)
-            .Returns(discount);
+            .GetActiveDiscountsAsync()
+            .Returns([discount]);
 
         var filter = Substitute.For<IDiscountAudienceFilter>();
         filter.IsUserEligible(user, discount).Returns(DiscountDictionary(true));
@@ -215,26 +215,27 @@ public class SubscriptionDiscountServiceTests
             .Returns(filter);
 
         // Act
-        var result = await sutProvider.Sut.ValidateDiscountEligibilityForUserAsync(user, discount.StripeCouponId, DiscountTierType.Premium);
+        var result = await sutProvider.Sut.ValidateDiscountEligibilityForUserAsync(
+            user, [discount.StripeCouponId], DiscountTierType.Premium);
 
         // Assert
         Assert.True(result);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateDiscountEligibilityForUserAsync_CouponFound_UserIsNotEligible_ReturnsFalse(
+    public async Task ValidateDiscountEligibilityForUserAsync_CouponFound_TierNotEligible_ReturnsFalse(
         User user,
         SubscriptionDiscount discount,
         SutProvider<SubscriptionDiscountService> sutProvider)
     {
-        // Arrange
+        // Arrange — discount exists and is active but user is not eligible for this audience type
         discount.AudienceType = DiscountAudienceType.UserHasNoPreviousSubscriptions;
         discount.StartDate = DateTime.UtcNow.AddDays(-1);
         discount.EndDate = DateTime.UtcNow.AddDays(30);
 
         sutProvider.GetDependency<ISubscriptionDiscountRepository>()
-            .GetByStripeCouponIdAsync(discount.StripeCouponId)
-            .Returns(discount);
+            .GetActiveDiscountsAsync()
+            .Returns([discount]);
 
         var filter = Substitute.For<IDiscountAudienceFilter>();
         filter.IsUserEligible(user, discount).Returns(DiscountDictionary(false));
@@ -243,7 +244,8 @@ public class SubscriptionDiscountServiceTests
             .Returns(filter);
 
         // Act
-        var result = await sutProvider.Sut.ValidateDiscountEligibilityForUserAsync(user, discount.StripeCouponId, DiscountTierType.Families);
+        var result = await sutProvider.Sut.ValidateDiscountEligibilityForUserAsync(
+            user, [discount.StripeCouponId], DiscountTierType.Families);
 
         // Assert
         Assert.False(result);
@@ -255,22 +257,93 @@ public class SubscriptionDiscountServiceTests
         SubscriptionDiscount discount,
         SutProvider<SubscriptionDiscountService> sutProvider)
     {
-        // Arrange
+        // Arrange — expired discount is not returned by GetActiveDiscountsAsync, so won't appear in eligible set
         discount.StartDate = DateTime.UtcNow.AddDays(-30);
-        discount.EndDate = DateTime.UtcNow.AddDays(-1); // Expired discount
+        discount.EndDate = DateTime.UtcNow.AddDays(-1);
 
         sutProvider.GetDependency<ISubscriptionDiscountRepository>()
-            .GetByStripeCouponIdAsync(discount.StripeCouponId)
-            .Returns(discount);
+            .GetActiveDiscountsAsync()
+            .Returns([]);
 
         // Act
-        var result = await sutProvider.Sut.ValidateDiscountEligibilityForUserAsync(user, discount.StripeCouponId, DiscountTierType.Premium);
+        var result = await sutProvider.Sut.ValidateDiscountEligibilityForUserAsync(
+            user, [discount.StripeCouponId], DiscountTierType.Premium);
 
         // Assert
         Assert.False(result);
-        await sutProvider.GetDependency<ISubscriptionDiscountRepository>()
-            .DidNotReceive()
-            .DeleteAsync(discount);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateDiscountEligibilityForUserAsync_MultipleCoupons_AllEligible_ReturnsTrue(
+        User user,
+        SubscriptionDiscount discount1,
+        SubscriptionDiscount discount2,
+        SutProvider<SubscriptionDiscountService> sutProvider)
+    {
+        // Arrange
+        discount1.AudienceType = DiscountAudienceType.AllUsers;
+        discount1.StartDate = DateTime.UtcNow.AddDays(-1);
+        discount1.EndDate = DateTime.UtcNow.AddDays(30);
+        discount2.AudienceType = DiscountAudienceType.AllUsers;
+        discount2.StartDate = DateTime.UtcNow.AddDays(-1);
+        discount2.EndDate = DateTime.UtcNow.AddDays(30);
+
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetActiveDiscountsAsync()
+            .Returns([discount1, discount2]);
+
+        var filter = Substitute.For<IDiscountAudienceFilter>();
+        filter.IsUserEligible(user, discount1).Returns(DiscountDictionary(true));
+        filter.IsUserEligible(user, discount2).Returns(DiscountDictionary(true));
+        sutProvider.GetDependency<IDiscountAudienceFilterFactory>()
+            .GetFilter(DiscountAudienceType.AllUsers)
+            .Returns(filter);
+
+        // Act
+        var result = await sutProvider.Sut.ValidateDiscountEligibilityForUserAsync(
+            user, [discount1.StripeCouponId, discount2.StripeCouponId], DiscountTierType.Premium);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateDiscountEligibilityForUserAsync_MultipleCoupons_OneNotEligible_ReturnsFalse(
+        User user,
+        SubscriptionDiscount discount1,
+        SubscriptionDiscount discount2,
+        SutProvider<SubscriptionDiscountService> sutProvider)
+    {
+        // Arrange — discount1 is eligible, discount2 is not
+        discount1.AudienceType = DiscountAudienceType.AllUsers;
+        discount1.StartDate = DateTime.UtcNow.AddDays(-1);
+        discount1.EndDate = DateTime.UtcNow.AddDays(30);
+        discount2.AudienceType = DiscountAudienceType.UserHasNoPreviousSubscriptions;
+        discount2.StartDate = DateTime.UtcNow.AddDays(-1);
+        discount2.EndDate = DateTime.UtcNow.AddDays(30);
+
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetActiveDiscountsAsync()
+            .Returns([discount1, discount2]);
+
+        var allUsersFilter = Substitute.For<IDiscountAudienceFilter>();
+        allUsersFilter.IsUserEligible(user, discount1).Returns(DiscountDictionary(true));
+        sutProvider.GetDependency<IDiscountAudienceFilterFactory>()
+            .GetFilter(DiscountAudienceType.AllUsers)
+            .Returns(allUsersFilter);
+
+        var restrictedFilter = Substitute.For<IDiscountAudienceFilter>();
+        restrictedFilter.IsUserEligible(user, discount2).Returns(DiscountDictionary(false));
+        sutProvider.GetDependency<IDiscountAudienceFilterFactory>()
+            .GetFilter(DiscountAudienceType.UserHasNoPreviousSubscriptions)
+            .Returns(restrictedFilter);
+
+        // Act
+        var result = await sutProvider.Sut.ValidateDiscountEligibilityForUserAsync(
+            user, [discount1.StripeCouponId, discount2.StripeCouponId], DiscountTierType.Premium);
+
+        // Assert
+        Assert.False(result);
     }
 
 }

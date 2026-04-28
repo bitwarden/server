@@ -57,7 +57,7 @@ public class OrganizationConnectionsController : Controller
     [HttpPost]
     public async Task<OrganizationConnectionResponseModel> CreateConnection([FromBody] OrganizationConnectionRequestModel model)
     {
-        if (!await HasPermissionAsync(model?.OrganizationId))
+        if (!await HasPermissionAsync(model?.OrganizationId, model?.Type))
         {
             throw new BadRequestException($"You do not have permission to create a connection of type {model.Type}.");
         }

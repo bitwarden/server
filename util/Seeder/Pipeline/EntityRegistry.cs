@@ -52,6 +52,27 @@ internal sealed class EntityRegistry
     internal Dictionary<Guid, List<Guid>> UserFolderIds { get; } = [];
 
     /// <summary>
+    /// Named folder lookup: (emailPrefix, folderName) → folderId.
+    /// Populated by <see cref="Steps.CreateRosterStep"/> when roster users declare named folders.
+    /// </summary>
+    internal Dictionary<string, Dictionary<string, Guid>> UserNamedFolders { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Email prefix → userId lookup for roster users. Used by assignment steps to resolve user references.
+    /// </summary>
+    internal Dictionary<string, Guid> UserEmailPrefixToUserId { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Cipher name → cipher ID lookup for fixture ciphers. Used by assignment steps to resolve cipher references.
+    /// </summary>
+    internal Dictionary<string, Guid> FixtureCipherNameToId { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Collection name → collection ID lookup for roster collections. Used by assignment steps to resolve collection references.
+    /// </summary>
+    internal Dictionary<string, Guid> FixtureCollectionNameToId { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Clears all registry lists. Called by <see cref="RecipeExecutor"/> before each pipeline run.
     /// </summary>
     internal void Clear()
@@ -62,5 +83,9 @@ internal sealed class EntityRegistry
         CollectionIds.Clear();
         CipherIds.Clear();
         UserFolderIds.Clear();
+        UserNamedFolders.Clear();
+        UserEmailPrefixToUserId.Clear();
+        FixtureCipherNameToId.Clear();
+        FixtureCollectionNameToId.Clear();
     }
 }

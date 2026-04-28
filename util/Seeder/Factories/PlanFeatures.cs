@@ -115,6 +115,8 @@ public static class PlanFeatures
             PlanType.TeamsStarter => (10, 10, 10),
             PlanType.EnterpriseMonthly => (1, 185, 17),
             PlanType.EnterpriseAnnually => (1, 12000, 60),
+            // Intentional: PlanType has 20+ variants including legacy plans. Seeder only models
+            // the 7 current plans; all others get reasonable defaults. Not a bug.
             _ => (1, 100, 10)
         };
 

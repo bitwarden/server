@@ -24,6 +24,7 @@ on:
 
 env:
   _AZ_REGISTRY: "bitwardenprod.azurecr.io"
+  _GHCR_REGISTRY: "ghcr.io/bitwarden"
 
 jobs:
   setup:
@@ -69,6 +70,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      packages: write
     env:
       _RELEASE_VERSION: ${{ needs.setup.outputs.release-version }}
       _BRANCH_NAME: ${{ inputs.branch }}
@@ -93,11 +95,13 @@ jobs:
           - project_name: Sso
     steps:
       - name: Print environment
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
           whoami
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
-          echo "Dry Run: ${{ inputs.dry_run }}"
+          echo "Dry Run: $DRY_RUN" 
 
       - name: Set up project name
         id: setup
@@ -107,7 +111,32 @@ jobs:
           echo "PROJECT_NAME: $PROJECT_NAME"
           echo "project_name=$PROJECT_NAME" >> "$GITHUB_OUTPUT"
 
-      ########## ACR PROD ##########
+      ########## GHCR ##########
+      - name: Log in to GHCR
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push version image
+        env:
+          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
+        run: |
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            skopeo copy --all \
+              "docker://$_GHCR_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME" \
+              "docker://$_GHCR_REGISTRY/$PROJECT_NAME:dryrun"
+          else
+            skopeo copy --all \
+              "docker://$_GHCR_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME" \
+              "docker://$_GHCR_REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION"
+          fi
+
+      - name: Log out from GHCR
+        run: docker logout ghcr.io
+
+      ########## ACR ##########
       - name: Log in to Azure
         uses: bitwarden/gh-actions/azure-login@main
         with:

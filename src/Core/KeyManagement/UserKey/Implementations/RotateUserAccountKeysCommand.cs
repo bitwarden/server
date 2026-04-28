@@ -4,8 +4,8 @@
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
+using Bit.Core.KeyManagement.UserKey.Models.Data;
 using Bit.Core.KeyManagement.Utilities;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -32,7 +32,6 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
     private readonly IWebAuthnCredentialRepository _credentialRepository;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IUserSignatureKeyPairRepository _userSignatureKeyPairRepository;
-    private readonly IFeatureService _featureService;
 
     /// <summary>
     /// Instantiates a new <see cref="RotateUserAccountKeysCommand"/>
@@ -56,8 +55,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         IDeviceRepository deviceRepository,
         IPasswordHasher<User> passwordHasher,
         IPushNotificationService pushService, IdentityErrorDescriber errors, IWebAuthnCredentialRepository credentialRepository,
-        IUserSignatureKeyPairRepository userSignatureKeyPairRepository,
-        IFeatureService featureService)
+        IUserSignatureKeyPairRepository userSignatureKeyPairRepository)
     {
         _userService = userService;
         _userRepository = userRepository;
@@ -72,11 +70,10 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         _credentialRepository = credentialRepository;
         _passwordHasher = passwordHasher;
         _userSignatureKeyPairRepository = userSignatureKeyPairRepository;
-        _featureService = featureService;
     }
 
     /// <inheritdoc />
-    public async Task<IdentityResult> RotateUserAccountKeysAsync(User user, RotateUserAccountKeysData model)
+    public async Task<IdentityResult> PasswordChangeAndRotateUserAccountKeysAsync(User user, PasswordChangeAndRotateUserAccountKeysData model)
     {
         if (user == null)
         {
@@ -88,45 +85,39 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
 
-        var now = DateTime.UtcNow;
-        user.RevisionDate = user.AccountRevisionDate = now;
-        user.LastKeyRotationDate = now;
-
-        // V2UpgradeToken is only valid for V1 users transitioning to V2.
-        // For V2 users the token is semantically invalid — discard it and perform a full logout.
-        var shouldPersistV2UpgradeToken = model.V2UpgradeToken != null && !IsV2EncryptionUserAsync(user);
-        if (shouldPersistV2UpgradeToken)
-        {
-            user.V2UpgradeToken = model.V2UpgradeToken!.ToJson();
-        }
-        else
-        {
-            user.V2UpgradeToken = null;
-            user.SecurityStamp = Guid.NewGuid().ToString();
-        }
+        model.ValidateForUser(user);
 
         List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions = [];
+        var shouldPersistV2UpgradeToken = await BaseRotateUserAccountKeysAsync(model.BaseData, user, saveEncryptedDataActions);
 
-        await UpdateAccountKeysAsync(model, user, saveEncryptedDataActions);
-        UpdateUnlockMethods(model, user, saveEncryptedDataActions);
-        UpdateUserData(model, user, saveEncryptedDataActions);
+        user.Key = model.MasterPasswordUnlockData.MasterKeyWrappedUserKey;
+        user.MasterPassword = _passwordHasher.HashPassword(user, model.MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash);
+        user.MasterPasswordHint = model.MasterPasswordHint;
 
         await _userRepository.UpdateUserKeyAndEncryptedDataV2Async(user, saveEncryptedDataActions);
 
-        if (shouldPersistV2UpgradeToken)
-        {
-            await _pushService.PushLogOutAsync(user.Id,
-                reason: PushNotificationLogOutReason.KeyRotation);
-        }
-        else
-        {
-            await _pushService.PushLogOutAsync(user.Id);
-        }
-
+        await HandlePushNotificationAsync(shouldPersistV2UpgradeToken, user);
         return IdentityResult.Success;
     }
 
-    public async Task RotateV2AccountKeysAsync(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
+    /// <inheritdoc />
+    public async Task MasterPasswordRotateUserAccountKeysAsync(User user, MasterPasswordRotateUserAccountKeysData model)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        model.ValidateForUser(user);
+
+        List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions = [];
+        var shouldPersistV2UpgradeToken =
+            await BaseRotateUserAccountKeysAsync(model.BaseData, user, saveEncryptedDataActions);
+        user.Key = model.MasterPasswordUnlockData.MasterKeyWrappedUserKey;
+
+        await _userRepository.UpdateUserKeyAndEncryptedDataV2Async(user, saveEncryptedDataActions);
+
+        await HandlePushNotificationAsync(shouldPersistV2UpgradeToken, user);
+    }
+
+    private async Task RotateV2AccountKeysAsync(BaseRotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
     {
         ValidateV2Encryption(model);
         await ValidateVerifyingKeyUnchangedAsync(model, user);
@@ -137,7 +128,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         user.SecurityVersion = model.AccountKeys.SecurityStateData.SecurityVersion;
     }
 
-    public void UpgradeV1ToV2Keys(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
+    private void UpgradeV1ToV2Keys(BaseRotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
     {
         ValidateV2Encryption(model);
         saveEncryptedDataActions.Add(_userSignatureKeyPairRepository.SetUserSignatureKeyPair(user.Id, model.AccountKeys.SignatureKeyPairData));
@@ -146,11 +137,11 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         user.SecurityVersion = model.AccountKeys.SecurityStateData.SecurityVersion;
     }
 
-    public async Task UpdateAccountKeysAsync(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
+    internal async Task UpdateAccountKeysAsync(BaseRotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
     {
         ValidatePublicKeyEncryptionKeyPairUnchanged(model, user);
 
-        if (IsV2EncryptionUserAsync(user))
+        if (IsV2EncryptionUser(user))
         {
             await RotateV2AccountKeysAsync(model, user, saveEncryptedDataActions);
         }
@@ -171,7 +162,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         user.PrivateKey = model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey;
     }
 
-    public void UpdateUserData(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
+    internal void UpdateUserData(BaseRotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
     {
         // The revision date has to be updated so that de-synced clients don't accidentally post over the re-encrypted data
         // with an old-user key-encrypted copy
@@ -196,39 +187,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         }
     }
 
-    void UpdateUnlockMethods(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
-    {
-        if (!model.MasterPasswordUnlockData.ValidateForUser(user))
-        {
-            throw new InvalidOperationException("The provided master password unlock data is not valid for this user.");
-        }
-        // Update master password authentication & unlock
-        user.Key = model.MasterPasswordUnlockData.MasterKeyEncryptedUserKey;
-        user.MasterPassword = _passwordHasher.HashPassword(user, model.MasterPasswordUnlockData.MasterKeyAuthenticationHash);
-        user.MasterPasswordHint = model.MasterPasswordUnlockData.MasterPasswordHint;
-
-        if (model.EmergencyAccesses.Any())
-        {
-            saveEncryptedDataActions.Add(_emergencyAccessRepository.UpdateForKeyRotation(user.Id, model.EmergencyAccesses));
-        }
-
-        if (model.OrganizationUsers.Any())
-        {
-            saveEncryptedDataActions.Add(_organizationUserRepository.UpdateForKeyRotation(user.Id, model.OrganizationUsers));
-        }
-
-        if (model.WebAuthnKeys.Any())
-        {
-            saveEncryptedDataActions.Add(_credentialRepository.UpdateKeysForRotationAsync(user.Id, model.WebAuthnKeys));
-        }
-
-        if (model.DeviceKeys.Any())
-        {
-            saveEncryptedDataActions.Add(_deviceRepository.UpdateKeysForRotationAsync(user.Id, model.DeviceKeys));
-        }
-    }
-
-    private bool IsV2EncryptionUserAsync(User user)
+    private static bool IsV2EncryptionUser(User user)
     {
         // Returns whether the user is a V2 user based on the private key's encryption type.
         ArgumentNullException.ThrowIfNull(user);
@@ -236,7 +195,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         return isPrivateKeyEncryptionV2;
     }
 
-    private async Task ValidateVerifyingKeyUnchangedAsync(RotateUserAccountKeysData model, User user)
+    private async Task ValidateVerifyingKeyUnchangedAsync(BaseRotateUserAccountKeysData model, User user)
     {
         var currentSignatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(user.Id) ?? throw new InvalidOperationException("User does not have a signature key pair.");
         if (model.AccountKeys.SignatureKeyPairData.VerifyingKey != currentSignatureKeyPair!.VerifyingKey)
@@ -245,7 +204,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         }
     }
 
-    private static void ValidatePublicKeyEncryptionKeyPairUnchanged(RotateUserAccountKeysData model, User user)
+    private static void ValidatePublicKeyEncryptionKeyPairUnchanged(BaseRotateUserAccountKeysData model, User user)
     {
         var publicKey = model.AccountKeys.PublicKeyEncryptionKeyPairData.PublicKey;
         if (publicKey != user.PublicKey)
@@ -254,7 +213,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         }
     }
 
-    private static void ValidateV2Encryption(RotateUserAccountKeysData model)
+    private static void ValidateV2Encryption(BaseRotateUserAccountKeysData model)
     {
         if (model.AccountKeys.SignatureKeyPairData == null)
         {
@@ -280,6 +239,68 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         if (model.AccountKeys.SecurityStateData == null || string.IsNullOrEmpty(model.AccountKeys.SecurityStateData.SecurityState))
         {
             throw new InvalidOperationException("No signed security state provider for V2 user");
+        }
+    }
+
+    private void UpdateBaseUnlockMethods(BaseRotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
+    {
+        if (model.EmergencyAccesses.Any())
+        {
+            saveEncryptedDataActions.Add(_emergencyAccessRepository.UpdateForKeyRotation(user.Id, model.EmergencyAccesses));
+        }
+
+        if (model.OrganizationUsers.Any())
+        {
+            saveEncryptedDataActions.Add(_organizationUserRepository.UpdateForKeyRotation(user.Id, model.OrganizationUsers));
+        }
+
+        if (model.WebAuthnKeys.Any())
+        {
+            saveEncryptedDataActions.Add(_credentialRepository.UpdateKeysForRotationAsync(user.Id, model.WebAuthnKeys));
+        }
+
+        if (model.DeviceKeys.Any())
+        {
+            saveEncryptedDataActions.Add(_deviceRepository.UpdateKeysForRotationAsync(user.Id, model.DeviceKeys));
+        }
+    }
+
+    private async Task<bool> BaseRotateUserAccountKeysAsync(BaseRotateUserAccountKeysData baseModel, User user,
+        List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
+    {
+        var now = DateTime.UtcNow;
+        user.RevisionDate = user.AccountRevisionDate = now;
+        user.LastKeyRotationDate = now;
+
+        // V2UpgradeToken is only valid for V1 users transitioning to V2.
+        // For V2 users the token is semantically invalid — discard it and perform a full logout.
+        var shouldPersistV2UpgradeToken = baseModel.V2UpgradeToken != null && !IsV2EncryptionUser(user);
+        if (shouldPersistV2UpgradeToken)
+        {
+            user.V2UpgradeToken = baseModel.V2UpgradeToken!.ToJson();
+        }
+        else
+        {
+            user.V2UpgradeToken = null;
+            user.SecurityStamp = Guid.NewGuid().ToString();
+        }
+
+        await UpdateAccountKeysAsync(baseModel, user, saveEncryptedDataActions);
+        UpdateBaseUnlockMethods(baseModel, user, saveEncryptedDataActions);
+        UpdateUserData(baseModel, user, saveEncryptedDataActions);
+        return shouldPersistV2UpgradeToken;
+    }
+
+    private async Task HandlePushNotificationAsync(bool shouldPersistV2UpgradeToken, User user)
+    {
+        if (shouldPersistV2UpgradeToken)
+        {
+            await _pushService.PushLogOutAsync(user.Id,
+                reason: PushNotificationLogOutReason.KeyRotation);
+        }
+        else
+        {
+            await _pushService.PushLogOutAsync(user.Id);
         }
     }
 }

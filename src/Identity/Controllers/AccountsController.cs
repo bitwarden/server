@@ -105,12 +105,8 @@ public class AccountsController : Controller
     [HttpPost("register/send-verification-email")]
     public async Task<IActionResult> PostRegisterSendVerificationEmail([FromBody] RegisterSendVerificationEmailRequestModel model)
     {
-        // Only pass fromMarketing if the feature flag is enabled
-        var isMarketingFeatureEnabled = _featureService.IsEnabled(FeatureFlagKeys.MarketingInitiatedPremiumFlow);
-        var fromMarketing = isMarketingFeatureEnabled ? model.FromMarketing : null;
-
         var token = await _sendVerificationEmailForRegistrationCommand.Run(model.Email, model.Name,
-            model.ReceiveMarketingEmails, fromMarketing);
+            model.ReceiveMarketingEmails, model.FromMarketing);
 
         if (token != null)
         {
@@ -141,28 +137,25 @@ public class AccountsController : Controller
     [HttpPost("register/finish")]
     public async Task<RegisterFinishResponseModel> PostRegisterFinish([FromBody] RegisterFinishRequestModel model)
     {
-        User user = model.ToUser();
+        var registerFinishData = model.ToData();
+        var user = model.ToUser(registerFinishData.IsV2Encryption());
 
         // Users will either have an emailed token or an email verification token - not both.
         IdentityResult? identityResult = null;
-
-        // PM-28143 - Just use the MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash
-        string masterPasswordAuthenticationHash = model.MasterPasswordAuthentication?.MasterPasswordAuthenticationHash
-                                                  ?? model.MasterPasswordHash!;
 
         switch (model.GetTokenType())
         {
             case RegisterFinishTokenType.EmailVerification:
                 identityResult = await _registerUserCommand.RegisterUserViaEmailVerificationToken(
                     user,
-                    masterPasswordAuthenticationHash,
+                    registerFinishData,
                     model.EmailVerificationToken!);
                 return ProcessRegistrationResult(identityResult, user);
 
             case RegisterFinishTokenType.OrganizationInvite:
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(
                     user,
-                    masterPasswordAuthenticationHash,
+                    registerFinishData,
                     model.OrgInviteToken!,
                     model.OrganizationUserId);
                 return ProcessRegistrationResult(identityResult, user);
@@ -170,14 +163,14 @@ public class AccountsController : Controller
             case RegisterFinishTokenType.OrgSponsoredFreeFamilyPlan:
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(
                     user,
-                    masterPasswordAuthenticationHash,
+                    registerFinishData,
                     model.OrgSponsoredFreeFamilyPlanToken!);
                 return ProcessRegistrationResult(identityResult, user);
 
             case RegisterFinishTokenType.EmergencyAccessInvite:
                 identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(
                     user,
-                    masterPasswordAuthenticationHash,
+                    registerFinishData,
                     model.AcceptEmergencyAccessInviteToken!,
                     (Guid)model.AcceptEmergencyAccessId!);
                 return ProcessRegistrationResult(identityResult, user);
@@ -185,7 +178,7 @@ public class AccountsController : Controller
             case RegisterFinishTokenType.ProviderInvite:
                 identityResult = await _registerUserCommand.RegisterUserViaProviderInviteToken(
                     user,
-                    masterPasswordAuthenticationHash,
+                    registerFinishData,
                     model.ProviderInviteToken!,
                     (Guid)model.ProviderUserId!);
                 return ProcessRegistrationResult(identityResult, user);

@@ -105,4 +105,21 @@ public class ProviderRepository : Repository<Provider, Models.Provider.Provider,
                 }).ToListAsync();
         }
     }
+
+#nullable enable
+    public async Task<ProviderAbility?> GetAbilityAsync(Guid id)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            return await GetDbSet(dbContext)
+                .Where(e => e.Id == id)
+                .Select(e => new ProviderAbility
+                {
+                    Id = e.Id,
+                    UseEvents = e.UseEvents,
+                    Enabled = e.Enabled,
+                }).FirstOrDefaultAsync();
+        }
+    }
 }

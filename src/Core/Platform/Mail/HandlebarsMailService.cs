@@ -101,7 +101,8 @@ public class HandlebarsMailService : IMailService
         string token,
         ProductTierType productTier,
         IEnumerable<ProductType> products,
-        int trialLength)
+        int trialLength,
+        bool paymentOptional = false)
     {
         var message = CreateDefaultMessage("Verify your email", email);
         var model = new TrialInitiationVerifyEmail
@@ -113,7 +114,8 @@ public class HandlebarsMailService : IMailService
             SiteName = _globalSettings.SiteName,
             ProductTier = productTier,
             Product = products,
-            TrialLength = trialLength
+            TrialLength = trialLength,
+            PaymentOptional = paymentOptional
         };
         await AddMessageContentAsync(message, "Billing.TrialInitiationVerifyEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
@@ -766,13 +768,15 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendAdminResetPasswordEmailAsync(string email, string? userName, string orgName)
+    public async Task SendAdminResetPasswordEmailAsync(string email, string? userName, string orgName, bool resetMasterPassword, bool resetTwoFactor)
     {
         var message = CreateDefaultMessage("Your admin has initiated account recovery", email);
         var model = new AdminResetPasswordViewModel()
         {
             UserName = GetUserIdentifier(email, userName),
             OrgName = CoreHelpers.SanitizeForEmail(orgName, false),
+            ResetMasterPassword = resetMasterPassword,
+            ResetTwoFactor = resetTwoFactor,
         };
         await AddMessageContentAsync(message, "AdminResetPassword", model);
         message.Category = "AdminResetPassword";

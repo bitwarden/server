@@ -72,7 +72,7 @@ services:
       - ef
 
   mariadb:
-    image: mariadb:10
+    image: mariadb:12
     ports:
       - 4306:3306
     environment:

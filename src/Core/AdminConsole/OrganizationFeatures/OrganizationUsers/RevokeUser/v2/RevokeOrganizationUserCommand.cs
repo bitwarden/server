@@ -27,7 +27,7 @@ public class RevokeOrganizationUserCommand(
 
         var validUsers = results.Where(r => r.IsValid).Select(r => r.Request).ToList();
 
-        await RevokeValidUsersAsync(validUsers);
+        await RevokeValidUsersAsync(validUsers, request.RevocationReason);
 
         await Task.WhenAll(
             LogRevokedOrganizationUsersAsync(validUsers, request.PerformedBy),
@@ -43,24 +43,28 @@ public class RevokeOrganizationUserCommand(
     private async Task<RevokeOrganizationUsersValidationRequest> CreateValidationRequestsAsync(
         RevokeOrganizationUsersRequest request)
     {
-        var organizationUserToRevoke = await organizationUserRepository
+        var organizationUser = await organizationUserRepository
             .GetManyAsync(request.OrganizationUserIdsToRevoke);
+
+        var organizationUserToRevoke = organizationUser
+            .Where(x => x.OrganizationId == request.OrganizationId)
+            .ToArray();
 
         return new RevokeOrganizationUsersValidationRequest(
             request.OrganizationId,
-            request.OrganizationUserIdsToRevoke,
+            organizationUserToRevoke,
             request.PerformedBy,
-            organizationUserToRevoke);
+            request.RevocationReason);
     }
 
-    private async Task RevokeValidUsersAsync(ICollection<OrganizationUser> validUsers)
+    private async Task RevokeValidUsersAsync(ICollection<OrganizationUser> validUsers, RevocationReason reason)
     {
         if (validUsers.Count == 0)
         {
             return;
         }
 
-        await organizationUserRepository.RevokeManyByIdAsync(validUsers.Select(u => u.Id));
+        await organizationUserRepository.RevokeManyAsync(validUsers.Select(u => u.Id), reason);
     }
 
     private async Task LogRevokedOrganizationUsersAsync(

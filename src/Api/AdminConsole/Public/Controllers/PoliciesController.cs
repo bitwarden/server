@@ -6,7 +6,7 @@ using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Microsoft.AspNetCore.Authorization;
@@ -20,16 +20,16 @@ public class PoliciesController : Controller
 {
     private readonly IPolicyRepository _policyRepository;
     private readonly ICurrentContext _currentContext;
-    private readonly IVNextSavePolicyCommand _vNextSavePolicyCommand;
+    private readonly ISavePolicyCommand _savePolicyCommand;
 
     public PoliciesController(
         IPolicyRepository policyRepository,
         ICurrentContext currentContext,
-        IVNextSavePolicyCommand vNextSavePolicyCommand)
+        ISavePolicyCommand savePolicyCommand)
     {
         _policyRepository = policyRepository;
         _currentContext = currentContext;
-        _vNextSavePolicyCommand = vNextSavePolicyCommand;
+        _savePolicyCommand = savePolicyCommand;
     }
 
     /// <summary>
@@ -84,7 +84,7 @@ public class PoliciesController : Controller
     public async Task<IActionResult> Put(PolicyType type, [FromBody] PolicyUpdateRequestModel model)
     {
         var savePolicyModel = model.ToSavePolicyModel(_currentContext.OrganizationId!.Value, type);
-        var policy = await _vNextSavePolicyCommand.SaveAsync(savePolicyModel);
+        var policy = await _savePolicyCommand.SaveAsync(savePolicyModel);
 
         var response = new PolicyResponseModel(policy);
         return new JsonResult(response);

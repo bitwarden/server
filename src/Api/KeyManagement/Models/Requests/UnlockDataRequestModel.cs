@@ -1,6 +1,5 @@
 ﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request;
-using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Core.Auth.Models.Api.Request;
 

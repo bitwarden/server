@@ -58,6 +58,7 @@ public class SyncResponseModelTests
         // Arrange
         user.MasterPassword = "hashed-password";
         user.Key = _mockEncryptedKey1;
+        user.MasterPasswordSalt = null;
         user.Kdf = KdfType.Argon2id;
         user.KdfIterations = 3;
         user.KdfMemory = 64;
@@ -70,12 +71,33 @@ public class SyncResponseModelTests
         Assert.NotNull(result.UserDecryption);
         Assert.NotNull(result.UserDecryption.MasterPasswordUnlock);
         Assert.Equal(_mockEncryptedKey1, result.UserDecryption.MasterPasswordUnlock.MasterKeyEncryptedUserKey);
-        Assert.Equal(user.Email.ToLowerInvariant(), result.UserDecryption.MasterPasswordUnlock.Salt);
+        Assert.Equal(user.GetMasterPasswordSalt(), result.UserDecryption.MasterPasswordUnlock.Salt);
         Assert.NotNull(result.UserDecryption.MasterPasswordUnlock.Kdf);
         Assert.Equal(KdfType.Argon2id, result.UserDecryption.MasterPasswordUnlock.Kdf.KdfType);
         Assert.Equal(3, result.UserDecryption.MasterPasswordUnlock.Kdf.Iterations);
         Assert.Equal(64, result.UserDecryption.MasterPasswordUnlock.Kdf.Memory);
         Assert.Equal(4, result.UserDecryption.MasterPasswordUnlock.Kdf.Parallelism);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void Constructor_UserWithExplicitSalt_UsesMasterPasswordSalt(User user)
+    {
+        // Arrange
+        user.MasterPassword = "hashed-password";
+        user.Key = _mockEncryptedKey1;
+        user.MasterPasswordSalt = "explicit-salt-value";
+        user.Kdf = KdfType.Argon2id;
+        user.KdfIterations = 3;
+        user.KdfMemory = 64;
+        user.KdfParallelism = 4;
+
+        // Act
+        var result = CreateSyncResponseModel(user);
+
+        // Assert
+        Assert.NotNull(result.UserDecryption?.MasterPasswordUnlock);
+        Assert.Equal("explicit-salt-value", result.UserDecryption.MasterPasswordUnlock.Salt);
     }
 
     [Theory]

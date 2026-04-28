@@ -4,29 +4,33 @@ using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.RustSDK;
+using Bit.Seeder.Attributes;
 using Bit.Seeder.Models;
 
 namespace Bit.Seeder.Factories;
 
 internal static class CipherEncryption
 {
-    private static readonly JsonSerializerOptions SdkJsonOptions = new()
+    private static readonly JsonSerializerOptions _sdkJsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    private static readonly JsonSerializerOptions ServerJsonOptions = new()
+    private static readonly JsonSerializerOptions _serverJsonOptions = new()
     {
         PropertyNamingPolicy = null,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
+    private static readonly string _fieldPathsJson =
+        JsonSerializer.Serialize(EncryptPropertyAttribute.GetFieldPaths<CipherViewDto>());
+
     internal static EncryptedCipherDto Encrypt(CipherViewDto cipherView, string keyBase64)
     {
-        var viewJson = JsonSerializer.Serialize(cipherView, SdkJsonOptions);
-        var encryptedJson = RustSdkService.EncryptCipher(viewJson, keyBase64);
-        return JsonSerializer.Deserialize<EncryptedCipherDto>(encryptedJson, SdkJsonOptions)
+        var viewJson = JsonSerializer.Serialize(cipherView, _sdkJsonOptions);
+        var encryptedJson = RustSdkService.EncryptFields(viewJson, _fieldPathsJson, keyBase64);
+        return JsonSerializer.Deserialize<EncryptedCipherDto>(encryptedJson, _sdkJsonOptions)
             ?? throw new InvalidOperationException("Failed to parse encrypted cipher");
     }
 
@@ -35,9 +39,10 @@ internal static class CipherEncryption
         object data,
         CipherType cipherType,
         Guid? organizationId,
-        Guid? userId)
+        Guid? userId,
+        DateTime? deletedDate = null)
     {
-        var dataJson = JsonSerializer.Serialize(data, ServerJsonOptions);
+        var dataJson = JsonSerializer.Serialize(data, _serverJsonOptions);
 
         return new Cipher
         {
@@ -49,7 +54,8 @@ internal static class CipherEncryption
             Key = encrypted.Key,
             Reprompt = (CipherRepromptType?)encrypted.Reprompt,
             CreationDate = DateTime.UtcNow,
-            RevisionDate = DateTime.UtcNow
+            RevisionDate = DateTime.UtcNow,
+            DeletedDate = deletedDate
         };
     }
 }

@@ -85,6 +85,10 @@ public class CollectController : Controller
                 case EventType.Cipher_ClientToggledCardCodeVisible:
                 case EventType.Cipher_ClientToggledHiddenFieldVisible:
                 case EventType.Cipher_ClientToggledPasswordVisible:
+                case EventType.Cipher_ClientCopiedBankAccountNumber:
+                case EventType.Cipher_ClientCopiedBankAccountPin:
+                case EventType.Cipher_ClientToggledBankAccountNumberVisible:
+                case EventType.Cipher_ClientToggledBankAccountPinVisible:
                 case EventType.Cipher_ClientViewed:
                     if (!eventModel.CipherId.HasValue)
                     {
@@ -146,7 +150,29 @@ public class CollectController : Controller
 
                     await _eventService.LogOrganizationEventAsync(organization, eventModel.Type, eventModel.Date);
                     break;
+                case EventType.PhishingBlocker_SiteAccessed:
+                case EventType.PhishingBlocker_SiteExited:
+                case EventType.PhishingBlocker_Bypassed:
+                    if (!eventModel.OrganizationId.HasValue)
+                    {
+                        continue;
+                    }
 
+                    // Verify the user belongs to this organization
+                    var orgUserContext = await _organizationUserRepository.GetByOrganizationAsync(eventModel.OrganizationId.Value, _currentContext.UserId.Value);
+                    if (orgUserContext == null)
+                    {
+                        continue;
+                    }
+
+                    var organizationForPhishingEvent = await _organizationRepository.GetByIdAsync(eventModel.OrganizationId.Value);
+                    if (organizationForPhishingEvent == null || !organizationForPhishingEvent.UsePhishingBlocker)
+                    {
+                        continue;
+                    }
+
+                    await _eventService.LogOrganizationUserEventAsync(orgUserContext, eventModel.Type, eventModel.Date);
+                    break;
                 default:
                     continue;
             }

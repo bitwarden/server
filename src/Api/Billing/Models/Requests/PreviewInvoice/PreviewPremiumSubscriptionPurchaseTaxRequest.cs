@@ -14,14 +14,13 @@ public record PreviewPremiumSubscriptionPurchaseTaxRequest
     [Required]
     public required MinimalBillingAddressRequest BillingAddress { get; set; }
 
-    [MaxLength(50)]
-    public string? Coupon { get; set; }
+    public string[]? Coupons { get; set; }
 
     public (PremiumPurchasePreview, BillingAddress) ToDomain() => (
         new PremiumPurchasePreview
         {
             AdditionalStorageGb = AdditionalStorage,
-            Coupon = Coupon
+            Coupons = Coupons
         },
         BillingAddress.ToDomain());
 }

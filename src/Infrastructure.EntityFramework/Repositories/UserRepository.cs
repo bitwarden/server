@@ -73,7 +73,8 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
                     Kdf = e.Kdf,
                     KdfIterations = e.KdfIterations,
                     KdfMemory = e.KdfMemory,
-                    KdfParallelism = e.KdfParallelism
+                    KdfParallelism = e.KdfParallelism,
+                    MasterPasswordSalt = e.MasterPasswordSalt
                 }).SingleOrDefaultAsync();
         }
     }
@@ -307,7 +308,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         userEntity.SecurityVersion = accountKeysData.SecurityStateData.SecurityVersion;
         userEntity.SignedPublicKey = accountKeysData.PublicKeyEncryptionKeyPairData.SignedPublicKey;
 
-        // Replace existing keypair if it exists
+        // Replace existing key-pair if it exists
         var existingKeyPair = await dbContext.UserSignatureKeyPairs
             .FirstOrDefaultAsync(x => x.UserId == userId);
         if (existingKeyPair != null)
@@ -579,6 +580,29 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         }
 
         await transaction.CommitAsync();
+    }
+
+    public UpdateUserData UpdateMasterPasswordUnlockData(Guid userId, RegisterFinishData registerFinishData)
+    {
+        return async (_, _) =>
+        {
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetDatabaseContext(scope);
+
+            var userEntity = await dbContext.Users.FindAsync(userId) ?? throw new ArgumentException("User not found", nameof(userId));
+            var timestamp = DateTime.UtcNow;
+
+            userEntity.Kdf = registerFinishData.Kdf.KdfType;
+            userEntity.KdfIterations = registerFinishData.Kdf.Iterations;
+            userEntity.KdfMemory = registerFinishData.Kdf.Memory;
+            userEntity.KdfParallelism = registerFinishData.Kdf.Parallelism;
+            userEntity.MasterPasswordSalt = registerFinishData.Salt;
+            userEntity.Key = registerFinishData.MasterKeyWrappedUserKey;
+            userEntity.RevisionDate = timestamp;
+            userEntity.AccountRevisionDate = timestamp;
+
+            await dbContext.SaveChangesAsync();
+        };
     }
 
     private static void MigrateDefaultUserCollectionsToShared(DatabaseContext dbContext, IEnumerable<Guid> userIds)

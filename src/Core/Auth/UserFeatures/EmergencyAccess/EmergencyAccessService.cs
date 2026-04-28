@@ -3,6 +3,8 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -33,6 +35,7 @@ public class EmergencyAccessService : IEmergencyAccessService
     private readonly GlobalSettings _globalSettings;
     private readonly IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> _dataProtectorTokenizer;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
 
     public EmergencyAccessService(
         IEmergencyAccessRepository emergencyAccessRepository,
@@ -45,7 +48,8 @@ public class EmergencyAccessService : IEmergencyAccessService
         IUserService userService,
         GlobalSettings globalSettings,
         IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> dataProtectorTokenizer,
-        IRemoveOrganizationUserCommand removeOrganizationUserCommand)
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand,
+        IPolicyRequirementQuery policyRequirementQuery)
     {
         _emergencyAccessRepository = emergencyAccessRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -58,6 +62,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         _globalSettings = globalSettings;
         _dataProtectorTokenizer = dataProtectorTokenizer;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
+        _policyRequirementQuery = policyRequirementQuery;
     }
 
     public async Task<Entities.EmergencyAccess> InviteAsync(User grantorUser, string emergencyContactEmail, EmergencyAccessType accessType, int waitTime)
@@ -67,9 +72,22 @@ public class EmergencyAccessService : IEmergencyAccessService
             throw new BadRequestException("Not a premium user.");
         }
 
+        if (grantorUser.Email.Equals(emergencyContactEmail, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new BadRequestException("You cannot add yourself as an emergency access contact.");
+        }
+
         if (accessType == EmergencyAccessType.Takeover && grantorUser.UsesKeyConnector)
         {
             throw new BadRequestException("You cannot use Emergency Access Takeover because you are using Key Connector.");
+        }
+
+        var requirement = await _policyRequirementQuery
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(grantorUser.Id);
+
+        if (requirement.GrantorCannotInviteToEmergencyAccess())
+        {
+            throw new BadRequestException("You cannot invite emergency contacts because you are a member of an organization that uses Automatic User Confirmation.");
         }
 
         var emergencyAccess = new Entities.EmergencyAccess
@@ -130,6 +148,14 @@ public class EmergencyAccessService : IEmergencyAccessService
             throw new BadRequestException("Invalid token.");
         }
 
+        var granteeRequirement = await _policyRequirementQuery
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(granteeUser.Id);
+
+        if (granteeRequirement.GranteeCannotAcceptEmergencyAccess())
+        {
+            throw new BadRequestException("You cannot accept emergency access invitations because you are a member of an organization that uses Automatic User Confirmation.");
+        }
+
         if (emergencyAccess.Status == EmergencyAccessStatusType.Accepted)
         {
             throw new BadRequestException("Invitation already accepted. You will receive an email when the grantor confirms you as an emergency access contact.");
@@ -161,7 +187,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         return emergencyAccess;
     }
 
-    // TODO: remove with PM-31327 when we migrate to the command. 
+    // TODO: remove with PM-31327 when we migrate to the command.
     public async Task DeleteAsync(Guid emergencyAccessId, Guid userId)
     {
         var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);

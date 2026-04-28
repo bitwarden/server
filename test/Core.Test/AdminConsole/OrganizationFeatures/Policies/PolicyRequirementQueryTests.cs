@@ -68,6 +68,60 @@ public class PolicyRequirementQueryTests
     }
 
     [Theory, BitAutoData]
+    public async Task GetAsyncVNext_CallsEnforceCallback(Guid userId)
+    {
+        // Arrange policies
+        var policyRepository = Substitute.For<IPolicyRepository>();
+        var thisPolicy = new PolicyDetails { PolicyType = PolicyType.SingleOrg };
+        var otherPolicy = new PolicyDetails { PolicyType = PolicyType.SingleOrg };
+        policyRepository.GetPolicyDetailsByUserIdAndPolicyTypeAsync(userId, PolicyType.SingleOrg)
+            .Returns([thisPolicy, otherPolicy]);
+
+        // Arrange a substitute Enforce function so that we can inspect the received calls
+        var callback = Substitute.For<Func<PolicyDetails, bool>>();
+        callback(Arg.Any<PolicyDetails>()).Returns(x => x.Arg<PolicyDetails>() == thisPolicy);
+
+        // Arrange the sut
+        var factory = new TestPolicyRequirementFactory(callback);
+        var sut = new PolicyRequirementQuery(policyRepository, [factory]);
+
+        // Act
+        var requirement = await sut.GetAsyncVNext<TestPolicyRequirement>(userId);
+
+        // Assert
+        Assert.Contains(thisPolicy, requirement.Policies);
+        Assert.DoesNotContain(otherPolicy, requirement.Policies);
+        callback.Received()(Arg.Is(thisPolicy));
+        callback.Received()(Arg.Is(otherPolicy));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsyncVNext_ThrowsIfNoFactoryRegistered(Guid userId)
+    {
+        var policyRepository = Substitute.For<IPolicyRepository>();
+        var sut = new PolicyRequirementQuery(policyRepository, []);
+
+        var exception = await Assert.ThrowsAsync<NotImplementedException>(()
+            => sut.GetAsyncVNext<TestPolicyRequirement>(userId));
+        Assert.Contains("No Requirement Factory found", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsyncVNext_HandlesNoPolicies(Guid userId)
+    {
+        var policyRepository = Substitute.For<IPolicyRepository>();
+        policyRepository.GetPolicyDetailsByUserIdAndPolicyTypeAsync(userId, PolicyType.SingleOrg)
+            .Returns([]);
+
+        var factory = new TestPolicyRequirementFactory(x => x.IsProvider);
+        var sut = new PolicyRequirementQuery(policyRepository, [factory]);
+
+        var requirement = await sut.GetAsyncVNext<TestPolicyRequirement>(userId);
+
+        Assert.Empty(requirement.Policies);
+    }
+
+    [Theory, BitAutoData]
     public async Task GetAsync_WithMultipleUserIds_ReturnsRequirementPerUser(Guid userIdA, Guid userIdB)
     {
         var policyRepository = Substitute.For<IPolicyRepository>();

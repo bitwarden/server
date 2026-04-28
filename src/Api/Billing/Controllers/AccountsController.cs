@@ -6,6 +6,7 @@ using Bit.Core;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -20,7 +21,8 @@ namespace Bit.Api.Billing.Controllers;
 public class AccountsController(
     IUserService userService,
     IFeatureService featureService,
-    ILicensingService licensingService) : Controller
+    ILicensingService licensingService,
+    IReinstateSubscriptionCommand reinstateSubscriptionCommand) : Controller
 {
     // TODO: Remove with deletion of pm-29594-update-individual-subscription-page
     [HttpGet("subscription")]
@@ -39,14 +41,10 @@ public class AccountsController(
         {
             if (user.Gateway != null)
             {
-                // Note: PM23341_Milestone_2 is the feature flag for the overall Milestone 2 initiative (PM-23341).
-                // This specific implementation (PM-26682) adds discount display functionality as part of that initiative.
-                // The feature flag controls the broader Milestone 2 feature set, not just this specific task.
-                var includeMilestone2Discount = featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2);
                 var subscriptionInfo = await paymentService.GetSubscriptionAsync(user);
                 var license = await userService.GenerateLicenseAsync(user, subscriptionInfo);
                 var claimsPrincipal = licensingService.GetClaimsPrincipalFromLicense(license);
-                return new SubscriptionResponseModel(user, subscriptionInfo, license, claimsPrincipal, includeMilestone2Discount);
+                return new SubscriptionResponseModel(user, subscriptionInfo, license, claimsPrincipal);
             }
             else
             {
@@ -114,8 +112,8 @@ public class AccountsController(
         }
 
         await subscriberService.CancelSubscription(user,
-            new OffboardingSurveyResponse { UserId = user.Id, Reason = request.Reason, Feedback = request.Feedback },
-            user.IsExpired());
+            user.IsExpired(),
+            new OffboardingSurveyResponse { UserId = user.Id, Reason = request.Reason, Feedback = request.Feedback });
     }
 
     // TODO: Remove with deletion of pm-29594-update-individual-subscription-page
@@ -129,6 +127,13 @@ public class AccountsController(
             throw new UnauthorizedAccessException();
         }
 
-        await userService.ReinstatePremiumAsync(user);
+        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        {
+            (await reinstateSubscriptionCommand.Run(user)).GetValueOrThrow();
+        }
+        else
+        {
+            await userService.ReinstatePremiumAsync(user);
+        }
     }
 }

@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core;
 using Bit.Core.Settings;
 using Bit.Identity.IdentityServer.RequestValidators;
 using Duende.IdentityServer.Models;
@@ -82,7 +83,7 @@ public class ApiClient : Client
         }
         else if (id == "mobile")
         {
-            RedirectUris = new[] { "bitwarden://sso-callback" };
+            RedirectUris = Constants.BitwardenMobileSsoCallbackUris;
             PostLogoutRedirectUris = new[] { "bitwarden://logged-out" };
         }
 

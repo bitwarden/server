@@ -389,6 +389,55 @@ public class ProviderBillingServiceTests
             org => org.GatewayCustomerId == "customer_id"));
     }
 
+    [Theory, BitAutoData]
+    public async Task CreateCustomer_ForClientOrg_USCustomer_SetsTaxExemptToNone(
+        Provider provider,
+        Organization organization,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        organization.GatewayCustomerId = null;
+        organization.Name = "Name";
+
+        var providerCustomer = new Customer
+        {
+            Address = new Address
+            {
+                Country = "US",
+                PostalCode = "12345",
+                Line1 = "123 Main St.",
+                Line2 = "Unit 4",
+                City = "Fake Town",
+                State = "Fake State"
+            },
+            TaxIds = new StripeList<TaxId>
+            {
+                Data =
+                [
+                    new TaxId { Type = "TYPE", Value = "VALUE" }
+                ]
+            },
+            TaxExempt = null
+        };
+
+        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider, Arg.Is<CustomerGetOptions>(
+                options => options.Expand.Contains("tax") && options.Expand.Contains("tax_ids")))
+            .Returns(providerCustomer);
+
+        sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri
+            .Returns(new Bit.Core.Settings.GlobalSettings.BaseServiceUriSettings(new Bit.Core.Settings.GlobalSettings())
+            {
+                CloudRegion = "US"
+            });
+
+        sutProvider.GetDependency<IStripeAdapter>().CreateCustomerAsync(Arg.Any<CustomerCreateOptions>())
+            .Returns(new Customer { Id = "customer_id" });
+
+        await sutProvider.Sut.CreateCustomerForClientOrganization(provider, organization);
+
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).CreateCustomerAsync(
+            Arg.Is<CustomerCreateOptions>(options => options.TaxExempt == StripeConstants.TaxExempt.None));
+    }
+
     #endregion
 
     #region GenerateClientInvoiceReport

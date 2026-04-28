@@ -18,14 +18,12 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
     IOrganizationRepository organizationRepository,
     IAutomaticallyConfirmOrganizationUsersValidator validator,
     IEventService eventService,
-    IMailService mailService,
     IUserRepository userRepository,
     IPushRegistrationService pushRegistrationService,
     IDeviceRepository deviceRepository,
     IPushNotificationService pushNotificationService,
     IPolicyRequirementQuery policyRequirementQuery,
     ICollectionRepository collectionRepository,
-    IFeatureService featureService,
     ISendOrganizationConfirmationCommand sendOrganizationConfirmationCommand,
     TimeProvider timeProvider,
     ILogger<AutomaticallyConfirmOrganizationUserCommand> logger) : IAutomaticallyConfirmOrganizationUserCommand
@@ -177,21 +175,13 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
     }
 
     /// <summary>
-    /// Sends the organization confirmed email using either the new mailer pattern or the legacy mail service,
-    /// depending on the feature flag.
+    /// Sends the organization confirmed email using the new mailer pattern.
     /// </summary>
     /// <param name="organization">The organization the user was confirmed to.</param>
     /// <param name="userEmail">The email address of the confirmed user.</param>
     /// <param name="accessSecretsManager">Whether the user has access to Secrets Manager.</param>
     internal async Task SendOrganizationConfirmedEmailAsync(Organization organization, string userEmail, bool accessSecretsManager)
     {
-        if (featureService.IsEnabled(FeatureFlagKeys.OrganizationConfirmationEmail))
-        {
-            await sendOrganizationConfirmationCommand.SendConfirmationAsync(organization, userEmail, accessSecretsManager);
-        }
-        else
-        {
-            await mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), userEmail, accessSecretsManager);
-        }
+        await sendOrganizationConfirmationCommand.SendConfirmationAsync(organization, userEmail, accessSecretsManager);
     }
 }

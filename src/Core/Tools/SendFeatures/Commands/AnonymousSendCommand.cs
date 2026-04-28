@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.Exceptions;
+﻿using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
@@ -33,7 +30,7 @@ public class AnonymousSendCommand : IAnonymousSendCommand
     }
 
     // Response: Send, password required, password invalid
-    public async Task<(string, SendAccessResult)> GetSendFileDownloadUrlAsync(Send send, string fileId, string password)
+    public async Task<(string?, SendAccessResult)> GetSendFileDownloadUrlAsync(Send send, string fileId, string? password)
     {
         if (send.Type != SendType.File)
         {

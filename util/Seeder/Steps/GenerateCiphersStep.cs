@@ -43,7 +43,7 @@ internal sealed class GenerateCiphersStep(
         var orgId = context.RequireOrgId();
         var orgKey = context.RequireOrgKey();
         var collectionIds = context.Registry.CollectionIds;
-        var typeDistribution = typeDist ?? CipherTypeDistributions.Realistic;
+        var typeDistribution = typeDist ?? _density?.CipherTypeDistribution ?? CipherTypeDistributions.Realistic;
         var passwordDistribution = pwDist ?? PasswordDistributions.Realistic;
         var companies = Companies.All;
 
@@ -95,6 +95,7 @@ internal sealed class GenerateCiphersStep(
             {
                 var orphanCount = (int)(count * _density.OrphanCipherRate);
                 var nonOrphanCount = count - orphanCount;
+                var primaryIndices = new int[nonOrphanCount];
 
                 for (var i = 0; i < nonOrphanCount; i++)
                 {
@@ -110,13 +111,32 @@ internal sealed class GenerateCiphersStep(
                         collectionIndex = i % collectionIds.Count;
                     }
 
-                    var collectionId = collectionIds[collectionIndex];
+                    primaryIndices[i] = collectionIndex;
 
                     collectionCiphers.Add(new CollectionCipher
                     {
                         CipherId = ciphers[i].Id,
-                        CollectionId = collectionId
+                        CollectionId = collectionIds[collectionIndex]
                     });
+                }
+
+                if (_density.MultiCollectionRate > 0 && collectionIds.Count > 1)
+                {
+                    var multiCount = (int)(nonOrphanCount * _density.MultiCollectionRate);
+                    for (var i = 0; i < multiCount; i++)
+                    {
+                        var extraCount = 1 + (i % Math.Max(_density.MaxCollectionsPerCipher - 1, 1));
+                        extraCount = Math.Min(extraCount, collectionIds.Count - 1);
+                        for (var j = 0; j < extraCount; j++)
+                        {
+                            var secondaryIndex = (primaryIndices[i] + 1 + j) % collectionIds.Count;
+                            collectionCiphers.Add(new CollectionCipher
+                            {
+                                CipherId = ciphers[i].Id,
+                                CollectionId = collectionIds[secondaryIndex]
+                            });
+                        }
+                    }
                 }
             }
         }

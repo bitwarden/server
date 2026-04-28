@@ -346,9 +346,9 @@ public class RevokeOrganizationUsersValidatorTests
     {
         return new RevokeOrganizationUsersValidationRequest(
             organizationId,
-            organizationUsers.Select(u => u.Id).ToList(),
+            organizationUsers,
             actingUser,
-            organizationUsers
+            RevocationReason.Manual
         );
     }
 }

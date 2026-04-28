@@ -20,6 +20,22 @@ internal static class EncryptedCipherDtoExtensions
             UriChecksum = u.UriChecksum,
             Match = u.Match.HasValue ? (UriMatchType?)u.Match : null
         }),
+        Fido2Credentials = e.Login?.Fido2Credentials?.Select(f => new CipherLoginFido2CredentialData
+        {
+            CredentialId = f.CredentialId,
+            KeyType = f.KeyType,
+            KeyAlgorithm = f.KeyAlgorithm,
+            KeyCurve = f.KeyCurve,
+            KeyValue = f.KeyValue,
+            RpId = f.RpId,
+            RpName = f.RpName,
+            UserHandle = f.UserHandle,
+            UserName = f.UserName,
+            UserDisplayName = f.UserDisplayName,
+            Counter = f.Counter,
+            Discoverable = f.Discoverable,
+            CreationDate = f.CreationDate
+        }).ToArray(),
         Fields = e.ToFields()
     };
 
@@ -76,6 +92,23 @@ internal static class EncryptedCipherDtoExtensions
         PrivateKey = e.SshKey?.PrivateKey,
         PublicKey = e.SshKey?.PublicKey,
         KeyFingerprint = e.SshKey?.Fingerprint,
+        Fields = e.ToFields()
+    };
+
+    internal static CipherBankAccountData ToBankAccountData(this EncryptedCipherDto e) => new()
+    {
+        Name = e.Name,
+        Notes = e.Notes,
+        BankName = e.BankAccount?.BankName,
+        NameOnAccount = e.BankAccount?.NameOnAccount,
+        AccountType = e.BankAccount?.AccountType,
+        AccountNumber = e.BankAccount?.AccountNumber,
+        RoutingNumber = e.BankAccount?.RoutingNumber,
+        BranchNumber = e.BankAccount?.BranchNumber,
+        Pin = e.BankAccount?.Pin,
+        SwiftCode = e.BankAccount?.SwiftCode,
+        Iban = e.BankAccount?.Iban,
+        BankContactPhone = e.BankAccount?.BankContactPhone,
         Fields = e.ToFields()
     };
 

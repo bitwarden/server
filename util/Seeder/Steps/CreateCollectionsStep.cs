@@ -135,7 +135,6 @@ internal sealed class CreateCollectionsStep : IStep
                 return min + (int)(weight * (range - 1) + 0.5);
 
             case CollectionFanOutShape.FrontLoaded:
-                // First 10% of collections get max fan-out, rest get min
                 var topCount = Math.Max(1, collectionCount / 10);
                 return collectionIndex < topCount ? max : min;
 
@@ -148,14 +147,18 @@ internal sealed class CreateCollectionsStep : IStep
         }
     }
 
-    internal static List<CollectionUser> BuildCollectionUsers(
+    internal List<CollectionUser> BuildCollectionUsers(
         List<Guid> collectionIds, List<Guid> userIds, int directUserCount)
     {
-        var result = new List<CollectionUser>(directUserCount * 2);
+        var min = _density!.UserCollectionMin;
+        var max = _density.UserCollectionMax;
+        var result = new List<CollectionUser>(directUserCount * (min + max + 1) / 2);
         for (var i = 0; i < directUserCount; i++)
         {
-            var maxAssignments = Math.Min((i % 3) + 1, collectionIds.Count);
-            for (var j = 0; j < maxAssignments; j++)
+            var assignmentCount = Math.Min(
+                ComputeCollectionsPerUser(i, directUserCount, min, max),
+                collectionIds.Count);
+            for (var j = 0; j < assignmentCount; j++)
             {
                 result.Add(CollectionUserSeeder.Create(
                     collectionIds[(i + j) % collectionIds.Count],
@@ -163,6 +166,34 @@ internal sealed class CreateCollectionsStep : IStep
             }
         }
         return result;
+    }
+
+    internal int ComputeCollectionsPerUser(int userIndex, int userCount, int min, int max)
+    {
+        var range = max - min + 1;
+        if (range <= 1)
+        {
+            return min;
+        }
+
+        switch (_density!.UserCollectionShape)
+        {
+            case CollectionFanOutShape.PowerLaw:
+                var exponent = 0.5 + _density.UserCollectionSkew * 1.5;
+                var weight = 1.0 / Math.Pow(userIndex + 1, exponent);
+                return min + (int)(weight * (range - 1) + 0.5);
+
+            case CollectionFanOutShape.FrontLoaded:
+                var topCount = Math.Max(1, userCount / 10);
+                return userIndex < topCount ? max : min;
+
+            case CollectionFanOutShape.Uniform:
+                return min + (userIndex % range);
+
+            default:
+                throw new InvalidOperationException(
+                    $"Unhandled CollectionFanOutShape: {_density.UserCollectionShape}");
+        }
     }
 
     private static (bool ReadOnly, bool HidePasswords, bool Manage) ResolvePermission(

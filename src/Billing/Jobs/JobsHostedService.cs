@@ -20,8 +20,7 @@ public class JobsHostedService(
     {
         Jobs = new List<Tuple<Type, ITrigger>>
         {
-            new(typeof(AliveJob), AliveJob.GetTrigger()),
-            new(typeof(ReconcileAdditionalStorageJob), ReconcileAdditionalStorageJob.GetTrigger())
+            new(typeof(AliveJob), AliveJob.GetTrigger())
         };
 
         await base.StartAsync(cancellationToken);
@@ -31,7 +30,6 @@ public class JobsHostedService(
     {
         services.AddTransient<AliveJob>();
         services.AddTransient<SubscriptionCancellationJob>();
-        services.AddTransient<ReconcileAdditionalStorageJob>();
         // add this service as a singleton so we can inject it where needed
         services.AddSingleton<JobsHostedService>();
         services.AddHostedService(sp => sp.GetRequiredService<JobsHostedService>());

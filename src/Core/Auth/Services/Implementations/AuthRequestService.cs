@@ -129,7 +129,7 @@ public class AuthRequestService : IAuthRequestService
 
             Debug.Assert(user is not null, "user should have been validated to be non-null and thrown if it's not.");
             // A user event will automatically create logs for each organization/provider this user belongs to.
-            await _eventService.LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval);
+            await _eventService.LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval, includeAcceptedStatusOrgs: true);
 
             AuthRequest? firstAuthRequest = null;
             foreach (var organizationUser in organizationUsers)

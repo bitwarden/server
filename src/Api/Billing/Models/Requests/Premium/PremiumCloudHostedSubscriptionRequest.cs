@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Api.Billing.Models.Requests.Payment;
+using Bit.Core.Auth.Attributes;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Premium.Models;
 
@@ -16,8 +17,10 @@ public class PremiumCloudHostedSubscriptionRequest : IValidatableObject
     [Range(0, 99)]
     public short AdditionalStorageGb { get; set; } = 0;
 
-    [MaxLength(50)]
-    public string? Coupon { get; set; }
+    public string[]? Coupons { get; set; }
+
+    [MarketingInitiativeValidation]
+    public string? FromMarketing { get; set; }
 
     public PremiumSubscriptionPurchase ToDomain()
     {
@@ -36,7 +39,8 @@ public class PremiumCloudHostedSubscriptionRequest : IValidatableObject
             PaymentMethod = paymentMethod,
             BillingAddress = billingAddress,
             AdditionalStorageGb = AdditionalStorageGb,
-            Coupon = Coupon
+            Coupons = Coupons,
+            FromMarketing = FromMarketing
         };
     }
 

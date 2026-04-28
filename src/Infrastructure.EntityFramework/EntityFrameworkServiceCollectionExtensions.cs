@@ -89,6 +89,7 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IOrganizationRepository, OrganizationRepository>();
         services.AddSingleton<IOrganizationSponsorshipRepository, OrganizationSponsorshipRepository>();
         services.AddSingleton<IOrganizationUserRepository, OrganizationUserRepository>();
+        services.AddSingleton<IOrganizationInviteLinkRepository, OrganizationInviteLinkRepository>();
         services.AddSingleton<IPlayItemRepository, PlayItemRepository>();
         services.AddSingleton<IPolicyRepository, PolicyRepository>();
         services.AddSingleton<IProviderOrganizationRepository, ProviderOrganizationRepository>();

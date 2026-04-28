@@ -27,6 +27,8 @@ public class BillingCommandResult<T>(OneOf<T, BadRequest, Conflict, Unhandled> i
     public static implicit operator BillingCommandResult<T>(Conflict conflict) => new(conflict);
     public static implicit operator BillingCommandResult<T>(Unhandled unhandled) => new(unhandled);
 
+    public bool Success => IsT0;
+
     public BillingCommandResult<TResult> Map<TResult>(Func<T, TResult> f)
         => Match(
             value => new BillingCommandResult<TResult>(f(value)),
@@ -39,6 +41,12 @@ public class BillingCommandResult<T>(OneOf<T, BadRequest, Conflict, Unhandled> i
         _ => Task.CompletedTask,
         _ => Task.CompletedTask,
         _ => Task.CompletedTask);
+
+    public T GetValueOrThrow() => Match(
+        value => value,
+        badRequest => throw new BillingException(badRequest.Response),
+        conflict => throw new BillingException(message: conflict.Response),
+        unhandled => throw new BillingException(message: unhandled.Response, innerException: unhandled.Exception));
 }
 
 public static class BillingCommandResultExtensions

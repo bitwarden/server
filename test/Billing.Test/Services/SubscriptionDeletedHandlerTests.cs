@@ -7,11 +7,14 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Entities;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using NSubstitute;
 using Quartz;
 using Stripe;
 using Xunit;
+using Event = Stripe.Event;
 
 namespace Bit.Billing.Test.Services;
 
@@ -19,11 +22,13 @@ public class SubscriptionDeletedHandlerTests
 {
     private readonly IStripeEventService _stripeEventService;
     private readonly IUserService _userService;
+    private readonly IUserRepository _userRepository;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
     private readonly IOrganizationDisableCommand _organizationDisableCommand;
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderService _providerService;
     private readonly ISchedulerFactory _schedulerFactory;
+    private readonly IPushNotificationAdapter _pushNotificationAdapter;
     private readonly IScheduler _scheduler;
     private readonly SubscriptionDeletedHandler _sut;
 
@@ -31,21 +36,25 @@ public class SubscriptionDeletedHandlerTests
     {
         _stripeEventService = Substitute.For<IStripeEventService>();
         _userService = Substitute.For<IUserService>();
+        _userRepository = Substitute.For<IUserRepository>();
         _stripeEventUtilityService = Substitute.For<IStripeEventUtilityService>();
         _organizationDisableCommand = Substitute.For<IOrganizationDisableCommand>();
         _providerRepository = Substitute.For<IProviderRepository>();
         _providerService = Substitute.For<IProviderService>();
         _schedulerFactory = Substitute.For<ISchedulerFactory>();
+        _pushNotificationAdapter = Substitute.For<IPushNotificationAdapter>();
         _scheduler = Substitute.For<IScheduler>();
         _schedulerFactory.GetScheduler().Returns(_scheduler);
         _sut = new SubscriptionDeletedHandler(
             _stripeEventService,
             _userService,
+            _userRepository,
             _stripeEventUtilityService,
             _organizationDisableCommand,
             _providerRepository,
             _providerService,
-            _schedulerFactory);
+            _schedulerFactory,
+            _pushNotificationAdapter);
     }
 
     [Fact]
@@ -129,9 +138,12 @@ public class SubscriptionDeletedHandlerTests
             Metadata = new Dictionary<string, string> { { "userId", userId.ToString() } }
         };
 
+        var user = new User { Id = userId, Premium = false, PremiumExpirationDate = subscription.GetCurrentPeriodEnd() };
+
         _stripeEventService.GetSubscription(stripeEvent, true).Returns(subscription);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
+        _userRepository.GetByIdAsync(userId).Returns(user);
 
         // Act
         await _sut.HandleAsync(stripeEvent);
@@ -139,6 +151,8 @@ public class SubscriptionDeletedHandlerTests
         // Assert
         await _userService.Received(1)
             .DisablePremiumAsync(userId, subscription.GetCurrentPeriodEnd());
+        await _userRepository.Received(1).GetByIdAsync(userId);
+        await _pushNotificationAdapter.Received(1).NotifyPremiumStatusChangedAsync(user);
     }
 
     [Fact]

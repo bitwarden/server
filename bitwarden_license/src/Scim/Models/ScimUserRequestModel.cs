@@ -74,7 +74,7 @@ public class ScimUserRequestModel : BaseScimUserModel
                 email = WorkEmail?.ToLowerInvariant();
                 if (string.IsNullOrWhiteSpace(email))
                 {
-                    email = Emails?.FirstOrDefault()?.Value?.ToLowerInvariant();
+                    email = Emails?.FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.Value))?.Value?.ToLowerInvariant();
                 }
 
                 return email;

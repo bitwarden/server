@@ -10,6 +10,8 @@ using Bit.Core.Utilities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.Queries;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
@@ -1065,7 +1067,6 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         var query = from c in dbContext.Ciphers.AsNoTracking()
                     where c.UserId == null
                        && c.OrganizationId == organizationId
-                       && c.Organization.Enabled
                        && (
                             c.CollectionCiphers.Count() == 0
                             || c.CollectionCiphers.Any(cc => (int)cc.Collection.Type != defaultTypeInt)

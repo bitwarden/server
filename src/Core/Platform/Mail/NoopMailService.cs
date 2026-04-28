@@ -37,7 +37,8 @@ public class NoopMailService : IMailService
         string token,
         ProductTierType productTier,
         IEnumerable<ProductType> products,
-        int trailLength)
+        int trailLength,
+        bool paymentOptional = false)
     {
         return Task.FromResult(0);
     }
@@ -241,7 +242,7 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendAdminResetPasswordEmailAsync(string email, string? userName, string orgName)
+    public Task SendAdminResetPasswordEmailAsync(string email, string? userName, string orgName, bool resetMasterPassword, bool resetTwoFactor)
     {
         return Task.FromResult(0);
     }

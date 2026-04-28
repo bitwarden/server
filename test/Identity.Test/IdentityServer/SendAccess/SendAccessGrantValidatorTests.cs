@@ -1,6 +1,4 @@
-﻿using Bit.Core;
-using Bit.Core.Auth.Identity;
-using Bit.Core.Services;
+﻿using Bit.Core.Auth.Identity;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
 using Bit.Identity.IdentityServer.Enums;
@@ -18,28 +16,6 @@ namespace Bit.Identity.Test.IdentityServer.SendAccess;
 [SutProviderCustomize]
 public class SendAccessGrantValidatorTests
 {
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_FeatureFlagDisabled_ReturnsUnsupportedGrantType(
-        [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        SutProvider<SendAccessGrantValidator> sutProvider)
-    {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendAccess)
-            .Returns(false);
-
-        var context = new ExtensionGrantValidationContext
-        {
-            Request = tokenRequest
-        };
-
-        // Act
-        await sutProvider.Sut.ValidateAsync(context);
-
-        // Assert
-        Assert.True(context.Result.IsError);
-        Assert.Equal(OidcConstants.TokenErrors.UnsupportedGrantType, context.Result.Error);
-    }
 
     [Theory, BitAutoData]
     public async Task ValidateAsync_MissingSendId_ReturnsInvalidRequest(
@@ -47,10 +23,6 @@ public class SendAccessGrantValidatorTests
         SutProvider<SendAccessGrantValidator> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendAccess)
-            .Returns(true);
-
         var context = new ExtensionGrantValidationContext
         {
             Request = tokenRequest
@@ -70,10 +42,6 @@ public class SendAccessGrantValidatorTests
         SutProvider<SendAccessGrantValidator> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendAccess)
-            .Returns(true);
-
         var context = new ExtensionGrantValidationContext();
 
         tokenRequest.GrantType = CustomGrantTypes.SendAccess;
@@ -108,6 +76,34 @@ public class SendAccessGrantValidatorTests
         // Assert
         Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, context.Result.Error);
         Assert.Equal($"{SendAccessConstants.TokenRequest.SendId} is invalid.", context.Result.ErrorDescription);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_SendInaccessibleMethod_ReturnsInvalidSendId(
+        [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        SutProvider<SendAccessGrantValidator> sutProvider,
+        Guid sendId)
+    {
+        // Arrange
+        var context = SetupTokenRequest(
+            sutProvider,
+            sendId,
+            tokenRequest);
+
+        sutProvider.GetDependency<ISendAuthenticationQuery>()
+            .GetAuthenticationMethod(sendId)
+            .Returns(new SendInaccessible());
+
+        // Act
+        await sutProvider.Sut.ValidateAsync(context);
+
+        // Assert
+        Assert.True(context.Result.IsError);
+        Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, context.Result.Error);
+        Assert.Equal(SendAccessConstants.SendIdGuidValidatorResults.InvalidSendId, context.Result.ErrorDescription);
+        var customResponse = context.Result.CustomResponse as Dictionary<string, object>;
+        Assert.NotNull(customResponse);
+        Assert.Equal(SendAccessConstants.SendIdGuidValidatorResults.InvalidSendId, customResponse[SendAccessConstants.SendAccessError]);
     }
 
     [Theory, BitAutoData]
@@ -268,7 +264,7 @@ public class SendAccessGrantValidatorTests
     public void GrantType_ReturnsCorrectType()
     {
         // Arrange & Act
-        var validator = new SendAccessGrantValidator(null!, null!, null!, null!, null!);
+        var validator = new SendAccessGrantValidator(null!, null!, null!, null!);
 
         // Assert
         Assert.Equal(CustomGrantTypes.SendAccess, ((IExtensionGrantValidator)validator).GrantType);
@@ -286,10 +282,6 @@ public class SendAccessGrantValidatorTests
         Guid sendId,
         ValidatedTokenRequest request)
     {
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendAccess)
-            .Returns(true);
-
         var context = new ExtensionGrantValidationContext();
 
         request.GrantType = CustomGrantTypes.SendAccess;

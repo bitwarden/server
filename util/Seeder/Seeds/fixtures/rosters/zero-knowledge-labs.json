@@ -1,14 +1,14 @@
 {
   "$schema": "../../schemas/roster.schema.json",
   "users": [
-    { "firstName": "Marcus", "lastName": "Chen", "title": "CEO", "role": "owner", "branch": "Leadership", "department": "Executive" },
-    { "firstName": "Priya", "lastName": "Narayanan", "title": "CTO", "role": "owner", "branch": "Leadership", "department": "Executive" },
+    { "firstName": "Marcus", "lastName": "Chen", "title": "CEO", "role": "owner", "branch": "Leadership", "department": "Executive", "folders": ["Executive", "Travel", "Finance"] },
+    { "firstName": "Priya", "lastName": "Narayanan", "title": "CTO", "role": "owner", "branch": "Leadership", "department": "Executive", "folders": ["Engineering", "Strategy", "Vendor Accounts"] },
     { "firstName": "Catherine", "lastName": "Okonkwo", "title": "CFO", "role": "owner", "branch": "Leadership", "department": "Executive" },
     { "firstName": "James", "lastName": "Whitfield", "title": "COO", "role": "owner", "branch": "Leadership", "department": "Executive" },
     { "firstName": "Elena", "lastName": "Vasquez", "title": "VP Engineering", "role": "owner", "branch": "Leadership", "department": "Executive" },
     { "firstName": "Robert", "lastName": "Adeyemi", "title": "CISO", "role": "owner", "branch": "Leadership", "department": "Executive" },
 
-    { "firstName": "Takeshi", "lastName": "Yamamoto", "title": "Principal Architect", "branch": "Engineering", "department": "Architecture" },
+    { "firstName": "Takeshi", "lastName": "Yamamoto", "title": "Principal Architect", "branch": "Engineering", "department": "Architecture", "folders": ["Dev Tools", "Cloud", "Monitoring"] },
     { "firstName": "Ingrid", "lastName": "Bergstrom", "title": "Principal Software Engineer", "branch": "Engineering", "department": "Architecture" },
     { "firstName": "Omar", "lastName": "Farouk", "title": "Principal Software Engineer", "branch": "Engineering", "department": "Architecture" },
     { "firstName": "Lucia", "lastName": "Moreno", "title": "Principal Software Engineer", "branch": "Engineering", "department": "Architecture" },
@@ -17,10 +17,10 @@
     { "firstName": "Kofi", "lastName": "Mensah", "title": "Staff Software Engineer", "branch": "Engineering", "department": "Architecture" },
     { "firstName": "Rachel", "lastName": "Petrov", "title": "Staff Software Engineer", "branch": "Engineering", "department": "Architecture" },
 
-    { "firstName": "Sanjay", "lastName": "Patel", "title": "Engineering Manager", "role": "admin", "branch": "Engineering", "department": "Avengers" },
+    { "firstName": "Sanjay", "lastName": "Patel", "title": "Engineering Manager", "role": "admin", "branch": "Engineering", "department": "Avengers", "folders": ["Team Admin", "Dev Tools", "Project Mgmt"] },
     { "firstName": "Yuki", "lastName": "Tanaka", "title": "Scrum Master", "branch": "Engineering", "department": "Avengers" },
     { "firstName": "Maria", "lastName": "Santos", "title": "Product Owner", "branch": "Engineering", "department": "Avengers" },
-    { "firstName": "Derek", "lastName": "Osei", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Avengers" },
+    { "firstName": "Derek", "lastName": "Osei", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Avengers", "folders": ["Dev Tools", "CI/CD"] },
     { "firstName": "Hannah", "lastName": "Liu", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Avengers" },
     { "firstName": "Viktor", "lastName": "Kozlov", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Avengers" },
     { "firstName": "Amara", "lastName": "Johnson", "title": "Software Engineer", "branch": "Engineering", "department": "Avengers" },
@@ -44,7 +44,7 @@
     { "firstName": "Patrick", "lastName": "O'Sullivan", "title": "Engineering Manager", "role": "admin", "branch": "Engineering", "department": "Thunderbolts" },
     { "firstName": "Keiko", "lastName": "Hashimoto", "title": "Scrum Master", "branch": "Engineering", "department": "Thunderbolts" },
     { "firstName": "Daniel", "lastName": "Obi", "title": "Product Owner", "branch": "Engineering", "department": "Thunderbolts" },
-    { "firstName": "Natasha", "lastName": "Filipova", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Thunderbolts" },
+    { "firstName": "Natasha", "lastName": "Filipova", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Thunderbolts", "folders": ["Dev Tools", "Cloud"] },
     { "firstName": "Carlos", "lastName": "Herrera", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Thunderbolts" },
     { "firstName": "Samantha", "lastName": "Park", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Thunderbolts" },
     { "firstName": "Ibrahim", "lastName": "Diallo", "title": "Software Engineer", "branch": "Engineering", "department": "Thunderbolts" },
@@ -53,7 +53,7 @@
     { "firstName": "Olivia", "lastName": "Chen", "title": "Intern Software Engineer", "branch": "Engineering", "department": "Thunderbolts" },
     { "firstName": "Marco", "lastName": "Rossi", "title": "Software Engineer in Test", "branch": "Engineering", "department": "Thunderbolts" },
 
-    { "firstName": "Wei", "lastName": "Zhang", "title": "Engineering Manager", "role": "admin", "branch": "Engineering", "department": "Guardians" },
+    { "firstName": "Wei", "lastName": "Zhang", "title": "Engineering Manager", "role": "admin", "branch": "Engineering", "department": "Guardians", "folders": ["Team Admin", "Dev Tools"] },
     { "firstName": "Anna", "lastName": "Kowalczyk", "title": "Scrum Master", "branch": "Engineering", "department": "Guardians" },
     { "firstName": "Trevor", "lastName": "Williams", "title": "Product Owner", "branch": "Engineering", "department": "Guardians" },
     { "firstName": "Olga", "lastName": "Petrova", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Guardians" },
@@ -233,7 +233,7 @@
     { "firstName": "Milo", "lastName": "Fitzgerald", "title": "Intern Software Engineer", "branch": "Engineering", "department": "Ravagers" },
     { "firstName": "Eun-Ji", "lastName": "Choi", "title": "Software Engineer in Test", "branch": "Engineering", "department": "Ravagers" },
 
-    { "firstName": "Malcolm", "lastName": "Sterling", "title": "Security Engineering Manager", "role": "admin", "branch": "Engineering", "department": "Security Engineering" },
+    { "firstName": "Malcolm", "lastName": "Sterling", "title": "Security Engineering Manager", "role": "admin", "branch": "Engineering", "department": "Security Engineering", "folders": ["Security Tools", "Compliance", "Pen Testing"] },
     { "firstName": "Yara", "lastName": "Bashir", "title": "Senior AppSec Engineer", "branch": "Engineering", "department": "Security Engineering" },
     { "firstName": "Darius", "lastName": "Wolfe", "title": "Senior AppSec Engineer", "branch": "Engineering", "department": "Security Engineering" },
     { "firstName": "Keiko", "lastName": "Taniguchi", "title": "AppSec Engineer", "branch": "Engineering", "department": "Security Engineering" },
@@ -253,7 +253,7 @@
     { "firstName": "Maxwell", "lastName": "Botha", "title": "DevEx Engineer", "branch": "Engineering", "department": "Platform Engineering" },
     { "firstName": "Ines", "lastName": "Ferreira", "title": "DevEx Engineer", "branch": "Engineering", "department": "Platform Engineering" },
 
-    { "firstName": "Gloria", "lastName": "Hammond", "title": "Director of QA", "role": "admin", "branch": "Engineering", "department": "Quality Assurance" },
+    { "firstName": "Gloria", "lastName": "Hammond", "title": "Director of QA", "role": "admin", "branch": "Engineering", "department": "Quality Assurance", "folders": ["QA Tools", "CI/CD"] },
     { "firstName": "Satoshi", "lastName": "Kimura", "title": "QA Manager - Automation", "branch": "Engineering", "department": "Quality Assurance" },
     { "firstName": "Bianca", "lastName": "Moretti", "title": "QA Manager - Manual", "branch": "Engineering", "department": "Quality Assurance" },
     { "firstName": "Rajesh", "lastName": "Venkatesh", "title": "Lead QA Engineer", "branch": "Engineering", "department": "Quality Assurance" },
@@ -272,7 +272,7 @@
     { "firstName": "Oscar", "lastName": "Lindholm", "title": "SDET", "branch": "Engineering", "department": "Quality Assurance" },
     { "firstName": "Priya", "lastName": "Balasubramanian", "title": "SDET", "branch": "Engineering", "department": "Quality Assurance" },
 
-    { "firstName": "Curtis", "lastName": "Washington", "title": "SRE Manager", "role": "admin", "branch": "Engineering", "department": "SRE" },
+    { "firstName": "Curtis", "lastName": "Washington", "title": "SRE Manager", "role": "admin", "branch": "Engineering", "department": "SRE", "folders": ["Infrastructure", "Monitoring", "Incident Response"] },
     { "firstName": "Annika", "lastName": "Holm", "title": "Senior SRE", "branch": "Engineering", "department": "SRE" },
     { "firstName": "Jamal", "lastName": "Baptiste", "title": "Senior SRE", "branch": "Engineering", "department": "SRE" },
     { "firstName": "Miriam", "lastName": "Schulz", "title": "Senior SRE", "branch": "Engineering", "department": "SRE" },
@@ -333,7 +333,7 @@
     { "firstName": "Noor", "lastName": "Abbasi", "title": "Technical Program Manager", "branch": "Engineering", "department": "TPM" },
     { "firstName": "Grant", "lastName": "Morrison", "title": "Technical Program Manager", "branch": "Engineering", "department": "TPM" },
 
-    { "firstName": "Danielle", "lastName": "Moreau", "title": "VP People Operations", "role": "admin", "branch": "Operations", "department": "People Operations" },
+    { "firstName": "Danielle", "lastName": "Moreau", "title": "VP People Operations", "role": "admin", "branch": "Operations", "department": "People Operations", "folders": ["HR Systems", "Recruiting", "Benefits"] },
     { "firstName": "Elijah", "lastName": "Osei", "title": "People Operations Lead", "branch": "Operations", "department": "People Operations" },
     { "firstName": "Kirsten", "lastName": "Arndt", "title": "People Operations Lead", "branch": "Operations", "department": "People Operations" },
     { "firstName": "Matias", "lastName": "Silva", "title": "HR Business Partner", "branch": "Operations", "department": "People Operations" },
@@ -342,14 +342,14 @@
     { "firstName": "Joanna", "lastName": "Wisniewska", "title": "Recruiter", "branch": "Operations", "department": "People Operations" },
     { "firstName": "Hamza", "lastName": "El-Khoury", "title": "Recruiter", "branch": "Operations", "department": "People Operations" },
 
-    { "firstName": "Leonard", "lastName": "Strauss", "title": "Director of Finance", "role": "admin", "branch": "Operations", "department": "Finance" },
+    { "firstName": "Leonard", "lastName": "Strauss", "title": "Director of Finance", "role": "admin", "branch": "Operations", "department": "Finance", "folders": ["Finance", "Payroll"] },
     { "firstName": "Chidinma", "lastName": "Obi", "title": "FP&A Director", "branch": "Operations", "department": "Finance" },
     { "firstName": "Margot", "lastName": "Lefevre", "title": "Senior Accountant", "branch": "Operations", "department": "Finance" },
     { "firstName": "Yoshiko", "lastName": "Tanaka", "title": "Senior Accountant", "branch": "Operations", "department": "Finance" },
     { "firstName": "Darren", "lastName": "Frost", "title": "Accountant", "branch": "Operations", "department": "Finance" },
     { "firstName": "Luciana", "lastName": "Barbosa", "title": "Accountant", "branch": "Operations", "department": "Finance" },
 
-    { "firstName": "Arthur", "lastName": "Kensington", "title": "General Counsel", "role": "admin", "branch": "Operations", "department": "Legal" },
+    { "firstName": "Arthur", "lastName": "Kensington", "title": "General Counsel", "role": "admin", "branch": "Operations", "department": "Legal", "folders": ["Legal Tools", "Compliance"] },
     { "firstName": "Habiba", "lastName": "Omar", "title": "Senior Legal Counsel", "branch": "Operations", "department": "Legal" },
     { "firstName": "Jean-Pierre", "lastName": "Renaud", "title": "Legal Counsel", "branch": "Operations", "department": "Legal" },
     { "firstName": "Mirabel", "lastName": "Okonkwo", "title": "Paralegal", "branch": "Operations", "department": "Legal" },
@@ -377,8 +377,8 @@
     { "firstName": "Riku", "lastName": "Saito", "title": "CS Specialist", "branch": "Go-to-Market", "department": "Customer Success" },
     { "firstName": "Natalie", "lastName": "Barrett", "title": "CS Specialist", "branch": "Go-to-Market", "department": "Customer Success" },
 
-    { "firstName": "Harrison", "lastName": "Blake", "title": "Sales Director", "role": "admin", "branch": "Go-to-Market", "department": "Sales" },
-    { "firstName": "Simone", "lastName": "Beaumont", "title": "Enterprise Account Executive", "branch": "Go-to-Market", "department": "Sales" },
+    { "firstName": "Harrison", "lastName": "Blake", "title": "Sales Director", "role": "admin", "branch": "Go-to-Market", "department": "Sales", "folders": ["CRM", "Prospecting", "Deal Tools"] },
+    { "firstName": "Simone", "lastName": "Beaumont", "title": "Enterprise Account Executive", "branch": "Go-to-Market", "department": "Sales", "folders": ["CRM", "Prospecting"] },
     { "firstName": "Dorian", "lastName": "Achebe", "title": "Enterprise Account Executive", "branch": "Go-to-Market", "department": "Sales" },
     { "firstName": "Katelyn", "lastName": "Ross", "title": "Enterprise Account Executive", "branch": "Go-to-Market", "department": "Sales" },
     { "firstName": "Vladimir", "lastName": "Kamenev", "title": "Mid-Market Account Executive", "branch": "Go-to-Market", "department": "Sales" },
@@ -393,7 +393,7 @@
     { "firstName": "Phoebe", "lastName": "Gallagher", "title": "Sales Operations Analyst", "branch": "Go-to-Market", "department": "Sales" },
     { "firstName": "Tadashi", "lastName": "Ogawa", "title": "Sales Operations Manager", "branch": "Go-to-Market", "department": "Sales" },
 
-    { "firstName": "Celeste", "lastName": "Dupont", "title": "Marketing Director", "role": "admin", "branch": "Go-to-Market", "department": "Marketing" },
+    { "firstName": "Celeste", "lastName": "Dupont", "title": "Marketing Director", "role": "admin", "branch": "Go-to-Market", "department": "Marketing", "folders": ["Ad Platforms", "Analytics", "Content"] },
     { "firstName": "Kwesi", "lastName": "Appiah", "title": "Growth Marketing Manager", "branch": "Go-to-Market", "department": "Marketing" },
     { "firstName": "Ilona", "lastName": "Szabo", "title": "Growth Marketing Specialist", "branch": "Go-to-Market", "department": "Marketing" },
     { "firstName": "Derek", "lastName": "Chambers", "title": "Product Marketing Manager", "branch": "Go-to-Market", "department": "Marketing" },

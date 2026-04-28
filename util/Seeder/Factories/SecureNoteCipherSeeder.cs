@@ -6,43 +6,21 @@ namespace Bit.Seeder.Factories;
 
 internal static class SecureNoteCipherSeeder
 {
-    internal static Cipher Create(
-        string encryptionKey,
-        string name,
-        Guid? organizationId = null,
-        Guid? userId = null,
-        string? notes = null)
+    internal static Cipher Create(CipherSeed options)
     {
+
         var cipherView = new CipherViewDto
         {
-            OrganizationId = organizationId,
-            Name = name,
-            Notes = notes,
+            OrganizationId = options.OrganizationId,
+            Name = options.Name,
+            Notes = options.Notes,
             Type = CipherTypes.SecureNote,
-            SecureNote = new SecureNoteViewDto { Type = 0 }
+            SecureNote = options.SecureNote ?? new SecureNoteViewDto { Type = 0 },
+            Fields = options.Fields
         };
 
-        var encrypted = CipherEncryption.Encrypt(cipherView, encryptionKey);
-        return CipherEncryption.CreateEntity(encrypted, encrypted.ToSecureNoteData(), CipherType.SecureNote, organizationId, userId);
+        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!);
+        return CipherEncryption.CreateEntity(encrypted, encrypted.ToSecureNoteData(), CipherType.SecureNote, options.OrganizationId, options.UserId);
     }
 
-    internal static Cipher CreateFromSeed(
-        string encryptionKey,
-        SeedVaultItem item,
-        Guid? organizationId = null,
-        Guid? userId = null)
-    {
-        var cipherView = new CipherViewDto
-        {
-            OrganizationId = organizationId,
-            Name = item.Name,
-            Notes = item.Notes,
-            Type = CipherTypes.SecureNote,
-            SecureNote = new SecureNoteViewDto { Type = 0 },
-            Fields = SeedItemMapping.MapFields(item.Fields)
-        };
-
-        var encrypted = CipherEncryption.Encrypt(cipherView, encryptionKey);
-        return CipherEncryption.CreateEntity(encrypted, encrypted.ToSecureNoteData(), CipherType.SecureNote, organizationId, userId);
-    }
 }

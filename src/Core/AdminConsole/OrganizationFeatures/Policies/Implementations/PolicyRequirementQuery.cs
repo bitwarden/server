@@ -13,6 +13,20 @@ public class PolicyRequirementQuery(
     public async Task<T> GetAsync<T>(Guid userId) where T : IPolicyRequirement
         => (await GetAsync<T>([userId])).Single().Requirement;
 
+    public async Task<T> GetAsyncVNext<T>(Guid userId) where T : IPolicyRequirement
+    {
+        var factory = factories.OfType<IPolicyRequirementFactory<T>>().SingleOrDefault();
+        if (factory is null)
+        {
+            throw new NotImplementedException("No Requirement Factory found for " + typeof(T));
+        }
+
+        var policyDetails = await policyRepository.GetPolicyDetailsByUserIdAndPolicyTypeAsync(userId, factory.PolicyType);
+        var enforcedPolicyDetails = policyDetails.Where(factory.Enforce);
+
+        return factory.Create(enforcedPolicyDetails);
+    }
+
     public async Task<IEnumerable<(Guid UserId, T Requirement)>> GetAsync<T>(IEnumerable<Guid> userIds) where T : IPolicyRequirement
     {
         var factory = factories.OfType<IPolicyRequirementFactory<T>>().SingleOrDefault();

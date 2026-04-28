@@ -1,8 +1,10 @@
 ﻿using Bit.Core.Utilities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.SeederApi.Controllers;
 
+[AllowAnonymous]
 public class InfoController : Controller
 {
     [HttpGet("~/alive")]

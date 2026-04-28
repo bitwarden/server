@@ -1,8 +1,10 @@
 ﻿using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
+using Bit.Core.Billing.Services;
 using Bit.Core.Settings;
 using NSubstitute;
 using Stripe;
+using Stripe.Checkout;
 using Xunit;
 
 namespace Bit.Billing.Test.Services;
@@ -10,6 +12,7 @@ namespace Bit.Billing.Test.Services;
 public class StripeEventServiceTests
 {
     private readonly IStripeFacade _stripeFacade;
+    private readonly IStripeAdapter _stripeAdapter;
     private readonly StripeEventService _stripeEventService;
 
     public StripeEventServiceTests()
@@ -19,9 +22,11 @@ public class StripeEventServiceTests
         globalSettings.BaseServiceUri = baseServiceUriSettings;
 
         _stripeFacade = Substitute.For<IStripeFacade>();
+        _stripeAdapter = Substitute.For<IStripeAdapter>();
         _stripeEventService = new StripeEventService(
             globalSettings,
-            _stripeFacade);
+            _stripeFacade,
+            _stripeAdapter);
     }
 
     #region GetCharge
@@ -408,6 +413,66 @@ public class StripeEventServiceTests
     }
     #endregion
 
+    #region GetCheckoutSession
+    [Fact]
+    public async Task GetCheckoutSession_EventNotCheckoutSessionRelated_ThrowsException()
+    {
+        // Arrange
+        var stripeEvent = CreateMockEvent("evt_test", "customer.updated", new Customer { Id = "cus_test" });
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<Exception>(async () => await _stripeEventService.GetCheckoutSession(stripeEvent));
+        Assert.Equal($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Session)}'", exception.Message);
+
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().GetCheckoutSessionAsync(null!);
+    }
+
+    [Fact]
+    public async Task GetCheckoutSession_NotFresh_ReturnsEventSession()
+    {
+        // Arrange
+        var mockSession = new Session { Id = "cs_test", SubscriptionId = "sub_test" };
+        var stripeEvent = CreateMockEvent("evt_test", "checkout.session.completed", mockSession);
+
+        // Act
+        var session = await _stripeEventService.GetCheckoutSession(stripeEvent);
+
+        // Assert
+        Assert.Equal(mockSession.Id, session.Id);
+        Assert.Equal(mockSession.SubscriptionId, session.SubscriptionId);
+
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().GetCheckoutSessionAsync(null!);
+    }
+
+    [Fact]
+    public async Task GetCheckoutSession_Fresh_Expand_ReturnsAPISession()
+    {
+        // Arrange
+        var eventSession = new Session { Id = "cs_test", SubscriptionId = "sub_old" };
+        var stripeEvent = CreateMockEvent("evt_test", "checkout.session.completed", eventSession);
+
+        var apiSession = new Session { Id = "cs_test", SubscriptionId = "sub_new" };
+
+        var expand = new List<string> { "customer" };
+
+        _stripeAdapter.GetCheckoutSessionAsync(
+                apiSession.Id,
+                Arg.Is<SessionGetOptions>(options => options.Expand == expand))
+            .Returns(apiSession);
+
+        // Act
+        var session = await _stripeEventService.GetCheckoutSession(stripeEvent, true, expand);
+
+        // Assert
+        Assert.Equal(apiSession, session);
+        Assert.NotSame(eventSession, session);
+
+        await _stripeAdapter.Received().GetCheckoutSessionAsync(
+            apiSession.Id,
+            Arg.Is<SessionGetOptions>(options => options.Expand == expand));
+    }
+    #endregion
+
     #region ValidateCloudRegion
     [Fact]
     public async Task ValidateCloudRegion_SubscriptionUpdated_Success()
@@ -688,6 +753,55 @@ public class StripeEventServiceTests
         await _stripeFacade.Received(1).GetSetupIntent(
             mockSetupIntent.Id,
             Arg.Any<SetupIntentGetOptions>());
+    }
+
+    [Fact]
+    public async Task ValidateCloudRegion_CheckoutSessionCompleted_WithCustomer_ReturnsTrue()
+    {
+        // Arrange
+        var customer = CreateMockCustomer();
+        var mockSession = new Session { Id = "cs_test", CustomerId = customer.Id };
+        var stripeEvent = CreateMockEvent("evt_test", "checkout.session.completed", mockSession);
+
+        var freshSession = new Session { Id = "cs_test", Customer = customer };
+        _stripeAdapter.GetCheckoutSessionAsync(
+                mockSession.Id,
+                Arg.Is<SessionGetOptions>(options => options.Expand!.Contains("customer")))
+            .Returns(freshSession);
+
+        // Act
+        var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
+
+        // Assert
+        Assert.True(cloudRegionValid);
+
+        await _stripeAdapter.Received(1).GetCheckoutSessionAsync(
+            mockSession.Id,
+            Arg.Is<SessionGetOptions>(options => options.Expand!.Contains("customer")));
+    }
+
+    [Fact]
+    public async Task ValidateCloudRegion_CheckoutSessionCompleted_NoCustomer_ReturnsFalse()
+    {
+        // Arrange
+        var mockSession = new Session { Id = "cs_test" };
+        var stripeEvent = CreateMockEvent("evt_test", "checkout.session.completed", mockSession);
+
+        var freshSession = new Session { Id = "cs_test", Customer = null };
+        _stripeAdapter.GetCheckoutSessionAsync(
+                mockSession.Id,
+                Arg.Is<SessionGetOptions>(options => options.Expand!.Contains("customer")))
+            .Returns(freshSession);
+
+        // Act
+        var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
+
+        // Assert
+        Assert.False(cloudRegionValid);
+
+        await _stripeAdapter.Received(1).GetCheckoutSessionAsync(
+            mockSession.Id,
+            Arg.Is<SessionGetOptions>(options => options.Expand!.Contains("customer")));
     }
 
     [Fact]

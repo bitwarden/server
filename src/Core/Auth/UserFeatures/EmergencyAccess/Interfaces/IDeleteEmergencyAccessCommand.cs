@@ -14,6 +14,11 @@ public interface IDeleteEmergencyAccessCommand
     /// <param name="emergencyAccessId">The ID of the emergency access record to delete.</param>
     /// <param name="userId">The ID of the requesting user; must be either the grantor or grantee of the record.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// Only records in <c>Accepted</c> or <c>Confirmed</c> status have a <c>GranteeId</c> foreign key set.
+    /// <c>Invited</c> records store only an email address, so a user cannot be matched as the grantee on
+    /// such records. When the user ID matches the <c>GrantorId</c>, records in any status are found.
+    /// </remarks>
     /// <exception cref="BadRequestException">
     /// Thrown when the emergency access record is not found or does not belong to the specified user.
     /// </exception>
@@ -26,6 +31,9 @@ public interface IDeleteEmergencyAccessCommand
     /// <param name="userIds">The IDs of users whose emergency access records — as grantor or grantee — will be deleted.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     /// <remarks>
+    /// Only records in <c>Accepted</c> or <c>Confirmed</c> status have a <c>GranteeId</c> foreign key set.
+    /// <c>Invited</c> records store only an email address, so a user cannot be matched as the grantee on
+    /// such records. When a user ID matches the <c>GrantorId</c>, records in any status are found.
     /// If no records are found for the provided user IDs, the method returns.
     /// </remarks>
     Task DeleteAllByUserIdsAsync(ICollection<Guid> userIds);
@@ -37,6 +45,9 @@ public interface IDeleteEmergencyAccessCommand
     /// <param name="userId">The ID of the user whose emergency access records — as grantor or grantee — will be deleted.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     /// <remarks>
+    /// Only records in <c>Accepted</c> or <c>Confirmed</c> status have a <c>GranteeId</c> foreign key set.
+    /// <c>Invited</c> records store only an email address, so a user cannot be matched as the grantee on
+    /// such records. When the user ID matches the <c>GrantorId</c>, records in any status are found.
     /// If no records are found for the provided user ID, the method returns.
     /// </remarks>
     Task DeleteAllByUserIdAsync(Guid userId);

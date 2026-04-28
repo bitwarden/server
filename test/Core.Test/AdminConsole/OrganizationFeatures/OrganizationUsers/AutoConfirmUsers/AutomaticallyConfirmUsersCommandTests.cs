@@ -389,8 +389,8 @@ public class AutomaticallyConfirmUsersCommandTests
             .Returns(true);
 
         var emailException = new Exception("Email sending failed");
-        sutProvider.GetDependency<IMailService>()
-            .SendOrganizationConfirmedEmailAsync(organization.DisplayName(), user.Email, organizationUser.AccessSecretsManager)
+        sutProvider.GetDependency<ISendOrganizationConfirmationCommand>()
+            .SendConfirmationAsync(organization, user.Email, organizationUser.AccessSecretsManager)
             .ThrowsAsync(emailException);
 
         // Act
@@ -702,10 +702,10 @@ public class AutomaticallyConfirmUsersCommandTests
                 EventType.OrganizationUser_AutomaticallyConfirmed,
                 Arg.Any<DateTime?>());
 
-        await sutProvider.GetDependency<IMailService>()
+        await sutProvider.GetDependency<ISendOrganizationConfirmationCommand>()
             .Received(1)
-            .SendOrganizationConfirmedEmailAsync(
-                organization.DisplayName(),
+            .SendConfirmationAsync(
+                organization,
                 user.Email,
                 organizationUser.AccessSecretsManager);
 
@@ -720,53 +720,4 @@ public class AutomaticallyConfirmUsersCommandTests
                 organization.Id.ToString());
     }
 
-    [Theory]
-    [BitAutoData]
-    public async Task SendOrganizationConfirmedEmailAsync_WithFeatureFlagOn_CallsSendOrganizationConfirmationCommand(
-        Organization organization,
-        string userEmail,
-        SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider)
-    {
-        // Arrange
-        const bool accessSecretsManager = true;
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.OrganizationConfirmationEmail)
-            .Returns(true);
-
-        // Act
-        await sutProvider.Sut.SendOrganizationConfirmedEmailAsync(organization, userEmail, accessSecretsManager);
-
-        // Assert
-        await sutProvider.GetDependency<ISendOrganizationConfirmationCommand>()
-            .Received(1)
-            .SendConfirmationAsync(organization, userEmail, accessSecretsManager);
-        await sutProvider.GetDependency<IMailService>()
-            .DidNotReceiveWithAnyArgs()
-            .SendOrganizationConfirmedEmailAsync(default, default, default);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task SendOrganizationConfirmedEmailAsync_WithFeatureFlagOff_UsesLegacyMailService(
-        Organization organization,
-        string userEmail,
-        SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider)
-    {
-        // Arrange
-        const bool accessSecretsManager = false;
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.OrganizationConfirmationEmail)
-            .Returns(false);
-
-        // Act
-        await sutProvider.Sut.SendOrganizationConfirmedEmailAsync(organization, userEmail, accessSecretsManager);
-
-        // Assert
-        await sutProvider.GetDependency<IMailService>()
-            .Received(1)
-            .SendOrganizationConfirmedEmailAsync(organization.DisplayName(), userEmail, accessSecretsManager);
-        await sutProvider.GetDependency<ISendOrganizationConfirmationCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .SendConfirmationAsync(default, default, default);
-    }
 }

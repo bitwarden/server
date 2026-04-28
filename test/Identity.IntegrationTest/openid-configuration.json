@@ -75,10 +75,7 @@
     "PS512",
     "ES256",
     "ES384",
-    "ES512",
-    "HS256",
-    "HS384",
-    "HS512"
+    "ES512"
   ],
   "prompt_values_supported": ["none", "login", "consent", "select_account"],
   "authorization_response_iss_parameter_supported": true,

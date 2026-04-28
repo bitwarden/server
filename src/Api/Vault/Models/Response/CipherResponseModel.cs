@@ -1,5 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
+﻿
 
 using System.Text.Json;
 using Bit.Core.Entities;
@@ -11,6 +10,8 @@ using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Api.Vault.Models.Response;
+// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
 
 public class CipherMiniResponseModel : ResponseModel
 {
@@ -53,6 +54,11 @@ public class CipherMiniResponseModel : ResponseModel
                 var sshKeyData = JsonSerializer.Deserialize<CipherSSHKeyData>(cipher.Data);
                 cipherData = sshKeyData;
                 SSHKey = new CipherSSHKeyModel(sshKeyData);
+                break;
+            case CipherType.BankAccount:
+                var bankAccountData = JsonSerializer.Deserialize<CipherBankAccountData>(cipher.Data);
+                cipherData = bankAccountData;
+                BankAccount = new CipherBankAccountModel(bankAccountData);
                 break;
             default:
                 throw new ArgumentException("Unsupported " + nameof(Type) + ".");
@@ -99,6 +105,9 @@ public class CipherMiniResponseModel : ResponseModel
     public CipherSSHKeyModel SSHKey { get; set; }
 
     [Obsolete("Use Data instead.")]
+    public CipherBankAccountModel BankAccount { get; set; }
+
+    [Obsolete("Use Data instead.")]
     public IEnumerable<CipherFieldModel> Fields { get; set; }
 
     [Obsolete("Use Data instead.")]
@@ -111,13 +120,13 @@ public class CipherMiniResponseModel : ResponseModel
     public CipherRepromptType Reprompt { get; set; }
     public string Key { get; set; }
 }
-
+#nullable enable
 public class CipherResponseModel : CipherMiniResponseModel
 {
     public CipherResponseModel(
         CipherDetails cipher,
         User user,
-        IDictionary<Guid, OrganizationAbility> organizationAbilities,
+        OrganizationAbility? organizationAbility,
         IGlobalSettings globalSettings,
         string obj = "cipher")
         : base(cipher, globalSettings, cipher.OrganizationUseTotp, obj)
@@ -127,7 +136,7 @@ public class CipherResponseModel : CipherMiniResponseModel
         Edit = cipher.Edit;
         ArchivedDate = cipher.ArchivedDate;
         ViewPassword = cipher.ViewPassword;
-        Permissions = new CipherPermissionsResponseModel(user, cipher, organizationAbilities);
+        Permissions = new CipherPermissionsResponseModel(user, cipher, organizationAbility);
     }
 
     public Guid? FolderId { get; set; }
@@ -143,10 +152,10 @@ public class CipherDetailsResponseModel : CipherResponseModel
     public CipherDetailsResponseModel(
         CipherDetails cipher,
         User user,
-        IDictionary<Guid, OrganizationAbility> organizationAbilities,
+        OrganizationAbility? organizationAbility,
         GlobalSettings globalSettings,
         IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, string obj = "cipherDetails")
-        : base(cipher, user, organizationAbilities, globalSettings, obj)
+        : base(cipher, user, organizationAbility, globalSettings, obj)
     {
         if (collectionCiphers?.TryGetValue(cipher.Id, out var collectionCipher) ?? false)
         {
@@ -161,10 +170,10 @@ public class CipherDetailsResponseModel : CipherResponseModel
     public CipherDetailsResponseModel(
         CipherDetails cipher,
         User user,
-        IDictionary<Guid, OrganizationAbility> organizationAbilities,
+        OrganizationAbility? organizationAbility,
         GlobalSettings globalSettings,
         IEnumerable<CollectionCipher> collectionCiphers, string obj = "cipherDetails")
-        : base(cipher, user, organizationAbilities, globalSettings, obj)
+        : base(cipher, user, organizationAbility, globalSettings, obj)
     {
         CollectionIds = collectionCiphers?.Select(c => c.CollectionId) ?? [];
     }
@@ -172,10 +181,10 @@ public class CipherDetailsResponseModel : CipherResponseModel
     public CipherDetailsResponseModel(
         CipherDetailsWithCollections cipher,
         User user,
-        IDictionary<Guid, OrganizationAbility> organizationAbilities,
+        OrganizationAbility? organizationAbility,
         GlobalSettings globalSettings,
         string obj = "cipherDetails")
-        : base(cipher, user, organizationAbilities, globalSettings, obj)
+        : base(cipher, user, organizationAbility, globalSettings, obj)
     {
         CollectionIds = cipher.CollectionIds ?? [];
     }

@@ -34,18 +34,6 @@ public class EmergencyAccessTakeoverResponseModelTests
     }
 
     [Theory]
-    [BitAutoData]
-    public void Constructor_Salt_EqualsGrantorEmailLowercasedAndTrimmed(
-        EmergencyAccess emergencyAccess, User grantor)
-    {
-        grantor.Email = "  TEST@Example.COM  ";
-
-        var model = new EmergencyAccessTakeoverResponseModel(emergencyAccess, grantor);
-
-        Assert.Equal("test@example.com", model.Salt);
-    }
-
-    [Theory]
     [InlineData("user@domain.com", "user@domain.com")]
     [InlineData("USER@DOMAIN.COM", "user@domain.com")]
     [InlineData("  user@domain.com  ", "user@domain.com")]

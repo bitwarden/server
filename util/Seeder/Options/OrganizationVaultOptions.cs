@@ -36,6 +36,12 @@ public class OrganizationVaultOptions
     public int Groups { get; init; } = 0;
 
     /// <summary>
+    /// Number of collections to create. When 0 and no <see cref="StructureModel"/> is set,
+    /// falls back to 1 collection if ciphers are requested.
+    /// </summary>
+    public int Collections { get; init; } = 0;
+
+    /// <summary>
     /// When true and Users >= 10, creates a realistic mix of user statuses:
     /// 85% Confirmed, 5% Invited, 5% Accepted, 5% Revoked.
     /// When false or Users less than 10, all users are Confirmed.
@@ -98,4 +104,10 @@ public class OrganizationVaultOptions
     /// Billing plan type for the organization.
     /// </summary>
     public PlanType PlanType { get; init; } = PlanType.EnterpriseAnnually;
+
+    /// <summary>
+    /// KDF iteration count for all seeded users. Defaults to 5,000 for fast seeding.
+    /// Use 600,000 for production-realistic e2e testing.
+    /// </summary>
+    public int KdfIterations { get; init; } = 5_000;
 }

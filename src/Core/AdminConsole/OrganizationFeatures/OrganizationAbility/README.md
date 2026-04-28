@@ -263,7 +263,9 @@ For manual override capability in the admin portal:
 
 - `src/Core/Billing/Organizations/Models/OrganizationLicense.cs`
     - Add the new property to the class
-    - `VerifyData()` — Add claims validation
+    - `VerifyData()` — Add claims validation using conditional comparison
+      (`!claimsPrincipal.HasClaim(...) || claimValue == orgValue`) so that self-hosted instances
+      with licenses generated before the claim existed are not incorrectly disabled (see PM-33980)
     - `GetDataBytes()` — Add the new property to the ignored fields section (below the comment
       `// any new fields added need to be added here so that they're ignored`)
 

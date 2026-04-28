@@ -2,6 +2,7 @@
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Entities;
 using Bit.Core.Tokens;
+using NSubstitute;
 using Xunit;
 
 
@@ -255,6 +256,61 @@ public class OrgUserInviteTokenableTests
         var token = new OrgUserInviteTokenable(orgUser);
         var result = Tokenable.FromToken<OrgUserInviteTokenable>(token.ToToken());
         Assert.Equal(orgUser.Email, result.OrgUserEmail);
+    }
+
+    // ValidateOrgUserInvite Parameters:
+    // bool tryUnprotectResult, bool useMatchingOrgUserId, bool useMatchingEmail, bool isExpired, string? expectedError
+    [Theory]
+    // TryUnprotect fails → "Invalid token."
+    [InlineData(false, true, true, false, "Invalid token.")]
+    // TryUnprotect succeeds, token is expired → "Expired token."
+    [InlineData(true, true, true, true, "Expired token.")]
+    // TryUnprotect succeeds, not expired, mismatched org user ID → "Invalid token."
+    [InlineData(true, false, true, false, "Invalid token.")]
+    // TryUnprotect succeeds, not expired, mismatched email → "Invalid token."
+    [InlineData(true, true, false, false, "Invalid token.")]
+    // TryUnprotect succeeds, not expired, both mismatched → "Invalid token."
+    [InlineData(true, false, false, false, "Invalid token.")]
+    // TryUnprotect succeeds, not expired, matching ID and email → null (valid)
+    [InlineData(true, true, true, false, null)]
+    public void ValidateOrgUserInvite_ReturnsExpectedErrors(
+        bool tryUnprotectResult,
+        bool useMatchingOrgUserId,
+        bool useMatchingEmail,
+        bool isExpired,
+        string? expectedError)
+    {
+        // Arrange
+        var orgUserId = Guid.NewGuid();
+        var orgUserEmail = "test@example.com";
+
+        var tokenable = new OrgUserInviteTokenable
+        {
+            Identifier = OrgUserInviteTokenable.TokenIdentifier,
+            OrgUserId = orgUserId,
+            OrgUserEmail = orgUserEmail,
+            ExpirationDate = isExpired
+                ? DateTime.UtcNow.AddDays(-1)
+                : DateTime.UtcNow.AddDays(1)
+        };
+
+        var factory = Substitute.For<IDataProtectorTokenFactory<OrgUserInviteTokenable>>();
+        factory.TryUnprotect(Arg.Any<string>(), out Arg.Any<OrgUserInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = tryUnprotectResult ? tokenable : null;
+                return tryUnprotectResult;
+            });
+
+        var inputOrgUserId = useMatchingOrgUserId ? orgUserId : Guid.NewGuid();
+        var inputEmail = useMatchingEmail ? orgUserEmail : "wrong@example.com";
+
+        // Act
+        var result = OrgUserInviteTokenable.ValidateOrgUserInvite(
+            factory, "test-token", inputOrgUserId, inputEmail);
+
+        // Assert
+        Assert.Equal(expectedError, result?.ErrorMessage);
     }
 
     private bool TimesAreCloseEnough(DateTime time1, DateTime time2, TimeSpan tolerance)

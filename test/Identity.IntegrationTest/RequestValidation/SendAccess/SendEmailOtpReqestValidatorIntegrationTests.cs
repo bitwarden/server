@@ -2,6 +2,7 @@
 using Bit.Core.Services;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
+using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 using Bit.IntegrationTestCommon.Factories;
 using Duende.IdentityModel;
 using NSubstitute;
@@ -132,7 +133,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
     }
 
     [Fact]
-    public async Task SendAccess_EmailOtpProtectedSend_InvalidOtp_ReturnsInvalidGrant()
+    public async Task SendAccess_EmailOtpProtectedSend_InvalidOtp_ReturnsInvalidRequest()
     {
         // Arrange
         var sendId = Guid.NewGuid();
@@ -170,8 +171,8 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
 
         // Assert
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains(OidcConstants.TokenErrors.InvalidGrant, content);
-        Assert.Contains("email otp is invalid", content);
+        Assert.Contains(OidcConstants.TokenErrors.InvalidRequest, content);
+        Assert.Contains($"{SendAccessConstants.TokenRequest.Email} and {SendAccessConstants.TokenRequest.Otp} are required.", content);
     }
 
     [Fact]

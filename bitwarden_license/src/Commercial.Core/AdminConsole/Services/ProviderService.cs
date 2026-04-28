@@ -57,7 +57,6 @@ public class ProviderService : IProviderService
     private readonly IOrganizationService _organizationService;
     private readonly ICurrentContext _currentContext;
     private readonly IStripeAdapter _stripeAdapter;
-    private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<ProviderDeleteTokenable> _providerDeleteTokenDataFactory;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IProviderBillingService _providerBillingService;
@@ -70,7 +69,7 @@ public class ProviderService : IProviderService
         IUserService userService, IOrganizationService organizationService, IMailService mailService,
         IDataProtectionProvider dataProtectionProvider, IEventService eventService,
         IOrganizationRepository organizationRepository, GlobalSettings globalSettings,
-        ICurrentContext currentContext, IStripeAdapter stripeAdapter, IFeatureService featureService,
+        ICurrentContext currentContext, IStripeAdapter stripeAdapter,
         IDataProtectorTokenFactory<ProviderDeleteTokenable> providerDeleteTokenDataFactory,
         IApplicationCacheService applicationCacheService, IProviderBillingService providerBillingService, IPricingClient pricingClient,
         IProviderClientOrganizationSignUpCommand providerClientOrganizationSignUpCommand,
@@ -89,7 +88,6 @@ public class ProviderService : IProviderService
         _dataProtector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
         _currentContext = currentContext;
         _stripeAdapter = stripeAdapter;
-        _featureService = featureService;
         _providerDeleteTokenDataFactory = providerDeleteTokenDataFactory;
         _applicationCacheService = applicationCacheService;
         _providerBillingService = providerBillingService;
@@ -123,16 +121,13 @@ public class ProviderService : IProviderService
             throw new BadRequestException("Invalid owner.");
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
-        {
-            var organizationAutoConfirmPolicyRequirement = await _policyRequirementQuery
-                .GetAsync<AutomaticUserConfirmationPolicyRequirement>(ownerUserId);
+        var organizationAutoConfirmPolicyRequirement = await _policyRequirementQuery
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(ownerUserId);
 
-            if (organizationAutoConfirmPolicyRequirement
-                .CannotCreateProvider())
-            {
-                throw new BadRequestException(new UserCannotJoinProvider().Message);
-            }
+        if (organizationAutoConfirmPolicyRequirement
+            .CannotCreateProvider())
+        {
+            throw new BadRequestException(new UserCannotJoinProvider().Message);
         }
 
         var customer = await _providerBillingService.SetupCustomer(provider, paymentMethod, billingAddress);
@@ -267,16 +262,13 @@ public class ProviderService : IProviderService
             throw new BadRequestException("User email does not match invite.");
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
-        {
-            var organizationAutoConfirmPolicyRequirement = await _policyRequirementQuery
-                .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
+        var organizationAutoConfirmPolicyRequirement = await _policyRequirementQuery
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
 
-            if (organizationAutoConfirmPolicyRequirement
-                .CannotJoinProvider())
-            {
-                throw new BadRequestException(new UserCannotJoinProvider().Message);
-            }
+        if (organizationAutoConfirmPolicyRequirement
+            .CannotJoinProvider())
+        {
+            throw new BadRequestException(new UserCannotJoinProvider().Message);
         }
 
         providerUser.Status = ProviderUserStatusType.Accepted;
@@ -324,17 +316,14 @@ public class ProviderService : IProviderService
                     throw new BadRequestException("Invalid user.");
                 }
 
-                if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
-                {
-                    var organizationAutoConfirmPolicyRequirement = await _policyRequirementQuery
-                        .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
+                var organizationAutoConfirmPolicyRequirement = await _policyRequirementQuery
+                    .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
 
-                    if (organizationAutoConfirmPolicyRequirement
-                        .CannotJoinProvider())
-                    {
-                        result.Add(Tuple.Create(providerUser, new UserCannotJoinProvider().Message));
-                        continue;
-                    }
+                if (organizationAutoConfirmPolicyRequirement
+                    .CannotJoinProvider())
+                {
+                    result.Add(Tuple.Create(providerUser, new UserCannotJoinProvider().Message));
+                    continue;
                 }
 
                 providerUser.Status = ProviderUserStatusType.Confirmed;

@@ -17,6 +17,7 @@ public class EmergencyAccessInviteRequestModel
     [Required]
     public EmergencyAccessType? Type { get; set; }
     [Required]
+    [Range(1, short.MaxValue)]
     public int WaitTimeDays { get; set; }
 }
 
@@ -25,6 +26,7 @@ public class EmergencyAccessUpdateRequestModel
     [Required]
     public EmergencyAccessType Type { get; set; }
     [Required]
+    [Range(1, short.MaxValue)]
     public int WaitTimeDays { get; set; }
     public string KeyEncrypted { get; set; }
 

@@ -9,6 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\src\Core\Core.csproj" />
       <ProjectReference Include="..\..\src\SharedWeb\SharedWeb.csproj" />
       <ProjectReference Include="..\Seeder\Seeder.csproj" />
     </ItemGroup>

@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Quartz;
 using Event = Stripe.Event;
@@ -13,28 +14,34 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
 {
     private readonly IStripeEventService _stripeEventService;
     private readonly IUserService _userService;
+    private readonly IUserRepository _userRepository;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
     private readonly IOrganizationDisableCommand _organizationDisableCommand;
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderService _providerService;
     private readonly ISchedulerFactory _schedulerFactory;
+    private readonly IPushNotificationAdapter _pushNotificationAdapter;
 
     public SubscriptionDeletedHandler(
         IStripeEventService stripeEventService,
         IUserService userService,
+        IUserRepository userRepository,
         IStripeEventUtilityService stripeEventUtilityService,
         IOrganizationDisableCommand organizationDisableCommand,
         IProviderRepository providerRepository,
         IProviderService providerService,
-        ISchedulerFactory schedulerFactory)
+        ISchedulerFactory schedulerFactory,
+        IPushNotificationAdapter pushNotificationAdapter)
     {
         _stripeEventService = stripeEventService;
         _userService = userService;
+        _userRepository = userRepository;
         _stripeEventUtilityService = stripeEventUtilityService;
         _organizationDisableCommand = organizationDisableCommand;
         _providerRepository = providerRepository;
         _providerService = providerService;
         _schedulerFactory = schedulerFactory;
+        _pushNotificationAdapter = pushNotificationAdapter;
     }
 
     /// <summary>
@@ -80,6 +87,11 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
         else if (userId.HasValue)
         {
             await _userService.DisablePremiumAsync(userId.Value, subscription.GetCurrentPeriodEnd());
+            var user = await _userRepository.GetByIdAsync(userId.Value);
+            if (user != null)
+            {
+                await _pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user!);
+            }
         }
     }
 

@@ -80,7 +80,7 @@ public class SsoRequestValidator(
 
         // Check if user belongs to any organization with an active SSO policy
         var ssoRequired = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            ? (await _policyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(user.Id))
+            ? (await _policyRequirementQuery.GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id))
             .SsoRequired
             : await _policyService.AnyPoliciesApplicableToUserAsync(
                 user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
