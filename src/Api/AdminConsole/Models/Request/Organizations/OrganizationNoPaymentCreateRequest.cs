@@ -32,6 +32,7 @@ public class OrganizationNoPaymentCreateRequest
     [Required]
     public string Key { get; set; }
 
+    [Required]
     public OrganizationKeysRequestModel Keys { get; set; }
     public PaymentMethodType? PaymentMethodType { get; set; }
     public string PaymentToken { get; set; }
@@ -110,7 +111,7 @@ public class OrganizationNoPaymentCreateRequest
                 BillingAddressCountry = BillingAddressCountry,
             },
             InitiationPath = InitiationPath,
-            Keys = Keys?.ToPublicKeyEncryptionKeyPairData()
+            Keys = Keys.ToPublicKeyEncryptionKeyPairData()
         };
 
         return orgSignup;
