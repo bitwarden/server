@@ -332,7 +332,8 @@ public class MembersController : Controller
         var request = new RevokeOrganizationUsersRequest(
             _currentContext.OrganizationId!.Value,
             [id],
-            new SystemUser(EventSystemUser.PublicApi)
+            new SystemUser(EventSystemUser.PublicApi),
+            RevocationReason.Manual
         );
 
         var results = await _revokeOrganizationUserCommandV2.RevokeUsersAsync(request);

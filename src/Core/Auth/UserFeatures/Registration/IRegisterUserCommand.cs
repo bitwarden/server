@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Models.Data;
 using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Auth.UserFeatures.Registration;
@@ -31,11 +32,11 @@ public interface IRegisterUserCommand
     /// If the organization has a 2FA required policy enabled, email verification will be enabled for the user.
     /// </summary>
     /// <param name="user">The <see cref="User"/> to create</param>
-    /// <param name="masterPasswordHash">The hashed master password the user entered</param>
+    /// <param name="registerFinishData">Cryptographic data for finishing user registration</param>
     /// <param name="orgInviteToken">The org invite token sent to the user via email</param>
     /// <param name="orgUserId">The associated org user guid that was created at the time of invite</param>
     /// <returns><see cref="IdentityResult"/></returns>
-    public Task<IdentityResult> RegisterUserViaOrganizationInviteToken(User user, string masterPasswordHash, string orgInviteToken, Guid? orgUserId);
+    public Task<IdentityResult> RegisterUserViaOrganizationInviteToken(User user, RegisterFinishData registerFinishData, string orgInviteToken, Guid? orgUserId);
 
     /// <summary>
     /// Creates a new user with a given master password hash, sends a welcome email, and raises the signup reference event.
@@ -43,10 +44,10 @@ public interface IRegisterUserCommand
     /// An error will be thrown if the token is invalid or expired.
     /// </summary>
     /// <param name="user">The <see cref="User"/> to create</param>
-    /// <param name="masterPasswordHash">The hashed master password the user entered</param>
+    /// <param name="registerFinishData">Cryptographic data for finishing user registration</param>
     /// <param name="emailVerificationToken">The email verification token sent to the user via email</param>
     /// <returns><see cref="IdentityResult"/></returns>
-    public Task<IdentityResult> RegisterUserViaEmailVerificationToken(User user, string masterPasswordHash, string emailVerificationToken);
+    public Task<IdentityResult> RegisterUserViaEmailVerificationToken(User user, RegisterFinishData registerFinishData, string emailVerificationToken);
 
     /// <summary>
     /// Creates a new user with a given master password hash, sends a welcome email, and raises the signup reference event.
@@ -54,10 +55,10 @@ public interface IRegisterUserCommand
     /// If the token is invalid or expired, an error will be thrown.
     /// </summary>
     /// <param name="user">The <see cref="User"/> to create</param>
-    /// <param name="masterPasswordHash">The hashed master password the user entered</param>
+    /// <param name="registerFinishData">Cryptographic data for finishing user registration</param>
     /// <param name="orgSponsoredFreeFamilyPlanInviteToken">The org sponsored free family plan invite token sent to the user via email</param>
     /// <returns><see cref="IdentityResult"/></returns>
-    public Task<IdentityResult> RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(User user, string masterPasswordHash, string orgSponsoredFreeFamilyPlanInviteToken);
+    public Task<IdentityResult> RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(User user, RegisterFinishData registerFinishData, string orgSponsoredFreeFamilyPlanInviteToken);
 
     /// <summary>
     /// Creates a new user with a given master password hash, sends a welcome email, and raises the signup reference event.
@@ -65,11 +66,11 @@ public interface IRegisterUserCommand
     /// If the token is invalid or expired, an error will be thrown.
     /// </summary>
     /// <param name="user">The <see cref="User"/> to create</param>
-    /// <param name="masterPasswordHash">The hashed master password the user entered</param>
+    /// <param name="registerFinishData">Cryptographic data for finishing user registration</param>
     /// <param name="acceptEmergencyAccessInviteToken">The emergency access invite token sent to the user via email</param>
     /// <param name="acceptEmergencyAccessId">The emergency access id (used to validate the token)</param>
     /// <returns><see cref="IdentityResult"/></returns>
-    public Task<IdentityResult> RegisterUserViaAcceptEmergencyAccessInviteToken(User user, string masterPasswordHash,
+    public Task<IdentityResult> RegisterUserViaAcceptEmergencyAccessInviteToken(User user, RegisterFinishData registerFinishData,
         string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId);
 
     /// <summary>
@@ -78,10 +79,10 @@ public interface IRegisterUserCommand
     /// If the token is invalid or expired, an error will be thrown.
     /// </summary>
     /// <param name="user">The <see cref="User"/> to create</param>
-    /// <param name="masterPasswordHash">The hashed master password the user entered</param>
+    /// <param name="registerFinishData">Cryptographic data for finishing user registration</param>
     /// <param name="providerInviteToken">The provider invite token sent to the user via email</param>
     /// <param name="providerUserId">The provider user id which is used to validate the invite token</param>
     /// <returns><see cref="IdentityResult"/></returns>
-    public Task<IdentityResult> RegisterUserViaProviderInviteToken(User user, string masterPasswordHash, string providerInviteToken, Guid providerUserId);
+    public Task<IdentityResult> RegisterUserViaProviderInviteToken(User user, RegisterFinishData registerFinishData, string providerInviteToken, Guid providerUserId);
 
 }
