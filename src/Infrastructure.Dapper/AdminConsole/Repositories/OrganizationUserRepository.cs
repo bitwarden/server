@@ -721,10 +721,15 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         await using var connection = new SqlConnection(ConnectionString);
 
         var confirmedIds = await connection.QueryAsync<Guid>(
-            $"[{Schema}].[OrganizationUser_ConfirmByIds]",
+            $"[{Schema}].[OrganizationUser_UpdateManyConfirmByIds]",
             new
             {
-                UsersToConfirm = usersToConfirm.ToOrganizationUserToConfirmArrayTVP(),
+                UsersToConfirmJson = JsonSerializer.Serialize(usersToConfirm.Select(u => new
+                {
+                    Id = u.OrganizationUserId,
+                    u.UserId,
+                    u.Key,
+                })),
                 RevisionDate = DateTime.UtcNow
             },
             commandType: CommandType.StoredProcedure);
@@ -766,8 +771,8 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationUser>(
-                "[dbo].[OrganizationUser_ReadByOrganizationId]",
-                new { OrganizationId = organizationId, Type = (short?)null, Status = (short)status },
+                "[dbo].[OrganizationUser_ReadManyByOrganizationIdStatus]",
+                new { OrganizationId = organizationId, Status = (short)status },
                 commandType: CommandType.StoredProcedure);
 
             return results.ToList();

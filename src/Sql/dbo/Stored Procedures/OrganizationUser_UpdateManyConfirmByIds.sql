@@ -1,9 +1,27 @@
-CREATE PROCEDURE [dbo].[OrganizationUser_ConfirmByIds]
-    @UsersToConfirm [dbo].[OrganizationUserToConfirmArray] READONLY,
-    @RevisionDate   DATETIME2(7)
+CREATE PROCEDURE [dbo].[OrganizationUser_UpdateManyConfirmByIds]
+    @UsersToConfirmJson NVARCHAR(MAX),
+    @RevisionDate       DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
+
+    DECLARE @UsersToConfirm AS TABLE (
+        [Id]     UNIQUEIDENTIFIER NOT NULL,
+        [UserId] UNIQUEIDENTIFIER NOT NULL,
+        [Key]    NVARCHAR(MAX)    NULL
+    )
+
+    INSERT INTO @UsersToConfirm
+    SELECT
+        [Id],
+        [UserId],
+        [Key]
+    FROM OPENJSON(@UsersToConfirmJson)
+    WITH (
+        [Id]     UNIQUEIDENTIFIER '$.Id',
+        [UserId] UNIQUEIDENTIFIER '$.UserId',
+        [Key]    NVARCHAR(MAX)    '$.Key'
+    )
 
     DECLARE @ConfirmedIds [dbo].[GuidIdArray]
 
