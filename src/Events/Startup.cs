@@ -109,7 +109,7 @@ public class Startup
         }
 
         // Default Middleware
-        app.UseDefaultMiddleware(env, globalSettings);
+        app.UseDefaultMiddleware(env, globalSettings, Configuration);
 
         // Add routing
         app.UseRouting();

@@ -181,7 +181,7 @@ public class Startup
 
         // Services
         services.AddBaseServices(globalSettings);
-        services.AddDefaultServices(globalSettings);
+        services.AddDefaultServices(globalSettings, Configuration);
         services.AddOrganizationSubscriptionServices();
         services.AddCoreLocalizationServices();
         services.AddBillingOperations();
@@ -241,7 +241,7 @@ public class Startup
         app.UseMiddleware<SecurityHeadersMiddleware>();
 
         // Default Middleware
-        app.UseDefaultMiddleware(env, globalSettings);
+        app.UseDefaultMiddleware(env, globalSettings, Configuration);
 
         if (!globalSettings.SelfHosted)
         {

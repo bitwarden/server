@@ -71,6 +71,9 @@ public class Startup
             app.UseForwardedHeaders(globalSettings);
         }
 
+        // Default Middleware
+        app.UseDefaultMiddleware(env, globalSettings, Configuration);
+
         if (env.IsDevelopment())
         {
             app.UseDeveloperExceptionPage();

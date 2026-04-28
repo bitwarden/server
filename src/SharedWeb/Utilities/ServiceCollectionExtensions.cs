@@ -69,6 +69,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HeaderPropagation;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
@@ -259,12 +260,31 @@ public static class ServiceCollectionExtensions
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable>>>()));
     }
 
-    public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
+    public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings,
+        IConfiguration configuration)
     {
         // Required for UserService
         services.AddWebAuthn(globalSettings);
         // Required for HTTP calls
         services.AddHttpClient();
+
+        // Header propagation - forwards configured headers from inbound requests to outbound HttpClient calls.
+        // Headers are configured via environment/config (e.g. HeaderPropagation__Headers__0=X-Canary).
+        // When no headers are configured (e.g. self-hosted), this is a no-op.
+        var headersToPropagate = configuration.GetSection("HeaderPropagation:Headers").Get<string[]>() ?? [];
+        if (headersToPropagate.Length > 0)
+        {
+            services.AddHeaderPropagation(options =>
+            {
+                foreach (var header in headersToPropagate)
+                {
+                    options.Headers.Add(header);
+                }
+            });
+
+            services.ConfigureHttpClientDefaults(builder =>
+                builder.AddHeaderPropagation());
+        }
 
         services.AddSingleton<IStripeAdapter, StripeAdapter>();
         services.AddSingleton<Braintree.IBraintreeGateway>((serviceProvider) =>
@@ -553,12 +573,27 @@ public static class ServiceCollectionExtensions
     }
 
     public static void UseDefaultMiddleware(this IApplicationBuilder app,
-        IWebHostEnvironment env, GlobalSettings globalSettings)
+        IWebHostEnvironment env, GlobalSettings globalSettings, IConfiguration configuration)
     {
         app.UseMiddleware<RequestLoggingMiddleware>();
         if (globalSettings.TestPlayIdTrackingEnabled)
         {
             app.UseMiddleware<PlayIdMiddleware>();
+        }
+
+        // Header propagation - adds response headers + telemetry tags for observability.
+        // UseHeaderPropagation() is only called if AddHeaderPropagation() was registered
+        // (via AddDefaultServices). Services that don't make outbound HTTP calls only get
+        // the response middleware for DataDog tagging and response headers.
+        var headersToPropagate = configuration.GetSection("HeaderPropagation:Headers").Get<string[]>() ?? [];
+        if (headersToPropagate.Length > 0)
+        {
+            if (app.ApplicationServices.GetService(typeof(HeaderPropagationValues)) != null)
+            {
+                app.UseHeaderPropagation();
+            }
+
+            app.UseMiddleware<HeaderPropagationResponseMiddleware>(headersToPropagate);
         }
     }
 

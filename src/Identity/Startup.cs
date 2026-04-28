@@ -145,7 +145,7 @@ public class Startup
 
         // Services
         services.AddBaseServices(globalSettings);
-        services.AddDefaultServices(globalSettings);
+        services.AddDefaultServices(globalSettings, Configuration);
         services.AddOptionality();
         services.AddCoreLocalizationServices();
         services.AddBillingOperations();
@@ -165,6 +165,14 @@ public class Startup
         {
             client.BaseAddress = new Uri(globalSettings.BaseServiceUri.InternalSso);
         });
+
+        // Wire the OIDC "sso" handler to use a factory-created HttpClient so that
+        // ConfigureHttpClientDefaults (header propagation) applies to backchannel calls.
+        services.AddOptions<Microsoft.AspNetCore.Authentication.OpenIdConnect.OpenIdConnectOptions>("sso")
+            .Configure<IHttpClientFactory>((options, factory) =>
+            {
+                options.Backchannel = factory.CreateClient("InternalSso");
+            });
     }
 
     public void Configure(
@@ -193,7 +201,7 @@ public class Startup
         }
 
         // Default Middleware
-        app.UseDefaultMiddleware(environment, globalSettings);
+        app.UseDefaultMiddleware(environment, globalSettings, Configuration);
 
         if (!globalSettings.SelfHosted)
         {
