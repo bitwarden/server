@@ -1,4 +1,4 @@
-using Bit.AppHost;
+﻿using Bit.AppHost;
 
 var builder = DistributedApplication.CreateBuilder(args);
 var secretsSetup = builder.ConfigureSecrets();
