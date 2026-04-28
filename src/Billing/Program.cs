@@ -1,7 +1,4 @@
 ﻿using Bit.Core.Utilities;
-#if DEBUG
-using Bit.ServiceDefaults;
-#endif
 
 namespace Bit.Billing;
 
@@ -17,10 +14,6 @@ public class Program
                 webBuilder.UseStartup<Startup>();
             })
             .AddSerilogFileLogging();
-
-#if DEBUG
-        builder.AddServiceDefaults();
-#endif
 
         builder.Build().Run();
     }
