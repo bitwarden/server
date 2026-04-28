@@ -48,9 +48,12 @@ public class UpcomingInvoiceHandler(
     {
         var invoice = await stripeEventService.GetInvoice(parsedEvent);
 
+        // "subscriptions.data.discounts" is required by IPriceIncreaseScheduler.Schedule
+        // to preserve pre-existing subscription-level discounts when constructing Phase 2.
+        // See PM-35909.
         var customer =
             await stripeAdapter.GetCustomerAsync(invoice.CustomerId,
-                new CustomerGetOptions { Expand = ["subscriptions", "subscriptions.data.test_clock", "tax", "tax_ids"] });
+                new CustomerGetOptions { Expand = ["subscriptions", "subscriptions.data.discounts", "subscriptions.data.test_clock", "tax", "tax_ids"] });
 
         var subscription = customer.Subscriptions.FirstOrDefault();
 
