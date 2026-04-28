@@ -116,7 +116,7 @@ public class CipherRepositoryTests
     [CiSkippedTheory, EfOrganizationCipherCustomize, BitAutoData]
     public async Task CreateAsync_BumpsOrgUserAccountRevisionDates(Cipher cipher, List<User> users,
         List<OrganizationUser> orgUsers, Collection collection, Organization org, List<EfVaultRepo.CipherRepository> suts, List<EfRepo.UserRepository> efUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos,
-        List<EfAdminConsoleRepo.OrganizationUserRepository> efOrgUserRepos, List<EfRepo.CollectionRepository> efCollectionRepos)
+        List<EfAdminConsoleRepo.OrganizationUserRepository> efOrgUserRepos, List<EfAdminConsoleRepo.CollectionRepository> efCollectionRepos)
     {
         var savedCiphers = new List<Cipher>();
         foreach (var sut in suts)
@@ -238,7 +238,7 @@ public class CipherRepositoryTests
         List<EfVaultRepo.CipherRepository> suts,
         List<EfRepo.UserRepository> efUserRepos,
         List<EfRepo.OrganizationRepository> efOrgRepos,
-        List<EfRepo.CollectionRepository> efCollectionRepos)
+        List<EfAdminConsoleRepo.CollectionRepository> efCollectionRepos)
     {
         foreach (var sut in suts)
         {

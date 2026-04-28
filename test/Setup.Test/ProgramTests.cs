@@ -72,7 +72,7 @@ public class ProgramTests
             Assert.True(certFile.Exists);
             var cert = new X509Certificate2(certFile.FullName);
 
-            var hundredYearsFromNow = DateTime.UtcNow.AddDays(36500);
+            var hundredYearsFromNow = DateTime.Now.AddDays(36500);
 
             Assert.InRange(cert.NotAfter, hundredYearsFromNow.AddMinutes(-1), hundredYearsFromNow.AddMinutes(1));
 
