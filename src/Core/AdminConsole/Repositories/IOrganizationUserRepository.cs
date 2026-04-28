@@ -66,7 +66,7 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// around <see cref="RevokeManyAsync"/> for single-user operations.
     /// </summary>
     /// <param name="id">The ID of the organization user to revoke.</param>
-    Task RevokeAsync(Guid id);
+    Task RevokeAsync(Guid id, RevocationReason reason);
     /// <summary>
     /// Restores access for a single revoked organization user. This is a convenience wrapper
     /// around <see cref="RestoreManyAsync"/> for single-user operations.
@@ -97,7 +97,7 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// </summary>
     /// <param name="organizationUserIds">The IDs of the organization users to revoke.</param>
     /// <param name="reason">The reason for revocation. May be null if the reason is not known.</param>
-    Task RevokeManyAsync(IEnumerable<Guid> organizationUserIds, RevocationReason? reason = null);
+    Task RevokeManyAsync(IEnumerable<Guid> organizationUserIds, RevocationReason reason);
     /// <summary>
     /// Restores access for one or more revoked organization users, clearing their
     /// <see cref="Core.Entities.OrganizationUser.RevocationReason"/>. Only affects users

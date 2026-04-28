@@ -3,12 +3,12 @@
 #nullable disable
 
 using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.AdminConsole.Authorization.Collections;
 using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
-using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
@@ -651,7 +651,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     [Authorize<ManageUsersRequirement>]
     public async Task RevokeAsync(Guid orgId, Guid id)
     {
-        await RestoreOrRevokeUserAsync(orgId, id, _revokeOrganizationUserCommand.RevokeUserAsync);
+        await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _revokeOrganizationUserCommand.RevokeUserAsync(orgUser, userId, RevocationReason.Manual));
     }
 
     [HttpPut("revoke-self")]
@@ -690,7 +690,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
             new V2_RevokeOrganizationUserCommand.RevokeOrganizationUsersRequest(
                 orgId,
                 model.Ids.ToArray(),
-                new StandardUser(currentUserId.Value, await _currentContext.OrganizationOwner(orgId))));
+                new StandardUser(currentUserId.Value, await _currentContext.OrganizationOwner(orgId)),
+                RevocationReason.Manual));
 
         return new ListResponseModel<OrganizationUserBulkResponseModel>(results
             .Select(result => new OrganizationUserBulkResponseModel(result.Id,
