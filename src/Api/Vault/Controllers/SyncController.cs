@@ -43,7 +43,7 @@ public class SyncController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly ICurrentContext _currentContext;
     private readonly Version _sshKeyCipherMinimumVersion = new(Constants.SSHKeyCipherMinimumVersion);
-    private readonly Version _bankAccountCipherMinimumVersion = new(Constants.BankAccountCipherMinimumVersion);
+    private readonly Version _pm32009NewItemTypeMinimumVersion = new(Constants.PM32009NewItemTypeMinimumVersion);
     private readonly IFeatureService _featureService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
@@ -171,9 +171,11 @@ public class SyncController : Controller
 
         if (!_featureService.IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes)
             || _currentContext.ClientVersion == null
-            || _currentContext.ClientVersion < _bankAccountCipherMinimumVersion)
+            || _currentContext.ClientVersion < _pm32009NewItemTypeMinimumVersion)
         {
             unsupportedTypes.Add(Core.Vault.Enums.CipherType.BankAccount);
+            unsupportedTypes.Add(Core.Vault.Enums.CipherType.DriversLicense);
+            unsupportedTypes.Add(Core.Vault.Enums.CipherType.Passport);
         }
 
         return unsupportedTypes.Count == 0
