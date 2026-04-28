@@ -4,7 +4,6 @@ using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,18 +15,17 @@ namespace Bit.Api.AdminConsole.Controllers;
 [RequireFeature(FeatureFlagKeys.GenerateInviteLink)]
 public class OrganizationInviteLinksController(
     ICreateOrganizationInviteLinkCommand createOrganizationInviteLinkCommand,
-    IOrganizationInviteLinkRepository organizationInviteLinkRepository)
+    IGetOrganizationInviteLinkQuery getOrganizationInviteLinkQuery)
     : BaseAdminConsoleController
 {
     [HttpGet("")]
     [Authorize<ManageUsersRequirement>]
     public async Task<IResult> Get(Guid orgId)
     {
-        var link = await organizationInviteLinkRepository.GetByOrganizationIdAsync(orgId);
+        var result = await getOrganizationInviteLinkQuery.GetAsync(orgId);
 
-        return link is null
-            ? TypedResults.NotFound()
-            : TypedResults.Ok(new OrganizationInviteLinkResponseModel(link));
+        return Handle(result, link =>
+            TypedResults.Ok(new OrganizationInviteLinkResponseModel(link)));
     }
 
     [HttpPost("")]

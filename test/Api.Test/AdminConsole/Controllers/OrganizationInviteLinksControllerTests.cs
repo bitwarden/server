@@ -4,7 +4,6 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -83,9 +82,9 @@ public class OrganizationInviteLinksControllerTests
     {
         inviteLink.OrganizationId = orgId;
 
-        sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
-            .GetByOrganizationIdAsync(orgId)
-            .Returns(inviteLink);
+        sutProvider.GetDependency<IGetOrganizationInviteLinkQuery>()
+            .GetAsync(orgId)
+            .Returns(new CommandResult<OrganizationInviteLink>(inviteLink));
 
         var result = await sutProvider.Sut.Get(orgId);
 
@@ -100,13 +99,29 @@ public class OrganizationInviteLinksControllerTests
         Guid orgId,
         SutProvider<OrganizationInviteLinksController> sutProvider)
     {
-        sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
-            .GetByOrganizationIdAsync(orgId)
-            .Returns((OrganizationInviteLink?)null);
+        sutProvider.GetDependency<IGetOrganizationInviteLinkQuery>()
+            .GetAsync(orgId)
+            .Returns(new CommandResult<OrganizationInviteLink>(new InviteLinkNotFound()));
 
         var result = await sutProvider.Sut.Get(orgId);
 
-        Assert.IsType<NotFound>(result);
+        var notFoundResult = Assert.IsType<NotFound<Bit.Core.Models.Api.ErrorResponseModel>>(result);
+        Assert.NotNull(notFoundResult.Value);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Get_WhenInviteLinkNotAvailable_Returns400(
+        Guid orgId,
+        SutProvider<OrganizationInviteLinksController> sutProvider)
+    {
+        sutProvider.GetDependency<IGetOrganizationInviteLinkQuery>()
+            .GetAsync(orgId)
+            .Returns(new CommandResult<OrganizationInviteLink>(new InviteLinkNotAvailable()));
+
+        var result = await sutProvider.Sut.Get(orgId);
+
+        var badRequestResult = Assert.IsType<BadRequest<Bit.Core.Models.Api.ErrorResponseModel>>(result);
+        Assert.NotNull(badRequestResult.Value);
     }
 
     [Theory, BitAutoData]
