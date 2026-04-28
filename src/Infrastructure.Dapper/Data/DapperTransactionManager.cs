@@ -1,4 +1,4 @@
-﻿using System.Data.Common;
+﻿using System.Data;
 using Bit.Core.Platform.Data;
 using Bit.Core.Settings;
 using Microsoft.Data.SqlClient;
@@ -16,7 +16,9 @@ public sealed class DapperTransactionManager : ITransactionManager
 
     public bool HasActiveTransaction => TransactionState.Current is not null;
 
-    public async Task<ITransactionScope> BeginTransactionAsync(CancellationToken cancellationToken = default)
+    public async Task<ITransactionScope> BeginTransactionAsync(
+        IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
+        CancellationToken cancellationToken = default)
     {
         var existing = TransactionState.Current;
         if (existing is not null)
@@ -27,7 +29,7 @@ public sealed class DapperTransactionManager : ITransactionManager
 
         var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
-        var transaction = (DbTransaction)await connection.BeginTransactionAsync(cancellationToken);
+        var transaction = await connection.BeginTransactionAsync(isolationLevel, cancellationToken);
 
         var holder = new TransactionHolder
         {

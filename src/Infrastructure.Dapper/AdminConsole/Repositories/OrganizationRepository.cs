@@ -250,15 +250,16 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
 
     public async Task<OrganizationSeatCounts> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
     {
-        using (var connection = new SqlConnection(ConnectionString))
+        return await ExecuteWithConnectionAsync(async (connection, transaction) =>
         {
             var result = await connection.QueryAsync<OrganizationSeatCounts>(
                 "[dbo].[Organization_ReadOccupiedSeatCountByOrganizationId]",
                 new { OrganizationId = organizationId },
+                transaction: transaction,
                 commandType: CommandType.StoredProcedure);
 
             return result.SingleOrDefault() ?? new OrganizationSeatCounts();
-        }
+        });
     }
 
     public async Task<IEnumerable<Organization>> GetOrganizationsForSubscriptionSyncAsync()
@@ -285,11 +286,13 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
 
     public async Task IncrementSeatCountAsync(Guid organizationId, int increaseAmount, DateTime requestDate)
     {
-        await using var connection = new SqlConnection(ConnectionString);
-
-        await connection.ExecuteAsync("[dbo].[Organization_IncrementSeatCount]",
-            new { OrganizationId = organizationId, SeatsToAdd = increaseAmount, RequestDate = requestDate },
-            commandType: CommandType.StoredProcedure);
+        await ExecuteWithConnectionAsync(async (connection, transaction) =>
+        {
+            await connection.ExecuteAsync("[dbo].[Organization_IncrementSeatCount]",
+                new { OrganizationId = organizationId, SeatsToAdd = increaseAmount, RequestDate = requestDate },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+        });
     }
 
     public async Task InitializeOrganizationAsync(Organization organization, Func<DbConnection, DbTransaction, Task> confirmOwnerAction)

@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using System.Data;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Business;
@@ -50,7 +51,7 @@ public class PostUserCommand(
         Guid organizationId,
         ScimProviderType scimProvider)
     {
-        await transactionManager.BeginTransactionAsync();
+        await transactionManager.BeginTransactionAsync(IsolationLevel.Serializable);
 
         var organization = await organizationRepository.GetByIdAsync(organizationId);
 

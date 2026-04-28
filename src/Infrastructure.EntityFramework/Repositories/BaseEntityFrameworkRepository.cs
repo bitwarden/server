@@ -95,10 +95,7 @@ public abstract class BaseEntityFrameworkRepository
 
     public async Task<int> GetCountFromQuery<T>(IQuery<T> query)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            return await query.Run(GetDatabaseContext(scope)).CountAsync();
-        }
+        return await ExecuteWithContextAsync(dbContext => query.Run(dbContext).CountAsync());
     }
 
     protected async Task OrganizationUpdateStorage(Guid organizationId)

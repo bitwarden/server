@@ -1,4 +1,4 @@
-﻿using System.Data.Common;
+﻿using System.Data;
 using Bit.Core.Platform.Data;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +17,9 @@ public sealed class EfTransactionManager : ITransactionManager
 
     public bool HasActiveTransaction => TransactionState.Current is not null;
 
-    public async Task<ITransactionScope> BeginTransactionAsync(CancellationToken cancellationToken = default)
+    public async Task<ITransactionScope> BeginTransactionAsync(
+        IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
+        CancellationToken cancellationToken = default)
     {
         var existing = TransactionState.Current;
         if (existing is not null)
@@ -30,7 +32,7 @@ public sealed class EfTransactionManager : ITransactionManager
         var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
         var connection = dbContext.Database.GetDbConnection();
         await connection.OpenAsync(cancellationToken);
-        var transaction = (DbTransaction)await connection.BeginTransactionAsync(cancellationToken);
+        var transaction = await connection.BeginTransactionAsync(isolationLevel, cancellationToken);
 
         await dbContext.Database.UseTransactionAsync(transaction, cancellationToken);
 

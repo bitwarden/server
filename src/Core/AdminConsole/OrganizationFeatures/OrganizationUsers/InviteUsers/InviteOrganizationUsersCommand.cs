@@ -156,12 +156,14 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         {
             logger.LogError(ex, FailedToInviteUsersError.Code);
 
-            await organizationUserRepository.DeleteManyAsync(organizationUserToInviteEntities.Select(x => x.OrganizationUser.Id));
+            // this should already be done
+            //await organizationUserRepository.DeleteManyAsync(organizationUserToInviteEntities.Select(x => x.OrganizationUser.Id));
 
             // Do this first so that SmSeats never exceed PM seats (due to current billing requirements)
             await RevertSecretsManagerChangesAsync(validatedRequest, organization, validatedRequest.Value.InviteOrganization.SmSeats);
 
-            await RevertPasswordManagerChangesAsync(validatedRequest, organization);
+            //this should already be done
+            //await RevertPasswordManagerChangesAsync(validatedRequest, organization);
 
             return new Failure<InviteOrganizationUsersResponse>(
                 new FailedToInviteUsersError(
