@@ -141,3 +141,20 @@ public class OrganizationUserChangeEmailRequestModel
     [StringLength(256)]
     public string NewEmail { get; set; }
 }
+
+public class OrganizationUserBulkChangeEmailRequestModelEntry
+{
+    [Required]
+    public Guid Id { get; set; }
+
+    [Required]
+    [EmailAddress]
+    [StringLength(256)]
+    public string NewEmail { get; set; }
+}
+
+public class OrganizationUserBulkChangeEmailRequestModel
+{
+    [Required, MinLength(1)]
+    public IEnumerable<OrganizationUserBulkChangeEmailRequestModelEntry> Requests { get; set; }
+}

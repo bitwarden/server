@@ -85,6 +85,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly AccountRecoveryV2.IAdminRecoverAccountCommand _adminRecoverAccountCommandV2;
     private readonly ISelfRevokeOrganizationUserCommand _selfRevokeOrganizationUserCommand;
     private readonly IChangeEmailForPasswordlessOrgUserCommand _changeEmailForPasswordlessOrgUserCommand;
+    private readonly IBulkChangeEmailForPasswordlessOrgUserCommand _bulkChangeEmailForPasswordlessOrgUserCommand;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -118,7 +119,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand,
         V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext,
         ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand,
-        IChangeEmailForPasswordlessOrgUserCommand changeEmailForPasswordlessOrgUserCommand)
+        IChangeEmailForPasswordlessOrgUserCommand changeEmailForPasswordlessOrgUserCommand,
+        IBulkChangeEmailForPasswordlessOrgUserCommand bulkChangeEmailForPasswordlessOrgUserCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -153,6 +155,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _adminRecoverAccountCommandV2 = adminRecoverAccountCommandV2;
         _selfRevokeOrganizationUserCommand = selfRevokeOrganizationUserCommand;
         _changeEmailForPasswordlessOrgUserCommand = changeEmailForPasswordlessOrgUserCommand;
+        _bulkChangeEmailForPasswordlessOrgUserCommand = bulkChangeEmailForPasswordlessOrgUserCommand;
     }
 
     [HttpGet("{id}")]
@@ -575,6 +578,20 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
         await _changeEmailForPasswordlessOrgUserCommand.ChangeOrganizationUserEmailAsync(orgId, targetOrganizationUser, model.NewEmail);
         return TypedResults.NoContent();
+    }
+
+    [HttpPost("bulk-change-email-for-passwordless-user")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkChangeEmailForPasswordlessUser(
+        Guid orgId,
+        [FromBody] OrganizationUserBulkChangeEmailRequestModel model)
+    {
+        var requests = model.Requests.Select(r => (r.Id, r.NewEmail));
+        var results = await _bulkChangeEmailForPasswordlessOrgUserCommand
+            .BulkChangeOrganizationUserEmailAsync(orgId, requests);
+
+        return new ListResponseModel<OrganizationUserBulkResponseModel>(
+            results.Select(r => new OrganizationUserBulkResponseModel(r.OrganizationUserId, r.ErrorMessage)));
     }
 
     [HttpDelete("{id}")]

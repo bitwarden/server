@@ -164,6 +164,7 @@ public static class OrganizationServiceCollectionExtensions
 
         services.AddScoped<ISelfRevokeOrganizationUserCommand, SelfRevokeOrganizationUserCommand>();
         services.AddScoped<IChangeEmailForPasswordlessOrgUserCommand, ChangeEmailForPasswordlessOrgUserCommand>();
+        services.AddScoped<IBulkChangeEmailForPasswordlessOrgUserCommand, BulkChangeEmailForPasswordlessOrgUserCommand>();
     }
 
     private static void AddOrganizationApiKeyCommandsQueries(this IServiceCollection services)
