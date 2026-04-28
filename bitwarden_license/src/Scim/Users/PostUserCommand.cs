@@ -51,7 +51,7 @@ public class PostUserCommand(
         Guid organizationId,
         ScimProviderType scimProvider)
     {
-        await transactionManager.BeginTransactionAsync(IsolationLevel.Serializable);
+        await using var transactionScope = await transactionManager.BeginTransactionAsync(IsolationLevel.Serializable);
 
         var organization = await organizationRepository.GetByIdAsync(organizationId);
 
@@ -91,6 +91,7 @@ public class PostUserCommand(
             ? await organizationUserRepository.GetDetailsByIdAsync(invitedOrganizationUserId.Value)
             : null;
 
+        await transactionScope.CommitAsync();
         return organizationUser;
     }
 
