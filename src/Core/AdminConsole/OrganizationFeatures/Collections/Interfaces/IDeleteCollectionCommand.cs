@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Entities;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Collections.Interfaces;
 
 public interface IDeleteCollectionCommand
 {
