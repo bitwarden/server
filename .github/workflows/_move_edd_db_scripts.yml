@@ -7,6 +7,8 @@ on:
 permissions:
   pull-requests: write
   contents: write
+  id-token: write
+  actions: read
 
 jobs:
   setup:
@@ -54,13 +56,6 @@ jobs:
           subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           tenant_id: ${{ secrets.AZURE_TENANT_ID }}
           client_id: ${{ secrets.AZURE_CLIENT_ID }}
-
-      - name: Retrieve Slack secrets
-        id: retrieve-slack
-        uses: bitwarden/gh-actions/get-keyvault-secrets@main
-        with:
-          keyvault: "bitwarden-ci"
-          secrets: "devops-alerts-slack-webhook-url"
 
       - name: Retrieve secrets
         id: retrieve-secret
@@ -190,12 +185,3 @@ jobs:
               $(echo -e "$MOVED_FILES")
               ")
           echo "pr_url=${PR_URL}" >> "$GITHUB_OUTPUT"
-
-      - name: Notify Slack about creation of PR
-        if: ${{ steps.commit.outputs.pr_needed == 'true' }}
-        uses: act10ns/slack@44541246747a30eb3102d87f7a4cc5471b0ffb7d # v2.1.0
-        env:
-          SLACK_WEBHOOK_URL: ${{ steps.retrieve-slack.outputs.devops-alerts-slack-webhook-url }}
-        with:
-          message: "Created PR for moving EDD database scripts: ${{ steps.create-pr.outputs.pr_url }}"
-          status: ${{ job.status }}
