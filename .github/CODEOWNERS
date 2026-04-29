@@ -4,6 +4,9 @@
 #
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
+# CODEOWNERS owners
+.github/CODEOWNERS @bitwarden/tech-leads
+
 ## Docker-related files
 **/Dockerfile @bitwarden/team-appsec @bitwarden/dept-shot
 **/*.Dockerfile @bitwarden/team-appsec @bitwarden/dept-shot
