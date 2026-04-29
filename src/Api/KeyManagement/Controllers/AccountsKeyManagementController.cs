@@ -161,7 +161,9 @@ public class AccountsKeyManagementController : Controller
                 await _rotateUserAccountKeysCommand.MasterPasswordRotateUserAccountKeysAsync(user, dataModel);
                 break;
             case UnlockMethod.Tde:
-                throw new BadRequestException("TDE not implemented");
+                await _rotateUserAccountKeysCommand.TdeRotateUserAccountKeysAsync(user,
+                    new TdeRotateUserAccountKeysData { BaseData = await ToBaseDataModelAsync(request, user) });
+                break;
             case UnlockMethod.KeyConnector:
                 throw new BadRequestException("Key connector not implemented");
             default:
