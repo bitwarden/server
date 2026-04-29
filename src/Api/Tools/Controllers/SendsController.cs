@@ -130,7 +130,7 @@ public class SendsController : Controller
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetSendFileDownloadData(string encodedSendId,
+    public async Task<SendFileDownloadDataResponseModel> GetSendFileDownloadData(string encodedSendId,
         string fileId, [FromBody] SendAccessRequestModel model)
     {
         // Uncomment whenever we want to require the `send-id` header
@@ -158,7 +158,7 @@ public class SendsController : Controller
 
         if (result.Equals(SendAccessResult.PasswordRequired))
         {
-            return new UnauthorizedResult();
+            throw new UnauthorizedAccessException();
         }
 
         if (result.Equals(SendAccessResult.PasswordInvalid))
@@ -172,7 +172,7 @@ public class SendsController : Controller
             throw new NotFoundException();
         }
 
-        return new ObjectResult(new SendFileDownloadDataResponseModel() { Id = fileId, Url = url, });
+        return new SendFileDownloadDataResponseModel { Id = fileId, Url = url };
     }
 
     [AllowAnonymous]

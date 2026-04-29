@@ -320,6 +320,26 @@ public class SendsControllerTests : IDisposable
         await _nonAnonymousSendCommand.DidNotReceive().SaveSendAsync(Arg.Any<Send>());
     }
 
+    [Fact]
+    public async Task Access_WhenPasswordRequired_ThrowsUnauthorizedAccessException()
+    {
+        var sendId = Guid.NewGuid();
+        var accessId = CoreHelpers.Base64UrlEncode(sendId.ToByteArray());
+        var send = new Send
+        {
+            Id = sendId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new Dictionary<string, string>()),
+            AuthType = AuthType.Password
+        };
+
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _sendAuthorizationService.AccessAsync(send, null).Returns(SendAccessResult.PasswordRequired);
+
+        var request = new SendAccessRequestModel();
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.Access(accessId, request));
+    }
+
     [Theory]
     [InlineData(AuthType.Password)]
     [InlineData(AuthType.Email)]

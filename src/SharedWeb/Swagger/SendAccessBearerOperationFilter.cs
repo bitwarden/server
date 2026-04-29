@@ -11,23 +11,37 @@ namespace Bit.SharedWeb.Swagger;
 /// the OpenAPI generator to emit an explicit Bearer token parameter rather than injecting the
 /// user session token via middleware.
 /// </summary>
-public class SendAccessBearerOperationFilter : IOperationFilter
+public class SendAccessBearerOperationFilter : IDocumentFilter
 {
-    public void Apply(OpenApiOperation operation, OperationFilterContext context)
+    public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
     {
-        var requiresSendPolicy = context.MethodInfo
-            .GetCustomAttributes(true)
-            .OfType<AuthorizeAttribute>()
-            .Any(a => a.Policy == Policies.Send);
+        var sendPolicyPaths = context.ApiDescriptions
+            .Where(api => api.ActionDescriptor.EndpointMetadata
+                .OfType<AuthorizeAttribute>()
+                .Any(a => a.Policy == Policies.Send))
+            .Select(api => (
+                Method: api.HttpMethod?.ToUpperInvariant(),
+                Path: $"/{api.RelativePath?.TrimEnd('/')}"
+            ))
+            .Where(x => x.Method != null)
+            .ToHashSet();
 
-        if (!requiresSendPolicy) return;
+        foreach (var (path, pathItem) in swaggerDoc.Paths)
+        {
+            if (pathItem.Operations is null) continue;
 
-        operation.Security =
-        [
-            new OpenApiSecurityRequirement
+            foreach (var (method, operation) in pathItem.Operations)
             {
-                [new OpenApiSecuritySchemeReference("send-access-bearer")] = []
+                if (!sendPolicyPaths.Contains((method.Method.ToUpperInvariant(), path.TrimEnd('/')))) continue;
+
+                operation.Security =
+                [
+                    new OpenApiSecurityRequirement
+                    {
+                        [new OpenApiSecuritySchemeReference("send-access-bearer", swaggerDoc)] = []
+                    }
+                ];
             }
-        ];
+        }
     }
 }
