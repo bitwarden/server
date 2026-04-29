@@ -379,7 +379,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
             return;
         }
 
-        await _groupRepository.UpdateUsersAsync(group.Id, users);
+        await _groupRepository.UpdateUsersAsync(group.Id, users, group.RevisionDate);
     }
 
     private async Task<Organization?> GetOrgById(Guid id)

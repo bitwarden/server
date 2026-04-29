@@ -116,7 +116,7 @@ public class CollectionRepositoryTests
         });
 
         // Assign the test user to the test group
-        await groupRepository.UpdateUsersAsync(group.Id, new[] { orgUser.Id });
+        await groupRepository.UpdateUsersAsync(group.Id, new[] { orgUser.Id }, DateTime.UtcNow);
 
         var collection = new Collection { Name = "Test Collection", OrganizationId = organization.Id, };
 
@@ -191,8 +191,8 @@ public class CollectionRepositoryTests
         });
 
         // Assign the test user to the test groups
-        await groupRepository.UpdateUsersAsync(group.Id, new[] { orgUser.Id });
-        await groupRepository.UpdateUsersAsync(group2.Id, new[] { orgUser.Id });
+        await groupRepository.UpdateUsersAsync(group.Id, new[] { orgUser.Id }, DateTime.UtcNow);
+        await groupRepository.UpdateUsersAsync(group2.Id, new[] { orgUser.Id }, DateTime.UtcNow);
 
         var collection = new Collection { Name = "Test Collection", OrganizationId = organization.Id, };
 
@@ -399,8 +399,8 @@ public class CollectionRepositoryTests
         });
 
         // Assign the test user to the test groups
-        await groupRepository.UpdateUsersAsync(group.Id, new[] { orgUser.Id });
-        await groupRepository.UpdateUsersAsync(group2.Id, new[] { orgUser.Id });
+        await groupRepository.UpdateUsersAsync(group.Id, new[] { orgUser.Id }, DateTime.UtcNow);
+        await groupRepository.UpdateUsersAsync(group2.Id, new[] { orgUser.Id }, DateTime.UtcNow);
 
         var collection1 = new Collection { Name = "Collection 1", OrganizationId = organization.Id, };
 
