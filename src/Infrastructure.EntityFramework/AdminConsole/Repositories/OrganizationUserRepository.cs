@@ -994,6 +994,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                     c.RevisionDate = revisionDate;
                 }
             }
+
+            await dbContext.SaveChangesAsync();
         });
     }
 
