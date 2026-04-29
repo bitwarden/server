@@ -81,6 +81,7 @@ public class OrganizationInviteLinksControllerTests
         SutProvider<OrganizationInviteLinksController> sutProvider)
     {
         inviteLink.OrganizationId = orgId;
+        inviteLink.AllowedDomains = "[\"acme.com\"]";
 
         sutProvider.GetDependency<IGetOrganizationInviteLinkQuery>()
             .GetAsync(orgId)
