@@ -49,7 +49,13 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<ICollection<OrganizationUserOrganizationDetails>> GetManyConfirmedAcceptedDetailsByUserAsync(Guid userId);
     Task<OrganizationUserOrganizationDetails?> GetDetailsByUserAsync(Guid userId, Guid organizationId,
         OrganizationUserStatusType? status = null);
-    Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds);
+    /// <summary>
+    /// Replace the group memberships for an organization user.
+    /// </summary>
+    /// <param name="orgUserId">The organization user whose group memberships will be replaced.</param>
+    /// <param name="groupIds">The full set of group ids the user should belong to.</param>
+    /// <param name="revisionDate">The timestamp to set as each affected group's new revision date.</param>
+    Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds, DateTime revisionDate);
     Task UpsertManyAsync(IEnumerable<OrganizationUser> organizationUsers);
     Task<Guid> CreateAsync(OrganizationUser obj, IEnumerable<CollectionAccessSelection> collections);
     Task<ICollection<Guid>?> CreateManyAsync(IEnumerable<OrganizationUser> organizationIdUsers);
@@ -66,7 +72,7 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// around <see cref="RevokeManyAsync"/> for single-user operations.
     /// </summary>
     /// <param name="id">The ID of the organization user to revoke.</param>
-    Task RevokeAsync(Guid id);
+    Task RevokeAsync(Guid id, RevocationReason reason);
     /// <summary>
     /// Restores access for a single revoked organization user. This is a convenience wrapper
     /// around <see cref="RestoreManyAsync"/> for single-user operations.
@@ -97,7 +103,7 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// </summary>
     /// <param name="organizationUserIds">The IDs of the organization users to revoke.</param>
     /// <param name="reason">The reason for revocation. May be null if the reason is not known.</param>
-    Task RevokeManyAsync(IEnumerable<Guid> organizationUserIds, RevocationReason? reason = null);
+    Task RevokeManyAsync(IEnumerable<Guid> organizationUserIds, RevocationReason reason);
     /// <summary>
     /// Restores access for one or more revoked organization users, clearing their
     /// <see cref="Core.Entities.OrganizationUser.RevocationReason"/>. Only affects users

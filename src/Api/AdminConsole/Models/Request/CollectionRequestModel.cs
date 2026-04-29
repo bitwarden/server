@@ -2,10 +2,11 @@
 #nullable disable
 
 using System.ComponentModel.DataAnnotations;
+using Bit.Api.Models.Request;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.Models.Request;
+namespace Bit.Api.AdminConsole.Models.Request;
 
 public class CreateCollectionRequestModel
 {
