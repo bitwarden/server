@@ -1,4 +1,5 @@
-﻿using Bit.Core.Utilities;
+﻿using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Utilities;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -10,7 +11,7 @@ internal class WebAuthnChallengeCacheProvider(
     private const string _cacheKeyPrefix = "WebAuthnAssertion_";
     private static readonly DistributedCacheEntryOptions _cacheOptions = new()
     {
-        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(17)
+        AbsoluteExpirationRelativeToNow = WebAuthnLoginAssertionOptionsTokenable.TokenLifetime
     };
 
     private readonly IDistributedCache _distributedCache = distributedCache;

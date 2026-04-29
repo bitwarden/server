@@ -26,7 +26,7 @@ public class WebAuthnLoginAssertionOptionsTokenable : ExpiringTokenable
     [JsonConstructor]
     public WebAuthnLoginAssertionOptionsTokenable()
     {
-        ExpirationDate = DateTime.UtcNow.Add(_tokenLifetime);
+        ExpirationDate = DateTime.UtcNow.Add(TokenLifetime);
     }
 
     public WebAuthnLoginAssertionOptionsTokenable(WebAuthnLoginAssertionOptionsScope scope, AssertionOptions options) : this()
