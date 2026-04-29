@@ -1,5 +1,4 @@
-﻿using System.IO;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Utilities;
 using Bit.Seeder.Services;
 using Bit.SharedWeb.Utilities;
