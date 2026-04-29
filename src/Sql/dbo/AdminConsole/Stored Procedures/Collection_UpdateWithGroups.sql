@@ -14,6 +14,32 @@ BEGIN
 
     EXEC [dbo].[Collection_Update] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate, @DefaultUserCollectionEmail, @Type
 
+    -- Bump RevisionDate on all affected groups (old + new) before modifying CollectionGroup
+    ;WITH [AffectedGroupsCTE] AS (
+        SELECT
+            g.[Id]
+        FROM
+            @Groups g
+
+        UNION
+
+        SELECT
+            CG.[GroupId]
+        FROM
+            [dbo].[CollectionGroup] CG
+        WHERE
+            CG.[CollectionId] = @Id
+    )
+    UPDATE
+        G
+    SET
+        G.[RevisionDate] = @RevisionDate
+    FROM
+        [dbo].[Group] G
+    WHERE
+        G.[OrganizationId] = @OrganizationId
+        AND G.[Id] IN (SELECT [Id] FROM [AffectedGroupsCTE])
+
     -- Groups
     -- Delete groups that are no longer in source
     DELETE

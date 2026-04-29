@@ -63,6 +63,7 @@ public class OrganizationService : IOrganizationService
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand;
+    private readonly TimeProvider _timeProvider;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -86,7 +87,9 @@ public class OrganizationService : IOrganizationService
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IPricingClient pricingClient,
         ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
-        IStripeAdapter stripeAdapter, IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand)
+        IStripeAdapter stripeAdapter,
+        IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
+        TimeProvider timeProvider)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -111,6 +114,7 @@ public class OrganizationService : IOrganizationService
         _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
         _stripeAdapter = stripeAdapter;
         _updateOrganizationSubscriptionCommand = updateOrganizationSubscriptionCommand;
+        _timeProvider = timeProvider;
     }
 
     public async Task ReinstateSubscriptionAsync(Guid organizationId)
@@ -675,9 +679,10 @@ public class OrganizationService : IOrganizationService
                 await _organizationUserRepository.CreateAsync(orgUser, collections);
             }
 
+            var revisionDate = _timeProvider.GetUtcNow().UtcDateTime;
             foreach (var (orgUser, groups) in orgUserGroups)
             {
-                await _organizationUserRepository.UpdateGroupsAsync(orgUser.Id, groups);
+                await _organizationUserRepository.UpdateGroupsAsync(orgUser.Id, groups, revisionDate);
             }
 
             if (!await _currentContext.ManageUsers(organization.Id))

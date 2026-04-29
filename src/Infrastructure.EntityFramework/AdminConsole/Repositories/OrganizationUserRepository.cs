@@ -729,11 +729,35 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds)
+    public async Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds, DateTime revisionDate)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
+
+            var orgUser = await dbContext.OrganizationUsers.FindAsync(orgUserId);
+            if (orgUser != null)
+            {
+                var existingGroupIds = await dbContext.GroupUsers
+                    .Where(gu => gu.OrganizationUserId == orgUserId)
+                    .Select(gu => gu.GroupId)
+                    .ToListAsync();
+
+                var allAffectedGroupIds = existingGroupIds
+                    .Union(groupIds)
+                    .Distinct()
+                    .ToList();
+
+                var affectedGroups = await dbContext.Groups
+                    .Where(g => g.OrganizationId == orgUser.OrganizationId
+                        && allAffectedGroupIds.Contains(g.Id))
+                    .ToListAsync();
+
+                foreach (var g in affectedGroups)
+                {
+                    g.RevisionDate = revisionDate;
+                }
+            }
 
             var procedure = new GroupUserUpdateGroupsQuery(orgUserId, groupIds);
 
