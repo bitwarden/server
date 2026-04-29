@@ -41,55 +41,25 @@ public class ReinstateSubscriptionCommand(
 
         if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
         {
-            var activeSchedule = await GetActiveScheduleAsync(subscription);
-
-            // if there is an active schedule, we need to update it to include Phase 2 because it was removed during cancellation
-            if (activeSchedule is { Phases.Count: > 0 })
+            if (subscription.Metadata?.ContainsKey(MetadataKeys.CancelledDuringDeferredPriceIncrease) == true)
             {
-                if (activeSchedule.Phases.Count > 1)
-                {
-                    _logger.LogError(
-                        "{Command}: Subscription schedule ({ScheduleId}) has {PhaseCount} phases (expected 1 after cancellation), updating to add Phase 2",
-                        CommandName, activeSchedule.Id, activeSchedule.Phases.Count);
-                    return DefaultConflict;
-                }
-
                 _logger.LogInformation(
-                    "{Command}: Active subscription schedule ({ScheduleId}) found for subscription ({SubscriptionId}), updating schedule phases",
-                    CommandName, activeSchedule.Id, subscription.Id);
+                    "{Command}: Subscription ({SubscriptionId}) has pending price increase, clearing flag and recreating schedule",
+                    CommandName, subscription.Id);
 
-                var phase2 = await priceIncreaseScheduler.ResolvePhase2Async(subscription);
-                if (phase2 == null)
+                // Clear pending cancellation and flag BEFORE attaching a schedule.
+                // Stripe discourages direct subscription updates once a schedule is attached as it can create inconsistencies in phases.
+                await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
                 {
-                    _logger.LogError("Failed to resolve Phase 2 for Subscription {SubscriptionId}", subscription.Id);
-                    return DefaultConflict;
-                }
-                var phase1 = activeSchedule.Phases[0];
-
-                await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
-                    new SubscriptionScheduleUpdateOptions
+                    CancelAtPeriodEnd = false,
+                    Metadata = new Dictionary<string, string>
                     {
-                        EndBehavior = SubscriptionScheduleEndBehavior.Release,
-                        Phases =
-                        [
-                            new SubscriptionSchedulePhaseOptions
-                            {
-                                StartDate = phase1.StartDate,
-                                EndDate = phase1.EndDate,
-                                Items = phase1.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
-                                {
-                                    Price = i.PriceId,
-                                    Quantity = i.Quantity
-                                }).ToList(),
-                                Discounts = phase1.Discounts?.Select(d => new SubscriptionSchedulePhaseDiscountOptions
-                                {
-                                    Coupon = d.CouponId
-                                }).ToList(),
-                                ProrationBehavior = ProrationBehavior.None
-                            },
-                            phase2
-                        ]
-                    });
+                        [MetadataKeys.CancelledDuringDeferredPriceIncrease] = ""
+                    }
+                });
+
+                await priceIncreaseScheduler.Schedule(subscription);
+
                 return new None();
             }
         }
@@ -103,14 +73,4 @@ public class ReinstateSubscriptionCommand(
 
         return new None();
     });
-
-    private async Task<SubscriptionSchedule?> GetActiveScheduleAsync(Subscription subscription)
-    {
-        var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
-            new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
-
-        return schedules.Data.FirstOrDefault(s =>
-            s.SubscriptionId == subscription.Id &&
-            s.Status == SubscriptionScheduleStatus.Active);
-    }
 }

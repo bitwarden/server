@@ -15,7 +15,7 @@ public interface IUpdateOrganizationIntegrationConfigurationCommand
     /// <param name="configurationId">The unique identifier of the configuration to update.</param>
     /// <param name="updatedConfiguration">The updated configuration data.</param>
     /// <returns>The updated configuration.</returns>
-    /// <exception cref="Exceptions.NotFoundException">
+    /// <exception cref="Exceptions.BadRequestException">Thrown when the integration or the configuration does not exist,
     /// Thrown when the integration or the configuration does not exist,
     /// or the integration does not belong to the specified organization,
     /// or the configuration does not belong to the specified integration.</exception>

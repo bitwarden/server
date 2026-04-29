@@ -106,7 +106,8 @@ public class UsersController : Controller
                 new RevokeOrganizationUsersRequest(
                     organizationId,
                     [id],
-                    new SystemUser(EventSystemUser.SCIM)));
+                    new SystemUser(EventSystemUser.SCIM),
+                    RevocationReason.Manual));
 
             var errors = results.Select(x => x.Result.Match(
                 y => $"{y.Message} for user {x.Id}",

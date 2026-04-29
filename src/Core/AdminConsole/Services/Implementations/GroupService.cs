@@ -13,15 +13,18 @@ public class GroupService : IGroupService
     private readonly IEventService _eventService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IGroupRepository _groupRepository;
+    private readonly TimeProvider _timeProvider;
 
     public GroupService(
         IEventService eventService,
         IOrganizationUserRepository organizationUserRepository,
-        IGroupRepository groupRepository)
+        IGroupRepository groupRepository,
+        TimeProvider timeProvider)
     {
         _eventService = eventService;
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
+        _timeProvider = timeProvider;
     }
 
     [Obsolete("IDeleteGroupCommand should be used instead. To be removed by EC-608.")]
@@ -58,7 +61,7 @@ public class GroupService : IGroupService
             throw new NotFoundException();
         }
 
-        await _groupRepository.DeleteUserAsync(group.Id, organizationUserId);
+        await _groupRepository.DeleteUserAsync(group.Id, organizationUserId, _timeProvider.GetUtcNow().UtcDateTime);
 
         return orgUser;
     }

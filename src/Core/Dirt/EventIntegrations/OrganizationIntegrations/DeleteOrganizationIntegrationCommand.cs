@@ -20,7 +20,7 @@ public class DeleteOrganizationIntegrationCommand(
         var integration = await integrationRepository.GetByIdAsync(integrationId);
         if (integration is null || integration.OrganizationId != organizationId)
         {
-            throw new NotFoundException();
+            throw new BadRequestException("Integration not found for this organization.");
         }
 
         await integrationRepository.DeleteAsync(integration);

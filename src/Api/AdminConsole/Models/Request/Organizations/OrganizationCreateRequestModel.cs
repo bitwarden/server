@@ -33,6 +33,7 @@ public class OrganizationCreateRequestModel : IValidatableObject
     [Required]
     public string Key { get; set; }
 
+    [Required]
     public OrganizationKeysRequestModel Keys { get; set; }
     public PaymentMethodType? PaymentMethodType { get; set; }
     public string PaymentToken { get; set; }
@@ -117,7 +118,7 @@ public class OrganizationCreateRequestModel : IValidatableObject
             InitiationPath = InitiationPath,
             SkipTrial = SkipTrial,
             Coupons = Coupons,
-            Keys = Keys?.ToPublicKeyEncryptionKeyPairData()
+            Keys = Keys.ToPublicKeyEncryptionKeyPairData()
         };
 
         return orgSignup;

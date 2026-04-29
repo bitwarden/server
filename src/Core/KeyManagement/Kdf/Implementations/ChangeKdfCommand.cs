@@ -51,7 +51,7 @@ public class ChangeKdfCommand : IChangeKdfCommand
         // Currently KDF settings are not saved separately for authentication and unlock and must therefore be equal
         if (!authenticationData.Kdf.Equals(unlockData.Kdf))
         {
-            throw new BadRequestException("KDF settings must be equal for authentication and unlock.");
+            throw new BadRequestException("AuthenticationData and UnlockData must have the same KDF configuration.");
         }
 
         var validationErrors = KdfSettingsValidator.Validate(unlockData.Kdf);

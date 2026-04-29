@@ -26,6 +26,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
     private readonly IGroupRepository _groupRepository;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
     private readonly IPricingClient _pricingClient;
+    private readonly TimeProvider _timeProvider;
 
     public UpdateOrganizationUserCommand(
         IEventService eventService,
@@ -37,7 +38,8 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         ICollectionRepository collectionRepository,
         IGroupRepository groupRepository,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        TimeProvider timeProvider)
     {
         _eventService = eventService;
         _organizationService = organizationService;
@@ -49,6 +51,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         _groupRepository = groupRepository;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
         _pricingClient = pricingClient;
+        _timeProvider = timeProvider;
     }
 
     /// <summary>
@@ -139,7 +142,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
 
         if (groupAccess != null)
         {
-            await _organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, groupAccess);
+            await _organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, groupAccess, _timeProvider.GetUtcNow().UtcDateTime);
         }
 
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Updated);

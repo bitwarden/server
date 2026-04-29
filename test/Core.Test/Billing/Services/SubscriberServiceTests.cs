@@ -362,7 +362,7 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task CancelSubscription_CancelAtEndOfPeriod_FlagOn_TwoPhaseSchedule_UpdatesScheduleEndBehaviorToCancel(
+    public async Task CancelSubscription_CancelAtEndOfPeriod_FlagOn_TwoPhaseSchedule_ReleasesScheduleAndSetsCancelAtPeriodEnd(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -413,21 +413,20 @@ public class SubscriberServiceTests
 
         await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: false);
 
-        await stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(scheduleId,
-            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
-                o.EndBehavior == StripeConstants.SubscriptionScheduleEndBehavior.Cancel &&
-                o.Phases.Count == 1 &&
-                o.Phases[0].Items.Any(i => i.Price == "old-price") &&
-                o.Phases[0].Metadata == null));
+        await stripeAdapter.Received(1).ReleaseSubscriptionScheduleAsync(scheduleId);
+        await stripeAdapter.Received(1).UpdateSubscriptionAsync(subscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(o =>
+                o.CancelAtPeriodEnd == true &&
+                o.Metadata.ContainsKey(StripeConstants.MetadataKeys.CancelledDuringDeferredPriceIncrease)));
 
         await stripeAdapter.DidNotReceiveWithAnyArgs()
-            .CancelSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
+            .UpdateSubscriptionScheduleAsync(Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
         await stripeAdapter.DidNotReceiveWithAnyArgs()
-            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+            .CancelSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
     }
 
     [Theory, BitAutoData]
-    public async Task CancelSubscription_CancelAtEndOfPeriod_FlagOn_TwoPhaseSchedule_WithSurvey_AlsoUpdatesSubscriptionWithCancellationDetails(
+    public async Task CancelSubscription_CancelAtEndOfPeriod_FlagOn_TwoPhaseSchedule_WithSurvey_ReleasesScheduleAndUpdatesCancellationDetails(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -486,12 +485,17 @@ public class SubscriberServiceTests
 
         await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: false, offboardingSurveyResponse);
 
-        await stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(scheduleId,
-            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
-                o.EndBehavior == StripeConstants.SubscriptionScheduleEndBehavior.Cancel &&
-                o.Phases.Count == 1 &&
-                o.Phases[0].Metadata["cancellingUserId"] == userId.ToString()));
+        await stripeAdapter.Received(1).ReleaseSubscriptionScheduleAsync(scheduleId);
+        await stripeAdapter.Received(1).UpdateSubscriptionAsync(subscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(o =>
+                o.CancelAtPeriodEnd == true &&
+                o.CancellationDetails.Comment == "Too pricey" &&
+                o.CancellationDetails.Feedback == "too_expensive" &&
+                o.Metadata["cancellingUserId"] == userId.ToString() &&
+                o.Metadata.ContainsKey(StripeConstants.MetadataKeys.CancelledDuringDeferredPriceIncrease)));
 
+        await stripeAdapter.DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionScheduleAsync(Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
         await stripeAdapter.DidNotReceiveWithAnyArgs()
             .CancelSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
     }

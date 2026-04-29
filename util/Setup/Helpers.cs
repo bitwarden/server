@@ -3,7 +3,6 @@
 
 using System.Diagnostics;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -112,35 +111,41 @@ public static class Helpers
         return null;
     }
 
-    public static string Exec(string cmd, bool returnStdout = false)
+    public static string Exec(string cmd, string[] arguments = null, bool returnStdout = false, bool returnStderr = false)
     {
-        var process = new Process
+        var startInfo = new ProcessStartInfo(cmd, arguments ?? [])
         {
-            StartInfo = new ProcessStartInfo
-            {
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                WindowStyle = ProcessWindowStyle.Hidden
-            }
+            RedirectStandardOutput = returnStdout,
+            RedirectStandardError = returnStderr,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            WindowStyle = ProcessWindowStyle.Hidden
         };
 
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        var process = new Process { StartInfo = startInfo };
+
+        var result = new StringBuilder();
+
+        process.OutputDataReceived += (_, e) =>
         {
-            var escapedArgs = cmd.Replace("\"", "\\\"");
-            process.StartInfo.FileName = "/bin/sh";
-            process.StartInfo.Arguments = $"-c \"{escapedArgs}\"";
-        }
-        else
+            if (!returnStdout || e.Data == null) return;
+            result.AppendLine(e.Data);
+        };
+
+        process.ErrorDataReceived += (_, e) =>
         {
-            process.StartInfo.FileName = "powershell";
-            process.StartInfo.Arguments = cmd;
-        }
+            if (!returnStderr || e.Data == null) return;
+            result.AppendLine(e.Data);
+        };
 
         process.Start();
-        var result = returnStdout ? process.StandardOutput.ReadToEnd() : null;
+
+        if (returnStdout) process.BeginOutputReadLine();
+        if (returnStderr) process.BeginErrorReadLine();
+
         process.WaitForExit();
-        return result;
+
+        return result.ToString();
     }
 
     public static string ReadInput(string prompt)

@@ -1,7 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.KeyManagement.Models.Api.Request;
-using Bit.Core.Utilities;
-
 
 namespace Bit.Api.Auth.Models.Request.Accounts;
 
@@ -21,27 +19,33 @@ public class PasswordRequestModel : SecretVerificationRequestModel
 
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        // validate the secrets for the base class first
         foreach (var result in base.Validate(validationContext))
         {
             yield return result;
         }
 
-        // Enforce: if one is provided, both must be provided. Neither is also acceptable
-        // for backward compatibility with clients that don't yet send these fields.
-        if (AuthenticationData != null && UnlockData != null)
-        {
-            foreach (var validationResult in KdfSettingsValidator.ValidateAuthenticationAndUnlockData(
-                AuthenticationData.ToData(), UnlockData.ToData()))
-            {
-                yield return validationResult;
-            }
-        }
-        else if (AuthenticationData != null || UnlockData != null)
+        // Either both must be present or none should be present
+        if ((AuthenticationData == null) != (UnlockData == null))
         {
             yield return new ValidationResult(
                 "AuthenticationData and UnlockData must be provided.",
                 [nameof(AuthenticationData), nameof(UnlockData)]);
+        }
+        if (AuthenticationData != null && UnlockData != null)
+        {
+            if (!AuthenticationData.HasSameKdfConfiguration(UnlockData))
+            {
+                yield return new ValidationResult(
+                    "AuthenticationData and UnlockData must have the same KDF configuration.",
+                    [nameof(AuthenticationData), nameof(UnlockData)]);
+            }
+
+            if (!AuthenticationData.Salt.Equals(UnlockData.Salt))
+            {
+                yield return new ValidationResult(
+                    "AuthenticationData and UnlockData must have the same salt.",
+                    [nameof(AuthenticationData), nameof(UnlockData)]);
+            }
         }
     }
 }

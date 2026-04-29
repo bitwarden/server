@@ -97,7 +97,10 @@ public class TwoFactorAuthenticationPolicyEventHandler : IOnPolicyPreUpdateEvent
         }
 
         var commandResult = await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
-            new RevokeOrganizationUsersRequest(organizationId, nonCompliantUsers.Select(x => x.user), performedBy));
+            new RevokeOrganizationUsersRequest(organizationId,
+                nonCompliantUsers.Select(x => x.user),
+                performedBy,
+                RevocationReason.TwoFactorPolicyNonCompliance));
 
         if (commandResult.HasErrors)
         {

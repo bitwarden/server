@@ -42,6 +42,16 @@ public class EncryptedCipherDto
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public EncryptedBankAccountDto? BankAccount { get; set; }
 
+    // TODO: Remove JsonIgnore condition when Rust SDK supports DriversLicense cipher type
+    [JsonPropertyName("driversLicense")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public EncryptedDriversLicenseDto? DriversLicense { get; set; }
+
+    // TODO: Remove JsonIgnore condition when Rust SDK supports Passport cipher type
+    [JsonPropertyName("passport")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public EncryptedPassportDto? Passport { get; set; }
+
     [JsonPropertyName("fields")]
     public List<EncryptedFieldDto>? Fields { get; set; }
 
@@ -269,4 +279,82 @@ public class EncryptedBankAccountDto
 
     [JsonPropertyName("bankContactPhone")]
     public string? BankContactPhone { get; set; }
+}
+
+public class EncryptedDriversLicenseDto
+{
+    [JsonPropertyName("firstName")]
+    public string? FirstName { get; set; }
+
+    [JsonPropertyName("middleName")]
+    public string? MiddleName { get; set; }
+
+    [JsonPropertyName("lastName")]
+    public string? LastName { get; set; }
+
+    [JsonPropertyName("dateOfBirth")]
+    public string? DateOfBirth { get; set; }
+
+    [JsonPropertyName("licenseNumber")]
+    public string? LicenseNumber { get; set; }
+
+    [JsonPropertyName("issuingCountry")]
+    public string? IssuingCountry { get; set; }
+
+    [JsonPropertyName("issuingState")]
+    public string? IssuingState { get; set; }
+
+    [JsonPropertyName("issueDate")]
+    public string? IssueDate { get; set; }
+
+    [JsonPropertyName("issuingAuthority")]
+    public string? IssuingAuthority { get; set; }
+
+    [JsonPropertyName("expirationDate")]
+    public string? ExpirationDate { get; set; }
+
+    [JsonPropertyName("licenseClass")]
+    public string? LicenseClass { get; set; }
+}
+
+public class EncryptedPassportDto
+{
+    [JsonPropertyName("surname")]
+    public string? Surname { get; set; }
+
+    [JsonPropertyName("givenName")]
+    public string? GivenName { get; set; }
+
+    [JsonPropertyName("dateOfBirth")]
+    public string? DateOfBirth { get; set; }
+
+    [JsonPropertyName("sex")]
+    public string? Sex { get; set; }
+
+    [JsonPropertyName("birthPlace")]
+    public string? BirthPlace { get; set; }
+
+    [JsonPropertyName("nationality")]
+    public string? Nationality { get; set; }
+
+    [JsonPropertyName("passportNumber")]
+    public string? PassportNumber { get; set; }
+
+    [JsonPropertyName("passportType")]
+    public string? PassportType { get; set; }
+
+    [JsonPropertyName("issuingCountry")]
+    public string? IssuingCountry { get; set; }
+
+    [JsonPropertyName("issuingAuthority")]
+    public string? IssuingAuthority { get; set; }
+
+    [JsonPropertyName("issueDate")]
+    public string? IssueDate { get; set; }
+
+    [JsonPropertyName("expirationDate")]
+    public string? ExpirationDate { get; set; }
+
+    [JsonPropertyName("nationalIdentificationNumber")]
+    public string? NationalIdentificationNumber { get; set; }
 }

@@ -17,17 +17,20 @@ public class UpdateGroupCommand : IUpdateGroupCommand
     private readonly IGroupRepository _groupRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ICollectionRepository _collectionRepository;
+    private readonly TimeProvider _timeProvider;
 
     public UpdateGroupCommand(
         IEventService eventService,
         IGroupRepository groupRepository,
         IOrganizationUserRepository organizationUserRepository,
-        ICollectionRepository collectionRepository)
+        ICollectionRepository collectionRepository,
+        TimeProvider timeProvider)
     {
         _eventService = eventService;
         _groupRepository = groupRepository;
         _organizationUserRepository = organizationUserRepository;
         _collectionRepository = collectionRepository;
+        _timeProvider = timeProvider;
     }
 
     public async Task UpdateGroupAsync(Group group, Organization organization,
@@ -64,7 +67,8 @@ public class UpdateGroupCommand : IUpdateGroupCommand
 
     private async Task SaveGroupWithCollectionsAsync(Group group, IEnumerable<CollectionAccessSelection>? collections = null)
     {
-        group.RevisionDate = DateTime.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        group.RevisionDate = now;
 
         if (collections == null)
         {
@@ -81,7 +85,7 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         var newUserIds = userIds as Guid[] ?? userIds.ToArray();
         var originalUserIds = await _groupRepository.GetManyUserIdsByIdAsync(group.Id);
 
-        await _groupRepository.UpdateUsersAsync(group.Id, newUserIds);
+        await _groupRepository.UpdateUsersAsync(group.Id, newUserIds, group.RevisionDate);
 
         // We only want to create events OrganizationUserEvents for those that were actually modified.
         // HashSet.SymmetricExceptWith is a convenient method of finding the difference between lists
@@ -90,7 +94,7 @@ public class UpdateGroupCommand : IUpdateGroupCommand
 
         // Fetch all changed users for logging the event
         var users = await _organizationUserRepository.GetManyAsync(changedUserIds);
-        var eventDate = DateTime.UtcNow;
+        var eventDate = group.RevisionDate;
 
         if (systemUser.HasValue)
         {

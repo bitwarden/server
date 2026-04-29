@@ -9,6 +9,7 @@ using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
@@ -18,6 +19,8 @@ namespace Bit.Core.Test.AdminConsole.Services;
 [OrganizationCustomize(UseGroups = true)]
 public class GroupServiceTests
 {
+    private static readonly DateTime _expectedRevisionDate = DateTime.UtcNow.AddYears(1);
+
     [Theory, BitAutoData]
     public async Task DeleteAsync_ValidData_DeletesGroup(Group group, SutProvider<GroupService> sutProvider)
     {
@@ -37,8 +40,9 @@ public class GroupServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteUserAsync_ValidData_DeletesUserInGroupRepository(Group group, Organization organization, OrganizationUser organizationUser, SutProvider<GroupService> sutProvider)
+    public async Task DeleteUserAsync_ValidData_DeletesUserInGroupRepository(Group group, Organization organization, OrganizationUser organizationUser)
     {
+        var sutProvider = SetupSutProvider();
         group.OrganizationId = organization.Id;
         organization.UseGroups = true;
         organizationUser.OrganizationId = organization.Id;
@@ -47,14 +51,15 @@ public class GroupServiceTests
 
         await sutProvider.Sut.DeleteUserAsync(group, organizationUser.Id);
 
-        await sutProvider.GetDependency<IGroupRepository>().Received().DeleteUserAsync(group.Id, organizationUser.Id);
+        await sutProvider.GetDependency<IGroupRepository>().Received().DeleteUserAsync(group.Id, organizationUser.Id, Arg.Is<DateTime>(d => d == _expectedRevisionDate));
         await sutProvider.GetDependency<IEventService>().Received()
             .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_UpdatedGroups);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteUserAsync_ValidData_WithEventSystemUser_DeletesUserInGroupRepository(Group group, Organization organization, OrganizationUser organizationUser, EventSystemUser eventSystemUser, SutProvider<GroupService> sutProvider)
+    public async Task DeleteUserAsync_ValidData_WithEventSystemUser_DeletesUserInGroupRepository(Group group, Organization organization, OrganizationUser organizationUser, EventSystemUser eventSystemUser)
     {
+        var sutProvider = SetupSutProvider();
         group.OrganizationId = organization.Id;
         organization.UseGroups = true;
         organizationUser.OrganizationId = organization.Id;
@@ -63,7 +68,7 @@ public class GroupServiceTests
 
         await sutProvider.Sut.DeleteUserAsync(group, organizationUser.Id, eventSystemUser);
 
-        await sutProvider.GetDependency<IGroupRepository>().Received().DeleteUserAsync(group.Id, organizationUser.Id);
+        await sutProvider.GetDependency<IGroupRepository>().Received().DeleteUserAsync(group.Id, organizationUser.Id, Arg.Is<DateTime>(d => d == _expectedRevisionDate));
         await sutProvider.GetDependency<IEventService>().Received()
             .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_UpdatedGroups, eventSystemUser);
     }
@@ -82,8 +87,17 @@ public class GroupServiceTests
         // invalid user
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteUserAsync(group, Guid.NewGuid()));
         await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs()
-            .DeleteUserAsync(default, default);
+            .DeleteUserAsync(default, default, default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
             .LogOrganizationUserEventAsync<OrganizationUser>(default, default);
+    }
+
+    private static SutProvider<GroupService> SetupSutProvider()
+    {
+        var sutProvider = new SutProvider<GroupService>()
+            .WithFakeTimeProvider()
+            .Create();
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_expectedRevisionDate);
+        return sutProvider;
     }
 }

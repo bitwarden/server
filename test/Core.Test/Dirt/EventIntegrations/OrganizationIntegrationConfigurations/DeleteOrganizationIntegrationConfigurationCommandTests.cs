@@ -98,7 +98,7 @@ public class DeleteOrganizationIntegrationConfigurationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteAsync_IntegrationDoesNotExist_ThrowsNotFound(
+    public async Task DeleteAsync_IntegrationDoesNotExist_ThrowsBadRequest(
         SutProvider<DeleteOrganizationIntegrationConfigurationCommand> sutProvider,
         Guid organizationId,
         Guid integrationId,
@@ -108,7 +108,7 @@ public class DeleteOrganizationIntegrationConfigurationCommandTests
             .GetByIdAsync(integrationId)
             .Returns((OrganizationIntegration)null);
 
-        await Assert.ThrowsAsync<NotFoundException>(
+        await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.DeleteAsync(organizationId, integrationId, configurationId));
 
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().DidNotReceive()
@@ -122,7 +122,7 @@ public class DeleteOrganizationIntegrationConfigurationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteAsync_IntegrationDoesNotBelongToOrganization_ThrowsNotFound(
+    public async Task DeleteAsync_IntegrationDoesNotBelongToOrganization_ThrowsBadRequest(
         SutProvider<DeleteOrganizationIntegrationConfigurationCommand> sutProvider,
         Guid organizationId,
         Guid integrationId,
@@ -136,7 +136,7 @@ public class DeleteOrganizationIntegrationConfigurationCommandTests
             .GetByIdAsync(integrationId)
             .Returns(integration);
 
-        await Assert.ThrowsAsync<NotFoundException>(
+        await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.DeleteAsync(organizationId, integrationId, configurationId));
 
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().DidNotReceive()
@@ -150,7 +150,7 @@ public class DeleteOrganizationIntegrationConfigurationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteAsync_ConfigurationDoesNotExist_ThrowsNotFound(
+    public async Task DeleteAsync_ConfigurationDoesNotExist_ThrowsBadRequest(
         SutProvider<DeleteOrganizationIntegrationConfigurationCommand> sutProvider,
         Guid organizationId,
         Guid integrationId,
@@ -167,7 +167,7 @@ public class DeleteOrganizationIntegrationConfigurationCommandTests
             .GetByIdAsync(configurationId)
             .Returns((OrganizationIntegrationConfiguration)null);
 
-        await Assert.ThrowsAsync<NotFoundException>(
+        await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.DeleteAsync(organizationId, integrationId, configurationId));
 
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().DidNotReceive()
@@ -179,7 +179,7 @@ public class DeleteOrganizationIntegrationConfigurationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteAsync_ConfigurationDoesNotBelongToIntegration_ThrowsNotFound(
+    public async Task DeleteAsync_ConfigurationDoesNotBelongToIntegration_ThrowsBadRequest(
         SutProvider<DeleteOrganizationIntegrationConfigurationCommand> sutProvider,
         Guid organizationId,
         Guid integrationId,
@@ -199,7 +199,7 @@ public class DeleteOrganizationIntegrationConfigurationCommandTests
             .GetByIdAsync(configurationId)
             .Returns(configuration);
 
-        await Assert.ThrowsAsync<NotFoundException>(
+        await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.DeleteAsync(organizationId, integrationId, configurationId));
 
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().DidNotReceive()

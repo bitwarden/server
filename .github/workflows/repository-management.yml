@@ -241,5 +241,9 @@ jobs:
   move_edd_db_scripts:
     name: Move EDD database scripts
     needs: cut_branch
-    permissions: {}
+    permissions:
+      pull-requests: write
+      contents: write
+      id-token: write
+      actions: read
     uses: ./.github/workflows/_move_edd_db_scripts.yml

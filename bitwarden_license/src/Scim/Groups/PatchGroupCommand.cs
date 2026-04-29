@@ -22,19 +22,22 @@ public class PatchGroupCommand : IPatchGroupCommand
     private readonly IUpdateGroupCommand _updateGroupCommand;
     private readonly ILogger<PatchGroupCommand> _logger;
     private readonly IOrganizationRepository _organizationRepository;
+    private readonly TimeProvider _timeProvider;
 
     public PatchGroupCommand(
         IGroupRepository groupRepository,
         IGroupService groupService,
         IUpdateGroupCommand updateGroupCommand,
         ILogger<PatchGroupCommand> logger,
-        IOrganizationRepository organizationRepository)
+        IOrganizationRepository organizationRepository,
+        TimeProvider timeProvider)
     {
         _groupRepository = groupRepository;
         _groupService = groupService;
         _updateGroupCommand = updateGroupCommand;
         _logger = logger;
         _organizationRepository = organizationRepository;
+        _timeProvider = timeProvider;
     }
 
     public async Task PatchGroupAsync(Group group, ScimPatchModel model)
@@ -53,7 +56,7 @@ public class PatchGroupCommand : IPatchGroupCommand
             case PatchOps.Replace when operation.Path?.ToLowerInvariant() == PatchPaths.Members:
                 {
                     var ids = GetOperationValueIds(operation.Value);
-                    await _groupRepository.UpdateUsersAsync(group.Id, ids);
+                    await _groupRepository.UpdateUsersAsync(group.Id, ids, _timeProvider.GetUtcNow().UtcDateTime);
                     break;
                 }
 
@@ -122,7 +125,7 @@ public class PatchGroupCommand : IPatchGroupCommand
                     {
                         orgUserIds.Remove(v);
                     }
-                    await _groupRepository.UpdateUsersAsync(group.Id, orgUserIds);
+                    await _groupRepository.UpdateUsersAsync(group.Id, orgUserIds, _timeProvider.GetUtcNow().UtcDateTime);
                     break;
                 }
 
@@ -146,7 +149,7 @@ public class PatchGroupCommand : IPatchGroupCommand
             return;
         }
 
-        await _groupRepository.AddGroupUsersByIdAsync(group.Id, usersToAdd);
+        await _groupRepository.AddGroupUsersByIdAsync(group.Id, usersToAdd, _timeProvider.GetUtcNow().UtcDateTime);
     }
 
     private static HashSet<Guid> GetOperationValueIds(JsonElement objArray)

@@ -3,7 +3,8 @@
 
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
-using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
@@ -18,41 +19,25 @@ public class PolicyService : IPolicyService
 {
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly GlobalSettings _globalSettings;
 
     public PolicyService(
         IApplicationCacheService applicationCacheService,
         IOrganizationUserRepository organizationUserRepository,
-        IPolicyRepository policyRepository,
+        IPolicyRequirementQuery policyRequirementQuery,
         GlobalSettings globalSettings)
     {
         _applicationCacheService = applicationCacheService;
         _organizationUserRepository = organizationUserRepository;
-        _policyRepository = policyRepository;
+        _policyRequirementQuery = policyRequirementQuery;
         _globalSettings = globalSettings;
     }
 
     public async Task<MasterPasswordPolicyData> GetMasterPasswordPolicyForUserAsync(User user)
     {
-        var policies = (await _policyRepository.GetManyByUserIdAsync(user.Id))
-            .Where(p => p.Type == PolicyType.MasterPassword && p.Enabled)
-            .ToList();
-
-        if (!policies.Any())
-        {
-            return null;
-        }
-
-        var enforcedOptions = new MasterPasswordPolicyData();
-
-        foreach (var policy in policies)
-        {
-            enforcedOptions.CombineWith(policy.GetDataModel<MasterPasswordPolicyData>());
-        }
-
-        return enforcedOptions;
-
+        var requirement = await _policyRequirementQuery.GetAsyncVNext<MasterPasswordPolicyRequirement>(user.Id);
+        return requirement.EnforcedOptions;
     }
 
     public async Task<ICollection<OrganizationUserPolicyDetails>> GetPoliciesApplicableToUserAsync(Guid userId, PolicyType policyType, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted)

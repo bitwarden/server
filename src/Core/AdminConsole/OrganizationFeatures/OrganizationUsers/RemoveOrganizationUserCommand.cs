@@ -212,9 +212,11 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         }
 
         var deletingUserIsOwner = false;
+        var deletingUserIsCustom = false;
         if (deletingUserId.HasValue)
         {
             deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
+            deletingUserIsCustom = await _currentContext.OrganizationCustom(organizationId);
         }
 
         var claimedStatus = deletingUserId.HasValue && eventSystemUser == null
@@ -233,6 +235,11 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
                 if (orgUser.Type == OrganizationUserType.Owner && deletingUserId.HasValue && !deletingUserIsOwner)
                 {
                     throw new BadRequestException(RemoveOwnerByNonOwnerErrorMessage);
+                }
+
+                if (orgUser.Type == OrganizationUserType.Admin && deletingUserIsCustom)
+                {
+                    throw new BadRequestException(RemoveAdminByCustomUserErrorMessage);
                 }
 
                 if (claimedStatus.TryGetValue(orgUser.Id, out var isClaimed) && isClaimed)

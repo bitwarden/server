@@ -488,6 +488,10 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                     RevisionDate = timestamp,
                     AccountRevisionDate = timestamp,
                     MasterPasswordSalt = masterPasswordUnlockData.Salt
+                    // TODO (PM-35501): Add SecurityStamp so the rotation done in
+                    // MasterPasswordService.BuildUpdateUserDelegateSetInitialMasterPassword
+                    // is persisted.
+                    // TODO Need to add User.LastPasswordChangeDate here in PM-34905
                 },
                 transaction: transaction,
                 commandType: CommandType.StoredProcedure);

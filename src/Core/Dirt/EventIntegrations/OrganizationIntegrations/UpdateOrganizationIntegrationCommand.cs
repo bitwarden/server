@@ -27,7 +27,7 @@ public class UpdateOrganizationIntegrationCommand(
             integration.OrganizationId != organizationId ||
             integration.Type != updatedIntegration.Type)
         {
-            throw new NotFoundException();
+            throw new BadRequestException("Integration not found for this organization with the specified type.");
         }
 
         updatedIntegration.Id = integration.Id;

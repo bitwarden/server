@@ -1476,4 +1476,32 @@ public class OrganizationUserRepositoryTests
         // Assert
         Assert.False(result);
     }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task UpdateGroupsAsync_BumpsGroupRevisionDate(
+        IGroupRepository groupRepository,
+        IUserRepository userRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        var org = await organizationRepository.CreateTestOrganizationAsync();
+        var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(org, user);
+        var group1 = await groupRepository.CreateTestGroupAsync(org, "group1");
+        var group2 = await groupRepository.CreateTestGroupAsync(org, "group2");
+
+        var expectedRevisionDate = DateTime.UtcNow.AddMinutes(10);
+
+        // Act
+        await organizationUserRepository.UpdateGroupsAsync(orgUser.Id, [group1.Id, group2.Id], expectedRevisionDate);
+
+        // Assert
+        var actualGroup1 = await groupRepository.GetByIdAsync(group1.Id);
+        var actualGroup2 = await groupRepository.GetByIdAsync(group2.Id);
+        Assert.NotNull(actualGroup1);
+        Assert.NotNull(actualGroup2);
+        Assert.Equal(expectedRevisionDate, actualGroup1.RevisionDate, TimeSpan.FromMilliseconds(10));
+        Assert.Equal(expectedRevisionDate, actualGroup2.RevisionDate, TimeSpan.FromMilliseconds(10));
+    }
 }

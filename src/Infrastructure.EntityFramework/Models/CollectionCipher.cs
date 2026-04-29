@@ -2,6 +2,7 @@
 #nullable disable
 
 using AutoMapper;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
 
 namespace Bit.Infrastructure.EntityFramework.Models;

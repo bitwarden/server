@@ -5,6 +5,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUse
 
 public interface IRevokeOrganizationUserCommand
 {
-    Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId);
-    Task RevokeUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser);
+    Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId, RevocationReason reason);
+    Task RevokeUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser, RevocationReason reason);
 }

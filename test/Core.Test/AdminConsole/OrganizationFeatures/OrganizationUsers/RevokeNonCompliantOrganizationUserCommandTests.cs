@@ -20,7 +20,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
     public async Task RevokeNonCompliantOrganizationUsersAsync_GivenUnrecognizedUserType_WhenAttemptingToRevoke_ThenErrorShouldBeReturned(
             Guid organizationId, SutProvider<RevokeNonCompliantOrganizationUserCommand> sutProvider)
     {
-        var command = new RevokeOrganizationUsersRequest(organizationId, [], new InvalidUser());
+        var command = new RevokeOrganizationUsersRequest(organizationId, [], new InvalidUser(), RevocationReason.TwoFactorPolicyNonCompliance);
 
         var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
 
@@ -34,7 +34,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
             SutProvider<RevokeNonCompliantOrganizationUserCommand> sutProvider)
     {
         var command = new RevokeOrganizationUsersRequest(organizationId, revokingUser,
-            new StandardUser(revokingUser?.UserId ?? Guid.NewGuid(), true));
+            new StandardUser(revokingUser?.UserId ?? Guid.NewGuid(), true), RevocationReason.TwoFactorPolicyNonCompliance);
 
         var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
 
@@ -50,7 +50,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         userFromAnotherOrg.OrganizationId = Guid.NewGuid();
 
         var command = new RevokeOrganizationUsersRequest(organizationId, userFromAnotherOrg,
-            new StandardUser(Guid.NewGuid(), true));
+            new StandardUser(Guid.NewGuid(), true), RevocationReason.TwoFactorPolicyNonCompliance);
 
         var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
 
@@ -66,7 +66,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         userToRevoke.OrganizationId = organizationId;
 
         var command = new RevokeOrganizationUsersRequest(organizationId, userToRevoke,
-            new StandardUser(Guid.NewGuid(), true));
+            new StandardUser(Guid.NewGuid(), true), RevocationReason.TwoFactorPolicyNonCompliance);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
@@ -87,7 +87,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         userToRevoke.Type = OrganizationUserType.Owner;
 
         var command = new RevokeOrganizationUsersRequest(organizationId, userToRevoke,
-            new StandardUser(Guid.NewGuid(), false));
+            new StandardUser(Guid.NewGuid(), false), RevocationReason.TwoFactorPolicyNonCompliance);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
@@ -108,7 +108,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         userToRevoke.Status = OrganizationUserStatusType.Revoked;
 
         var command = new RevokeOrganizationUsersRequest(organizationId, userToRevoke,
-            new StandardUser(Guid.NewGuid(), true));
+            new StandardUser(Guid.NewGuid(), true), RevocationReason.TwoFactorPolicyNonCompliance);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
@@ -131,7 +131,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         revocableUsers[1].Status = OrganizationUserStatusType.Revoked;
 
         var command = new RevokeOrganizationUsersRequest(organizationId, revocableUsers,
-            new StandardUser(Guid.NewGuid(), false));
+            new StandardUser(Guid.NewGuid(), false), RevocationReason.TwoFactorPolicyNonCompliance);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
@@ -152,7 +152,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         userToRevoke.Type = OrganizationUserType.Admin;
 
         var command = new RevokeOrganizationUsersRequest(organizationId, userToRevoke,
-            new StandardUser(Guid.NewGuid(), false));
+            new StandardUser(Guid.NewGuid(), false), RevocationReason.TwoFactorPolicyNonCompliance);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
@@ -162,7 +162,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
-            .RevokeManyAsync(Arg.Is<IEnumerable<Guid>>(x => x.Count() == 1 && x.Contains(userToRevoke.Id)), null);
+            .RevokeManyAsync(Arg.Is<IEnumerable<Guid>>(x => x.Count() == 1 && x.Contains(userToRevoke.Id)), RevocationReason.TwoFactorPolicyNonCompliance);
 
         Assert.True(result.Success);
 
@@ -172,7 +172,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
                 Arg.Is<IEnumerable<(OrganizationUserUserDetails organizationUser, EventType eventType, DateTime? time
                     )>>(
                     x => x.Any(y =>
-                        y.organizationUser.Id == userToRevoke.Id && y.eventType == EventType.OrganizationUser_Revoked)
+                        y.organizationUser.Id == userToRevoke.Id && y.eventType == EventType.OrganizationUser_Revoked_TwoFactorNonCompliance)
                 ));
     }
 
