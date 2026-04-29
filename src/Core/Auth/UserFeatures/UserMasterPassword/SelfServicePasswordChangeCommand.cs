@@ -1,7 +1,9 @@
 ﻿using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Identity;
 
@@ -10,7 +12,9 @@ namespace Bit.Core.Auth.UserFeatures.UserMasterPassword;
 public class SelfServicePasswordChangeCommand(
     IUserService userService,
     IMasterPasswordService masterPasswordService,
-    IdentityErrorDescriber identityErrorDescriber) : ISelfServicePasswordChangeCommand
+    IdentityErrorDescriber identityErrorDescriber,
+    IEventService eventService,
+    IPushNotificationService pushService) : ISelfServicePasswordChangeCommand
 {
     public async Task<IdentityResult> ChangePasswordAsync(
         User user,
@@ -36,6 +40,9 @@ public class SelfServicePasswordChangeCommand(
         {
             return IdentityResult.Failed(result.AsT1);
         }
+
+        await eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
+        await pushService.PushLogOutAsync(user.Id, true);
 
         return IdentityResult.Success;
     }
