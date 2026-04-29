@@ -19,6 +19,7 @@ public class ValidateSequenceAttribute<TValidator> : ValidationAttribute
         {
             return ValidationResult.Success;
         }
+
         var items = ((IEnumerable<object>)value).ToList();
         var validator = new TValidator();
         var invalid = items.Where(item => !validator.IsValid(item)).ToList();
