@@ -13,6 +13,7 @@ using Bit.Scim.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
@@ -21,11 +22,14 @@ namespace Bit.Scim.Test.Groups;
 [SutProviderCustomize]
 public class PatchGroupCommandTests
 {
+    private static readonly DateTime _expectedRevisionDate = DateTime.UtcNow.AddYears(1);
+
     [Theory]
     [BitAutoData]
-    public async Task PatchGroup_ReplaceListMembers_Success(SutProvider<PatchGroupCommand> sutProvider,
+    public async Task PatchGroup_ReplaceListMembers_Success(
         Organization organization, Group group, IEnumerable<Guid> userIds)
     {
+        var sutProvider = SetupSutProvider();
         group.OrganizationId = organization.Id;
 
         var scimPatchModel = new ScimPatchModel
@@ -48,7 +52,8 @@ public class PatchGroupCommandTests
             group.Id,
             Arg.Is<IEnumerable<Guid>>(arg =>
                 arg.Count() == userIds.Count() &&
-                arg.ToHashSet().SetEquals(userIds)));
+                arg.ToHashSet().SetEquals(userIds)),
+            Arg.Is<DateTime>(d => d == _expectedRevisionDate));
     }
 
     [Theory]
@@ -168,8 +173,9 @@ public class PatchGroupCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task PatchGroup_AddSingleMember_Success(SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group, ICollection<Guid> existingMembers, Guid userId)
+    public async Task PatchGroup_AddSingleMember_Success(Organization organization, Group group, ICollection<Guid> existingMembers, Guid userId)
     {
+        var sutProvider = SetupSutProvider();
         group.OrganizationId = organization.Id;
 
         sutProvider.GetDependency<IGroupRepository>()
@@ -193,7 +199,8 @@ public class PatchGroupCommandTests
 
         await sutProvider.GetDependency<IGroupRepository>().Received(1).AddGroupUsersByIdAsync(
             group.Id,
-            Arg.Is<IEnumerable<Guid>>(arg => arg.Single() == userId));
+            Arg.Is<IEnumerable<Guid>>(arg => arg.Single() == userId),
+            Arg.Is<DateTime>(d => d == _expectedRevisionDate));
     }
 
     [Theory]
@@ -229,13 +236,14 @@ public class PatchGroupCommandTests
 
         await sutProvider.GetDependency<IGroupRepository>()
             .DidNotReceiveWithAnyArgs()
-            .AddGroupUsersByIdAsync(default, default);
+            .AddGroupUsersByIdAsync(default, default, default);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PatchGroup_AddListMembers_Success(SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group, ICollection<Guid> existingMembers, ICollection<Guid> userIds)
+    public async Task PatchGroup_AddListMembers_Success(Organization organization, Group group, ICollection<Guid> existingMembers, ICollection<Guid> userIds)
     {
+        var sutProvider = SetupSutProvider();
         group.OrganizationId = organization.Id;
 
         sutProvider.GetDependency<IGroupRepository>()
@@ -262,15 +270,18 @@ public class PatchGroupCommandTests
             group.Id,
             Arg.Is<IEnumerable<Guid>>(arg =>
                 arg.Count() == userIds.Count &&
-                arg.ToHashSet().SetEquals(userIds)));
+                arg.ToHashSet().SetEquals(userIds)),
+            Arg.Is<DateTime>(d => d == _expectedRevisionDate));
     }
 
     [Theory]
     [BitAutoData]
     public async Task PatchGroup_AddListMembers_IgnoresDuplicatesInRequest(
-        SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group,
+        Organization organization, Group group,
         ICollection<Guid> existingMembers)
     {
+        var sutProvider = SetupSutProvider();
+
         // Create 3 userIds
         var fixture = new Fixture { RepeatCount = 3 };
         var userIds = fixture.CreateMany<Guid>().ToList();
@@ -308,17 +319,19 @@ public class PatchGroupCommandTests
             group.Id,
             Arg.Is<IEnumerable<Guid>>(arg =>
                 arg.Count() == 3 &&
-                arg.ToHashSet().SetEquals(userIds)));
+                arg.ToHashSet().SetEquals(userIds)),
+            Arg.Is<DateTime>(d => d == _expectedRevisionDate));
     }
 
     [Theory]
     [BitAutoData]
     public async Task PatchGroup_AddListMembers_SuccessIfOnlySomeUsersAreInGroup(
-        SutProvider<PatchGroupCommand> sutProvider,
         Organization organization, Group group,
         ICollection<Guid> existingMembers,
         ICollection<Guid> userIds)
     {
+        var sutProvider = SetupSutProvider();
+
         // A user is already in the group, but some still need to be added
         userIds.Add(existingMembers.First());
 
@@ -350,7 +363,8 @@ public class PatchGroupCommandTests
                 group.Id,
                 Arg.Is<IEnumerable<Guid>>(arg =>
                     arg.Count() == userIds.Count &&
-                    arg.ToHashSet().SetEquals(userIds)));
+                    arg.ToHashSet().SetEquals(userIds)),
+                Arg.Is<DateTime>(d => d == _expectedRevisionDate));
     }
 
     [Theory]
@@ -379,9 +393,10 @@ public class PatchGroupCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task PatchGroup_RemoveListMembers_Success(SutProvider<PatchGroupCommand> sutProvider,
+    public async Task PatchGroup_RemoveListMembers_Success(
         Organization organization, Group group, ICollection<Guid> existingMembers)
     {
+        var sutProvider = SetupSutProvider();
         List<Guid> usersToRemove = [existingMembers.First(), existingMembers.Skip(1).First()];
         group.OrganizationId = organization.Id;
 
@@ -412,7 +427,8 @@ public class PatchGroupCommandTests
                 group.Id,
                 Arg.Is<IEnumerable<Guid>>(arg =>
                     arg.Count() == expectedRemainingUsers.Count &&
-                    arg.ToHashSet().SetEquals(expectedRemainingUsers)));
+                    arg.ToHashSet().SetEquals(expectedRemainingUsers)),
+                Arg.Is<DateTime>(d => d == _expectedRevisionDate));
     }
 
     [Theory]
@@ -430,7 +446,7 @@ public class PatchGroupCommandTests
         await sutProvider.Sut.PatchGroupAsync(group, scimPatchModel);
 
         // Assert: no operation performed
-        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().UpdateUsersAsync(default, default);
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().UpdateUsersAsync(default, default, default);
         await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().GetManyUserIdsByIdAsync(default);
         await sutProvider.GetDependency<IUpdateGroupCommand>().DidNotReceiveWithAnyArgs().UpdateGroupAsync(default, default);
         await sutProvider.GetDependency<IGroupService>().DidNotReceiveWithAnyArgs().DeleteUserAsync(default, default);
@@ -454,9 +470,18 @@ public class PatchGroupCommandTests
 
         await sutProvider.Sut.PatchGroupAsync(group, scimPatchModel);
 
-        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().UpdateUsersAsync(default, default);
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().UpdateUsersAsync(default, default, default);
         await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().GetManyUserIdsByIdAsync(default);
         await sutProvider.GetDependency<IUpdateGroupCommand>().DidNotReceiveWithAnyArgs().UpdateGroupAsync(default, default);
         await sutProvider.GetDependency<IGroupService>().DidNotReceiveWithAnyArgs().DeleteUserAsync(default, default);
+    }
+
+    private static SutProvider<PatchGroupCommand> SetupSutProvider()
+    {
+        var sutProvider = new SutProvider<PatchGroupCommand>()
+            .WithFakeTimeProvider()
+            .Create();
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_expectedRevisionDate);
+        return sutProvider;
     }
 }

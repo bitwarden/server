@@ -545,9 +545,28 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
+
             if (groups != null)
             {
+                var existingGroupIds = await dbContext.CollectionGroups
+                    .Where(cg => cg.CollectionId == collection.Id)
+                    .Select(cg => cg.GroupId)
+                    .ToListAsync();
+
                 await ReplaceCollectionGroupsAsync(dbContext, collection, groups);
+
+                var allAffectedGroupIds = existingGroupIds
+                    .Union(groups.Select(g => g.Id))
+                    .Distinct()
+                    .ToList();
+                var affectedGroups = await dbContext.Groups
+                    .Where(g => g.OrganizationId == collection.OrganizationId
+                        && allAffectedGroupIds.Contains(g.Id))
+                    .ToListAsync();
+                foreach (var g in affectedGroups)
+                {
+                    g.RevisionDate = collection.RevisionDate;
+                }
             }
             if (users != null)
             {
@@ -725,6 +744,20 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             foreach (var c in collections)
             {
                 c.RevisionDate = revisionDate;
+            }
+
+            // Bump the revision date on all affected groups
+            if (groups != null)
+            {
+                var groupIdsList = groups.Select(g => g.Id).ToList();
+                var affectedGroups = await dbContext.Groups
+                    .Where(g => g.OrganizationId == organizationId
+                        && groupIdsList.Contains(g.Id))
+                    .ToListAsync();
+                foreach (var g in affectedGroups)
+                {
+                    g.RevisionDate = revisionDate;
+                }
             }
 
             await dbContext.UserBumpAccountRevisionDateByCollectionIdsAsync(collectionIdsList, organizationId);

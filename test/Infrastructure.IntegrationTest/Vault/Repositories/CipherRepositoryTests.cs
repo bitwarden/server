@@ -246,7 +246,7 @@ public class CipherRepositoryTests
             OrganizationId = organization.Id,
             Name = "Edit Group",
         });
-        await groupRepository.UpdateUsersAsync(editGroup.Id, new[] { orgUser.Id });
+        await groupRepository.UpdateUsersAsync(editGroup.Id, new[] { orgUser.Id }, DateTime.UtcNow);
 
         // MANAGE
 
@@ -487,7 +487,7 @@ public class CipherRepositoryTests
             OrganizationId = organization.Id,
             Name = "Test Group",
         });
-        await groupRepository.UpdateUsersAsync(group.Id, new[] { orgUser.Id });
+        await groupRepository.UpdateUsersAsync(group.Id, new[] { orgUser.Id }, DateTime.UtcNow);
 
         var (manageCipher, nonManageCipher) = await CreateCipherInOrganizationCollectionWithGroup(
             organization, group, cipherRepository, collectionRepository, collectionCipherRepository, groupRepository);
@@ -822,7 +822,7 @@ public class CipherRepositoryTests
             OrganizationId = organization.Id,
             Name = "Edit Group",
         });
-        await groupRepository.UpdateUsersAsync(editGroup.Id, new[] { orgUser1.Id });
+        await groupRepository.UpdateUsersAsync(editGroup.Id, new[] { orgUser1.Id }, DateTime.UtcNow);
 
         // Add collections to Org
         var manageCollection = await collectionRepository.CreateAsync(new Collection
