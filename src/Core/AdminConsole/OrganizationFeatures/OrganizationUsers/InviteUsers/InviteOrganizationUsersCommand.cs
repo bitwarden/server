@@ -163,7 +163,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             await RevertSecretsManagerChangesAsync(validatedRequest, organization, validatedRequest.Value.InviteOrganization.SmSeats);
 
             //this should already be done
-            //await RevertPasswordManagerChangesAsync(validatedRequest, organization);
+            await RevertPasswordManagerChangesAsync(validatedRequest, organization);
 
             return new Failure<InviteOrganizationUsersResponse>(
                 new FailedToInviteUsersError(
@@ -193,7 +193,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         {
             organization.Seats = (short?)validatedResult.Value.PasswordManagerSubscriptionUpdate.Seats;
 
-            await organizationRepository.ReplaceAsync(organization);
+            //await organizationRepository.ReplaceAsync(organization);
             await applicationCacheService.UpsertOrganizationAbilityAsync(organization);
         }
     }
