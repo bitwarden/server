@@ -98,7 +98,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             token.TokenIsValid(WebAuthnLoginAssertionOptionsScope.Authentication);
         var deviceResponse = JsonSerializer.Deserialize<AuthenticatorAssertionRawResponse>(rawDeviceResponse);
 
-        if (!verified || deviceResponse == null)
+        if (!verified || deviceResponse == null || token.Options == null)
         {
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidRequest);
             return;
