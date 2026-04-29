@@ -12,6 +12,7 @@ using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
 using Bit.SharedWeb.Swagger;
 using Bit.SharedWeb.Utilities;
+using Duende.IdentityServer.Extensions;
 using Duende.IdentityServer.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi;
@@ -190,6 +191,12 @@ public class Startup
         {
             app.UsePathBase("/identity");
             app.UseForwardedHeaders(globalSettings);
+
+            if (globalSettings.KdfDefaultHashKey.IsNullOrEmpty())
+            {
+                logger.LogWarning(
+                    "globalSettings__kdfdefaulthashkey is not set. This value not being set degrades account enumeration protections. Set this value to a strong random secret (used as an HMAC key) in production environments.");
+            }
         }
 
         // Default Middleware
