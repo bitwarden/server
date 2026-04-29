@@ -16,7 +16,8 @@ internal static class SshKeyCipherSeeder
             Notes = options.Notes,
             Type = CipherTypes.SshKey,
             SshKey = options.SshKey,
-            Fields = options.Fields
+            Fields = options.Fields,
+            Reprompt = (int)options.Reprompt
         };
 
         var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!);

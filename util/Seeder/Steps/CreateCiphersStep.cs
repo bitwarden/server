@@ -80,8 +80,6 @@ internal sealed class CreateCiphersStep : IStep
                 cipher.Favorites = CipherComposer.BuildFavoritesJson([userId.Value]);
             }
 
-            cipher.Reprompt = options.Reprompt;
-
             ciphers.Add(cipher);
 
             if (context.Registry.FixtureCipherNameToId.ContainsKey(item.Name))
