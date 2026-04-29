@@ -93,6 +93,7 @@ public static class StripeConstants
         public const string OriginatingPlatform = "originatingPlatform";
         public const string OriginatingAppVersion = "originatingAppVersion";
         public const string TrialInitiationPath = "trialInitiationPath";
+        public const string CancelledDuringDeferredPriceIncrease = "cancelled_during_deferred_price_increase";
     }
 
     public static class PaymentBehavior
