@@ -35,4 +35,7 @@
 
     <EmbeddedResource Include="Utilities\data\embeddedResource.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="Billing\Services\test-org-license-*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

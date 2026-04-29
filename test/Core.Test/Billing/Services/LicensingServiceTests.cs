@@ -5,10 +5,13 @@ using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Settings;
 using Bit.Core.Test.Billing.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 using Xunit;
 
 namespace Bit.Core.Test.Billing.Services;
@@ -40,7 +43,8 @@ public class LicensingServiceTests
         return directory;
     });
 
-    public static SutProvider<LicensingService> GetSutProvider()
+    public static SutProvider<LicensingService> GetSutProvider(
+        string environmentName = "Development")
     {
         var fixture = new Fixture().WithAutoNSubstitutions();
 
@@ -48,9 +52,20 @@ public class LicensingServiceTests
         settings.LicenseDirectory = LicenseDirectory;
         settings.SelfHosted = true;
 
+        var environment = fixture.Create<IWebHostEnvironment>();
+        environment.EnvironmentName = environmentName;
+
         return new SutProvider<LicensingService>(fixture)
             .SetDependency(settings)
+            .SetDependency(environment)
             .Create();
+    }
+
+    private static OrganizationLicense LoadLicense(string filename)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "Billing", "Services", filename);
+        var json = File.ReadAllText(path);
+        return JsonSerializer.Deserialize<OrganizationLicense>(json);
     }
 
     [Theory, BitAutoData, OrganizationLicenseCustomize]
@@ -130,6 +145,43 @@ public class LicensingServiceTests
             {
                 Directory.Delete(UserLicenseDirectory.Value, true);
             }
+        }
+    }
+
+    public static TheoryData<string, string, bool> GetClaimsPrincipalFromLicense_TestCases =>
+        new()
+        {
+            // Dev license validates on non-production server (dev cert is in verification list)
+            { "test-org-license-dev.json", Environments.Development, true },
+            // Dev license fails on production server (dev cert not loaded)
+            { "test-org-license-dev.json", Environments.Production, false },
+            // Both prod and dev cert is in verification list on dev server
+            { "test-org-license-prod.json", Environments.Development, true },
+            // Prod license validates on production server
+            { "test-org-license-prod.json", Environments.Production, true },
+            // Dev license on QA server
+            { "test-org-license-dev.json", "QA", true },
+            // Prod license on QA server
+            { "test-org-license-prod.json", "QA", true },
+        };
+
+    [Theory]
+    [MemberData(nameof(GetClaimsPrincipalFromLicense_TestCases))]
+    public void GetClaimsPrincipalFromLicense_ValidatesCorrectCertPerEnvironment(
+        string licenseFile, string environment, bool shouldSucceed)
+    {
+        var sutProvider = GetSutProvider(environment);
+        var license = LoadLicense(licenseFile);
+
+        if (shouldSucceed)
+        {
+            var result = sutProvider.Sut.GetClaimsPrincipalFromLicense(license);
+            Assert.NotNull(result);
+        }
+        else
+        {
+            Assert.Throws<BadRequestException>(() =>
+                sutProvider.Sut.GetClaimsPrincipalFromLicense(license));
         }
     }
 }
