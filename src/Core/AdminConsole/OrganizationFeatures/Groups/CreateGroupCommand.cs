@@ -17,16 +17,19 @@ public class CreateGroupCommand : ICreateGroupCommand
     private readonly IEventService _eventService;
     private readonly IGroupRepository _groupRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly TimeProvider _timeProvider;
 
     public CreateGroupCommand(
         IEventService eventService,
         IGroupRepository groupRepository,
-        IOrganizationUserRepository organizationUserRepository
+        IOrganizationUserRepository organizationUserRepository,
+        TimeProvider timeProvider
         )
     {
         _eventService = eventService;
         _groupRepository = groupRepository;
         _organizationUserRepository = organizationUserRepository;
+        _timeProvider = timeProvider;
     }
 
     public async Task CreateGroupAsync(Group group, Organization organization,
@@ -61,7 +64,8 @@ public class CreateGroupCommand : ICreateGroupCommand
 
     private async Task GroupRepositoryCreateGroupAsync(Group group, Organization organization, IEnumerable<CollectionAccessSelection> collections = null)
     {
-        group.CreationDate = group.RevisionDate = DateTime.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        group.CreationDate = group.RevisionDate = now;
 
         if (collections == null)
         {
@@ -78,10 +82,10 @@ public class CreateGroupCommand : ICreateGroupCommand
     {
         var usersToAddToGroup = userIds as Guid[] ?? userIds.ToArray();
 
-        await _groupRepository.UpdateUsersAsync(group.Id, usersToAddToGroup);
+        await _groupRepository.UpdateUsersAsync(group.Id, usersToAddToGroup, group.RevisionDate);
 
         var users = await _organizationUserRepository.GetManyAsync(usersToAddToGroup);
-        var eventDate = DateTime.UtcNow;
+        var eventDate = group.RevisionDate;
 
         if (systemUser.HasValue)
         {

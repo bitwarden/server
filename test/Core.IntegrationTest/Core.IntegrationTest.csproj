@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="coverlet.collector" Version="8.0.0" />
+    <PackageReference Include="coverlet.collector" Version="10.0.0" />
     <PackageReference Include="MartinCostello.Logging.XUnit" Version="0.7.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(MicrosoftNetTestSdkVersion)" />
     <PackageReference Include="Rnwood.SmtpServer" Version="3.1.0-ci0868" />
