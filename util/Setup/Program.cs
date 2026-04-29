@@ -170,8 +170,10 @@ public class Program
                 "pkcs12",
                 "-nokeys",
                 "-info",
-                "-in", $"{application.RootDirectory}/identity/identity.pfx",
-                "-passin", $"pass:{_context.Install.IdentityCertPassword}",
+                "-in",
+                $"{application.RootDirectory}/identity/identity.pfx",
+                "-passin",
+                $"pass:{_context.Install.IdentityCertPassword}",
             ],
             returnStdout: true,
             returnStderr: false);
@@ -187,11 +189,14 @@ public class Program
                 "openssl",
                 [
                     "pkcs12",
-                    "-in", $"{application.RootDirectory}/identity/identity.pfx",
+                    "-in",
+                    $"{application.RootDirectory}/identity/identity.pfx",
                     "-nocerts",
                     "-nodes",
-                    "-out", "identity.key",
-                    "-passin", $"pass:{_context.Install.IdentityCertPassword}",
+                    "-out",
+                    "identity.key",
+                    "-passin",
+                    $"pass:{_context.Install.IdentityCertPassword}",
                 ],
                 returnStdout: false,
                 returnStderr: false);
@@ -201,11 +206,14 @@ public class Program
                 "openssl",
                 [
                     "pkcs12",
-                    "-in", $"{application.RootDirectory}/identity/identity.pfx",
+                    "-in",
+                    $"{application.RootDirectory}/identity/identity.pfx",
                     "-clcerts",
                     "-nokeys",
-                    "-out", "identity.crt",
-                    "-passin", $"pass:{_context.Install.IdentityCertPassword}",
+                    "-out",
+                    "identity.crt",
+                    "-passin",
+                    $"pass:{_context.Install.IdentityCertPassword}",
                 ],
                 returnStdout: false,
                 returnStderr: false);
@@ -216,10 +224,14 @@ public class Program
                 [
                     "pkcs12",
                     "-export",
-                    "-out", $"{application.RootDirectory}/identity/identity.pfx",
-                    "-inkey", "identity.key",
-                    "-in", $"identity.crt",
-                    "-passout", $"pass:{_context.Install.IdentityCertPassword}"
+                    "-out",
+                    $"{application.RootDirectory}/identity/identity.pfx",
+                    "-inkey",
+                    "identity.key",
+                    "-in",
+                    $"identity.crt",
+                    "-passout",
+                    $"pass:{_context.Install.IdentityCertPassword}"
                 ],
                 returnStdout: false,
                 returnStderr: false);
