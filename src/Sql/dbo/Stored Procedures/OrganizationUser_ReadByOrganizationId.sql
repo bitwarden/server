@@ -1,6 +1,6 @@
 ﻿CREATE PROCEDURE [dbo].[OrganizationUser_ReadByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER,
-    @Type TINYINT = NULL
+    @Type TINYINT
 AS
 BEGIN
     SET NOCOUNT ON

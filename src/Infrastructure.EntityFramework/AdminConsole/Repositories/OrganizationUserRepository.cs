@@ -1056,23 +1056,32 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         var orgUserIds = usersToConfirmList.Select(u => u.OrganizationUserId).ToList();
         var keyByOrgUserId = usersToConfirmList.ToDictionary(u => u.OrganizationUserId, u => u.Key);
 
-        var confirmedIds = await dbContext.OrganizationUsers
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        var rowsToUpdate = await dbContext.OrganizationUsers
             .Where(ou => orgUserIds.Contains(ou.Id) && ou.Status == OrganizationUserStatusType.Accepted)
-            .Select(ou => ou.Id)
             .ToListAsync();
 
-        if (confirmedIds.Count == 0)
+        if (rowsToUpdate.Count == 0)
         {
-            return confirmedIds;
+            await transaction.RollbackAsync();
+            return [];
         }
 
-        await dbContext.OrganizationUsers
-            .Where(ou => confirmedIds.Contains(ou.Id))
-            .ExecuteUpdateAsync(s => s
-                .SetProperty(ou => ou.Status, OrganizationUserStatusType.Confirmed)
-                .SetProperty(ou => ou.Key, ou => keyByOrgUserId[ou.Id]));
+        var revisionDate = DateTime.UtcNow;
+        foreach (var ou in rowsToUpdate)
+        {
+            ou.Status = OrganizationUserStatusType.Confirmed;
+            ou.Key = keyByOrgUserId[ou.Id];
+            ou.RevisionDate = revisionDate;
+        }
 
+        await dbContext.SaveChangesAsync();
+
+        var confirmedIds = rowsToUpdate.Select(o => o.Id).ToList();
         await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(confirmedIds);
+
+        await transaction.CommitAsync();
 
         return confirmedIds;
     }

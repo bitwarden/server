@@ -70,6 +70,10 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
         var autoConfirmPolicyByUserId = autoConfirmPolicyResults.ToDictionary(r => r.UserId, r => r.Requirement);
 
         // Group all org memberships by the user so we can do the multi-org check in memory.
+        // GetManyByManyUsersAsync queries by UserId only (WHERE UserId IN (...)), matching the
+        // single-user path's GetManyByUserAsync. Neither returns Invited rows with a null UserId.
+        // The || Email fallback in AutomaticUserConfirmationPolicyEnforcementValidator is only
+        // used to locate the current org-user row defensively and does not extend the data fetched here.
         var orgUsersByUserId = allOrgUsersForUsers
             .GroupBy(ou => ou.UserId!.Value)
             .ToDictionary(g => g.Key, g => g.Count());
