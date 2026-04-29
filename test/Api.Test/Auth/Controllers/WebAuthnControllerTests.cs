@@ -177,6 +177,25 @@ public class WebAuthnControllerTests
         Assert.NotNull(result);
         Assert.IsType<WebAuthnLoginAssertionOptionsResponseModel>(result);
     }
+
+    [Theory, BitAutoData]
+    public async Task AssertionOptions_Success_ProtectsTokenWithUpdateKeySetScope(SecretVerificationRequestModel requestModel, User user, SutProvider<WebAuthnController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<IUserService>().VerifySecretAsync(user, requestModel.Secret).Returns(true);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>()
+            .Protect(Arg.Any<WebAuthnLoginAssertionOptionsTokenable>()).Returns("token");
+
+        // Act
+        await sutProvider.Sut.AssertionOptions(requestModel);
+
+        // Assert
+        sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>()
+            .Received(1)
+            .Protect(Arg.Is<WebAuthnLoginAssertionOptionsTokenable>(t =>
+                t.Scope == Core.Auth.Enums.WebAuthnLoginAssertionOptionsScope.UpdateKeySet));
+    }
     #endregion
 
     [Theory, BitAutoData]
@@ -417,6 +436,30 @@ public class WebAuthnControllerTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateCredential(requestModel));
         // Assert
         Assert.Equal(expectedMessage, exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_TokenWithNullOptions_ThrowsBadRequestException(WebAuthnLoginCredentialUpdateRequestModel requestModel, SutProvider<WebAuthnController> sutProvider)
+    {
+        // Arrange - tokenable deserialized with correct scope but Options == null
+        var expectedMessage = "The token associated with your request is invalid or has expired. A valid token is required to continue.";
+        var token = new WebAuthnLoginAssertionOptionsTokenable
+        {
+            Scope = Core.Auth.Enums.WebAuthnLoginAssertionOptionsScope.UpdateKeySet,
+            Options = null,
+        };
+        sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>()
+            .Unprotect(requestModel.Token)
+            .Returns(token);
+
+        // Act
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateCredential(requestModel));
+
+        // Assert
+        Assert.Equal(expectedMessage, exception.Message);
+        await sutProvider.GetDependency<IAssertWebAuthnLoginCredentialCommand>()
+            .DidNotReceive()
+            .AssertWebAuthnLoginCredential(Arg.Any<AssertionOptions>(), Arg.Any<AuthenticatorAssertionRawResponse>());
     }
 
     [Theory, BitAutoData]
