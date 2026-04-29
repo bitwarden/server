@@ -32,16 +32,40 @@
 use akd::configuration::Configuration;
 use akd::hash::{Digest, DIGEST_BYTES};
 use akd::{AkdLabel, AkdValue, AzksValue, AzksValueWithEpoch, NodeLabel, VersionFreshness};
-use std::sync::OnceLock;
 use uuid::Uuid;
 
-/// Bitwarden installation ID for instance separation
-pub(crate) static INSTALLATION_CONTEXT: OnceLock<Vec<u8>> = OnceLock::new();
+use std::sync::OnceLock;
+
 const BITWARDEN_V1: &[u8] = b"BWv1";
+
+#[cfg(feature = "multi_directory")]
+const CONTEXT_LEN: usize = BITWARDEN_V1.len() + 16; // tag + UUID
+
+/// Bitwarden installation ID for instance separation (single-directory mode).
+/// Uses `OnceLock` for zero-overhead reads after one-time initialization.
+#[cfg(not(feature = "multi_directory"))]
+pub(crate) static INSTALLATION_CONTEXT: OnceLock<Vec<u8>> = OnceLock::new();
+
+/// Default installation context set by `init()` (multi-directory mode).
+/// Read by `hash()` when no thread-local override is present.
+#[cfg(feature = "multi_directory")]
+static DEFAULT_INSTALLATION_CONTEXT: OnceLock<[u8; CONTEXT_LEN]> = OnceLock::new();
+
+#[cfg(feature = "multi_directory")]
+thread_local! {
+    /// Thread-local installation context set by `with_installation()`.
+    /// Takes precedence over `DEFAULT_INSTALLATION_CONTEXT` so per-call
+    /// overrides on one thread don't affect concurrent verifications on
+    /// other threads. `Copy` array → no locking, no allocation.
+    static THREAD_INSTALLATION_CONTEXT: std::cell::Cell<Option<[u8; CONTEXT_LEN]>> =
+        const { std::cell::Cell::new(None) };
+}
 
 #[derive(Clone)]
 pub struct BitwardenV1Configuration;
 
+/// Single-directory mode: initialize once at process startup.
+#[cfg(not(feature = "multi_directory"))]
 impl BitwardenV1Configuration {
     /// Initialize the global installation context. Must be called once before any use.
     ///
@@ -74,7 +98,76 @@ impl BitwardenV1Configuration {
         maybe_installation_context
             .expect("BitwardenV1Configuration::init() must be called before use")
     }
+}
 
+/// Multi-directory mode: `init()` sets a process-wide default installation
+/// context, and `with_installation()` can temporarily override it per-call on
+/// the current thread. The two are independent — using both is supported.
+#[cfg(feature = "multi_directory")]
+impl BitwardenV1Configuration {
+    /// Set the default installation context for this process.
+    ///
+    /// Server-style path: call once at startup. After this, `hash()` works on
+    /// any thread without needing `with_installation()`.
+    ///
+    /// Concurrent threads inside `with_installation()` still see their own
+    /// override; the default applies only when no thread-local override is set.
+    ///
+    /// # Panics
+    /// Panics if called more than once.
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(level = "info", name = "BitwardenV1Configuration::init")
+    )]
+    pub fn init(installation_context: Uuid) {
+        DEFAULT_INSTALLATION_CONTEXT
+            .set(build_context(installation_context))
+            .expect("BitwardenV1Configuration already initialized");
+        #[cfg(feature = "tracing")]
+        tracing::info!("BitwardenV1Configuration initialization successful");
+    }
+
+    /// Set the installation context for the duration of `f` on this thread.
+    ///
+    /// Client-style path for processes that talk to multiple installations.
+    /// Each call writes a thread-local override; concurrent calls on different
+    /// threads run in parallel. Restores the previous thread-local context
+    /// (or `None`) when `f` returns or panics.
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(
+            level = "debug",
+            name = "BitwardenV1Configuration::with_installation",
+            skip(f)
+        )
+    )]
+    pub fn with_installation<T>(installation_id: Uuid, f: impl FnOnce() -> T) -> T {
+        let context = build_context(installation_id);
+
+        struct Guard {
+            previous: Option<[u8; CONTEXT_LEN]>,
+        }
+        impl Drop for Guard {
+            fn drop(&mut self) {
+                THREAD_INSTALLATION_CONTEXT.with(|cell| cell.set(self.previous));
+            }
+        }
+
+        let previous = THREAD_INSTALLATION_CONTEXT.with(|cell| cell.replace(Some(context)));
+        let _guard = Guard { previous };
+        f()
+    }
+}
+
+#[cfg(feature = "multi_directory")]
+fn build_context(installation_id: Uuid) -> [u8; CONTEXT_LEN] {
+    let mut buf = [0u8; CONTEXT_LEN];
+    buf[..BITWARDEN_V1.len()].copy_from_slice(BITWARDEN_V1);
+    buf[BITWARDEN_V1.len()..].copy_from_slice(installation_id.as_bytes());
+    buf
+}
+
+impl BitwardenV1Configuration {
     /// Used by the client to supply a commitment nonce and value to reconstruct the commitment, via:
     /// commitment = H(i2osp_array(value), i2osp_array(nonce))
     fn generate_commitment_from_nonce_client(value: &akd::AkdValue, nonce: &[u8]) -> AzksValue {
@@ -96,7 +189,25 @@ impl Configuration for BitwardenV1Configuration {
     fn hash(item: &[u8]) -> akd::hash::Digest {
         // Hash(installation_context || item)
         let mut hasher = blake3::Hasher::new();
+
+        #[cfg(not(feature = "multi_directory"))]
         hasher.update(Self::get_context());
+
+        #[cfg(feature = "multi_directory")]
+        {
+            // Thread-local override (set by with_installation) wins; otherwise
+            // fall back to the process-wide default (set by init).
+            let thread_ctx = THREAD_INSTALLATION_CONTEXT.with(|cell| cell.get());
+            match thread_ctx.as_ref().or_else(|| DEFAULT_INSTALLATION_CONTEXT.get()) {
+                Some(ctx) => hasher.update(ctx),
+                None => panic!(
+                    "BitwardenV1Configuration::hash() called without installation context. \
+                     Call init() at startup, or use with_installation() to set context \
+                     per-verification call."
+                ),
+            };
+        }
+
         hasher.update(item);
         hasher.finalize().into()
     }
@@ -237,5 +348,134 @@ mod tests {
     #[test]
     fn test_bitwarden_v1_configuration_is_send_sync() {
         let _assert: &dyn EnsureSendSync = &BitwardenV1Configuration;
+    }
+
+    #[cfg(feature = "multi_directory")]
+    mod multi_directory {
+        use akd::configuration::Configuration;
+        use uuid::Uuid;
+
+        use super::*;
+
+        #[test]
+        fn with_installation_produces_deterministic_hashes() {
+            let id = Uuid::nil();
+            let hash1 =
+                BitwardenV1Configuration::with_installation(id, || {
+                    BitwardenV1Configuration::hash(b"test data")
+                });
+            let hash2 =
+                BitwardenV1Configuration::with_installation(id, || {
+                    BitwardenV1Configuration::hash(b"test data")
+                });
+            assert_eq!(hash1, hash2);
+        }
+
+        #[test]
+        fn different_installations_produce_different_hashes() {
+            let id_a = Uuid::nil();
+            let id_b = Uuid::max();
+
+            let hash_a =
+                BitwardenV1Configuration::with_installation(id_a, || {
+                    BitwardenV1Configuration::hash(b"same input")
+                });
+            let hash_b =
+                BitwardenV1Configuration::with_installation(id_b, || {
+                    BitwardenV1Configuration::hash(b"same input")
+                });
+            assert_ne!(hash_a, hash_b);
+        }
+
+        #[test]
+        fn context_does_not_leak_between_calls() {
+            let id_a = Uuid::nil();
+            let id_b = Uuid::max();
+
+            // Set context to id_a, then switch to id_b
+            let hash_a =
+                BitwardenV1Configuration::with_installation(id_a, || {
+                    BitwardenV1Configuration::hash(b"payload")
+                });
+            let hash_b =
+                BitwardenV1Configuration::with_installation(id_b, || {
+                    BitwardenV1Configuration::hash(b"payload")
+                });
+            // Switch back to id_a — should match the original, not id_b
+            let hash_a_again =
+                BitwardenV1Configuration::with_installation(id_a, || {
+                    BitwardenV1Configuration::hash(b"payload")
+                });
+
+            assert_ne!(hash_a, hash_b);
+            assert_eq!(hash_a, hash_a_again);
+        }
+
+        #[test]
+        #[should_panic(expected = "called without installation context")]
+        fn hash_without_context_panics() {
+            BitwardenV1Configuration::hash(b"no context set");
+        }
+
+        #[test]
+        fn context_resets_after_with_installation() {
+            let id = Uuid::nil();
+            BitwardenV1Configuration::with_installation(id, || {
+                BitwardenV1Configuration::hash(b"inside context")
+            });
+            // After with_installation returns, the thread-local context is None.
+            // Without init() having been called, hash() should panic.
+            let result = std::panic::catch_unwind(|| {
+                BitwardenV1Configuration::hash(b"outside context")
+            });
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn concurrent_installations_isolated_per_thread() {
+            use std::sync::Arc;
+            use std::thread;
+
+            let id_a = Uuid::nil();
+            let id_b = Uuid::max();
+
+            // Compute reference hashes
+            let ref_a = BitwardenV1Configuration::with_installation(id_a, || {
+                BitwardenV1Configuration::hash(b"thread test")
+            });
+            let ref_b = BitwardenV1Configuration::with_installation(id_b, || {
+                BitwardenV1Configuration::hash(b"thread test")
+            });
+
+            let results_a = Arc::new(std::sync::Mutex::new(Vec::new()));
+            let results_b = Arc::new(std::sync::Mutex::new(Vec::new()));
+
+            let mut handles = vec![];
+            for _ in 0..10 {
+                let ra = Arc::clone(&results_a);
+                let rb = Arc::clone(&results_b);
+                handles.push(thread::spawn(move || {
+                    let ha = BitwardenV1Configuration::with_installation(id_a, || {
+                        BitwardenV1Configuration::hash(b"thread test")
+                    });
+                    ra.lock().unwrap().push(ha);
+                    let hb = BitwardenV1Configuration::with_installation(id_b, || {
+                        BitwardenV1Configuration::hash(b"thread test")
+                    });
+                    rb.lock().unwrap().push(hb);
+                }));
+            }
+            for h in handles {
+                h.join().unwrap();
+            }
+
+            // Every result for id_a must match the reference, same for id_b
+            for ha in results_a.lock().unwrap().iter() {
+                assert_eq!(*ha, ref_a);
+            }
+            for hb in results_b.lock().unwrap().iter() {
+                assert_eq!(*hb, ref_b);
+            }
+        }
     }
 }

@@ -12,9 +12,6 @@
 
 use akd::{AkdLabel, AkdValue};
 
-#[cfg(feature = "config")]
-pub mod config;
-
 #[cfg(feature = "request_models")]
 pub mod request_models;
 
