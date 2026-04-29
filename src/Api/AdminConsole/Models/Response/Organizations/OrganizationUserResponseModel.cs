@@ -147,6 +147,7 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         // Prevent reset password when using key connector.
         ResetPasswordEnrolled = ResetPasswordEnrolled && !data.OrgUser.UsesKeyConnector;
         ClaimedByOrganization = data.ClaimedByOrganization;
+        RevocationReason = data.OrgUser.RevocationReason;
     }
 
     public OrganizationUserUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
@@ -168,6 +169,7 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         // Prevent reset password when using key connector.
         ResetPasswordEnrolled = ResetPasswordEnrolled && !organizationUser.UsesKeyConnector;
         ClaimedByOrganization = claimedByOrganization;
+        RevocationReason = organizationUser.RevocationReason;
     }
 
     public string Name { get; set; }
@@ -188,6 +190,11 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
     public bool ClaimedByOrganization { get; set; }
     public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
     public IEnumerable<Guid> Groups { get; set; }
+    /// <summary>
+    /// The reason the user is revoked. Null if the user is not revoked, or was revoked before
+    /// revocation reasons were tracked.
+    /// </summary>
+    public RevocationReason? RevocationReason { get; set; }
 }
 
 public class OrganizationUserResetPasswordDetailsResponseModel : ResponseModel
