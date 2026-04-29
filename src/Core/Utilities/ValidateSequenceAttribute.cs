@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Collections;
+using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 
 namespace Bit.Core.Utilities;
@@ -20,7 +21,7 @@ public class ValidateSequenceAttribute<TValidator> : ValidationAttribute
             return ValidationResult.Success;
         }
 
-        var items = ((IEnumerable<object>)value).ToList();
+        var items = ((IEnumerable)value).Cast<object>().ToList();
         var validator = new TValidator();
         var invalid = items.Where(item => !validator.IsValid(item)).ToList();
 
