@@ -14,16 +14,6 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.InviteLinks;
 [SutProviderCustomize]
 public class CreateOrganizationInviteLinkCommandTests
 {
-    private static void SetupAbility(
-        SutProvider<CreateOrganizationInviteLinkCommand> sutProvider,
-        Guid organizationId,
-        bool useInviteLinks = true)
-    {
-        sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilityAsync(organizationId)
-            .Returns(new OrganizationAbility { UseInviteLinks = useInviteLinks });
-    }
-
     [Theory, BitAutoData]
     public async Task CreateAsync_WithValidInput_Success(
         Guid organizationId,
@@ -199,5 +189,15 @@ public class CreateOrganizationInviteLinkCommandTests
         await sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
             .DidNotReceiveWithAnyArgs()
             .CreateAsync(default!);
+    }
+
+    private static void SetupAbility(
+        SutProvider<CreateOrganizationInviteLinkCommand> sutProvider,
+        Guid organizationId,
+        bool useInviteLinks = true)
+    {
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { UseInviteLinks = useInviteLinks });
     }
 }
