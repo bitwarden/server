@@ -4,6 +4,7 @@
 using System.ComponentModel.DataAnnotations;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
+using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.Auth.Models.Request;
@@ -43,13 +44,41 @@ public class EmergencyAccessUpdateRequestModel
     }
 }
 
-public class EmergencyAccessPasswordRequestModel
+public class EmergencyAccessPasswordRequestModel : IValidatableObject
 {
-    [Required]
+    [Obsolete("To be removed in PM-33141")]
     [StringLength(300)]
     public string NewMasterPasswordHash { get; set; }
-    [Required]
+    [Obsolete("To be removed in PM-33141")]
     public string Key { get; set; }
+
+    public MasterPasswordUnlockDataRequestModel UnlockData { get; set; }
+    public MasterPasswordAuthenticationDataRequestModel AuthenticationData { get; set; }
+
+    public bool RequestHasNewDataTypes()
+    {
+        return UnlockData is not null && AuthenticationData is not null;
+    }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        var hasNewPayloads = UnlockData is not null && AuthenticationData is not null;
+        var hasLegacyPayloads = NewMasterPasswordHash is not null && Key is not null;
+
+        if (hasNewPayloads && hasLegacyPayloads)
+        {
+            yield return new ValidationResult(
+                "Cannot provide both new payloads (UnlockData/AuthenticationData) and legacy payloads (NewMasterPasswordHash/Key).",
+                [nameof(UnlockData), nameof(AuthenticationData), nameof(NewMasterPasswordHash), nameof(Key)]);
+        }
+
+        if (!hasNewPayloads && !hasLegacyPayloads)
+        {
+            yield return new ValidationResult(
+                "Must provide either new payloads (UnlockData/AuthenticationData) or legacy payloads (NewMasterPasswordHash/Key).",
+                [nameof(UnlockData), nameof(AuthenticationData), nameof(NewMasterPasswordHash), nameof(Key)]);
+        }
+    }
 }
 
 public class EmergencyAccessWithIdRequestModel : EmergencyAccessUpdateRequestModel

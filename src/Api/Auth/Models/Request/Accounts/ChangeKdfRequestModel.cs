@@ -3,7 +3,7 @@ using Bit.Core.KeyManagement.Models.Api.Request;
 
 namespace Bit.Api.Auth.Models.Request.Accounts;
 
-public class PasswordRequestModel : IValidatableObject
+public class ChangeKdfRequestModel : IValidatableObject
 {
     [Required]
     public required string MasterPasswordHash { get; set; }
@@ -12,16 +12,9 @@ public class PasswordRequestModel : IValidatableObject
     public string? NewMasterPasswordHash { get; set; }
     [Obsolete("To be removed in PM-33141")]
     public string? Key { get; set; }
-    [StringLength(50)]
-    public string? MasterPasswordHint { get; set; }
 
     public MasterPasswordAuthenticationDataRequestModel? AuthenticationData { get; set; }
     public MasterPasswordUnlockDataRequestModel? UnlockData { get; set; }
-
-    public bool RequestHasNewDataTypes()
-    {
-        return UnlockData is not null && AuthenticationData is not null;
-    }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
