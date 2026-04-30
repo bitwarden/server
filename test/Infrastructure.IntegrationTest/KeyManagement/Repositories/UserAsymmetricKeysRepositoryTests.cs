@@ -17,7 +17,9 @@ public class UserAsymmetricKeysRepositoryTests
         IUserAsymmetricKeysRepository userAsymmetricKeysRepository)
     {
         var user = await userRepository.CreateTestUserAsync();
-        var originalAccountRevisionDate = user.AccountRevisionDate;
+        user.AccountRevisionDate = DateTime.UtcNow.AddDays(-1);
+        await userRepository.ReplaceAsync(user);
+
         var newKeys = new UserAsymmetricKeys
         {
             UserId = user.Id,
@@ -31,7 +33,6 @@ public class UserAsymmetricKeysRepositoryTests
         Assert.NotNull(updatedUser);
         Assert.Equal("new-public-key", updatedUser.PublicKey);
         Assert.Equal("new-encrypted-private-key", updatedUser.PrivateKey);
-        Assert.True(updatedUser.AccountRevisionDate > originalAccountRevisionDate);
         Assert.Equal(DateTime.UtcNow, updatedUser.AccountRevisionDate, TimeSpan.FromMinutes(1));
     }
 
@@ -147,7 +148,8 @@ public class UserAsymmetricKeysRepositoryTests
         IOrganizationRepository organizationRepository)
     {
         var user = await userRepository.CreateTestUserAsync();
-        var originalAccountRevisionDate = user.AccountRevisionDate;
+        user.AccountRevisionDate = DateTime.UtcNow.AddDays(-1);
+        await userRepository.ReplaceAsync(user);
         var grantorUser = await userRepository.CreateTestUserAsync("grantor");
 
         var ea = await emergencyAccessRepository.CreateAsync(new EmergencyAccess
@@ -190,7 +192,6 @@ public class UserAsymmetricKeysRepositoryTests
         Assert.NotNull(updatedUser);
         Assert.Equal("new-public-key", updatedUser.PublicKey);
         Assert.Equal("new-encrypted-private-key", updatedUser.PrivateKey);
-        Assert.True(updatedUser.AccountRevisionDate > originalAccountRevisionDate);
         Assert.Equal(DateTime.UtcNow, updatedUser.AccountRevisionDate, TimeSpan.FromMinutes(1));
 
         var updatedEa = await emergencyAccessRepository.GetByIdAsync(ea.Id);
