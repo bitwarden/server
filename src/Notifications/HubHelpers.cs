@@ -54,8 +54,12 @@ public class HubHelpers
                     await _hubContext.Clients.User(cipherNotification.Payload.UserId.Value.ToString())
                         .SendAsync(_receiveMessageMethod, cipherNotification, cancellationToken);
                 }
-                // OrganizationId-only cipher notifications are no longer sent via push engines;
-                // MultiServicePushNotificationService fans out per-user before the message is queued.
+                else if (cipherNotification.Payload.OrganizationId.HasValue)
+                {
+                    await _hubContext.Clients
+                        .Group(NotificationsHub.GetOrganizationGroup(cipherNotification.Payload.OrganizationId.Value))
+                        .SendAsync(_receiveMessageMethod, cipherNotification, cancellationToken);
+                }
 
                 break;
             case PushType.SyncFolderUpdate:

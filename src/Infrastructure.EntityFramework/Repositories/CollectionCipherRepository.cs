@@ -120,9 +120,8 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
                                where ou.Status == Core.Enums.OrganizationUserStatusType.Confirmed && ou.UserId != null
                                select ou.UserId!.Value;
 
-            var orgLevelUserIds = from cc in dbContext.CollectionCiphers
-                                  where collectionIdList.Contains(cc.CollectionId)
-                                  join c in dbContext.Collections on cc.CollectionId equals c.Id
+            var orgLevelUserIds = from c in dbContext.Collections
+                                  where collectionIdList.Contains(c.Id)
                                   join o in dbContext.Organizations on c.OrganizationId equals o.Id
                                   join ou in dbContext.OrganizationUsers on c.OrganizationId equals ou.OrganizationId
                                   where ou.Status == Core.Enums.OrganizationUserStatusType.Confirmed

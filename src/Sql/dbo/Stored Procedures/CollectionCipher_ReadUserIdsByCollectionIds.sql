@@ -38,12 +38,11 @@ BEGIN
     FROM
         [dbo].[OrganizationUser] OU
     INNER JOIN
-        [dbo].[CollectionCipher] CC ON CC.[CollectionId] IN (SELECT [Id] FROM @CollectionIds)
-    INNER JOIN
-        [dbo].[Collection] COL ON COL.[Id] = CC.[CollectionId]
+        [dbo].[Collection] COL ON COL.[OrganizationId] = OU.[OrganizationId]
     INNER JOIN
         [dbo].[Organization] O ON O.[Id] = COL.[OrganizationId]
-    WHERE OU.[OrganizationId] = COL.[OrganizationId]
+    WHERE
+        COL.[Id] IN (SELECT [Id] FROM @CollectionIds)
         AND OU.[Status] = 2 -- Confirmed
         AND OU.[Type] IN (0, 1) -- Owner/Admin
         AND O.[AllowAdminAccessToAllCollectionItems] = 1
