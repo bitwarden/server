@@ -5,9 +5,7 @@ namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
 public class OrganizationInviteLinkResponseModel : ResponseModel
 {
-    public OrganizationInviteLinkResponseModel() : base("organizationInviteLink")
-    {
-    }
+    public OrganizationInviteLinkResponseModel() : base("organizationInviteLink") { }
 
     public OrganizationInviteLinkResponseModel(OrganizationInviteLink inviteLink)
         : base("organizationInviteLink")
