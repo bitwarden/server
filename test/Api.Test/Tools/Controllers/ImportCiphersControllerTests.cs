@@ -1,10 +1,10 @@
 ﻿using System.Security.Claims;
 using AutoFixture;
-using Bit.Api.Models.Request;
+using Bit.Api.AdminConsole.Authorization.Collections;
+using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.Tools.Controllers;
 using Bit.Api.Tools.Models.Request.Accounts;
 using Bit.Api.Tools.Models.Request.Organizations;
-using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core.Context;
 using Bit.Core.Entities;
