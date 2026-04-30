@@ -347,7 +347,8 @@ public class RevokeOrganizationUsersValidatorTests
         return new RevokeOrganizationUsersValidationRequest(
             organizationId,
             organizationUsers,
-            actingUser
+            actingUser,
+            RevocationReason.Manual
         );
     }
 }

@@ -159,7 +159,7 @@ public class WebAuthnController : Controller
     public async Task UpdateCredential([FromBody] WebAuthnLoginCredentialUpdateRequestModel model)
     {
         var tokenable = _assertionOptionsDataProtector.Unprotect(model.Token);
-        if (!tokenable.TokenIsValid(WebAuthnLoginAssertionOptionsScope.UpdateKeySet))
+        if (!tokenable.TokenIsValid(WebAuthnLoginAssertionOptionsScope.UpdateKeySet) || tokenable.Options == null)
         {
             throw new BadRequestException("The token associated with your request is invalid or has expired. A valid token is required to continue.");
         }

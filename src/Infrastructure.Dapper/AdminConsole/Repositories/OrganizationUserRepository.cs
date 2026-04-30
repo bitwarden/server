@@ -371,13 +371,13 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds)
+    public async Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds, DateTime revisionDate)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
                 "[dbo].[GroupUser_UpdateGroups]",
-                new { OrganizationUserId = orgUserId, GroupIds = groupIds.ToGuidIdArrayTVP() },
+                new { OrganizationUserId = orgUserId, GroupIds = groupIds.ToGuidIdArrayTVP(), RevisionDate = revisionDate },
                 commandType: CommandType.StoredProcedure);
         }
     }
@@ -559,9 +559,9 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task RevokeAsync(Guid id)
+    public async Task RevokeAsync(Guid id, RevocationReason reason)
     {
-        await RevokeManyAsync([id]);
+        await RevokeManyAsync([id], reason);
     }
 
     public async Task RestoreAsync(Guid id, OrganizationUserStatusType status)
@@ -621,7 +621,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task RevokeManyAsync(IEnumerable<Guid> organizationUserIds, RevocationReason? reason = null)
+    public async Task RevokeManyAsync(IEnumerable<Guid> organizationUserIds, RevocationReason reason)
     {
         await using var connection = new SqlConnection(ConnectionString);
 
