@@ -29,8 +29,9 @@ public class UsersControllerConcurrencyTests
         {
             TestDatabase = new SqlServerTestDatabase()
         };
-        factory.SubstituteService((IFeatureService f)
-            => f.IsEnabled(FeatureFlagKeys.ScimInviteUserOptimization).Returns(true));
+
+        factory.SubstituteService((IFeatureService f) => f.IsEnabled(FeatureFlagKeys.ScimInviteUserOptimization)
+            .Returns(true));
 
         try
         {
@@ -74,7 +75,7 @@ public class UsersControllerConcurrencyTests
         }
         finally
         {
-            factory.Dispose();
+            await factory.DisposeAsync();
         }
     }
 

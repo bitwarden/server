@@ -22,6 +22,13 @@ public sealed class TransactionHolder : IAsyncDisposable
     public bool Doomed { get; set; }
 
     /// <summary>
+    /// True when this holder is responsible for disposing <see cref="Connection"/>.
+    /// EF reuses the DbContext's connection and must leave its lifetime to the scope;
+    /// Dapper opens its own connection and must dispose it here.
+    /// </summary>
+    public bool OwnsConnection { get; init; } = true;
+
+    /// <summary>
     /// For EF: the DatabaseContext associated with this transaction.
     /// </summary>
     public object? DbContext { get; set; }
@@ -46,7 +53,11 @@ public sealed class TransactionHolder : IAsyncDisposable
         }
 
         await Transaction.DisposeAsync();
-        await Connection.DisposeAsync();
+
+        if (OwnsConnection)
+        {
+            await Connection.DisposeAsync();
+        }
 
         if (Scope is not null)
         {

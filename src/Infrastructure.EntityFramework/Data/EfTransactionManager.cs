@@ -40,6 +40,7 @@ public sealed class EfTransactionManager : ITransactionManager
         {
             Connection = connection,
             Transaction = transaction,
+            OwnsConnection = false,
             DbContext = dbContext,
             Scope = scope,
         };
