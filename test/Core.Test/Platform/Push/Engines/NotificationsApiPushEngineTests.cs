@@ -256,6 +256,51 @@ public class NotificationsApiPushEngineTests : PushTestBase
         };
     }
 
+    protected override JsonNode GetPushReceiveCreatePayload(Receive receive)
+    {
+        return new JsonObject
+        {
+            ["Type"] = 28,
+            ["Payload"] = new JsonObject
+            {
+                ["Id"] = receive.Id,
+                ["UserId"] = receive.UserId,
+                ["RevisionDate"] = receive.RevisionDate,
+            },
+            ["ContextId"] = DeviceIdentifier,
+        };
+    }
+
+    protected override JsonNode GetPushReceiveUpdatePayload(Receive receive)
+    {
+        return new JsonObject
+        {
+            ["Type"] = 29,
+            ["Payload"] = new JsonObject
+            {
+                ["Id"] = receive.Id,
+                ["UserId"] = receive.UserId,
+                ["RevisionDate"] = receive.RevisionDate,
+            },
+            ["ContextId"] = DeviceIdentifier,
+        };
+    }
+
+    protected override JsonNode GetPushReceiveDeletePayload(Receive receive)
+    {
+        return new JsonObject
+        {
+            ["Type"] = 30,
+            ["Payload"] = new JsonObject
+            {
+                ["Id"] = receive.Id,
+                ["UserId"] = receive.UserId,
+                ["RevisionDate"] = receive.RevisionDate,
+            },
+            ["ContextId"] = DeviceIdentifier,
+        };
+    }
+
     protected override JsonNode GetPushAuthRequestPayload(AuthRequest authRequest)
     {
         return new JsonObject

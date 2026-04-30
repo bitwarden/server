@@ -248,6 +248,57 @@ public interface IPushNotificationService
         return Task.CompletedTask;
     }
 
+    Task PushSyncReceiveCreateAsync(Receive receive)
+    {
+        return PushAsync(new PushNotification<SyncReceivePushNotification>
+        {
+            Type = PushType.SyncReceiveCreate,
+            Target = NotificationTarget.User,
+            TargetId = receive.UserId,
+            Payload = new SyncReceivePushNotification
+            {
+                Id = receive.Id,
+                UserId = receive.UserId,
+                RevisionDate = receive.RevisionDate,
+            },
+            ExcludeCurrentContext = true,
+        });
+    }
+
+    Task PushSyncReceiveUpdateAsync(Receive receive)
+    {
+        return PushAsync(new PushNotification<SyncReceivePushNotification>
+        {
+            Type = PushType.SyncReceiveUpdate,
+            Target = NotificationTarget.User,
+            TargetId = receive.UserId,
+            Payload = new SyncReceivePushNotification
+            {
+                Id = receive.Id,
+                UserId = receive.UserId,
+                RevisionDate = receive.RevisionDate,
+            },
+            ExcludeCurrentContext = true,
+        });
+    }
+
+    Task PushSyncReceiveDeleteAsync(Receive receive)
+    {
+        return PushAsync(new PushNotification<SyncReceivePushNotification>
+        {
+            Type = PushType.SyncReceiveDelete,
+            Target = NotificationTarget.User,
+            TargetId = receive.UserId,
+            Payload = new SyncReceivePushNotification
+            {
+                Id = receive.Id,
+                UserId = receive.UserId,
+                RevisionDate = receive.RevisionDate,
+            },
+            ExcludeCurrentContext = true,
+        });
+    }
+
     Task PushNotificationAsync(Notification notification)
     {
         var message = new NotificationPushNotification

@@ -44,6 +44,7 @@ public class SyncResponseModel() : ResponseModel("sync")
         bool excludeDomains,
         IEnumerable<Policy> policies,
         IEnumerable<Send> sends,
+        IEnumerable<Receive> receives,
         IEnumerable<WebAuthnCredential> webAuthnCredentials)
         : this()
     {
@@ -62,6 +63,7 @@ public class SyncResponseModel() : ResponseModel("sync")
         Domains = excludeDomains ? null : new DomainsResponseModel(user, false);
         Policies = policies?.Select(p => new PolicyResponseModel(p)) ?? new List<PolicyResponseModel>();
         Sends = sends.Select(s => new SendResponseModel(s));
+        Receives = receives.Select(r => new ReceiveResponseModel(r));
         var webAuthnPrfOptions = webAuthnCredentials
             .Where(c => c.GetPrfStatus() == WebAuthnPrfStatus.Enabled)
             .Select(c => new WebAuthnPrfDecryptionOption(
@@ -120,5 +122,6 @@ public class SyncResponseModel() : ResponseModel("sync")
     public DomainsResponseModel Domains { get; set; }
     public IEnumerable<PolicyResponseModel> Policies { get; set; }
     public IEnumerable<SendResponseModel> Sends { get; set; }
+    public IEnumerable<ReceiveResponseModel> Receives { get; set; }
     public UserDecryptionResponseModel UserDecryption { get; set; }
 }
