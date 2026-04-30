@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_ReadManyByOrganizationIdStatus]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_ReadByOrganizationIdStatus]
     @OrganizationId UNIQUEIDENTIFIER,
     @Status         TINYINT
 AS

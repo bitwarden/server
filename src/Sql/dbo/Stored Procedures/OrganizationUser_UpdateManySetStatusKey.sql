@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_UpdateManySetStatusKey]
+CREATE PROCEDURE [dbo].[OrganizationUser_UpdateManySetStatusKey]
     @UsersJson             NVARCHAR(MAX),
     @NewStatus             TINYINT,
     @RequiredCurrentStatus TINYINT,
@@ -46,4 +46,3 @@ BEGIN
     -- Return the IDs that were actually updated so the caller can track idempotency
     SELECT [Id] FROM @UpdatedIds
 END
-GO
