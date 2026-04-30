@@ -5,15 +5,24 @@ use uuid::Uuid;
 
 use crate::{BitwardenAkdLabelMaterial, BitwardenAkdPairMaterial};
 
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(
+    feature = "wasm",
+    derive(tsify::Tsify),
+    tsify(into_wasm_abi, from_wasm_abi)
+)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum BitwardenAkdPairMaterialRequest {
     UserRealWorldId {
         real_world_id: String,
+        #[cfg_attr(feature = "wasm", tsify(type = "string"))]
         user_id: Uuid,
     },
     UserPublicKey {
+        #[cfg_attr(feature = "wasm", tsify(type = "string"))]
         user_id: Uuid,
+        #[cfg_attr(feature = "wasm", tsify(type = "string"))]
         public_key_der_b64: B64,
     },
 }
@@ -63,11 +72,22 @@ impl TryFrom<BitwardenAkdPairMaterialRequest> for AkdValue {
     }
 }
 
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(
+    feature = "wasm",
+    derive(tsify::Tsify),
+    tsify(into_wasm_abi, from_wasm_abi)
+)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum BitwardenAkdLabelMaterialRequest {
-    UserRealWorldId { real_world_id: String },
-    UserPublicKey { user_id: Uuid },
+    UserRealWorldId {
+        real_world_id: String,
+    },
+    UserPublicKey {
+        #[cfg_attr(feature = "wasm", tsify(type = "string"))]
+        user_id: Uuid,
+    },
 }
 
 impl TryFrom<BitwardenAkdLabelMaterialRequest> for BitwardenAkdLabelMaterial {

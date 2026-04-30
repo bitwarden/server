@@ -12,6 +12,17 @@
 
 use akd::{AkdLabel, AkdValue};
 
+// `setup_scaffolding!` defines this crate's `UniFfiTag` (the per-crate marker
+// that every uniffi derive references) and emits the cdylib-side rustbuffer /
+// future helper symbols. Each library crate that uses uniffi derives must call
+// it; the cdylib megazord later pulls them all in via
+// `<crate>::uniffi_reexport_scaffolding!()`.
+#[cfg(feature = "uniffi")]
+uniffi::setup_scaffolding!("bitwarden_akd_configuration");
+// The rest of the uniffi setup is in another module
+#[cfg(feature = "uniffi")]
+pub mod uniffi_scaffolding;
+
 #[cfg(feature = "request_models")]
 pub mod request_models;
 
@@ -44,9 +55,7 @@ impl BitwardenAkdPairMaterial {
             BitwardenAkdPairMaterial::UserPublicKey {
                 user_id,
                 public_key_der: _,
-            } => BitwardenAkdLabelMaterial::UserPublicKey {
-                user_id: user_id.clone(),
-            },
+            } => BitwardenAkdLabelMaterial::UserPublicKey { user_id: *user_id },
         }
     }
 
