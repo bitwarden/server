@@ -220,12 +220,12 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
 
         // Setup "existing" azure infrastructure.
         await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
-            .WithPortBinding(10000)
+            .WithPortBinding(10000, true)
             .Build();
 
         await azurite.StartAsync();
 
-        var azuriteConnectionString = $"UseDevelopmentStorage=true;DevelopmentStorageProxyUri=http://{azurite.Hostname}:{azurite.GetMappedPublicPort(10000)}";
+        var azuriteConnectionString = $"DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://{azurite.Hostname}:{azurite.GetMappedPublicPort(10000)}/devstoreaccount1;";
 
         var blobServiceClient = new BlobServiceClient(azuriteConnectionString);
 
@@ -354,12 +354,12 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
     {
         // Start azurite
         await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
-            .WithPortBinding(10000)
+            .WithPortBinding(10000, true)
             .Build();
 
         await azurite.StartAsync();
 
-        var azuriteConnectionString = $"UseDevelopmentStorage=true;DevelopmentStorageProxyUri=http://{azurite.Hostname}:{azurite.GetMappedPublicPort(10000)}";
+        var azuriteConnectionString = $"DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://{azurite.Hostname}:{azurite.GetMappedPublicPort(10000)}/devstoreaccount1;";
 
         var blobServiceClient = new BlobServiceClient(azuriteConnectionString);
 
