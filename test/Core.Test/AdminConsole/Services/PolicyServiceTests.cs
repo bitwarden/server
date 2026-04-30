@@ -1,7 +1,7 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
+﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
-using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services.Implementations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -125,123 +125,31 @@ public class PolicyServiceTests
     [Theory, BitAutoData]
     public async Task GetMasterPasswordPolicyForUserAsync_ReturnsEnforcedOptions(User user, SutProvider<PolicyService> sutProvider)
     {
-        // Arrange: Create three policies with different requirements to test combining behavior
-        var policy1 = new Policy
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = Guid.NewGuid(),
-            Type = PolicyType.MasterPassword,
-            Enabled = true
-        };
-        policy1.SetDataModel(new MasterPasswordPolicyData
-        {
-            MinComplexity = 3,
-            MinLength = 12,
-            RequireLower = true,
-            RequireUpper = false,
-            RequireNumbers = true,
-            RequireSpecial = false,
-            EnforceOnLogin = true
-        });
+        var enforcedOptions = new MasterPasswordPolicyData { MinLength = 12, RequireUpper = true };
+        var requirement = new MasterPasswordPolicyRequirement { EnforcedOptions = enforcedOptions };
 
-        var policy2 = new Policy
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = Guid.NewGuid(),
-            Type = PolicyType.MasterPassword,
-            Enabled = true
-        };
-        policy2.SetDataModel(new MasterPasswordPolicyData
-        {
-            MinComplexity = 4,
-            MinLength = 10,
-            RequireLower = false,
-            RequireUpper = true,
-            RequireNumbers = false,
-            RequireSpecial = true,
-            EnforceOnLogin = false
-        });
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsyncVNext<MasterPasswordPolicyRequirement>(user.Id)
+            .Returns(requirement);
 
-        var policy3 = new Policy
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = Guid.NewGuid(),
-            Type = PolicyType.MasterPassword,
-            Enabled = true
-        };
-        policy3.SetDataModel(new MasterPasswordPolicyData
-        {
-            MinComplexity = 2,
-            MinLength = 15,
-            RequireLower = false,
-            RequireUpper = false,
-            RequireNumbers = false,
-            RequireSpecial = false,
-            EnforceOnLogin = false
-        });
-
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetManyByUserIdAsync(user.Id)
-            .Returns([policy1, policy2, policy3]);
-
-        // Act
         var result = await sutProvider.Sut.GetMasterPasswordPolicyForUserAsync(user);
 
-        // Assert: Verify that policies were combined correctly
         Assert.NotNull(result);
-
-        // MinComplexity and MinLength should take the highest values
-        Assert.Equal(4, result.MinComplexity); // highest from policy2
-        Assert.Equal(15, result.MinLength); // highest from policy3
-
-        // Boolean flags should use OR logic (true if any policy has true)
-        Assert.True(result.RequireLower); // true from policy1
-        Assert.True(result.RequireUpper); // true from policy2
-        Assert.True(result.RequireNumbers); // true from policy1
-        Assert.True(result.RequireSpecial); // true from policy2
-        Assert.True(result.EnforceOnLogin); // true from policy1
+        Assert.Equal(12, result.MinLength);
+        Assert.True(result.RequireUpper);
     }
 
     [Theory, BitAutoData]
     public async Task GetMasterPasswordPolicyForUserAsync_WithNoPolicies_ReturnsNull(User user, SutProvider<PolicyService> sutProvider)
     {
-        // Arrange: No enabled policies
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetManyByUserIdAsync(user.Id)
-            .Returns(new List<Policy>());
+        var requirement = new MasterPasswordPolicyRequirement();
 
-        // Act
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsyncVNext<MasterPasswordPolicyRequirement>(user.Id)
+            .Returns(requirement);
+
         var result = await sutProvider.Sut.GetMasterPasswordPolicyForUserAsync(user);
 
-        // Assert
-        Assert.Null(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetMasterPasswordPolicyForUserAsync_WithDisabledPolicies_ReturnsNull(User user, SutProvider<PolicyService> sutProvider)
-    {
-        // Arrange: Policies exist but are disabled
-        var disabledPolicy = new Policy
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = Guid.NewGuid(),
-            Type = PolicyType.MasterPassword,
-            Enabled = false
-        };
-        disabledPolicy.SetDataModel(new MasterPasswordPolicyData
-        {
-            MinComplexity = 3,
-            MinLength = 12
-        });
-
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetManyByUserIdAsync(user.Id)
-            .Returns(new List<Policy> { disabledPolicy });
-
-        // Act
-        var result = await sutProvider.Sut.GetMasterPasswordPolicyForUserAsync(user);
-
-        // Assert
         Assert.Null(result);
     }
 
@@ -275,13 +183,6 @@ public class PolicyServiceTests
             .GetOrganizationAbilitiesAsync(Arg.Is<IEnumerable<Guid>>(ids =>
                 ids.Contains(includedOrgId) &&
                 !ids.Contains(excludedOrgId)));
-    }
-
-    private static void SetupOrg(SutProvider<PolicyService> sutProvider, Guid organizationId, Organization organization)
-    {
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organizationId)
-            .Returns(Task.FromResult(organization));
     }
 
     private static void SetupUserPolicies(Guid userId, SutProvider<PolicyService> sutProvider)
