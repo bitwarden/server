@@ -244,7 +244,7 @@ public class SlackIntegrationControllerTests
         integration.Configuration = null;
         var expectedUrl = "https://localhost/";
         var fakeTime = new FakeTimeProvider(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
-        sutProvider.SetDependency<TimeProvider>(fakeTime);
+        sutProvider.SetDependency<TimeProvider>(fakeTime, "timeProvider").Create();
 
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
@@ -282,7 +282,7 @@ public class SlackIntegrationControllerTests
         integration.Type = IntegrationType.Slack;
         var expectedUrl = "https://localhost/";
         var fakeTime = new FakeTimeProvider(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
-        sutProvider.SetDependency<TimeProvider>(fakeTime);
+        sutProvider.SetDependency<TimeProvider>(fakeTime, "timeProvider").Create();
 
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
