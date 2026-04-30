@@ -31,7 +31,8 @@ BEGIN
         [UseAutomaticUserConfirmation],
         [UsePhishingBlocker],
         [UseDisableSmAdsForUsers],
-        [UseMyItems]
+        [UseMyItems],
+        [UseInviteLinks]
     FROM
         [dbo].[Organization]
 END

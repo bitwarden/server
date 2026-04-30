@@ -160,6 +160,7 @@ public class UpgradeOrganizationPlanVNextCommand(
         organization.UseOrganizationDomains = plan.HasOrganizationDomains;
         organization.UseAutomaticUserConfirmation = plan.AutomaticUserConfirmation;
         organization.UseMyItems = plan.HasMyItems;
+        organization.UseInviteLinks = plan.HasInviteLinks;
 
         if (keys != null)
         {

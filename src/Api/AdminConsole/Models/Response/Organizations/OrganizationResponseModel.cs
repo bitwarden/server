@@ -77,6 +77,7 @@ public class OrganizationResponseModel : ResponseModel
         UseDisableSmAdsForUsers = organization.UseDisableSmAdsForUsers;
         UsePhishingBlocker = organization.UsePhishingBlocker;
         UseMyItems = organization.UseMyItems;
+        UseInviteLinks = organization.UseInviteLinks;
     }
 
     public Guid Id { get; set; }
@@ -129,6 +130,7 @@ public class OrganizationResponseModel : ResponseModel
     public bool UseDisableSmAdsForUsers { get; set; }
     public bool UsePhishingBlocker { get; set; }
     public bool UseMyItems { get; set; }
+    public bool UseInviteLinks { get; set; }
 }
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel

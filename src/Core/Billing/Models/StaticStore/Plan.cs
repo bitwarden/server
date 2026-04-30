@@ -34,6 +34,7 @@ public abstract record Plan
     public bool UsersGetPremium { get; protected init; }
     public bool HasCustomPermissions { get; protected init; }
     public bool HasMyItems { get; protected init; }
+    public bool HasInviteLinks { get; protected init; }
     public int UpgradeSortOrder { get; protected init; }
     // TODO: Move to the client
     public int DisplaySortOrder { get; protected init; }

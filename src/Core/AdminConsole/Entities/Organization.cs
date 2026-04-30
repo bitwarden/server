@@ -151,6 +151,12 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     public bool UseMyItems { get; set; }
 
     /// <summary>
+    /// If set to true, the organization can generate invite links to invite users to the organization.
+    /// This is an Enterprise-only feature.
+    /// </summary>
+    public bool UseInviteLinks { get; set; }
+
+    /// <summary>
     /// When set to <see langword="true"/>, the organization is excluded from automated billing
     /// lifecycle operations such as subscription cancellation and disabling for non-payment.
     /// </summary>
@@ -337,6 +343,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
         UseApi = license.UseApi;
         UsePolicies = license.UsePolicies;
         UseMyItems = license.UseMyItems;
+        UseInviteLinks = license.UseInviteLinks;
         UseSso = license.UseSso;
         UseKeyConnector = license.UseKeyConnector;
         UseScim = license.UseScim;

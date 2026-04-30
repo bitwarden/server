@@ -76,6 +76,7 @@ public class ProviderClientOrganizationSignUpCommand : IProviderClientOrganizati
             MaxStorageGb = plan.PasswordManager.BaseStorageGb,
             UsePolicies = plan.HasPolicies,
             UseMyItems = plan.HasMyItems,
+            UseInviteLinks = plan.HasInviteLinks,
             UseSso = plan.HasSso,
             UseOrganizationDomains = plan.HasOrganizationDomains,
             UseGroups = plan.HasGroups,
