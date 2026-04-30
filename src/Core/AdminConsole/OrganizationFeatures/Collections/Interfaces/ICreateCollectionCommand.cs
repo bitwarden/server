@@ -4,7 +4,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Collections.Interfaces;
 
 public interface ICreateCollectionCommand
 {
