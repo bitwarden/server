@@ -4,10 +4,11 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using Bit.Api.AdminConsole.Public.Models.Response;
+using Bit.Api.Models.Public.Response;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 
-namespace Bit.Api.Models.Public.Response;
+namespace Bit.Api.AdminConsole.Models.Public.Response;
 
 /// <summary>
 /// A collection.

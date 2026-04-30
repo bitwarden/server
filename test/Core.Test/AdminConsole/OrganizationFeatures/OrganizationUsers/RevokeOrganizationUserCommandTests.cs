@@ -28,11 +28,11 @@ public class RevokeOrganizationUserCommandTests
     {
         RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
 
-        await sutProvider.Sut.RevokeUserAsync(organizationUser, owner.Id);
+        await sutProvider.Sut.RevokeUserAsync(organizationUser, owner.Id, RevocationReason.Manual);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
-            .RevokeAsync(organizationUser.Id);
+            .RevokeAsync(organizationUser.Id, RevocationReason.Manual);
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
             .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
@@ -50,11 +50,11 @@ public class RevokeOrganizationUserCommandTests
     {
         RestoreRevokeUser_Setup(organization, null, organizationUser, sutProvider);
 
-        await sutProvider.Sut.RevokeUserAsync(organizationUser, eventSystemUser);
+        await sutProvider.Sut.RevokeUserAsync(organizationUser, eventSystemUser, RevocationReason.Manual);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
-            .RevokeAsync(organizationUser.Id);
+            .RevokeAsync(organizationUser.Id, RevocationReason.Manual);
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
             .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked, eventSystemUser);
