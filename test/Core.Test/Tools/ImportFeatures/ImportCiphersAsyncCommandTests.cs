@@ -149,7 +149,7 @@ public class ImportCiphersAsyncCommandTests
             .GetManyByOrganizationIdAsync(organization.Id)
             .Returns(new List<Collection> { collections[0] });
 
-        await sutProvider.Sut.ImportIntoOrganizationalVaultAsync(collections, ciphers, collectionRelationships, importingUserId);
+        await sutProvider.Sut.ImportIntoOrganizationalVaultAsync(collections, ciphers, collectionRelationships, importingUserId, [], []);
 
         await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(
             ciphers,
@@ -160,7 +160,8 @@ public class ImportCiphersAsyncCommandTests
             Arg.Is<IEnumerable<CollectionUser>>(cus =>
                 cus.Count() == collections.Count - 1 &&
                 !cus.Any(cu => cu.CollectionId == collections[0].Id) && // Check that access was not added for the collection that already existed in the organization
-                cus.All(cu => cu.OrganizationUserId == importingOrganizationUser.Id && cu.Manage == true)));
+                cus.All(cu => cu.OrganizationUserId == importingOrganizationUser.Id && cu.Manage == true)),
+            Arg.Is<IEnumerable<Folder>>(f => f.Count() == 0));
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
     }
 
@@ -206,7 +207,7 @@ public class ImportCiphersAsyncCommandTests
             .Returns(new List<Collection> { collections[0] });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.ImportIntoOrganizationalVaultAsync(collections, ciphers, collectionRelationships, importingUserId));
+            sutProvider.Sut.ImportIntoOrganizationalVaultAsync(collections, ciphers, collectionRelationships, importingUserId, [], []));
 
         Assert.Equal("This organization can only have a maximum of " +
         $"{organization.MaxCollections} collections.", exception.Message);
@@ -256,14 +257,15 @@ public class ImportCiphersAsyncCommandTests
             .GetManyByOrganizationIdAsync(organization.Id)
             .Returns(new List<Collection>());
 
-        await sutProvider.Sut.ImportIntoOrganizationalVaultAsync(collections, ciphers, collectionRelationships, importingUserId);
+        await sutProvider.Sut.ImportIntoOrganizationalVaultAsync(collections, ciphers, collectionRelationships, importingUserId, [], []);
 
         // Verify ciphers were created but no CollectionUser entries were created (because the organization user (importingUserId) is null)
         await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(
             ciphers,
             Arg.Is<IEnumerable<Collection>>(cols => cols.Count() == collections.Count),
             Arg.Is<IEnumerable<CollectionCipher>>(cc => cc.Count() == ciphers.Count),
-            Arg.Is<IEnumerable<CollectionUser>>(cus => !cus.Any()));
+            Arg.Is<IEnumerable<CollectionUser>>(cus => !cus.Any()),
+            Arg.Is<IEnumerable<Folder>>(f => f.Count() == 0));
 
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
     }
@@ -309,7 +311,7 @@ public class ImportCiphersAsyncCommandTests
             .Returns(false);
 
         var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
-            sutProvider.Sut.ImportIntoOrganizationalVaultAsync(collections, ciphers, collectionRelationships, importingUserId));
+            sutProvider.Sut.ImportIntoOrganizationalVaultAsync(collections, ciphers, collectionRelationships, importingUserId, [], []));
 
         Assert.Contains("organization members or authorized providers", exception.Message);
     }
@@ -398,7 +400,7 @@ public class ImportCiphersAsyncCommandTests
             .GetManyByOrganizationIdAsync(organization.Id)
             .Returns(new List<Collection>());
 
-        await sutProvider.Sut.ImportIntoOrganizationalVaultAsync(collections, ciphers, collectionRelationships, importingUserId);
+        await sutProvider.Sut.ImportIntoOrganizationalVaultAsync(collections, ciphers, collectionRelationships, importingUserId, [], []);
 
         await sutProvider.GetDependency<ICipherRepository>()
             .Received(1)
@@ -410,6 +412,7 @@ public class ImportCiphersAsyncCommandTests
                     c[0].Archives.Contains(archivedDate.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ"))),
                 Arg.Any<IEnumerable<Collection>>(),
                 Arg.Any<IEnumerable<CollectionCipher>>(),
-                Arg.Any<IEnumerable<CollectionUser>>());
+                Arg.Any<IEnumerable<CollectionUser>>(),
+                Arg.Is<IEnumerable<Folder>>(f => f.Count() == 0));
     }
 }

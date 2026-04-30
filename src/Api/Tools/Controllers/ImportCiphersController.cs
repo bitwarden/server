@@ -74,7 +74,7 @@ public class ImportCiphersController : Controller
         var orgId = new Guid(organizationId);
         var collections = model.Collections.Select(c => c.ToCollection(orgId)).ToList();
 
-        //An User is allowed to import if CanCreate Collections or has AccessToImportExport
+        // A User is allowed to import if CanCreate Collections or has AccessToImportExport
         var authorized = await CheckOrgImportPermissionAsync(collections, orgId);
         if (!authorized)
         {
@@ -83,7 +83,8 @@ public class ImportCiphersController : Controller
 
         var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var ciphers = model.Ciphers.Select(l => l.ToOrganizationCipherDetails(orgId)).ToList();
-        await _importCiphersCommand.ImportIntoOrganizationalVaultAsync(collections, ciphers, model.CollectionRelationships, userId);
+        var folders = model.Folders.Select(f => f.ToFolder(userId)).ToList();
+        await _importCiphersCommand.ImportIntoOrganizationalVaultAsync(collections, ciphers, model.CollectionRelationships, userId, folders, model.FolderRelationships);
     }
 
     private async Task<bool> CheckOrgImportPermissionAsync(List<Collection> collections, Guid orgId)
