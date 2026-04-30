@@ -265,11 +265,10 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         );
 
         // Step 3: Start apps that have that new cert as able to Unprotect ONLY, this step
-        // should have 0 behavioral different and could likely be skipped but it what it
-        // gives us is a place to revert back to that won't break items that might have
-        // been successfully protected with the new certificate. If we skip this step then
-        // in case of issues you need to be ready to update the node with configuration like
-        // this instead of doing a revert in case of issue.
+        // should have 0 behavioral difference between the previous version but it's important
+        // to get all pods with this config so that in the next step all pods don't have to
+        // be updated at the same moment. This makes it so that pods that are slower to get the
+        // config change are able to interoperate with pods that get it quicker.
         var preparedAppConfig = new Dictionary<string, string?>
         {
             { "GlobalSettings:Storage:ConnectionString", azuriteConnectionString },
