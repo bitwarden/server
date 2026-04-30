@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using System.Diagnostics;
-using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -22,7 +21,6 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
     private readonly ICurrentContext _currentContext;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IApplicationCacheService _applicationCacheService;
-    private readonly IFeatureService _featureService;
     private Guid _targetOrganizationId;
     private HashSet<Guid>? _managedCollectionsIds;
 
@@ -31,13 +29,11 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
     public BulkCollectionAuthorizationHandler(
         ICurrentContext currentContext,
         ICollectionRepository collectionRepository,
-        IApplicationCacheService applicationCacheService,
-        IFeatureService featureService)
+        IApplicationCacheService applicationCacheService)
     {
         _currentContext = currentContext;
         _collectionRepository = collectionRepository;
         _applicationCacheService = applicationCacheService;
-        _featureService = featureService;
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
@@ -90,18 +86,10 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
                 break;
 
             case not null when requirement == BulkCollectionOperations.ModifyUserAccess:
-                if (_featureService.IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers))
-                {
-                    return;
-                }
                 authorized = await CanUpdateUserAccessAsync(resources, org);
                 break;
 
             case not null when requirement == BulkCollectionOperations.ModifyGroupAccess:
-                if (_featureService.IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers))
-                {
-                    return;
-                }
                 authorized = await CanUpdateGroupAccessAsync(resources, org);
                 break;
 
