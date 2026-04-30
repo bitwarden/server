@@ -34,6 +34,8 @@ using Bit.Core.Tools.SendFeatures;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Enums;
+using Bit.Api.Platform.Sync;
+
 
 
 #if !OSS
@@ -178,6 +180,8 @@ public class Startup
         services
             .AddScoped<IRotationValidator<IEnumerable<OtherDeviceKeysUpdateRequestModel>, IEnumerable<Device>>,
                 DeviceRotationValidator>();
+
+        services.TryAddSingleton<SyncMetrics>();
 
         // Services
         services.AddBaseServices(globalSettings);
