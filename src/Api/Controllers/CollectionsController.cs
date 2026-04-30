@@ -224,42 +224,24 @@ public class CollectionsController : Controller
     [HttpPost("bulk-access")]
     public async Task PostBulkCollectionAccess(Guid orgId, [FromBody] BulkCollectionAccessRequestModel model)
     {
+        if (_featureService.IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers))
+        {
+            await PostBulkCollectionAccess_vNext(orgId, model);
+            return;
+        }
+
         var collections = await _collectionRepository.GetManyByManyIdsAsync(model.CollectionIds);
         if (collections.Count(c => c.OrganizationId == orgId) != model.CollectionIds.Count())
         {
             throw new NotFoundException("One or more collections not found.");
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers))
-        {
-            if (model.Users?.Any() == true)
-            {
-                var resource = new CollectionUserAccessResource(collections.ToList(), null);
-                if (!(await _authorizationService.AuthorizeAsync(User, resource,
-                        CollectionUserOperations.Create)).Succeeded)
-                {
-                    throw new NotFoundException();
-                }
-            }
+        var result = await _authorizationService.AuthorizeAsync(User, collections,
+            new[] { BulkCollectionOperations.ModifyUserAccess, BulkCollectionOperations.ModifyGroupAccess });
 
-            if (model.Groups?.Any() == true)
-            {
-                if (!(await _authorizationService.AuthorizeAsync(User, collections,
-                        CollectionGroupOperations.Create)).Succeeded)
-                {
-                    throw new NotFoundException();
-                }
-            }
-        }
-        else
+        if (!result.Succeeded)
         {
-            var result = await _authorizationService.AuthorizeAsync(User, collections,
-                new[] { BulkCollectionOperations.ModifyUserAccess, BulkCollectionOperations.ModifyGroupAccess });
-
-            if (!result.Succeeded)
-            {
-                throw new NotFoundException();
-            }
+            throw new NotFoundException();
         }
 
         await _bulkAddCollectionAccessCommand.AddAccessAsync(
@@ -320,11 +302,7 @@ public class CollectionsController : Controller
 
         if (model.Users != null)
         {
-            // TargetUserId is null because this endpoint modifies access for multiple users
-            // at the collection level; self-assignment protection is not applicable here
-            // (consistent with the pre-feature-flag behavior).
-            var resource = new CollectionUserAccessResource(new[] { collection }, null);
-            await AuthorizeUserAccessChangesAsync(model.Users, currentAccess.Users, resource);
+            await AuthorizeUserAccessChangesAsync(model.Users, currentAccess.Users, new[] { collection });
         }
 
         if (model.Groups != null)
@@ -346,27 +324,59 @@ public class CollectionsController : Controller
         return new CollectionAccessDetailsResponseModel(collectionWithPermissions);
     }
 
+    private async Task PostBulkCollectionAccess_vNext(Guid orgId, BulkCollectionAccessRequestModel model)
+    {
+        var collections = await _collectionRepository.GetManyByManyIdsAsync(model.CollectionIds);
+        if (collections.Count(c => c.OrganizationId == orgId) != model.CollectionIds.Count())
+        {
+            throw new NotFoundException("One or more collections not found.");
+        }
+
+        if (model.Users?.Any() == true)
+        {
+            if (!(await _authorizationService.AuthorizeAsync(User, collections.ToList(),
+                    CollectionUserOperations.Create)).Succeeded)
+            {
+                throw new NotFoundException();
+            }
+        }
+
+        if (model.Groups?.Any() == true)
+        {
+            if (!(await _authorizationService.AuthorizeAsync(User, collections.ToList(),
+                    CollectionGroupOperations.Create)).Succeeded)
+            {
+                throw new NotFoundException();
+            }
+        }
+
+        await _bulkAddCollectionAccessCommand.AddAccessAsync(
+            collections,
+            model.Users?.Select(u => u.ToSelectionReadOnly()).ToList(),
+            model.Groups?.Select(g => g.ToSelectionReadOnly()).ToList());
+    }
+
     private async Task AuthorizeUserAccessChangesAsync(
         IEnumerable<SelectionReadOnlyRequestModel> posted,
         IEnumerable<CollectionAccessSelection> current,
-        CollectionUserAccessResource resource)
+        ICollection<Collection> collections)
     {
         var (createIds, updateIds, deleteIds) = posted.DiffAccessSelections(current);
 
         if (createIds.Count > 0 &&
-            !(await _authorizationService.AuthorizeAsync(User, resource, CollectionUserOperations.Create)).Succeeded)
+            !(await _authorizationService.AuthorizeAsync(User, collections, CollectionUserOperations.Create)).Succeeded)
         {
             throw new NotFoundException();
         }
 
         if (updateIds.Count > 0 &&
-            !(await _authorizationService.AuthorizeAsync(User, resource, CollectionUserOperations.Update)).Succeeded)
+            !(await _authorizationService.AuthorizeAsync(User, collections, CollectionUserOperations.Update)).Succeeded)
         {
             throw new NotFoundException();
         }
 
         if (deleteIds.Count > 0 &&
-            !(await _authorizationService.AuthorizeAsync(User, resource, CollectionUserOperations.Delete)).Succeeded)
+            !(await _authorizationService.AuthorizeAsync(User, collections, CollectionUserOperations.Delete)).Succeeded)
         {
             throw new NotFoundException();
         }

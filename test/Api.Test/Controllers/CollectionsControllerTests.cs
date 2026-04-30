@@ -742,7 +742,7 @@ public class CollectionsControllerTests
 
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
-                Arg.Any<CollectionUserAccessResource>(),
+                Arg.Any<ICollection<Collection>>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Create)))
             .Returns(AuthorizationResult.Success());
 
@@ -784,7 +784,7 @@ public class CollectionsControllerTests
 
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
-                Arg.Any<CollectionUserAccessResource>(),
+                Arg.Any<ICollection<Collection>>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Create)))
             .Returns(AuthorizationResult.Failed());
 
@@ -814,7 +814,7 @@ public class CollectionsControllerTests
 
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
-                Arg.Any<CollectionUserAccessResource>(),
+                Arg.Any<ICollection<Collection>>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Create)))
             .Returns(AuthorizationResult.Success());
 
@@ -856,7 +856,7 @@ public class CollectionsControllerTests
 
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
-                Arg.Any<CollectionUserAccessResource>(),
+                Arg.Any<ICollection<Collection>>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Update)))
             .Returns(AuthorizationResult.Success());
 
@@ -896,7 +896,7 @@ public class CollectionsControllerTests
 
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
-                Arg.Any<CollectionUserAccessResource>(),
+                Arg.Any<ICollection<Collection>>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Delete)))
             .Returns(AuthorizationResult.Success());
 
@@ -935,7 +935,7 @@ public class CollectionsControllerTests
 
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
-                Arg.Any<CollectionUserAccessResource>(),
+                Arg.Any<ICollection<Collection>>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Create)))
             .Returns(AuthorizationResult.Failed());
 
@@ -966,7 +966,7 @@ public class CollectionsControllerTests
 
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
-                Arg.Any<CollectionUserAccessResource>(),
+                Arg.Any<ICollection<Collection>>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Update)))
             .Returns(AuthorizationResult.Failed());
 
@@ -996,7 +996,7 @@ public class CollectionsControllerTests
 
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
-                Arg.Any<CollectionUserAccessResource>(),
+                Arg.Any<ICollection<Collection>>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Delete)))
             .Returns(AuthorizationResult.Failed());
 
@@ -1124,7 +1124,7 @@ public class CollectionsControllerTests
 
         await sutProvider.GetDependency<IAuthorizationService>().DidNotReceive()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
-                Arg.Any<CollectionUserAccessResource>(),
+                Arg.Any<ICollection<Collection>>(),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>());
 
         await sutProvider.GetDependency<IAuthorizationService>().DidNotReceive()
