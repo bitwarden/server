@@ -14,7 +14,7 @@ public class CreateOrganizationInviteLinkRequestModelTests
     {
         var model = new CreateOrganizationInviteLinkRequestModel
         {
-            AllowedDomains = ["acme.com"],
+            AllowedDomains = new[] { "acme.com" },
             EncryptedInviteKey = _validEncryptedString,
         };
 
@@ -33,7 +33,7 @@ public class CreateOrganizationInviteLinkRequestModelTests
     {
         var model = new CreateOrganizationInviteLinkRequestModel
         {
-            AllowedDomains = [invalidDomain],
+            AllowedDomains = new[] { invalidDomain },
             EncryptedInviteKey = _validEncryptedString,
         };
 
@@ -48,7 +48,7 @@ public class CreateOrganizationInviteLinkRequestModelTests
     {
         var model = new CreateOrganizationInviteLinkRequestModel
         {
-            AllowedDomains = [],
+            AllowedDomains = Array.Empty<string>(),
             EncryptedInviteKey = _validEncryptedString,
         };
 
@@ -63,7 +63,7 @@ public class CreateOrganizationInviteLinkRequestModelTests
     {
         var model = new CreateOrganizationInviteLinkRequestModel
         {
-            AllowedDomains = ["acme.com", "not a domain", "<script>"],
+            AllowedDomains = new[] { "acme.com", "not a domain", "<script>" },
             EncryptedInviteKey = _validEncryptedString,
         };
 
