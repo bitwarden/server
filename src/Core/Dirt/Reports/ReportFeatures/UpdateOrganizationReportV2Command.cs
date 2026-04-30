@@ -53,36 +53,21 @@ public class UpdateOrganizationReportV2Command : IUpdateOrganizationReportV2Comm
             throw new BadRequestException("Organization report does not belong to the specified organization");
         }
 
-        if (request.ContentEncryptionKey != null)
-        {
-            existingReport.ContentEncryptionKey = request.ContentEncryptionKey;
-        }
-
-        if (request.SummaryData != null)
-        {
-            existingReport.SummaryData = request.SummaryData;
-        }
-
-        if (request.ApplicationData != null)
-        {
-            existingReport.ApplicationData = request.ApplicationData;
-        }
-
-        if (request.ReportMetrics != null)
-        {
-            existingReport.ApplicationCount = request.ReportMetrics.ApplicationCount;
-            existingReport.ApplicationAtRiskCount = request.ReportMetrics.ApplicationAtRiskCount;
-            existingReport.CriticalApplicationCount = request.ReportMetrics.CriticalApplicationCount;
-            existingReport.CriticalApplicationAtRiskCount = request.ReportMetrics.CriticalApplicationAtRiskCount;
-            existingReport.MemberCount = request.ReportMetrics.MemberCount;
-            existingReport.MemberAtRiskCount = request.ReportMetrics.MemberAtRiskCount;
-            existingReport.CriticalMemberCount = request.ReportMetrics.CriticalMemberCount;
-            existingReport.CriticalMemberAtRiskCount = request.ReportMetrics.CriticalMemberAtRiskCount;
-            existingReport.PasswordCount = request.ReportMetrics.PasswordCount;
-            existingReport.PasswordAtRiskCount = request.ReportMetrics.PasswordAtRiskCount;
-            existingReport.CriticalPasswordCount = request.ReportMetrics.CriticalPasswordCount;
-            existingReport.CriticalPasswordAtRiskCount = request.ReportMetrics.CriticalPasswordAtRiskCount;
-        }
+        existingReport.ContentEncryptionKey = request.ContentEncryptionKey;
+        existingReport.SummaryData = request.SummaryData;
+        existingReport.ApplicationData = request.ApplicationData;
+        existingReport.ApplicationCount = request.ReportMetrics.ApplicationCount;
+        existingReport.ApplicationAtRiskCount = request.ReportMetrics.ApplicationAtRiskCount;
+        existingReport.CriticalApplicationCount = request.ReportMetrics.CriticalApplicationCount;
+        existingReport.CriticalApplicationAtRiskCount = request.ReportMetrics.CriticalApplicationAtRiskCount;
+        existingReport.MemberCount = request.ReportMetrics.MemberCount;
+        existingReport.MemberAtRiskCount = request.ReportMetrics.MemberAtRiskCount;
+        existingReport.CriticalMemberCount = request.ReportMetrics.CriticalMemberCount;
+        existingReport.CriticalMemberAtRiskCount = request.ReportMetrics.CriticalMemberAtRiskCount;
+        existingReport.PasswordCount = request.ReportMetrics.PasswordCount;
+        existingReport.PasswordAtRiskCount = request.ReportMetrics.PasswordAtRiskCount;
+        existingReport.CriticalPasswordCount = request.ReportMetrics.CriticalPasswordCount;
+        existingReport.CriticalPasswordAtRiskCount = request.ReportMetrics.CriticalPasswordAtRiskCount;
 
         existingReport.RevisionDate = DateTime.UtcNow;
         await _organizationReportRepo.ReplaceAsync(existingReport);
