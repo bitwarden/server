@@ -178,7 +178,7 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
     }
 
     /// <inheritdoc />
-    public DatabaseTransactionAction SetStatusToAcceptedForKeyRegeneration(
+    public DatabaseTransactionAction SetStatusToAcceptedForPublicKeyPairRegeneration(
         IEnumerable<Core.Auth.Entities.EmergencyAccess> emergencyAccesses)
     {
         return async (connection, transaction) =>

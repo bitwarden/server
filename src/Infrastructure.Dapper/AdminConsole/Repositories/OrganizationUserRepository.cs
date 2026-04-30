@@ -745,7 +745,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
     }
 
     /// <inheritdoc />
-    public DatabaseTransactionAction SetStatusToAcceptedForKeyRegeneration(IEnumerable<OrganizationUser> organizationUsers)
+    public DatabaseTransactionAction SetStatusToAcceptedForPublicKeyPairRegeneration(IEnumerable<OrganizationUser> organizationUsers)
     {
         return async (connection, transaction) =>
         {
@@ -755,16 +755,23 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                 return;
             }
 
+            var utcNow = DateTime.UtcNow;
+
             await connection.ExecuteAsync(
-                "[dbo].[OrganizationUser_SetStatusToAccepted]",
-                new { OrganizationUserIds = ids.ToGuidIdArrayTVP() },
+                "[dbo].[OrganizationUser_UpdateManySetStatus]",
+                new
+                {
+                    OrganizationUserIds = ids.ToGuidIdArrayTVP(),
+                    Status = (short)OrganizationUserStatusType.Accepted,
+                    RevisionDate = utcNow
+                },
                 transaction: transaction,
                 commandType: CommandType.StoredProcedure);
         };
     }
 
     /// <inheritdoc />
-    public DatabaseTransactionAction RemoveForKeyRegeneration(IEnumerable<OrganizationUser> organizationUsers)
+    public DatabaseTransactionAction RemoveForPublicKeyPairRegeneration(IEnumerable<OrganizationUser> organizationUsers)
     {
         return async (connection, transaction) =>
         {

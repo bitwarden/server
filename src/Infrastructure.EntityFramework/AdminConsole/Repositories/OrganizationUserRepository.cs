@@ -1060,7 +1060,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
     }
 
     /// <inheritdoc />
-    public DatabaseTransactionAction SetStatusToAcceptedForKeyRegeneration(
+    public DatabaseTransactionAction SetStatusToAcceptedForPublicKeyPairRegeneration(
         IEnumerable<Core.Entities.OrganizationUser> organizationUsers)
     {
         return async (connection, transaction) =>
@@ -1081,13 +1081,11 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                     .SetProperty(ou => ou.Status, OrganizationUserStatusType.Accepted)
                     .SetProperty(ou => ou.Key, (string?)null)
                     .SetProperty(ou => ou.RevisionDate, utcNow));
-
-            await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(ids);
         };
     }
 
     /// <inheritdoc />
-    public DatabaseTransactionAction RemoveForKeyRegeneration(
+    public DatabaseTransactionAction RemoveForPublicKeyPairRegeneration(
         IEnumerable<Core.Entities.OrganizationUser> organizationUsers)
     {
         return async (connection, transaction) =>
@@ -1100,8 +1098,6 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
             using var scope = ServiceScopeFactory.CreateScope();
             var dbContext = GetTransactionalDatabaseContext(scope, connection, transaction);
-
-            await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(ids);
 
             await dbContext.CollectionUsers
                 .Where(cu => ids.Contains(cu.OrganizationUserId))

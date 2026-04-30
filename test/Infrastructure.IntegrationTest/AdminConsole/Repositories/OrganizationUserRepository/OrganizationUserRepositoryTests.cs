@@ -1478,7 +1478,7 @@ public class OrganizationUserRepositoryTests
     }
 
     [Theory, DatabaseData]
-    public async Task SetStatusToAcceptedForKeyRegeneration_ConfirmedUser_SetsToAcceptedAndClearsKey(
+    public async Task SetStatusToAcceptedForPublicKeyPairRegeneration_ConfirmedUser_SetsToAcceptedAndClearsKey(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -1491,7 +1491,7 @@ public class OrganizationUserRepositoryTests
         orgUser.Key = "old-org-key";
         await organizationUserRepository.ReplaceAsync(orgUser);
 
-        var action = organizationUserRepository.SetStatusToAcceptedForKeyRegeneration([orgUser]);
+        var action = organizationUserRepository.SetStatusToAcceptedForPublicKeyPairRegeneration([orgUser]);
         await DatabaseTransactionActionTestHelper.ExecuteAsync(database, action, serviceProvider);
 
         var updatedOrgUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
@@ -1501,7 +1501,7 @@ public class OrganizationUserRepositoryTests
     }
 
     [Theory, DatabaseData]
-    public async Task RemoveForKeyRegeneration_RevokedUser_DeletesUser(
+    public async Task RemoveForPublicKeyPairRegeneration_RevokedUser_DeletesUser(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -1512,7 +1512,7 @@ public class OrganizationUserRepositoryTests
         var org = await organizationRepository.CreateTestOrganizationAsync();
         var orgUser = await organizationUserRepository.CreateRevokedTestOrganizationUserAsync(org, user);
 
-        var action = organizationUserRepository.RemoveForKeyRegeneration([orgUser]);
+        var action = organizationUserRepository.RemoveForPublicKeyPairRegeneration([orgUser]);
         await DatabaseTransactionActionTestHelper.ExecuteAsync(database, action, serviceProvider);
 
         Assert.Null(await organizationUserRepository.GetByIdAsync(orgUser.Id));

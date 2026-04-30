@@ -79,7 +79,7 @@ public class RegenerateUserAsymmetricKeysCommand : IRegenerateUserAsymmetricKeys
         if (eaToReset.Count > 0)
         {
             updateDataActions.Add(
-                _emergencyAccessRepository.SetStatusToAcceptedForKeyRegeneration(eaToReset));
+                _emergencyAccessRepository.SetStatusToAcceptedForPublicKeyPairRegeneration(eaToReset));
         }
 
         var orgUsersToReset = usersOrganizationAccounts
@@ -88,7 +88,7 @@ public class RegenerateUserAsymmetricKeysCommand : IRegenerateUserAsymmetricKeys
         if (orgUsersToReset.Count > 0)
         {
             updateDataActions.Add(
-                _organizationUserRepository.SetStatusToAcceptedForKeyRegeneration(orgUsersToReset));
+                _organizationUserRepository.SetStatusToAcceptedForPublicKeyPairRegeneration(orgUsersToReset));
         }
 
         var orgUsersToRemove = usersOrganizationAccounts
@@ -97,7 +97,7 @@ public class RegenerateUserAsymmetricKeysCommand : IRegenerateUserAsymmetricKeys
         if (orgUsersToRemove.Count > 0)
         {
             updateDataActions.Add(
-                _organizationUserRepository.RemoveForKeyRegeneration(orgUsersToRemove));
+                _organizationUserRepository.RemoveForPublicKeyPairRegeneration(orgUsersToRemove));
         }
 
         await _userAsymmetricKeysRepository.RegenerateUserAsymmetricKeysAsync(

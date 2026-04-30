@@ -702,7 +702,7 @@ public class EmergencyAccessRepositoriesTests
     }
 
     [Theory, DatabaseData]
-    public async Task SetStatusToAcceptedForKeyRegeneration_AllApplicableStatuses_SetsToAcceptedAndClearsKey(
+    public async Task SetStatusToAcceptedForPublicKeyPairRegeneration_AllApplicableStatuses_SetsToAcceptedAndClearsKey(
         IUserRepository userRepository,
         IEmergencyAccessRepository emergencyAccessRepository,
         Database database,
@@ -747,7 +747,7 @@ public class EmergencyAccessRepositoriesTests
             }));
         }
 
-        var action = emergencyAccessRepository.SetStatusToAcceptedForKeyRegeneration(emergencyAccesses);
+        var action = emergencyAccessRepository.SetStatusToAcceptedForPublicKeyPairRegeneration(emergencyAccesses);
         await DatabaseTransactionActionTestHelper.ExecuteAsync(database, action, serviceProvider);
 
         foreach (var ea in emergencyAccesses)

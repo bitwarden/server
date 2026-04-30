@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
@@ -178,7 +179,7 @@ public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEme
     }
 
     /// <inheritdoc />
-    public DatabaseTransactionAction SetStatusToAcceptedForKeyRegeneration(IEnumerable<EmergencyAccess> emergencyAccesses)
+    public DatabaseTransactionAction SetStatusToAcceptedForPublicKeyPairRegeneration(IEnumerable<EmergencyAccess> emergencyAccesses)
     {
         return async (connection, transaction) =>
         {
@@ -188,9 +189,16 @@ public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEme
                 return;
             }
 
+            var utcNow = DateTime.UtcNow;
+
             await connection.ExecuteAsync(
-                "[dbo].[EmergencyAccess_SetStatusToAccepted]",
-                new { Ids = ids.ToGuidIdArrayTVP() },
+                "[dbo].[EmergencyAccess_UpdateManySetStatus]",
+                new
+                {
+                    Ids = ids.ToGuidIdArrayTVP(),
+                    Status = (byte)EmergencyAccessStatusType.Accepted,
+                    RevisionDate = utcNow
+                },
                 transaction: transaction,
                 commandType: CommandType.StoredProcedure);
         };

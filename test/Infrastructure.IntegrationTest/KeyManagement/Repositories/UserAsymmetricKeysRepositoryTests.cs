@@ -17,6 +17,7 @@ public class UserAsymmetricKeysRepositoryTests
         IUserAsymmetricKeysRepository userAsymmetricKeysRepository)
     {
         var user = await userRepository.CreateTestUserAsync();
+        var originalAccountRevisionDate = user.AccountRevisionDate;
         var newKeys = new UserAsymmetricKeys
         {
             UserId = user.Id,
@@ -30,6 +31,8 @@ public class UserAsymmetricKeysRepositoryTests
         Assert.NotNull(updatedUser);
         Assert.Equal("new-public-key", updatedUser.PublicKey);
         Assert.Equal("new-encrypted-private-key", updatedUser.PrivateKey);
+        Assert.True(updatedUser.AccountRevisionDate > originalAccountRevisionDate);
+        Assert.Equal(DateTime.UtcNow, updatedUser.AccountRevisionDate, TimeSpan.FromMinutes(1));
     }
 
     [Theory, DatabaseData]
@@ -62,7 +65,7 @@ public class UserAsymmetricKeysRepositoryTests
 
         var updateActions = new[]
         {
-            emergencyAccessRepository.SetStatusToAcceptedForKeyRegeneration([ea])
+            emergencyAccessRepository.SetStatusToAcceptedForPublicKeyPairRegeneration([ea])
         };
 
         await userAsymmetricKeysRepository.RegenerateUserAsymmetricKeysAsync(newKeys, updateActions);
@@ -95,7 +98,7 @@ public class UserAsymmetricKeysRepositoryTests
 
         var updateActions = new[]
         {
-            organizationUserRepository.SetStatusToAcceptedForKeyRegeneration([orgUser])
+            organizationUserRepository.SetStatusToAcceptedForPublicKeyPairRegeneration([orgUser])
         };
 
         await userAsymmetricKeysRepository.RegenerateUserAsymmetricKeysAsync(newKeys, updateActions);
@@ -126,7 +129,7 @@ public class UserAsymmetricKeysRepositoryTests
 
         var updateActions = new[]
         {
-            organizationUserRepository.RemoveForKeyRegeneration([orgUser])
+            organizationUserRepository.RemoveForPublicKeyPairRegeneration([orgUser])
         };
 
         await userAsymmetricKeysRepository.RegenerateUserAsymmetricKeysAsync(newKeys, updateActions);
@@ -144,6 +147,7 @@ public class UserAsymmetricKeysRepositoryTests
         IOrganizationRepository organizationRepository)
     {
         var user = await userRepository.CreateTestUserAsync();
+        var originalAccountRevisionDate = user.AccountRevisionDate;
         var grantorUser = await userRepository.CreateTestUserAsync("grantor");
 
         var ea = await emergencyAccessRepository.CreateAsync(new EmergencyAccess
@@ -175,9 +179,9 @@ public class UserAsymmetricKeysRepositoryTests
 
         var updateActions = new[]
         {
-            emergencyAccessRepository.SetStatusToAcceptedForKeyRegeneration([ea]),
-            organizationUserRepository.SetStatusToAcceptedForKeyRegeneration([confirmedOrgUser]),
-            organizationUserRepository.RemoveForKeyRegeneration([revokedOrgUser]),
+            emergencyAccessRepository.SetStatusToAcceptedForPublicKeyPairRegeneration([ea]),
+            organizationUserRepository.SetStatusToAcceptedForPublicKeyPairRegeneration([confirmedOrgUser]),
+            organizationUserRepository.RemoveForPublicKeyPairRegeneration([revokedOrgUser]),
         };
 
         await userAsymmetricKeysRepository.RegenerateUserAsymmetricKeysAsync(newKeys, updateActions);
@@ -186,6 +190,8 @@ public class UserAsymmetricKeysRepositoryTests
         Assert.NotNull(updatedUser);
         Assert.Equal("new-public-key", updatedUser.PublicKey);
         Assert.Equal("new-encrypted-private-key", updatedUser.PrivateKey);
+        Assert.True(updatedUser.AccountRevisionDate > originalAccountRevisionDate);
+        Assert.Equal(DateTime.UtcNow, updatedUser.AccountRevisionDate, TimeSpan.FromMinutes(1));
 
         var updatedEa = await emergencyAccessRepository.GetByIdAsync(ea.Id);
         Assert.NotNull(updatedEa);

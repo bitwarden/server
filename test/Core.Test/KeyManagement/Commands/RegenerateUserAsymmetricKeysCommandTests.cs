@@ -59,13 +59,13 @@ public class RegenerateUserAsymmetricKeysCommandTests
             .PushSyncSettingsAsync(Arg.Is(userAsymmetricKeys.UserId));
         sutProvider.GetDependency<IEmergencyAccessRepository>()
             .DidNotReceiveWithAnyArgs()
-            .SetStatusToAcceptedForKeyRegeneration(Arg.Any<IEnumerable<EmergencyAccessDetails>>());
+            .SetStatusToAcceptedForPublicKeyPairRegeneration(Arg.Any<IEnumerable<EmergencyAccessDetails>>());
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
-            .SetStatusToAcceptedForKeyRegeneration(Arg.Any<IEnumerable<OrganizationUser>>());
+            .SetStatusToAcceptedForPublicKeyPairRegeneration(Arg.Any<IEnumerable<OrganizationUser>>());
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
-            .RemoveForKeyRegeneration(Arg.Any<IEnumerable<OrganizationUser>>());
+            .RemoveForPublicKeyPairRegeneration(Arg.Any<IEnumerable<OrganizationUser>>());
     }
 
     [Theory]
@@ -131,14 +131,14 @@ public class RegenerateUserAsymmetricKeysCommandTests
 
         sutProvider.GetDependency<IEmergencyAccessRepository>()
             .Received(1)
-            .SetStatusToAcceptedForKeyRegeneration(Arg.Is<IEnumerable<EmergencyAccessDetails>>(
+            .SetStatusToAcceptedForPublicKeyPairRegeneration(Arg.Is<IEnumerable<EmergencyAccessDetails>>(
                 items => items.All(ea => ea.Status == statusType)));
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
-            .SetStatusToAcceptedForKeyRegeneration(Arg.Any<IEnumerable<OrganizationUser>>());
+            .SetStatusToAcceptedForPublicKeyPairRegeneration(Arg.Any<IEnumerable<OrganizationUser>>());
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
-            .RemoveForKeyRegeneration(Arg.Any<IEnumerable<OrganizationUser>>());
+            .RemoveForPublicKeyPairRegeneration(Arg.Any<IEnumerable<OrganizationUser>>());
         await sutProvider.GetDependency<IUserAsymmetricKeysRepository>()
             .Received(1)
             .RegenerateUserAsymmetricKeysAsync(
@@ -174,13 +174,13 @@ public class RegenerateUserAsymmetricKeysCommandTests
 
         sutProvider.GetDependency<IEmergencyAccessRepository>()
             .DidNotReceiveWithAnyArgs()
-            .SetStatusToAcceptedForKeyRegeneration(Arg.Any<IEnumerable<EmergencyAccessDetails>>());
+            .SetStatusToAcceptedForPublicKeyPairRegeneration(Arg.Any<IEnumerable<EmergencyAccessDetails>>());
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
-            .SetStatusToAcceptedForKeyRegeneration(Arg.Any<IEnumerable<OrganizationUser>>());
+            .SetStatusToAcceptedForPublicKeyPairRegeneration(Arg.Any<IEnumerable<OrganizationUser>>());
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
-            .RemoveForKeyRegeneration(Arg.Any<IEnumerable<OrganizationUser>>());
+            .RemoveForPublicKeyPairRegeneration(Arg.Any<IEnumerable<OrganizationUser>>());
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceiveWithAnyArgs()
             .SendEmergencyAccessAcceptedEmailAsync(Arg.Any<string>(), Arg.Any<string>());
@@ -203,14 +203,14 @@ public class RegenerateUserAsymmetricKeysCommandTests
 
         sutProvider.GetDependency<IEmergencyAccessRepository>()
             .DidNotReceiveWithAnyArgs()
-            .SetStatusToAcceptedForKeyRegeneration(Arg.Any<IEnumerable<EmergencyAccessDetails>>());
+            .SetStatusToAcceptedForPublicKeyPairRegeneration(Arg.Any<IEnumerable<EmergencyAccessDetails>>());
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
-            .SetStatusToAcceptedForKeyRegeneration(Arg.Is<IEnumerable<OrganizationUser>>(
+            .SetStatusToAcceptedForPublicKeyPairRegeneration(Arg.Is<IEnumerable<OrganizationUser>>(
                 items => items.All(ou => ou.Status == OrganizationUserStatusType.Confirmed)));
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
-            .RemoveForKeyRegeneration(Arg.Any<IEnumerable<OrganizationUser>>());
+            .RemoveForPublicKeyPairRegeneration(Arg.Any<IEnumerable<OrganizationUser>>());
         await sutProvider.GetDependency<IUserAsymmetricKeysRepository>()
             .Received(1)
             .RegenerateUserAsymmetricKeysAsync(
@@ -238,13 +238,13 @@ public class RegenerateUserAsymmetricKeysCommandTests
 
         sutProvider.GetDependency<IEmergencyAccessRepository>()
             .DidNotReceiveWithAnyArgs()
-            .SetStatusToAcceptedForKeyRegeneration(Arg.Any<IEnumerable<EmergencyAccessDetails>>());
+            .SetStatusToAcceptedForPublicKeyPairRegeneration(Arg.Any<IEnumerable<EmergencyAccessDetails>>());
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
-            .SetStatusToAcceptedForKeyRegeneration(Arg.Any<IEnumerable<OrganizationUser>>());
+            .SetStatusToAcceptedForPublicKeyPairRegeneration(Arg.Any<IEnumerable<OrganizationUser>>());
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
-            .RemoveForKeyRegeneration(Arg.Is<IEnumerable<OrganizationUser>>(
+            .RemoveForPublicKeyPairRegeneration(Arg.Is<IEnumerable<OrganizationUser>>(
                 items => items.All(ou => ou.Status == OrganizationUserStatusType.Revoked)));
         await sutProvider.GetDependency<IUserAsymmetricKeysRepository>()
             .Received(1)
@@ -278,13 +278,13 @@ public class RegenerateUserAsymmetricKeysCommandTests
 
         sutProvider.GetDependency<IEmergencyAccessRepository>()
             .DidNotReceiveWithAnyArgs()
-            .SetStatusToAcceptedForKeyRegeneration(Arg.Any<IEnumerable<EmergencyAccessDetails>>());
+            .SetStatusToAcceptedForPublicKeyPairRegeneration(Arg.Any<IEnumerable<EmergencyAccessDetails>>());
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
-            .SetStatusToAcceptedForKeyRegeneration(Arg.Any<IEnumerable<OrganizationUser>>());
+            .SetStatusToAcceptedForPublicKeyPairRegeneration(Arg.Any<IEnumerable<OrganizationUser>>());
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
-            .RemoveForKeyRegeneration(Arg.Any<IEnumerable<OrganizationUser>>());
+            .RemoveForPublicKeyPairRegeneration(Arg.Any<IEnumerable<OrganizationUser>>());
         await sutProvider.GetDependency<IEventService>()
             .DidNotReceiveWithAnyArgs()
             .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>());

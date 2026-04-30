@@ -48,7 +48,7 @@ public interface IEmergencyAccessRepository : IRepository<EmergencyAccess, Guid>
     /// Used during key regeneration when the grantee's public key changes.
     /// </summary>
     /// <param name="emergencyAccesses">Emergency access records to update</param>
-    DatabaseTransactionAction SetStatusToAcceptedForKeyRegeneration(IEnumerable<EmergencyAccess> emergencyAccesses);
+    DatabaseTransactionAction SetStatusToAcceptedForPublicKeyPairRegeneration(IEnumerable<EmergencyAccess> emergencyAccesses);
 
     /// <summary>
     /// Deletes multiple emergency access records by their IDs
