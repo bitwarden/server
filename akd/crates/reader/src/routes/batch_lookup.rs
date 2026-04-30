@@ -59,22 +59,13 @@ pub async fn batch_lookup_handler(
         );
     }
 
-    let labels: Vec<akd::AkdLabel> = match bitwarden_akd_labels
+    let labels: Vec<akd::AkdLabel> = bitwarden_akd_labels
         .into_iter()
-        .map(|req| -> Result<akd::AkdLabel, _> {
-            let label: BitwardenAkdLabelMaterial = req.try_into()?;
-            Ok((&label).into())
+        .map(|req| {
+            let label: BitwardenAkdLabelMaterial = req.into();
+            (&label).into()
         })
-        .collect::<Result<Vec<_>, _>>()
-    {
-        Ok(labels) => labels,
-        Err(e) => {
-            let reader_error = ReaderError::RequestConversion(e);
-            let status = reader_error.status_code();
-            error!(err = ?reader_error, status = %status, "Invalid request");
-            return (status, Json(Response::error(reader_error)));
-        }
-    };
+        .collect();
     let lookup_proofs = directory.batch_lookup(&labels).await;
 
     match lookup_proofs {

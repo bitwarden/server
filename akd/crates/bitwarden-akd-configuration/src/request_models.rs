@@ -27,17 +27,9 @@ pub enum BitwardenAkdPairMaterialRequest {
     },
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum RequestConversionError {
-    #[error("Invalid base64 encoding: {0}")]
-    InvalidBase64(#[from] bitwarden_encoding::NotB64EncodedError),
-}
-
-impl TryFrom<BitwardenAkdPairMaterialRequest> for BitwardenAkdPairMaterial {
-    type Error = RequestConversionError;
-
-    fn try_from(req: BitwardenAkdPairMaterialRequest) -> Result<Self, Self::Error> {
-        Ok(match req {
+impl From<BitwardenAkdPairMaterialRequest> for BitwardenAkdPairMaterial {
+    fn from(req: BitwardenAkdPairMaterialRequest) -> Self {
+        match req {
             BitwardenAkdPairMaterialRequest::UserRealWorldId {
                 real_world_id,
                 user_id,
@@ -47,28 +39,24 @@ impl TryFrom<BitwardenAkdPairMaterialRequest> for BitwardenAkdPairMaterial {
             },
             BitwardenAkdPairMaterialRequest::UserPublicKey {
                 user_id,
-                public_key_der_b64: public_key_der,
+                public_key_der_b64,
             } => BitwardenAkdPairMaterial::UserPublicKey {
                 user_id,
-                public_key_der: public_key_der.into_bytes(),
+                public_key_der: public_key_der_b64.into_bytes(),
             },
-        })
+        }
     }
 }
 
-impl TryFrom<BitwardenAkdPairMaterialRequest> for AkdLabel {
-    type Error = RequestConversionError;
-
-    fn try_from(req: BitwardenAkdPairMaterialRequest) -> Result<Self, Self::Error> {
-        req.try_into().map(|l: BitwardenAkdPairMaterial| l.into())
+impl From<BitwardenAkdPairMaterialRequest> for AkdLabel {
+    fn from(req: BitwardenAkdPairMaterialRequest) -> Self {
+        BitwardenAkdPairMaterial::from(req).into()
     }
 }
 
-impl TryFrom<BitwardenAkdPairMaterialRequest> for AkdValue {
-    type Error = RequestConversionError;
-
-    fn try_from(req: BitwardenAkdPairMaterialRequest) -> Result<Self, Self::Error> {
-        req.try_into().map(|l: BitwardenAkdPairMaterial| l.into())
+impl From<BitwardenAkdPairMaterialRequest> for AkdValue {
+    fn from(req: BitwardenAkdPairMaterialRequest) -> Self {
+        BitwardenAkdPairMaterial::from(req).into()
     }
 }
 
@@ -90,26 +78,22 @@ pub enum BitwardenAkdLabelMaterialRequest {
     },
 }
 
-impl TryFrom<BitwardenAkdLabelMaterialRequest> for BitwardenAkdLabelMaterial {
-    type Error = RequestConversionError;
-
-    fn try_from(req: BitwardenAkdLabelMaterialRequest) -> Result<Self, Self::Error> {
-        Ok(match req {
+impl From<BitwardenAkdLabelMaterialRequest> for BitwardenAkdLabelMaterial {
+    fn from(value: BitwardenAkdLabelMaterialRequest) -> Self {
+        match value {
             BitwardenAkdLabelMaterialRequest::UserRealWorldId { real_world_id } => {
                 BitwardenAkdLabelMaterial::UserRealWorldId { real_world_id }
             }
             BitwardenAkdLabelMaterialRequest::UserPublicKey { user_id } => {
                 BitwardenAkdLabelMaterial::UserPublicKey { user_id }
             }
-        })
+        }
     }
 }
 
-impl TryFrom<BitwardenAkdLabelMaterialRequest> for AkdLabel {
-    type Error = RequestConversionError;
-
-    fn try_from(req: BitwardenAkdLabelMaterialRequest) -> Result<Self, Self::Error> {
-        req.try_into().map(|l: BitwardenAkdLabelMaterial| l.into())
+impl From<BitwardenAkdLabelMaterialRequest> for AkdLabel {
+    fn from(value: BitwardenAkdLabelMaterialRequest) -> Self {
+        BitwardenAkdLabelMaterial::from(value).into()
     }
 }
 
@@ -125,8 +109,8 @@ mod tests {
             "user_id": "550e8400-e29b-41d4-a716-446655440000"
         }"#;
 
-        let req: BitwardenAkdPairMaterialRequest = serde_json::from_str(json).unwrap();
-        let pair: BitwardenAkdPairMaterial = req.try_into().unwrap();
+        let req: BitwardenAkdPairMaterialRequest = serde_json::from_str(json).expect("valid json");
+        let pair: BitwardenAkdPairMaterial = req.into();
 
         let BitwardenAkdPairMaterial::UserRealWorldId {
             real_world_id,
@@ -139,7 +123,7 @@ mod tests {
         assert_eq!(real_world_id, "user@example.com");
         assert_eq!(
             user_id,
-            Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap()
+            Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").expect("valid uuid")
         );
     }
 
@@ -151,8 +135,8 @@ mod tests {
             "public_key_der_b64": "MIIBIQ=="
         }"#;
 
-        let req: BitwardenAkdPairMaterialRequest = serde_json::from_str(json).unwrap();
-        let pair: BitwardenAkdPairMaterial = req.try_into().unwrap();
+        let req: BitwardenAkdPairMaterialRequest = serde_json::from_str(json).expect("valid json");
+        let pair: BitwardenAkdPairMaterial = req.into();
 
         let BitwardenAkdPairMaterial::UserPublicKey {
             user_id,
@@ -164,7 +148,7 @@ mod tests {
 
         assert_eq!(
             user_id,
-            Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap()
+            Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").expect("valid uuid")
         );
         assert_eq!(public_key_der, vec![48, 130, 1, 33]);
     }
@@ -176,10 +160,10 @@ mod tests {
             "real_world_id": "user@example.com"
         }"#;
 
-        let req: BitwardenAkdLabelMaterialRequest = serde_json::from_str(json).unwrap();
-        let label = req.try_into();
+        let req: BitwardenAkdLabelMaterialRequest = serde_json::from_str(json).expect("valid json");
+        let label: BitwardenAkdLabelMaterial = req.into();
 
-        let Ok(BitwardenAkdLabelMaterial::UserRealWorldId { real_world_id }) = label else {
+        let BitwardenAkdLabelMaterial::UserRealWorldId { real_world_id } = label else {
             panic!("Converted to wrong variant")
         };
 
@@ -193,16 +177,16 @@ mod tests {
             "user_id": "550e8400-e29b-41d4-a716-446655440000"
         }"#;
 
-        let req: BitwardenAkdLabelMaterialRequest = serde_json::from_str(json).unwrap();
-        let label = req.try_into();
+        let req: BitwardenAkdLabelMaterialRequest = serde_json::from_str(json).expect("valid json");
+        let label: BitwardenAkdLabelMaterial = req.into();
 
-        let Ok(BitwardenAkdLabelMaterial::UserPublicKey { user_id }) = label else {
+        let BitwardenAkdLabelMaterial::UserPublicKey { user_id } = label else {
             panic!("Converted to wrong variant")
         };
 
         assert_eq!(
             user_id,
-            Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap()
+            Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").expect("valid uuid")
         );
     }
 }

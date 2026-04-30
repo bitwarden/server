@@ -19,16 +19,7 @@ pub async fn publish_handler(
 ) -> impl IntoResponse {
     info!("Handling publish request");
 
-    let bitwarden_akd_pair: BitwardenAkdPairMaterial = match pair_request.try_into() {
-        Ok(pair) => pair,
-        Err(e) => {
-            error!("Invalid request: {:?}", e);
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(PublishResponse { success: false }),
-            );
-        }
-    };
+    let bitwarden_akd_pair: BitwardenAkdPairMaterial = pair_request.into();
 
     let label = (&bitwarden_akd_pair).into();
     let value = (&bitwarden_akd_pair).into();

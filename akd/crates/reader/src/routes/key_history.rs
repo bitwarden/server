@@ -52,15 +52,7 @@ pub async fn key_history_handler(
     }): Json<KeyHistoryRequest>,
 ) -> (StatusCode, Json<Response<HistoryData>>) {
     info!("Handling get key history request");
-    let label: BitwardenAkdLabelMaterial = match bitwarden_akd_label_material.try_into() {
-        Ok(label) => label,
-        Err(e) => {
-            let reader_error = ReaderError::RequestConversion(e);
-            let status = reader_error.status_code();
-            error!(err = ?reader_error, status = %status, "Invalid request");
-            return (status, Json(Response::error(reader_error)));
-        }
-    };
+    let label: BitwardenAkdLabelMaterial = bitwarden_akd_label_material.into();
     let history_proof = directory
         .key_history(&(&label).into(), history_params.into())
         .await;

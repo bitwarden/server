@@ -79,7 +79,7 @@ mod tests {
         let prediction = tracker.predict_next_epoch(now).await;
         assert!(prediction.is_some());
 
-        let (seconds_until, next_time) = prediction.unwrap();
+        let (seconds_until, next_time) = prediction.expect("passed assertion");
 
         // Should predict ~20 seconds until next (30 - 10)
         assert!((seconds_until - 20.0).abs() < 0.2);
@@ -101,7 +101,7 @@ mod tests {
         let prediction = tracker.predict_next_epoch(now).await;
         assert!(prediction.is_some());
 
-        let (seconds_until, _) = prediction.unwrap();
+        let (seconds_until, _) = prediction.expect("passed assertion");
 
         // Should predict ~15 seconds until next (75 % 30 = 15, 30 - 15 = 15)
         assert!((seconds_until - 15.0).abs() < 0.2);
@@ -117,7 +117,10 @@ mod tests {
         tracker.record_publish(t1).await;
         tracker.record_publish(t2).await;
 
-        let (seconds_until, _) = tracker.predict_next_epoch(now).await.unwrap();
+        let (seconds_until, _) = tracker
+            .predict_next_epoch(now)
+            .await
+            .expect("publishes have happened");
 
         // Should use the newer publish time (t2)
         assert!((seconds_until - 20.0).abs() < 0.2);

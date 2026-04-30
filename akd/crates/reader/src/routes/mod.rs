@@ -1,4 +1,4 @@
-use axum::routing::get;
+use axum::routing::{get, post};
 use serde::{Deserialize, Serialize};
 
 use crate::error::{ErrorResponse, ReaderError};
@@ -19,10 +19,10 @@ pub fn api_routes() -> axum::Router<AppState> {
         .route("/health", get(health::health_handler))
         .route("/public_key", get(get_public_key::get_public_key_handler))
         .route("/epoch_hash", get(get_epoch_hash::get_epoch_hash_handler))
-        .route("/lookup", get(lookup::lookup_handler))
-        .route("/key_history", get(key_history::key_history_handler))
-        .route("/batch_lookup", get(batch_lookup::batch_lookup_handler))
-        .route("/audit", get(audit::audit_handler))
+        .route("/lookup", post(lookup::lookup_handler))
+        .route("/key_history", post(key_history::key_history_handler))
+        .route("/batch_lookup", post(batch_lookup::batch_lookup_handler))
+        .route("/audit", post(audit::audit_handler))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
