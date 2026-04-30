@@ -18,7 +18,7 @@ public record PasswordManagerPlanOnlyAllowsMaxAdditionalSeatsError(PasswordManag
     : Error<PasswordManagerSubscriptionUpdate>(GetErrorMessage(InvalidRequest), InvalidRequest)
 {
     private static string GetErrorMessage(PasswordManagerSubscriptionUpdate invalidRequest) =>
-        string.Format(Code, invalidRequest.PasswordManagerPlan.MaxAdditionalSeats);
+        string.Format(Code, invalidRequest.PasswordManagerPlan?.MaxAdditionalSeats);
 
     public const string Code = "Organization plan allows a maximum of {0} additional seats.";
 }
