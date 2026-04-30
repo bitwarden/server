@@ -39,6 +39,7 @@ public class PlanResponseModel : ResponseModel
         HasResetPassword = plan.HasResetPassword;
         UsersGetPremium = plan.UsersGetPremium;
         HasMyItems = plan.HasMyItems;
+        HasInviteLinks = plan.HasInviteLinks;
         UpgradeSortOrder = plan.UpgradeSortOrder;
         DisplaySortOrder = plan.DisplaySortOrder;
         LegacyYear = plan.LegacyYear;
@@ -80,6 +81,7 @@ public class PlanResponseModel : ResponseModel
     public bool HasResetPassword { get; set; }
     public bool UsersGetPremium { get; set; }
     public bool HasMyItems { get; set; }
+    public bool HasInviteLinks { get; set; }
 
     public int UpgradeSortOrder { get; set; }
     public int DisplaySortOrder { get; set; }
