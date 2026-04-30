@@ -201,7 +201,7 @@ public class CollectionUserAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { CollectionUserOperations.Create },
             new ClaimsPrincipal(),
-            MakeResource(collections, targetUserId: actingUserId));
+            MakeResource(collections, targetOrganizationUserId: actingUserId));
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -227,10 +227,16 @@ public class CollectionUserAuthorizationHandlerTests
         ArrangeFeatureFlag(sutProvider);
         ArrangeOrganizationAbility(sutProvider, organization, false);
 
+        // Set up the OrgUser so CallerOrganizationUserId == actingUserId, matching TargetOrganizationUserId.
+        var callerOrgUser = new OrganizationUser { Id = actingUserId, UserId = actingUserId, OrganizationId = organization.Id };
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organization.Id, actingUserId)
+            .Returns(callerOrgUser);
+
         var context = new AuthorizationHandlerContext(
             new[] { CollectionUserOperations.Create },
             new ClaimsPrincipal(),
-            MakeResource(collections, targetUserId: actingUserId));
+            MakeResource(collections, targetOrganizationUserId: actingUserId));
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -260,7 +266,7 @@ public class CollectionUserAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { CollectionUserOperations.Create },
             new ClaimsPrincipal(),
-            MakeResource(collections, targetUserId: targetUserId));
+            MakeResource(collections, targetOrganizationUserId: targetUserId));
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -534,7 +540,7 @@ public class CollectionUserAuthorizationHandlerTests
 
         await sutProvider.Sut.HandleAsync(context);
 
-        Assert.True(context.HasFailed);
+        Assert.False(context.HasSucceeded);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
@@ -548,11 +554,11 @@ public class CollectionUserAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { CollectionUserOperations.Create },
             new ClaimsPrincipal(),
-            new CollectionUserAccessResource(null!, null));
+            new CollectionUserAccessResource(null!, Guid.NewGuid()));
 
         await sutProvider.Sut.HandleAsync(context);
 
-        Assert.True(context.HasFailed);
+        Assert.False(context.HasSucceeded);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
@@ -588,7 +594,7 @@ public class CollectionUserAuthorizationHandlerTests
 
         var collection1 = new Collection { Id = Guid.NewGuid(), OrganizationId = Guid.NewGuid() };
         var collection2 = new Collection { Id = Guid.NewGuid(), OrganizationId = Guid.NewGuid() };
-        var resource = new CollectionUserAccessResource(new List<Collection> { collection1, collection2 }, null);
+        var resource = new CollectionUserAccessResource(new List<Collection> { collection1, collection2 }, Guid.NewGuid());
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionUserOperations.Create },
@@ -867,9 +873,11 @@ public class CollectionUserAuthorizationHandlerTests
     }
 
     private static CollectionUserAccessResource MakeResource<T>(
-        ICollection<T> collections, Guid? targetUserId = null) where T : Collection
+        ICollection<T> collections, Guid? targetOrganizationUserId = null) where T : Collection
     {
-        return new CollectionUserAccessResource(collections.Cast<Collection>().ToList(), targetUserId);
+        return new CollectionUserAccessResource(
+            collections.Cast<Collection>().ToList(),
+            targetOrganizationUserId ?? Guid.NewGuid());
     }
 
     private static void ArrangeFeatureFlag(SutProvider<CollectionUserAuthorizationHandler> sutProvider)
