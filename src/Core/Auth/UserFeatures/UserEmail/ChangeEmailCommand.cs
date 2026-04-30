@@ -24,8 +24,10 @@ public class ChangeEmailCommand : IChangeEmailCommand
         _pushNotificationService = pushNotificationService;
     }
 
-    public async Task ChangeEmailAsync(User user, string newEmail, bool logOutUser = true)
+    public async Task ChangeEmailAsync(User user, string newEmail)
     {
+        // ValidateClaimedUserDomainAsync.
+
         // Querying by email exposes a limited account-enumeration vector: a distinct error response
         // ("Email already in use.") vs. success lets a caller infer whether a Bitwarden account exists
         // at a given address. Callers are responsible for enforcing access controls before reaching this
@@ -61,9 +63,13 @@ public class ChangeEmailCommand : IChangeEmailCommand
             }
         }
 
-        if (logOutUser)
+        if (user.HasMasterPassword())
         {
             await _pushNotificationService.PushLogOutAsync(user.Id);
+        }
+        else
+        {
+            // Perform sync. Does r evision date push a sync?
         }
     }
 }
