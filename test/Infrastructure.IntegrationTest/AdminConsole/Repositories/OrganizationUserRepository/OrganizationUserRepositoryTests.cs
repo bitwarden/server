@@ -618,6 +618,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(organization.UseOrganizationDomains, result.UseOrganizationDomains);
         Assert.Equal(organization.UseAdminSponsoredFamilies, result.UseAdminSponsoredFamilies);
         Assert.Equal(organization.UseAutomaticUserConfirmation, result.UseAutomaticUserConfirmation);
+        Assert.Equal(organization.UseInviteLinks, result.UseInviteLinks);
         Assert.Equal(orgUser1.RevocationReason, result.RevocationReason);
     }
 
