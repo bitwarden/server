@@ -28,7 +28,7 @@ public class CollectionGroupAuthorizationHandlerTests
         CurrentContextOrganization organization,
         Guid actingUserId)
     {
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
@@ -37,7 +37,7 @@ public class CollectionGroupAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Create },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -60,7 +60,7 @@ public class CollectionGroupAuthorizationHandlerTests
         organization.Type = userType;
         organization.Permissions = new Permissions();
 
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         ArrangeFeatureFlag(sutProvider);
         ArrangeOrganizationAbility(sutProvider, organization, true);
@@ -68,7 +68,7 @@ public class CollectionGroupAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Create },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -88,7 +88,7 @@ public class CollectionGroupAuthorizationHandlerTests
         organization.Type = OrganizationUserType.Custom;
         organization.Permissions = new Permissions { ManageGroups = true };
 
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         ArrangeFeatureFlag(sutProvider);
         ArrangeOrganizationAbility(sutProvider, organization, true);
@@ -96,7 +96,7 @@ public class CollectionGroupAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Create },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -116,7 +116,7 @@ public class CollectionGroupAuthorizationHandlerTests
         organization.Type = OrganizationUserType.Custom;
         organization.Permissions = new Permissions { ManageGroups = true };
 
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         ArrangeFeatureFlag(sutProvider);
         ArrangeOrganizationAbility(sutProvider, organization, false);
@@ -124,7 +124,7 @@ public class CollectionGroupAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Create },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -149,7 +149,7 @@ public class CollectionGroupAuthorizationHandlerTests
             c.Manage = true;
         }
 
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         ArrangeFeatureFlag(sutProvider);
         ArrangeOrganizationAbility(sutProvider, organization, false);
@@ -157,7 +157,7 @@ public class CollectionGroupAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Create },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -174,14 +174,14 @@ public class CollectionGroupAuthorizationHandlerTests
         ICollection<Collection> collections,
         SutProvider<CollectionGroupAuthorizationHandler> sutProvider)
     {
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         ArrangeFeatureFlag(sutProvider);
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Create },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>())
@@ -207,7 +207,7 @@ public class CollectionGroupAuthorizationHandlerTests
         organization.Type = userType;
         organization.Permissions = new Permissions();
 
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         ArrangeFeatureFlag(sutProvider);
         ArrangeOrganizationAbility(sutProvider, organization, true);
@@ -215,7 +215,7 @@ public class CollectionGroupAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Update },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -235,7 +235,7 @@ public class CollectionGroupAuthorizationHandlerTests
         organization.Type = OrganizationUserType.Custom;
         organization.Permissions = new Permissions { ManageGroups = true };
 
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         ArrangeFeatureFlag(sutProvider);
         ArrangeOrganizationAbility(sutProvider, organization, true);
@@ -243,7 +243,7 @@ public class CollectionGroupAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Update },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -268,7 +268,7 @@ public class CollectionGroupAuthorizationHandlerTests
             c.Manage = true;
         }
 
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         ArrangeFeatureFlag(sutProvider);
         ArrangeOrganizationAbility(sutProvider, organization, false);
@@ -276,7 +276,7 @@ public class CollectionGroupAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Update },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -293,14 +293,14 @@ public class CollectionGroupAuthorizationHandlerTests
         ICollection<Collection> collections,
         SutProvider<CollectionGroupAuthorizationHandler> sutProvider)
     {
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         ArrangeFeatureFlag(sutProvider);
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Update },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>())
@@ -326,7 +326,7 @@ public class CollectionGroupAuthorizationHandlerTests
         organization.Type = userType;
         organization.Permissions = new Permissions();
 
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         ArrangeFeatureFlag(sutProvider);
         ArrangeOrganizationAbility(sutProvider, organization, true);
@@ -334,7 +334,7 @@ public class CollectionGroupAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Delete },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -354,7 +354,7 @@ public class CollectionGroupAuthorizationHandlerTests
         organization.Type = OrganizationUserType.Custom;
         organization.Permissions = new Permissions { ManageGroups = true };
 
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         ArrangeFeatureFlag(sutProvider);
         ArrangeOrganizationAbility(sutProvider, organization, true);
@@ -362,7 +362,7 @@ public class CollectionGroupAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Delete },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -387,7 +387,7 @@ public class CollectionGroupAuthorizationHandlerTests
             c.Manage = true;
         }
 
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         ArrangeFeatureFlag(sutProvider);
         ArrangeOrganizationAbility(sutProvider, organization, false);
@@ -395,7 +395,7 @@ public class CollectionGroupAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Delete },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -412,14 +412,14 @@ public class CollectionGroupAuthorizationHandlerTests
         ICollection<Collection> collections,
         SutProvider<CollectionGroupAuthorizationHandler> sutProvider)
     {
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         ArrangeFeatureFlag(sutProvider);
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Delete },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>())
@@ -433,38 +433,40 @@ public class CollectionGroupAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task HandleRequirementAsync_WithNoUserId_Fails(
+    public async Task HandleRequirementAsync_WithNoUserId_DoesNotSucceed(
         SutProvider<CollectionGroupAuthorizationHandler> sutProvider,
         ICollection<Collection> collections)
     {
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         ArrangeFeatureFlag(sutProvider);
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Create },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns((Guid?)null);
 
         await sutProvider.Sut.HandleAsync(context);
 
-        Assert.True(context.HasFailed);
+        Assert.False(context.HasSucceeded);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task HandleRequirementAsync_WithNullResources_Fails(
-        SutProvider<CollectionGroupAuthorizationHandler> sutProvider)
+    public async Task HandleRequirementAsync_WithNullCollections_DoesNotSucceed(
+        SutProvider<CollectionGroupAuthorizationHandler> sutProvider,
+        Guid actingUserId)
     {
         ArrangeFeatureFlag(sutProvider);
 
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(Guid.NewGuid());
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
 
+        var resource = new CollectionGroupAccessResource(null, Guid.NewGuid());
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Create },
             new ClaimsPrincipal(),
-            (IEnumerable<Collection>)null);
+            resource);
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -477,14 +479,14 @@ public class CollectionGroupAuthorizationHandlerTests
         ICollection<Collection> collections,
         Guid actingUserId)
     {
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         ArrangeFeatureFlag(sutProvider);
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Create },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>())
@@ -506,12 +508,13 @@ public class CollectionGroupAuthorizationHandlerTests
 
         var collection1 = new Collection { Id = Guid.NewGuid(), OrganizationId = Guid.NewGuid() };
         var collection2 = new Collection { Id = Guid.NewGuid(), OrganizationId = Guid.NewGuid() };
-        var resources = new List<Collection> { collection1, collection2 };
+        var resource = new CollectionGroupAccessResource(
+            new List<Collection> { collection1, collection2 }, Guid.NewGuid());
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Create },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
 
@@ -528,7 +531,7 @@ public class CollectionGroupAuthorizationHandlerTests
         organization.Type = OrganizationUserType.Custom;
         organization.Permissions = new Permissions { EditAnyCollection = true };
 
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         ArrangeFeatureFlag(sutProvider);
         ArrangeOrganizationAbility(sutProvider, organization, false);
@@ -536,7 +539,7 @@ public class CollectionGroupAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Create },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -559,7 +562,7 @@ public class CollectionGroupAuthorizationHandlerTests
         organization.Type = userType;
         organization.Permissions = new Permissions();
 
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         ArrangeFeatureFlag(sutProvider);
         ArrangeOrganizationAbility(sutProvider, organization, false);
@@ -567,7 +570,7 @@ public class CollectionGroupAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Create },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -589,7 +592,7 @@ public class CollectionGroupAuthorizationHandlerTests
         organization.Type = OrganizationUserType.Custom;
         organization.Permissions = new Permissions { ManageGroups = true };
 
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         ArrangeFeatureFlag(sutProvider);
         ArrangeOrganizationAbility(sutProvider, organization, false);
@@ -597,7 +600,7 @@ public class CollectionGroupAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Update },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -620,7 +623,7 @@ public class CollectionGroupAuthorizationHandlerTests
         organization.Type = userType;
         organization.Permissions = new Permissions();
 
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         ArrangeFeatureFlag(sutProvider);
         ArrangeOrganizationAbility(sutProvider, organization, false);
@@ -628,7 +631,7 @@ public class CollectionGroupAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Update },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -650,7 +653,7 @@ public class CollectionGroupAuthorizationHandlerTests
         organization.Type = OrganizationUserType.Custom;
         organization.Permissions = new Permissions { ManageGroups = true };
 
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         ArrangeFeatureFlag(sutProvider);
         ArrangeOrganizationAbility(sutProvider, organization, false);
@@ -658,7 +661,7 @@ public class CollectionGroupAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Delete },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -681,7 +684,7 @@ public class CollectionGroupAuthorizationHandlerTests
         organization.Type = userType;
         organization.Permissions = new Permissions();
 
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         ArrangeFeatureFlag(sutProvider);
         ArrangeOrganizationAbility(sutProvider, organization, false);
@@ -689,7 +692,7 @@ public class CollectionGroupAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Delete },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -714,7 +717,7 @@ public class CollectionGroupAuthorizationHandlerTests
         organization.Type = userType;
         organization.Permissions = new Permissions();
 
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         ArrangeFeatureFlag(sutProvider);
         ArrangeOrganizationAbility(sutProvider, organization, true);
@@ -722,7 +725,7 @@ public class CollectionGroupAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Create },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -745,7 +748,7 @@ public class CollectionGroupAuthorizationHandlerTests
         organization.Type = OrganizationUserType.User;
         organization.Permissions = new Permissions();
 
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         ArrangeFeatureFlag(sutProvider);
         ArrangeOrganizationAbility(sutProvider, organization, false);
@@ -753,7 +756,7 @@ public class CollectionGroupAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Create },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -778,7 +781,7 @@ public class CollectionGroupAuthorizationHandlerTests
         organization.Type = OrganizationUserType.Custom;
         organization.Permissions = new Permissions { EditAnyCollection = true };
 
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         ArrangeFeatureFlag(sutProvider);
         ArrangeOrganizationAbility(sutProvider, organization, false);
@@ -786,7 +789,7 @@ public class CollectionGroupAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Create },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -809,7 +812,7 @@ public class CollectionGroupAuthorizationHandlerTests
         organization.Type = userType;
         organization.Permissions = new Permissions();
 
-        var resources = collections.ToList();
+        var resource = MakeResource(collections);
 
         ArrangeFeatureFlag(sutProvider);
         ArrangeOrganizationAbility(sutProvider, organization, true);
@@ -817,7 +820,7 @@ public class CollectionGroupAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Update },
             new ClaimsPrincipal(),
-            resources);
+            resource);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -828,6 +831,14 @@ public class CollectionGroupAuthorizationHandlerTests
         await sutProvider.Sut.HandleAsync(context);
 
         Assert.True(context.HasSucceeded);
+    }
+
+    private static CollectionGroupAccessResource MakeResource<T>(
+        ICollection<T> collections, Guid? targetGroupId = null) where T : Collection
+    {
+        return new CollectionGroupAccessResource(
+            collections.Cast<Collection>().ToList(),
+            targetGroupId ?? Guid.NewGuid());
     }
 
     private static void ArrangeFeatureFlag(SutProvider<CollectionGroupAuthorizationHandler> sutProvider)
