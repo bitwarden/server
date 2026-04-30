@@ -497,8 +497,11 @@ public static class ServiceCollectionExtensions
             }
             else if (CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificatePassword))
             {
-                dataProtectionCert = CoreHelpers.GetBlobCertificateAsync(globalSettings.Storage.ConnectionString, "certificates",
-                    "dataprotection.pfx", globalSettings.DataProtection.CertificatePassword)
+                dataProtectionCert = CoreHelpers.GetBlobCertificateAsync(
+                    globalSettings.Storage.ConnectionString,
+                    "certificates",
+                    globalSettings.DataProtection.BlobName,
+                    globalSettings.DataProtection.CertificatePassword)
                     .GetAwaiter().GetResult();
             }
 
@@ -507,6 +510,20 @@ public static class ServiceCollectionExtensions
                 builder
                     .PersistKeysToAzureBlobStorage(globalSettings.Storage.ConnectionString, "aspnet-dataprotection", "keys.xml")
                     .ProtectKeysWithCertificate(dataProtectionCert);
+
+                if (globalSettings.DataProtection.UnprotectCertificates.Length > 0)
+                {
+                    var unprotectCertificates = Task.WhenAll(globalSettings.DataProtection.UnprotectCertificates
+                        .Select(ci => CoreHelpers.GetBlobCertificateAsync(
+                            globalSettings.Storage.ConnectionString,
+                            "certificates",
+                            ci.FileName,
+                            ci.Password
+                        ))
+                    ).GetAwaiter().GetResult();
+
+                    builder.UnprotectKeysWithAnyCertificate(unprotectCertificates);
+                }
             }
         }
     }

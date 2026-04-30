@@ -545,25 +545,38 @@ public class GlobalSettings : IGlobalSettings
         public bool ApplyAbsoluteExpirationOnRefreshToken { get; set; } = false;
     }
 
+#nullable enable
     public class DataProtectionSettings
     {
         private readonly GlobalSettings _globalSettings;
 
-        private string _directory;
+        private string? _directory;
 
         public DataProtectionSettings(GlobalSettings globalSettings)
         {
             _globalSettings = globalSettings;
         }
 
-        public string CertificateThumbprint { get; set; }
-        public string CertificatePassword { get; set; }
+        public string? CertificateThumbprint { get; set; }
+
+        public string BlobName { get; set; } = "dataprotection.pfx";
+
+        public string? CertificatePassword { get; set; }
         public string Directory
         {
             get => _globalSettings.BuildDirectory(_directory, "/core/aspnet-dataprotection");
             set => _directory = value;
         }
+
+        public CertificateInfo[] UnprotectCertificates { get; set; } = [];
+
+        public class CertificateInfo
+        {
+            public required string FileName { get; set; }
+            public required string Password { get; set; }
+        }
     }
+#nullable disable
 
     public class NotificationsSettings : ConnectionStringSettings
     {

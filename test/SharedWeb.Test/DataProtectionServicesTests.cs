@@ -191,20 +191,17 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
                     new BinaryData(certificate.Export(X509ContentType.Pfx, "County-Secluded9-Reshuffle-Womanhood"))
                 );
 
+                await context.Certificates.UploadBlobAsync("newcert.pfx", new BinaryData(FakeInitialCert));
+
                 context.Config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     { "GlobalSettings:DataProtection:CertificatePassword", "County-Secluded9-Reshuffle-Womanhood" },
+                    { "GlobalSettings:DataProtection:UnprotectCertificates:0:FileName", "newcert.pfx" },
+                    { "GlobalSettings:DataProtection:UnprotectCertificates:0:Password", "Alongside-Unworthy-Query3-Cozy" },
                 });
 
                 // Upload keys that were encrypted with the initial cert
                 await context.DataProtection.UploadBlobAsync("keys.xml", new BinaryData(KeysData));
-
-                context.CustomizeServices(services =>
-                {
-                    // This should be the way to start using a new key but still be able to unprotect old data
-                    services.AddDataProtection()
-                        .UnprotectKeysWithAnyCertificate(new X509Certificate2(FakeInitialCert, "Alongside-Unworthy-Query3-Cozy"));
-                });
             },
             test: (context) =>
             {
@@ -214,22 +211,145 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         );
     }
 
-    private record TestSetupContext(BlobContainerClient Certificates, BlobContainerClient DataProtection, IConfigurationBuilder Config)
+    [Fact]
+    public async Task UpgradePath()
     {
-        private Action<IServiceCollection> _customizeServices = (_) => {};
+        // The goal of this test is an upgrade scenario where we want to start using a new certificate
+        // encrypting keys at rest but want the upgrade to cause 0 issues with data protection
+        // we also want to be able to revert the configuration changes in case there are issues.
 
-        public void CustomizeServices(Action<IServiceCollection> customizeServices)
-        {
-            _customizeServices += customizeServices;
-        }
+        // Setup "existing" azure infrastructure.
+        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
+            .WithPortBinding(10000)
+            .Build();
 
-        public void Run(IServiceCollection services)
+        await azurite.StartAsync();
+
+        var azuriteConnectionString = $"UseDevelopmentStorage=true;DevelopmentStorageProxyUri=http://{azurite.Hostname}:{azurite.GetMappedPublicPort(10000)}";
+
+        var blobServiceClient = new BlobServiceClient(azuriteConnectionString);
+
+        var certificates = await blobServiceClient.CreateBlobContainerAsync("certificates");
+        var dataProtection = await blobServiceClient.CreateBlobContainerAsync("aspnet-dataprotection");
+
+        await certificates.Value.UploadBlobAsync("dataprotection.pfx", new BinaryData(FakeInitialCert));
+        await dataProtection.Value.UploadBlobAsync("keys.xml", new BinaryData(KeysData));
+
+        // End existing infrastructure
+
+        // Step 1: We deploy a new version of our app but with NO config changes
+        using var noNewConfigApp = CreateApp(new Dictionary<string, string?>
         {
-            _customizeServices.Invoke(services);
-        }
+            { "GlobalSettings:Storage:ConnectionString", azuriteConnectionString },
+            { "GlobalSettings:DataProtection:CertificatePassword", "Alongside-Unworthy-Query3-Cozy" },
+        });
+
+        var noNewConfigProtector = GetProtector(noNewConfigApp);
+
+        // App should still be able to unprotect data previously protected
+        Assert.Equal("MyTestData", noNewConfigProtector.Unprotect(SavedProtectedData));
+        // It should also be able to protect new data that will be consumed later
+        var noNewConfigProtectedData = AssertRoundTrippable(noNewConfigProtector, "NoNewConfig");
+
+        // Step 2: We generate a new certificate and upload it to a DIFFERENT blob in azure
+        // Importantly this can be done at any point.
+        using var rsa = RSA.Create(2048);
+        var now = DateTimeOffset.UtcNow;
+        var certificate = new CertificateRequest("CN=New Dataprotected test certificate", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1)
+            .CreateSelfSigned(now, now.AddDays(365));
+
+        const string NewCertPassword = "Undergrad-Police0-Maturely-Countless";
+        await certificates.Value.UploadBlobAsync(
+            "mynewcert.pfx",
+            new BinaryData(certificate.Export(X509ContentType.Pfx, NewCertPassword))
+        );
+
+        // Step 3: Start apps that have that new cert as able to Unprotect ONLY, this step
+        // should have 0 behavioral different and could likely be skipped but it what it
+        // gives us is a place to revert back to that won't break items that might have
+        // been successfully protected with the new certificate. If we skip this step then
+        // in case of issues you need to be ready to update the node with configuration like
+        // this instead of doing a revert in case of issue.
+        var preparedAppConfig = new Dictionary<string, string?>
+        {
+            { "GlobalSettings:Storage:ConnectionString", azuriteConnectionString },
+            { "GlobalSettings:DataProtection:CertificatePassword", "Alongside-Unworthy-Query3-Cozy" },
+
+            // The new cert gets prepared to be able to unprotect data but it has never been used
+            // to protect data so its existence here is technically not needed.
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:FileName", "mynewcert.pfx" },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:Password", NewCertPassword },
+        };
+        using var preparedApp = CreateApp(preparedAppConfig);
+
+        var preparedAppProtector = GetProtector(preparedApp);
+
+        var preparedProtectedData = AssertRoundTrippable(preparedAppProtector, "Prepared");
+
+        // This app should be able to unprotect data from before any of these changes
+        // and from the app that contains only the code deploy and no config changes.
+        Assert.Equal("MyTestData", preparedAppProtector.Unprotect(SavedProtectedData));
+        Assert.Equal("NoNewConfig", preparedAppProtector.Unprotect(noNewConfigProtectedData));
+
+        // Step 4: This is where real config changes start to happen, we actually start protecting
+        // data with the new cert but should still be able to unprotect all previous data
+        using var updatedConfigApp = CreateApp(new Dictionary<string, string?>
+        {
+            // Same connection string as always
+            { "GlobalSettings:Storage:ConnectionString", azuriteConnectionString },
+
+            // This config key gets set to the new certificate password
+            { "GlobalSettings:DataProtection:CertificatePassword", NewCertPassword },
+            // This is a totally new config key and it gets set to the blob where the new
+            // cert resides
+            { "GlobalSettings:DataProtection:BlobName", "mynewcert.pfx" },
+
+            // The pre-existing certificate gets "demoted" to being a unprotect certificate
+            // this is what makes it so that the data can continue to be decrypted
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:FileName", "dataprotection.pfx" },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:Password", "Alongside-Unworthy-Query3-Cozy" },
+        });
+
+        var updatedConfigProtector = GetProtector(updatedConfigApp);
+
+        var updatedConfigData = AssertRoundTrippable(updatedConfigProtector, "UpdatedConfig");
+
+        // This should still be able to unprotect all previously protected data
+        Assert.Equal("MyTestData", updatedConfigProtector.Unprotect(SavedProtectedData));
+        Assert.Equal("NoNewConfig", updatedConfigProtector.Unprotect(noNewConfigProtectedData));
+        Assert.Equal("Prepared", updatedConfigProtector.Unprotect(preparedProtectedData));
+
+        // Problems! If there are problems in step 4 then we should revert the config changes
+        // back to what they were in step 3, it will hopefully still be able to unprotect
+        // that was actually protected with the new cert but we are still in undefined territory
+        // if there are issues as this test intends to show how it will work.
+        using var revertedApp = CreateApp(preparedAppConfig);
+
+        var revertedAppProtector = GetProtector(revertedApp);
+
+        AssertRoundTrippable(revertedAppProtector, "Reverted");
+
+        Assert.Equal("MyTestData", revertedAppProtector.Unprotect(SavedProtectedData));
+        Assert.Equal("NoNewConfig", revertedAppProtector.Unprotect(noNewConfigProtectedData));
+        Assert.Equal("Prepared", revertedAppProtector.Unprotect(preparedProtectedData));
+        Assert.Equal("UpdatedConfig", revertedAppProtector.Unprotect(updatedConfigData));
     }
 
+    private record TestSetupContext(BlobContainerClient Certificates, BlobContainerClient DataProtection, IConfigurationBuilder Config);
+
     private record TestRunContext(IServiceProvider Services, IDataProtector Protector);
+
+    private IDataProtector GetProtector(IServiceProvider services)
+    {
+        return services.GetRequiredService<IDataProtectionProvider>().CreateProtector("Test");
+    }
+
+    private string AssertRoundTrippable(IDataProtector protector, string testString)
+    {
+        var protectedData = protector.Protect(testString);
+        Assert.Equal(testString, protector.Unprotect(protectedData));
+        return protectedData;
+    }
 
     private static async Task RunTestAsync(Func<TestSetupContext, Task> testSetup, Action<TestRunContext> test)
     {
@@ -258,20 +378,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
 
         await testSetup(context);
 
-        var config = configurationBuilder.Build();
-        var globalSettings = new GlobalSettings();
-        config.GetSection("GlobalSettings").Bind(globalSettings);
-
-        var services = new ServiceCollection();
-
-        var webHostEnvironment = Substitute.For<IWebHostEnvironment>();
-        webHostEnvironment.EnvironmentName.Returns("Production");
-
-        services.AddCustomDataProtectionServices(webHostEnvironment, globalSettings);
-
-        context.Run(services);
-
-        using var serviceProvider = services.BuildServiceProvider();
+        using var serviceProvider = CreateApp(context.Config);
 
         var runContext = new TestRunContext(
             serviceProvider,
@@ -279,5 +386,32 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         );
 
         test(runContext);
+    }
+
+    private static ServiceProvider CreateApp(Dictionary<string, string?> initialData)
+    {
+        var configurationBuilder = new ConfigurationBuilder()
+            .AddInMemoryCollection(initialData);
+        return CreateApp(configurationBuilder);
+    }
+
+    private static ServiceProvider CreateApp(IConfigurationBuilder configurationBuilder)
+    {
+        var services = new ServiceCollection();
+
+        var configuration = configurationBuilder.Build();
+
+        var globalSettings = new GlobalSettings();
+        configuration.GetSection("GlobalSettings").Bind(globalSettings);
+
+        var environment = Substitute.For<IWebHostEnvironment>();
+        environment.EnvironmentName.Returns("Production");
+
+        services.AddCustomDataProtectionServices(
+            environment,
+            globalSettings
+        );
+
+        return services.BuildServiceProvider();
     }
 }
