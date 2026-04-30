@@ -14,8 +14,8 @@ mod routes;
 use epoch_tracker::EpochTracker;
 
 pub use crate::config::ApplicationConfig;
-pub use error::{ErrorCode, ErrorResponse, ReaderError};
-pub use routes::response_types;
+pub use bitwarden_akd_configuration::wire_models::ErrorResponse;
+pub use error::{ErrorCode, ReaderError};
 
 #[derive(Clone)]
 struct AppState {

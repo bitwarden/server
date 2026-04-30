@@ -1,17 +1,9 @@
 use axum::{extract::State, http::StatusCode, Json};
-use serde::{Deserialize, Serialize};
+use bitwarden_akd_configuration::wire_models::HealthData;
 use tracing::{info, instrument};
 
-use crate::{routes::Response, AppState};
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct HealthData {
-    time: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    predicted_next_epoch_datetime: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    predicted_seconds_until_next_epoch: Option<f64>,
-}
+use super::Response;
+use crate::AppState;
 
 #[instrument(skip_all)]
 pub async fn health_handler(

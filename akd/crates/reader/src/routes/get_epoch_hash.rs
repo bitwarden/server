@@ -1,24 +1,9 @@
-use akd::EpochHash;
 use axum::{extract::State, http::StatusCode, Json};
-use serde::{Deserialize, Serialize};
+use bitwarden_akd_configuration::wire_models::EpochData;
 use tracing::{error, info, instrument};
 
-use crate::{error::ReaderError, routes::Response, AppState};
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct EpochData {
-    pub epoch: u64,
-    pub epoch_hash_b64: bitwarden_encoding::B64,
-}
-
-impl From<EpochHash> for EpochData {
-    fn from(epoch_hash: EpochHash) -> Self {
-        EpochData {
-            epoch: epoch_hash.0,
-            epoch_hash_b64: bitwarden_encoding::B64::from(epoch_hash.1.as_ref()),
-        }
-    }
-}
+use super::Response;
+use crate::{error::ReaderError, AppState};
 
 #[instrument(skip_all)]
 pub async fn get_epoch_hash_handler(
@@ -36,7 +21,7 @@ pub async fn get_epoch_hash_handler(
             let reader_error = ReaderError::Akd(e);
             let status = reader_error.status_code();
             error!(err = ?reader_error, status = %status, "Failed to get current AKD epoch hash");
-            (status, Json(Response::error(reader_error)))
+            (status, Json(Response::error(reader_error.to_error_response())))
         }
     }
 }

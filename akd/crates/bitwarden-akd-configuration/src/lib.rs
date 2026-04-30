@@ -23,8 +23,8 @@ uniffi::setup_scaffolding!("bitwarden_akd_configuration");
 #[cfg(feature = "uniffi")]
 pub mod uniffi_scaffolding;
 
-#[cfg(feature = "request_models")]
-pub mod request_models;
+#[cfg(feature = "wire_models")]
+pub mod wire_models;
 
 mod bitwarden_v1_configuration;
 

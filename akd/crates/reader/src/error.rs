@@ -1,5 +1,6 @@
 use akd::errors::AkdError;
 use axum::http::StatusCode;
+use bitwarden_akd_configuration::wire_models::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -28,16 +29,9 @@ pub enum ReaderError {
     InternalError(String),
 }
 
-/// Error response structure sent to clients
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ErrorResponse {
-    /// Machine-readable error code for client-side matching
-    pub code: ErrorCode,
-    /// Human-readable error message
-    pub message: String,
-}
-
-/// Machine-readable error codes for reliable client-side parsing
+/// Machine-readable error codes for reliable client-side parsing. The
+/// `SCREAMING_SNAKE_CASE` rename is the on-the-wire form, applied by serde
+/// when the typed enum is serialized inside an [`ErrorResponse<ErrorCode>`].
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ErrorCode {
@@ -146,7 +140,7 @@ impl ReaderError {
     }
 
     /// Convert error to ErrorResponse
-    pub fn to_error_response(&self) -> ErrorResponse {
+    pub fn to_error_response(&self) -> ErrorResponse<ErrorCode> {
         ErrorResponse {
             code: self.error_code(),
             message: self.to_string(),

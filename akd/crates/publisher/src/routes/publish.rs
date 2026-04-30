@@ -2,7 +2,7 @@ use super::AppState;
 use akd_storage::PublishQueue;
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use bitwarden_akd_configuration::{
-    request_models::BitwardenAkdPairMaterialRequest, BitwardenAkdPairMaterial,
+    wire_models::BitwardenAkdPairMaterialRequest, BitwardenAkdPairMaterial,
 };
 use serde::Serialize;
 use tracing::{error, info, instrument};

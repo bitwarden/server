@@ -1,10 +1,9 @@
 use axum::{extract::State, http::StatusCode, Json};
+use bitwarden_akd_configuration::wire_models::PublicKeyData;
 use tracing::{error, info, instrument};
 
-use crate::{error::ReaderError, routes::Response, AppState};
-
-/// Public key encoded as a base64 string
-pub type PublicKeyData = bitwarden_encoding::B64;
+use super::Response;
+use crate::{error::ReaderError, AppState};
 
 #[instrument(skip_all)]
 pub async fn get_public_key_handler(
@@ -22,7 +21,7 @@ pub async fn get_public_key_handler(
             let reader_error = ReaderError::Akd(e);
             let status = reader_error.status_code();
             error!(err = ?reader_error, status = %status, "Failed to get AKD public key");
-            (status, Json(Response::error(reader_error)))
+            (status, Json(Response::error(reader_error.to_error_response())))
         }
     }
 }

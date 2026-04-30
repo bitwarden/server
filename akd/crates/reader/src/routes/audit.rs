@@ -1,17 +1,10 @@
 use akd_storage::{AuditStorage, AuditStorageError};
 use axum::{extract::State, http::StatusCode, Json};
-use serde::{Deserialize, Serialize};
+use bitwarden_akd_configuration::wire_models::{AuditData, AuditRequest};
 use tracing::{error, info, instrument};
 
-use crate::{error::ReaderError, routes::Response, AppState};
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AuditRequest {
-    /// The epoch to audit. Proves the transition from epoch-1 to this epoch.
-    pub epoch: u64,
-}
-
-pub type AuditData = akd::SingleAppendOnlyProof;
+use super::Response;
+use crate::{error::ReaderError, AppState};
 
 #[instrument(skip_all)]
 pub async fn audit_handler(
@@ -28,7 +21,9 @@ pub async fn audit_handler(
         error!(epoch, "Cannot audit epoch 0: no predecessor epoch exists");
         return (
             StatusCode::BAD_REQUEST,
-            Json(Response::error(ReaderError::InvalidEpoch { epoch })),
+            Json(Response::error(
+                ReaderError::InvalidEpoch { epoch }.to_error_response(),
+            )),
         );
     }
 
@@ -92,7 +87,7 @@ pub async fn audit_handler(
         Err(reader_error) => {
             let status = reader_error.status_code();
             error!(err = ?reader_error, status = %status, "Failed to perform epoch audit");
-            (status, Json(Response::error(reader_error)))
+            (status, Json(Response::error(reader_error.to_error_response())))
         }
     }
 }

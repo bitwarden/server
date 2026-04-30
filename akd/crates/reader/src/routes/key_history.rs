@@ -1,47 +1,12 @@
 use axum::{extract::State, http::StatusCode, Json};
 use bitwarden_akd_configuration::{
-    request_models::BitwardenAkdLabelMaterialRequest, BitwardenAkdLabelMaterial,
+    wire_models::{HistoryData, KeyHistoryRequest},
+    BitwardenAkdLabelMaterial,
 };
-use serde::{Deserialize, Serialize};
 use tracing::{error, info, instrument};
 
-use crate::{
-    error::ReaderError,
-    routes::{get_epoch_hash::EpochData, Response},
-    AppState,
-};
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct KeyHistoryRequest {
-    pub bitwarden_akd_label_material: BitwardenAkdLabelMaterialRequest,
-    /// the label to look up encoded as an uppercase hex string
-    pub history_params: HistoryParams,
-}
-
-/// The parameters that dictate how much of the history proof to return to the consumer
-/// (either a complete history, or some limited form).
-#[derive(Copy, Clone, Serialize, Deserialize, Debug)]
-pub enum HistoryParams {
-    /// Returns a complete history for a label
-    Complete,
-    /// Returns up to the most recent N updates for a label
-    MostRecent(usize),
-}
-
-impl From<HistoryParams> for akd::HistoryParams {
-    fn from(params: HistoryParams) -> Self {
-        match params {
-            HistoryParams::Complete => akd::HistoryParams::Complete,
-            HistoryParams::MostRecent(n) => akd::HistoryParams::MostRecent(n),
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct HistoryData {
-    pub history_proof: akd::HistoryProof,
-    pub epoch_data: EpochData,
-}
+use super::Response;
+use crate::{error::ReaderError, AppState};
 
 #[instrument(skip_all)]
 pub async fn key_history_handler(
@@ -69,7 +34,7 @@ pub async fn key_history_handler(
             let reader_error = ReaderError::Akd(e);
             let status = reader_error.status_code();
             error!(err = ?reader_error, status = %status, "Failed to get key history");
-            (status, Json(Response::error(reader_error)))
+            (status, Json(Response::error(reader_error.to_error_response())))
         }
     }
 }

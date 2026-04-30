@@ -7,7 +7,7 @@ license-file.workspace = true
 keywords.workspace = true
 
 [dependencies]
-akd.workspace = true
+akd = { workspace = true, features = ["serde_serialization"] }
 bitwarden-encoding = { workspace = true }
 blake3.workspace = true
 serde = { workspace = true, optional = true }
@@ -30,8 +30,8 @@ workspace = true
 
 [features]
 tracing = ["dep:tracing"]
-request_models = ["dep:serde"]
+wire_models = ["dep:serde"]
 multi_directory = []
 uniffi = ["dep:uniffi"]
 wasm = ["dep:tsify", "dep:wasm-bindgen"]
-default = ["tracing", "request_models"]
+default = ["tracing", "wire_models"]

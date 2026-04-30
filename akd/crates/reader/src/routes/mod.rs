@@ -1,7 +1,4 @@
 use axum::routing::{get, post};
-use serde::{Deserialize, Serialize};
-
-use crate::error::{ErrorResponse, ReaderError};
 
 mod audit;
 mod batch_lookup;
@@ -10,9 +7,11 @@ mod get_public_key;
 mod health;
 mod key_history;
 mod lookup;
-pub mod response_types;
 
 use crate::AppState;
+
+pub(crate) type Response<T> =
+    bitwarden_akd_configuration::wire_models::Response<T, crate::error::ErrorCode>;
 
 pub fn api_routes() -> axum::Router<AppState> {
     axum::Router::new()
@@ -23,31 +22,4 @@ pub fn api_routes() -> axum::Router<AppState> {
         .route("/key_history", post(key_history::key_history_handler))
         .route("/batch_lookup", post(batch_lookup::batch_lookup_handler))
         .route("/audit", post(audit::audit_handler))
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Response<T> {
-    pub success: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub data: Option<T>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<ErrorResponse>,
-}
-
-impl<T: Serialize> Response<T> {
-    pub fn success(data: T) -> Self {
-        Self {
-            success: true,
-            data: Some(data),
-            error: None,
-        }
-    }
-
-    pub fn error(err: ReaderError) -> Self {
-        Self {
-            success: false,
-            data: None,
-            error: Some(err.to_error_response()),
-        }
-    }
 }
