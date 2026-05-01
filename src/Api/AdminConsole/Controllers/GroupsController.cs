@@ -312,7 +312,7 @@ public class GroupsController : Controller
         if (model.Collections?.Any() == true)
         {
             var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(a => a.Id));
-            var resource = new CollectionGroupAccessResource(collections.ToList(), TargetGroupId: Guid.Empty);
+            var resource = new CollectionGroupAccessResource(collections.ToList());
             await _authorizationService.AuthorizeOrThrowAsync(User, resource, CollectionGroupOperations.Create);
         }
 
@@ -352,14 +352,14 @@ public class GroupsController : Controller
         var createCollections = allCollections.Where(c => createIds.Contains(c.Id)).ToList();
         if (createCollections.Count > 0)
         {
-            var createResource = new CollectionGroupAccessResource(createCollections, groupId);
+            var createResource = new CollectionGroupAccessResource(createCollections);
             await _authorizationService.AuthorizeOrThrowAsync(User, createResource, CollectionGroupOperations.Create);
         }
 
         var updateCollections = allCollections.Where(c => updateIds.Contains(c.Id)).ToList();
         if (updateCollections.Count > 0)
         {
-            var updateResource = new CollectionGroupAccessResource(updateCollections, groupId);
+            var updateResource = new CollectionGroupAccessResource(updateCollections);
             await _authorizationService.AuthorizeOrThrowAsync(User, updateResource, CollectionGroupOperations.Update);
         }
 
@@ -370,7 +370,7 @@ public class GroupsController : Controller
         var deleteCollections = allCollections.Where(c => deleteIds.Contains(c.Id)).ToList();
         if (deleteCollections.Count > 0)
         {
-            var deleteResource = new CollectionGroupAccessResource(deleteCollections, groupId);
+            var deleteResource = new CollectionGroupAccessResource(deleteCollections);
             if (!(await _authorizationService.AuthorizeAsync(User, deleteResource, CollectionGroupOperations.Delete)).Succeeded)
             {
                 foreach (var c in deleteCollections)

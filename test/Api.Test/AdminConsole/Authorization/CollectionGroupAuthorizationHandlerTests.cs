@@ -462,7 +462,7 @@ public class CollectionGroupAuthorizationHandlerTests
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
 
-        var resource = new CollectionGroupAccessResource(null, Guid.NewGuid());
+        var resource = new CollectionGroupAccessResource(null);
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Create },
             new ClaimsPrincipal(),
@@ -509,7 +509,7 @@ public class CollectionGroupAuthorizationHandlerTests
         var collection1 = new Collection { Id = Guid.NewGuid(), OrganizationId = Guid.NewGuid() };
         var collection2 = new Collection { Id = Guid.NewGuid(), OrganizationId = Guid.NewGuid() };
         var resource = new CollectionGroupAccessResource(
-            new List<Collection> { collection1, collection2 }, Guid.NewGuid());
+            new List<Collection> { collection1, collection2 });
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionGroupOperations.Create },
@@ -834,11 +834,10 @@ public class CollectionGroupAuthorizationHandlerTests
     }
 
     private static CollectionGroupAccessResource MakeResource<T>(
-        ICollection<T> collections, Guid? targetGroupId = null) where T : Collection
+        ICollection<T> collections) where T : Collection
     {
         return new CollectionGroupAccessResource(
-            collections.Cast<Collection>().ToList(),
-            targetGroupId ?? Guid.NewGuid());
+            collections.Cast<Collection>().ToList());
     }
 
     private static void ArrangeFeatureFlag(SutProvider<CollectionGroupAuthorizationHandler> sutProvider)
