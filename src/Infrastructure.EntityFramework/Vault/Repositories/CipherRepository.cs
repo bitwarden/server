@@ -204,7 +204,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                 await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, collectionUserEntities);
             }
 
-            if(folders.Any())
+            if (folders.Any())
             {
                 var folderEntities = Mapper.Map<List<Folder>>(folders);
                 await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, folderEntities);

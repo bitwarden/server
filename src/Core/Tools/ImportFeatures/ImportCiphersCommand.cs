@@ -75,7 +75,7 @@ public class ImportCiphersCommand : IImportCiphersCommand
             }
         }
 
-        var newFolders = await processFolders(importingUserId, folders, folderRelationships, ciphers);
+        var newFolders = await ProcessFolders(importingUserId, folders, folderRelationships, ciphers);
 
         // Create it all
         await _cipherRepository.CreateAsync(importingUserId, ciphers, newFolders);
@@ -138,7 +138,7 @@ public class ImportCiphersCommand : IImportCiphersCommand
             }
         }
 
-        var newFolders = await processFolders(importingUserId, folders, folderRelationships, ciphers);
+        var newFolders = await ProcessFolders(importingUserId, folders, folderRelationships, ciphers);
 
         var organizationCollectionsIds = (await _collectionRepository.GetManyByOrganizationIdAsync(org.Id)).Select(c => c.Id).ToList();
 
@@ -205,7 +205,7 @@ public class ImportCiphersCommand : IImportCiphersCommand
         await _pushService.PushSyncVaultAsync(importingUserId);
     }
 
-    private async Task<List<Folder>> processFolders(Guid importingUserId, List<Folder> folders, IEnumerable<KeyValuePair<int, int>> folderRelationships, List<CipherDetails> ciphers)
+    private async Task<List<Folder>> ProcessFolders(Guid importingUserId, List<Folder> folders, IEnumerable<KeyValuePair<int, int>> folderRelationships, List<CipherDetails> ciphers)
     {
         var userfoldersIds = (await _folderRepository.GetManyByUserIdAsync(importingUserId)).Select(f => f.Id).ToList();
 

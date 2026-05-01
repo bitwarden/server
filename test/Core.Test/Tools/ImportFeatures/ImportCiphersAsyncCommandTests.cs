@@ -115,7 +115,8 @@ public class ImportCiphersAsyncCommandTests
         OrganizationUser importingOrganizationUser,
         List<Collection> collections,
         List<CipherDetails> ciphers,
-        SutProvider<ImportCiphersCommand> sutProvider)
+        SutProvider<ImportCiphersCommand> sutProvider,
+        List<Folder> folders)
     {
         organization.MaxCollections = null;
         importingOrganizationUser.OrganizationId = organization.Id;
@@ -136,6 +137,11 @@ public class ImportCiphersAsyncCommandTests
             new(2, 2)
         };
 
+        KeyValuePair<int, int>[] folderRelationships = {
+            new(0, 0),
+            new(1, 1),
+        };
+
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)
             .Returns(organization);
@@ -148,8 +154,13 @@ public class ImportCiphersAsyncCommandTests
         sutProvider.GetDependency<ICollectionRepository>()
             .GetManyByOrganizationIdAsync(organization.Id)
             .Returns(new List<Collection> { collections[0] });
+        
+        // Set up a folder that already exists for the importing user
+        sutProvider.GetDependency<IFolderRepository>()
+            .GetManyByUserIdAsync(importingUserId)
+            .Returns(new List<Folder> { folders[0] });
 
-        await sutProvider.Sut.ImportIntoOrganizationalVaultAsync(collections, ciphers, collectionRelationships, importingUserId, [], []);
+        await sutProvider.Sut.ImportIntoOrganizationalVaultAsync(collections, ciphers, collectionRelationships, importingUserId, folders, folderRelationships);
 
         await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(
             ciphers,
@@ -161,7 +172,10 @@ public class ImportCiphersAsyncCommandTests
                 cus.Count() == collections.Count - 1 &&
                 !cus.Any(cu => cu.CollectionId == collections[0].Id) && // Check that access was not added for the collection that already existed in the organization
                 cus.All(cu => cu.OrganizationUserId == importingOrganizationUser.Id && cu.Manage == true)),
-            Arg.Is<IEnumerable<Folder>>(f => f.Count() == 0));
+            Arg.Is<IEnumerable<Folder>>(newFolders =>
+                newFolders.Count() == folders.Count() - 1 &&
+                !newFolders.Any(folder => folder.Id == folders[0].Id) // Check that the folder that already existed for the importing user was not added
+            ));
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
     }
 
