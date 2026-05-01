@@ -501,6 +501,7 @@ public class UserService : UserManager<User>, IUserService
         });
     }
 
+    [Obsolete("Use ISelfServicePasswordChangeCommand instead. To be removed in PM-33141.")]
     public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint,
         string key)
     {
@@ -677,6 +678,7 @@ public class UserService : UserManager<User>, IUserService
         return IdentityResult.Success;
     }
 
+    [Obsolete("Use IReplaceAdminSetTemporaryPasswordCommand instead. To be removed in PM-33141.")]
     public async Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint)
     {
         if (!user.ForcePasswordReset)
@@ -1047,6 +1049,7 @@ public class UserService : UserManager<User>, IUserService
         return user.Key == null && user.MasterPassword != null && user.PrivateKey != null;
     }
 
+    [Obsolete("Use MasterPasswordService.PrepareSetInitialMasterPasswordAsync or PrepareUpdateExistingMasterPasswordAsync instead. To be removed in PM-33141.")]
     private async Task<IdentityResult> ValidatePasswordInternal(User user, string password)
     {
         var errors = new List<IdentityError>();
