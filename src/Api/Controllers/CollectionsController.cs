@@ -294,11 +294,7 @@ public class CollectionsController : Controller
     {
         var (collection, currentAccess) = await _collectionRepository.GetByIdWithAccessAsync(id);
 
-        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.Update)).Succeeded;
-        if (!authorized)
-        {
-            throw new NotFoundException();
-        }
+        await _authorizationService.AuthorizeOrThrowAsync(User, collection, BulkCollectionOperations.Update);
 
         if (model.Users != null)
         {
@@ -334,20 +330,14 @@ public class CollectionsController : Controller
 
         if (model.Users?.Any() == true)
         {
-            if (!(await _authorizationService.AuthorizeAsync(User, collections.ToList(),
-                    CollectionUserOperations.Create)).Succeeded)
-            {
-                throw new NotFoundException();
-            }
+            await _authorizationService.AuthorizeOrThrowAsync(User, collections.ToList(),
+                CollectionUserOperations.Create);
         }
 
         if (model.Groups?.Any() == true)
         {
-            if (!(await _authorizationService.AuthorizeAsync(User, collections.ToList(),
-                    CollectionGroupOperations.Create)).Succeeded)
-            {
-                throw new NotFoundException();
-            }
+            await _authorizationService.AuthorizeOrThrowAsync(User, collections.ToList(),
+                CollectionGroupOperations.Create);
         }
 
         await _bulkAddCollectionAccessCommand.AddAccessAsync(
@@ -363,22 +353,19 @@ public class CollectionsController : Controller
     {
         var (createIds, updateIds, deleteIds) = posted.DiffAccessSelections(current);
 
-        if (createIds.Count > 0 &&
-            !(await _authorizationService.AuthorizeAsync(User, collections, CollectionUserOperations.Create)).Succeeded)
+        if (createIds.Count > 0)
         {
-            throw new NotFoundException();
+            await _authorizationService.AuthorizeOrThrowAsync(User, collections, CollectionUserOperations.Create);
         }
 
-        if (updateIds.Count > 0 &&
-            !(await _authorizationService.AuthorizeAsync(User, collections, CollectionUserOperations.Update)).Succeeded)
+        if (updateIds.Count > 0)
         {
-            throw new NotFoundException();
+            await _authorizationService.AuthorizeOrThrowAsync(User, collections, CollectionUserOperations.Update);
         }
 
-        if (deleteIds.Count > 0 &&
-            !(await _authorizationService.AuthorizeAsync(User, collections, CollectionUserOperations.Delete)).Succeeded)
+        if (deleteIds.Count > 0)
         {
-            throw new NotFoundException();
+            await _authorizationService.AuthorizeOrThrowAsync(User, collections, CollectionUserOperations.Delete);
         }
     }
 
@@ -389,22 +376,19 @@ public class CollectionsController : Controller
     {
         var (createIds, updateIds, deleteIds) = posted.DiffAccessSelections(current);
 
-        if (createIds.Count > 0 &&
-            !(await _authorizationService.AuthorizeAsync(User, collections, CollectionGroupOperations.Create)).Succeeded)
+        if (createIds.Count > 0)
         {
-            throw new NotFoundException();
+            await _authorizationService.AuthorizeOrThrowAsync(User, collections, CollectionGroupOperations.Create);
         }
 
-        if (updateIds.Count > 0 &&
-            !(await _authorizationService.AuthorizeAsync(User, collections, CollectionGroupOperations.Update)).Succeeded)
+        if (updateIds.Count > 0)
         {
-            throw new NotFoundException();
+            await _authorizationService.AuthorizeOrThrowAsync(User, collections, CollectionGroupOperations.Update);
         }
 
-        if (deleteIds.Count > 0 &&
-            !(await _authorizationService.AuthorizeAsync(User, collections, CollectionGroupOperations.Delete)).Succeeded)
+        if (deleteIds.Count > 0)
         {
-            throw new NotFoundException();
+            await _authorizationService.AuthorizeOrThrowAsync(User, collections, CollectionGroupOperations.Delete);
         }
     }
 }
