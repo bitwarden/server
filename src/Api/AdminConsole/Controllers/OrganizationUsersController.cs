@@ -857,7 +857,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
         if (requestModel.Collections?.Any() == true)
         {
             var collections = (await _collectionRepository.GetManyByManyIdsAsync(requestModel.Collections.Select(a => a.Id))).ToList();
-            await _authorizationService.AuthorizeOrThrowAsync(User, collections, CollectionUserOperations.Create);
+            var resource = new CollectionUserAccessResource(collections, TargetOrganizationUserId: Guid.Empty);
+            await _authorizationService.AuthorizeOrThrowAsync(User, resource, CollectionUserOperations.Create);
         }
 
         var userId = _userService.GetProperUserId(User);
@@ -870,17 +871,25 @@ public class OrganizationUsersController : BaseAdminConsoleController
     {
         var userId = _userService.GetProperUserId(User).Value;
 
-        if (requestModel.Groups != null)
+        // Glue: the legacy API sends the caller's full group list, including their own user. We silently
+        // drop the caller's own group changes here. Remove once clients send a delta (add/remove only).
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
+        var editingSelf = userId == organizationUser.UserId;
+        var groupsToSave = editingSelf && !organizationAbility.AllowAdminAccessToAllCollectionItems
+            ? null
+            : requestModel.Groups;
+
+        if (groupsToSave != null)
         {
             var currentGroupIds = await _groupRepository.GetManyIdsByUserIdAsync(organizationUser.Id);
             var groupResource = new OrganizationUserGroupAssignmentResource(
-                orgId, userId, organizationUser.Id, requestModel.Groups, currentGroupIds);
+                orgId, userId, organizationUser.Id, groupsToSave, currentGroupIds);
             await _authorizationService.AuthorizeOrThrowAsync(User, groupResource, GroupOperations.UpdateMembership);
         }
 
         var collectionsToSave = await AuthorizeAndPrepareCollectionAccessAsync(requestModel, currentAccess, organizationUser.Id);
         await _updateOrganizationUserCommand.UpdateUserAsync(requestModel.ToOrganizationUser(organizationUser), organizationUser.Type, userId,
-            collectionsToSave, requestModel.Groups);
+            collectionsToSave, groupsToSave);
     }
 
     /// <summary>

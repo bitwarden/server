@@ -302,7 +302,7 @@ public class GroupsControllerTests
 
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
-                 Arg.Any<IEnumerable<Collection>>(),
+                 Arg.Any<CollectionGroupAccessResource>(),
                  Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Create)))
              .Returns(AuthorizationResult.Success());
 
@@ -330,7 +330,7 @@ public class GroupsControllerTests
 
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
-                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Any<CollectionGroupAccessResource>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Create)))
             .Returns(AuthorizationResult.Failed());
 

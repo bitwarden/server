@@ -296,11 +296,9 @@ public class OrganizationUsersControllerTests
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
             .Returns(true);
-        // Invite uses IList<Collection> directly (no CollectionUserAccessResource) —
-        // routes to BulkCollectionUserAuthorizationHandler with no self-assignment check.
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
-                Arg.Any<IList<Collection>>(),
+                Arg.Any<CollectionUserAccessResource>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Create)))
             .Returns(AuthorizationResult.Success());
         sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
@@ -324,7 +322,7 @@ public class OrganizationUsersControllerTests
             .Returns(true);
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
-                Arg.Any<IList<Collection>>(),
+                Arg.Any<CollectionUserAccessResource>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Create)))
             .Returns(AuthorizationResult.Failed());
         sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);

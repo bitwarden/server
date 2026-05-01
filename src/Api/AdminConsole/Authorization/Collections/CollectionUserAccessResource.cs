@@ -3,7 +3,8 @@
 namespace Bit.Api.AdminConsole.Authorization.Collections;
 
 /// <summary>
-/// Carries the collections and target user for a collection user-access authorization check.
+/// Resource for authorizing user access to collections.
+/// Use <see cref="Guid.Empty"/> for <c>TargetOrganizationUserId</c> when the user does not exist yet (e.g. on invite).
 /// </summary>
 public record CollectionUserAccessResource(
     ICollection<Collection> Collections,

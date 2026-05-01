@@ -312,7 +312,8 @@ public class GroupsController : Controller
         if (model.Collections?.Any() == true)
         {
             var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(a => a.Id));
-            await _authorizationService.AuthorizeOrThrowAsync(User, collections, CollectionGroupOperations.Create);
+            var resource = new CollectionGroupAccessResource(collections.ToList(), TargetGroupId: Guid.Empty);
+            await _authorizationService.AuthorizeOrThrowAsync(User, resource, CollectionGroupOperations.Create);
         }
 
         var organization = await _organizationRepository.GetByIdAsync(orgId);
