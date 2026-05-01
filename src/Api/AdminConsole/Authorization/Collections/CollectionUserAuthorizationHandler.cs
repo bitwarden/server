@@ -64,19 +64,32 @@ public class CollectionUserAuthorizationHandler
         }
 
         var organization = _currentContext.GetOrganization(targetOrganizationId);
-        var authorizationContext = await BuildContextAsync(targetOrganizationId, organization);
+        var authorizationContext = await _collectionAccessContextService.GetOrBuildAsync(
+            targetOrganizationId, organization, _currentContext, _collectionRepository, _applicationCacheService);
 
-        var authorized = requirement switch
+        bool authorized;
+        if (requirement == CollectionUserOperations.Create)
         {
-            not null when requirement == CollectionUserOperations.Create =>
-                CanCreateUserAccess(resource, organization, authorizationContext),
-            not null when requirement == CollectionUserOperations.Update =>
-                collections.All(c => CollectionUserAuthorizationRules.CanModifyUserAccess(c, organization, authorizationContext)),
-            not null when requirement == CollectionUserOperations.Delete =>
-                collections.All(c => CollectionUserAuthorizationRules.CanModifyUserAccess(c, organization, authorizationContext)),
-            null => throw new UnreachableException(),
-            _ => false
-        };
+            var callerOrganizationUser = organization != null
+                ? await _organizationUserRepository.GetByOrganizationAsync(targetOrganizationId, _currentContext.UserId!.Value)
+                : null;
+            authorized = CanCreateUserAccess(
+                resource, organization,
+                authorizationContext with { CallerOrganizationUserId = callerOrganizationUser?.Id });
+        }
+        else if (requirement == CollectionUserOperations.Update || requirement == CollectionUserOperations.Delete)
+        {
+            authorized = collections.All(c =>
+                CollectionUserAuthorizationRules.CanModifyUserAccess(c, organization, authorizationContext));
+        }
+        else if (requirement == null)
+        {
+            throw new UnreachableException();
+        }
+        else
+        {
+            authorized = false;
+        }
 
         if (authorized)
         {
@@ -98,19 +111,5 @@ public class CollectionUserAuthorizationHandler
         }
 
         return resource.Collections.All(c => CollectionUserAuthorizationRules.CanModifyUserAccess(c, organization, collectionAccessContext));
-    }
-
-    private async Task<CollectionAccessContext> BuildContextAsync(
-        Guid organizationId,
-        CurrentContextOrganization? organization)
-    {
-        var context = await _collectionAccessContextService.GetOrBuildAsync(
-            organizationId, organization, _currentContext, _collectionRepository, _applicationCacheService);
-
-        var callerOrganizationUser = organization != null
-            ? await _organizationUserRepository.GetByOrganizationAsync(organizationId, _currentContext.UserId!.Value)
-            : null;
-
-        return context with { CallerOrganizationUserId = callerOrganizationUser?.Id };
     }
 }
