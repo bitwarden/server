@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Bit.Api.Test.Auth.Models.Request.Accounts;
 
-public class PasswordRequestModelTests
+public class UpdateTempPasswordRequestModelTests
 {
     [Theory]
     [BitAutoData(KdfType.PBKDF2_SHA256, 600000, null, null)]
@@ -23,9 +23,8 @@ public class PasswordRequestModelTests
             Parallelism = parallelism
         };
 
-        var model = new PasswordRequestModel
+        var model = new UpdateTempPasswordRequestModel
         {
-            MasterPasswordHash = "masterPasswordHash",
             AuthenticationData = new MasterPasswordAuthenticationDataRequestModel
             {
                 Kdf = kdf,
@@ -45,17 +44,14 @@ public class PasswordRequestModelTests
         Assert.Empty(result);
     }
 
-    [Theory]
-    [BitAutoData]
-    public void Validate_NewPayloadsOnly_WithMismatchedKdfSettings_ReturnsKdfValidationError(
-        string masterPasswordHash)
+    [Fact]
+    public void Validate_NewPayloadsOnly_WithMismatchedKdfSettings_ReturnsKdfValidationError()
     {
         var authKdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600000 };
         var unlockKdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 650000 };
 
-        var model = new PasswordRequestModel
+        var model = new UpdateTempPasswordRequestModel
         {
-            MasterPasswordHash = masterPasswordHash,
             AuthenticationData = new MasterPasswordAuthenticationDataRequestModel
             {
                 Kdf = authKdf,
@@ -78,11 +74,10 @@ public class PasswordRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void Validate_LegacyPayloadsOnly_NoErrors(string masterPasswordHash, string newHash, string key)
+    public void Validate_LegacyPayloadsOnly_NoErrors(string newHash, string key)
     {
-        var model = new PasswordRequestModel
+        var model = new UpdateTempPasswordRequestModel
         {
-            MasterPasswordHash = masterPasswordHash,
             NewMasterPasswordHash = newHash,
             Key = key
         };
@@ -94,18 +89,12 @@ public class PasswordRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void Validate_BothNewAndLegacyPayloads_ReturnsError(
-        string masterPasswordHash, string newHash, string key)
+    public void Validate_BothNewAndLegacyPayloads_ReturnsError(string newHash, string key)
     {
-        var kdf = new KdfRequestModel
-        {
-            KdfType = KdfType.PBKDF2_SHA256,
-            Iterations = 600000
-        };
+        var kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600000 };
 
-        var model = new PasswordRequestModel
+        var model = new UpdateTempPasswordRequestModel
         {
-            MasterPasswordHash = masterPasswordHash,
             NewMasterPasswordHash = newHash,
             Key = key,
             AuthenticationData = new MasterPasswordAuthenticationDataRequestModel
@@ -128,14 +117,10 @@ public class PasswordRequestModelTests
         Assert.Contains("Cannot provide both", result[0].ErrorMessage);
     }
 
-    [Theory]
-    [BitAutoData]
-    public void Validate_NeitherNewNorLegacyPayloads_ReturnsError(string masterPasswordHash)
+    [Fact]
+    public void Validate_NeitherNewNorLegacyPayloads_ReturnsError()
     {
-        var model = new PasswordRequestModel
-        {
-            MasterPasswordHash = masterPasswordHash
-        };
+        var model = new UpdateTempPasswordRequestModel();
 
         var result = model.Validate(new ValidationContext(model)).ToList();
 
@@ -143,15 +128,13 @@ public class PasswordRequestModelTests
         Assert.Contains("Must provide either", result[0].ErrorMessage);
     }
 
-    [Theory]
-    [BitAutoData]
-    public void Validate_OnlyUnlockData_ReturnsError(string masterPasswordHash)
+    [Fact]
+    public void Validate_OnlyUnlockData_ReturnsError()
     {
         var kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600000 };
 
-        var model = new PasswordRequestModel
+        var model = new UpdateTempPasswordRequestModel
         {
-            MasterPasswordHash = masterPasswordHash,
             UnlockData = new MasterPasswordUnlockDataRequestModel
             {
                 Kdf = kdf,
@@ -166,15 +149,13 @@ public class PasswordRequestModelTests
         Assert.Contains("Must provide either", result[0].ErrorMessage);
     }
 
-    [Theory]
-    [BitAutoData]
-    public void Validate_OnlyAuthenticationData_ReturnsError(string masterPasswordHash)
+    [Fact]
+    public void Validate_OnlyAuthenticationData_ReturnsError()
     {
         var kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600000 };
 
-        var model = new PasswordRequestModel
+        var model = new UpdateTempPasswordRequestModel
         {
-            MasterPasswordHash = masterPasswordHash,
             AuthenticationData = new MasterPasswordAuthenticationDataRequestModel
             {
                 Kdf = kdf,
@@ -191,17 +172,13 @@ public class PasswordRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void RequestHasNewDataTypes_WithBothPresent_ReturnsTrue(string masterPasswordHash)
+    public void RequestHasNewDataTypes_WithBothPresent_ReturnsTrue(string hint)
     {
-        var kdf = new KdfRequestModel
-        {
-            KdfType = KdfType.PBKDF2_SHA256,
-            Iterations = 600000
-        };
+        var kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600000 };
 
-        var model = new PasswordRequestModel
+        var model = new UpdateTempPasswordRequestModel
         {
-            MasterPasswordHash = masterPasswordHash,
+            MasterPasswordHint = hint,
             AuthenticationData = new MasterPasswordAuthenticationDataRequestModel
             {
                 Kdf = kdf,
@@ -221,12 +198,10 @@ public class PasswordRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void RequestHasNewDataTypes_WithLegacyOnly_ReturnsFalse(
-        string masterPasswordHash, string newHash, string key)
+    public void RequestHasNewDataTypes_WithLegacyOnly_ReturnsFalse(string newHash, string key)
     {
-        var model = new PasswordRequestModel
+        var model = new UpdateTempPasswordRequestModel
         {
-            MasterPasswordHash = masterPasswordHash,
             NewMasterPasswordHash = newHash,
             Key = key
         };

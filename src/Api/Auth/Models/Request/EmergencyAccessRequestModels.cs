@@ -52,7 +52,9 @@ public class EmergencyAccessPasswordRequestModel : IValidatableObject
     [Obsolete("To be removed in PM-33141")]
     public string Key { get; set; }
 
+    // Should be made required in PM-33141
     public MasterPasswordUnlockDataRequestModel UnlockData { get; set; }
+    // Should be made required in PM-33141
     public MasterPasswordAuthenticationDataRequestModel AuthenticationData { get; set; }
 
     public bool RequestHasNewDataTypes()
@@ -64,6 +66,15 @@ public class EmergencyAccessPasswordRequestModel : IValidatableObject
     {
         var hasNewPayloads = UnlockData is not null && AuthenticationData is not null;
         var hasLegacyPayloads = NewMasterPasswordHash is not null && Key is not null;
+
+        if (hasNewPayloads && !hasLegacyPayloads)
+        {
+            foreach (var validationResult in KdfSettingsValidator.ValidateAuthenticationAndUnlockData(
+                         AuthenticationData.ToData(), UnlockData.ToData()))
+            {
+                yield return validationResult;
+            }
+        }
 
         if (hasNewPayloads && hasLegacyPayloads)
         {

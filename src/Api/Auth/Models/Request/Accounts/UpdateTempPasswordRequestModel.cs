@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.KeyManagement.Models.Api.Request;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Auth.Models.Request.Accounts;
 
@@ -13,7 +14,9 @@ public class UpdateTempPasswordRequestModel : IValidatableObject
     [StringLength(50)]
     public string? MasterPasswordHint { get; set; }
 
+    // Should be made required in PM-33141
     public MasterPasswordUnlockDataRequestModel? UnlockData { get; set; }
+    // Should be made required in PM-33141
     public MasterPasswordAuthenticationDataRequestModel? AuthenticationData { get; set; }
 
     public bool RequestHasNewDataTypes()
@@ -25,6 +28,15 @@ public class UpdateTempPasswordRequestModel : IValidatableObject
     {
         var hasNewPayloads = UnlockData is not null && AuthenticationData is not null;
         var hasLegacyPayloads = NewMasterPasswordHash is not null && Key is not null;
+
+        if (hasNewPayloads && !hasLegacyPayloads)
+        {
+            foreach (var validationResult in KdfSettingsValidator.ValidateAuthenticationAndUnlockData(
+                         AuthenticationData!.ToData(), UnlockData!.ToData()))
+            {
+                yield return validationResult;
+            }
+        }
 
         if (hasNewPayloads && hasLegacyPayloads)
         {
