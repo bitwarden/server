@@ -4,5 +4,5 @@ namespace Bit.Core.Auth.UserFeatures.UserEmail.Interfaces;
 
 public interface IChangeEmailCommand
 {
-    Task ChangeEmailAsync(User user, string newEmail, bool logOutUser = true);
+    Task ChangeEmailAsync(User user, string newEmail);
 }

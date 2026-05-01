@@ -69,7 +69,8 @@ public class ChangeEmailCommand : IChangeEmailCommand
         }
         else
         {
-            // Perform sync. Does r evision date push a sync?
+            // Perform sync. Does revision date push a sync?
+            // Make sure email is sent back on sync
         }
     }
 }
