@@ -236,6 +236,7 @@ public class AccountsController : Controller
 
     private UserKdfInformation GetDefaultKdf(string email)
     {
+        // Always normalize email before use so casing differences in the request do not affect the response.
         var normalizedEmail = email.Trim().ToLowerInvariant();
         var kdfIndex = EnumerationProtectionHelpers.GetIndexForInputHash(_defaultKdfHmacKey, normalizedEmail, _defaultKdfResults.Count);
         // PM-31702: In the future we may need to generate a deterministic random salt, for the time being we will use email and null.
