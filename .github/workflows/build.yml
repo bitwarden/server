@@ -543,7 +543,6 @@ jobs:
           azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
           azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
-          repository: devops
           task: deploy-server-dev
           description: "Triggered by server build on main"
 
