@@ -67,6 +67,12 @@ public class EmergencyAccessPasswordRequestModel : IValidatableObject
         var hasNewPayloads = UnlockData is not null && AuthenticationData is not null;
         var hasLegacyPayloads = NewMasterPasswordHash is not null && Key is not null;
 
+        foreach (var validationResult in MasterPasswordPayloadVariantValidator.ValidateExclusivity(
+                     hasNewPayloads, hasLegacyPayloads))
+        {
+            yield return validationResult;
+        }
+
         if (hasNewPayloads && !hasLegacyPayloads)
         {
             foreach (var validationResult in KdfSettingsValidator.ValidateAuthenticationAndUnlockData(
@@ -74,20 +80,6 @@ public class EmergencyAccessPasswordRequestModel : IValidatableObject
             {
                 yield return validationResult;
             }
-        }
-
-        if (hasNewPayloads && hasLegacyPayloads)
-        {
-            yield return new ValidationResult(
-                "Cannot provide both new payloads (UnlockData/AuthenticationData) and legacy payloads (NewMasterPasswordHash/Key).",
-                [nameof(UnlockData), nameof(AuthenticationData), nameof(NewMasterPasswordHash), nameof(Key)]);
-        }
-
-        if (!hasNewPayloads && !hasLegacyPayloads)
-        {
-            yield return new ValidationResult(
-                "Must provide either new payloads (UnlockData/AuthenticationData) or legacy payloads (NewMasterPasswordHash/Key).",
-                [nameof(UnlockData), nameof(AuthenticationData), nameof(NewMasterPasswordHash), nameof(Key)]);
         }
     }
 }
