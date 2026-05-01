@@ -167,7 +167,7 @@ public class CollectionUserAuthorizationRulesTests
         Assert.False(CollectionUserAuthorizationRules.CanAddSelf(allowAdminAccessToAllCollectionItems: false));
     }
 
-    private static CollectionAccessAuthorizationContext EmptyContext() =>
+    private static CollectionAccessContext EmptyContext() =>
         new(
             AllowAdminAccessToAllCollectionItems: false,
             CallerIsProviderUser: false,

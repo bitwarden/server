@@ -155,7 +155,7 @@ public class CollectionGroupAuthorizationRulesTests
         Assert.False(CollectionGroupAuthorizationRules.CanModifyGroupAccess(collection, null, ctx));
     }
 
-    private static CollectionAccessAuthorizationContext EmptyContext() =>
+    private static CollectionAccessContext EmptyContext() =>
         new(
             AllowAdminAccessToAllCollectionItems: false,
             CallerIsProviderUser: false,

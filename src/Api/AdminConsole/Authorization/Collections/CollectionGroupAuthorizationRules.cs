@@ -12,7 +12,7 @@ public static class CollectionGroupAuthorizationRules
     public static bool CanModifyGroupAccess(
         Collection collection,
         CurrentContextOrganization? org,
-        CollectionAccessAuthorizationContext ctx)
+        CollectionAccessContext ctx)
     {
         if (ctx.AllowAdminAccessToAllCollectionItems &&
             org is { Permissions.ManageGroups: true })

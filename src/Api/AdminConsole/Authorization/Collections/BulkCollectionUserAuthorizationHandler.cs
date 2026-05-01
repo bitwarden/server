@@ -20,17 +20,20 @@ public class BulkCollectionUserAuthorizationHandler
     private readonly ICollectionRepository _collectionRepository;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IFeatureService _featureService;
+    private readonly CollectionAccessContextService _collectionAccessContextService;
 
     public BulkCollectionUserAuthorizationHandler(
         ICurrentContext currentContext,
         ICollectionRepository collectionRepository,
         IApplicationCacheService applicationCacheService,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        CollectionAccessContextService collectionAccessContextService)
     {
         _currentContext = currentContext;
         _collectionRepository = collectionRepository;
         _applicationCacheService = applicationCacheService;
         _featureService = featureService;
+        _collectionAccessContextService = collectionAccessContextService;
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
@@ -59,16 +62,16 @@ public class BulkCollectionUserAuthorizationHandler
         }
 
         var organization = _currentContext.GetOrganization(targetOrganizationId);
-        var authorizationContext = await BuildContextAsync(targetOrganizationId, organization);
+        var collectionAccessContext = await BuildCollectionAccessContextAsync(targetOrganizationId, organization);
 
         var authorized = requirement switch
         {
             not null when requirement == CollectionUserOperations.Create =>
-                resources.All(c => CollectionUserAuthorizationRules.CanModifyUserAccess(c, organization, authorizationContext)),
+                resources.All(c => CollectionUserAuthorizationRules.CanModifyUserAccess(c, organization, collectionAccessContext)),
             not null when requirement == CollectionUserOperations.Update =>
-                resources.All(c => CollectionUserAuthorizationRules.CanModifyUserAccess(c, organization, authorizationContext)),
+                resources.All(c => CollectionUserAuthorizationRules.CanModifyUserAccess(c, organization, collectionAccessContext)),
             not null when requirement == CollectionUserOperations.Delete =>
-                resources.All(c => CollectionUserAuthorizationRules.CanModifyUserAccess(c, organization, authorizationContext)),
+                resources.All(c => CollectionUserAuthorizationRules.CanModifyUserAccess(c, organization, collectionAccessContext)),
             null => throw new UnreachableException(),
             _ => false
         };
@@ -79,9 +82,9 @@ public class BulkCollectionUserAuthorizationHandler
         }
     }
 
-    private Task<CollectionAccessAuthorizationContext> BuildContextAsync(
+    private Task<CollectionAccessContext> BuildCollectionAccessContextAsync(
         Guid organizationId,
         CurrentContextOrganization? organization) =>
-        CollectionAccessContextFactory.BuildAsync(
+        _collectionAccessContextService.GetOrBuildAsync(
             organizationId, organization, _currentContext, _collectionRepository, _applicationCacheService);
 }

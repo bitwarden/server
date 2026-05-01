@@ -11,38 +11,38 @@ public static class CollectionUserAuthorizationRules
 {
     public static bool CanModifyUserAccess(
         Collection collection,
-        CurrentContextOrganization? org,
-        CollectionAccessAuthorizationContext ctx)
+        CurrentContextOrganization? organization,
+        CollectionAccessContext collectionAccessContext)
     {
-        if (org is { Permissions.EditAnyCollection: true })
+        if (organization is { Permissions.EditAnyCollection: true })
         {
             return true;
         }
 
-        if (ctx.AllowAdminAccessToAllCollectionItems &&
-            org is { Permissions.ManageUsers: true })
+        if (collectionAccessContext.AllowAdminAccessToAllCollectionItems &&
+            organization is { Permissions.ManageUsers: true })
         {
             return true;
         }
 
-        if (ctx.AllowAdminAccessToAllCollectionItems &&
-            org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin })
+        if (collectionAccessContext.AllowAdminAccessToAllCollectionItems &&
+            organization is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin })
         {
             return true;
         }
 
-        if (ctx.CallerManagedCollectionIds.Contains(collection.Id))
+        if (collectionAccessContext.CallerManagedCollectionIds.Contains(collection.Id))
         {
             return true;
         }
 
-        if (org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } &&
-            ctx.OrphanedCollectionIds.Contains(collection.Id))
+        if (organization is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } &&
+            collectionAccessContext.OrphanedCollectionIds.Contains(collection.Id))
         {
             return true;
         }
 
-        return ctx.CallerIsProviderUser;
+        return collectionAccessContext.CallerIsProviderUser;
     }
 
     public static bool CanAddSelf(bool allowAdminAccessToAllCollectionItems) =>

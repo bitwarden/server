@@ -11,6 +11,7 @@ public static class AuthorizationHandlerCollectionExtensions
     public static void AddAdminConsoleAuthorizationHandlers(this IServiceCollection services)
     {
         services.TryAddScoped<IOrganizationContext, OrganizationContext>();
+        services.TryAddScoped<CollectionAccessContextService>();
 
         services.TryAddEnumerable([
             ServiceDescriptor.Scoped<IAuthorizationHandler, BulkCollectionAuthorizationHandler>(),

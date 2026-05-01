@@ -19,19 +19,22 @@ public class CollectionUserAuthorizationHandler
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IFeatureService _featureService;
+    private readonly CollectionAccessContextService _collectionAccessContextService;
 
     public CollectionUserAuthorizationHandler(
         ICurrentContext currentContext,
         ICollectionRepository collectionRepository,
         IOrganizationUserRepository organizationUserRepository,
         IApplicationCacheService applicationCacheService,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        CollectionAccessContextService collectionAccessContextService)
     {
         _currentContext = currentContext;
         _collectionRepository = collectionRepository;
         _organizationUserRepository = organizationUserRepository;
         _applicationCacheService = applicationCacheService;
         _featureService = featureService;
+        _collectionAccessContextService = collectionAccessContextService;
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
@@ -84,30 +87,30 @@ public class CollectionUserAuthorizationHandler
     private static bool CanCreateUserAccess(
         CollectionUserAccessResource resource,
         CurrentContextOrganization? organization,
-        CollectionAccessAuthorizationContext ctx)
+        CollectionAccessContext collectionAccessContext)
     {
-        var editingSelf = ctx.CallerOrganizationUserId.HasValue &&
-                          ctx.CallerOrganizationUserId.Value == resource.TargetOrganizationUserId;
+        var editingSelf = collectionAccessContext.CallerOrganizationUserId.HasValue &&
+                          collectionAccessContext.CallerOrganizationUserId.Value == resource.TargetOrganizationUserId;
 
-        if (editingSelf && !CollectionUserAuthorizationRules.CanAddSelf(ctx.AllowAdminAccessToAllCollectionItems))
+        if (editingSelf && !CollectionUserAuthorizationRules.CanAddSelf(collectionAccessContext.AllowAdminAccessToAllCollectionItems))
         {
             throw new BadRequestException("You cannot add yourself to a collection.");
         }
 
-        return resource.Collections.All(c => CollectionUserAuthorizationRules.CanModifyUserAccess(c, organization, ctx));
+        return resource.Collections.All(c => CollectionUserAuthorizationRules.CanModifyUserAccess(c, organization, collectionAccessContext));
     }
 
-    private async Task<CollectionAccessAuthorizationContext> BuildContextAsync(
+    private async Task<CollectionAccessContext> BuildContextAsync(
         Guid organizationId,
         CurrentContextOrganization? organization)
     {
-        var ctx = await CollectionAccessContextFactory.BuildAsync(
+        var context = await _collectionAccessContextService.GetOrBuildAsync(
             organizationId, organization, _currentContext, _collectionRepository, _applicationCacheService);
 
-        var callerOrgUser = organization != null
+        var callerOrganizationUser = organization != null
             ? await _organizationUserRepository.GetByOrganizationAsync(organizationId, _currentContext.UserId!.Value)
             : null;
 
-        return ctx with { CallerOrganizationUserId = callerOrgUser?.Id };
+        return context with { CallerOrganizationUserId = callerOrganizationUser?.Id };
     }
 }

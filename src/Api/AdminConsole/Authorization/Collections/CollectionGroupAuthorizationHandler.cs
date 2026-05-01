@@ -18,17 +18,20 @@ public class CollectionGroupAuthorizationHandler
     private readonly ICollectionRepository _collectionRepository;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IFeatureService _featureService;
+    private readonly CollectionAccessContextService _collectionAccessContextService;
 
     public CollectionGroupAuthorizationHandler(
         ICurrentContext currentContext,
         ICollectionRepository collectionRepository,
         IApplicationCacheService applicationCacheService,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        CollectionAccessContextService collectionAccessContextService)
     {
         _currentContext = currentContext;
         _collectionRepository = collectionRepository;
         _applicationCacheService = applicationCacheService;
         _featureService = featureService;
+        _collectionAccessContextService = collectionAccessContextService;
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
@@ -58,16 +61,16 @@ public class CollectionGroupAuthorizationHandler
         }
 
         var organization = _currentContext.GetOrganization(targetOrganizationId);
-        var authorizationContext = await BuildContextAsync(targetOrganizationId, organization);
+        var collectionAccessContext = await BuildCollectionAccessContextAsync(targetOrganizationId, organization);
 
         var authorized = requirement switch
         {
             not null when requirement == CollectionGroupOperations.Create =>
-                collections.All(c => CollectionGroupAuthorizationRules.CanModifyGroupAccess(c, organization, authorizationContext)),
+                collections.All(c => CollectionGroupAuthorizationRules.CanModifyGroupAccess(c, organization, collectionAccessContext)),
             not null when requirement == CollectionGroupOperations.Update =>
-                collections.All(c => CollectionGroupAuthorizationRules.CanModifyGroupAccess(c, organization, authorizationContext)),
+                collections.All(c => CollectionGroupAuthorizationRules.CanModifyGroupAccess(c, organization, collectionAccessContext)),
             not null when requirement == CollectionGroupOperations.Delete =>
-                collections.All(c => CollectionGroupAuthorizationRules.CanModifyGroupAccess(c, organization, authorizationContext)),
+                collections.All(c => CollectionGroupAuthorizationRules.CanModifyGroupAccess(c, organization, collectionAccessContext)),
             null => throw new UnreachableException(),
             _ => false
         };
@@ -78,9 +81,9 @@ public class CollectionGroupAuthorizationHandler
         }
     }
 
-    private Task<CollectionAccessAuthorizationContext> BuildContextAsync(
+    private Task<CollectionAccessContext> BuildCollectionAccessContextAsync(
         Guid organizationId,
         CurrentContextOrganization? organization) =>
-        CollectionAccessContextFactory.BuildAsync(
+        _collectionAccessContextService.GetOrBuildAsync(
             organizationId, organization, _currentContext, _collectionRepository, _applicationCacheService);
 }

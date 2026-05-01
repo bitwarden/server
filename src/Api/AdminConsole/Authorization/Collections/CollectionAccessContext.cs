@@ -3,7 +3,7 @@
 /// <summary>
 /// Caller and organization data fetched once per request and shared across collection authorization checks.
 /// </summary>
-public readonly record struct CollectionAccessAuthorizationContext(
+public readonly record struct CollectionAccessContext(
     bool AllowAdminAccessToAllCollectionItems,
     bool CallerIsProviderUser,
     HashSet<Guid> CallerManagedCollectionIds,

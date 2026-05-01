@@ -6,11 +6,29 @@ using Bit.Core.Services;
 namespace Bit.Api.AdminConsole.Authorization.Collections;
 
 /// <summary>
-/// Builds the shared <see cref="CollectionAccessAuthorizationContext"/> for collection access handlers.
+/// Builds and caches the <see cref="CollectionAccessContext"/> for use across collection authorization handlers.
 /// </summary>
-internal static class CollectionAccessContextFactory
+public sealed class CollectionAccessContextService
 {
-    public static async Task<CollectionAccessAuthorizationContext> BuildAsync(
+    private readonly Dictionary<Guid, CollectionAccessContext> _cache = [];
+
+    public async Task<CollectionAccessContext> GetOrBuildAsync(
+        Guid organizationId,
+        CurrentContextOrganization? organization,
+        ICurrentContext currentContext,
+        ICollectionRepository collectionRepository,
+        IApplicationCacheService applicationCacheService)
+    {
+        if (!_cache.TryGetValue(organizationId, out var context))
+        {
+            context = await BuildAsync(organizationId, organization, currentContext, collectionRepository, applicationCacheService);
+            _cache[organizationId] = context;
+        }
+
+        return context;
+    }
+
+    private static async Task<CollectionAccessContext> BuildAsync(
         Guid organizationId,
         CurrentContextOrganization? organization,
         ICurrentContext currentContext,
@@ -48,7 +66,7 @@ internal static class CollectionAccessContextFactory
             orphanedCollectionIds = [];
         }
 
-        return new CollectionAccessAuthorizationContext(
+        return new CollectionAccessContext(
             AllowAdminAccessToAllCollectionItems: allowAdminAccess,
             CallerIsProviderUser: isProviderUser,
             CallerManagedCollectionIds: managedCollectionIds,
