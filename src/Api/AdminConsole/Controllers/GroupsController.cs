@@ -363,20 +363,15 @@ public class GroupsController : Controller
             await _authorizationService.AuthorizeOrThrowAsync(User, updateResource, CollectionGroupOperations.Update);
         }
 
-        // Non-fatal: if the caller cannot delete a collection, preserve it from current access.
-        // This handles the case where the client omits a collection it cannot see — that collection
-        // should not be removed just because the client didn't include it.
+        // TODO: remove this preservation glue once clients send remove-list deltas instead of the full collection set.
         var preservedFromDelete = new HashSet<Guid>();
         var deleteCollections = allCollections.Where(c => deleteIds.Contains(c.Id)).ToList();
-        if (deleteCollections.Count > 0)
+        foreach (var collection in deleteCollections)
         {
-            var deleteResource = new CollectionGroupAccessResource(deleteCollections);
+            var deleteResource = new CollectionGroupAccessResource([collection]);
             if (!(await _authorizationService.AuthorizeAsync(User, deleteResource, CollectionGroupOperations.Delete)).Succeeded)
             {
-                foreach (var c in deleteCollections)
-                {
-                    preservedFromDelete.Add(c.Id);
-                }
+                preservedFromDelete.Add(collection.Id);
             }
         }
 

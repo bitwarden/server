@@ -442,16 +442,17 @@ public class GroupsControllerPutTests
         GroupRequestModel groupRequestModel, OrganizationUser savingUser,
         SutProvider<GroupsController> sutProvider)
     {
+        var deletableId = CoreHelpers.GenerateComb();
         var preservedId = CoreHelpers.GenerateComb();
         var currentAccess = groupRequestModel.Collections
             .Select(c => c.ToSelectionReadOnly())
+            .Append(new CollectionAccessSelection { Id = deletableId })
             .Append(new CollectionAccessSelection { Id = preservedId })
             .ToList();
         Put_Setup(sutProvider, organization, true, group, savingUser, currentAccess, []);
         ArrangeFeatureFlag(sutProvider);
         ArrangeGroupMembershipAuthorizationSuccess(sutProvider);
 
-        // Create/Update succeed; Delete is denied — collection should be preserved
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionGroupAccessResource>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
@@ -459,11 +460,17 @@ public class GroupsControllerPutTests
             .Returns(AuthorizationResult.Success());
 
         sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionGroupAccessResource>(),
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Is<CollectionGroupAccessResource>(r => r.Collections.Any(c => c.Id == deletableId)),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Delete)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Is<CollectionGroupAccessResource>(r => r.Collections.Any(c => c.Id == preservedId)),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Delete)))
             .Returns(AuthorizationResult.Failed());
 
-        // Should NOT throw — the denied delete is gracefully preserved
         var response = await sutProvider.Sut.Put(organization.Id, group.Id, groupRequestModel);
 
         await sutProvider.GetDependency<IUpdateGroupCommand>()
@@ -471,7 +478,8 @@ public class GroupsControllerPutTests
             .UpdateGroupAsync(
                 Arg.Any<Group>(), organization,
                 Arg.Is<List<CollectionAccessSelection>>(cols =>
-                    cols.Any(c => c.Id == preservedId)),
+                    cols.Any(c => c.Id == preservedId) &&
+                    !cols.Any(c => c.Id == deletableId)),
                 groupRequestModel.Users);
     }
 

@@ -871,8 +871,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     {
         var userId = _userService.GetProperUserId(User).Value;
 
-        // Glue: the legacy API sends the caller's full group list, including their own user. We silently
-        // drop the caller's own group changes here. Remove once clients send a delta (add/remove only).
+        // TODO: remove once clients send group deltas (add/remove only) instead of the caller's full group list.
         var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
         var editingSelf = userId == organizationUser.UserId;
         var groupsToSave = editingSelf && !organizationAbility.AllowAdminAccessToAllCollectionItems
@@ -919,20 +918,15 @@ public class OrganizationUsersController : BaseAdminConsoleController
             await _authorizationService.AuthorizeOrThrowAsync(User, resource, CollectionUserOperations.Update);
         }
 
-        // Non-fatal: if the caller cannot delete a collection, preserve it from current access.
-        // This handles the case where the client omits a collection it cannot see — that collection
-        // should not be removed just because the client didn't include it.
+        // TODO: remove this preservation glue once clients send remove-list deltas instead of the full collection set.
         var preservedFromDelete = new HashSet<Guid>();
         var deleteCollections = allCollections.Where(c => deleteIds.Contains(c.Id)).ToList();
-        if (deleteCollections.Count > 0)
+        foreach (var collection in deleteCollections)
         {
-            var resource = new CollectionUserAccessResource(deleteCollections, targetOrganizationUserId);
+            var resource = new CollectionUserAccessResource([collection], targetOrganizationUserId);
             if (!(await _authorizationService.AuthorizeAsync(User, resource, CollectionUserOperations.Delete)).Succeeded)
             {
-                foreach (var c in deleteCollections)
-                {
-                    preservedFromDelete.Add(c.Id);
-                }
+                preservedFromDelete.Add(collection.Id);
             }
         }
 

@@ -465,9 +465,11 @@ public class OrganizationUserControllerPutTests
         OrganizationUser organizationUser, OrganizationAbility organizationAbility,
         SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
     {
+        var deletableId = CoreHelpers.GenerateComb();
         var preservedId = CoreHelpers.GenerateComb();
         var currentAccess = model.Collections
             .Select(c => c.ToSelectionReadOnly())
+            .Append(new CollectionAccessSelection { Id = deletableId })
             .Append(new CollectionAccessSelection { Id = preservedId })
             .ToList();
         Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, currentCollectionAccess: currentAccess);
@@ -482,16 +484,24 @@ public class OrganizationUserControllerPutTests
             .Returns(AuthorizationResult.Success());
 
         sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionUserAccessResource>(),
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Is<CollectionUserAccessResource>(r => r.Collections.Any(c => c.Id == deletableId)),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Delete)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Is<CollectionUserAccessResource>(r => r.Collections.Any(c => c.Id == preservedId)),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Delete)))
             .Returns(AuthorizationResult.Failed());
 
-        // Should NOT throw — delete denial is non-fatal; the collection is preserved
         await sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model);
 
         await sutProvider.GetDependency<IUpdateOrganizationUserCommand>().Received(1).UpdateUserAsync(
             Arg.Any<OrganizationUser>(), Arg.Any<OrganizationUserType>(), savingUserId,
-            Arg.Is<List<CollectionAccessSelection>>(cols => cols.Any(c => c.Id == preservedId)),
+            Arg.Is<List<CollectionAccessSelection>>(cols =>
+                cols.Any(c => c.Id == preservedId) &&
+                !cols.Any(c => c.Id == deletableId)),
             Arg.Any<IEnumerable<Guid>>());
     }
 
