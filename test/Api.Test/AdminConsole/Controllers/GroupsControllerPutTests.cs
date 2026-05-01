@@ -5,6 +5,7 @@ using Bit.Api.Models.Request;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
@@ -299,6 +300,16 @@ public class GroupsControllerPutTests
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>())
             .Returns(AuthorizationResult.Success());
 
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionGroupAccessResource>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>())
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<GroupMembershipUpdateResource>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>())
+            .Returns(AuthorizationResult.Success());
+
         var response = await sutProvider.Sut.Put(organization.Id, group.Id, groupRequestModel);
 
         await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(
@@ -313,20 +324,13 @@ public class GroupsControllerPutTests
         SutProvider<GroupsController> sutProvider)
     {
         Put_Setup(sutProvider, organization, true, group, savingUser, [], []);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
-            .Returns(true);
+        ArrangeFeatureFlag(sutProvider);
+        ArrangeGroupMembershipAuthorizationSuccess(sutProvider);
 
         // All collections are new -> Create operations
         sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ICollection<Collection>>(),
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionGroupAccessResource>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Create)))
-            .Returns(AuthorizationResult.Success());
-
-        sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Collection>(),
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Update)))
             .Returns(AuthorizationResult.Success());
 
         var response = await sutProvider.Sut.Put(organization.Id, group.Id, groupRequestModel);
@@ -344,18 +348,11 @@ public class GroupsControllerPutTests
     {
         var currentAccess = groupRequestModel.Collections.Select(c => c.ToSelectionReadOnly()).ToList();
         Put_Setup(sutProvider, organization, true, group, savingUser, currentAccess, []);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
-            .Returns(true);
+        ArrangeFeatureFlag(sutProvider);
+        ArrangeGroupMembershipAuthorizationSuccess(sutProvider);
 
         sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ICollection<Collection>>(),
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Update)))
-            .Returns(AuthorizationResult.Success());
-
-        sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Collection>(),
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionGroupAccessResource>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Update)))
             .Returns(AuthorizationResult.Success());
 
@@ -373,13 +370,11 @@ public class GroupsControllerPutTests
         SutProvider<GroupsController> sutProvider)
     {
         Put_Setup(sutProvider, organization, true, group, savingUser, [], []);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
-            .Returns(true);
+        ArrangeFeatureFlag(sutProvider);
+        ArrangeGroupMembershipAuthorizationSuccess(sutProvider);
 
         sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ICollection<Collection>>(),
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionGroupAccessResource>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Create)))
             .Returns(AuthorizationResult.Failed());
 
@@ -395,13 +390,11 @@ public class GroupsControllerPutTests
     {
         var currentAccess = groupRequestModel.Collections.Select(c => c.ToSelectionReadOnly()).ToList();
         Put_Setup(sutProvider, organization, true, group, savingUser, currentAccess, []);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
-            .Returns(true);
+        ArrangeFeatureFlag(sutProvider);
+        ArrangeGroupMembershipAuthorizationSuccess(sutProvider);
 
         sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ICollection<Collection>>(),
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionGroupAccessResource>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Update)))
             .Returns(AuthorizationResult.Failed());
 
@@ -421,18 +414,11 @@ public class GroupsControllerPutTests
             .Append(new CollectionAccessSelection { Id = removedId })
             .ToList();
         Put_Setup(sutProvider, organization, true, group, savingUser, currentAccess, []);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
-            .Returns(true);
+        ArrangeFeatureFlag(sutProvider);
+        ArrangeGroupMembershipAuthorizationSuccess(sutProvider);
 
         sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ICollection<Collection>>(),
-                Arg.Any<IEnumerable<IAuthorizationRequirement>>())
-            .Returns(AuthorizationResult.Success());
-
-        sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Collection>(),
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionGroupAccessResource>(),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>())
             .Returns(AuthorizationResult.Success());
 
@@ -445,35 +431,114 @@ public class GroupsControllerPutTests
                 groupRequestModel.Users);
     }
 
+    /// <summary>
+    /// Replaces the old ThrowsIfCannotDeleteCollections test which encoded the buggy behavior.
+    /// When delete authorization fails, the collection must be preserved (not cause an exception).
+    /// </summary>
     [Theory]
     [BitAutoData]
-    public async Task Put_WithFeatureFlagEnabled_ThrowsIfCannotDeleteCollections(Organization organization, Group group,
+    public async Task Put_WithFeatureFlagEnabled_PreservesCollectionWhenDeleteNotAuthorized(
+        Organization organization, Group group,
         GroupRequestModel groupRequestModel, OrganizationUser savingUser,
         SutProvider<GroupsController> sutProvider)
     {
-        var removedId = CoreHelpers.GenerateComb();
+        var preservedId = CoreHelpers.GenerateComb();
         var currentAccess = groupRequestModel.Collections
             .Select(c => c.ToSelectionReadOnly())
-            .Append(new CollectionAccessSelection { Id = removedId })
+            .Append(new CollectionAccessSelection { Id = preservedId })
             .ToList();
         Put_Setup(sutProvider, organization, true, group, savingUser, currentAccess, []);
+        ArrangeFeatureFlag(sutProvider);
+        ArrangeGroupMembershipAuthorizationSuccess(sutProvider);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
-            .Returns(true);
-
+        // Create/Update succeed; Delete is denied — collection should be preserved
         sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ICollection<Collection>>(),
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Update)))
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionGroupAccessResource>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
+                    reqs.Contains(CollectionGroupOperations.Create) || reqs.Contains(CollectionGroupOperations.Update)))
             .Returns(AuthorizationResult.Success());
 
         sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ICollection<Collection>>(),
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionGroupAccessResource>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Delete)))
             .Returns(AuthorizationResult.Failed());
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.Put(organization.Id, group.Id, groupRequestModel));
+        // Should NOT throw — the denied delete is gracefully preserved
+        var response = await sutProvider.Sut.Put(organization.Id, group.Id, groupRequestModel);
+
+        await sutProvider.GetDependency<IUpdateGroupCommand>()
+            .Received(1)
+            .UpdateGroupAsync(
+                Arg.Any<Group>(), organization,
+                Arg.Is<List<CollectionAccessSelection>>(cols =>
+                    cols.Any(c => c.Id == preservedId)),
+                groupRequestModel.Users);
+    }
+
+    /// <summary>
+    /// The reviewer's concrete failure scenario:
+    /// A custom-role user with ManageGroups (but no EditAnyCollection) updates a group.
+    /// The group has Collection A (managed) and Collection B (unmanaged).
+    /// The client sends only Collection A (unaware of B).
+    /// Delete authz for B fails → B should be PRESERVED, update should SUCCEED.
+    /// </summary>
+    [Theory]
+    [BitAutoData]
+    public async Task Put_WithFeatureFlagEnabled_CustomManageGroupsUser_WithUnmanagedCollectionOmitted_Succeeds(
+        Organization organization, Group group,
+        GroupRequestModel groupRequestModel, OrganizationUser savingUser,
+        SutProvider<GroupsController> sutProvider)
+    {
+        var unmanagedCollectionId = CoreHelpers.GenerateComb();
+        // current state: group has the request model's collections + unmanaged collection B
+        var currentAccess = groupRequestModel.Collections
+            .Select(c => c.ToSelectionReadOnly())
+            .Append(new CollectionAccessSelection { Id = unmanagedCollectionId })
+            .ToList();
+
+        // AdminAccess off: caller is a custom ManageGroups user, not admin
+        Put_Setup(sutProvider, organization, false, group, savingUser, currentAccess, []);
+        ArrangeFeatureFlag(sutProvider);
+        ArrangeGroupMembershipAuthorizationSuccess(sutProvider);
+
+        // Update for model collections succeeds (caller manages them)
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionGroupAccessResource>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
+                    reqs.Contains(CollectionGroupOperations.Create) || reqs.Contains(CollectionGroupOperations.Update)))
+            .Returns(AuthorizationResult.Success());
+
+        // Delete for the unmanaged collection fails — caller cannot see/manage it
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionGroupAccessResource>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Delete)))
+            .Returns(AuthorizationResult.Failed());
+
+        // The update should succeed (no exception) and the unmanaged collection should be preserved
+        var response = await sutProvider.Sut.Put(organization.Id, group.Id, groupRequestModel);
+
+        await sutProvider.GetDependency<IUpdateGroupCommand>()
+            .Received(1)
+            .UpdateGroupAsync(
+                Arg.Any<Group>(), organization,
+                Arg.Is<List<CollectionAccessSelection>>(cols =>
+                    cols.Any(c => c.Id == unmanagedCollectionId)),
+                groupRequestModel.Users);
+    }
+
+    private static void ArrangeFeatureFlag(SutProvider<GroupsController> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
+            .Returns(true);
+    }
+
+    private static void ArrangeGroupMembershipAuthorizationSuccess(SutProvider<GroupsController> sutProvider)
+    {
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<GroupMembershipUpdateResource>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(GroupOperations.UpdateMembership)))
+            .Returns(AuthorizationResult.Success());
     }
 
     private void Put_Setup(SutProvider<GroupsController> sutProvider, Organization organization,

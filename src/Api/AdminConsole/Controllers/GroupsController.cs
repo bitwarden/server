@@ -8,6 +8,7 @@ using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core;
+using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
@@ -15,6 +16,7 @@ using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -130,14 +132,18 @@ public class GroupsController : Controller
     [Authorize<ManageGroupsRequirement>]
     public async Task<GroupResponseModel> Post(Guid orgId, [FromBody] GroupRequestModel model)
     {
+        if (_featureService.IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers))
+        {
+            return await Post_vNext(orgId, model);
+        }
+
         // Check the user has permission to grant access to the collections for the new group
         if (model.Collections?.Any() == true)
         {
             var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(a => a.Id));
-            IAuthorizationRequirement requirement = _featureService.IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
-                ? CollectionGroupOperations.Create
-                : BulkCollectionOperations.ModifyGroupAccess;
-            var authorized = (await _authorizationService.AuthorizeAsync(User, collections, requirement)).Succeeded;
+            var authorized =
+                (await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.ModifyGroupAccess))
+                .Succeeded;
             if (!authorized)
             {
                 throw new NotFoundException();
@@ -161,6 +167,11 @@ public class GroupsController : Controller
             throw new NotFoundException();
         }
 
+        if (_featureService.IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers))
+        {
+            return await Put_vNext(orgId, id, group, currentAccess, model);
+        }
+
         // Authorization check:
         // If admins are not allowed access to all collections, you cannot add yourself to a group.
         // No error is thrown for this, we just don't update groups.
@@ -177,13 +188,18 @@ public class GroupsController : Controller
             }
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers))
+        // Authorization check:
+        // You must have authorization to ModifyUserAccess for all collections being saved
+        var postedCollections = await _collectionRepository
+            .GetManyByManyIdsAsync(model.Collections.Select(c => c.Id));
+        foreach (var collection in postedCollections)
         {
-            await PutCollectionAccess_vNext(model, currentAccess);
-        }
-        else
-        {
-            await PutCollectionAccess(model);
+            if (!(await _authorizationService.AuthorizeAsync(User, collection,
+                    BulkCollectionOperations.ModifyGroupAccess))
+                .Succeeded)
+            {
+                throw new NotFoundException();
+            }
         }
 
         // The client only sends collections that the saving user has permissions to edit.
@@ -195,10 +211,8 @@ public class GroupsController : Controller
         var readonlyCollectionIds = new HashSet<Guid>();
         foreach (var collection in currentCollections)
         {
-            IAuthorizationRequirement requirement = _featureService.IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
-                ? CollectionGroupOperations.Update
-                : BulkCollectionOperations.ModifyGroupAccess;
-            if (!(await _authorizationService.AuthorizeAsync(User, collection, requirement)).Succeeded)
+            if (!(await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyGroupAccess))
+                .Succeeded)
             {
                 readonlyCollectionIds.Add(collection.Id);
             }
@@ -293,52 +307,80 @@ public class GroupsController : Controller
         await DeleteUser(orgId, id, orgUserId);
     }
 
-    private async Task PutCollectionAccess_vNext(
-        GroupRequestModel model,
-        ICollection<Core.Models.Data.CollectionAccessSelection> currentAccess)
+    private async Task<GroupResponseModel> Post_vNext(Guid orgId, GroupRequestModel model)
+    {
+        if (model.Collections?.Any() == true)
+        {
+            var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(a => a.Id));
+            await _authorizationService.AuthorizeOrThrowAsync(User, collections, CollectionGroupOperations.Create);
+        }
+
+        var organization = await _organizationRepository.GetByIdAsync(orgId);
+        var group = model.ToGroup(orgId);
+        await _createGroupCommand.CreateGroupAsync(group, organization, model.Collections?.Select(c => c.ToSelectionReadOnly()).ToList(), model.Users);
+
+        return new GroupResponseModel(group);
+    }
+
+    private async Task<GroupResponseModel> Put_vNext(Guid orgId, Guid id, Core.AdminConsole.Entities.Group group,
+        ICollection<Core.Models.Data.CollectionAccessSelection> currentAccess, GroupRequestModel model)
+    {
+        var userId = _userService.GetProperUserId(User).Value;
+        var currentGroupUsers = await _groupRepository.GetManyUserIdsByIdAsync(id);
+        var membershipResource = new GroupMembershipUpdateResource(orgId, userId, model.Users, currentGroupUsers);
+        await _authorizationService.AuthorizeOrThrowAsync(User, membershipResource, GroupOperations.UpdateMembership);
+
+        var collectionsToSave = await AuthorizeAndPrepareCollectionAccessAsync(model, currentAccess, id);
+        var organization = await _organizationRepository.GetByIdAsync(orgId);
+        await _updateGroupCommand.UpdateGroupAsync(model.ToGroup(group), organization, collectionsToSave, model.Users);
+
+        return new GroupResponseModel(group);
+    }
+
+    /// <summary>
+    /// Authorizes the collection access changes and returns the list to persist.
+    /// </summary>
+    private async Task<List<Core.Models.Data.CollectionAccessSelection>> AuthorizeAndPrepareCollectionAccessAsync(
+        GroupRequestModel model, ICollection<Core.Models.Data.CollectionAccessSelection> currentAccess, Guid groupId)
     {
         var (createIds, updateIds, deleteIds) = model.Collections.DiffAccessSelections(currentAccess);
 
         var allCollections = await _collectionRepository.GetManyByManyIdsAsync(
             createIds.Concat(updateIds).Concat(deleteIds));
 
-        await AuthorizeCollectionAccessAsync(
-            allCollections.Where(c => createIds.Contains(c.Id)).ToList(), CollectionGroupOperations.Create);
-        await AuthorizeCollectionAccessAsync(
-            allCollections.Where(c => updateIds.Contains(c.Id)).ToList(), CollectionGroupOperations.Update);
-        await AuthorizeCollectionAccessAsync(
-            allCollections.Where(c => deleteIds.Contains(c.Id)).ToList(), CollectionGroupOperations.Delete);
-    }
-
-    private async Task AuthorizeCollectionAccessAsync(
-        ICollection<Core.Entities.Collection> collections,
-        IAuthorizationRequirement requirement)
-    {
-        if (collections.Count == 0)
+        var createCollections = allCollections.Where(c => createIds.Contains(c.Id)).ToList();
+        if (createCollections.Count > 0)
         {
-            return;
+            var createResource = new CollectionGroupAccessResource(createCollections, groupId);
+            await _authorizationService.AuthorizeOrThrowAsync(User, createResource, CollectionGroupOperations.Create);
         }
 
-        if (!(await _authorizationService.AuthorizeAsync(User, collections, requirement)).Succeeded)
+        var updateCollections = allCollections.Where(c => updateIds.Contains(c.Id)).ToList();
+        if (updateCollections.Count > 0)
         {
-            throw new NotFoundException();
+            var updateResource = new CollectionGroupAccessResource(updateCollections, groupId);
+            await _authorizationService.AuthorizeOrThrowAsync(User, updateResource, CollectionGroupOperations.Update);
         }
-    }
 
-    private async Task PutCollectionAccess(GroupRequestModel model)
-    {
-        // Authorization check:
-        // You must have authorization to ModifyGroupAccess for all collections being saved
-        var postedCollections = await _collectionRepository
-            .GetManyByManyIdsAsync(model.Collections.Select(c => c.Id));
-        foreach (var collection in postedCollections)
+        // Non-fatal: if the caller cannot delete a collection, preserve it from current access.
+        // This handles the case where the client omits a collection it cannot see — that collection
+        // should not be removed just because the client didn't include it.
+        var preservedFromDelete = new HashSet<Guid>();
+        var deleteCollections = allCollections.Where(c => deleteIds.Contains(c.Id)).ToList();
+        if (deleteCollections.Count > 0)
         {
-            if (!(await _authorizationService.AuthorizeAsync(User, collection,
-                    BulkCollectionOperations.ModifyGroupAccess))
-                .Succeeded)
+            var deleteResource = new CollectionGroupAccessResource(deleteCollections, groupId);
+            if (!(await _authorizationService.AuthorizeAsync(User, deleteResource, CollectionGroupOperations.Delete)).Succeeded)
             {
-                throw new NotFoundException();
+                foreach (var c in deleteCollections)
+                {
+                    preservedFromDelete.Add(c.Id);
+                }
             }
         }
+
+        return model.Collections.Select(c => c.ToSelectionReadOnly())
+            .Concat(currentAccess.Where(ca => preservedFromDelete.Contains(ca.Id)))
+            .ToList();
     }
 }
