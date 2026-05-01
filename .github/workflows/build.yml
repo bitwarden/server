@@ -214,7 +214,7 @@ jobs:
           if [[ "$IMAGE_TAG" == "main" ]]; then
             IMAGE_TAG=dev
           fi
-          
+
           IMAGE_TAG=${IMAGE_TAG:0:128} # Limit image tags to 128 chars
           echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
           echo "### :mega: Docker Image Tag: $IMAGE_TAG" >> "$GITHUB_STEP_SUMMARY"
@@ -548,8 +548,8 @@ jobs:
         id: get-kv-secrets
         uses: bitwarden/gh-actions/get-keyvault-secrets@main
         with:
-          keyvault: gh-org-bitwarden
-          secrets: "BW-GHAPP-ID,BW-GHAPP-KEY"
+          keyvault: gh-server
+          secrets: "DEPLOY-TRIGGER-APP-ID,DEPLOY-TRIGGER-APP-TOKEN"
 
       - name: Log out from Azure
         uses: bitwarden/gh-actions/azure-logout@main
@@ -558,25 +558,24 @@ jobs:
         uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3.0.0
         id: app-token
         with:
-          app-id: ${{ steps.get-kv-secrets.outputs.BW-GHAPP-ID }}
-          private-key: ${{ steps.get-kv-secrets.outputs.BW-GHAPP-KEY }}
+          app-id: ${{ steps.get-kv-secrets.outputs.DEPLOY-TRIGGER-APP-ID }}
+          private-key: ${{ steps.get-kv-secrets.outputs.DEPLOY-TRIGGER-APP-TOKEN }}
           owner: ${{ github.repository_owner }}
           repositories: devops
 
-      - name: Trigger K8s deploy
+      - name: Create server USDEV deployment in deploy repo
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           github-token: ${{ steps.app-token.outputs.token }}
           script: |
-            await github.rest.actions.createWorkflowDispatch({
+            await github.rest.repos.createDeployment({
               owner: 'bitwarden',
               repo: 'devops',
-              workflow_id: 'deploy-k8s.yml',
               ref: 'main',
-              inputs: {
-                environment: 'US-DEV Cloud',
-                tag: 'main'
-              }
+              environment: 'trigger-server-dev',
+              auto_merge: false,
+              required_contexts: [],
+              description: 'Triggered by server build on main'
             })
 
   setup-ephemeral-environment:

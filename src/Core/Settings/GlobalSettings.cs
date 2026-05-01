@@ -269,7 +269,7 @@ public class GlobalSettings : IGlobalSettings
                     _readOnlyConnectionString = null;
                 }
 
-                _connectionString = value.Trim('"');
+                _connectionString = value?.Trim('"');
             }
         }
 
@@ -277,13 +277,13 @@ public class GlobalSettings : IGlobalSettings
         {
             get => string.IsNullOrWhiteSpace(_readOnlyConnectionString) ?
                 _connectionString : _readOnlyConnectionString;
-            set => _readOnlyConnectionString = value.Trim('"');
+            set => _readOnlyConnectionString = value?.Trim('"');
         }
 
         public string JobSchedulerConnectionString
         {
             get => _jobSchedulerConnectionString;
-            set => _jobSchedulerConnectionString = value.Trim('"');
+            set => _jobSchedulerConnectionString = value?.Trim('"');
         }
     }
 
@@ -335,19 +335,19 @@ public class GlobalSettings : IGlobalSettings
             public string ConnectionString
             {
                 get => _connectionString;
-                set => _connectionString = value.Trim('"');
+                set => _connectionString = value?.Trim('"');
             }
 
             public string EventTopicName
             {
                 get => _eventTopicName;
-                set => _eventTopicName = value.Trim('"');
+                set => _eventTopicName = value?.Trim('"');
             }
 
             public string IntegrationTopicName
             {
                 get => _integrationTopicName;
-                set => _integrationTopicName = value.Trim('"');
+                set => _integrationTopicName = value?.Trim('"');
             }
         }
 
@@ -382,27 +382,27 @@ public class GlobalSettings : IGlobalSettings
             public string HostName
             {
                 get => _hostName;
-                set => _hostName = value.Trim('"');
+                set => _hostName = value?.Trim('"');
             }
             public string Username
             {
                 get => _username;
-                set => _username = value.Trim('"');
+                set => _username = value?.Trim('"');
             }
             public string Password
             {
                 get => _password;
-                set => _password = value.Trim('"');
+                set => _password = value?.Trim('"');
             }
             public string EventExchangeName
             {
                 get => _eventExchangeName;
-                set => _eventExchangeName = value.Trim('"');
+                set => _eventExchangeName = value?.Trim('"');
             }
             public string IntegrationExchangeName
             {
                 get => _integrationExchangeName;
-                set => _integrationExchangeName = value.Trim('"');
+                set => _integrationExchangeName = value?.Trim('"');
             }
         }
     }
@@ -432,7 +432,7 @@ public class GlobalSettings : IGlobalSettings
         public string ConnectionString
         {
             get => _connectionString;
-            set => _connectionString = value.Trim('"');
+            set => _connectionString = value?.Trim('"');
         }
     }
 
@@ -455,7 +455,7 @@ public class GlobalSettings : IGlobalSettings
         public string ConnectionString
         {
             get => _connectionString;
-            set => _connectionString = value.Trim('"');
+            set => _connectionString = value?.Trim('"');
         }
 
         public string BaseDirectory
