@@ -2,7 +2,6 @@
 using Bit.Core.Billing.Enums;
 using Bit.Core.Services;
 using Bit.Infrastructure.EntityFramework.Repositories;
-using Bit.IntegrationTestCommon;
 using Bit.Scim.IntegrationTest.Factories;
 using Bit.Scim.Models;
 using Bit.Scim.Utilities;
@@ -27,7 +26,7 @@ public class UsersControllerConcurrencyTests
 
         var factory = new ScimApplicationFactory
         {
-            TestDatabase = new SqlServerTestDatabase()
+            TestDatabase = new EnvSqlServerTestDatabase()
         };
 
         factory.SubstituteService((IFeatureService f) => f.IsEnabled(FeatureFlagKeys.ScimInviteUserOptimization)
