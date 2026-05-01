@@ -558,6 +558,46 @@ public class OrganizationUserControllerPutTests
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>());
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task Put_FeatureFlagEnabled_NoAdminAccess_SelfEdit_SilentlyDropsGroups(
+        OrganizationUserUpdateRequestModel model,
+        OrganizationUser organizationUser, OrganizationAbility organizationAbility,
+        SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
+    {
+        // Self-edit with admin access disabled
+        organizationUser.UserId = savingUserId;
+        organizationAbility.AllowAdminAccessToAllCollectionItems = false;
+
+        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, currentCollectionAccess: []);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
+            .Returns(true);
+
+        // Not changing any collection access
+        model.Collections = new List<SelectionReadOnlyRequestModel>();
+
+        var orgUserId = organizationUser.Id;
+        var existingUserType = organizationUser.Type;
+
+        await sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model);
+
+        // Groups are silently dropped (null) because the client sent the full set for a self-edit
+        // without admin access. This is adapter/glue until the client sends a delta.
+        await sutProvider.GetDependency<IUpdateOrganizationUserCommand>().Received(1).UpdateUserAsync(
+            Arg.Any<OrganizationUser>(), existingUserType, savingUserId,
+            Arg.Any<List<CollectionAccessSelection>>(),
+            null);
+
+        // No group membership authorization check should run when groups are stripped
+        await sutProvider.GetDependency<IAuthorizationService>().DidNotReceive()
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<OrganizationUserGroupAssignmentResource>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>());
+    }
+
     private void Put_Setup(SutProvider<OrganizationUsersController> sutProvider,
         OrganizationAbility organizationAbility, OrganizationUser organizationUser, Guid savingUserId,
         List<CollectionAccessSelection> currentCollectionAccess)
