@@ -433,8 +433,11 @@ public class SubscriptionUpdatedHandlerTests
             }
         };
 
+        var user = new User { Id = userId };
+
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
+        _userRepository.GetByIdAsync(userId).Returns(user);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -521,12 +524,11 @@ public class SubscriptionUpdatedHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_UnpaidProviderSubscription_WhenProviderNotFound_StillSetsCancellation()
+    public async Task HandleAsync_WhenProviderNotFound_SkipsHandler()
     {
         // Arrange
         var providerId = Guid.NewGuid();
         var subscriptionId = "sub_123";
-        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
 
         var previousSubscription = new Subscription
         {
@@ -542,7 +544,7 @@ public class SubscriptionUpdatedHandlerTests
             {
                 Data =
                 [
-                    new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd }
+                    new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(30) }
                 ]
             },
             Metadata = new Dictionary<string, string> { { "providerId", providerId.ToString() } },
@@ -567,16 +569,10 @@ public class SubscriptionUpdatedHandlerTests
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert - Provider not updated (since not found), but cancellation is still set
+        // Assert — guard exits early, no side effects
         await _providerService.DidNotReceive().UpdateAsync(Arg.Any<Provider>());
-        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
-            subscriptionId,
-            Arg.Is<SubscriptionUpdateOptions>(options =>
-                options.CancelAt.HasValue &&
-                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
-                options.ProrationBehavior == ProrationBehavior.None &&
-                options.CancellationDetails != null &&
-                options.CancellationDetails.Comment != null));
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Fact]
@@ -692,6 +688,8 @@ public class SubscriptionUpdatedHandlerTests
 
         _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
             .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
+
+        _userRepository.GetByIdAsync(userId).Returns(new User { Id = userId });
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -879,6 +877,9 @@ public class SubscriptionUpdatedHandlerTests
 
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
+
+        _organizationRepository.GetByIdAsync(organizationId).Returns(new Organization { Id = organizationId, PlanType = PlanType.FamiliesAnnually });
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(new FamiliesPlan());
 
         _stripeEventUtilityService.IsSponsoredSubscription(subscription)
             .Returns(true);
@@ -1114,7 +1115,7 @@ public class SubscriptionUpdatedHandlerTests
         await _stripeEventService
             .Received(1)
             .GetSubscription(parsedEvent, true, Arg.Any<List<string>>());
-        await _providerRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
+        await _providerRepository.Received(1).GetByIdAsync(providerId);
         await _providerService
             .DidNotReceive()
             .UpdateAsync(Arg.Any<Provider>());
@@ -1146,7 +1147,7 @@ public class SubscriptionUpdatedHandlerTests
         await _stripeEventService
             .Received(1)
             .GetSubscription(parsedEvent, true, Arg.Any<List<string>>());
-        await _providerRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
+        await _providerRepository.Received(1).GetByIdAsync(providerId);
         await _providerService
             .DidNotReceive()
             .UpdateAsync(Arg.Any<Provider>());
@@ -1178,7 +1179,7 @@ public class SubscriptionUpdatedHandlerTests
         await _stripeEventService
             .Received(1)
             .GetSubscription(parsedEvent, true, Arg.Any<List<string>>());
-        await _providerRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
+        await _providerRepository.Received(1).GetByIdAsync(providerId);
         await _providerService
             .DidNotReceive()
             .UpdateAsync(Arg.Any<Provider>());
@@ -1210,7 +1211,7 @@ public class SubscriptionUpdatedHandlerTests
         await _stripeEventService
             .Received(1)
             .GetSubscription(parsedEvent, true, Arg.Any<List<string>>());
-        await _providerRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
+        await _providerRepository.Received(1).GetByIdAsync(providerId);
         await _providerService
             .DidNotReceive()
             .UpdateAsync(Arg.Any<Provider>());
@@ -1274,7 +1275,7 @@ public class SubscriptionUpdatedHandlerTests
         await _stripeEventService
             .Received(1)
             .GetSubscription(parsedEvent, true, Arg.Any<List<string>>());
-        await _providerRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
+        await _providerRepository.Received(1).GetByIdAsync(providerId);
         await _providerService
             .DidNotReceive()
             .UpdateAsync(Arg.Any<Provider>());
@@ -1356,6 +1357,8 @@ public class SubscriptionUpdatedHandlerTests
 
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
+
+        _userRepository.GetByIdAsync(userId).Returns(new User { Id = userId });
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -1578,6 +1581,9 @@ public class SubscriptionUpdatedHandlerTests
             .Returns(subscription);
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
             .Returns(false);
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.FamiliesAnnually };
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(new FamiliesPlan());
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -1626,6 +1632,9 @@ public class SubscriptionUpdatedHandlerTests
             .Returns(subscription);
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
             .Returns(true);
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.FamiliesAnnually };
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(new FamiliesPlan());
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -1688,6 +1697,7 @@ public class SubscriptionUpdatedHandlerTests
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025Plan);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(new Organization { Id = organizationId, PlanType = PlanType.FamiliesAnnually });
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -1745,6 +1755,7 @@ public class SubscriptionUpdatedHandlerTests
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
             .Returns(true);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(new Organization { Id = organizationId, PlanType = PlanType.FamiliesAnnually });
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -1787,6 +1798,7 @@ public class SubscriptionUpdatedHandlerTests
             .Returns(subscription);
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
             .Returns(true);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(new Organization { Id = organizationId });
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -1796,7 +1808,7 @@ public class SubscriptionUpdatedHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_ScheduleTriggered_OrganizationNotFound_DoesNotThrow()
+    public async Task HandleAsync_ScheduleTriggeredMigration_WhenOrganizationNotFound_SkipsHandler()
     {
         // Arrange
         var organizationId = Guid.NewGuid();
@@ -1853,7 +1865,7 @@ public class SubscriptionUpdatedHandlerTests
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert — logs warning, does not throw, does not update
+        // Assert — guard exits early — logs warning, does not throw, does not update
         await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
     }
 
@@ -2218,5 +2230,99 @@ public class SubscriptionUpdatedHandlerTests
 
         // Assert — the flag clear must not have been persisted
         await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenUserNotFound_SkipsHandler()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var subscriptionId = "sub_123";
+
+        var previousSubscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Active
+        };
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Unpaid,
+            Metadata = new Dictionary<string, string> { { "userId", userId.ToString() } },
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(30) }]
+            },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _userRepository.GetByIdAsync(userId).ReturnsNull();
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — guard exits early, no side effects
+        await _userService.DidNotReceive().DisablePremiumAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>());
+        await _userService.DidNotReceive().UpdatePremiumExpirationAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>());
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenOrganizationNotFound_SkipsHandler()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var subscriptionId = "sub_123";
+
+        var previousSubscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Active
+        };
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Unpaid,
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(30) }]
+            },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).ReturnsNull();
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — guard exits early, no side effects
+        await _organizationDisableCommand.DidNotReceive().DisableAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>());
+        await _organizationService.DidNotReceive().UpdateExpirationDateAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>());
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 }
