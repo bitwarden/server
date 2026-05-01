@@ -89,6 +89,7 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
             license.UseDisableSmAdsForUsers = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseDisableSmAdsForUsers);
             license.UsePhishingBlocker = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UsePhishingBlocker);
             license.UseMyItems = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseMyItems);
+            license.UseInviteLinks = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseInviteLinks);
             license.MaxStorageGb = claimsPrincipal.GetValue<short?>(OrganizationLicenseConstants.MaxStorageGb);
             license.InstallationId = claimsPrincipal.GetValue<Guid>(OrganizationLicenseConstants.InstallationId);
             license.LicenseType = claimsPrincipal.GetValue<LicenseType>(OrganizationLicenseConstants.LicenseType);

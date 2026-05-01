@@ -261,7 +261,12 @@ public class SubscriberService(
         SubscriptionCancellationDetailsOptions? cancellationDetails,
         Dictionary<string, string>? cancellingUserMetadata)
     {
-        var updateOptions = new SubscriptionUpdateOptions();
+        var updateOptions = new SubscriptionUpdateOptions
+        {
+            CancelAtPeriodEnd = true,
+            CancellationDetails = cancellationDetails,
+            Metadata = cancellingUserMetadata
+        };
 
         if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
         {
@@ -269,59 +274,20 @@ public class SubscriberService(
 
             if (activeSchedule is { Phases.Count: > 0 })
             {
-                if (activeSchedule.Phases.Count > 2)
-                {
-                    logger.LogWarning(
-                        "{Service}: Subscription schedule ({ScheduleId}) has {PhaseCount} phases (expected 1-2), updating to only one phase for cancellation",
-                        GetType().Name, activeSchedule.Id, activeSchedule.Phases.Count);
-                }
-
                 logger.LogInformation(
-                    "{Service}: Active subscription schedule ({ScheduleId}) found for subscription ({SubscriptionId}), updating schedule phases",
+                    "{Service}: Active subscription schedule ({ScheduleId}) found for subscription ({SubscriptionId}), releasing schedule before cancellation",
                     GetType().Name, activeSchedule.Id, subscription.Id);
 
-                var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
-                var currentPhase = activeSchedule.Phases.FirstOrDefault(p => p.EndDate > now)
-                    ?? activeSchedule.Phases[^1];
+                await stripeAdapter.ReleaseSubscriptionScheduleAsync(activeSchedule.Id);
 
-                await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
-                    new SubscriptionScheduleUpdateOptions
-                    {
-                        EndBehavior = SubscriptionScheduleEndBehavior.Cancel,
-                        Phases =
-                        [
-                            new SubscriptionSchedulePhaseOptions
-                            {
-                                StartDate = currentPhase.StartDate,
-                                EndDate = currentPhase.EndDate,
-                                Items = currentPhase.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
-                                {
-                                    Price = i.PriceId,
-                                    Quantity = i.Quantity
-                                }).ToList(),
-                                Discounts = currentPhase.StartDate <= now
-                                    ? []
-                                    : currentPhase.Discounts?.Select(d =>
-                                        new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),
-                                ProrationBehavior = ProrationBehavior.None,
-                                Metadata = cancellingUserMetadata
-                            }
-                        ]
-                    });
-                return;
+                updateOptions.Metadata = new Dictionary<string, string>(cancellingUserMetadata ?? [])
+                {
+                    [MetadataKeys.CancelledDuringDeferredPriceIncrease] = "true"
+                };
             }
         }
 
-        updateOptions.CancelAtPeriodEnd = true;
-
-        if (cancellationDetails != null)
-        {
-            updateOptions.CancellationDetails = cancellationDetails;
-            updateOptions.Metadata = cancellingUserMetadata;
-        }
-
         await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, updateOptions);
-
     }
 
     private async Task<SubscriptionSchedule?> GetActiveScheduleAsync(Subscription subscription)
