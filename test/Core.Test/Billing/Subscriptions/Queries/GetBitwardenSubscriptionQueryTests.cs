@@ -415,8 +415,8 @@ public class GetBitwardenSubscriptionQueryTests
         var result = await _query.Run(user);
 
         Assert.NotNull(result);
-        Assert.NotNull(result.Cart.PasswordManager.Seats.Discount);
-        Assert.Equal(BitwardenDiscountType.PercentOff, result.Cart.PasswordManager.Seats.Discount.Type);
+        var seatDiscount = Assert.Single(result.Cart.PasswordManager.Seats.Discounts);
+        Assert.Equal(BitwardenDiscountType.PercentOff, seatDiscount.Type);
     }
 
     [Fact]
@@ -633,7 +633,7 @@ public class GetBitwardenSubscriptionQueryTests
         var cartDiscount = Assert.Single(result.Cart.Discounts);
         Assert.Equal(BitwardenDiscountType.PercentOff, cartDiscount.Type);
         Assert.Equal(30, cartDiscount.Value);
-        Assert.Null(result.Cart.PasswordManager.Seats.Discount);
+        Assert.Empty(result.Cart.PasswordManager.Seats.Discounts);
     }
 
     [Fact]
@@ -683,7 +683,7 @@ public class GetBitwardenSubscriptionQueryTests
 
         Assert.NotNull(result);
         Assert.Empty(result.Cart.Discounts);
-        Assert.Null(result.Cart.PasswordManager.Seats.Discount);
+        Assert.Empty(result.Cart.PasswordManager.Seats.Discounts);
     }
 
     [Fact]
@@ -730,7 +730,7 @@ public class GetBitwardenSubscriptionQueryTests
         var cartDiscount = Assert.Single(result.Cart.Discounts);
         Assert.Equal(BitwardenDiscountType.AmountOff, cartDiscount.Type);
         Assert.Equal(500, cartDiscount.Value);
-        Assert.Null(result.Cart.PasswordManager.Seats.Discount);
+        Assert.Empty(result.Cart.PasswordManager.Seats.Discounts);
     }
 
     [Fact]
@@ -757,9 +757,9 @@ public class GetBitwardenSubscriptionQueryTests
 
         Assert.NotNull(result);
         Assert.Empty(result.Cart.Discounts);
-        Assert.NotNull(result.Cart.PasswordManager.Seats.Discount);
-        Assert.Equal(BitwardenDiscountType.PercentOff, result.Cart.PasswordManager.Seats.Discount.Type);
-        Assert.Equal(25, result.Cart.PasswordManager.Seats.Discount.Value);
+        var seatDiscount = Assert.Single(result.Cart.PasswordManager.Seats.Discounts);
+        Assert.Equal(BitwardenDiscountType.PercentOff, seatDiscount.Type);
+        Assert.Equal(25, seatDiscount.Value);
     }
 
     [Fact]
@@ -783,7 +783,7 @@ public class GetBitwardenSubscriptionQueryTests
 
         Assert.NotNull(result);
         Assert.Empty(result.Cart.Discounts);
-        Assert.Null(result.Cart.PasswordManager.Seats.Discount);
+        Assert.Empty(result.Cart.PasswordManager.Seats.Discounts);
     }
 
     [Fact]
@@ -807,7 +807,7 @@ public class GetBitwardenSubscriptionQueryTests
 
         Assert.NotNull(result);
         Assert.Empty(result.Cart.Discounts);
-        Assert.Null(result.Cart.PasswordManager.Seats.Discount);
+        Assert.Empty(result.Cart.PasswordManager.Seats.Discounts);
     }
 
     [Fact]
@@ -946,7 +946,72 @@ public class GetBitwardenSubscriptionQueryTests
 
         Assert.NotNull(result);
         Assert.Empty(result.Cart.Discounts);
-        Assert.Null(result.Cart.PasswordManager.Seats.Discount);
+        Assert.Empty(result.Cart.PasswordManager.Seats.Discounts);
+    }
+
+    [Fact]
+    public async Task Run_WithSingleProductLevelDiscount_SetsDiscountsListOnSeats()
+    {
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active);
+        var productDiscount = CreateDiscount(discountType: "product", productId: "prod_premium_seat");
+        subscription.Discounts = [productDiscount];
+        var premiumPlans = CreatePremiumPlans();
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(CreateInvoicePreview());
+
+        var result = await _query.Run(user);
+
+        Assert.NotNull(result);
+        var seatDiscount = Assert.Single(result.Cart.PasswordManager.Seats.Discounts);
+        Assert.Equal(BitwardenDiscountType.PercentOff, seatDiscount.Type);
+        Assert.Equal(20, seatDiscount.Value);
+    }
+
+    [Fact]
+    public async Task Run_WithMultipleProductLevelDiscounts_SetsAllMatchingDiscountsOnSeats()
+    {
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active);
+        subscription.Discounts =
+        [
+            new Discount
+            {
+                Coupon = new Coupon
+                {
+                    Valid = true,
+                    PercentOff = 10,
+                    AppliesTo = new CouponAppliesTo { Products = ["prod_premium_seat"] }
+                }
+            },
+            new Discount
+            {
+                Coupon = new Coupon
+                {
+                    Valid = true,
+                    AmountOff = 200,
+                    AppliesTo = new CouponAppliesTo { Products = ["prod_premium_seat"] }
+                }
+            }
+        ];
+        var premiumPlans = CreatePremiumPlans();
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(CreateInvoicePreview());
+
+        var result = await _query.Run(user);
+
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Cart.PasswordManager.Seats.Discounts.Count);
+        Assert.Contains(result.Cart.PasswordManager.Seats.Discounts, d => d.Type == BitwardenDiscountType.PercentOff && d.Value == 10);
+        Assert.Contains(result.Cart.PasswordManager.Seats.Discounts, d => d.Type == BitwardenDiscountType.AmountOff && d.Value == 200);
     }
 
     [Fact]

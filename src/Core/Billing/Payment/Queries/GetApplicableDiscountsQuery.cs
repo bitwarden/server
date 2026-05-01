@@ -10,19 +10,38 @@ namespace Bit.Core.Billing.Payment.Queries;
 public interface IGetApplicableDiscountsQuery
 {
     /// <summary>
-    /// Returns all discounts the user is eligible for, mapped to <see cref="SubscriptionDiscountResponseModel"/>.
+    /// Returns all discounts the user is eligible for, split into cart-level and item-level
     /// </summary>
-    Task<BillingCommandResult<SubscriptionDiscountResponseModel[]>> Run(User user);
+    Task<BillingCommandResult<SubscriptionDiscountEligibilityResponseModel>> Run(User user);
 }
 
 public class GetApplicableDiscountsQuery(
     ISubscriptionDiscountService subscriptionDiscountService) : IGetApplicableDiscountsQuery
 {
-    public async Task<BillingCommandResult<SubscriptionDiscountResponseModel[]>> Run(User user)
+    public async Task<BillingCommandResult<SubscriptionDiscountEligibilityResponseModel>> Run(User user)
     {
         var eligibleDiscounts = await subscriptionDiscountService.GetEligibleDiscountsAsync(user);
-        return eligibleDiscounts
-            .Select(e => SubscriptionDiscountResponseModel.From(e.Discount, e.TierEligibility))
-            .ToArray();
+
+        var cartLevel = new List<SubscriptionDiscountResponseModel>();
+        var itemLevel = new List<SubscriptionDiscountResponseModel>();
+
+        foreach (var eligibility in eligibleDiscounts)
+        {
+            var model = SubscriptionDiscountResponseModel.From(eligibility.Discount, eligibility.TierEligibility);
+            if (eligibility.Discount.StripeProductIds is null or { Count: 0 })
+            {
+                cartLevel.Add(model);
+            }
+            else
+            {
+                itemLevel.Add(model);
+            }
+        }
+
+        return new SubscriptionDiscountEligibilityResponseModel
+        {
+            CartLevelDiscounts = cartLevel.ToArray(),
+            ItemLevelDiscounts = itemLevel.ToArray()
+        };
     }
 }

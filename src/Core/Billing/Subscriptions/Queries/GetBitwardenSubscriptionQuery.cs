@@ -134,7 +134,10 @@ public class GetBitwardenSubscriptionQuery(
             TranslationKey = "premiumMembership",
             Quantity = passwordManagerSeatsItem.Quantity,
             Cost = seatCost,
-            Discount = productLevelCoupons.FirstOrDefault(coupon => coupon.AppliesTo(passwordManagerSeatsItem))
+            Discounts = [.. productLevelCoupons
+                .Where(coupon => coupon.AppliesTo(passwordManagerSeatsItem))
+                .Select(c => (BitwardenDiscount?)c)
+                .OfType<BitwardenDiscount>()]
         };
 
         var additionalStorage = additionalStorageItem != null
@@ -143,7 +146,10 @@ public class GetBitwardenSubscriptionQuery(
                 TranslationKey = "additionalStorageGB",
                 Quantity = additionalStorageItem.Quantity,
                 Cost = GetCost(additionalStorageItem),
-                Discount = productLevelCoupons.FirstOrDefault(coupon => coupon.AppliesTo(additionalStorageItem))
+                Discounts = [.. productLevelCoupons
+                    .Where(coupon => coupon.AppliesTo(additionalStorageItem))
+                    .Select(c => (BitwardenDiscount?)c)
+                    .OfType<BitwardenDiscount>()]
             }
             : null;
 

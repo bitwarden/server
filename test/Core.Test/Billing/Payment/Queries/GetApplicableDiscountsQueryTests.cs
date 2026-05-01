@@ -18,7 +18,7 @@ public class GetApplicableDiscountsQueryTests
         => Enum.GetValues<DiscountTierType>().ToDictionary(t => t, _ => eligibilitySetting);
 
     [Theory, BitAutoData]
-    public async Task Run_NoEligibleDiscounts_ReturnsEmptyArray(
+    public async Task Run_NoEligibleDiscounts_ReturnsBothEmpty(
         User user,
         SutProvider<GetApplicableDiscountsQuery> sutProvider)
     {
@@ -32,16 +32,19 @@ public class GetApplicableDiscountsQueryTests
 
         // Assert
         Assert.True(result.IsT0);
-        Assert.Empty(result.AsT0);
+        Assert.Empty(result.AsT0.CartLevelDiscounts);
+        Assert.Empty(result.AsT0.ItemLevelDiscounts);
     }
 
     [Theory, BitAutoData]
-    public async Task Run_EligibleDiscounts_ReturnsMappedResponseModels(
+    public async Task Run_CartLevelDiscount_NullStripeProductIds_AppearsInCartLevel(
         User user,
         SubscriptionDiscount discount,
         SutProvider<GetApplicableDiscountsQuery> sutProvider)
     {
         // Arrange
+        discount.StripeProductIds = null;
+
         sutProvider.GetDependency<ISubscriptionDiscountService>()
             .GetEligibleDiscountsAsync(user)
             .Returns(new List<DiscountEligibility> { new(discount, DiscountDictionary(true)) });
@@ -51,8 +54,106 @@ public class GetApplicableDiscountsQueryTests
 
         // Assert
         Assert.True(result.IsT0);
-        var models = result.AsT0;
-        var model = Assert.Single(models);
+        var model = Assert.Single(result.AsT0.CartLevelDiscounts);
+        Assert.Empty(result.AsT0.ItemLevelDiscounts);
+        Assert.Equal(discount.StripeCouponId, model.StripeCouponId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_CartLevelDiscount_EmptyStripeProductIds_AppearsInCartLevel(
+        User user,
+        SubscriptionDiscount discount,
+        SutProvider<GetApplicableDiscountsQuery> sutProvider)
+    {
+        // Arrange
+        discount.StripeProductIds = [];
+
+        sutProvider.GetDependency<ISubscriptionDiscountService>()
+            .GetEligibleDiscountsAsync(user)
+            .Returns(new List<DiscountEligibility> { new(discount, DiscountDictionary(true)) });
+
+        // Act
+        var result = await sutProvider.Sut.Run(user);
+
+        // Assert
+        Assert.True(result.IsT0);
+        var model = Assert.Single(result.AsT0.CartLevelDiscounts);
+        Assert.Empty(result.AsT0.ItemLevelDiscounts);
+        Assert.Equal(discount.StripeCouponId, model.StripeCouponId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_ItemLevelDiscount_WithStripeProductIds_AppearsInItemLevel(
+        User user,
+        SubscriptionDiscount discount,
+        SutProvider<GetApplicableDiscountsQuery> sutProvider)
+    {
+        // Arrange
+        discount.StripeProductIds = ["prod_premium_seat"];
+
+        sutProvider.GetDependency<ISubscriptionDiscountService>()
+            .GetEligibleDiscountsAsync(user)
+            .Returns(new List<DiscountEligibility> { new(discount, DiscountDictionary(true)) });
+
+        // Act
+        var result = await sutProvider.Sut.Run(user);
+
+        // Assert
+        Assert.True(result.IsT0);
+        Assert.Empty(result.AsT0.CartLevelDiscounts);
+        var model = Assert.Single(result.AsT0.ItemLevelDiscounts);
+        Assert.Equal(discount.StripeCouponId, model.StripeCouponId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_MixedDiscounts_SplitsCorrectly(
+        User user,
+        SubscriptionDiscount cartDiscount,
+        SubscriptionDiscount itemDiscount,
+        SutProvider<GetApplicableDiscountsQuery> sutProvider)
+    {
+        // Arrange
+        cartDiscount.StripeProductIds = null;
+        itemDiscount.StripeProductIds = ["prod_premium_seat"];
+
+        sutProvider.GetDependency<ISubscriptionDiscountService>()
+            .GetEligibleDiscountsAsync(user)
+            .Returns(new List<DiscountEligibility>
+            {
+                new(cartDiscount, DiscountDictionary(true)),
+                new(itemDiscount, DiscountDictionary(true))
+            });
+
+        // Act
+        var result = await sutProvider.Sut.Run(user);
+
+        // Assert
+        Assert.True(result.IsT0);
+        var cartModel = Assert.Single(result.AsT0.CartLevelDiscounts);
+        var itemModel = Assert.Single(result.AsT0.ItemLevelDiscounts);
+        Assert.Equal(cartDiscount.StripeCouponId, cartModel.StripeCouponId);
+        Assert.Equal(itemDiscount.StripeCouponId, itemModel.StripeCouponId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_EligibleDiscounts_MapsAllFieldsCorrectly(
+        User user,
+        SubscriptionDiscount discount,
+        SutProvider<GetApplicableDiscountsQuery> sutProvider)
+    {
+        // Arrange
+        discount.StripeProductIds = null;
+
+        sutProvider.GetDependency<ISubscriptionDiscountService>()
+            .GetEligibleDiscountsAsync(user)
+            .Returns(new List<DiscountEligibility> { new(discount, DiscountDictionary(true)) });
+
+        // Act
+        var result = await sutProvider.Sut.Run(user);
+
+        // Assert
+        Assert.True(result.IsT0);
+        var model = Assert.Single(result.AsT0.CartLevelDiscounts);
         Assert.Equal(discount.StripeCouponId, model.StripeCouponId);
         Assert.Equal(discount.PercentOff, model.PercentOff);
         Assert.Equal(discount.AmountOff, model.AmountOff);
@@ -70,6 +171,7 @@ public class GetApplicableDiscountsQueryTests
         SutProvider<GetApplicableDiscountsQuery> sutProvider)
     {
         // Arrange
+        discount.StripeProductIds = null;
         var tierEligibility = DiscountDictionary(true);
 
         sutProvider.GetDependency<ISubscriptionDiscountService>()
@@ -80,7 +182,7 @@ public class GetApplicableDiscountsQueryTests
         var result = await sutProvider.Sut.Run(user);
 
         // Assert
-        var model = Assert.Single(result.AsT0);
+        var model = Assert.Single(result.AsT0.CartLevelDiscounts);
         Assert.NotNull(model.TierEligibility);
         Assert.All(model.TierEligibility.Values, Assert.True);
     }
@@ -92,6 +194,7 @@ public class GetApplicableDiscountsQueryTests
         SutProvider<GetApplicableDiscountsQuery> sutProvider)
     {
         // Arrange
+        discount.StripeProductIds = null;
         var tierEligibility = new Dictionary<DiscountTierType, bool>
         {
             { DiscountTierType.Premium, true },
@@ -106,20 +209,23 @@ public class GetApplicableDiscountsQueryTests
         var result = await sutProvider.Sut.Run(user);
 
         // Assert
-        var model = Assert.Single(result.AsT0);
+        var model = Assert.Single(result.AsT0.CartLevelDiscounts);
         Assert.NotNull(model.TierEligibility);
         Assert.True(model.TierEligibility[DiscountTierType.Premium]);
         Assert.False(model.TierEligibility[DiscountTierType.Families]);
     }
 
     [Theory, BitAutoData]
-    public async Task Run_MultipleEligibleDiscounts_ReturnsAllMappedResponseModels(
+    public async Task Run_MultipleCartLevelDiscounts_ReturnsAllInCartLevel(
         User user,
         SubscriptionDiscount firstDiscount,
         SubscriptionDiscount secondDiscount,
         SutProvider<GetApplicableDiscountsQuery> sutProvider)
     {
         // Arrange
+        firstDiscount.StripeProductIds = null;
+        secondDiscount.StripeProductIds = [];
+
         sutProvider.GetDependency<ISubscriptionDiscountService>()
             .GetEligibleDiscountsAsync(user)
             .Returns(new List<DiscountEligibility>
@@ -133,9 +239,9 @@ public class GetApplicableDiscountsQueryTests
 
         // Assert
         Assert.True(result.IsT0);
-        var models = result.AsT0;
-        Assert.Equal(2, models.Length);
-        Assert.Contains(models, m => m.StripeCouponId == firstDiscount.StripeCouponId);
-        Assert.Contains(models, m => m.StripeCouponId == secondDiscount.StripeCouponId);
+        Assert.Equal(2, result.AsT0.CartLevelDiscounts.Length);
+        Assert.Contains(result.AsT0.CartLevelDiscounts, m => m.StripeCouponId == firstDiscount.StripeCouponId);
+        Assert.Contains(result.AsT0.CartLevelDiscounts, m => m.StripeCouponId == secondDiscount.StripeCouponId);
+        Assert.Empty(result.AsT0.ItemLevelDiscounts);
     }
 }

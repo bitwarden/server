@@ -22,9 +22,9 @@ public record CartItem
     public required decimal Cost { get; init; }
 
     /// <summary>
-    /// An optional discount applied specifically to this cart item.
+    /// Optional discounts applied specifically to this cart item.
     /// </summary>
-    public BitwardenDiscount? Discount { get; init; }
+    public List<BitwardenDiscount> Discounts { get; init; } = [];
 }
 
 public record PasswordManagerCartItems
