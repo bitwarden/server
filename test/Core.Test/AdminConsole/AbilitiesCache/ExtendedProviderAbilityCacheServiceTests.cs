@@ -21,7 +21,7 @@ public class ExtendedProviderAbilityCacheServiceTests
         ProviderAbility nonExistAbility2)
     {
         // Arrange
-        SetupCacheReturns(sutProvider, existAbility1, existAbility2, nonExistAbility1, nonExistAbility2);
+        SetupCacheReturns(sutProvider, existAbility1, existAbility2);
 
         // Act
         var result = await sutProvider.Sut.GetProviderAbilitiesAsync([existAbility1.Id, existAbility2.Id, nonExistAbility1.Id, nonExistAbility2.Id]);

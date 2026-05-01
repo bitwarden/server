@@ -26,13 +26,13 @@ public class ExtendedProviderAbilityCacheService(
     {
         var tasks = providerIds
             .Distinct()
-            .Select(async providerId => (providerId, ability: await GetProviderAbilityAsync(providerId, cancellationToken)));
+            .Select(providerId => GetProviderAbilityAsync(providerId, cancellationToken));
 
         var results = await Task.WhenAll(tasks);
 
         return results
-            .Where(result => result.ability != null)
-            .ToDictionary(result => result.providerId, result => result.ability!);
+            .Where(ability => ability != null)
+            .ToDictionary(ability => ability!.Id, ability => ability!);
     }
 
     public async Task UpsertProviderAbilityAsync(Provider provider)
