@@ -8,6 +8,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
+using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
@@ -295,9 +296,11 @@ public class OrganizationUsersControllerTests
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
             .Returns(true);
+        // Invite uses IList<Collection> directly (no CollectionUserAccessResource) —
+        // routes to BulkCollectionUserAuthorizationHandler with no self-assignment check.
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
-                Arg.Any<CollectionUserAccessResource>(),
+                Arg.Any<IList<Collection>>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Create)))
             .Returns(AuthorizationResult.Success());
         sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
@@ -321,7 +324,7 @@ public class OrganizationUsersControllerTests
             .Returns(true);
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
-                Arg.Any<CollectionUserAccessResource>(),
+                Arg.Any<IList<Collection>>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Create)))
             .Returns(AuthorizationResult.Failed());
         sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
@@ -893,5 +896,145 @@ public class OrganizationUsersControllerTests
         await sutProvider.GetDependency<IBulkResendOrganizationInvitesCommand>()
             .Received(1)
             .BulkResendInvitesAsync(organizationId, userId, bulkRequestModel.Ids);
+    }
+
+    /// <summary>
+    /// When delete authorization fails, the collection must be preserved (not cause an exception).
+    /// This tests the fix for the bug where unmanaged collections were accidentally removed.
+    /// </summary>
+    [Theory]
+    [BitAutoData]
+    public async Task Put_WithFeatureFlagEnabled_PreservesCollectionWhenDeleteNotAuthorized(
+        OrganizationUser organizationUser,
+        OrganizationUserUpdateRequestModel model,
+        Guid actingUserId,
+        OrganizationAbility organizationAbility,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        organizationAbility.AllowAdminAccessToAllCollectionItems = true;
+        organizationUser.OrganizationId = organizationAbility.Id;
+        organizationUser.UserId = Guid.NewGuid();
+
+        var preservedId = Guid.NewGuid();
+        var currentAccess = model.Collections
+            .Select(c => c.ToSelectionReadOnly())
+            .Append(new CollectionAccessSelection { Id = preservedId })
+            .ToList();
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdWithCollectionsAsync(organizationUser.Id)
+            .Returns(Tuple.Create<OrganizationUser?, ICollection<CollectionAccessSelection>>(organizationUser, currentAccess));
+
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
+            .Returns(actingUserId);
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilityAsync(organizationAbility.Id)
+            .Returns(organizationAbility);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(callInfo => callInfo.Arg<IEnumerable<Guid>>()
+                .Select(id => new Collection { Id = id, OrganizationId = organizationAbility.Id })
+                .ToList());
+
+        // Create/Update succeed; Delete is denied
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionUserAccessResource>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
+                    reqs.Contains(CollectionUserOperations.Create) || reqs.Contains(CollectionUserOperations.Update)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionUserAccessResource>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Delete)))
+            .Returns(AuthorizationResult.Failed());
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<OrganizationUserGroupAssignmentResource>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>())
+            .Returns(AuthorizationResult.Success());
+
+        // Should NOT throw — denied deletes are gracefully preserved
+        await sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model);
+
+        await sutProvider.GetDependency<IUpdateOrganizationUserCommand>()
+            .Received(1)
+            .UpdateUserAsync(
+                Arg.Any<OrganizationUser>(),
+                Arg.Any<OrganizationUserType>(),
+                actingUserId,
+                Arg.Is<List<CollectionAccessSelection>>(cols =>
+                    cols.Any(c => c.Id == preservedId)),
+                Arg.Any<IEnumerable<Guid>>());
+    }
+
+    /// <summary>
+    /// Verifies that TargetOrganizationUserId is populated with organizationUser.Id (OrganizationUser.Id),
+    /// NOT organizationUser.UserId (User.Id). This is the bug fix for the misnamed TargetUserId field.
+    /// </summary>
+    [Theory]
+    [BitAutoData]
+    public async Task Put_WithFeatureFlagEnabled_UsesOrganizationUserIdNotUserId(
+        OrganizationUser organizationUser,
+        OrganizationUserUpdateRequestModel model,
+        Guid actingUserId,
+        OrganizationAbility organizationAbility,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        organizationAbility.AllowAdminAccessToAllCollectionItems = true;
+        organizationUser.OrganizationId = organizationAbility.Id;
+        organizationUser.UserId = Guid.NewGuid();
+
+        var currentAccess = model.Collections.Select(c => c.ToSelectionReadOnly()).ToList();
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdWithCollectionsAsync(organizationUser.Id)
+            .Returns(Tuple.Create<OrganizationUser?, ICollection<CollectionAccessSelection>>(organizationUser, currentAccess));
+
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
+            .Returns(actingUserId);
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilityAsync(organizationAbility.Id)
+            .Returns(organizationAbility);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(callInfo => callInfo.Arg<IEnumerable<Guid>>()
+                .Select(id => new Collection { Id = id, OrganizationId = organizationAbility.Id })
+                .ToList());
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionUserAccessResource>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>())
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<OrganizationUserGroupAssignmentResource>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>())
+            .Returns(AuthorizationResult.Success());
+
+        await sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model);
+
+        // Verify that TargetOrganizationUserId is the OrganizationUser.Id (not the User.Id)
+        await sutProvider.GetDependency<IAuthorizationService>()
+            .Received()
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                Arg.Is<CollectionUserAccessResource>(r =>
+                    r.TargetOrganizationUserId == organizationUser.Id &&
+                    r.TargetOrganizationUserId != organizationUser.UserId),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>());
     }
 }
