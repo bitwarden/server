@@ -23,7 +23,7 @@ public class ReplaceAdminSetTemporaryPasswordCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task Replace_Success(
+    public async Task ReplaceTemporaryPasswordAsync_Success(
         SutProvider<ReplaceAdminSetTemporaryPasswordCommand> sutProvider,
         User user, string masterPasswordHint,
         KdfSettings kdfSettings, string salt, string wrappedKey, string authHash)
@@ -36,7 +36,7 @@ public class ReplaceAdminSetTemporaryPasswordCommandTests
             .PrepareUpdateExistingMasterPasswordAsync(user, Arg.Any<UpdateExistingPasswordData>())
             .Returns(OneOf<User, IdentityError[]>.FromT0(user));
 
-        var result = await sutProvider.Sut.Replace(user, unlockData, authenticationData, masterPasswordHint);
+        var result = await sutProvider.Sut.ReplaceTemporaryPasswordAsync(user, unlockData, authenticationData, masterPasswordHint);
 
         Assert.Equal(IdentityResult.Success, result);
         Assert.False(user.ForcePasswordReset);
@@ -52,7 +52,7 @@ public class ReplaceAdminSetTemporaryPasswordCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task Replace_NotForcePasswordReset_ThrowsBadRequestException(
+    public async Task ReplaceTemporaryPasswordAsync_NotForcePasswordReset_ThrowsBadRequestException(
         SutProvider<ReplaceAdminSetTemporaryPasswordCommand> sutProvider,
         User user, string masterPasswordHint,
         KdfSettings kdfSettings, string salt, string wrappedKey, string authHash)
@@ -62,14 +62,14 @@ public class ReplaceAdminSetTemporaryPasswordCommandTests
         var authenticationData = CreateAuthenticationData(kdfSettings, salt, authHash);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.Replace(user, unlockData, authenticationData, masterPasswordHint));
+            () => sutProvider.Sut.ReplaceTemporaryPasswordAsync(user, unlockData, authenticationData, masterPasswordHint));
 
         Assert.Equal("User does not have a temporary password to update.", exception.Message);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task Replace_MasterPasswordServiceFails_ReturnsErrors(
+    public async Task ReplaceTemporaryPasswordAsync_MasterPasswordServiceFails_ReturnsErrors(
         SutProvider<ReplaceAdminSetTemporaryPasswordCommand> sutProvider,
         User user, string masterPasswordHint,
         KdfSettings kdfSettings, string salt, string wrappedKey, string authHash)
@@ -83,7 +83,7 @@ public class ReplaceAdminSetTemporaryPasswordCommandTests
             .PrepareUpdateExistingMasterPasswordAsync(user, Arg.Any<UpdateExistingPasswordData>())
             .Returns(OneOf<User, IdentityError[]>.FromT1(identityErrors));
 
-        var result = await sutProvider.Sut.Replace(user, unlockData, authenticationData, masterPasswordHint);
+        var result = await sutProvider.Sut.ReplaceTemporaryPasswordAsync(user, unlockData, authenticationData, masterPasswordHint);
 
         Assert.False(result.Succeeded);
         Assert.Contains(result.Errors, e => e.Code == "TestError");
@@ -100,7 +100,7 @@ public class ReplaceAdminSetTemporaryPasswordCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task Replace_PassesCorrectDataToMasterPasswordService(
+    public async Task ReplaceTemporaryPasswordAsync_PassesCorrectDataToMasterPasswordService(
         SutProvider<ReplaceAdminSetTemporaryPasswordCommand> sutProvider,
         User user, string masterPasswordHint,
         KdfSettings kdfSettings, string salt, string wrappedKey, string authHash)
@@ -113,7 +113,7 @@ public class ReplaceAdminSetTemporaryPasswordCommandTests
             .PrepareUpdateExistingMasterPasswordAsync(user, Arg.Any<UpdateExistingPasswordData>())
             .Returns(OneOf<User, IdentityError[]>.FromT0(user));
 
-        await sutProvider.Sut.Replace(user, unlockData, authenticationData, masterPasswordHint);
+        await sutProvider.Sut.ReplaceTemporaryPasswordAsync(user, unlockData, authenticationData, masterPasswordHint);
 
         await sutProvider.GetDependency<IMasterPasswordService>().Received(1)
             .PrepareUpdateExistingMasterPasswordAsync(user,

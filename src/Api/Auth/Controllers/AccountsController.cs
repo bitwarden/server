@@ -671,7 +671,7 @@ public class AccountsController : Controller
         IdentityResult result;
         if (model.RequestHasNewDataTypes())
         {
-            result = await _replaceAdminSetTemporaryPasswordCommand.Replace(
+            result = await _replaceAdminSetTemporaryPasswordCommand.ReplaceTemporaryPasswordAsync(
                 user,
                 model.UnlockData!.ToData(),
                 model.AuthenticationData!.ToData(),

@@ -19,7 +19,7 @@ public class ReplaceAdminSetTemporaryPasswordCommand(
     IEventService eventService,
     IPushNotificationService pushService) : IReplaceAdminSetTemporaryPasswordCommand
 {
-    public async Task<IdentityResult> Replace(
+    public async Task<IdentityResult> ReplaceTemporaryPasswordAsync(
         User user,
         MasterPasswordUnlockData unlockData,
         MasterPasswordAuthenticationData authenticationData,

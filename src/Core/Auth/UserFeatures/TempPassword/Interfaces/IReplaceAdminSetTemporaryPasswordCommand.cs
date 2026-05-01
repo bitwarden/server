@@ -20,7 +20,7 @@ public interface IReplaceAdminSetTemporaryPasswordCommand
     /// <param name="authenticationData">new master password authentication data (hash, salt, KDF configuration)</param>
     /// <param name="masterPasswordHint">optional hint for the new master password</param>
     /// <returns>success or identity errors from validation</returns>
-    Task<IdentityResult> Replace(
+    Task<IdentityResult> ReplaceTemporaryPasswordAsync(
         User user,
         MasterPasswordUnlockData unlockData,
         MasterPasswordAuthenticationData authenticationData,
