@@ -579,6 +579,55 @@ jobs:
               }
             })
 
+  trigger-deploy-server-usdev:
+    name: Trigger server USDEV deploy
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-22.04
+    needs: build-artifacts
+    permissions:
+      id-token: write
+    steps:
+      - name: Log in to Azure
+        uses: bitwarden/gh-actions/azure-login@main
+        with:
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
+
+      - name: Get Azure Key Vault secrets
+        id: get-kv-secrets
+        uses: bitwarden/gh-actions/get-keyvault-secrets@main
+        with:
+          keyvault: gh-server # TODO: confirm keyvault name
+          secrets: "DEPLOY-TRIGGER-APP-ID,DEPLOY-TRIGGER-APP-TOKEN"
+
+      - name: Log out from Azure
+        uses: bitwarden/gh-actions/azure-logout@main
+
+      - name: Generate GH App token
+        uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3.0.0
+        id: app-token
+        with:
+          app-id: ${{ steps.get-kv-secrets.outputs.DEPLOY-TRIGGER-APP-ID }}
+          private-key: ${{ steps.get-kv-secrets.outputs.DEPLOY-TRIGGER-APP-TOKEN }}
+          owner: ${{ github.repository_owner }}
+          repositories: deploy
+
+      - name: Create server USDEV deployment in deploy repo
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            await github.rest.repos.createDeployment({
+              owner: 'bitwarden',
+              repo: 'deploy',
+              ref: 'main',
+              environment: 'trigger-server-dev', // TODO: create this environment in the deploy repo
+              auto_merge: false,
+              required_contexts: [],
+              description: 'Triggered by server build on main'
+            })
+
   setup-ephemeral-environment:
     name: Setup Ephemeral Environment
     needs: build-artifacts
