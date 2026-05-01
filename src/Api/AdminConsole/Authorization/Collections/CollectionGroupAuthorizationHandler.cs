@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using Bit.Core;
 using Bit.Core.Context;
-using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -79,45 +78,9 @@ public class CollectionGroupAuthorizationHandler
         }
     }
 
-    private async Task<CollectionAccessAuthorizationContext> BuildContextAsync(
+    private Task<CollectionAccessAuthorizationContext> BuildContextAsync(
         Guid organizationId,
-        CurrentContextOrganization? organization)
-    {
-        var ability = organization != null
-            ? await _applicationCacheService.GetOrganizationAbilityAsync(organization.Id)
-            : null;
-
-        var allowAdminAccess = ability is { AllowAdminAccessToAllCollectionItems: true };
-        var isProviderUser = await _currentContext.ProviderUserForOrgAsync(organizationId);
-
-        var allUserCollections = await _collectionRepository
-            .GetManyByUserIdAsync(_currentContext.UserId!.Value);
-
-        var managedCollectionIds = allUserCollections
-            .Where(c => c.Manage)
-            .Select(c => c.Id)
-            .ToHashSet();
-
-        HashSet<Guid> orphanedCollectionIds;
-        if (organization is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin }
-            or { Permissions.EditAnyCollection: true })
-        {
-            var organizationCollections = await _collectionRepository
-                .GetManyByOrganizationIdWithAccessAsync(organizationId);
-            orphanedCollectionIds = organizationCollections
-                .Where(c => !c.Item2.Users.Any(u => u.Manage) && !c.Item2.Groups.Any(g => g.Manage))
-                .Select(c => c.Item1.Id)
-                .ToHashSet();
-        }
-        else
-        {
-            orphanedCollectionIds = [];
-        }
-
-        return new CollectionAccessAuthorizationContext(
-            AllowAdminAccessToAllCollectionItems: allowAdminAccess,
-            CallerIsProviderUser: isProviderUser,
-            CallerManagedCollectionIds: managedCollectionIds,
-            OrphanedCollectionIds: orphanedCollectionIds);
-    }
+        CurrentContextOrganization? organization) =>
+        CollectionAccessContextFactory.BuildAsync(
+            organizationId, organization, _currentContext, _collectionRepository, _applicationCacheService);
 }
