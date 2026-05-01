@@ -13,25 +13,25 @@ namespace Bit.Core.Test.AdminConsole.AbilitiesCache;
 public class ExtendedProviderAbilityCacheServiceTests
 {
     [Theory, BitAutoData]
-    public async Task GetProviderAbilitiesAsync_ReturnsAvailableAbilitiesForAllIds(
+    public async Task GetProviderAbilitiesAsync_ReturnsAvailableAbilitiesForRequestedIds(
         SutProvider<ExtendedProviderAbilityCacheService> sutProvider,
-        ProviderAbility existAbility1,
-        ProviderAbility existAbility2,
-        ProviderAbility nonExistAbility1,
-        ProviderAbility nonExistAbility2)
+        ProviderAbility requestedAbility1,
+        ProviderAbility requestedAbility2,
+        ProviderAbility nonRequestedAbility,
+        ProviderAbility nonExistAbility)
     {
         // Arrange
-        SetupCacheReturns(sutProvider, existAbility1, existAbility2);
+        SetupCacheReturns(sutProvider, requestedAbility1, requestedAbility2, nonRequestedAbility);
 
         // Act
-        var result = await sutProvider.Sut.GetProviderAbilitiesAsync([existAbility1.Id, existAbility2.Id, nonExistAbility1.Id, nonExistAbility2.Id]);
+        var result = await sutProvider.Sut.GetProviderAbilitiesAsync([requestedAbility1.Id, requestedAbility2.Id, nonExistAbility.Id]);
 
         // Assert
         Assert.Equal(2, result.Count);
-        Assert.Equal(existAbility1, result[existAbility1.Id]);
-        Assert.Equal(existAbility2, result[existAbility2.Id]);
-        Assert.DoesNotContain(nonExistAbility1.Id, result.Keys);
-        Assert.DoesNotContain(nonExistAbility2.Id, result.Keys);
+        Assert.Equal(requestedAbility1, result[requestedAbility1.Id]);
+        Assert.Equal(requestedAbility2, result[requestedAbility2.Id]);
+        Assert.DoesNotContain(nonRequestedAbility.Id, result.Keys);
+        Assert.DoesNotContain(nonExistAbility.Id, result.Keys);
     }
 
     [Theory, BitAutoData]
