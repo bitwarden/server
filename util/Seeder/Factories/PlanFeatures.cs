@@ -14,13 +14,6 @@ public static class PlanFeatures
 {
     internal static void Apply(Organization org, PlanType planType)
     {
-        // Org-level admin settings — not plan-gated, safe defaults for seeding
-        org.UseAutomaticUserConfirmation = true;
-        org.AllowAdminAccessToAllCollectionItems = true;
-        org.LimitCollectionCreation = true;
-        org.LimitCollectionDeletion = true;
-        org.LimitItemDeletion = true;
-
         switch (planType)
         {
             case PlanType.Free:
@@ -90,25 +83,11 @@ public static class PlanFeatures
             return;
         }
 
-        if (overrides.AllowAdminAccessToAllCollectionItems.HasValue)
-        {
-            org.AllowAdminAccessToAllCollectionItems = overrides.AllowAdminAccessToAllCollectionItems.Value;
-        }
-
-        if (overrides.LimitItemDeletion.HasValue)
-        {
-            org.LimitItemDeletion = overrides.LimitItemDeletion.Value;
-        }
-
-        if (overrides.LimitCollectionCreation.HasValue)
-        {
-            org.LimitCollectionCreation = overrides.LimitCollectionCreation.Value;
-        }
-
-        if (overrides.LimitCollectionDeletion.HasValue)
-        {
-            org.LimitCollectionDeletion = overrides.LimitCollectionDeletion.Value;
-        }
+        org.UseAutomaticUserConfirmation = overrides.UseAutomaticUserConfirmation ?? org.UseAutomaticUserConfirmation;
+        org.AllowAdminAccessToAllCollectionItems = overrides.AllowAdminAccessToAllCollectionItems ?? org.AllowAdminAccessToAllCollectionItems;
+        org.LimitItemDeletion = overrides.LimitItemDeletion ?? org.LimitItemDeletion;
+        org.LimitCollectionCreation = overrides.LimitCollectionCreation ?? org.LimitCollectionCreation;
+        org.LimitCollectionDeletion = overrides.LimitCollectionDeletion ?? org.LimitCollectionDeletion;
     }
 
     public static PlanType Parse(string? planTypeString)

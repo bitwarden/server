@@ -200,6 +200,7 @@ internal static class PresetLoader
 
     private static OrganizationOverrides ToOverrides(SeedPresetOrganization org) => new()
     {
+        UseAutomaticUserConfirmation = org.UseAutomaticUserConfirmation,
         AllowAdminAccessToAllCollectionItems = org.AllowAdminAccessToAllCollectionItems,
         LimitItemDeletion = org.LimitItemDeletion,
         LimitCollectionCreation = org.LimitCollectionCreation,

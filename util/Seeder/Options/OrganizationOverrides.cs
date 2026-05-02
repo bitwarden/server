@@ -6,6 +6,7 @@ namespace Bit.Seeder.Options;
 /// </summary>
 public sealed record OrganizationOverrides
 {
+    public bool? UseAutomaticUserConfirmation { get; init; }
     public bool? AllowAdminAccessToAllCollectionItems { get; init; }
     public bool? LimitItemDeletion { get; init; }
     public bool? LimitCollectionCreation { get; init; }
