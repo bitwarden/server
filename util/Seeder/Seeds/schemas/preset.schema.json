@@ -59,15 +59,15 @@
         },
         "limitItemDeletion": {
           "type": "boolean",
-          "description": "When true, members can only delete items when they have Can Manage permission. Defaults to true if omitted."
+          "description": "When true, members can only delete items when they have Can Manage permission."
         },
         "limitCollectionCreation": {
           "type": "boolean",
-          "description": "When true, only owners, admins, and some custom users can create collections. Defaults to true if omitted."
+          "description": "When true, only owners, admins, and some custom users can create collections."
         },
         "limitCollectionDeletion": {
           "type": "boolean",
-          "description": "When true, only owners, admins, and some custom users can delete collections. Defaults to true if omitted."
+          "description": "When true, only owners, admins, and some custom users can delete collections."
         }
       }
     },
