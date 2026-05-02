@@ -27,6 +27,10 @@ internal record SeedPresetOrganization
     public string? Domain { get; init; }
     public int? Seats { get; init; }
     public string? PlanType { get; init; }
+    public bool? AllowAdminAccessToAllCollectionItems { get; init; }
+    public bool? LimitItemDeletion { get; init; }
+    public bool? LimitCollectionCreation { get; init; }
+    public bool? LimitCollectionDeletion { get; init; }
 }
 
 internal record SeedPresetRoster

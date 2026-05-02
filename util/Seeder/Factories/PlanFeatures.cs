@@ -2,6 +2,7 @@
 using System.Text;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Seeder.Options;
 
 namespace Bit.Seeder.Factories;
 
@@ -75,6 +76,38 @@ public static class PlanFeatures
                 throw new ArgumentException(
                     $"Unsupported PlanType '{planType}'. Supported types: Free, TeamsMonthly, TeamsAnnually, " +
                     "TeamsStarter, EnterpriseMonthly, EnterpriseAnnually, FamiliesAnnually.");
+        }
+    }
+
+    /// <summary>
+    /// Applies overrides on top of the plan defaults.
+    /// Only non-null properties are applied; null means "keep the plan default".
+    /// </summary>
+    internal static void ApplyOrganizationOverrides(Organization org, OrganizationOverrides? overrides)
+    {
+        if (overrides is null)
+        {
+            return;
+        }
+
+        if (overrides.AllowAdminAccessToAllCollectionItems.HasValue)
+        {
+            org.AllowAdminAccessToAllCollectionItems = overrides.AllowAdminAccessToAllCollectionItems.Value;
+        }
+
+        if (overrides.LimitItemDeletion.HasValue)
+        {
+            org.LimitItemDeletion = overrides.LimitItemDeletion.Value;
+        }
+
+        if (overrides.LimitCollectionCreation.HasValue)
+        {
+            org.LimitCollectionCreation = overrides.LimitCollectionCreation.Value;
+        }
+
+        if (overrides.LimitCollectionDeletion.HasValue)
+        {
+            org.LimitCollectionDeletion = overrides.LimitCollectionDeletion.Value;
         }
     }
 

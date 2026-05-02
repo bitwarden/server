@@ -48,6 +48,22 @@
             "families-annually"
           ],
           "description": "Billing plan type. Defaults to enterprise-annually if omitted."
+        },
+        "allowAdminAccessToAllCollectionItems": {
+          "type": "boolean",
+          "description": "When true, admins, owners, and some custom users can read/write all collections and items. Defaults to true if omitted."
+        },
+        "limitItemDeletion": {
+          "type": "boolean",
+          "description": "When true, members can only delete items when they have Can Manage permission. Defaults to true if omitted."
+        },
+        "limitCollectionCreation": {
+          "type": "boolean",
+          "description": "When true, only owners, admins, and some custom users can create collections. Defaults to true if omitted."
+        },
+        "limitCollectionDeletion": {
+          "type": "boolean",
+          "description": "When true, only owners, admins, and some custom users can delete collections. Defaults to true if omitted."
         }
       }
     },

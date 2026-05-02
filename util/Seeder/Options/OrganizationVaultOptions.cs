@@ -110,4 +110,10 @@ public class OrganizationVaultOptions
     /// Use 600,000 for production-realistic e2e testing.
     /// </summary>
     public int KdfIterations { get; init; } = 5_000;
+
+    /// <summary>
+    /// Optional overrides applied on top of the billing plan's defaults.
+    /// Null means "use plan defaults for everything".
+    /// </summary>
+    public OrganizationOverrides? Overrides { get; init; }
 }
