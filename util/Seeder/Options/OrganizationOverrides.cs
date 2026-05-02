@@ -1,4 +1,4 @@
-namespace Bit.Seeder.Options;
+﻿namespace Bit.Seeder.Options;
 
 /// <summary>
 /// Optional overrides applied on top of plan defaults when creating an organization.
