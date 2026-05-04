@@ -12,8 +12,8 @@ BEGIN
     INNER JOIN
         [dbo].[OrganizationUser] OU ON OU.[Id] = CU.[OrganizationUserId]
     WHERE
-    CU.[CollectionId] IN (SELECT [Id] FROM @CollectionIds)
-        AND OU.[Status] = 2 -- Confirmed
+        CU.[CollectionId] IN (SELECT [Id] FROM @CollectionIds)
+            AND OU.[Status] = 2 -- Confirmed
 
     UNION
 
