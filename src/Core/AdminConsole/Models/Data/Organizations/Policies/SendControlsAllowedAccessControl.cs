@@ -1,8 +1,8 @@
-namespace Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+﻿namespace Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 
 public enum SendWhoCanAccessType
 {
-  Any,
-  PasswordProtected,
-  SpecificPeople
+    Any,
+    PasswordProtected,
+    SpecificPeople
 }

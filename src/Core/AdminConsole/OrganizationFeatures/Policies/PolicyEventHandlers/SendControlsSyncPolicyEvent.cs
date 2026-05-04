@@ -94,12 +94,14 @@ public class SendControlsSyncPolicyEvent(
                     postUpsertedPolicyState.Enabled && SendIsNonCompliant(send, sendControlsPolicyData))
                 {
                     disabled.Add(send.Id);
-                } else
+                }
+                else
                 {
                     enabled.Add(send.Id);
                 }
             }
-            if (enabled.Count > 0) {
+            if (enabled.Count > 0)
+            {
                 await sendRepository.UpdateManyDisabledAsync(enabled, false);
             }
             if (disabled.Count > 0)
@@ -111,41 +113,41 @@ public class SendControlsSyncPolicyEvent(
 
     private static bool SendIsNonCompliant(Send send, SendControlsPolicyData policyData)
     {
-        if (policyData.DisableSend)                                                                                                                                                                                                                                      
+        if (policyData.DisableSend)
         {
-            return true;                                                                                                                                                                                                                                                 
-        }                
-        if (policyData.DisableHideEmail && (send.HideEmail ?? false))                                                                                                                                                                                                    
+            return true;
+        }
+        if (policyData.DisableHideEmail && (send.HideEmail ?? false))
         {
-            return true;                                                                                                                                                                                                                                                 
-        }                
+            return true;
+        }
         if (policyData.WhoCanAccess == SendWhoCanAccessType.PasswordProtected
-            && send.AuthType != AuthType.Password)                                                                                                                                                                                                                       
+            && send.AuthType != AuthType.Password)
         {
-            return true;                                                                                                                                                                                                                                                 
-        }                
+            return true;
+        }
         if (policyData.WhoCanAccess == SendWhoCanAccessType.SpecificPeople)
-        {                                                                                                                                                                                                                                                                
+        {
             if (send.AuthType != AuthType.Email)
-            {                                                                                                                                                                                                                                                            
+            {
                 return true;
             }
             try
             {
                 if (policyData.AllowedDomains != null && !SendValidationService.SendAllEmailsHaveAllowedDomains(send.Emails, policyData.AllowedDomains))
-                {                                                                                                                                                                                                                                                        
+                {
                     return true;
-                }                                                                                                                                                                                                                                                        
-            }            
+                }
+            }
             catch (BadRequestException)
-            {                                                                                                                                                                                                                                                            
+            {
                 // Send data not sent from our clients may not have validation guaranteeing their
                 // emails field contains valid email addresses. We can't verify such a Send against
                 // the allowed-domains list, so treat it as non-compliant and disable it rather than
                 // aborting the org-wide sweep.
-                return true;                                                                                                                                                                                                                                             
+                return true;
             }
-        }                                                                                                                                                                                                                                                                
-        return false;    
+        }
+        return false;
     }
 }
