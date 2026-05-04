@@ -4,6 +4,8 @@ using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Exceptions;
+using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.Services;
@@ -89,12 +91,7 @@ public class SendControlsSyncPolicyEvent(
             {
                 if (
                     // If the policy is disabled then we want to re-enable any Sends that were previously disabled
-                    postUpsertedPolicyState.Enabled && 
-                    (sendControlsPolicyData.DisableSend ||
-                    (sendControlsPolicyData.DisableHideEmail && (send.HideEmail ?? false)) ||
-                    (sendControlsPolicyData.WhoCanAccess == SendWhoCanAccessType.PasswordProtected && send.AuthType != AuthType.Password) ||
-                    (sendControlsPolicyData.WhoCanAccess == SendWhoCanAccessType.SpecificPeople && send.AuthType != AuthType.Email) ||
-                    (sendControlsPolicyData.WhoCanAccess == SendWhoCanAccessType.SpecificPeople && !SendValidationService.SendAllEmailsHaveAllowedDomains(send.Emails, sendControlsPolicyData.AllowedDomains))))
+                    postUpsertedPolicyState.Enabled && SendIsNonCompliant(send, sendControlsPolicyData))
                 {
                     disabled.Add(send.Id);
                 } else
@@ -110,5 +107,45 @@ public class SendControlsSyncPolicyEvent(
                 await sendRepository.UpdateManyDisabledAsync(disabled, true);
             }
         }
+    }
+
+    private static bool SendIsNonCompliant(Send send, SendControlsPolicyData policyData)
+    {
+        if (policyData.DisableSend)                                                                                                                                                                                                                                      
+        {
+            return true;                                                                                                                                                                                                                                                 
+        }                
+        if (policyData.DisableHideEmail && (send.HideEmail ?? false))                                                                                                                                                                                                    
+        {
+            return true;                                                                                                                                                                                                                                                 
+        }                
+        if (policyData.WhoCanAccess == SendWhoCanAccessType.PasswordProtected
+            && send.AuthType != AuthType.Password)                                                                                                                                                                                                                       
+        {
+            return true;                                                                                                                                                                                                                                                 
+        }                
+        if (policyData.WhoCanAccess == SendWhoCanAccessType.SpecificPeople)
+        {                                                                                                                                                                                                                                                                
+            if (send.AuthType != AuthType.Email)
+            {                                                                                                                                                                                                                                                            
+                return true;
+            }
+            try
+            {
+                if (policyData.AllowedDomains != null && !SendValidationService.SendAllEmailsHaveAllowedDomains(send.Emails, policyData.AllowedDomains))
+                {                                                                                                                                                                                                                                                        
+                    return true;
+                }                                                                                                                                                                                                                                                        
+            }            
+            catch (BadRequestException)
+            {                                                                                                                                                                                                                                                            
+                // Send data not sent from our clients may not have validation guaranteeing their
+                // emails field contains valid email addresses. We can't verify such a Send against
+                // the allowed-domains list, so treat it as non-compliant and disable it rather than
+                // aborting the org-wide sweep.
+                return true;                                                                                                                                                                                                                                             
+            }
+        }                                                                                                                                                                                                                                                                
+        return false;    
     }
 }
