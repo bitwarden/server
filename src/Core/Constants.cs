@@ -192,15 +192,17 @@ public static class FeatureFlagKeys
     public const string PM34210_DesktopAddDevices = "pm-34210-desktop-add-devices";
 
     /* Autofill Team */
-    public const string SSHAgentV2 = "ssh-agent-v2";
-    public const string SSHVersionCheckQAOverride = "ssh-version-check-qa-override";
     public const string NotificationRefresh = "notification-refresh";
-    public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
-    public const string WindowsDesktopAutotype = "windows-desktop-autotype";
-    public const string WindowsDesktopAutotypeGA = "windows-desktop-autotype-ga";
     public const string FillAssistTargetingRules = "fill-assist-targeting-rules";
     public const string NotificationUndeterminedCipherScenarioLogic = "undetermined-cipher-scenario-logic";
     public const string EnableAutofillTriage = "enable-autofill-triage";
+
+    /* Desktop Native Team */
+    public const string SSHAgentV2 = "ssh-agent-v2";
+    public const string SSHVersionCheckQAOverride = "ssh-version-check-qa-override";
+    public const string WindowsDesktopAutotype = "windows-desktop-autotype";
+    public const string WindowsDesktopAutotypeGA = "windows-desktop-autotype-ga";
+    public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
 
     /* Billing Team */
     public const string PM24032_NewNavigationPremiumUpgradeButton = "pm-24032-new-navigation-premium-upgrade-button";
