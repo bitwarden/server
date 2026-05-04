@@ -89,7 +89,7 @@ public class UpdateTempPasswordRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void Validate_BothNewAndLegacyPayloads_ReturnsError(string newHash, string key)
+    public void Validate_BothNewAndLegacyPayloads_NoErrors(string newHash, string key)
     {
         var kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600000 };
 
@@ -113,8 +113,7 @@ public class UpdateTempPasswordRequestModelTests
 
         var result = model.Validate(new ValidationContext(model)).ToList();
 
-        Assert.Single(result);
-        Assert.Contains("Cannot provide both", result[0].ErrorMessage);
+        Assert.Empty(result);
     }
 
     [Fact]

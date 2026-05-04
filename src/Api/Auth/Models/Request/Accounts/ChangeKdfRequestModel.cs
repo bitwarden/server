@@ -38,7 +38,7 @@ public class ChangeKdfRequestModel : IValidatableObject
             yield return validationResult;
         }
 
-        if (hasNewPayloads && !hasLegacyPayloads)
+        if (hasNewPayloads)
         {
             foreach (var validationResult in KdfSettingsValidator.ValidateAuthenticationAndUnlockData(
                          AuthenticationData!.ToData(), UnlockData!.ToData()))

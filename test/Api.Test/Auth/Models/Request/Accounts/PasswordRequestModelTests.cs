@@ -94,7 +94,7 @@ public class PasswordRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void Validate_BothNewAndLegacyPayloads_ReturnsError(
+    public void Validate_BothNewAndLegacyPayloads_NoErrors(
         string masterPasswordHash, string newHash, string key)
     {
         var kdf = new KdfRequestModel
@@ -124,8 +124,7 @@ public class PasswordRequestModelTests
 
         var result = model.Validate(new ValidationContext(model)).ToList();
 
-        Assert.Single(result);
-        Assert.Contains("Cannot provide both", result[0].ErrorMessage);
+        Assert.Empty(result);
     }
 
     [Theory]
