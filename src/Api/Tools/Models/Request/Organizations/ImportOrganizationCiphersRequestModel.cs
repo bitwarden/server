@@ -9,5 +9,5 @@ public class ImportOrganizationCiphersRequestModel
     public CipherRequestModel[] Ciphers { get; set; } = [];
     public KeyValuePair<int, int>[] CollectionRelationships { get; set; } = [];
     public FolderWithIdRequestModel[] Folders { get; set; } = [];
-    public KeyValuePair<int, int>[] FolderRelationships { get; set; } = []; 
+    public KeyValuePair<int, int>[] FolderRelationships { get; set; } = [];
 }

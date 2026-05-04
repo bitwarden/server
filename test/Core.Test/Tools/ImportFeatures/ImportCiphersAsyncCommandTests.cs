@@ -154,7 +154,7 @@ public class ImportCiphersAsyncCommandTests
         sutProvider.GetDependency<ICollectionRepository>()
             .GetManyByOrganizationIdAsync(organization.Id)
             .Returns(new List<Collection> { collections[0] });
-        
+
         // Set up a folder that already exists for the importing user
         sutProvider.GetDependency<IFolderRepository>()
             .GetManyByUserIdAsync(importingUserId)
