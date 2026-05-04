@@ -356,37 +356,44 @@ public class AccountBillingVNextControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetApplicableDiscountsAsync_NoEligibleDiscounts_ReturnsOkWithEmptyArray(User user)
+    public async Task GetApplicableDiscountsAsync_NoEligibleDiscounts_ReturnsOkWithEmptyModel(User user)
     {
         // Arrange
+        var eligibility = new SubscriptionDiscountEligibilityResponseModel();
         _getApplicableDiscountsQuery.Run(user)
-            .Returns(Array.Empty<SubscriptionDiscountResponseModel>());
+            .Returns(new BillingCommandResult<SubscriptionDiscountEligibilityResponseModel>(eligibility));
 
         // Act
         var result = await _sut.GetApplicableDiscountsAsync(user);
 
         // Assert
-        var okResult = Assert.IsType<Ok<SubscriptionDiscountResponseModel[]>>(result);
-        Assert.Empty(okResult.Value!);
+        var okResult = Assert.IsType<Ok<SubscriptionDiscountEligibilityResponseModel>>(result);
+        Assert.Empty(okResult.Value!.CartLevelDiscounts);
+        Assert.Empty(okResult.Value!.ItemLevelDiscounts);
         await _getApplicableDiscountsQuery.Received(1).Run(user);
     }
 
     [Theory, BitAutoData]
     public async Task GetApplicableDiscountsAsync_EligibleDiscounts_ReturnsOkWithDiscounts(
         User user,
-        SubscriptionDiscountResponseModel firstModel,
-        SubscriptionDiscountResponseModel secondModel)
+        SubscriptionDiscountResponseModel cartDiscount,
+        SubscriptionDiscountResponseModel itemDiscount)
     {
         // Arrange
-        var models = new[] { firstModel, secondModel };
-        _getApplicableDiscountsQuery.Run(user).Returns(models);
+        var eligibility = new SubscriptionDiscountEligibilityResponseModel
+        {
+            CartLevelDiscounts = [cartDiscount],
+            ItemLevelDiscounts = [itemDiscount]
+        };
+        _getApplicableDiscountsQuery.Run(user)
+            .Returns(new BillingCommandResult<SubscriptionDiscountEligibilityResponseModel>(eligibility));
 
         // Act
         var result = await _sut.GetApplicableDiscountsAsync(user);
 
         // Assert
-        var okResult = Assert.IsType<Ok<SubscriptionDiscountResponseModel[]>>(result);
-        Assert.Equal(models, okResult.Value);
+        var okResult = Assert.IsType<Ok<SubscriptionDiscountEligibilityResponseModel>>(result);
+        Assert.Equal(eligibility, okResult.Value);
         await _getApplicableDiscountsQuery.Received(1).Run(user);
     }
 
