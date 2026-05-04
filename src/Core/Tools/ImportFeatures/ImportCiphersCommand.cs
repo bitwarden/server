@@ -207,14 +207,17 @@ public class ImportCiphersCommand : IImportCiphersCommand
 
     private async Task<List<Folder>> ProcessFolders(Guid importingUserId, List<Folder> folders, IEnumerable<KeyValuePair<int, int>> folderRelationships, List<CipherDetails> ciphers)
     {
-        var userfoldersIds = (await _folderRepository.GetManyByUserIdAsync(importingUserId)).Select(f => f.Id).ToList();
-
-        //Assign id to the ones that don't exist in DB
-        //Need to keep the list order to create the relationships
+        if (folders.Count == 0)
+        {
+            return folders;
+        }
+        var userFoldersIds = (await _folderRepository.GetManyByUserIdAsync(importingUserId)).Select(f => f.Id).ToList();
+        // Assign id to the ones that don't exist in DB
+        // Need to keep the list order to create the relationships
         var newFolders = new List<Folder>();
         foreach (var folder in folders)
         {
-            if (!userfoldersIds.Contains(folder.Id))
+            if (!userFoldersIds.Contains(folder.Id))
             {
                 folder.SetNewId();
                 newFolders.Add(folder);
