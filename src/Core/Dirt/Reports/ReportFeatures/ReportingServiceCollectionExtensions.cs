@@ -11,6 +11,8 @@ public static class ReportingServiceCollectionExtensions
     public static void AddReportingServices(this IServiceCollection services, IGlobalSettings globalSettings)
     {
         services.AddExtendedCache(OrganizationReportCacheConstants.CacheName, (GlobalSettings)globalSettings);
+        services.AddExtendedCache(GetPasskeyDirectoryQuery.CacheName, (GlobalSettings)globalSettings);
+        services.AddHttpClient(GetPasskeyDirectoryQuery.HttpClientName);
 
         services.AddScoped<IRiskInsightsReportQuery, RiskInsightsReportQuery>();
         services.AddScoped<IMemberAccessReportQuery, MemberAccessReportQuery>();
@@ -27,5 +29,6 @@ public static class ReportingServiceCollectionExtensions
         services.AddScoped<IUpdateOrganizationReportDataCommand, UpdateOrganizationReportDataCommand>();
         services.AddScoped<IGetOrganizationReportApplicationDataQuery, GetOrganizationReportApplicationDataQuery>();
         services.AddScoped<IUpdateOrganizationReportApplicationDataCommand, UpdateOrganizationReportApplicationDataCommand>();
+        services.AddScoped<IGetPasskeyDirectoryQuery, GetPasskeyDirectoryQuery>();
     }
 }
