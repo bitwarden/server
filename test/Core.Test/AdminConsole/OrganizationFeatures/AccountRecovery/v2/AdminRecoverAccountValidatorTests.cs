@@ -10,8 +10,6 @@ using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using NSubstitute;
-using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
 
@@ -684,6 +682,112 @@ public class AdminRecoverAccountValidatorTests
         SetupValidPolicy(sutProvider, organization, policy);
 
         organizationUser.Status = OrganizationUserStatusType.Revoked;
+        organizationUser.OrganizationId = organization.Id;
+        organizationUser.ResetPasswordKey = null; // Not enrolled
+        organizationUser.UserId = Guid.NewGuid();
+
+        var request = new RecoverAccountRequest
+        {
+            OrgId = organization.Id,
+            OrganizationUser = organizationUser,
+            ResetMasterPassword = true,
+            ResetTwoFactor = false,
+            NewMasterPasswordHash = "some-hash",
+            Key = "some-key",
+        };
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<InvalidOrgUserError>(result.AsError);
+    }
+
+    // region Success paths: Accepted users
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_AcceptedUser_ResetMasterPassword_ReturnsValid(
+        Organization organization,
+        OrganizationUser organizationUser,
+        User user,
+        [Policy(PolicyType.ResetPassword, true)] PolicyStatus policy,
+        SutProvider<AdminRecoverAccountValidator> sutProvider)
+    {
+        // Arrange
+        SetupValidOrganization(sutProvider, organization);
+        SetupValidPolicy(sutProvider, organization, policy);
+        SetupValidOrganizationUser(organizationUser, organization.Id);
+        organizationUser.Status = OrganizationUserStatusType.Accepted;
+        SetupValidUser(sutProvider, user, organizationUser);
+
+        var request = new RecoverAccountRequest
+        {
+            OrgId = organization.Id,
+            OrganizationUser = organizationUser,
+            ResetMasterPassword = true,
+            ResetTwoFactor = false,
+            NewMasterPasswordHash = "some-hash",
+            Key = "some-key",
+        };
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        // Assert
+        Assert.True(result.IsValid);
+        Assert.Equal(request, result.Request);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_AcceptedUser_ResetTwoFactor_ReturnsValid(
+        Organization organization,
+        OrganizationUser organizationUser,
+        User user,
+        [Policy(PolicyType.ResetPassword, true)] PolicyStatus policy,
+        SutProvider<AdminRecoverAccountValidator> sutProvider)
+    {
+        // Arrange
+        SetupValidOrganization(sutProvider, organization);
+        SetupValidPolicy(sutProvider, organization, policy);
+        SetupValidOrganizationUser(organizationUser, organization.Id);
+        organizationUser.Status = OrganizationUserStatusType.Accepted;
+        SetupValidUser(sutProvider, user, organizationUser);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AdminResetTwoFactor)
+            .Returns(true);
+
+        var request = new RecoverAccountRequest
+        {
+            OrgId = organization.Id,
+            OrganizationUser = organizationUser,
+            ResetMasterPassword = false,
+            ResetTwoFactor = true,
+        };
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        // Assert
+        Assert.True(result.IsValid);
+        Assert.Equal(request, result.Request);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_AcceptedUser_NotEnrolledInAccountRecovery_ReturnsInvalidOrgUserError(
+        Organization organization,
+        OrganizationUser organizationUser,
+        [Policy(PolicyType.ResetPassword, true)] PolicyStatus policy,
+        SutProvider<AdminRecoverAccountValidator> sutProvider)
+    {
+        // Arrange
+        SetupValidOrganization(sutProvider, organization);
+        SetupValidPolicy(sutProvider, organization, policy);
+
+        organizationUser.Status = OrganizationUserStatusType.Accepted;
         organizationUser.OrganizationId = organization.Id;
         organizationUser.ResetPasswordKey = null; // Not enrolled
         organizationUser.UserId = Guid.NewGuid();
