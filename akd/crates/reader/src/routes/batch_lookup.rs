@@ -63,7 +63,7 @@ pub async fn batch_lookup_handler(
             StatusCode::OK,
             Json(Response::success(BatchLookupData {
                 lookup_proofs,
-                epoch_data: epoch_hash.into(),
+                current_epoch_data: epoch_hash.into(),
             })),
         ),
         Err(e) => {

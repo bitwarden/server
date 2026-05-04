@@ -1,0 +1,51 @@
+[package]
+name = "akd-verifier"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license-file.workspace = true
+keywords.workspace = true
+
+[features]
+default = ["native"]
+native = ["reqwest/rustls-tls"]
+# Enables uniffi derives on the in-crate model/error types so foreign-binding
+# generators can see them. The actual FFI binding surface lives in the
+# `akd-verifier-uniffi` cdylib.
+uniffi = ["dep:uniffi", "bitwarden-akd-configuration/uniffi"]
+# Enables tsify/wasm derives on the in-crate model/error types. The actual
+# wasm-bindgen surface lives in the `akd-verifier-wasm` cdylib.
+wasm = [
+    "dep:tsify",
+    "dep:wasm-bindgen",
+    "bitwarden-akd-configuration/wasm",
+]
+
+[dependencies]
+akd = { workspace = true, features = ["serde_serialization"] }
+bitwarden-akd-configuration = { workspace = true, features = [
+    "multi_directory",
+] }
+bitwarden-encoding = { workspace = true }
+futures = { version = "0.3", default-features = false, features = [
+    "async-await",
+] }
+reqwest = { version = "0.12", default-features = false, features = ["json"] }
+serde = { workspace = true }
+serde_json = "1"
+thiserror = { workspace = true }
+tsify = { version = "0.5", default-features = false, features = [
+    "js",
+], optional = true }
+uniffi = { version = "0.29", optional = true }
+uuid = { workspace = true }
+wasm-bindgen = { version = "0.2", features = [
+    "serde-serialize",
+], optional = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt"] }
+wiremock = "0.6"
+
+[lints]
+workspace = true

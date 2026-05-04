@@ -1,0 +1,22 @@
+[package]
+name = "akd-verifier-uniffi"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license-file.workspace = true
+keywords.workspace = true
+
+[lib]
+crate-type = ["lib", "staticlib", "cdylib"]
+
+[dependencies]
+akd-verifier = { path = "../akd-verifier", features = ["uniffi"] }
+bitwarden-akd-configuration = { workspace = true, features = ["uniffi"] }
+bitwarden-encoding = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+uniffi = "0.29"
+uuid = { workspace = true }
+
+[lints]
+workspace = true

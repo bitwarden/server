@@ -219,7 +219,9 @@ pub struct BatchLookupRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BatchLookupData {
     pub lookup_proofs: Vec<LookupProof>,
-    pub epoch_data: EpochData,
+    /// Epoch and root-hash the proofs are rooted at — i.e. the directory's
+    /// current state at response time.
+    pub current_epoch_data: EpochData,
 }
 
 /// Request body for `POST /key_history`.

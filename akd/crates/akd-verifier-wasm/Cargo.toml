@@ -1,0 +1,22 @@
+[package]
+name = "akd-verifier-wasm"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license-file.workspace = true
+keywords.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+akd-verifier = { path = "../akd-verifier", default-features = false, features = ["wasm"] }
+bitwarden-akd-configuration = { workspace = true, features = ["wasm"] }
+serde = { workspace = true }
+tsify = { version = "0.5", default-features = false, features = ["js"] }
+uuid = { workspace = true }
+wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
+wasm-bindgen-futures = "0.4"
+
+[lints]
+workspace = true
