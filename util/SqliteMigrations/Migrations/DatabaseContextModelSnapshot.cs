@@ -236,6 +236,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("UseGroups")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("UseInviteLinks")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("UseKeyConnector")
                         .HasColumnType("INTEGER");
 

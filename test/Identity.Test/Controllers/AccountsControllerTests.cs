@@ -1113,7 +1113,7 @@ public class AccountsControllerTests : IDisposable
 
         // Assert mismatched auth/unlock KDF settings are rejected
         Assert.Single(results);
-        Assert.Equal("KDF settings must be equal for authentication and unlock.", results[0].ErrorMessage);
+        Assert.Equal("AuthenticationData and UnlockData must have the same KDF configuration.", results[0].ErrorMessage);
     }
 
     [Theory, BitAutoData]

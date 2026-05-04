@@ -43,6 +43,13 @@ public class InviteUsersPasswordManagerValidator(
             return new Valid<PasswordManagerSubscriptionUpdate>(subscriptionUpdate);
         }
 
+        if (subscriptionUpdate.PasswordManagerPlan is null)
+        {
+            // Plan is null on self-hosted. Skip plan-based checks and pass through so
+            // InviteUsersEnvironmentValidator can return the "cannot autoscale on self-hosted" error.
+            return new Valid<PasswordManagerSubscriptionUpdate>(subscriptionUpdate);
+        }
+
         if (subscriptionUpdate.PasswordManagerPlan.BaseSeats + subscriptionUpdate.SeatsRequiredToAdd <= 0)
         {
             return new Invalid<PasswordManagerSubscriptionUpdate>(new PasswordManagerMustHaveSeatsError(subscriptionUpdate));

@@ -243,6 +243,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("UseGroups")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("UseInviteLinks")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("UseKeyConnector")
                         .HasColumnType("boolean");
 
