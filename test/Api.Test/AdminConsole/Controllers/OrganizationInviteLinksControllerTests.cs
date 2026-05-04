@@ -145,4 +145,75 @@ public class OrganizationInviteLinksControllerTests
         var badRequestResult = Assert.IsType<BadRequest<Bit.Core.Models.Api.ErrorResponseModel>>(result);
         Assert.NotNull(badRequestResult.Value);
     }
+
+    [Theory, BitAutoData]
+    public async Task Update_WithValidInput_ReturnsOk(
+        Guid orgId,
+        OrganizationInviteLink inviteLink,
+        SutProvider<OrganizationInviteLinksController> sutProvider)
+    {
+        inviteLink.OrganizationId = orgId;
+        inviteLink.AllowedDomains = "[\"acme.com\"]";
+
+        var model = new UpdateOrganizationInviteLinkRequestModel
+        {
+            AllowedDomains = ["acme.com"],
+        };
+
+        sutProvider.GetDependency<IUpdateOrganizationInviteLinkCommand>()
+            .UpdateAsync(Arg.Any<UpdateOrganizationInviteLinkRequest>())
+            .Returns(new CommandResult<OrganizationInviteLink>(inviteLink));
+
+        var result = await sutProvider.Sut.Update(orgId, model);
+
+        var okResult = Assert.IsType<Ok<OrganizationInviteLinkResponseModel>>(result);
+        Assert.NotNull(okResult.Value);
+        Assert.Equal(inviteLink.Id, okResult.Value.Id);
+        Assert.Equal(orgId, okResult.Value.OrganizationId);
+
+        await sutProvider.GetDependency<IUpdateOrganizationInviteLinkCommand>()
+            .Received(1)
+            .UpdateAsync(Arg.Is<UpdateOrganizationInviteLinkRequest>(r =>
+                r.OrganizationId == orgId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Update_WhenNoLinkExists_ReturnsNotFound(
+        Guid orgId,
+        SutProvider<OrganizationInviteLinksController> sutProvider)
+    {
+        var model = new UpdateOrganizationInviteLinkRequestModel
+        {
+            AllowedDomains = ["acme.com"],
+        };
+
+        sutProvider.GetDependency<IUpdateOrganizationInviteLinkCommand>()
+            .UpdateAsync(Arg.Any<UpdateOrganizationInviteLinkRequest>())
+            .Returns(new CommandResult<OrganizationInviteLink>(new InviteLinkNotFound()));
+
+        var result = await sutProvider.Sut.Update(orgId, model);
+
+        var notFoundResult = Assert.IsType<NotFound<Bit.Core.Models.Api.ErrorResponseModel>>(result);
+        Assert.NotNull(notFoundResult.Value);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Update_WithValidationError_Returns400(
+        Guid orgId,
+        SutProvider<OrganizationInviteLinksController> sutProvider)
+    {
+        var model = new UpdateOrganizationInviteLinkRequestModel
+        {
+            AllowedDomains = [],
+        };
+
+        sutProvider.GetDependency<IUpdateOrganizationInviteLinkCommand>()
+            .UpdateAsync(Arg.Any<UpdateOrganizationInviteLinkRequest>())
+            .Returns(new CommandResult<OrganizationInviteLink>(new InviteLinkDomainsRequired()));
+
+        var result = await sutProvider.Sut.Update(orgId, model);
+
+        var badRequestResult = Assert.IsType<BadRequest<Bit.Core.Models.Api.ErrorResponseModel>>(result);
+        Assert.NotNull(badRequestResult.Value);
+    }
 }
