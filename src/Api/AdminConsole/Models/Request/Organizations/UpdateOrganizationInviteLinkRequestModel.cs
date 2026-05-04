@@ -10,6 +10,7 @@ public class UpdateOrganizationInviteLinkRequestModel
     /// Email domains permitted to accept the invite link (e.g. <c>["acme.com"]</c>).
     /// </summary>
     [Required]
+    [MinLength(1)]
     [ValidateSequence<DomainNameValidatorAttribute>]
     public required IEnumerable<string> AllowedDomains { get; set; }
 

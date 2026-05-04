@@ -39,6 +39,20 @@ public class UpdateOrganizationInviteLinkRequestModelTests
     }
 
     [Fact]
+    public void Validate_WithEmptyAllowedDomains_ReturnsError()
+    {
+        var model = new UpdateOrganizationInviteLinkRequestModel
+        {
+            AllowedDomains = [],
+        };
+
+        var results = Validate(model);
+
+        Assert.Single(results);
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(model.AllowedDomains)));
+    }
+
+    [Fact]
     public void Validate_WithMixedValidAndInvalidDomains_ReturnsError()
     {
         var model = new UpdateOrganizationInviteLinkRequestModel
