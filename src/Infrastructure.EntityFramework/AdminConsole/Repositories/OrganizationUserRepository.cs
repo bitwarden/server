@@ -327,9 +327,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var dbContext = GetDatabaseContext(scope);
             return await dbContext.OrganizationUsers
                 .Where(ou => ou.Type == OrganizationUserType.Owner && ou.Status == OrganizationUserStatusType.Confirmed)
-                .GroupBy(ou => ou.UserId)
-                .Select(g => new { UserId = g.Key, ConfirmedOwnerCount = g.Count() })
-                .Where(oc => oc.UserId == userId && oc.ConfirmedOwnerCount == 1)
+                .GroupBy(ou => ou.OrganizationId)
+                .Where(g => g.Count() == 1 && g.Any(ou => ou.UserId == userId))
                 .CountAsync();
         }
     }
