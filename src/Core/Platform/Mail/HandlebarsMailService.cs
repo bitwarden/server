@@ -770,7 +770,7 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendAdminResetPasswordEmailAsync(string email, string? userName, string orgName, bool resetMasterPassword, bool resetTwoFactor)
     {
-        var message = CreateDefaultMessage("Your admin has initiated account recovery", email);
+        var message = CreateDefaultMessage($"{orgName} has initiated account recovery", email);
         var model = new AdminResetPasswordViewModel()
         {
             UserName = GetUserIdentifier(email, userName),
