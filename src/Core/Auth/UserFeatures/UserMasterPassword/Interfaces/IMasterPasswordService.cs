@@ -51,8 +51,7 @@ namespace Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 ///   <item>
 ///     <term>Set</term>
 ///     <description>Client sends all data (hash, salt, KDF). Server sets all
-///     fields. Stage 1 caveat: server enforces <c>salt == email.ToLowerInvariant().Trim()</c>
-///     (PM-28143 removes this in Stage 3). Use when creating a new user.</description>
+///     fields. Use when creating a new user.</description>
 ///   </item>
 ///   <item>
 ///     <term>Update (hash only)</term>
