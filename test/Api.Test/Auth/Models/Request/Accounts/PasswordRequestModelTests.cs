@@ -232,4 +232,40 @@ public class PasswordRequestModelTests
 
         Assert.False(model.RequestHasNewDataTypes());
     }
+
+    [Theory]
+    [BitAutoData]
+    public void Validate_WhenBothAuthAndUnlockPresent_WithBelowMinimumKdf_NoError(
+        string masterPasswordHash)
+    {
+        // Regression guard (PM-35306): legacy users with sub-minimum KDF settings must be able to
+        // change their master password. KDF strength is enforced in the commands for registration
+        // and KDF change, NOT in change-password.
+        var kdf = new KdfRequestModel
+        {
+            KdfType = KdfType.PBKDF2_SHA256,
+            Iterations = 1
+        };
+
+        var model = new PasswordRequestModel
+        {
+            MasterPasswordHash = masterPasswordHash,
+            AuthenticationData = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = kdf,
+                MasterPasswordAuthenticationHash = "authHash",
+                Salt = "salt"
+            },
+            UnlockData = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = kdf,
+                MasterKeyWrappedUserKey = "wrappedKey",
+                Salt = "salt"
+            }
+        };
+
+        var result = model.Validate(new ValidationContext(model)).ToList();
+
+        Assert.DoesNotContain(result, r => r.ErrorMessage != null && r.ErrorMessage.Contains("KDF iterations must be between"));
+    }
 }
