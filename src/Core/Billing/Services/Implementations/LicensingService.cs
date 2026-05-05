@@ -94,6 +94,10 @@ public class LicensingService : ILicensingService
                 _verificationCertificates.Add(devCert);
             }
         }
+        else if (CoreHelpers.SettingHasValue(_globalSettings.LicenseCertificatePath) && CoreHelpers.SettingHasValue(_globalSettings.LicenseCertificatePassword))
+        {
+            _creationCertificate = CoreHelpers.GetCertificate(_globalSettings.LicenseCertificatePath, _globalSettings.LicenseCertificatePassword);
+        }
         else if (CoreHelpers.SettingHasValue(_globalSettings.Storage?.ConnectionString) &&
             CoreHelpers.SettingHasValue(_globalSettings.LicenseCertificatePassword))
         {
