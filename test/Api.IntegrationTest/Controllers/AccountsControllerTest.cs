@@ -307,7 +307,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("AuthenticationData and UnlockData must have the same salt.", content);
+        Assert.Contains("Invalid master password salt.", content);
     }
 
     [Fact]
@@ -333,7 +333,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("AuthenticationData and UnlockData must have the same salt.", content);
+        Assert.Contains("Invalid master password salt.", content);
     }
 
     [Fact]
@@ -363,10 +363,10 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     }
 
     [Theory]
-    [InlineData(KdfType.PBKDF2_SHA256, 1, null, null)]
-    [InlineData(KdfType.Argon2id, 4, null, 5)]
-    [InlineData(KdfType.Argon2id, 4, 65, null)]
-    public async Task PostKdf_InvalidKdf_BadRequest(KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism)
+    [InlineData(KdfType.PBKDF2_SHA256, 1, null, null, "KDF iterations must be between")]
+    [InlineData(KdfType.Argon2id, 4, null, 5, "Argon2 memory must be between")]
+    [InlineData(KdfType.Argon2id, 4, 65, null, "Argon2 parallelism must be between")]
+    public async Task PostKdf_InvalidKdf_BadRequest(KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism, string expectedError)
     {
         await _loginHelper.LoginAsync(_ownerEmail);
 
@@ -382,7 +382,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("KDF settings are invalid.", content);
+        Assert.Contains(expectedError, content);
     }
 
     [Fact]

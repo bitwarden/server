@@ -25,6 +25,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Auth.Controllers;
@@ -37,6 +38,7 @@ public class AccountsController : Controller
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IUserService _userService;
+    private readonly ISelfServicePasswordChangeCommand _selfServicePasswordChangeCommand;
     private readonly IPolicyService _policyService;
     private readonly ISetInitialMasterPasswordCommandV1 _setInitialMasterPasswordCommandV1;
     private readonly IFinishSsoJitProvisionMasterPasswordCommand _finishSsoJitProvisionMasterPasswordCommand;
@@ -54,6 +56,7 @@ public class AccountsController : Controller
         IOrganizationUserRepository organizationUserRepository,
         IProviderUserRepository providerUserRepository,
         IUserService userService,
+        ISelfServicePasswordChangeCommand selfServicePasswordChangeCommand,
         IPolicyService policyService,
         IFinishSsoJitProvisionMasterPasswordCommand finishSsoJitProvisionMasterPasswordCommand,
         ISetInitialMasterPasswordCommandV1 setInitialMasterPasswordCommandV1,
@@ -71,6 +74,7 @@ public class AccountsController : Controller
         _organizationUserRepository = organizationUserRepository;
         _providerUserRepository = providerUserRepository;
         _userService = userService;
+        _selfServicePasswordChangeCommand = selfServicePasswordChangeCommand;
         _policyService = policyService;
         _finishSsoJitProvisionMasterPasswordCommand = finishSsoJitProvisionMasterPasswordCommand;
         _setInitialMasterPasswordCommandV1 = setInitialMasterPasswordCommandV1;
@@ -197,8 +201,22 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _userService.ChangePasswordAsync(user, model.MasterPasswordHash,
-            model.NewMasterPasswordHash, model.MasterPasswordHint, model.Key);
+        IdentityResult result;
+        if (model.RequestHasNewDataTypes())
+        {
+            result = await _selfServicePasswordChangeCommand.ChangePasswordAsync(
+                user,
+                model.MasterPasswordHash,
+                model.UnlockData!.ToData(),
+                model.AuthenticationData!.ToData(),
+                model.MasterPasswordHint);
+        }
+        else
+        {
+            result = await _userService.ChangePasswordAsync(user, model.MasterPasswordHash,
+                model.NewMasterPasswordHash, model.MasterPasswordHint, model.Key);
+        }
+
         if (result.Succeeded)
         {
             return;
@@ -288,7 +306,7 @@ public class AccountsController : Controller
     }
 
     [HttpPost("kdf")]
-    public async Task PostKdf([FromBody] PasswordRequestModel model)
+    public async Task PostKdf([FromBody] ChangeKdfRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)

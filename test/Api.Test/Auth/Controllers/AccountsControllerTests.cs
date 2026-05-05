@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Core.AdminConsole.Repositories;
@@ -33,6 +33,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IUserService _userService;
     private readonly IProviderUserRepository _providerUserRepository;
+    private readonly ISelfServicePasswordChangeCommand _selfServicePasswordChangeCommand;
     private readonly IPolicyService _policyService;
     private readonly IFinishSsoJitProvisionMasterPasswordCommand _finishSsoJitProvisionMasterPasswordCommand;
     private readonly ISetInitialMasterPasswordCommandV1 _setInitialMasterPasswordCommandV1;
@@ -51,6 +52,7 @@ public class AccountsControllerTests : IDisposable
         _organizationService = Substitute.For<IOrganizationService>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _providerUserRepository = Substitute.For<IProviderUserRepository>();
+        _selfServicePasswordChangeCommand = Substitute.For<ISelfServicePasswordChangeCommand>();
         _policyService = Substitute.For<IPolicyService>();
         _finishSsoJitProvisionMasterPasswordCommand = Substitute.For<IFinishSsoJitProvisionMasterPasswordCommand>();
         _setInitialMasterPasswordCommandV1 = Substitute.For<ISetInitialMasterPasswordCommandV1>();
@@ -68,6 +70,7 @@ public class AccountsControllerTests : IDisposable
             _organizationUserRepository,
             _providerUserRepository,
             _userService,
+            _selfServicePasswordChangeCommand,
             _policyService,
             _finishSsoJitProvisionMasterPasswordCommand,
             _setInitialMasterPasswordCommandV1,
@@ -639,7 +642,7 @@ public class AccountsControllerTests : IDisposable
 
     [Theory]
     [BitAutoData]
-    public async Task PostKdf_UserNotFound_ShouldFail(PasswordRequestModel model)
+    public async Task PostKdf_UserNotFound_ShouldFail(ChangeKdfRequestModel model)
     {
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult<User>(null));
 
@@ -650,7 +653,7 @@ public class AccountsControllerTests : IDisposable
     [Theory]
     [BitAutoData]
     public async Task PostKdf_WithNullAuthenticationData_ShouldFail(
-        User user, PasswordRequestModel model)
+        User user, ChangeKdfRequestModel model)
     {
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
         model.AuthenticationData = null;
@@ -664,7 +667,7 @@ public class AccountsControllerTests : IDisposable
     [Theory]
     [BitAutoData]
     public async Task PostKdf_WithNullUnlockData_ShouldFail(
-        User user, PasswordRequestModel model)
+        User user, ChangeKdfRequestModel model)
     {
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
         model.UnlockData = null;
@@ -678,7 +681,7 @@ public class AccountsControllerTests : IDisposable
     [Theory]
     [BitAutoData]
     public async Task PostKdf_ChangeKdfFailed_ShouldFail(
-        User user, PasswordRequestModel model)
+        User user, ChangeKdfRequestModel model)
     {
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
         _changeKdfCommand.ChangeKdfAsync(Arg.Any<User>(), Arg.Any<string>(),
@@ -696,7 +699,7 @@ public class AccountsControllerTests : IDisposable
     [Theory]
     [BitAutoData]
     public async Task PostKdf_ChangeKdfSuccess_NoError(
-        User user, PasswordRequestModel model)
+        User user, ChangeKdfRequestModel model)
     {
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
         _changeKdfCommand.ChangeKdfAsync(Arg.Any<User>(), Arg.Any<string>(),
