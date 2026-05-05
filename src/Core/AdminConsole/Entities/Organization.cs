@@ -279,7 +279,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     public bool LimitItemDeletion { get; set; }
 
     /// <summary>
-    /// If true, the organization can use the Risk Insights feature. Thisis a reporting feature that provides
+    /// If true, the organization can use the Risk Insights feature. This is a reporting feature that provides
     /// insights into the security of an organization.
     /// </summary>
     public bool UseRiskInsights { get; set; }
