@@ -37,6 +37,7 @@ public class GlobalSettings : IGlobalSettings
         set => _mailTemplateDirectory = value;
     }
     public string LicenseCertificatePassword { get; set; }
+    public string LicenseCertificatePath { get; set; }
     public virtual string PushRelayBaseUri { get; set; }
     public virtual string InternalIdentityKey { get; set; }
     public virtual string OidcIdentityClientKey { get; set; }

@@ -5,7 +5,6 @@ using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
@@ -68,7 +67,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
     }
 
     [Fact]
-    public async Task Create_AsOwner_ReturnsCreated()
+    public async Task CreateThenGet_AsOwner_ReturnsCreatedAndOk()
     {
         var request = new CreateOrganizationInviteLinkRequestModel
         {
@@ -76,22 +75,76 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
             EncryptedInviteKey = _validEncryptedKey,
         };
 
-        var response = await _client.PostAsJsonAsync(
+        static void AssertInviteLink(OrganizationInviteLinkResponseModel? content, Organization organization)
+        {
+            Assert.NotNull(content);
+            Assert.NotEqual(Guid.Empty, content.Id);
+            Assert.NotEqual(Guid.Empty, content.Code);
+            Assert.Equal(organization.Id, content.OrganizationId);
+            Assert.Equal(["acme.com", "example.com"], content.AllowedDomains);
+            Assert.Equal(_validEncryptedKey, content.EncryptedInviteKey);
+        }
+
+        var createResponse = await _client.PostAsJsonAsync(
             $"/organizations/{_organization.Id}/invite-link", request);
 
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
 
-        var content = await response.Content.ReadFromJsonAsync<OrganizationInviteLinkResponseModel>();
+        var created = await createResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkResponseModel>();
+        AssertInviteLink(created, _organization);
+
+        var getResponse = await _client.GetAsync($"/organizations/{_organization.Id}/invite-link");
+
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+
+        var content = await getResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkResponseModel>();
+        AssertInviteLink(content, _organization);
+    }
+
+    [Fact]
+    public async Task CreateThenUpdateThenGet_AsOwner_ReturnsCreatedAndOkAndOk()
+    {
+        var createRequest = new CreateOrganizationInviteLinkRequestModel
+        {
+            AllowedDomains = ["acme.com"],
+            EncryptedInviteKey = _validEncryptedKey,
+        };
+
+        var createResponse = await _client.PostAsJsonAsync(
+            $"/organizations/{_organization.Id}/invite-link", createRequest);
+
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+
+        var created = await createResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkResponseModel>();
+        Assert.NotNull(created);
+
+        var updateRequest = new UpdateOrganizationInviteLinkRequestModel
+        {
+            AllowedDomains = ["example.com", "new.com"],
+        };
+
+        var updateResponse = await _client.PutAsJsonAsync(
+            $"/organizations/{_organization.Id}/invite-link", updateRequest);
+
+        Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
+
+        var updated = await updateResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkResponseModel>();
+        Assert.NotNull(updated);
+        Assert.Equal(created.Id, updated.Id);
+        Assert.Equal(created.Code, updated.Code);
+        Assert.Equal(_organization.Id, updated.OrganizationId);
+        Assert.Equal(_validEncryptedKey, updated.EncryptedInviteKey);
+        Assert.Equal(["example.com", "new.com"], updated.AllowedDomains);
+
+        var getResponse = await _client.GetAsync($"/organizations/{_organization.Id}/invite-link");
+
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+
+        var content = await getResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkResponseModel>();
         Assert.NotNull(content);
-        Assert.NotEqual(Guid.Empty, content.Id);
-        Assert.NotEqual(Guid.Empty, content.Code);
-        Assert.Equal(_organization.Id, content.OrganizationId);
-        Assert.Equal(["acme.com", "example.com"], content.AllowedDomains);
+        Assert.Equal(created.Id, content.Id);
+        Assert.Equal(created.Code, content.Code);
         Assert.Equal(_validEncryptedKey, content.EncryptedInviteKey);
-
-        var repository = _factory.GetService<IOrganizationInviteLinkRepository>();
-        var persisted = await repository.GetByOrganizationIdAsync(_organization.Id);
-        Assert.NotNull(persisted);
-        Assert.Equal(content.Id, persisted.Id);
+        Assert.Equal(["example.com", "new.com"], content.AllowedDomains);
     }
 }

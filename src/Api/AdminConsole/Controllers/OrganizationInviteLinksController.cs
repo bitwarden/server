@@ -14,9 +14,21 @@ namespace Bit.Api.AdminConsole.Controllers;
 [Authorize("Application")]
 [RequireFeature(FeatureFlagKeys.GenerateInviteLink)]
 public class OrganizationInviteLinksController(
-    ICreateOrganizationInviteLinkCommand createOrganizationInviteLinkCommand)
+    ICreateOrganizationInviteLinkCommand createOrganizationInviteLinkCommand,
+    IGetOrganizationInviteLinkQuery getOrganizationInviteLinkQuery,
+    IUpdateOrganizationInviteLinkCommand updateOrganizationInviteLinkCommand)
     : BaseAdminConsoleController
 {
+    [HttpGet("")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<IResult> Get(Guid orgId)
+    {
+        var result = await getOrganizationInviteLinkQuery.GetAsync(orgId);
+
+        return Handle(result, link =>
+            TypedResults.Ok(new OrganizationInviteLinkResponseModel(link)));
+    }
+
     [HttpPost("")]
     [Authorize<ManageUsersRequirement>]
     public async Task<IResult> Create(Guid orgId, [FromBody] CreateOrganizationInviteLinkRequestModel model)
@@ -28,5 +40,16 @@ public class OrganizationInviteLinksController(
             TypedResults.Created(
                 $"organizations/{orgId}/invite-link",
                 new OrganizationInviteLinkResponseModel(link)));
+    }
+
+    [HttpPut("")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<IResult> Update(Guid orgId, [FromBody] UpdateOrganizationInviteLinkRequestModel model)
+    {
+        var result = await updateOrganizationInviteLinkCommand.UpdateAsync(
+            model.ToCommandRequest(orgId));
+
+        return Handle(result, link =>
+            TypedResults.Ok(new OrganizationInviteLinkResponseModel(link)));
     }
 }
