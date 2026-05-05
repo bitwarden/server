@@ -4,7 +4,15 @@ using Bit.Core.Utilities;
 
 namespace Bit.Api.Auth.Models.Request.Accounts;
 
-public class PasswordRequestModel : IValidatableObject
+/// <summary>
+/// Dual-shape request: validation accepts either the legacy
+/// (<see cref="NewMasterPasswordHash"/>, <see cref="Key"/>) or new
+/// (<see cref="AuthenticationData"/>, <see cref="UnlockData"/>) payload so the wire contract
+/// can stabilize ahead of caller wiring. <c>PostKdf</c> currently honors only the new shape;
+/// legacy-shape dispatch arrives with <c>ChangeKdfCommand</c>'s dual-path refactor. All legacy
+/// fields are removed in PM-33141.
+/// </summary>
+public class ChangeKdfRequestModel : IValidatableObject
 {
     [Required]
     public required string MasterPasswordHash { get; set; }
@@ -13,18 +21,11 @@ public class PasswordRequestModel : IValidatableObject
     public string? NewMasterPasswordHash { get; set; }
     [Obsolete("To be removed in PM-33141")]
     public string? Key { get; set; }
-    [StringLength(50)]
-    public string? MasterPasswordHint { get; set; }
 
     // Should be made required in PM-33141
     public MasterPasswordAuthenticationDataRequestModel? AuthenticationData { get; set; }
     // Should be made required in PM-33141
     public MasterPasswordUnlockDataRequestModel? UnlockData { get; set; }
-
-    public bool RequestHasNewDataTypes()
-    {
-        return UnlockData is not null && AuthenticationData is not null;
-    }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
