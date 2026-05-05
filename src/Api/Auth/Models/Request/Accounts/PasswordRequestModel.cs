@@ -39,10 +39,17 @@ public class PasswordRequestModel : IValidatableObject
 
         if (hasNewPayloads)
         {
-            foreach (var validationResult in KdfSettingsValidator.ValidateAuthenticationAndUnlockData(
-                         AuthenticationData!.ToData(), UnlockData!.ToData()))
+            if (!AuthenticationData!.HasSameKdfConfiguration(UnlockData!))
             {
-                yield return validationResult;
+                yield return new ValidationResult(
+                    "AuthenticationData and UnlockData must have the same KDF configuration.",
+                    [nameof(AuthenticationData), nameof(UnlockData)]);
+            }
+            if (!AuthenticationData.Salt.Equals(UnlockData!.Salt))
+            {
+                yield return new ValidationResult(
+                    "AuthenticationData and UnlockData must have the same salt.",
+                    [nameof(AuthenticationData), nameof(UnlockData)]);
             }
         }
     }
