@@ -1,18 +1,19 @@
 CREATE PROCEDURE [dbo].[Send_UpdateDisabledByIds]
     @Ids AS [dbo].[GuidIdArray] READONLY,
-    @Disabled BIT
+    @Disabled BIT,
+    @RevisionDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
 
-    DECLARE @UserIds [dbo].[GuidIdarray]
+    DECLARE @UserIds [dbo].[GuidIdArray]
 
     -- Set field
     UPDATE
         [dbo].[Send]
     SET
         [Disabled] = @Disabled,
-        [RevisionDate] = GETUTCDATE()
+        [RevisionDate] = @RevisionDate
     WHERE
         [Id] IN (SELECT * FROM @Ids)
     

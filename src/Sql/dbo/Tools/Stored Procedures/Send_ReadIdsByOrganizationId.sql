@@ -1,5 +1,5 @@
-CREATE PROCEDURE [dbo].[Send_ReadIdsByOrgId]
-    @Id UNIQUEIDENTIFIER
+CREATE PROCEDURE [dbo].[Send_ReadIdsByOrganizationId]
+    @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
@@ -12,7 +12,7 @@ BEGIN
     FROM
         [dbo].[OrganizationUserView]
     WHERE
-        OrganizationId = @Id
+        OrganizationId = @OrganizationId
 
     -- Get the IDs of all Sends associated with those users --
     SELECT

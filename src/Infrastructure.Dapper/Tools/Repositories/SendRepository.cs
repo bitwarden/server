@@ -198,7 +198,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
         using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
             $"[{Schema}].[Send_UpdateDisabledByIds]",
-            new { Ids = ids.ToGuidIdArrayTVP(), Disabled = disabled },
+            new { Ids = ids.ToGuidIdArrayTVP(), Disabled = disabled, RevisionDate = DateTime.UtcNow },
             commandType: CommandType.StoredProcedure);
     }
 
@@ -206,8 +206,8 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
     {
         using var connection = new SqlConnection(ConnectionString);
         var sendIds = await connection.QueryAsync<Guid>(
-            $"[{Schema}].[Send_ReadIdsByOrgId]",
-            new { Id = organizationId },
+            $"[{Schema}].[Send_ReadIdsByOrganizationId]",
+            new { OrganizationId = organizationId },
             commandType: CommandType.StoredProcedure);
         return sendIds;
     }

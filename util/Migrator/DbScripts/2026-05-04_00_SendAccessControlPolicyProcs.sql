@@ -5,7 +5,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    DECLARE @UserIds [dbo].[GuidIdarray]
+    DECLARE @UserIds [dbo].[GuidIdArray]
 
     -- Set field
     UPDATE
@@ -45,7 +45,7 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[Send_ReadIdsByOrgId]
+CREATE OR ALTER PROCEDURE [dbo].[Send_ReadIdsByOrganizationId]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
