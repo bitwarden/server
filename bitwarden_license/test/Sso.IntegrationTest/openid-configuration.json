@@ -10,8 +10,6 @@
   "introspection_endpoint": "http://localhost:51822/connect/introspect",
   "device_authorization_endpoint": "http://localhost:51822/connect/deviceauthorization",
   "backchannel_authentication_endpoint": "http://localhost:51822/connect/ciba",
-  "pushed_authorization_request_endpoint": "http://localhost:51822/connect/par",
-  "require_pushed_authorization_requests": false,
   "frontchannel_logout_supported": true,
   "frontchannel_logout_session_supported": true,
   "backchannel_logout_supported": true,
@@ -64,10 +62,18 @@
     "client_secret_basic",
     "client_secret_post"
   ],
-  "id_token_signing_alg_values_supported": ["RS256"],
-  "userinfo_signing_alg_values_supported": ["RS256"],
-  "introspection_signing_alg_values_supported": ["RS256"],
-  "subject_types_supported": ["public"],
+  "id_token_signing_alg_values_supported": [
+    "RS256"
+  ],
+  "userinfo_signing_alg_values_supported": [
+    "RS256"
+  ],
+  "introspection_signing_alg_values_supported": [
+    "RS256"
+  ],
+  "subject_types_supported": [
+    "public"
+  ],
   "code_challenge_methods_supported": [
     "plain",
     "S256"
@@ -91,7 +97,9 @@
     "select_account"
   ],
   "authorization_response_iss_parameter_supported": true,
-  "backchannel_token_delivery_modes_supported": ["poll"],
+  "backchannel_token_delivery_modes_supported": [
+    "poll"
+  ],
   "backchannel_user_code_parameter_supported": true,
   "dpop_signing_alg_values_supported": [
     "RS256",
