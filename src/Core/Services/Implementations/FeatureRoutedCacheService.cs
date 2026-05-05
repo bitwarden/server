@@ -37,6 +37,11 @@ public class FeatureRoutedCacheService(
 
     public async Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync(IEnumerable<Guid> providerIds)
     {
+        if (featureService.IsEnabled(FeatureFlagKeys.ProviderAbilityExtendedCache))
+        {
+            return await providerAbilityCacheService.GetProviderAbilitiesAsync(providerIds);
+        }
+
         var allProviderAbilities = await inMemoryApplicationCacheService.GetProviderAbilitiesAsync();
         return providerIds
             .Distinct()
