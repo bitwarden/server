@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Core.AdminConsole.Repositories;

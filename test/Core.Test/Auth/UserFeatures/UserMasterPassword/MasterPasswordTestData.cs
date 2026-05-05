@@ -1,4 +1,4 @@
-using Bit.Core.KeyManagement.Models.Data;
+﻿using Bit.Core.KeyManagement.Models.Data;
 
 namespace Bit.Core.Test.Auth.UserFeatures.UserMasterPassword;
 

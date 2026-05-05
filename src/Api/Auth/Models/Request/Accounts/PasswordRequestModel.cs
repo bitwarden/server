@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.Utilities;
 
