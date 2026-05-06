@@ -48,10 +48,7 @@ public class RefreshOrganizationInviteLinkCommandTests
 
         await sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
             .Received(1)
-            .DeleteAsync(existingLink);
-        await sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
-            .Received(1)
-            .CreateAsync(link);
+            .RefreshAsync(existingLink, link);
     }
 
     [Theory, BitAutoData]
@@ -77,10 +74,7 @@ public class RefreshOrganizationInviteLinkCommandTests
 
         await sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
             .DidNotReceiveWithAnyArgs()
-            .DeleteAsync(default!);
-        await sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .CreateAsync(default!);
+            .RefreshAsync(default!, default!);
     }
 
     [Theory, BitAutoData]
@@ -103,10 +97,7 @@ public class RefreshOrganizationInviteLinkCommandTests
 
         await sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
             .DidNotReceiveWithAnyArgs()
-            .DeleteAsync(default!);
-        await sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .CreateAsync(default!);
+            .RefreshAsync(default!, default!);
     }
 
     private static void SetupAbility(

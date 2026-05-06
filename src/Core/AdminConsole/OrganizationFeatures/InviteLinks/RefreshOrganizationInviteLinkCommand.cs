@@ -38,8 +38,7 @@ public class RefreshOrganizationInviteLinkCommand(
         };
         newLink.SetNewId();
 
-        await organizationInviteLinkRepository.DeleteAsync(existing);
-        await organizationInviteLinkRepository.CreateAsync(newLink);
+        await organizationInviteLinkRepository.RefreshAsync(existing, newLink);
 
         return newLink;
     }
