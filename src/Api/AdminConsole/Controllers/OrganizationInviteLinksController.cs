@@ -15,7 +15,8 @@ namespace Bit.Api.AdminConsole.Controllers;
 [RequireFeature(FeatureFlagKeys.GenerateInviteLink)]
 public class OrganizationInviteLinksController(
     ICreateOrganizationInviteLinkCommand createOrganizationInviteLinkCommand,
-    IGetOrganizationInviteLinkQuery getOrganizationInviteLinkQuery)
+    IGetOrganizationInviteLinkQuery getOrganizationInviteLinkQuery,
+    IUpdateOrganizationInviteLinkCommand updateOrganizationInviteLinkCommand)
     : BaseAdminConsoleController
 {
     [HttpGet("")]
@@ -39,5 +40,16 @@ public class OrganizationInviteLinksController(
             TypedResults.Created(
                 $"organizations/{orgId}/invite-link",
                 new OrganizationInviteLinkResponseModel(link)));
+    }
+
+    [HttpPut("")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<IResult> Update(Guid orgId, [FromBody] UpdateOrganizationInviteLinkRequestModel model)
+    {
+        var result = await updateOrganizationInviteLinkCommand.UpdateAsync(
+            model.ToCommandRequest(orgId));
+
+        return Handle(result, link =>
+            TypedResults.Ok(new OrganizationInviteLinkResponseModel(link)));
     }
 }

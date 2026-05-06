@@ -7,14 +7,14 @@ using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 
-public class CreateOrganizationInviteLinkCommand(
+public class UpdateOrganizationInviteLinkCommand(
     IOrganizationInviteLinkRepository organizationInviteLinkRepository,
     IApplicationCacheService applicationCacheService,
     TimeProvider timeProvider)
-    : ICreateOrganizationInviteLinkCommand
+    : IUpdateOrganizationInviteLinkCommand
 {
-    public async Task<CommandResult<OrganizationInviteLink>> CreateAsync(
-        CreateOrganizationInviteLinkRequest request)
+    public async Task<CommandResult<OrganizationInviteLink>> UpdateAsync(
+        UpdateOrganizationInviteLinkRequest request)
     {
         if (!await OrganizationHasInviteLinksAbilityAsync(request.OrganizationId))
         {
@@ -27,25 +27,16 @@ public class CreateOrganizationInviteLinkCommand(
             return new InviteLinkDomainsRequired();
         }
 
-        var existingLink = await organizationInviteLinkRepository.GetByOrganizationIdAsync(request.OrganizationId);
-        if (existingLink != null)
+        var inviteLink = await organizationInviteLinkRepository.GetByOrganizationIdAsync(request.OrganizationId);
+        if (inviteLink is null)
         {
-            return new InviteLinkAlreadyExists();
+            return new InviteLinkNotFound();
         }
 
-        var now = timeProvider.GetUtcNow().UtcDateTime;
-        var inviteLink = new OrganizationInviteLink
-        {
-            OrganizationId = request.OrganizationId,
-            EncryptedInviteKey = request.EncryptedInviteKey,
-            EncryptedOrgKey = request.EncryptedOrgKey,
-            CreationDate = now,
-            RevisionDate = now,
-        };
         inviteLink.SetAllowedDomains(sanitizedDomains);
-        inviteLink.SetNewId();
+        inviteLink.RevisionDate = timeProvider.GetUtcNow().UtcDateTime;
 
-        await organizationInviteLinkRepository.CreateAsync(inviteLink);
+        await organizationInviteLinkRepository.ReplaceAsync(inviteLink);
 
         return inviteLink;
     }
@@ -55,5 +46,4 @@ public class CreateOrganizationInviteLinkCommand(
         var ability = await applicationCacheService.GetOrganizationAbilityAsync(organizationId);
         return ability is not null && ability.UseInviteLinks;
     }
-
 }
