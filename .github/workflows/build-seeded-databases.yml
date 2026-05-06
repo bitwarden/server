@@ -40,6 +40,9 @@ jobs:
 
       - name: Set up .NET
         uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v4.1.0
+        with:
+          cache: true
+          cache-dependency-path: "**/*.csproj"
 
       - name: Restore and build SeederUtility
         run: |
@@ -59,7 +62,7 @@ jobs:
           if [[ -n "${{ inputs.database }}" ]]; then
             databases='["${{ inputs.database }}"]'
           else
-            databases='["postgres"]'
+            databases='["postgres","mysql","mssql"]'
           fi
 
           echo "presets=${presets}" >> "$GITHUB_OUTPUT"
@@ -83,6 +86,9 @@ jobs:
 
       - name: Set up .NET
         uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v4.1.0
+        with:
+          cache: true
+          cache-dependency-path: "**/*.csproj"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.7.1
@@ -103,6 +109,25 @@ jobs:
           bash util/SeederUtility/scripts/build-seeded-image.sh \
             "${{ matrix.preset }}" \
             "${{ matrix.database }}"
+
+      - name: Save image as tarball
+        run: |
+          TAG="${{ matrix.preset }}"
+          TAG="${TAG//./-}"
+          DB="${{ matrix.database }}"
+          SHA_SHORT="${GITHUB_SHA:0:7}"
+          docker save \
+            "${{ env._AZ_REGISTRY }}/shot/seeded-${DB}:${TAG}" \
+            "${{ env._AZ_REGISTRY }}/shot/seeded-${DB}:${TAG}-${SHA_SHORT}" \
+            -o "seeded-${DB}-${TAG}-${SHA_SHORT}.tar"
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: seeded-${{ matrix.database }}-${{ matrix.preset }}
+          path: seeded-*.tar
+          retention-days: 7
+          if-no-files-found: error
 
       - name: Job summary
         if: always()
