@@ -217,15 +217,6 @@ if [[ "${DB_TYPE}" == "sqlite" ]]; then
     globalSettings__sqlite__connectionString="Data Source=${SQLITE_FILE}" \
     dotnet run --project . -- preset --name "${PRESET_NAME}"
 
-    # Metadata injected directly into the SQLite file via sqlite3 if available
-    if command -v sqlite3 &>/dev/null; then
-        sqlite3 "${SQLITE_FILE}" \
-            "CREATE TABLE IF NOT EXISTS \"_SeederMetadata\" (\"Key\" TEXT PRIMARY KEY, \"Value\" TEXT);
-             INSERT OR REPLACE INTO \"_SeederMetadata\" VALUES ('preset', '${PRESET_NAME}');
-             INSERT OR REPLACE INTO \"_SeederMetadata\" VALUES ('git_sha', '${GIT_SHA}');
-             INSERT OR REPLACE INTO \"_SeederMetadata\" VALUES ('built_at', '${BUILD_DATE}');"
-    fi
-
     _docker_build_and_push
     echo "==> Done: ${PRESET_NAME} (${DB_TYPE}) → ${TAG}"
     exit 0
@@ -359,44 +350,19 @@ case "${DB_TYPE}" in
     ;;
 esac
 
-# --- Write metadata, dump, cleanup ---
+# --- Dump database ---
 case "${DB_TYPE}" in
   postgres)
     docker exec "${CONTAINER_NAME}" \
         pg_dump --no-owner --no-acl -U "${DB_USER}" -d "${DB_NAME}" > "${WORK_DIR}/seed.sql"
-
-    cat >> "${WORK_DIR}/seed.sql" << EOF
-
--- Seeder metadata
-CREATE TABLE IF NOT EXISTS public."_SeederMetadata" ("Key" text PRIMARY KEY, "Value" text);
-INSERT INTO public."_SeederMetadata" VALUES ('preset', '${PRESET_NAME}') ON CONFLICT ("Key") DO UPDATE SET "Value" = EXCLUDED."Value";
-INSERT INTO public."_SeederMetadata" VALUES ('git_sha', '${GIT_SHA}') ON CONFLICT ("Key") DO UPDATE SET "Value" = EXCLUDED."Value";
-INSERT INTO public."_SeederMetadata" VALUES ('built_at', '${BUILD_DATE}') ON CONFLICT ("Key") DO UPDATE SET "Value" = EXCLUDED."Value";
-EOF
     ;;
 
   mysql|mariadb)
     docker exec "${CONTAINER_NAME}" \
         sh -c 'mysqldump -u root -p"'"${DB_PASS}"'" --no-tablespaces "'"${DB_NAME}"'" 2>/dev/null || mariadb-dump -u root -p"'"${DB_PASS}"'" --no-tablespaces "'"${DB_NAME}"'" 2>/dev/null' > "${WORK_DIR}/seed.sql"
-
-    cat >> "${WORK_DIR}/seed.sql" << EOF
-
--- Seeder metadata
-CREATE TABLE IF NOT EXISTS \`_SeederMetadata\` (\`Key\` varchar(255) PRIMARY KEY, \`Value\` text);
-INSERT INTO \`_SeederMetadata\` VALUES ('preset', '${PRESET_NAME}') ON DUPLICATE KEY UPDATE \`Value\` = VALUES(\`Value\`);
-INSERT INTO \`_SeederMetadata\` VALUES ('git_sha', '${GIT_SHA}') ON DUPLICATE KEY UPDATE \`Value\` = VALUES(\`Value\`);
-INSERT INTO \`_SeederMetadata\` VALUES ('built_at', '${BUILD_DATE}') ON DUPLICATE KEY UPDATE \`Value\` = VALUES(\`Value\`);
-EOF
     ;;
 
   mssql)
-    # Write metadata before backup so it's baked in
-    docker exec "${CONTAINER_NAME}" \
-        /opt/mssql-tools18/bin/sqlcmd \
-            -S localhost -U SA -P "${DB_PASS}" -C \
-            -d "${DB_NAME}" \
-            -Q "IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='_SeederMetadata' AND xtype='U') CREATE TABLE [_SeederMetadata] ([Key] nvarchar(255) PRIMARY KEY, [Value] nvarchar(max)); MERGE [_SeederMetadata] AS t USING (VALUES ('preset','${PRESET_NAME}'),('git_sha','${GIT_SHA}'),('built_at','${BUILD_DATE}')) AS s([Key],[Value]) ON t.[Key]=s.[Key] WHEN MATCHED THEN UPDATE SET [Value]=s.[Value] WHEN NOT MATCHED THEN INSERT VALUES(s.[Key],s.[Value]);"
-
     # Copy MDF/LDF files directly — avoids RESTORE issues on Kubernetes PVCs
     docker exec "${CONTAINER_NAME}" \
         /opt/mssql-tools18/bin/sqlcmd \
