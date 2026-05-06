@@ -28,16 +28,15 @@ public class PasswordRequestModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        var hasNewPayloads = AuthenticationData is not null && UnlockData is not null;
         var hasLegacyPayloads = NewMasterPasswordHash is not null && Key is not null;
 
         foreach (var validationResult in MasterPasswordPayloadVariantValidator.ValidateExclusivity(
-                     hasNewPayloads, hasLegacyPayloads))
+                     RequestHasNewDataTypes(), hasLegacyPayloads))
         {
             yield return validationResult;
         }
 
-        if (hasNewPayloads)
+        if (RequestHasNewDataTypes())
         {
             if (!AuthenticationData!.HasSameKdfConfiguration(UnlockData!))
             {

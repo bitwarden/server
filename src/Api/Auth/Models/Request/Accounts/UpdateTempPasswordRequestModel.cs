@@ -26,16 +26,15 @@ public class UpdateTempPasswordRequestModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        var hasNewPayloads = UnlockData is not null && AuthenticationData is not null;
         var hasLegacyPayloads = NewMasterPasswordHash is not null && Key is not null;
 
         foreach (var validationResult in MasterPasswordPayloadVariantValidator.ValidateExclusivity(
-                     hasNewPayloads, hasLegacyPayloads))
+                     RequestHasNewDataTypes(), hasLegacyPayloads))
         {
             yield return validationResult;
         }
 
-        if (hasNewPayloads)
+        if (RequestHasNewDataTypes())
         {
             foreach (var validationResult in KdfSettingsValidator.ValidateAuthenticationAndUnlockData(
                          AuthenticationData!.ToData(), UnlockData!.ToData()))
