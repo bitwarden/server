@@ -17,7 +17,8 @@ public class OrganizationInviteLinksController(
     ICreateOrganizationInviteLinkCommand createOrganizationInviteLinkCommand,
     IGetOrganizationInviteLinkQuery getOrganizationInviteLinkQuery,
     IUpdateOrganizationInviteLinkCommand updateOrganizationInviteLinkCommand,
-    IDeleteOrganizationInviteLinkCommand deleteOrganizationInviteLinkCommand)
+    IDeleteOrganizationInviteLinkCommand deleteOrganizationInviteLinkCommand,
+    IRefreshOrganizationInviteLinkCommand refreshOrganizationInviteLinkCommand)
     : BaseAdminConsoleController
 {
     [HttpGet("")]
@@ -60,5 +61,16 @@ public class OrganizationInviteLinksController(
     {
         var result = await deleteOrganizationInviteLinkCommand.DeleteAsync(orgId);
         return Handle(result);
+    }
+
+    [HttpPost("refresh")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<IResult> Refresh(Guid orgId, [FromBody] RefreshOrganizationInviteLinkRequestModel model)
+    {
+        var result = await refreshOrganizationInviteLinkCommand.RefreshAsync(
+            model.ToCommandRequest(orgId));
+
+        return Handle(result, link =>
+            TypedResults.Ok(new OrganizationInviteLinkResponseModel(link)));
     }
 }
