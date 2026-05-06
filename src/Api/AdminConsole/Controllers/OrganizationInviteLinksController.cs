@@ -16,7 +16,8 @@ namespace Bit.Api.AdminConsole.Controllers;
 public class OrganizationInviteLinksController(
     ICreateOrganizationInviteLinkCommand createOrganizationInviteLinkCommand,
     IGetOrganizationInviteLinkQuery getOrganizationInviteLinkQuery,
-    IUpdateOrganizationInviteLinkCommand updateOrganizationInviteLinkCommand)
+    IUpdateOrganizationInviteLinkCommand updateOrganizationInviteLinkCommand,
+    IDeleteOrganizationInviteLinkCommand deleteOrganizationInviteLinkCommand)
     : BaseAdminConsoleController
 {
     [HttpGet("")]
@@ -51,5 +52,13 @@ public class OrganizationInviteLinksController(
 
         return Handle(result, link =>
             TypedResults.Ok(new OrganizationInviteLinkResponseModel(link)));
+    }
+
+    [HttpDelete("")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<IResult> Delete(Guid orgId)
+    {
+        var result = await deleteOrganizationInviteLinkCommand.DeleteAsync(orgId);
+        return Handle(result);
     }
 }
