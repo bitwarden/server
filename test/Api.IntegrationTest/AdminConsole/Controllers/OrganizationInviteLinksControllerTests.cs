@@ -147,4 +147,28 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         Assert.Equal(_validEncryptedKey, content.EncryptedInviteKey);
         Assert.Equal(["example.com", "new.com"], content.AllowedDomains);
     }
+
+    [Fact]
+    public async Task Delete_AsOwner_ReturnsNoContentAndRemovesLink()
+    {
+        var createRequest = new CreateOrganizationInviteLinkRequestModel
+        {
+            AllowedDomains = ["acme.com"],
+            EncryptedInviteKey = _validEncryptedKey,
+        };
+        var createResponse = await _client.PostAsJsonAsync(
+            $"/organizations/{_organization.Id}/invite-link", createRequest);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+
+        var deleteResponse = await _client.DeleteAsync(
+            $"/organizations/{_organization.Id}/invite-link");
+        Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+
+        var deleteAgainResponse = await _client.DeleteAsync(
+            $"/organizations/{_organization.Id}/invite-link");
+        Assert.Equal(HttpStatusCode.NotFound, deleteAgainResponse.StatusCode);
+
+        var getResponse = await _client.GetAsync($"/organizations/{_organization.Id}/invite-link");
+        Assert.Equal(HttpStatusCode.NotFound, getResponse.StatusCode);
+    }
 }
