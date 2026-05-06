@@ -71,20 +71,6 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
         return results.ToList();
     }
 
-    public async Task<OrganizationDomainSsoDetailsData?> GetOrganizationDomainSsoDetailsAsync(string email)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection
-                .QueryAsync<OrganizationDomainSsoDetailsData>(
-                    $"[{Schema}].[OrganizationDomainSsoDetails_ReadByEmail]",
-                    new { Email = email },
-                    commandType: CommandType.StoredProcedure);
-
-            return results.SingleOrDefault();
-        }
-    }
-
     public async Task<IEnumerable<VerifiedOrganizationDomainSsoDetail>> GetVerifiedOrganizationDomainSsoDetailsAsync(string email)
     {
         await using var connection = new SqlConnection(ConnectionString);

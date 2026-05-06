@@ -140,7 +140,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 UseAutomaticUserConfirmation = e.UseAutomaticUserConfirmation,
                 UseDisableSmAdsForUsers = e.UseDisableSmAdsForUsers,
                 UsePhishingBlocker = e.UsePhishingBlocker,
-                UseMyItems = e.UseMyItems
+                UseMyItems = e.UseMyItems,
+                UseInviteLinks = e.UseInviteLinks
             }).ToListAsync();
         }
     }
@@ -265,6 +266,9 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             await dbContext.NotificationStatuses.Where(ns => ns.Notification.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
             await dbContext.Notifications.Where(n => n.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+
+            await dbContext.Sends.Where(s => s.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
 
             // The below section are 3 SPROCS in SQL Server but are only called by here

@@ -286,6 +286,7 @@ public class UpgradeOrganizationPlanVNextCommandTests
         Assert.Equal(targetPlan.HasOrganizationDomains, organization.UseOrganizationDomains);
         Assert.Equal(targetPlan.AutomaticUserConfirmation, organization.UseAutomaticUserConfirmation);
         Assert.Equal(targetPlan.HasMyItems, organization.UseMyItems);
+        Assert.Equal(targetPlan.HasInviteLinks, organization.UseInviteLinks);
     }
 
     [Fact]
