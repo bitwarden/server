@@ -140,12 +140,6 @@ public class WebAuthnController : Controller
 
     private async Task ValidateIfUserCanUsePasskeyLogin(Guid userId)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
-        {
-            await ValidateRequireSsoPolicyDisabledOrNotApplicable(userId);
-            return;
-        }
-
         var requireSsoPolicyRequirement = await _policyRequirementQuery.GetAsyncVNext<RequireSsoPolicyRequirement>(userId);
 
         if (!requireSsoPolicyRequirement.CanUsePasskeyLogin)
