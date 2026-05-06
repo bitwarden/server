@@ -1,7 +1,6 @@
 ﻿using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Request.WebAuthn;
-using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
@@ -98,13 +97,12 @@ public class WebAuthnControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task AttestationOptions_WithPolicyRequirementsEnabled_CanUsePasskeyLoginFalse_ThrowsBadRequestException(
+    public async Task AttestationOptions_CanUsePasskeyLoginFalse_ThrowsBadRequestException(
         SecretVerificationRequestModel requestModel, User user, SutProvider<WebAuthnController> sutProvider)
     {
         // Arrange
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
         sutProvider.GetDependency<IUserService>().VerifySecretAsync(user, default).ReturnsForAnyArgs(true);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .ReturnsForAnyArgs(new RequireSsoPolicyRequirement { CanUsePasskeyLogin = false });
@@ -116,12 +114,11 @@ public class WebAuthnControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task AttestationOptions_WithPolicyRequirementsEnabled_CanUsePasskeyLoginTrue_Succeeds(
+    public async Task AttestationOptions_CanUsePasskeyLoginTrue_Succeeds(
         SecretVerificationRequestModel requestModel, User user, SutProvider<WebAuthnController> sutProvider)
     {
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
         sutProvider.GetDependency<IUserService>().VerifySecretAsync(user, default).ReturnsForAnyArgs(true);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .ReturnsForAnyArgs(new RequireSsoPolicyRequirement { CanUsePasskeyLogin = true });
@@ -332,7 +329,7 @@ public class WebAuthnControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Post_WithPolicyRequirementsEnabled_CanUsePasskeyLoginFalse_ThrowsBadRequestException(
+    public async Task Post_CanUsePasskeyLoginFalse_ThrowsBadRequestException(
         WebAuthnLoginCredentialCreateRequestModel requestModel,
         CredentialCreateOptions createOptions,
         User user,
@@ -346,7 +343,6 @@ public class WebAuthnControllerTests
         sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable>>()
             .Unprotect(requestModel.Token)
             .Returns(token);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .ReturnsForAnyArgs(new RequireSsoPolicyRequirement { CanUsePasskeyLogin = false });
@@ -358,7 +354,7 @@ public class WebAuthnControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Post_WithPolicyRequirementsEnabled_CanUsePasskeyLoginTrue_Succeeds(
+    public async Task Post_CanUsePasskeyLoginTrue_Succeeds(
         WebAuthnLoginCredentialCreateRequestModel requestModel,
         CredentialCreateOptions createOptions,
         User user,
@@ -376,7 +372,6 @@ public class WebAuthnControllerTests
         sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable>>()
             .Unprotect(requestModel.Token)
             .Returns(token);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .ReturnsForAnyArgs(new RequireSsoPolicyRequirement { CanUsePasskeyLogin = true });
