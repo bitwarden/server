@@ -108,7 +108,7 @@ public class PushSendRequestModelTests
         var serialized = JsonSerializer.Serialize(dictionary, JsonHelpers.IgnoreWritingNull);
         var jsonException =
             Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<PushSendRequestModel<string>>(serialized));
-        Assert.Contains($"missing required properties, including the following: {requiredField}",
+        Assert.Contains($"was missing required properties including: '{requiredField}'",
             jsonException.Message);
     }
 

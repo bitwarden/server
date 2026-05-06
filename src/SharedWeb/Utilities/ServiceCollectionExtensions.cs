@@ -511,8 +511,11 @@ public static class ServiceCollectionExtensions
             }
             else if (CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificatePassword))
             {
-                dataProtectionCert = CoreHelpers.GetBlobCertificateAsync(globalSettings.Storage.ConnectionString, "certificates",
-                    "dataprotection.pfx", globalSettings.DataProtection.CertificatePassword)
+                dataProtectionCert = CoreHelpers.GetBlobCertificateAsync(
+                    globalSettings.Storage.ConnectionString,
+                    "certificates",
+                    globalSettings.DataProtection.BlobName,
+                    globalSettings.DataProtection.CertificatePassword)
                     .GetAwaiter().GetResult();
             }
 
@@ -521,6 +524,20 @@ public static class ServiceCollectionExtensions
                 builder
                     .PersistKeysToAzureBlobStorage(globalSettings.Storage.ConnectionString, "aspnet-dataprotection", "keys.xml")
                     .ProtectKeysWithCertificate(dataProtectionCert);
+
+                if (globalSettings.DataProtection.UnprotectCertificates.Length > 0)
+                {
+                    var unprotectCertificates = Task.WhenAll(globalSettings.DataProtection.UnprotectCertificates
+                        .Select(ci => CoreHelpers.GetBlobCertificateAsync(
+                            globalSettings.Storage.ConnectionString,
+                            "certificates",
+                            ci.FileName,
+                            ci.Password
+                        ))
+                    ).GetAwaiter().GetResult();
+
+                    builder.UnprotectKeysWithAnyCertificate(unprotectCertificates);
+                }
             }
         }
     }
@@ -617,14 +634,14 @@ public static class ServiceCollectionExtensions
             var proxyNetworks = globalSettings.KnownNetworks.Split(',');
             foreach (var proxyNetwork in proxyNetworks)
             {
-                if (Microsoft.AspNetCore.HttpOverrides.IPNetwork.TryParse(proxyNetwork.Trim(), out var ipn))
+                if (System.Net.IPNetwork.TryParse(proxyNetwork.Trim(), out var ipn))
                 {
-                    options.KnownNetworks.Add(ipn);
+                    options.KnownIPNetworks.Add(ipn);
                 }
             }
         }
 
-        if (options.KnownProxies.Count > 1 || options.KnownNetworks.Count > 1)
+        if (options.KnownProxies.Count > 1 || options.KnownIPNetworks.Count > 1)
         {
             options.ForwardLimit = null;
         }
