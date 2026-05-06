@@ -33,7 +33,6 @@ public class WebAuthnController : Controller
     private readonly IAssertWebAuthnLoginCredentialCommand _assertWebAuthnLoginCredentialCommand;
     private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
-    private readonly IFeatureService _featureService;
 
     public WebAuthnController(
         IUserService userService,
@@ -45,8 +44,7 @@ public class WebAuthnController : Controller
         ICreateWebAuthnLoginCredentialCommand createWebAuthnLoginCredentialCommand,
         IAssertWebAuthnLoginCredentialCommand assertWebAuthnLoginCredentialCommand,
         IGetWebAuthnLoginCredentialAssertionOptionsCommand getWebAuthnLoginCredentialAssertionOptionsCommand,
-        IPolicyRequirementQuery policyRequirementQuery,
-        IFeatureService featureService)
+        IPolicyRequirementQuery policyRequirementQuery)
     {
         _userService = userService;
         _policyService = policyService;
@@ -58,7 +56,6 @@ public class WebAuthnController : Controller
         _assertWebAuthnLoginCredentialCommand = assertWebAuthnLoginCredentialCommand;
         _getWebAuthnLoginCredentialAssertionOptionsCommand = getWebAuthnLoginCredentialAssertionOptionsCommand;
         _policyRequirementQuery = policyRequirementQuery;
-        _featureService = featureService;
     }
 
     [Authorize(Policies.Web)]
