@@ -11,11 +11,28 @@
 #   REGISTRY           ACR registry (default: bitwardenprod.azurecr.io)
 #   GIT_SHA            Override git SHA (default: current HEAD short SHA)
 #   DP_KEY_XML         Data protection key XML content (for CI; written to key stores)
+#   KEEP_BUILD_DIR=1   Preserve the per-preset build directory after completion
+#
+# Parallel invocations:
+#   The script is safe to run concurrently for different <preset, db-type>
+#   pairs. Per-invocation isolation comes from:
+#     - a unique container name (seeder-build-<db-type>-<tag>)
+#     - dynamic host-port binding (the DB port is mapped to an ephemeral host
+#       port, discovered via `docker inspect`)
+#     - a per-preset Docker build context under docker/<db-type>/build/<tag>/
+#   Callers should `dotnet build` the migrations projects and the SeederUtility
+#   once before fanning out in parallel — concurrent `dotnet run` invocations
+#   from the same project directory will race on bin/obj outputs.
 #
 # Examples:
 #   ./build-seeded-image.sh qa.dunder-mifflin-enterprise-full
 #   ./build-seeded-image.sh qa.dunder-mifflin-enterprise-full mysql
 #   PUSH=true ./build-seeded-image.sh scale.md-balanced-sterling-cooper mssql
+#
+#   # Loop over every preset from `preset --list --output json` and build for postgres:
+#   dotnet run --project .. -- preset --list --output json \
+#     | jq -r '.organization[], .individual[]' \
+#     | while read -r preset; do ./build-seeded-image.sh "$preset"; done
 
 set -euo pipefail
 
@@ -30,17 +47,67 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SEEDER_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 REPO_ROOT="$(cd "${SEEDER_DIR}/../.." && pwd)"
 DOCKER_DIR="${SEEDER_DIR}/docker/${DB_TYPE}"
+METADATA_FILE="${SCRIPT_DIR}/presets-metadata.json"
 
-# Sanitize preset name for Docker tag: replace dots with dashes
+# --- Validate DB type ---
+case "${DB_TYPE}" in
+  postgres|mysql|mariadb|mssql|sqlite) ;;
+  *)
+    echo "ERROR: Unknown database type '${DB_TYPE}'. Supported: postgres, mysql, mariadb, mssql, sqlite"
+    exit 1
+    ;;
+esac
+
+# Sanitize preset name for Docker tag + container name: replace dots with dashes
 TAG="${PRESET_NAME//./-}"
 IMAGE_REPO="${REGISTRY}/shot/seeded-${DB_TYPE}"
 IMAGE_STABLE="${IMAGE_REPO}:${TAG}"
 IMAGE_VERSIONED="${IMAGE_REPO}:${TAG}-${GIT_SHA}"
 
+CONTAINER_NAME="seeder-build-${DB_TYPE}-${TAG}"
+WORK_DIR="${DOCKER_DIR}/build/${TAG}"
+
+# --- Cleanup on any exit (partial failures shouldn't leave containers behind) ---
+cleanup() {
+    local status=$?
+    docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
+    if [[ "${KEEP_BUILD_DIR:-0}" != "1" && -d "${WORK_DIR}" ]]; then
+        rm -rf "${WORK_DIR}"
+    fi
+    return "${status}"
+}
+trap cleanup EXIT
+
+# Look up preset metadata for OCI labels. Requires `jq`. Missing entries
+# fall back to sensible defaults so the build still succeeds; downstream
+# tooling that reads labels should handle empty values gracefully.
+PRESET_CATEGORY="unknown"
+PRESET_DESCRIPTION=""
+if command -v jq >/dev/null 2>&1 && [[ -f "${METADATA_FILE}" ]]; then
+    PRESET_CATEGORY=$(jq -r --arg p "${PRESET_NAME}" \
+        '.presets[$p].category // "unknown"' "${METADATA_FILE}")
+    PRESET_DESCRIPTION=$(jq -r --arg p "${PRESET_NAME}" \
+        '.presets[$p].description // ""' "${METADATA_FILE}")
+else
+    echo "WARNING: jq or ${METADATA_FILE} not found; OCI labels will be minimal"
+fi
+
 echo "==> Building seeded ${DB_TYPE} image for preset: ${PRESET_NAME}"
 echo "    Stable:    ${IMAGE_STABLE}"
 echo "    Versioned: ${IMAGE_VERSIONED}"
 echo "    Git SHA:   ${GIT_SHA}"
+echo "    Category:  ${PRESET_CATEGORY}"
+echo "    Desc:      ${PRESET_DESCRIPTION}"
+echo "    Container: ${CONTAINER_NAME}"
+echo "    Build dir: ${WORK_DIR}"
+
+# --- Prepare per-preset build context ---
+rm -rf "${WORK_DIR}"
+mkdir -p "${WORK_DIR}"
+cp "${DOCKER_DIR}/Dockerfile" "${WORK_DIR}/Dockerfile"
+if [[ "${DB_TYPE}" == "mssql" ]]; then
+    cp "${DOCKER_DIR}/docker-entrypoint.sh" "${WORK_DIR}/docker-entrypoint.sh"
+fi
 
 # ============================================================
 # Docker build and push (shared for all DB types)
@@ -50,66 +117,60 @@ _docker_build_and_push() {
     docker buildx build \
         --platform linux/amd64 \
         --build-arg "PRESET_NAME=${PRESET_NAME}" \
+        --build-arg "PRESET_CATEGORY=${PRESET_CATEGORY}" \
+        --build-arg "PRESET_DESCRIPTION=${PRESET_DESCRIPTION}" \
+        --build-arg "DB_TYPE=${DB_TYPE}" \
         --build-arg "GIT_SHA=${GIT_SHA}" \
         --build-arg "BUILD_DATE=${BUILD_DATE}" \
         -t "${IMAGE_STABLE}" \
         -t "${IMAGE_VERSIONED}" \
-        "${DOCKER_DIR}" \
+        "${WORK_DIR}" \
         --load
 
     echo "==> Built: ${IMAGE_STABLE}"
     echo "==> Built: ${IMAGE_VERSIONED}"
 
     if [[ "${PUSH}" == "true" ]]; then
-        echo "==> Logging in to ACR"
-        az acr login --name bitwardenprod
-
+        # Caller is responsible for registry auth (e.g. `az acr login` in CI or
+        # locally) before invoking with PUSH=true.
         echo "==> Pushing images"
         docker push "${IMAGE_STABLE}"
         docker push "${IMAGE_VERSIONED}"
         echo "==> Pushed: ${IMAGE_STABLE}"
         echo "==> Pushed: ${IMAGE_VERSIONED}"
+
+        # free up disk after push
+        docker rmi "${IMAGE_STABLE}" "${IMAGE_VERSIONED}" >/dev/null 2>&1 || true
     fi
 }
 
-# --- Validate DB type ---
-case "${DB_TYPE}" in
-  postgres|mysql|mariadb|mssql|sqlite) ;;
-  *)
-    echo "ERROR: Unknown database type '${DB_TYPE}'. Supported: postgres, mariadb, mssql, sqlite"
-    exit 1
-    ;;
-esac
-
 # --- DB-type configuration ---
+# INTERNAL_PORT: the port the database listens on inside the container.
+# HOST_PORT is discovered post-start via `docker inspect`.
 case "${DB_TYPE}" in
   postgres)
-    CONTAINER_NAME="seeder-build-postgres"
-    DB_PORT=5432
+    INTERNAL_PORT=5432
     DB_NAME="vault_dev"
     DB_USER="postgres"
     DB_PASS="Password1!"
     MIGRATIONS_DIR="${REPO_ROOT}/util/PostgresMigrations"
     ;;
   mysql)
-    CONTAINER_NAME="seeder-build-mysql"
-    DB_PORT=3306
+    INTERNAL_PORT=3306
     DB_NAME="vault_dev"
     DB_USER="root"
     DB_PASS="Password1!"
     MIGRATIONS_DIR="${REPO_ROOT}/util/MySqlMigrations"
     ;;
   mariadb)
-    CONTAINER_NAME="seeder-build-mariadb"
-    DB_PORT=4306
+    INTERNAL_PORT=3306
     DB_NAME="vault_dev"
     DB_USER="root"
     DB_PASS="Password1!"
     MIGRATIONS_DIR="${REPO_ROOT}/util/MySqlMigrations"
     ;;
   mssql)
-    CONTAINER_NAME="seeder-build-mssql"
-    DB_PORT=1433
+    INTERNAL_PORT=1433
     DB_NAME="vault_dev"
     DB_USER="SA"
     # MSSQL requires a complex password (uppercase, number, symbol)
@@ -117,9 +178,8 @@ case "${DB_TYPE}" in
     MIGRATIONS_DIR="${REPO_ROOT}/util/MsSqlMigratorUtility"
     ;;
   sqlite)
-    CONTAINER_NAME=""
     DB_NAME="vault_dev"
-    SQLITE_FILE="${DOCKER_DIR}/seed.db"
+    SQLITE_FILE="${WORK_DIR}/seed.db"
     MIGRATIONS_DIR="${REPO_ROOT}/util/SqliteMigrations"
     ;;
 esac
@@ -141,8 +201,6 @@ else
     echo "WARNING: Data protection key not found at ${DP_KEY_SRC}."
     echo "         Encrypted fields may not be decryptable in the target environment."
 fi
-
-mkdir -p "${DOCKER_DIR}"
 
 # ============================================================
 # SQLite — no container needed, seeder writes directly to file
@@ -169,6 +227,7 @@ if [[ "${DB_TYPE}" == "sqlite" ]]; then
     fi
 
     _docker_build_and_push
+    echo "==> Done: ${PRESET_NAME} (${DB_TYPE}) → ${TAG}"
     exit 0
 fi
 
@@ -176,7 +235,7 @@ fi
 # Container-based databases
 # ============================================================
 
-# --- Start container ---
+# --- Start container with a dynamic host port so multiple invocations don't clash ---
 echo "==> Starting ${DB_TYPE} container: ${CONTAINER_NAME}"
 docker rm -f "${CONTAINER_NAME}" 2>/dev/null || true
 
@@ -187,25 +246,25 @@ case "${DB_TYPE}" in
         -e "POSTGRES_DB=${DB_NAME}" \
         -e "POSTGRES_USER=${DB_USER}" \
         -e "POSTGRES_PASSWORD=${DB_PASS}" \
-        -p "${DB_PORT}:5432" \
-        postgres:14
+        -p "0:${INTERNAL_PORT}" \
+        postgres:14 >/dev/null
     ;;
   mysql)
     docker run -d \
         --name "${CONTAINER_NAME}" \
         -e "MYSQL_DATABASE=${DB_NAME}" \
         -e "MYSQL_ROOT_PASSWORD=${DB_PASS}" \
-        -p "${DB_PORT}:3306" \
+        -p "0:${INTERNAL_PORT}" \
         mysql:8.0 \
-        --default-authentication-plugin=mysql_native_password
+        --default-authentication-plugin=mysql_native_password >/dev/null
     ;;
   mariadb)
     docker run -d \
         --name "${CONTAINER_NAME}" \
         -e "MARIADB_DATABASE=${DB_NAME}" \
         -e "MARIADB_ROOT_PASSWORD=${DB_PASS}" \
-        -p "${DB_PORT}:3306" \
-        mariadb:12
+        -p "0:${INTERNAL_PORT}" \
+        mariadb:12 >/dev/null
     ;;
   mssql)
     docker run -d \
@@ -213,28 +272,47 @@ case "${DB_TYPE}" in
         -e "ACCEPT_EULA=Y" \
         -e "MSSQL_PID=Developer" \
         -e "SA_PASSWORD=${DB_PASS}" \
-        -p "${DB_PORT}:1433" \
+        -p "0:${INTERNAL_PORT}" \
         --platform linux/amd64 \
-        mcr.microsoft.com/mssql/server:2022-CU22-ubuntu-22.04
+        mcr.microsoft.com/mssql/server:2022-CU22-ubuntu-22.04 >/dev/null
     ;;
 esac
 
-# --- Wait for readiness ---
-echo "==> Waiting for ${DB_TYPE} to be ready..."
+# Discover the ephemeral host port chosen by Docker
+HOST_PORT=$(docker inspect \
+    --format="{{(index (index .NetworkSettings.Ports \"${INTERNAL_PORT}/tcp\") 0).HostPort}}" \
+    "${CONTAINER_NAME}")
+echo "==> ${DB_TYPE} host port: ${HOST_PORT}"
+
+# --- Wait for readiness (bounded so a stuck container fails fast) ---
+READY_TIMEOUT_SECS=300
+wait_until_ready() {
+    local deadline=$(( $(date +%s) + READY_TIMEOUT_SECS ))
+    while ! "$@" &>/dev/null; do
+        if (( $(date +%s) >= deadline )); then
+            echo "ERROR: ${DB_TYPE} did not become ready within ${READY_TIMEOUT_SECS}s"
+            docker logs --tail 50 "${CONTAINER_NAME}" || true
+            return 1
+        fi
+        sleep 2
+    done
+}
+
+echo "==> Waiting for ${DB_TYPE} to be ready (timeout ${READY_TIMEOUT_SECS}s)..."
 case "${DB_TYPE}" in
   postgres)
-    until docker exec "${CONTAINER_NAME}" \
-        pg_isready -U "${DB_USER}" -d "${DB_NAME}" &>/dev/null; do sleep 1; done
+    wait_until_ready docker exec "${CONTAINER_NAME}" \
+        pg_isready -U "${DB_USER}" -d "${DB_NAME}"
     ;;
   mysql|mariadb)
-    until docker exec "${CONTAINER_NAME}" \
-        sh -c 'mysqladmin ping -u root -p"'"${DB_PASS}"'" --silent 2>/dev/null || mariadb-admin ping -u root -p"'"${DB_PASS}"'" --silent 2>/dev/null' &>/dev/null; do sleep 2; done
+    wait_until_ready docker exec "${CONTAINER_NAME}" \
+        sh -c 'mysqladmin ping -u root -p"'"${DB_PASS}"'" --silent 2>/dev/null || mariadb-admin ping -u root -p"'"${DB_PASS}"'" --silent 2>/dev/null'
     ;;
   mssql)
-    until docker exec "${CONTAINER_NAME}" \
+    wait_until_ready docker exec "${CONTAINER_NAME}" \
         /opt/mssql-tools18/bin/sqlcmd \
             -S localhost -U SA -P "${DB_PASS}" -C \
-            -Q "SELECT 1" &>/dev/null; do sleep 2; done
+            -Q "SELECT 1"
     ;;
 esac
 echo "==> ${DB_TYPE} ready"
@@ -245,18 +323,18 @@ case "${DB_TYPE}" in
   postgres)
     cd "${MIGRATIONS_DIR}"
     dotnet ef database update \
-        --connection "Host=localhost;Port=${DB_PORT};Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASS}"
+        --connection "Host=localhost;Port=${HOST_PORT};Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASS}"
     ;;
   mysql|mariadb)
     cd "${MIGRATIONS_DIR}"
     dotnet ef database update \
         -- --globalSettings:databaseProvider=mysql \
-           --globalSettings:mySql:connectionString="Server=localhost;Port=${DB_PORT};Database=${DB_NAME};Uid=${DB_USER};Pwd=${DB_PASS};"
+           --globalSettings:mySql:connectionString="Server=localhost;Port=${HOST_PORT};Database=${DB_NAME};Uid=${DB_USER};Pwd=${DB_PASS};"
     ;;
   mssql)
     cd "${MIGRATIONS_DIR}"
     dotnet run -- \
-        "Server=localhost;Database=${DB_NAME};User Id=${DB_USER};Password=${DB_PASS};TrustServerCertificate=true;"
+        "Server=localhost,${HOST_PORT};Database=${DB_NAME};User Id=${DB_USER};Password=${DB_PASS};TrustServerCertificate=true;"
     ;;
 esac
 
@@ -265,16 +343,18 @@ echo "==> Seeding database with preset: ${PRESET_NAME}"
 cd "${SEEDER_DIR}"
 case "${DB_TYPE}" in
   postgres)
+    globalSettings__databaseProvider=postgreSql \
+    globalSettings__postgreSql__connectionString="Host=localhost;Port=${HOST_PORT};Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASS}" \
     dotnet run --project . -- preset --name "${PRESET_NAME}"
     ;;
   mysql|mariadb)
     globalSettings__databaseProvider=mySQL \
-    globalSettings__mySql__connectionString="Server=localhost;Port=${DB_PORT};Database=${DB_NAME};Uid=${DB_USER};Pwd=${DB_PASS};" \
+    globalSettings__mySql__connectionString="Server=localhost;Port=${HOST_PORT};Database=${DB_NAME};Uid=${DB_USER};Pwd=${DB_PASS};" \
     dotnet run --project . -- preset --name "${PRESET_NAME}"
     ;;
   mssql)
     globalSettings__databaseProvider=sqlServer \
-    globalSettings__sqlServer__connectionString="Server=localhost;Database=${DB_NAME};User Id=${DB_USER};Password=${DB_PASS};TrustServerCertificate=true;" \
+    globalSettings__sqlServer__connectionString="Server=localhost,${HOST_PORT};Database=${DB_NAME};User Id=${DB_USER};Password=${DB_PASS};TrustServerCertificate=true;" \
     dotnet run --project . -- preset --name "${PRESET_NAME}"
     ;;
 esac
@@ -283,9 +363,9 @@ esac
 case "${DB_TYPE}" in
   postgres)
     docker exec "${CONTAINER_NAME}" \
-        pg_dump --no-owner --no-acl -U "${DB_USER}" -d "${DB_NAME}" > "${DOCKER_DIR}/seed.sql"
+        pg_dump --no-owner --no-acl -U "${DB_USER}" -d "${DB_NAME}" > "${WORK_DIR}/seed.sql"
 
-    cat >> "${DOCKER_DIR}/seed.sql" << EOF
+    cat >> "${WORK_DIR}/seed.sql" << EOF
 
 -- Seeder metadata
 CREATE TABLE IF NOT EXISTS "_SeederMetadata" ("Key" text PRIMARY KEY, "Value" text);
@@ -297,9 +377,9 @@ EOF
 
   mysql|mariadb)
     docker exec "${CONTAINER_NAME}" \
-        sh -c 'mysqldump -u root -p"'"${DB_PASS}"'" --no-tablespaces "'"${DB_NAME}"'" 2>/dev/null || mariadb-dump -u root -p"'"${DB_PASS}"'" --no-tablespaces "'"${DB_NAME}"'" 2>/dev/null' > "${DOCKER_DIR}/seed.sql"
+        sh -c 'mysqldump -u root -p"'"${DB_PASS}"'" --no-tablespaces "'"${DB_NAME}"'" 2>/dev/null || mariadb-dump -u root -p"'"${DB_PASS}"'" --no-tablespaces "'"${DB_NAME}"'" 2>/dev/null' > "${WORK_DIR}/seed.sql"
 
-    cat >> "${DOCKER_DIR}/seed.sql" << EOF
+    cat >> "${WORK_DIR}/seed.sql" << EOF
 
 -- Seeder metadata
 CREATE TABLE IF NOT EXISTS \`_SeederMetadata\` (\`Key\` varchar(255) PRIMARY KEY, \`Value\` text);
@@ -322,13 +402,13 @@ EOF
         /opt/mssql-tools18/bin/sqlcmd \
             -S localhost -U SA -P "${DB_PASS}" -C \
             -Q "ALTER DATABASE [${DB_NAME}] SET OFFLINE WITH ROLLBACK IMMEDIATE"
-    docker cp "${CONTAINER_NAME}:/var/opt/mssql/data/${DB_NAME}.mdf" "${DOCKER_DIR}/${DB_NAME}.mdf"
-    docker cp "${CONTAINER_NAME}:/var/opt/mssql/data/${DB_NAME}_log.ldf" "${DOCKER_DIR}/${DB_NAME}_log.ldf"
+    docker cp "${CONTAINER_NAME}:/var/opt/mssql/data/${DB_NAME}.mdf" "${WORK_DIR}/${DB_NAME}.mdf"
+    docker cp "${CONTAINER_NAME}:/var/opt/mssql/data/${DB_NAME}_log.ldf" "${WORK_DIR}/${DB_NAME}_log.ldf"
     ;;
 esac
 
 echo "==> Stopping ${DB_TYPE} container"
-docker rm -f "${CONTAINER_NAME}"
+docker rm -f "${CONTAINER_NAME}" >/dev/null
 
 _docker_build_and_push
 echo "==> Done: ${PRESET_NAME} (${DB_TYPE}) → ${TAG}"

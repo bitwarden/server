@@ -1,24 +1,28 @@
 name: Build Seeded Database Images
 
 on:
+  push:
+    branches: [feat/seeder-build-pipeline]
+    paths:
+      - .github/workflows/build-seeded-databases.yml
+      - util/SeederUtility/**
+      - util/Seeder/**
   workflow_dispatch:
     inputs:
       preset:
-        description: "Preset name to build (leave empty to build all organization presets)"
+        description: "Preset name to build"
         required: false
         type: string
       database:
-        description: "Database type to build (leave empty to build all)"
+        description: "Database type to build"
         required: false
         type: choice
         options:
           - ""
           - postgres
+          - mysql
           - mariadb
           - mssql
-          - sqlite
-  schedule:
-    - cron: "0 2 * * 0" # Every Sunday at 2am UTC
 
 env:
   _AZ_REGISTRY: bitwardenprod.azurecr.io
@@ -46,18 +50,16 @@ jobs:
         id: matrix
         working-directory: util/SeederUtility
         run: |
-          # Presets
           if [[ -n "${{ inputs.preset }}" ]]; then
             presets='["${{ inputs.preset }}"]'
           else
-            presets=$(dotnet run --no-build -- preset --list --json | jq -c '.organization')
+            presets='["qa.dunder-mifflin-enterprise-full"]'
           fi
 
-          # Databases
           if [[ -n "${{ inputs.database }}" ]]; then
             databases='["${{ inputs.database }}"]'
           else
-            databases='["postgres","mariadb","mssql","sqlite"]'
+            databases='["postgres"]'
           fi
 
           echo "presets=${presets}" >> "$GITHUB_OUTPUT"
@@ -85,33 +87,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.7.1
 
-      - name: Set up QEMU (for cross-platform builds)
+      - name: Set up QEMU
         uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.1.0
 
-      - name: Write data protection key
+      - name: Build seeded image
         env:
-          DP_KEY_XML: ${{ secrets.SEEDER_DP_KEY_XML }}
-        run: |
-          mkdir -p "$HOME/.aspnet/DataProtection-Keys"
-          echo "${DP_KEY_XML}" > \
-            "$HOME/.aspnet/DataProtection-Keys/key-9aa06f19-9afe-414b-8791-189be3b5650f.xml"
-          mkdir -p util/SeederUtility/docker/dp-keys
-          echo "${DP_KEY_XML}" > \
-            util/SeederUtility/docker/dp-keys/key-9aa06f19-9afe-414b-8791-189be3b5650f.xml
-
-      - name: Log in to Azure
-        uses: bitwarden/gh-actions/azure-login@main
-        with:
-          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-          client_id: ${{ secrets.AZURE_CLIENT_ID }}
-
-      - name: Log in to ACR
-        run: az acr login -n bitwardenprod
-
-      - name: Build and push seeded image
-        env:
-          PUSH: "true"
+          PUSH: "false"
           REGISTRY: ${{ env._AZ_REGISTRY }}
           GIT_SHA: ${{ github.sha }}
         run: |
@@ -128,9 +109,5 @@ jobs:
           DB="${{ matrix.database }}"
           SHA="${{ github.sha }}"
           echo "### ${DB} / ${{ matrix.preset }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "| | |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| **Stable** | \`${{ env._AZ_REGISTRY }}/shot/seeded-${DB}:${TAG}\` |" \
-            >> "$GITHUB_STEP_SUMMARY"
-          echo "| **Versioned** | \`${{ env._AZ_REGISTRY }}/shot/seeded-${DB}:${TAG}-${SHA:0:7}\` |" \
+          echo "Built (not pushed): \`${{ env._AZ_REGISTRY }}/shot/seeded-${DB}:${TAG}-${SHA:0:7}\`" \
             >> "$GITHUB_STEP_SUMMARY"
