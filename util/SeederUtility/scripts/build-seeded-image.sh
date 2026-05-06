@@ -368,10 +368,10 @@ case "${DB_TYPE}" in
     cat >> "${WORK_DIR}/seed.sql" << EOF
 
 -- Seeder metadata
-CREATE TABLE IF NOT EXISTS "_SeederMetadata" ("Key" text PRIMARY KEY, "Value" text);
-INSERT INTO "_SeederMetadata" VALUES ('preset', '${PRESET_NAME}') ON CONFLICT ("Key") DO UPDATE SET "Value" = EXCLUDED."Value";
-INSERT INTO "_SeederMetadata" VALUES ('git_sha', '${GIT_SHA}') ON CONFLICT ("Key") DO UPDATE SET "Value" = EXCLUDED."Value";
-INSERT INTO "_SeederMetadata" VALUES ('built_at', '${BUILD_DATE}') ON CONFLICT ("Key") DO UPDATE SET "Value" = EXCLUDED."Value";
+CREATE TABLE IF NOT EXISTS public."_SeederMetadata" ("Key" text PRIMARY KEY, "Value" text);
+INSERT INTO public."_SeederMetadata" VALUES ('preset', '${PRESET_NAME}') ON CONFLICT ("Key") DO UPDATE SET "Value" = EXCLUDED."Value";
+INSERT INTO public."_SeederMetadata" VALUES ('git_sha', '${GIT_SHA}') ON CONFLICT ("Key") DO UPDATE SET "Value" = EXCLUDED."Value";
+INSERT INTO public."_SeederMetadata" VALUES ('built_at', '${BUILD_DATE}') ON CONFLICT ("Key") DO UPDATE SET "Value" = EXCLUDED."Value";
 EOF
     ;;
 
