@@ -1,6 +1,7 @@
 CREATE OR ALTER PROCEDURE [dbo].[Send_UpdateDisabledByIds]
     @Ids AS [dbo].[GuidIdArray] READONLY,
-    @Disabled BIT
+    @Disabled BIT,
+    @RevisionDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -12,7 +13,7 @@ BEGIN
         [dbo].[Send]
     SET
         [Disabled] = @Disabled,
-        [RevisionDate] = GETUTCDATE()
+        [RevisionDate] = @RevisionDate
     WHERE
         [Id] IN (SELECT * FROM @Ids)
     
@@ -46,7 +47,7 @@ END
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[Send_ReadIdsByOrganizationId]
-    @Id UNIQUEIDENTIFIER
+    @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
@@ -59,7 +60,7 @@ BEGIN
     FROM
         [dbo].[OrganizationUserView]
     WHERE
-        OrganizationId = @Id
+        OrganizationId = @OrganizationId
 
     -- Get the IDs of all Sends associated with those users --
     SELECT
