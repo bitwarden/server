@@ -323,7 +323,7 @@ case "${DB_TYPE}" in
   postgres)
     cd "${MIGRATIONS_DIR}"
     dotnet ef database update \
-        --connection "Host=localhost;Port=${HOST_PORT};Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASS}"
+        -- --globalSettings:postgreSql:connectionString="Host=localhost;Port=${HOST_PORT};Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASS}"
     ;;
   mysql|mariadb)
     cd "${MIGRATIONS_DIR}"
