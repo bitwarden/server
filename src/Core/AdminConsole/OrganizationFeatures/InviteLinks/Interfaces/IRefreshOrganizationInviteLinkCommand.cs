@@ -6,14 +6,9 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 public interface IRefreshOrganizationInviteLinkCommand
 {
     /// <summary>
-    /// Refreshes the invite link for the specified organization by replacing the existing link
-    /// with a new one (new <c>Id</c>, <c>Code</c>, and <c>EncryptedInviteKey</c>). The existing
-    /// <c>AllowedDomains</c> carry over. The previous link's URL stops working immediately.
+    /// Replaces the invite link for the specified organization with a new one. The existing allowed domains carry over.
     /// </summary>
-    /// <param name="request">The organization id and the new encrypted invite key.</param>
-    /// <returns>
-    /// The new <see cref="OrganizationInviteLink"/>, or an error if the invite link feature is
-    /// not available for the organization or no existing invite link is found.
-    /// </returns>
+    /// <param name="request">The organization ID and the encryption keys.</param>
+    /// <returns>The new <see cref="OrganizationInviteLink"/>, or an error if the feature is unavailable or no existing link is found.</returns>
     Task<CommandResult<OrganizationInviteLink>> RefreshAsync(RefreshOrganizationInviteLinkRequest request);
 }
