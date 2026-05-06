@@ -13,6 +13,3 @@ public record InviteLinkNotAvailable()
 
 public record InviteLinkNotFound()
     : NotFoundError("Invite link not found.");
-
-public record InviteLinkEncryptedKeyRequired()
-    : BadRequestError("An encrypted invite key is required.");
