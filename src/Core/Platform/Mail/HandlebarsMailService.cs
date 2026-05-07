@@ -777,6 +777,8 @@ public class HandlebarsMailService : IMailService
             OrgName = CoreHelpers.SanitizeForEmail(orgName, false),
             ResetMasterPassword = resetMasterPassword,
             ResetTwoFactor = resetTwoFactor,
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName,
         };
         await AddMessageContentAsync(message, "AdminResetPassword", model);
         message.Category = "AdminResetPassword";
