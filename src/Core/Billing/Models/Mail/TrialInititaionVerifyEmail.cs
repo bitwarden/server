@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.Auth.Models.Mail;
+﻿using Bit.Core.Auth.Models.Mail;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 
@@ -23,7 +20,8 @@ public class TrialInitiationVerifyEmail : RegisterVerifyEmail
                       $"&fromEmail=true" +
                       $"&productTier={(int)ProductTier}" +
                       $"&product={string.Join(",", Product.Select(p => (int)p))}" +
-                      $"&trialLength={TrialLength}";
+                      $"&trialLength={TrialLength}" +
+                      $"&trialInitiationId={TrialInitiationId}";
 
             if (PaymentOptional)
             {
@@ -35,20 +33,22 @@ public class TrialInitiationVerifyEmail : RegisterVerifyEmail
     }
 
     public string VerifyYourEmailHTMLCopy =>
-        TrialLength == 7
+        TrialLength > 0
             ? "Verify your email address below to finish signing up for your free trial."
             : $"Verify your email address below to finish signing up for your {ProductTier.GetDisplayName()} plan.";
 
     public string VerifyYourEmailTextCopy =>
-        TrialLength == 7
+        TrialLength > 0
             ? "Verify your email address using the link below and start your free trial of Bitwarden."
             : $"Verify your email address using the link below and start your {ProductTier.GetDisplayName()} Bitwarden plan.";
 
     public ProductTierType ProductTier { get; set; }
 
-    public IEnumerable<ProductType> Product { get; set; }
+    public IEnumerable<ProductType> Product { get; set; } = null!;
 
     public int TrialLength { get; set; }
+
+    public string TrialInitiationId { get; set; } = null!;
 
     public bool PaymentOptional { get; set; }
 

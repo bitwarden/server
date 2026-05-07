@@ -38,6 +38,7 @@ public class NoopMailService : IMailService
         ProductTierType productTier,
         IEnumerable<ProductType> products,
         int trailLength,
+        string trialInitiationId,
         bool paymentOptional = false)
     {
         return Task.FromResult(0);

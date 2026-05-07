@@ -102,6 +102,7 @@ public class HandlebarsMailService : IMailService
         ProductTierType productTier,
         IEnumerable<ProductType> products,
         int trialLength,
+        string trialInitiationId,
         bool paymentOptional = false)
     {
         var message = CreateDefaultMessage("Verify your email", email);
@@ -115,6 +116,7 @@ public class HandlebarsMailService : IMailService
             ProductTier = productTier,
             Product = products,
             TrialLength = trialLength,
+            TrialInitiationId = trialInitiationId,
             PaymentOptional = paymentOptional
         };
         await AddMessageContentAsync(message, "Billing.TrialInitiationVerifyEmail", model);
