@@ -3,7 +3,6 @@ using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Api.Auth.Models.Response.WebAuthn;
 using Bit.Api.Models.Response;
 using Bit.Core;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
@@ -24,7 +23,6 @@ namespace Bit.Api.Auth.Controllers;
 public class WebAuthnController : Controller
 {
     private readonly IUserService _userService;
-    private readonly IPolicyService _policyService;
     private readonly IWebAuthnCredentialRepository _credentialRepository;
     private readonly IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable> _createOptionsDataProtector;
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
@@ -47,7 +45,6 @@ public class WebAuthnController : Controller
         IPolicyRequirementQuery policyRequirementQuery)
     {
         _userService = userService;
-        _policyService = policyService;
         _credentialRepository = credentialRepository;
         _createOptionsDataProtector = createOptionsDataProtector;
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
@@ -123,16 +120,6 @@ public class WebAuthnController : Controller
         }
 
         return new WebAuthnCredentialResponseModel(credential);
-    }
-
-    private async Task ValidateRequireSsoPolicyDisabledOrNotApplicable(Guid userId)
-    {
-        var requireSsoLogin = await _policyService.AnyPoliciesApplicableToUserAsync(userId, PolicyType.RequireSso);
-
-        if (requireSsoLogin)
-        {
-            throw new BadRequestException("Passkeys cannot be created for your account. SSO login is required.");
-        }
     }
 
     private async Task ValidateIfUserCanUsePasskeyLogin(Guid userId)
