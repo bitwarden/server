@@ -78,6 +78,36 @@ public class PasswordRequestModelTests
 
     [Theory]
     [BitAutoData]
+    public void Validate_NewPayloadsOnly_WithMismatchedSalts_ReturnsSaltValidationError(
+        string masterPasswordHash)
+    {
+        var kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600000 };
+
+        var model = new PasswordRequestModel
+        {
+            MasterPasswordHash = masterPasswordHash,
+            AuthenticationData = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = kdf,
+                MasterPasswordAuthenticationHash = "authHash",
+                Salt = "salt-auth"
+            },
+            UnlockData = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = kdf,
+                MasterKeyWrappedUserKey = "wrappedKey",
+                Salt = "salt-unlock"
+            }
+        };
+
+        var result = model.Validate(new ValidationContext(model)).ToList();
+
+        Assert.Single(result);
+        Assert.Equal("Invalid master password salt.", result[0].ErrorMessage);
+    }
+
+    [Theory]
+    [BitAutoData]
     public void Validate_LegacyPayloadsOnly_NoErrors(string masterPasswordHash, string newHash, string key)
     {
         var model = new PasswordRequestModel
