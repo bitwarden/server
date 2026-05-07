@@ -37,7 +37,7 @@ public class UpdateTempPasswordRequestModel : IValidatableObject
 
         if (RequestHasNewDataTypes())
         {
-            foreach (var validationResult in KdfSettingsValidator.ValidateAuthenticationAndUnlockData(
+            foreach (var validationResult in KdfSettingsValidator.ValidateKdfAndSaltAgreement(
                          AuthenticationData!.ToData(), UnlockData!.ToData()))
             {
                 yield return validationResult;
