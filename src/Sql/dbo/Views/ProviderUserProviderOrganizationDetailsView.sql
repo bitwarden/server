@@ -48,6 +48,7 @@ SELECT
     O.[UsePhishingBlocker],
     O.[UseDisableSmAdsForUsers],
     O.[UseMyItems],
+    O.[UseInviteLinks],
     O.[ExemptFromBillingAutomation]
 FROM
     [dbo].[ProviderUser] PU

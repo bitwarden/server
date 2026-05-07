@@ -59,6 +59,7 @@ SELECT
     O.[UsePhishingBlocker],
     O.[UseDisableSmAdsForUsers],
     O.[UseMyItems],
+    O.[UseInviteLinks],
     OU.[RevocationReason],
     O.[ExemptFromBillingAutomation]
 FROM

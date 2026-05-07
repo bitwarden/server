@@ -73,5 +73,6 @@ public class OrganizationUserOrganizationDetails : IProfileOrganizationDetails
     public bool UseDisableSMAdsForUsers { get; set; }
     public bool UsePhishingBlocker { get; set; }
     public bool UseMyItems { get; set; }
+    public bool UseInviteLinks { get; set; }
     public bool ExemptFromBillingAutomation { get; set; }
 }

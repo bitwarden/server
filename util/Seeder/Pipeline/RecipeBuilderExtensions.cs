@@ -16,17 +16,23 @@ namespace Bit.Seeder.Pipeline;
 public static class RecipeBuilderExtensions
 {
     /// <summary>
-    /// Use an organization from embedded fixtures with optional plan/seats overrides from the preset.
+    /// Use an organization from embedded fixtures with optional plan/seats/overrides from the preset.
     /// </summary>
     /// <param name="builder">The recipe builder</param>
     /// <param name="fixture">Organization fixture name without extension</param>
     /// <param name="planType">Optional plan type override (from preset)</param>
     /// <param name="seats">Optional seats override (from preset)</param>
+    /// <param name="overrides">Optional org-level overrides applied on top of plan defaults. Null keeps all plan defaults.</param>
     /// <returns>The builder for fluent chaining</returns>
-    public static RecipeBuilder UseOrganization(this RecipeBuilder builder, string fixture, string? planType = null, int? seats = null)
+    public static RecipeBuilder UseOrganization(
+        this RecipeBuilder builder,
+        string fixture,
+        string? planType = null,
+        int? seats = null,
+        OrganizationOverrides? overrides = null)
     {
         builder.HasOrg = true;
-        builder.AddStep(_ => CreateOrganizationStep.FromFixture(fixture, planType, seats));
+        builder.AddStep(_ => CreateOrganizationStep.FromFixture(fixture, planType, seats, overrides));
         return builder;
     }
 
@@ -38,11 +44,18 @@ public static class RecipeBuilderExtensions
     /// <param name="domain">Organization domain (used for email generation)</param>
     /// <param name="seats">Number of user seats</param>
     /// <param name="planType">Billing plan type (defaults to EnterpriseAnnually)</param>
+    /// <param name="overrides">Optional org-level overrides applied on top of plan defaults. Null keeps all plan defaults.</param>
     /// <returns>The builder for fluent chaining</returns>
-    public static RecipeBuilder CreateOrganization(this RecipeBuilder builder, string name, string domain, int? seats = null, PlanType planType = PlanType.EnterpriseAnnually)
+    public static RecipeBuilder CreateOrganization(
+        this RecipeBuilder builder,
+        string name,
+        string domain,
+        int? seats = null,
+        PlanType planType = PlanType.EnterpriseAnnually,
+        OrganizationOverrides? overrides = null)
     {
         builder.HasOrg = true;
-        builder.AddStep(_ => CreateOrganizationStep.FromParams(name, domain, seats, planType));
+        builder.AddStep(_ => CreateOrganizationStep.FromParams(name, domain, seats, planType, overrides));
         return builder;
     }
 

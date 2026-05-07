@@ -10,7 +10,7 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Bit.Api.Vault.AuthorizationHandlers.Collections;
+namespace Bit.Api.AdminConsole.Authorization.Collections;
 
 /// <summary>
 /// Handles authorization logic for Collection objects, including access permissions for users and groups.
