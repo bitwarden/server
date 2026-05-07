@@ -255,18 +255,3 @@ public class OrganizationUserBulkResponseModel : ResponseModel
     public string Error { get; set; }
 }
 
-public class OrganizationUserPendingAutoConfirmResponseModel : ResponseModel
-{
-    public OrganizationUserPendingAutoConfirmResponseModel(OrganizationUser organizationUser)
-        : base("OrganizationUserPendingAutoConfirmResponseModel")
-    {
-        Id = organizationUser.Id;
-        UserId = organizationUser.UserId.Value;
-    }
-
-    /// <summary>The OrganizationUser ID (used for the confirm call).</summary>
-    public Guid Id { get; set; }
-
-    /// <summary>The User ID (used for public key lookup).</summary>
-    public Guid UserId { get; set; }
-}

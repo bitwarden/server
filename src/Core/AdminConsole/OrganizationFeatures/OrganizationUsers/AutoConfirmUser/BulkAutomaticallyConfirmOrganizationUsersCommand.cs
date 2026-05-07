@@ -30,34 +30,31 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommand(
     : IBulkAutomaticallyConfirmOrganizationUsersCommand
 {
     public async Task<IReadOnlyList<(Guid OrganizationUserId, string? Error)>> BulkAutomaticallyConfirmOrganizationUsersAsync(
-        IEnumerable<AutomaticallyConfirmOrganizationUserRequest> requests)
+        BulkAutomaticallyConfirmOrganizationUsersRequest request)
     {
-        var requestsList = requests.ToList();
-
-        if (requestsList.Count == 0)
+        if (request.UsersToConfirm.Count == 0)
         {
             return [];
         }
 
-        // All requests must be for the same organization.
-        var orgId = requestsList[0].OrganizationId;
+        var orgId = request.OrganizationId;
 
         // Fetch org and all org-users once for the entire batch.
         var organization = await organizationRepository.GetByIdAsync(orgId);
-        var orgUserIds = requestsList.Select(r => r.OrganizationUserId).ToList();
+        var orgUserIds = request.UsersToConfirm.Select(u => u.OrganizationUserId).ToList();
         var orgUsers = await organizationUserRepository.GetManyAsync(orgUserIds);
         var orgUserById = orgUsers.ToDictionary(ou => ou.Id);
 
         // Build hydrated validation requests.
-        var validationRequests = requestsList
-            .Select(r => new AutomaticallyConfirmOrganizationUserValidationRequest
+        var validationRequests = request.UsersToConfirm
+            .Select(u => new AutomaticallyConfirmOrganizationUserValidationRequest
             {
-                OrganizationUserId = r.OrganizationUserId,
-                OrganizationId = r.OrganizationId,
-                Key = r.Key,
-                DefaultUserCollectionName = r.DefaultUserCollectionName,
-                PerformedBy = r.PerformedBy,
-                OrganizationUser = orgUserById.TryGetValue(r.OrganizationUserId, out var ou) ? ou : null,
+                OrganizationUserId = u.OrganizationUserId,
+                OrganizationId = orgId,
+                Key = u.Key,
+                DefaultUserCollectionName = request.DefaultUserCollectionName,
+                PerformedBy = request.PerformedBy,
+                OrganizationUser = orgUserById.TryGetValue(u.OrganizationUserId, out var ou) ? ou : null,
                 Organization = organization
             })
             .ToList();
@@ -73,7 +70,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommand(
 
         if (validatedRequests.Count == 0)
         {
-            return BuildResults(requestsList, validationResults, new HashSet<Guid>());
+            return BuildResults(request.UsersToConfirm, validationResults, new HashSet<Guid>());
         }
 
         var usersToConfirm = validatedRequests
@@ -96,7 +93,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommand(
 
         if (confirmedRequests.Count == 0)
         {
-            return BuildResults(requestsList, validationResults, new HashSet<Guid>());
+            return BuildResults(request.UsersToConfirm, validationResults, new HashSet<Guid>());
         }
 
         // Run post-confirmation side effects.
@@ -109,11 +106,11 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommand(
                 SyncOrganizationKeysAsync(r)
             )));
 
-        return BuildResults(requestsList, validationResults, confirmedIds);
+        return BuildResults(request.UsersToConfirm, validationResults, confirmedIds);
     }
 
     private static IReadOnlyList<(Guid OrganizationUserId, string? Error)> BuildResults(
-        IReadOnlyList<AutomaticallyConfirmOrganizationUserRequest> requests,
+        IReadOnlyList<BulkAutoConfirmUserEntry> usersToConfirm,
         IReadOnlyList<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>> validationResults,
         IReadOnlySet<Guid> confirmedIds)
     {
@@ -121,16 +118,16 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommand(
             .Where(r => r.IsError)
             .ToDictionary(r => r.Request.OrganizationUserId, r => r.AsError.Message);
 
-        return requests
-            .Select(r =>
+        return usersToConfirm
+            .Select(u =>
             {
-                if (errorByOrgUserId.TryGetValue(r.OrganizationUserId, out var errorMessage))
+                if (errorByOrgUserId.TryGetValue(u.OrganizationUserId, out var errorMessage))
                 {
-                    return (r.OrganizationUserId, (string?)errorMessage);
+                    return (u.OrganizationUserId, (string?)errorMessage);
                 }
 
                 // No error means either confirmed or already-confirmed (idempotent).
-                return (r.OrganizationUserId, (string?)null);
+                return (u.OrganizationUserId, (string?)null);
             })
             .ToList();
     }

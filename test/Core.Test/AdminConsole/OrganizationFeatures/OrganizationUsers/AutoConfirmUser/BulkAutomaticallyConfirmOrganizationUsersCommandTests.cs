@@ -31,19 +31,19 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
         orgUser1.OrganizationId = organization.Id;
         orgUser2.OrganizationId = organization.Id;
 
-        var requests = BuildRequests(organization.Id, performingUserId,
+        var request = BuildRequest(organization.Id, performingUserId,
             (orgUser1.Id, key1),
             (orgUser2.Id, key2));
 
         SetupCommonMocks(sutProvider, organization, [orgUser1, orgUser2]);
-        SetupValidatorAllValid(sutProvider, requests, [orgUser1, orgUser2], organization);
+        SetupValidatorAllValid(sutProvider, request, [orgUser1, orgUser2], organization);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .ConfirmManyOrganizationUsersAsync(Arg.Any<IEnumerable<AcceptedOrganizationUserToConfirm>>())
             .Returns([orgUser1.Id, orgUser2.Id]);
 
         // Act
-        var results = await sutProvider.Sut.BulkAutomaticallyConfirmOrganizationUsersAsync(requests);
+        var results = await sutProvider.Sut.BulkAutomaticallyConfirmOrganizationUsersAsync(request);
 
         // Assert
         Assert.Equal(2, results.Count);
@@ -64,7 +64,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
         orgUser1.OrganizationId = organization.Id;
         orgUser2.OrganizationId = organization.Id;
 
-        var requests = BuildRequests(organization.Id, performingUserId,
+        var request = BuildRequest(organization.Id, performingUserId,
             (orgUser1.Id, key1),
             (orgUser2.Id, key2));
 
@@ -74,8 +74,8 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
         sutProvider.GetDependency<IBulkAutomaticallyConfirmOrganizationUsersValidator>()
             .ValidateManyAsync(Arg.Any<IEnumerable<AutomaticallyConfirmOrganizationUserValidationRequest>>())
             .Returns([
-                ValidationResultHelpers.Valid(BuildValidationRequest(requests[0], orgUser1, organization)),
-                ValidationResultHelpers.Invalid(BuildValidationRequest(requests[1], orgUser2, organization), new UserIsNotAccepted())
+                ValidationResultHelpers.Valid(BuildValidationRequest(request.UsersToConfirm[0], request, orgUser1, organization)),
+                ValidationResultHelpers.Invalid(BuildValidationRequest(request.UsersToConfirm[1], request, orgUser2, organization), new UserIsNotAccepted())
             ]);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -83,7 +83,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
             .Returns([orgUser1.Id]);
 
         // Act
-        var results = await sutProvider.Sut.BulkAutomaticallyConfirmOrganizationUsersAsync(requests);
+        var results = await sutProvider.Sut.BulkAutomaticallyConfirmOrganizationUsersAsync(request);
 
         // Assert
         Assert.Equal(2, results.Count);
@@ -97,10 +97,13 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
 
     [Theory, BitAutoData]
     public async Task BulkAutomaticallyConfirmOrganizationUsersAsync_EmptyList_ReturnsEmptyResults(
+        Guid organizationId,
+        Guid performingUserId,
         SutProvider<BulkAutomaticallyConfirmOrganizationUsersCommand> sutProvider)
     {
         // Act
-        var results = await sutProvider.Sut.BulkAutomaticallyConfirmOrganizationUsersAsync([]);
+        var results = await sutProvider.Sut.BulkAutomaticallyConfirmOrganizationUsersAsync(
+            BuildRequest(organizationId, performingUserId));
 
         // Assert
         Assert.Empty(results);
@@ -121,45 +124,47 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
         // Arrange
         orgUser.OrganizationId = organization.Id;
 
-        var requests = BuildRequests(organization.Id, performingUserId, (orgUser.Id, key));
+        var request = BuildRequest(organization.Id, performingUserId, (orgUser.Id, key));
 
         SetupCommonMocks(sutProvider, organization, [orgUser]);
-        SetupValidatorAllValid(sutProvider, requests, [orgUser], organization);
+        SetupValidatorAllValid(sutProvider, request, [orgUser], organization);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .ConfirmManyOrganizationUsersAsync(Arg.Any<IEnumerable<AcceptedOrganizationUserToConfirm>>())
             .Returns([orgUser.Id]);
 
         // Act
-        var results = await sutProvider.Sut.BulkAutomaticallyConfirmOrganizationUsersAsync(requests);
+        var results = await sutProvider.Sut.BulkAutomaticallyConfirmOrganizationUsersAsync(request);
 
         // Assert
         Assert.Single(results);
         Assert.Equal(orgUser.Id, results[0].OrganizationUserId);
     }
 
-    private static List<AutomaticallyConfirmOrganizationUserRequest> BuildRequests(
+    private static BulkAutomaticallyConfirmOrganizationUsersRequest BuildRequest(
         Guid organizationId,
         Guid performingUserId,
         params (Guid OrgUserId, string Key)[] userKeys) =>
-        userKeys.Select(u => new AutomaticallyConfirmOrganizationUserRequest
+        new()
         {
-            OrganizationUserId = u.OrgUserId,
             OrganizationId = organizationId,
-            Key = u.Key,
             DefaultUserCollectionName = string.Empty,
-            PerformedBy = new StandardUser(performingUserId, false)
-        }).ToList();
+            PerformedBy = new StandardUser(performingUserId, false),
+            UsersToConfirm = userKeys
+                .Select(u => new BulkAutoConfirmUserEntry { OrganizationUserId = u.OrgUserId, Key = u.Key })
+                .ToList(),
+        };
 
     private static AutomaticallyConfirmOrganizationUserValidationRequest BuildValidationRequest(
-        AutomaticallyConfirmOrganizationUserRequest request,
+        BulkAutoConfirmUserEntry entry,
+        BulkAutomaticallyConfirmOrganizationUsersRequest request,
         OrganizationUser orgUser,
         Organization organization) =>
         new()
         {
-            OrganizationUserId = request.OrganizationUserId,
+            OrganizationUserId = entry.OrganizationUserId,
             OrganizationId = request.OrganizationId,
-            Key = request.Key,
+            Key = entry.Key,
             DefaultUserCollectionName = request.DefaultUserCollectionName,
             PerformedBy = request.PerformedBy,
             OrganizationUser = orgUser,
@@ -182,13 +187,13 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
 
     private static void SetupValidatorAllValid(
         SutProvider<BulkAutomaticallyConfirmOrganizationUsersCommand> sutProvider,
-        IEnumerable<AutomaticallyConfirmOrganizationUserRequest> requests,
+        BulkAutomaticallyConfirmOrganizationUsersRequest request,
         ICollection<OrganizationUser> orgUsers,
         Organization organization)
     {
         var orgUserById = orgUsers.ToDictionary(ou => ou.Id);
-        var validationResults = requests
-            .Select(r => ValidationResultHelpers.Valid(BuildValidationRequest(r, orgUserById[r.OrganizationUserId], organization)))
+        var validationResults = request.UsersToConfirm
+            .Select(u => ValidationResultHelpers.Valid(BuildValidationRequest(u, request, orgUserById[u.OrganizationUserId], organization)))
             .ToList<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>>();
 
         sutProvider.GetDependency<IBulkAutomaticallyConfirmOrganizationUsersValidator>()

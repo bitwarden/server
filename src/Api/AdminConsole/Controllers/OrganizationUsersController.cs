@@ -830,7 +830,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
             return new ListResponseModel<OrganizationUserPendingAutoConfirmResponseModel>([]);
         }
 
-        var pendingUsers = await _organizationUserRepository.GetManyByOrganizationIdWithStatusAsync(orgId, OrganizationUserStatusType.Accepted);
+        var pendingUsers = await _organizationUserRepository.GetManyPendingAutoConfirmAsync(orgId);
         var responses = pendingUsers.Select(u => new OrganizationUserPendingAutoConfirmResponseModel(u));
         return new ListResponseModel<OrganizationUserPendingAutoConfirmResponseModel>(responses);
     }
@@ -852,17 +852,22 @@ public class OrganizationUsersController : BaseAdminConsoleController
         var isOwner = await _currentContext.OrganizationOwner(orgId);
         var actingUser = new StandardUser(userId.Value, isOwner);
 
-        var requests = model.Keys.Select(entry => new AutomaticallyConfirmOrganizationUserRequest
+        var request = new BulkAutomaticallyConfirmOrganizationUsersRequest
         {
             OrganizationId = orgId,
-            OrganizationUserId = entry.Id,
-            Key = entry.Key,
             DefaultUserCollectionName = model.DefaultUserCollectionName,
             PerformedBy = actingUser,
-        });
+            UsersToConfirm = model.Keys
+                .Select(entry => new BulkAutoConfirmUserEntry
+                {
+                    OrganizationUserId = entry.Id,
+                    Key = entry.Key,
+                })
+                .ToList(),
+        };
 
         var results = await _bulkAutomaticallyConfirmOrganizationUsersCommand
-            .BulkAutomaticallyConfirmOrganizationUsersAsync(requests);
+            .BulkAutomaticallyConfirmOrganizationUsersAsync(request);
 
         var responses = results.Select(r => new OrganizationUserBulkResponseModel(r.OrganizationUserId, r.Error ?? string.Empty));
         return TypedResults.Ok(new ListResponseModel<OrganizationUserBulkResponseModel>(responses));

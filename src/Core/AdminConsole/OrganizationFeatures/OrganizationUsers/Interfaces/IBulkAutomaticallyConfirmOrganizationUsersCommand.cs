@@ -13,13 +13,16 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interface
 public interface IBulkAutomaticallyConfirmOrganizationUsersCommand
 {
     /// <summary>
-    /// Automatically confirms each of the provided organization users.
+    /// Automatically confirms each of the users specified in <paramref name="request"/>.
     /// </summary>
-    /// <param name="requests">The collection of auto-confirm requests, one per user to confirm.</param>
+    /// <param name="request">
+    /// The bulk confirmation request containing shared context (organization, collection name, actor)
+    /// and the per-user entries (organization user ID + encrypted key).
+    /// </param>
     /// <returns>
     /// A list of tuples containing the organization user ID and an optional error message.
     /// A null error indicates a successful confirmation for that user.
     /// </returns>
     Task<IReadOnlyList<(Guid OrganizationUserId, string? Error)>> BulkAutomaticallyConfirmOrganizationUsersAsync(
-        IEnumerable<AutomaticallyConfirmOrganizationUserRequest> requests);
+        BulkAutomaticallyConfirmOrganizationUsersRequest request);
 }

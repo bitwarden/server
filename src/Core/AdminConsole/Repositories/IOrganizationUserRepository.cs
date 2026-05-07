@@ -155,6 +155,12 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<ICollection<OrganizationUser>> GetManyByOrganizationIdWithStatusAsync(Guid organizationId, OrganizationUserStatusType status);
 
     /// <summary>
+    /// Returns all Accepted, User-role organization users pending automatic confirmation for the given organization.
+    /// </summary>
+    /// <param name="organizationId">The organization to search within.</param>
+    Task<ICollection<OrganizationUser>> GetManyPendingAutoConfirmAsync(Guid organizationId);
+
+    /// <summary>
     /// Returns the OrganizationUserUserDetails if found.
     /// </summary>
     /// <param name="organizationId">The id of the organization</param>

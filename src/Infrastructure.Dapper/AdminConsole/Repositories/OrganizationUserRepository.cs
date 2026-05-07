@@ -780,4 +780,19 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             return results.ToList();
         }
     }
+
+    public async Task<ICollection<OrganizationUser>> GetManyPendingAutoConfirmAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationUser>(
+                "[dbo].[OrganizationUser_ReadByOrganizationIdStatus]",
+                new { OrganizationId = organizationId, Status = (short)OrganizationUserStatusType.Accepted },
+                commandType: CommandType.StoredProcedure);
+
+            return results
+                .Where(u => u.Type == OrganizationUserType.User)
+                .ToList();
+        }
+    }
 }
