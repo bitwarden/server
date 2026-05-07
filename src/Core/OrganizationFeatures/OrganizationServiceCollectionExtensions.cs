@@ -30,6 +30,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.V
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationConfirmation;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.SelfRevokeUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
@@ -149,6 +150,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IRemoveOrganizationUserCommand, RemoveOrganizationUserCommand>();
         services.AddScoped<IRevokeNonCompliantOrganizationUserCommand, RevokeNonCompliantOrganizationUserCommand>();
         services.AddScoped<IUpdateOrganizationUserCommand, UpdateOrganizationUserCommand>();
+        services.AddScoped<IUpdateUserResetPasswordEnrollmentCommand, UpdateUserResetPasswordEnrollmentCommand>();
         services.AddScoped<IUpdateOrganizationUserGroupsCommand, UpdateOrganizationUserGroupsCommand>();
         services.AddScoped<IConfirmOrganizationUserCommand, ConfirmOrganizationUserCommand>();
         services.AddScoped<ISendOrganizationConfirmationCommand, SendOrganizationConfirmationCommand>();
