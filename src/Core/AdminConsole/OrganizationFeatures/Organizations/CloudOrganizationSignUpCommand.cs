@@ -4,6 +4,7 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.Billing.Cache;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
@@ -43,13 +44,15 @@ public class CloudOrganizationSignUpCommand(
     ICollectionRepository collectionRepository,
     IDeviceRepository deviceRepository,
     IPricingClient pricingClient,
-    IPolicyRequirementQuery policyRequirementQuery) : ICloudOrganizationSignUpCommand
+    IPolicyRequirementQuery policyRequirementQuery,
+    ITrialInitiationCache trialInitiationCache) : ICloudOrganizationSignUpCommand
 {
     public async Task<SignUpOrganizationResponse> SignUpOrganizationAsync(OrganizationSignup signup)
     {
         var plan = await pricingClient.GetPlanOrThrow(signup.Plan);
 
         ValidatePasswordManagerPlan(plan, signup);
+        await ValidateTrialLengthAsync(signup);
 
         if (signup.UseSecretsManager)
         {
@@ -342,5 +345,17 @@ public class CloudOrganizationSignUpCommand(
         return devices
             .Where(d => !string.IsNullOrWhiteSpace(d.PushToken))
             .Select(d => d.Id.ToString());
+    }
+
+    private async Task ValidateTrialLengthAsync(OrganizationSignup signup)
+    {
+        if (signup.TrialLength is not null)
+        {
+            if (string.IsNullOrWhiteSpace(signup.TrialInitiationId))
+            {
+                throw new BadRequestException("A trial initiation ID is required when specifying a trial length.");
+            }
+            await trialInitiationCache.ValidateTrialLengthAsync(signup.TrialInitiationId, signup.TrialLength.Value);
+        }
     }
 }
