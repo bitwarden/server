@@ -69,7 +69,6 @@ public class SsoRequestValidatorTests
         Assert.Null(context.ValidationErrorResult);
         Assert.Null(context.CustomResponse);
 
-        // Should use the new policy requirement query when feature flag is enabled
         await sutProvider.GetDependency<IPolicyRequirementQuery>().Received(1).GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id);
     }
 
