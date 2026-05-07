@@ -1,7 +1,7 @@
-﻿using Bit.Core.Utilities;
+﻿using Bit.Core.Auth.Utilities;
 using Xunit;
 
-namespace Bit.Api.Test.Utilities;
+namespace Bit.Api.Test.Auth.Utilities;
 
 public class MasterPasswordPayloadVariantValidatorTests
 {

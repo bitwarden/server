@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Core.Utilities;
+namespace Bit.Core.Auth.Utilities;
 
 public static class MasterPasswordPayloadVariantValidator
 {
