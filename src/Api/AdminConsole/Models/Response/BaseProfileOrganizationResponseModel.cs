@@ -53,7 +53,6 @@ public abstract class BaseProfileOrganizationResponseModel : ResponseModel
         UsePasswordManager = organizationDetails.UsePasswordManager;
         UseMyItems = organizationDetails.UseMyItems;
         UseInviteLinks = organizationDetails.UseInviteLinks;
-        ExemptFromBillingAutomation = organizationDetails.ExemptFromBillingAutomation;
         SelfHost = organizationDetails.SelfHost;
         Seats = organizationDetails.Seats;
         MaxCollections = organizationDetails.MaxCollections;
@@ -109,7 +108,6 @@ public abstract class BaseProfileOrganizationResponseModel : ResponseModel
     public bool UsePhishingBlocker { get; set; }
     public bool UseMyItems { get; set; }
     public bool UseInviteLinks { get; set; }
-    public bool ExemptFromBillingAutomation { get; set; }
     public bool SelfHost { get; set; }
     public int? Seats { get; set; }
     public short? MaxCollections { get; set; }

@@ -60,8 +60,7 @@ SELECT
     O.[UseDisableSmAdsForUsers],
     O.[UseMyItems],
     O.[UseInviteLinks],
-    OU.[RevocationReason],
-    O.[ExemptFromBillingAutomation]
+    OU.[RevocationReason]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN
