@@ -42,6 +42,12 @@ public class SelfServicePasswordChangeCommandTests
 
         Assert.Equal(IdentityResult.Success, result);
 
+        await sutProvider.GetDependency<IMasterPasswordService>().Received(1)
+            .SaveUpdateExistingMasterPasswordAsync(user,
+                Arg.Is<UpdateExistingPasswordData>(d =>
+                    d.MasterPasswordUnlock == unlockData &&
+                    d.MasterPasswordAuthentication == authenticationData &&
+                    d.MasterPasswordHint == masterPasswordHint));
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
@@ -107,32 +113,4 @@ public class SelfServicePasswordChangeCommandTests
             .PushLogOutAsync(default, default);
     }
 
-    [Theory]
-    [BitAutoData]
-    public async Task ChangePasswordAsync_PassesCorrectDataToMasterPasswordService(
-        SutProvider<SelfServicePasswordChangeCommand> sutProvider,
-        User user, string masterPasswordHash, string masterPasswordHint,
-        KdfSettings kdfSettings, string salt, string wrappedKey, string authHash)
-    {
-        var unlockData = CreateUnlockData(kdfSettings, salt, wrappedKey);
-        var authenticationData = CreateAuthenticationData(kdfSettings, salt, authHash);
-
-        sutProvider.GetDependency<IUserService>()
-            .CheckPasswordAsync(user, masterPasswordHash)
-            .Returns(true);
-
-        sutProvider.GetDependency<IMasterPasswordService>()
-            .SaveUpdateExistingMasterPasswordAsync(user, Arg.Any<UpdateExistingPasswordData>())
-            .Returns(OneOf<User, IdentityError[]>.FromT0(user));
-
-        await sutProvider.Sut.ChangePasswordAsync(
-            user, masterPasswordHash, unlockData, authenticationData, masterPasswordHint);
-
-        await sutProvider.GetDependency<IMasterPasswordService>().Received(1)
-            .SaveUpdateExistingMasterPasswordAsync(user,
-                Arg.Is<UpdateExistingPasswordData>(d =>
-                    d.MasterPasswordUnlock == unlockData &&
-                    d.MasterPasswordAuthentication == authenticationData &&
-                    d.MasterPasswordHint == masterPasswordHint));
-    }
 }
