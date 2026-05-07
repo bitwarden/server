@@ -54,7 +54,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         var recipeName = "from-options";
         var builder = services.AddRecipe(recipeName);
 
-        builder.CreateOrganization(options.Name, options.Domain, options.Users + 1, options.PlanType);
+        builder.CreateOrganization(options.Name, options.Domain, options.Users + 1, options.PlanType, options.Overrides);
         builder.AddOrganizationApiKey();
         builder.AddOwner();
         builder.WithGenerator(options.Domain);

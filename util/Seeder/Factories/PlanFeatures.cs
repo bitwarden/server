@@ -2,6 +2,7 @@
 using System.Text;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Seeder.Options;
 
 namespace Bit.Seeder.Factories;
 
@@ -13,13 +14,6 @@ public static class PlanFeatures
 {
     internal static void Apply(Organization org, PlanType planType)
     {
-        // Org-level admin settings — not plan-gated, safe defaults for seeding
-        org.UseAutomaticUserConfirmation = true;
-        org.AllowAdminAccessToAllCollectionItems = true;
-        org.LimitCollectionCreation = true;
-        org.LimitCollectionDeletion = true;
-        org.LimitItemDeletion = true;
-
         switch (planType)
         {
             case PlanType.Free:
@@ -76,6 +70,24 @@ public static class PlanFeatures
                     $"Unsupported PlanType '{planType}'. Supported types: Free, TeamsMonthly, TeamsAnnually, " +
                     "TeamsStarter, EnterpriseMonthly, EnterpriseAnnually, FamiliesAnnually.");
         }
+    }
+
+    /// <summary>
+    /// Applies overrides on top of the organization's initial values.
+    /// Only non-null properties are applied; null means "leave the value unchanged from <see cref="OrganizationSeeder.Create"/>".
+    /// </summary>
+    internal static void ApplyOrganizationOverrides(Organization org, OrganizationOverrides? overrides)
+    {
+        if (overrides is null)
+        {
+            return;
+        }
+
+        org.UseAutomaticUserConfirmation = overrides.UseAutomaticUserConfirmation ?? org.UseAutomaticUserConfirmation;
+        org.AllowAdminAccessToAllCollectionItems = overrides.AllowAdminAccessToAllCollectionItems ?? org.AllowAdminAccessToAllCollectionItems;
+        org.LimitItemDeletion = overrides.LimitItemDeletion ?? org.LimitItemDeletion;
+        org.LimitCollectionCreation = overrides.LimitCollectionCreation ?? org.LimitCollectionCreation;
+        org.LimitCollectionDeletion = overrides.LimitCollectionDeletion ?? org.LimitCollectionDeletion;
     }
 
     public static PlanType Parse(string? planTypeString)
