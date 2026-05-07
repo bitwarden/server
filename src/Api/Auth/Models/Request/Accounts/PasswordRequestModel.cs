@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Auth.Utilities;
 using Bit.Core.KeyManagement.Models.Api.Request;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Auth.Models.Request.Accounts;
 
@@ -38,17 +39,10 @@ public class PasswordRequestModel : IValidatableObject
 
         if (RequestHasNewDataTypes())
         {
-            if (!AuthenticationData!.HasSameKdfConfiguration(UnlockData!))
+            foreach (var validationResult in KdfSettingsValidator.ValidateKdfAndSaltAgreement(
+                         AuthenticationData!.ToData(), UnlockData!.ToData()))
             {
-                yield return new ValidationResult(
-                    "AuthenticationData and UnlockData must have the same KDF configuration.",
-                    [nameof(AuthenticationData), nameof(UnlockData)]);
-            }
-            if (!AuthenticationData.Salt.Equals(UnlockData!.Salt))
-            {
-                yield return new ValidationResult(
-                    "AuthenticationData and UnlockData must have the same salt.",
-                    [nameof(AuthenticationData), nameof(UnlockData)]);
+                yield return validationResult;
             }
         }
     }
