@@ -82,6 +82,11 @@ public class OrganizationCreateRequestModel : IValidatableObject
 
     public bool SkipTrial { get; set; }
 
+    [Range(0, 30)]
+    public int? TrialLength { get; set; }
+
+    public string TrialInitiationId { get; set; }
+
     public string[] Coupons { get; set; }
 
     public virtual OrganizationSignup ToOrganizationSignup(User user)
@@ -117,6 +122,8 @@ public class OrganizationCreateRequestModel : IValidatableObject
             },
             InitiationPath = InitiationPath,
             SkipTrial = SkipTrial,
+            TrialLength = TrialLength,
+            TrialInitiationId = TrialInitiationId,
             Coupons = Coupons,
             Keys = Keys.ToPublicKeyEncryptionKeyPairData()
         };
