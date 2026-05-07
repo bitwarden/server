@@ -73,8 +73,8 @@ public static class PlanFeatures
     }
 
     /// <summary>
-    /// Applies overrides on top of the plan defaults.
-    /// Only non-null properties are applied; null means "keep the plan default".
+    /// Applies overrides on top of the organization's initial values.
+    /// Only non-null properties are applied; null means "leave the value unchanged from <see cref="OrganizationSeeder.Create"/>".
     /// </summary>
     internal static void ApplyOrganizationOverrides(Organization org, OrganizationOverrides? overrides)
     {

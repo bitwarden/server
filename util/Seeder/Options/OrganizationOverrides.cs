@@ -1,8 +1,8 @@
 ﻿namespace Bit.Seeder.Options;
 
 /// <summary>
-/// Optional overrides applied on top of plan defaults when creating an organization.
-/// Null properties mean "keep the plan default".
+/// Optional overrides applied on top of the organization's initial values.
+/// Null properties mean "leave the value unchanged from OrganizationSeeder.Create".
 /// </summary>
 public sealed record OrganizationOverrides
 {

@@ -112,8 +112,8 @@ public class OrganizationVaultOptions
     public int KdfIterations { get; init; } = 5_000;
 
     /// <summary>
-    /// Optional overrides applied on top of the billing plan's defaults.
-    /// Null means "use plan defaults for everything".
+    /// Optional overrides for collection management settings applied on top of the organization's initial values.
+    /// Null means "leave all collection management settings unchanged from OrganizationSeeder.Create".
     /// </summary>
     public OrganizationOverrides? Overrides { get; init; }
 }
