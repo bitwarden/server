@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -32,7 +29,7 @@ public class UpdateUserResetPasswordEnrollmentCommand : IUpdateUserResetPassword
         _eventService = eventService;
     }
 
-    public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey,
+    public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string? resetPasswordKey,
         Guid? callingUserId)
     {
         // Org User must be the same as the calling user and the organization ID associated with the user must match passed org ID

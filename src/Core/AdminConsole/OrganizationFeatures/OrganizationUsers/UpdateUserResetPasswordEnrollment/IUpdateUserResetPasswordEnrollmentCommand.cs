@@ -6,5 +6,5 @@ public interface IUpdateUserResetPasswordEnrollmentCommand
     /// Enrolls or withdraws an organization user from account recovery. Pass a non-null
     /// <paramref name="resetPasswordKey"/> to enroll, or null to withdraw.
     /// </summary>
-    Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey, Guid? callingUserId);
+    Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string? resetPasswordKey, Guid? callingUserId);
 }
