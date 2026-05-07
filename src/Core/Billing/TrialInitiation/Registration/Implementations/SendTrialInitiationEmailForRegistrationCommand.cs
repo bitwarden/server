@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Billing.Cache;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -14,7 +15,8 @@ public class SendTrialInitiationEmailForRegistrationCommand(
     IUserRepository userRepository,
     GlobalSettings globalSettings,
     IMailService mailService,
-    IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> tokenDataFactory)
+    IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> tokenDataFactory,
+    ITrialInitiationCache trialInitiationCache)
     : ISendTrialInitiationEmailForRegistrationCommand
 {
     public async Task<string?> Handle(
@@ -45,12 +47,9 @@ public class SendTrialInitiationEmailForRegistrationCommand(
 
         await PerformConstantTimeOperationsAsync();
 
-        if (trialLength != 0 && trialLength != 7)
-        {
-            trialLength = 7;
-        }
-
-        await mailService.SendTrialInitiationSignupEmailAsync(userExists, email, token, productTier, products, trialLength, paymentOptional);
+        var trialInitiationId = Guid.NewGuid().ToString();
+        await mailService.SendTrialInitiationSignupEmailAsync(userExists, email, token, productTier, products, trialLength, trialInitiationId, paymentOptional);
+        await trialInitiationCache.WriteAsync(trialInitiationId, trialLength);
 
         return null;
     }
