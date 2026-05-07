@@ -10,3 +10,6 @@ public record InviteLinkDomainsRequired()
 
 public record InviteLinkNotAvailable()
     : BadRequestError("Your organization's plan does not support invite links.");
+
+public record InviteLinkNotFound()
+    : NotFoundError("Invite link not found.");

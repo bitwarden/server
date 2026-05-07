@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Services;
 
@@ -20,7 +21,7 @@ public class CreateOrganizationInviteLinkCommand(
             return new InviteLinkNotAvailable();
         }
 
-        var sanitizedDomains = SanitizeDomains(request.AllowedDomains);
+        var sanitizedDomains = InviteLinkDomainSanitizer.SanitizeDomains(request.AllowedDomains);
         if (sanitizedDomains.Count == 0)
         {
             return new InviteLinkDomainsRequired();
@@ -55,13 +56,4 @@ public class CreateOrganizationInviteLinkCommand(
         return ability is not null && ability.UseInviteLinks;
     }
 
-    /// <summary>
-    /// Normalizes domains to lowercase and removes blank entries.
-    /// </summary>
-    private static List<string> SanitizeDomains(IEnumerable<string>? domains) =>
-        domains?
-            .Select(d => d?.Trim().ToLowerInvariant())
-            .Where(d => !string.IsNullOrEmpty(d))
-            .Cast<string>()
-            .ToList() ?? [];
 }

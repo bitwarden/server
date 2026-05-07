@@ -67,7 +67,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationApiKeyCommandsQueries();
         services.AddOrganizationCollectionCommands();
         services.AddOrganizationGroupCommands();
-        services.AddOrganizationInviteLinkCommands();
+        services.AddOrganizationInviteLinkCommandsQueries();
         services.AddOrganizationDomainCommandsQueries();
         services.AddOrganizationSignUpCommands();
         services.AddOrganizationDeleteCommands();
@@ -191,9 +191,12 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IUpdateGroupCommand, UpdateGroupCommand>();
     }
 
-    private static void AddOrganizationInviteLinkCommands(this IServiceCollection services)
+    private static void AddOrganizationInviteLinkCommandsQueries(this IServiceCollection services)
     {
         services.TryAddScoped<ICreateOrganizationInviteLinkCommand, CreateOrganizationInviteLinkCommand>();
+        services.TryAddScoped<IGetOrganizationInviteLinkQuery, GetOrganizationInviteLinkQuery>();
+        services.TryAddScoped<IUpdateOrganizationInviteLinkCommand, UpdateOrganizationInviteLinkCommand>();
+        services.TryAddScoped<IDeleteOrganizationInviteLinkCommand, DeleteOrganizationInviteLinkCommand>();
     }
 
     private static void AddOrganizationDomainCommandsQueries(this IServiceCollection services)
