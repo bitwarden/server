@@ -17,15 +17,23 @@ public record AutomaticallyConfirmOrganizationUserRequest
 }
 
 /// <summary>
-/// Automatically Confirm User Validation Request
+/// Hydrated request passed to the validator. Carries the retrieved <see cref="OrganizationUser"/> and
+/// <see cref="Organization"/> objects directly; <see cref="OrganizationUserId"/> and
+/// <see cref="OrganizationId"/> are derived from those objects to prevent the two copies from diverging.
 /// </summary>
-/// <remarks>
-/// This is used to hold retrieved data and pass it to the validator
-/// </remarks>
-public record AutomaticallyConfirmOrganizationUserValidationRequest : AutomaticallyConfirmOrganizationUserRequest
+public record AutomaticallyConfirmOrganizationUserValidationRequest
 {
-    public OrganizationUser? OrganizationUser { get; set; }
-    public Organization? Organization { get; set; }
+    public required string Key { get; init; }
+    public required string DefaultUserCollectionName { get; init; }
+    public required IActingUser PerformedBy { get; init; }
+    public OrganizationUser? OrganizationUser { get; init; }
+    public Organization? Organization { get; init; }
+
+    /// <summary>Derived from <see cref="OrganizationUser"/>.</summary>
+    public Guid OrganizationUserId => OrganizationUser!.Id;
+
+    /// <summary>Derived from <see cref="Organization"/>.</summary>
+    public Guid OrganizationId => Organization!.Id;
 }
 
 /// <summary>

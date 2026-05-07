@@ -45,16 +45,23 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommand(
         var orgUsers = await organizationUserRepository.GetManyAsync(orgUserIds);
         var orgUserById = orgUsers.ToDictionary(ou => ou.Id);
 
-        // Build hydrated validation requests.
+        // Users not found in the repository are immediately invalid; track their IDs for the
+        // final result so the caller gets a per-user error rather than a silent omission.
+        var notFoundIds = request.UsersToConfirm
+            .Select(u => u.OrganizationUserId)
+            .Where(id => !orgUserById.ContainsKey(id))
+            .ToHashSet();
+
+        // Build hydrated validation requests only for users that were actually found so that
+        // OrganizationUserId and OrganizationId can be safely derived from the hydrated objects.
         var validationRequests = request.UsersToConfirm
+            .Where(u => !notFoundIds.Contains(u.OrganizationUserId))
             .Select(u => new AutomaticallyConfirmOrganizationUserValidationRequest
             {
-                OrganizationUserId = u.OrganizationUserId,
-                OrganizationId = orgId,
                 Key = u.Key,
                 DefaultUserCollectionName = request.DefaultUserCollectionName,
                 PerformedBy = request.PerformedBy,
-                OrganizationUser = orgUserById.TryGetValue(u.OrganizationUserId, out var ou) ? ou : null,
+                OrganizationUser = orgUserById[u.OrganizationUserId],
                 Organization = organization
             })
             .ToList();
@@ -70,7 +77,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommand(
 
         if (validatedRequests.Count == 0)
         {
-            return BuildResults(request.UsersToConfirm, validationResults, new HashSet<Guid>());
+            return BuildResults(request.UsersToConfirm, validationResults, new HashSet<Guid>(), notFoundIds);
         }
 
         var usersToConfirm = validatedRequests
@@ -93,7 +100,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommand(
 
         if (confirmedRequests.Count == 0)
         {
-            return BuildResults(request.UsersToConfirm, validationResults, new HashSet<Guid>());
+            return BuildResults(request.UsersToConfirm, validationResults, new HashSet<Guid>(), notFoundIds);
         }
 
         // Run post-confirmation side effects.
@@ -106,13 +113,14 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommand(
                 SyncOrganizationKeysAsync(r)
             )));
 
-        return BuildResults(request.UsersToConfirm, validationResults, confirmedIds);
+        return BuildResults(request.UsersToConfirm, validationResults, confirmedIds, notFoundIds);
     }
 
     private static IReadOnlyList<(Guid OrganizationUserId, string? Error)> BuildResults(
         IReadOnlyList<BulkAutoConfirmUserEntry> usersToConfirm,
         IReadOnlyList<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>> validationResults,
-        IReadOnlySet<Guid> confirmedIds)
+        IReadOnlySet<Guid> confirmedIds,
+        IReadOnlySet<Guid> notFoundIds)
     {
         var errorByOrgUserId = validationResults
             .Where(r => r.IsError)
@@ -121,6 +129,11 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommand(
         return usersToConfirm
             .Select(u =>
             {
+                if (notFoundIds.Contains(u.OrganizationUserId))
+                {
+                    return (u.OrganizationUserId, (string?)new UserNotFoundError().Message);
+                }
+
                 if (errorByOrgUserId.TryGetValue(u.OrganizationUserId, out var errorMessage))
                 {
                     return (u.OrganizationUserId, (string?)errorMessage);

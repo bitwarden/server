@@ -162,8 +162,6 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
         Organization organization) =>
         new()
         {
-            OrganizationUserId = entry.OrganizationUserId,
-            OrganizationId = request.OrganizationId,
             Key = entry.Key,
             DefaultUserCollectionName = request.DefaultUserCollectionName,
             PerformedBy = request.PerformedBy,

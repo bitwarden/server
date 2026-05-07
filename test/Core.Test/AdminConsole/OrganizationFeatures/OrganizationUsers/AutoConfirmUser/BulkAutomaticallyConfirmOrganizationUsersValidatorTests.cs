@@ -35,9 +35,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
             PerformedBy = Substitute.For<IActingUser>(),
             DefaultUserCollectionName = string.Empty,
             OrganizationUser = orgUser,
-            OrganizationUserId = orgUser.Id,
             Organization = organization,
-            OrganizationId = organization.Id,
             Key = "test-key"
         };
 

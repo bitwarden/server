@@ -37,8 +37,6 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
         // Mock positive validation result
         var validationRequest = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
-            OrganizationUserId = orgUser.Id,
-            OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = collectionName,
             PerformedBy = null,
@@ -98,8 +96,6 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
         // Mock positive validation result
         var validationRequest = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
-            OrganizationUserId = orgUser.Id,
-            OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = collectionName,
             PerformedBy = null,
@@ -162,8 +158,6 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
         // Mock positive validation result
         var validationRequest = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
-            OrganizationUserId = orgUser.Id,
-            OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = collectionName,
             PerformedBy = null,

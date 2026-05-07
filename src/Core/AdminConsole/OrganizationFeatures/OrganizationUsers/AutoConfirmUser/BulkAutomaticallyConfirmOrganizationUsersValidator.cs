@@ -31,9 +31,6 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
             return [];
         }
 
-        // All requests are for the same organization — verified by the bulk command before calling here.
-        var orgId = requestsList[0].OrganizationId;
-
         // Quick structural checks before making any DB calls.
         // We bail out early per-request so we only fetch bulk data for structurally valid users.
         var structuralResults = requestsList
@@ -49,6 +46,10 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
         {
             return structuralResults;
         }
+
+        // All valid requests are for the same organization — verified by the bulk command before
+        // calling here. OrganizationId is derived from the hydrated Organization object.
+        var orgId = validRequests[0].OrganizationId;
 
         var userIds = validRequests
             .Select(r => r.OrganizationUser!.UserId!.Value)
