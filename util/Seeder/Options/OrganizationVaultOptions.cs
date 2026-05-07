@@ -113,7 +113,7 @@ public class OrganizationVaultOptions
 
     /// <summary>
     /// Optional overrides for collection management settings applied on top of the organization's initial values.
-    /// Null means "leave all collection management settings unchanged from OrganizationSeeder.Create".
+    /// Null means "leave all collection management settings unchanged from <see cref="Bit.Seeder.Factories.OrganizationSeeder.Create"/>".
     /// </summary>
     public OrganizationOverrides? Overrides { get; init; }
 }

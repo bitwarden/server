@@ -2,7 +2,7 @@
 
 /// <summary>
 /// Optional overrides applied on top of the organization's initial values.
-/// Null properties mean "leave the value unchanged from OrganizationSeeder.Create".
+/// Null properties mean "leave the value unchanged from <see cref="Bit.Seeder.Factories.OrganizationSeeder.Create"/>".
 /// </summary>
 public sealed record OrganizationOverrides
 {
