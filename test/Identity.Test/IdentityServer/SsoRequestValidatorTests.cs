@@ -1,9 +1,6 @@
-﻿using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.Services;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Sso;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Identity.IdentityServer;
 using Bit.Identity.IdentityServer.Enums;
 using Bit.Identity.IdentityServer.RequestValidationConstants;
@@ -45,8 +42,6 @@ public class SsoRequestValidatorTests
         Assert.Null(context.CustomResponse);
 
         // Should not check policies since grant type allows bypass
-        await sutProvider.GetDependency<IPolicyService>().DidNotReceive()
-            .AnyPoliciesApplicableToUserAsync(Arg.Any<Guid>(), Arg.Any<PolicyType>(), Arg.Any<OrganizationUserStatusType>());
         await sutProvider.GetDependency<IPolicyRequirementQuery>().DidNotReceive()
             .GetAsyncVNext<RequireSsoPolicyRequirement>(Arg.Any<Guid>());
     }
@@ -76,8 +71,6 @@ public class SsoRequestValidatorTests
 
         // Should use the new policy requirement query when feature flag is enabled
         await sutProvider.GetDependency<IPolicyRequirementQuery>().Received(1).GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id);
-        await sutProvider.GetDependency<IPolicyService>().DidNotReceive()
-            .AnyPoliciesApplicableToUserAsync(Arg.Any<Guid>(), Arg.Any<PolicyType>(), Arg.Any<OrganizationUserStatusType>());
     }
 
     [Theory, BitAutoData]
