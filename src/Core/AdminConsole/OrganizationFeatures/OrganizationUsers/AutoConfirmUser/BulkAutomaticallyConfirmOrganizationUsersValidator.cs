@@ -84,7 +84,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
             .Select(pu => pu.UserId!.Value)
             .ToHashSet();
 
-        var resultsById = structuralResults.ToDictionary(r => r.Request.OrganizationUserId);
+        var resultsByRequest = structuralResults.ToDictionary(r => r.Request);
 
         foreach (var request in validRequests)
         {
@@ -93,8 +93,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
             // Org must have the Automatic User Confirmation policy enabled
             if (!policyStatus.Enabled || request.Organization is not { UseAutomaticUserConfirmation: true })
             {
-                resultsById[request.OrganizationUserId] =
-                    Invalid(request, new AutomaticallyConfirmUsersPolicyIsNotEnabled());
+                resultsByRequest[request] = Invalid(request, new AutomaticallyConfirmUsersPolicyIsNotEnabled());
                 continue;
             }
 
@@ -108,8 +107,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
 
                 if (requireTwoFactor?.IsTwoFactorRequiredForOrganization(orgId) == true)
                 {
-                    resultsById[request.OrganizationUserId] =
-                        Invalid(request, new UserDoesNotHaveTwoFactorEnabled());
+                    resultsByRequest[request] = Invalid(request, new UserDoesNotHaveTwoFactorEnabled());
                     continue;
                 }
             }
@@ -126,8 +124,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
                     // Provider users cannot be confirmed into an auto-confirm org.
                     if (providerUserIds.Contains(userId))
                     {
-                        resultsById[request.OrganizationUserId] =
-                            Invalid(request, new ProviderUsersCannotJoin());
+                        resultsByRequest[request] = Invalid(request, new ProviderUsersCannotJoin());
                         continue;
                     }
 
@@ -135,35 +132,35 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
                     var totalOrgMemberships = orgUsersByUserId.TryGetValue(userId, out var count) ? count : 0;
                     if (totalOrgMemberships > 1)
                     {
-                        resultsById[request.OrganizationUserId] =
-                            Invalid(request, new UserCannotBelongToAnotherOrganization());
+                        resultsByRequest[request] = Invalid(request, new UserCannotBelongToAnotherOrganization());
                         continue;
                     }
                 }
 
                 if (autoConfirmPolicy.IsEnabledForOrganizationsOtherThan(orgId))
                 {
-                    resultsById[request.OrganizationUserId] =
-                        Invalid(request, new OtherOrganizationDoesNotAllowOtherMembership());
+                    resultsByRequest[request] = Invalid(request, new OtherOrganizationDoesNotAllowOtherMembership());
                     continue;
                 }
             }
 
             // All checks passed.
-            resultsById[request.OrganizationUserId] = Valid(request);
+            resultsByRequest[request] = Valid(request);
         }
 
         // Return results in the original input order.
-        return requestsList.Select(r => resultsById[r.OrganizationUserId]);
+        return requestsList.Select(r => resultsByRequest[r]);
     }
 
     /// <summary>
     /// Validates structural preconditions that don't require any DB calls.
+    /// The caller (bulk command) is responsible for ensuring OrganizationUser is non-null before
+    /// passing requests here.
     /// </summary>
     private static ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest> ValidateStructure(
         AutomaticallyConfirmOrganizationUserValidationRequest request)
     {
-        if (request.OrganizationUser is null || request.OrganizationUser.UserId is null)
+        if (request.OrganizationUser!.UserId is null)
         {
             return Invalid(request, new UserNotFoundError());
         }

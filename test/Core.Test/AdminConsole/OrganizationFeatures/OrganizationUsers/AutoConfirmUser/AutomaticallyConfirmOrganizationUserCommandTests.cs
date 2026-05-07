@@ -39,7 +39,6 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
         {
             Key = key,
             DefaultUserCollectionName = collectionName,
-            PerformedBy = null,
             OrganizationUser = orgUser,
             Organization = organization
         };
@@ -67,7 +66,6 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
             OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = collectionName,
-            PerformedBy = null
         };
 
         // Act
@@ -98,7 +96,6 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
         {
             Key = key,
             DefaultUserCollectionName = collectionName,
-            PerformedBy = null,
             OrganizationUser = orgUser,
             Organization = organization
         };
@@ -126,7 +123,6 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
             OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = collectionName,
-            PerformedBy = null
         };
 
         // Act
@@ -160,7 +156,6 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
         {
             Key = key,
             DefaultUserCollectionName = collectionName,
-            PerformedBy = null,
             OrganizationUser = orgUser,
             Organization = organization
         };
@@ -179,7 +174,6 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
             OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = collectionName,
-            PerformedBy = null
         };
 
         // Act

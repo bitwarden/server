@@ -60,7 +60,6 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommand(
             {
                 Key = u.Key,
                 DefaultUserCollectionName = request.DefaultUserCollectionName,
-                PerformedBy = request.PerformedBy,
                 OrganizationUser = orgUserById[u.OrganizationUserId],
                 Organization = organization
             })

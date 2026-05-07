@@ -12,8 +12,10 @@ public interface IBulkAutomaticallyConfirmOrganizationUsersValidator
     /// Validates all <paramref name="requests"/> in a single bulk pass.
     /// </summary>
     /// <remarks>
-    /// The caller must already have populated <see cref="AutomaticallyConfirmOrganizationUserValidationRequest.OrganizationUser"/>
-    /// and <see cref="AutomaticallyConfirmOrganizationUserValidationRequest.Organization"/> on each request.
+    /// The caller must ensure <see cref="AutomaticallyConfirmOrganizationUserValidationRequest.OrganizationUser"/>
+    /// is non-null on every request (not-found users should be filtered out before calling here).
+    /// <see cref="AutomaticallyConfirmOrganizationUserValidationRequest.Organization"/> may be null;
+    /// structural validation will catch and report it per request.
     /// All requests must belong to the same organization.
     /// </remarks>
     /// <param name="requests">The hydrated validation requests to validate.</param>

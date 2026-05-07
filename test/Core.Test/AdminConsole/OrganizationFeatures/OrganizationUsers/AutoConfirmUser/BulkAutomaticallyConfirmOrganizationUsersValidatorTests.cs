@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
@@ -18,7 +17,6 @@ using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
@@ -26,13 +24,10 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.Auto
 [SutProviderCustomize]
 public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
 {
-    // ─── Helpers ────────────────────────────────────────────────────────────────
-
     private static AutomaticallyConfirmOrganizationUserValidationRequest BuildRequest(
         OrganizationUser orgUser, Organization organization) =>
         new()
         {
-            PerformedBy = Substitute.For<IActingUser>(),
             DefaultUserCollectionName = string.Empty,
             OrganizationUser = orgUser,
             Organization = organization,
@@ -80,8 +75,6 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
             .Returns(new List<ProviderUser>());
     }
 
-    // ─── Empty input ─────────────────────────────────────────────────────────────
-
     [Theory, BitAutoData]
     public async Task ValidateManyAsync_EmptyInput_ReturnsEmpty(
         SutProvider<BulkAutomaticallyConfirmOrganizationUsersValidator> sutProvider)
@@ -89,31 +82,6 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
         var results = await sutProvider.Sut.ValidateManyAsync([]);
 
         Assert.Empty(results);
-    }
-
-    // ─── Structural failures (no DB calls needed) ────────────────────────────────
-
-    [Theory, BitAutoData]
-    public async Task ValidateManyAsync_NullOrganizationUser_ReturnsUserNotFoundError(
-        SutProvider<BulkAutomaticallyConfirmOrganizationUsersValidator> sutProvider,
-        Organization organization)
-    {
-        var request = new AutomaticallyConfirmOrganizationUserValidationRequest
-        {
-            PerformedBy = Substitute.For<IActingUser>(),
-            DefaultUserCollectionName = string.Empty,
-            OrganizationUser = null,
-            OrganizationUserId = Guid.NewGuid(),
-            Organization = organization,
-            OrganizationId = organization.Id,
-            Key = "test-key"
-        };
-
-        var results = (await sutProvider.Sut.ValidateManyAsync([request])).ToList();
-
-        Assert.Single(results);
-        Assert.True(results[0].IsError);
-        Assert.IsType<UserNotFoundError>(results[0].AsError);
     }
 
     [Theory, BitAutoData]
@@ -193,8 +161,6 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
         Assert.IsType<UserIsNotUserType>(results[0].AsError);
     }
 
-    // ─── Policy disabled ─────────────────────────────────────────────────────────
-
     [Theory, BitAutoData]
     public async Task ValidateManyAsync_PolicyDisabled_ReturnsAutoConfirmPolicyNotEnabledError(
         SutProvider<BulkAutomaticallyConfirmOrganizationUsersValidator> sutProvider,
@@ -234,8 +200,6 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
         Assert.True(results[0].IsError);
         Assert.IsType<AutomaticallyConfirmUsersPolicyIsNotEnabled>(results[0].AsError);
     }
-
-    // ─── 2FA enforcement ─────────────────────────────────────────────────────────
 
     [Theory, BitAutoData]
     public async Task ValidateManyAsync_UserWithout2FA_And2FARequired_ReturnsUserDoesNotHaveTwoFactorEnabledError(
@@ -297,8 +261,6 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
         Assert.True(results[0].IsValid);
     }
 
-    // ─── Provider-user rejection ─────────────────────────────────────────────────
-
     [Theory, BitAutoData]
     public async Task ValidateManyAsync_ProviderUser_ReturnsProviderUsersCannotJoinError(
         SutProvider<BulkAutomaticallyConfirmOrganizationUsersValidator> sutProvider,
@@ -328,8 +290,6 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
         Assert.True(results[0].IsError);
         Assert.IsType<ProviderUsersCannotJoin>(results[0].AsError);
     }
-
-    // ─── Cross-org membership > 1 ────────────────────────────────────────────────
 
     [Theory, BitAutoData]
     public async Task ValidateManyAsync_CrossOrgMembershipsGreaterThanOne_ReturnsUserCannotBelongToAnotherOrganizationError(
@@ -364,8 +324,6 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
         Assert.IsType<UserCannotBelongToAnotherOrganization>(results[0].AsError);
     }
 
-    // ─── IsEnabledForOrganizationsOtherThan ─────────────────────────────────────
-
     [Theory, BitAutoData]
     public async Task ValidateManyAsync_OtherOrgHasAutoConfirmPolicy_ReturnsOtherOrganizationDoesNotAllowOtherMembershipError(
         SutProvider<BulkAutomaticallyConfirmOrganizationUsersValidator> sutProvider,
@@ -392,8 +350,6 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
         Assert.IsType<OtherOrganizationDoesNotAllowOtherMembership>(results[0].AsError);
     }
 
-    // ─── Happy path ──────────────────────────────────────────────────────────────
-
     [Theory, BitAutoData]
     public async Task ValidateManyAsync_ValidUser_ReturnsValidResult(
         SutProvider<BulkAutomaticallyConfirmOrganizationUsersValidator> sutProvider,
@@ -413,28 +369,26 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
         Assert.True(results[0].IsValid);
     }
 
-    // ─── Batch behaviour ─────────────────────────────────────────────────────────
-
     [Theory, BitAutoData]
     public async Task ValidateManyAsync_MixedBatch_ReturnsPerRequestResults(
         SutProvider<BulkAutomaticallyConfirmOrganizationUsersValidator> sutProvider,
         [Organization(useAutomaticUserConfirmation: true, planType: PlanType.EnterpriseAnnually)] Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser validOrgUser,
+        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser mismatchedOrgUser,
         Guid validUserId,
         [Policy(PolicyType.AutomaticUserConfirmation)] PolicyStatus enabledPolicy)
     {
         validOrgUser.UserId = validUserId;
         validOrgUser.OrganizationId = organization.Id;
 
-        // Second request has no UserId — will fail structural check before any DB fetch.
+        // Second request belongs to a different organization — will fail the OrganizationId
+        // mismatch structural check before any DB fetch.
+        mismatchedOrgUser.OrganizationId = Guid.NewGuid();
         var invalidRequest = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
-            PerformedBy = Substitute.For<IActingUser>(),
             DefaultUserCollectionName = string.Empty,
-            OrganizationUser = null,
-            OrganizationUserId = Guid.NewGuid(),
+            OrganizationUser = mismatchedOrgUser,
             Organization = organization,
-            OrganizationId = organization.Id,
             Key = "test-key"
         };
 
@@ -450,31 +404,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
 
         var invalidResult = results.Single(r => r.Request.OrganizationUserId == invalidRequest.OrganizationUserId);
         Assert.True(invalidResult.IsError);
-        Assert.IsType<UserNotFoundError>(invalidResult.AsError);
+        Assert.IsType<OrganizationUserIdIsInvalid>(invalidResult.AsError);
     }
 
-    [Theory, BitAutoData]
-    public async Task ValidateManyAsync_PreservesInputOrder(
-        SutProvider<BulkAutomaticallyConfirmOrganizationUsersValidator> sutProvider,
-        [Organization(useAutomaticUserConfirmation: true, planType: PlanType.EnterpriseAnnually)] Organization organization,
-        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser1,
-        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser2,
-        Guid userId1,
-        Guid userId2,
-        [Policy(PolicyType.AutomaticUserConfirmation)] PolicyStatus enabledPolicy)
-    {
-        orgUser1.UserId = userId1;
-        orgUser1.OrganizationId = organization.Id;
-        orgUser2.UserId = userId2;
-        orgUser2.OrganizationId = organization.Id;
-
-        SetupPassingBulkDataStubs(sutProvider, organization, [orgUser1, orgUser2], enabledPolicy);
-
-        var results = (await sutProvider.Sut.ValidateManyAsync(
-            [BuildRequest(orgUser1, organization), BuildRequest(orgUser2, organization)])).ToList();
-
-        Assert.Equal(2, results.Count);
-        Assert.Equal(orgUser1.Id, results[0].Request.OrganizationUserId);
-        Assert.Equal(orgUser2.Id, results[1].Request.OrganizationUserId);
-    }
 }

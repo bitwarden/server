@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.Entities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
@@ -13,7 +12,6 @@ public record AutomaticallyConfirmOrganizationUserRequest
     public required Guid OrganizationId { get; init; }
     public required string Key { get; init; }
     public required string DefaultUserCollectionName { get; init; }
-    public required IActingUser PerformedBy { get; init; }
 }
 
 /// <summary>
@@ -25,7 +23,6 @@ public record AutomaticallyConfirmOrganizationUserValidationRequest
 {
     public required string Key { get; init; }
     public required string DefaultUserCollectionName { get; init; }
-    public required IActingUser PerformedBy { get; init; }
     public OrganizationUser? OrganizationUser { get; init; }
     public Organization? Organization { get; init; }
 
@@ -47,13 +44,12 @@ public record BulkAutoConfirmUserEntry
 
 /// <summary>
 /// Top-level request for bulk automatic user confirmation.
-/// Shared fields (organization, collection name, actor) are specified once rather than
+/// Shared fields (organization, collection name) are specified once rather than
 /// repeated on every per-user entry.
 /// </summary>
 public record BulkAutomaticallyConfirmOrganizationUsersRequest
 {
     public required Guid OrganizationId { get; init; }
     public required string DefaultUserCollectionName { get; init; }
-    public required IActingUser PerformedBy { get; init; }
     public required IReadOnlyList<BulkAutoConfirmUserEntry> UsersToConfirm { get; init; }
 }

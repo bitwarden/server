@@ -795,13 +795,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         [FromRoute] Guid id,
         [FromBody] OrganizationUserConfirmRequestModel model)
     {
-        var userId = _userService.GetProperUserId(User);
-
-        if (userId is null || userId.Value == Guid.Empty)
-        {
-            return TypedResults.Unauthorized();
-        }
-
         return Handle(await _automaticallyConfirmOrganizationUserCommand.AutomaticallyConfirmOrganizationUserAsync(
             new AutomaticallyConfirmOrganizationUserRequest
             {
@@ -809,7 +802,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
                 OrganizationUserId = id,
                 Key = model.Key,
                 DefaultUserCollectionName = model.DefaultUserCollectionName,
-                PerformedBy = new StandardUser(userId.Value, await _currentContext.OrganizationOwner(orgId)),
             }));
     }
 
@@ -842,21 +834,10 @@ public class OrganizationUsersController : BaseAdminConsoleController
         Guid orgId,
         [FromBody] OrganizationUserBulkConfirmRequestModel model)
     {
-        var userId = _userService.GetProperUserId(User);
-
-        if (userId is null || userId.Value == Guid.Empty)
-        {
-            return Error.NotFound();
-        }
-
-        var isOwner = await _currentContext.OrganizationOwner(orgId);
-        var actingUser = new StandardUser(userId.Value, isOwner);
-
         var request = new BulkAutomaticallyConfirmOrganizationUsersRequest
         {
             OrganizationId = orgId,
             DefaultUserCollectionName = model.DefaultUserCollectionName,
-            PerformedBy = actingUser,
             UsersToConfirm = model.Keys
                 .Select(entry => new BulkAutoConfirmUserEntry
                 {
