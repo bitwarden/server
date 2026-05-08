@@ -1,4 +1,4 @@
-namespace Bit.Core.Billing.Cache;
+﻿namespace Bit.Core.Billing.Cache;
 
 /// <summary>
 /// Short-lived cache (15-minute TTL) that binds a trial length to a unique ID issued when a trial
