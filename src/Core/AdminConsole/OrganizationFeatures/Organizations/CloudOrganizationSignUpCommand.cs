@@ -349,13 +349,25 @@ public class CloudOrganizationSignUpCommand(
 
     private async Task ValidateTrialLengthAsync(OrganizationSignup signup)
     {
-        if (signup.TrialLength is not null)
+        if (signup.TrialLength is null)
         {
-            if (string.IsNullOrWhiteSpace(signup.TrialInitiationId))
-            {
-                throw new BadRequestException("A trial initiation ID is required when specifying a trial length.");
-            }
-            await trialInitiationCache.ValidateTrialLengthAsync(signup.TrialInitiationId, signup.TrialLength.Value);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(signup.TrialInitiationId))
+        {
+            throw new BadRequestException("A trial initiation ID is required when specifying a trial length.");
+        }
+
+        var cachedLength = await trialInitiationCache.GetAndRemoveAsync(signup.TrialInitiationId);
+        if (cachedLength is null)
+        {
+            throw new BadRequestException("Trial initiation has expired or is invalid. Please restart the trial flow.");
+        }
+
+        if (cachedLength != signup.TrialLength.Value)
+        {
+            throw new BadRequestException("Trial length does not match the original trial invitation.");
         }
     }
 }
