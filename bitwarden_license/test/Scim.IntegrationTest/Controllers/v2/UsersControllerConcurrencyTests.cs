@@ -21,6 +21,9 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2;
 /// </summary>
 public class UsersControllerConcurrencyTests
 {
+    private static readonly Lazy<IReadOnlyDictionary<SupportedDatabaseProviders, string>> _configuredConnections =
+        new(LoadConfiguredConnections);
+
     [SkippableTheory]
     [MemberData(nameof(DatabaseProviders))]
     public async Task Post_ConcurrentInvites_DoNotOvershootMaxAutoscaleSeats(
@@ -99,6 +102,13 @@ public class UsersControllerConcurrencyTests
 
     public static IEnumerable<object?[]> DatabaseProviders()
     {
+        yield return new object?[] { SupportedDatabaseProviders.SqlServer };
+        yield return new object?[] { SupportedDatabaseProviders.Postgres };
+        yield return new object?[] { SupportedDatabaseProviders.MySql };
+    }
+
+    private static IReadOnlyDictionary<SupportedDatabaseProviders, string> LoadConfiguredConnections()
+    {
         var config = new ConfigurationBuilder()
             .AddUserSecrets(typeof(Bit.Identity.Startup).Assembly, optional: true)
             .AddEnvironmentVariables("BW_TEST_")
@@ -131,17 +141,7 @@ public class UsersControllerConcurrencyTests
         TryAddFromUserSecrets(SupportedDatabaseProviders.Postgres, "globalSettings:postgreSql:connectionString");
         TryAddFromUserSecrets(SupportedDatabaseProviders.MySql, "globalSettings:mySql:connectionString");
 
-        var providers = new[]
-        {
-            SupportedDatabaseProviders.SqlServer,
-            SupportedDatabaseProviders.Postgres,
-            SupportedDatabaseProviders.MySql,
-        };
-
-        foreach (var providerType in providers)
-        {
-            yield return new object?[] { providerType, configured.GetValueOrDefault(providerType) };
-        }
+        return configured;
 
         void TryAddFromUserSecrets(SupportedDatabaseProviders type, string key)
         {
