@@ -7,6 +7,8 @@ using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
+using Bit.Core;
+using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
@@ -14,6 +16,7 @@ using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -33,6 +36,7 @@ public class GroupsController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IUserService _userService;
+    private readonly IFeatureService _featureService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ICollectionRepository _collectionRepository;
 
@@ -47,6 +51,7 @@ public class GroupsController : Controller
         IAuthorizationService authorizationService,
         IApplicationCacheService applicationCacheService,
         IUserService userService,
+        IFeatureService featureService,
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
@@ -60,6 +65,7 @@ public class GroupsController : Controller
         _authorizationService = authorizationService;
         _applicationCacheService = applicationCacheService;
         _userService = userService;
+        _featureService = featureService;
         _organizationUserRepository = organizationUserRepository;
         _collectionRepository = collectionRepository;
     }
@@ -126,6 +132,11 @@ public class GroupsController : Controller
     [Authorize<ManageGroupsRequirement>]
     public async Task<GroupResponseModel> Post(Guid orgId, [FromBody] GroupRequestModel model)
     {
+        if (_featureService.IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers))
+        {
+            return await Post_vNext(orgId, model);
+        }
+
         // Check the user has permission to grant access to the collections for the new group
         if (model.Collections?.Any() == true)
         {
@@ -154,6 +165,11 @@ public class GroupsController : Controller
         if (group == null || group.OrganizationId != orgId)
         {
             throw new NotFoundException();
+        }
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers))
+        {
+            return await Put_vNext(orgId, id, group, currentAccess, model);
         }
 
         // Authorization check:
@@ -289,5 +305,78 @@ public class GroupsController : Controller
     public async Task PostDeleteUser(Guid orgId, Guid id, Guid orgUserId)
     {
         await DeleteUser(orgId, id, orgUserId);
+    }
+
+    private async Task<GroupResponseModel> Post_vNext(Guid orgId, GroupRequestModel model)
+    {
+        if (model.Collections?.Any() == true)
+        {
+            var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(a => a.Id));
+            var resource = new CollectionGroupAccessResource(collections.ToList());
+            await _authorizationService.AuthorizeOrThrowAsync(User, resource, CollectionGroupOperations.Create);
+        }
+
+        var organization = await _organizationRepository.GetByIdAsync(orgId);
+        var group = model.ToGroup(orgId);
+        await _createGroupCommand.CreateGroupAsync(group, organization, model.Collections?.Select(c => c.ToSelectionReadOnly()).ToList(), model.Users);
+
+        return new GroupResponseModel(group);
+    }
+
+    private async Task<GroupResponseModel> Put_vNext(Guid orgId, Guid id, Core.AdminConsole.Entities.Group group,
+        ICollection<Core.Models.Data.CollectionAccessSelection> currentAccess, GroupRequestModel model)
+    {
+        var userId = _userService.GetProperUserId(User).Value;
+        var currentGroupUsers = await _groupRepository.GetManyUserIdsByIdAsync(id);
+        var membershipResource = new GroupMembershipUpdateResource(orgId, userId, model.Users, currentGroupUsers);
+        await _authorizationService.AuthorizeOrThrowAsync(User, membershipResource, GroupOperations.UpdateMembership);
+
+        var collectionsToSave = await AuthorizeAndPrepareCollectionAccessAsync(model, currentAccess, id);
+        var organization = await _organizationRepository.GetByIdAsync(orgId);
+        await _updateGroupCommand.UpdateGroupAsync(model.ToGroup(group), organization, collectionsToSave, model.Users);
+
+        return new GroupResponseModel(group);
+    }
+
+    /// <summary>
+    /// Authorizes the collection access changes and returns the list to persist.
+    /// </summary>
+    private async Task<List<Core.Models.Data.CollectionAccessSelection>> AuthorizeAndPrepareCollectionAccessAsync(
+        GroupRequestModel model, ICollection<Core.Models.Data.CollectionAccessSelection> currentAccess, Guid groupId)
+    {
+        var (createIds, updateIds, deleteIds) = model.Collections.DiffAccessSelections(currentAccess);
+
+        var allCollections = await _collectionRepository.GetManyByManyIdsAsync(
+            createIds.Concat(updateIds).Concat(deleteIds));
+
+        var createCollections = allCollections.Where(c => createIds.Contains(c.Id)).ToList();
+        if (createCollections.Count > 0)
+        {
+            var createResource = new CollectionGroupAccessResource(createCollections);
+            await _authorizationService.AuthorizeOrThrowAsync(User, createResource, CollectionGroupOperations.Create);
+        }
+
+        var updateCollections = allCollections.Where(c => updateIds.Contains(c.Id)).ToList();
+        if (updateCollections.Count > 0)
+        {
+            var updateResource = new CollectionGroupAccessResource(updateCollections);
+            await _authorizationService.AuthorizeOrThrowAsync(User, updateResource, CollectionGroupOperations.Update);
+        }
+
+        // TODO: remove this preservation glue once clients send remove-list deltas instead of the full collection set.
+        var preservedFromDelete = new HashSet<Guid>();
+        var deleteCollections = allCollections.Where(c => deleteIds.Contains(c.Id)).ToList();
+        foreach (var collection in deleteCollections)
+        {
+            var deleteResource = new CollectionGroupAccessResource([collection]);
+            if (!(await _authorizationService.AuthorizeAsync(User, deleteResource, CollectionGroupOperations.Delete)).Succeeded)
+            {
+                preservedFromDelete.Add(collection.Id);
+            }
+        }
+
+        return model.Collections.Select(c => c.ToSelectionReadOnly())
+            .Concat(currentAccess.Where(ca => preservedFromDelete.Contains(ca.Id)))
+            .ToList();
     }
 }
