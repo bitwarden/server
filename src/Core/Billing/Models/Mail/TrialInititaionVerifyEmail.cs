@@ -20,8 +20,7 @@ public class TrialInitiationVerifyEmail : RegisterVerifyEmail
                       $"&fromEmail=true" +
                       $"&productTier={(int)ProductTier}" +
                       $"&product={string.Join(",", Product.Select(p => (int)p))}" +
-                      $"&trialLength={TrialLength}" +
-                      $"&trialInitiationId={TrialInitiationId}";
+                      $"&trialLength={TrialLength}";
 
             if (PaymentOptional)
             {
@@ -47,8 +46,6 @@ public class TrialInitiationVerifyEmail : RegisterVerifyEmail
     public IEnumerable<ProductType> Product { get; set; } = null!;
 
     public int TrialLength { get; set; }
-
-    public string TrialInitiationId { get; set; } = null!;
 
     public bool PaymentOptional { get; set; }
 

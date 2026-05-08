@@ -46,7 +46,6 @@ public interface IMailService
         ProductTierType productTier,
         IEnumerable<ProductType> products,
         int trialLength,
-        string trialInitiationId,
         bool paymentOptional = false);
     Task SendVerifyDeleteEmailAsync(string email, Guid userId, string token);
     Task SendCannotDeleteClaimedAccountEmailAsync(string email);
