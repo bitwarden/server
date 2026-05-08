@@ -25,7 +25,7 @@ public class SendAuthorizationService : ISendAuthorizationService
     }
 
     public SendAccessResult SendCanBeAccessed(Send send,
-        string password)
+        string? password)
     {
         var now = DateTime.UtcNow;
         if (send == null || send.MaxAccessCount.GetValueOrDefault(int.MaxValue) <= send.AccessCount ||
@@ -54,7 +54,7 @@ public class SendAuthorizationService : ISendAuthorizationService
         return SendAccessResult.Granted;
     }
 
-    public async Task<SendAccessResult> AccessAsync(Send sendToBeAccessed, string password)
+    public async Task<SendAccessResult> AccessAsync(Send sendToBeAccessed, string? password)
     {
         var accessResult = SendCanBeAccessed(sendToBeAccessed, password);
 

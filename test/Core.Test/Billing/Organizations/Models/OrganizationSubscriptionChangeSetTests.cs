@@ -1,254 +1,290 @@
 ﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Models.StaticStore;
 using Bit.Core.Test.Billing.Mocks;
 using Xunit;
 
 namespace Bit.Core.Test.Billing.Organizations.Models;
 
-public class OrganizationSubscriptionChangeTests
-{
-    [Fact]
-    public void ImplicitConversion_AddItem_SetsCorrectFlags()
-    {
-        OrganizationSubscriptionChange change = new AddItem("price_123", 5);
-
-        Assert.True(change.IsItemAddition);
-        Assert.False(change.IsItemPriceChange);
-        Assert.False(change.IsItemRemoval);
-        Assert.False(change.IsItemQuantityUpdate);
-        Assert.True(change.IsStructural);
-    }
-
-    [Fact]
-    public void ImplicitConversion_ChangeItemPrice_SetsCorrectFlags()
-    {
-        OrganizationSubscriptionChange change = new ChangeItemPrice("price_old", "price_new", null);
-
-        Assert.False(change.IsItemAddition);
-        Assert.True(change.IsItemPriceChange);
-        Assert.False(change.IsItemRemoval);
-        Assert.False(change.IsItemQuantityUpdate);
-        Assert.True(change.IsStructural);
-    }
-
-    [Fact]
-    public void ImplicitConversion_RemoveItem_SetsCorrectFlags()
-    {
-        OrganizationSubscriptionChange change = new RemoveItem("price_123");
-
-        Assert.False(change.IsItemAddition);
-        Assert.False(change.IsItemPriceChange);
-        Assert.True(change.IsItemRemoval);
-        Assert.False(change.IsItemQuantityUpdate);
-        Assert.True(change.IsStructural);
-    }
-
-    [Fact]
-    public void ImplicitConversion_UpdateItemQuantity_SetsCorrectFlags()
-    {
-        OrganizationSubscriptionChange change = new UpdateItemQuantity("price_123", 10);
-
-        Assert.False(change.IsItemAddition);
-        Assert.False(change.IsItemPriceChange);
-        Assert.False(change.IsItemRemoval);
-        Assert.True(change.IsItemQuantityUpdate);
-        Assert.False(change.IsStructural);
-    }
-
-    [Fact]
-    public void ImplicitConversion_UpdateItemQuantityToZero_IsStructural()
-    {
-        OrganizationSubscriptionChange change = new UpdateItemQuantity("price_123", 0);
-
-        Assert.True(change.IsItemQuantityUpdate);
-        Assert.True(change.IsStructural);
-    }
-}
-
-public class OrganizationSubscriptionChangeSetTests
-{
-    [Fact]
-    public void UpdatePasswordManagerSeats_CreatesCorrectChangeSet()
-    {
-        var plan = MockPlans.Get(PlanType.TeamsAnnually);
-
-        var changeSet = OrganizationSubscriptionChangeSet.UpdatePasswordManagerSeats(plan, 25);
-
-        var change = Assert.Single(changeSet.Changes);
-        Assert.True(change.IsItemQuantityUpdate);
-        Assert.False(change.IsStructural);
-
-        var update = change.AsT3;
-        Assert.Equal(plan.PasswordManager.StripeSeatPlanId, update.PriceId);
-        Assert.Equal(25, update.Quantity);
-    }
-
-    [Fact]
-    public void UpdateStorage_CreatesCorrectChangeSet()
-    {
-        var plan = MockPlans.Get(PlanType.TeamsAnnually);
-
-        var changeSet = OrganizationSubscriptionChangeSet.UpdateStorage(plan, 3);
-
-        var change = Assert.Single(changeSet.Changes);
-        Assert.True(change.IsItemQuantityUpdate);
-
-        var update = change.AsT3;
-        Assert.Equal(plan.PasswordManager.StripeStoragePlanId, update.PriceId);
-        Assert.Equal(3, update.Quantity);
-    }
-
-    [Fact]
-    public void UpdateSecretsManagerSeats_CreatesCorrectChangeSet()
-    {
-        var plan = MockPlans.Get(PlanType.TeamsAnnually);
-
-        var changeSet = OrganizationSubscriptionChangeSet.UpdateSecretsManagerSeats(plan, 10);
-
-        var change = Assert.Single(changeSet.Changes);
-        Assert.True(change.IsItemQuantityUpdate);
-
-        var update = change.AsT3;
-        Assert.Equal(plan.SecretsManager.StripeSeatPlanId, update.PriceId);
-        Assert.Equal(10, update.Quantity);
-    }
-
-    [Fact]
-    public void UpdateSecretsManagerServiceAccounts_CreatesCorrectChangeSet()
-    {
-        var plan = MockPlans.Get(PlanType.TeamsAnnually);
-
-        var changeSet = OrganizationSubscriptionChangeSet.UpdateSecretsManagerServiceAccounts(plan, 50);
-
-        var change = Assert.Single(changeSet.Changes);
-        Assert.True(change.IsItemQuantityUpdate);
-
-        var update = change.AsT3;
-        Assert.Equal(plan.SecretsManager.StripeServiceAccountPlanId, update.PriceId);
-        Assert.Equal(50, update.Quantity);
-    }
-}
-
 public class OrganizationSubscriptionChangeSetBuilderTests
 {
+    private static Plan GetPlan(PlanType planType = PlanType.TeamsAnnually) =>
+        MockPlans.Get(planType);
+
     [Fact]
-    public void AddItem_AddsToChanges()
+    public void AddStorage_DoesNotSetChargeImmediately()
     {
-        var changeSet = new OrganizationSubscriptionChangeSetBuilder()
-            .AddItem("price_add", 3)
+        var plan = GetPlan();
+        var changeSet = OrganizationSubscriptionChangeSet.Builder(plan)
+            .AddStorage(3)
             .Build();
 
-        var change = Assert.Single(changeSet.Changes);
-        Assert.True(change.IsItemAddition);
+        Assert.False(changeSet.ChargeImmediately);
 
+        var change = Assert.Single(changeSet.Changes);
         var item = change.AsT0;
-        Assert.Equal("price_add", item.PriceId);
+        Assert.Equal(plan.PasswordManager.StripeStoragePlanId, item.PriceId);
         Assert.Equal(3, item.Quantity);
     }
 
     [Fact]
-    public void ChangeItemPrice_AddsToChanges()
+    public void UpdateStorage_DoesNotSetChargeImmediately()
     {
-        var changeSet = new OrganizationSubscriptionChangeSetBuilder()
-            .ChangeItemPrice("price_old", "price_new")
+        var plan = GetPlan();
+        var changeSet = OrganizationSubscriptionChangeSet.Builder(plan)
+            .UpdateStorage(5)
             .Build();
 
-        var change = Assert.Single(changeSet.Changes);
-        Assert.True(change.IsItemPriceChange);
-
-        var item = change.AsT1;
-        Assert.Equal("price_old", item.CurrentPriceId);
-        Assert.Equal("price_new", item.UpdatedPriceId);
-        Assert.Null(item.Quantity);
-    }
-
-    [Fact]
-    public void ChangeItemPrice_WithQuantity_AddsToChanges()
-    {
-        var changeSet = new OrganizationSubscriptionChangeSetBuilder()
-            .ChangeItemPrice("price_old", "price_new", 7)
-            .Build();
+        Assert.False(changeSet.ChargeImmediately);
 
         var change = Assert.Single(changeSet.Changes);
-        var item = change.AsT1;
-        Assert.Equal(7, item.Quantity);
-    }
-
-    [Fact]
-    public void RemoveItem_AddsToChanges()
-    {
-        var changeSet = new OrganizationSubscriptionChangeSetBuilder()
-            .RemoveItem("price_remove")
-            .Build();
-
-        var change = Assert.Single(changeSet.Changes);
-        Assert.True(change.IsItemRemoval);
-
-        var item = change.AsT2;
-        Assert.Equal("price_remove", item.PriceId);
-    }
-
-    [Fact]
-    public void UpdateItemQuantity_AddsToChanges()
-    {
-        var changeSet = new OrganizationSubscriptionChangeSetBuilder()
-            .UpdateItemQuantity("price_qty", 15)
-            .Build();
-
-        var change = Assert.Single(changeSet.Changes);
-        Assert.True(change.IsItemQuantityUpdate);
-
         var item = change.AsT3;
-        Assert.Equal("price_qty", item.PriceId);
-        Assert.Equal(15, item.Quantity);
+        Assert.Equal(plan.PasswordManager.StripeStoragePlanId, item.PriceId);
+        Assert.Equal(5, item.Quantity);
     }
 
     [Fact]
-    public void Build_WithMultipleChanges_PreservesOrder()
+    public void AddServiceAccounts_DoesNotSetChargeImmediately()
     {
-        var changeSet = new OrganizationSubscriptionChangeSetBuilder()
-            .AddItem("price_1", 1)
-            .RemoveItem("price_2")
-            .ChangeItemPrice("price_3", "price_4")
-            .UpdateItemQuantity("price_5", 10)
+        var plan = GetPlan();
+        var changeSet = OrganizationSubscriptionChangeSet.Builder(plan)
+            .AddServiceAccounts(10)
             .Build();
 
-        Assert.Equal(4, changeSet.Changes.Count);
-        Assert.True(changeSet.Changes[0].IsItemAddition);
-        Assert.True(changeSet.Changes[1].IsItemRemoval);
-        Assert.True(changeSet.Changes[2].IsItemPriceChange);
-        Assert.True(changeSet.Changes[3].IsItemQuantityUpdate);
+        Assert.False(changeSet.ChargeImmediately);
+
+        var change = Assert.Single(changeSet.Changes);
+        var item = change.AsT0;
+        Assert.Equal(plan.SecretsManager.StripeServiceAccountPlanId, item.PriceId);
+        Assert.Equal(10, item.Quantity);
+    }
+
+    [Fact]
+    public void UpdateServiceAccounts_DoesNotSetChargeImmediately()
+    {
+        var plan = GetPlan();
+        var changeSet = OrganizationSubscriptionChangeSet.Builder(plan)
+            .UpdateServiceAccounts(20)
+            .Build();
+
+        Assert.False(changeSet.ChargeImmediately);
+
+        var change = Assert.Single(changeSet.Changes);
+        var item = change.AsT3;
+        Assert.Equal(plan.SecretsManager.StripeServiceAccountPlanId, item.PriceId);
+        Assert.Equal(20, item.Quantity);
+    }
+
+    [Fact]
+    public void UpdatePasswordManagerSeats_DoesNotSetChargeImmediately()
+    {
+        var plan = GetPlan();
+        var changeSet = OrganizationSubscriptionChangeSet.Builder(plan)
+            .UpdatePasswordManagerSeats(25)
+            .Build();
+
+        Assert.False(changeSet.ChargeImmediately);
+
+        var change = Assert.Single(changeSet.Changes);
+        var item = change.AsT3;
+        Assert.Equal(plan.PasswordManager.StripeSeatPlanId, item.PriceId);
+        Assert.Equal(25, item.Quantity);
+    }
+
+    [Fact]
+    public void UpdateSecretsManagerSeats_DoesNotSetChargeImmediately()
+    {
+        var plan = GetPlan();
+        var changeSet = OrganizationSubscriptionChangeSet.Builder(plan)
+            .UpdateSecretsManagerSeats(10)
+            .Build();
+
+        Assert.False(changeSet.ChargeImmediately);
+
+        var change = Assert.Single(changeSet.Changes);
+        var item = change.AsT3;
+        Assert.Equal(plan.SecretsManager.StripeSeatPlanId, item.PriceId);
+        Assert.Equal(10, item.Quantity);
+    }
+
+    [Fact]
+    public void EstablishSponsorship_SetsChargeImmediately()
+    {
+        var plan = GetPlan(PlanType.FamiliesAnnually);
+        var sponsoredPlan = new SponsoredPlan { StripePlanId = "sponsored_plan_id" };
+
+        var changeSet = OrganizationSubscriptionChangeSet.Builder(plan)
+            .EstablishSponsorship(sponsoredPlan)
+            .Build();
+
+        Assert.True(changeSet.ChargeImmediately);
+        Assert.Equal(2, changeSet.Changes.Count);
+
+        var removeItem = changeSet.Changes[0].AsT2;
+        Assert.Equal(plan.PasswordManager.StripePlanId, removeItem.PriceId);
+
+        var addItem = changeSet.Changes[1].AsT0;
+        Assert.Equal("sponsored_plan_id", addItem.PriceId);
+        Assert.Equal(1, addItem.Quantity);
+    }
+
+    [Fact]
+    public void ChangePasswordManagerPrice_SetsChargeImmediately()
+    {
+        var currentPlan = GetPlan(PlanType.TeamsAnnually);
+        var targetPlan = GetPlan(PlanType.EnterpriseAnnually);
+
+        var changeSet = OrganizationSubscriptionChangeSet.Builder(currentPlan)
+            .ChangePasswordManagerPrice(targetPlan)
+            .Build();
+
+        Assert.True(changeSet.ChargeImmediately);
+
+        var change = Assert.Single(changeSet.Changes);
+        var priceChange = change.AsT1;
+        Assert.Equal(currentPlan.PasswordManager.StripeSeatPlanId, priceChange.CurrentPriceId);
+        Assert.Equal(targetPlan.PasswordManager.StripeSeatPlanId, priceChange.UpdatedPriceId);
+        Assert.Null(priceChange.Quantity);
+    }
+
+    [Fact]
+    public void ChangePasswordManagerPrice_NonSeatBased_UsesStripePlanId_AndSetsBaseSeatsQuantity()
+    {
+        var currentPlan = GetPlan(PlanType.FamiliesAnnually);
+        var targetPlan = GetPlan(PlanType.EnterpriseAnnually);
+
+        var changeSet = OrganizationSubscriptionChangeSet.Builder(currentPlan)
+            .ChangePasswordManagerPrice(targetPlan)
+            .Build();
+
+        Assert.True(changeSet.ChargeImmediately);
+
+        var change = Assert.Single(changeSet.Changes);
+        var priceChange = change.AsT1;
+        // Families is non-seat-based, so should use StripePlanId
+        Assert.Equal(currentPlan.PasswordManager.StripePlanId, priceChange.CurrentPriceId);
+        // Enterprise is seat-based, so should use StripeSeatPlanId
+        Assert.Equal(targetPlan.PasswordManager.StripeSeatPlanId, priceChange.UpdatedPriceId);
+        // Quantity should carry over Families BaseSeats (6) to the seat-based plan
+        Assert.Equal(currentPlan.PasswordManager.BaseSeats, priceChange.Quantity);
+    }
+
+    [Fact]
+    public void ChangePasswordManagerPrice_SeatBased_UsesStripeSeatPlanId()
+    {
+        var currentPlan = GetPlan(PlanType.TeamsAnnually);
+        var targetPlan = GetPlan(PlanType.EnterpriseAnnually);
+
+        var changeSet = OrganizationSubscriptionChangeSet.Builder(currentPlan)
+            .ChangePasswordManagerPrice(targetPlan)
+            .Build();
+
+        var change = Assert.Single(changeSet.Changes);
+        var priceChange = change.AsT1;
+        Assert.Equal(currentPlan.PasswordManager.StripeSeatPlanId, priceChange.CurrentPriceId);
+        Assert.Equal(targetPlan.PasswordManager.StripeSeatPlanId, priceChange.UpdatedPriceId);
+    }
+
+    [Fact]
+    public void ChangeStoragePrice_SetsChargeImmediately()
+    {
+        var currentPlan = GetPlan(PlanType.TeamsAnnually);
+        var targetPlan = GetPlan(PlanType.EnterpriseAnnually);
+
+        var changeSet = OrganizationSubscriptionChangeSet.Builder(currentPlan)
+            .ChangeStoragePrice(targetPlan)
+            .Build();
+
+        Assert.True(changeSet.ChargeImmediately);
+
+        var change = Assert.Single(changeSet.Changes);
+        var priceChange = change.AsT1;
+        Assert.Equal(currentPlan.PasswordManager.StripeStoragePlanId, priceChange.CurrentPriceId);
+        Assert.Equal(targetPlan.PasswordManager.StripeStoragePlanId, priceChange.UpdatedPriceId);
+    }
+
+    [Fact]
+    public void ChangeSecretsManagerSeatPrice_SetsChargeImmediately()
+    {
+        var currentPlan = GetPlan(PlanType.TeamsAnnually);
+        var targetPlan = GetPlan(PlanType.EnterpriseAnnually);
+
+        var changeSet = OrganizationSubscriptionChangeSet.Builder(currentPlan)
+            .ChangeSecretsManagerSeatPrice(targetPlan)
+            .Build();
+
+        Assert.True(changeSet.ChargeImmediately);
+
+        var change = Assert.Single(changeSet.Changes);
+        var priceChange = change.AsT1;
+        Assert.Equal(currentPlan.SecretsManager.StripeSeatPlanId, priceChange.CurrentPriceId);
+        Assert.Equal(targetPlan.SecretsManager.StripeSeatPlanId, priceChange.UpdatedPriceId);
+    }
+
+    [Fact]
+    public void ChangeServiceAccountPrice_SetsChargeImmediately()
+    {
+        var currentPlan = GetPlan(PlanType.TeamsAnnually);
+        var targetPlan = GetPlan(PlanType.EnterpriseAnnually);
+
+        var changeSet = OrganizationSubscriptionChangeSet.Builder(currentPlan)
+            .ChangeServiceAccountPrice(targetPlan)
+            .Build();
+
+        Assert.True(changeSet.ChargeImmediately);
+
+        var change = Assert.Single(changeSet.Changes);
+        var priceChange = change.AsT1;
+        Assert.Equal(currentPlan.SecretsManager.StripeServiceAccountPlanId, priceChange.CurrentPriceId);
+        Assert.Equal(targetPlan.SecretsManager.StripeServiceAccountPlanId, priceChange.UpdatedPriceId);
+    }
+
+    [Fact]
+    public void Build_MixedSeatAndAddOn_DoesNotSetChargeImmediately()
+    {
+        var plan = GetPlan();
+        var changeSet = OrganizationSubscriptionChangeSet.Builder(plan)
+            .UpdatePasswordManagerSeats(10)
+            .AddStorage(3)
+            .Build();
+
+        Assert.False(changeSet.ChargeImmediately);
+        Assert.Equal(2, changeSet.Changes.Count);
+    }
+
+    [Fact]
+    public void Build_MixedStructuralAndAddOn_SetsChargeImmediately()
+    {
+        var currentPlan = GetPlan(PlanType.TeamsAnnually);
+        var targetPlan = GetPlan(PlanType.EnterpriseAnnually);
+
+        var changeSet = OrganizationSubscriptionChangeSet.Builder(currentPlan)
+            .UpdateStorage(5)
+            .ChangePasswordManagerPrice(targetPlan)
+            .Build();
+
+        Assert.True(changeSet.ChargeImmediately);
+        Assert.Equal(2, changeSet.Changes.Count);
     }
 
     [Fact]
     public void Build_WithNoChanges_ReturnsEmptyChangeSet()
     {
-        var changeSet = new OrganizationSubscriptionChangeSetBuilder()
-            .Build();
+        var plan = GetPlan();
+        var changeSet = OrganizationSubscriptionChangeSet.Builder(plan).Build();
 
         Assert.Empty(changeSet.Changes);
+        Assert.False(changeSet.ChargeImmediately);
     }
 
     [Fact]
     public void Build_ReturnsReadOnlyChanges()
     {
-        var changeSet = new OrganizationSubscriptionChangeSetBuilder()
-            .AddItem("price_1", 1)
+        var plan = GetPlan();
+        var changeSet = OrganizationSubscriptionChangeSet.Builder(plan)
+            .AddStorage(1)
             .Build();
 
         Assert.IsAssignableFrom<IReadOnlyList<OrganizationSubscriptionChange>>(changeSet.Changes);
-    }
-
-    [Fact]
-    public void Build_MixedStructuralAndNonStructural()
-    {
-        var changeSet = new OrganizationSubscriptionChangeSetBuilder()
-            .AddItem("price_add", 1)
-            .UpdateItemQuantity("price_qty", 5)
-            .Build();
-
-        Assert.Equal(2, changeSet.Changes.Count);
-        Assert.True(changeSet.Changes[0].IsStructural);
-        Assert.False(changeSet.Changes[1].IsStructural);
     }
 }

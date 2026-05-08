@@ -249,12 +249,13 @@ public class EventsController : Controller
         return fallbackServiceAccount;
     }
 
-    [HttpGet("~/organizations/{orgId}/users/{id}/events")]
-    public async Task<ListResponseModel<EventResponseModel>> GetOrganizationUser(string orgId, string id,
+    [HttpGet("~/organizations/{orgId:guid}/users/{id:guid}/events")]
+    public async Task<ListResponseModel<EventResponseModel>> GetOrganizationUser(Guid orgId, Guid id,
         [FromQuery] DateTime? start = null, [FromQuery] DateTime? end = null, [FromQuery] string continuationToken = null)
     {
-        var organizationUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
+        var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
         if (organizationUser == null || !organizationUser.UserId.HasValue ||
+            organizationUser.OrganizationId != orgId ||
             !await _currentContext.AccessEventLogs(organizationUser.OrganizationId))
         {
             throw new NotFoundException();
@@ -290,6 +291,7 @@ public class EventsController : Controller
     {
         var providerUser = await _providerUserRepository.GetByIdAsync(id);
         if (providerUser == null || !providerUser.UserId.HasValue ||
+            providerUser.ProviderId != providerId ||
             !_currentContext.ProviderAccessEventLogs(providerUser.ProviderId))
         {
             throw new NotFoundException();

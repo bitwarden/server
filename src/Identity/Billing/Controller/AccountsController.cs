@@ -17,13 +17,19 @@ public class AccountsController(
     {
         var trialLength = model.TrialLength ?? 7;
 
+        if (model.PaymentOptional && trialLength == 0)
+        {
+            return BadRequest(new { message = "Payment cannot be optional when trial length is zero." });
+        }
+
         var token = await sendTrialInitiationEmailForRegistrationCommand.Handle(
             model.Email,
             model.Name,
             model.ReceiveMarketingEmails,
             model.ProductTier,
             model.Products,
-            trialLength);
+            trialLength,
+            model.PaymentOptional);
 
         if (token != null)
         {

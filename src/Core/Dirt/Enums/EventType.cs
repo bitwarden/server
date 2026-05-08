@@ -34,6 +34,15 @@ public enum EventType : int
     Cipher_SoftDeleted = 1115,
     Cipher_Restored = 1116,
     Cipher_ClientToggledCardNumberVisible = 1117,
+    Cipher_ClientToggledTOTPSeedVisible = 1118,
+    Cipher_ClientCopiedBankAccountNumber = 1119,
+    Cipher_ClientCopiedBankAccountPin = 1120,
+    Cipher_ClientToggledBankAccountNumberVisible = 1121,
+    Cipher_ClientToggledBankAccountPinVisible = 1122,
+    Cipher_ClientCopiedLicenseNumber = 1123,
+    Cipher_ClientToggledLicenseNumberVisible = 1124,
+    Cipher_ClientCopiedPassportNumber = 1125,
+    Cipher_ClientToggledPassportNumberVisible = 1126,
 
     Collection_Created = 1300,
     Collection_Updated = 1301,
@@ -62,6 +71,9 @@ public enum EventType : int
     OrganizationUser_Left = 1516,    // User voluntarily left the organization
     OrganizationUser_AutomaticallyConfirmed = 1517,
     OrganizationUser_SelfRevoked = 1518, // User self-revoked due to declining organization data ownership policy
+    OrganizationUser_AdminResetTwoFactor = 1519,
+    OrganizationUser_Revoked_TwoFactorNonCompliance = 1520,
+    OrganizationUser_Revoked_SingleOrganizationNonCompliance = 1521,
 
     Organization_Updated = 1600,
     Organization_PurgedVault = 1601,
@@ -124,4 +136,10 @@ public enum EventType : int
     ServiceAccount_GroupRemoved = 2303,
     ServiceAccount_Created = 2304,
     ServiceAccount_Deleted = 2305,
+
+    PhishingBlocker_SiteAccessed = 2400,
+    PhishingBlocker_SiteExited = 2401,
+    PhishingBlocker_Bypassed = 2402,
+
+
 }

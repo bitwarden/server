@@ -12,12 +12,14 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.Commands;
 using Bit.Core.AdminConsole.Utilities.Errors;
 using Bit.Core.AdminConsole.Utilities.Validation;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
@@ -32,7 +34,9 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
     ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
     IProviderOrganizationRepository providerOrganizationRepository,
-    IProviderUserRepository providerUserRepository
+    IProviderUserRepository providerUserRepository,
+    IPricingClient pricingClient,
+    IGlobalSettings globalSettings
     ) : IInviteOrganizationUsersCommand
 {
 
@@ -83,7 +87,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
                 return new Failure<InviteOrganizationUsersResponse>(
                         new Error<InviteOrganizationUsersResponse>(
                             failure.Error.Message,
-                            new InviteOrganizationUsersResponse(failure.Error.ErroredValue.InvitedUsers, request.InviteOrganization.OrganizationId)
+                            new InviteOrganizationUsersResponse(failure.Error.ErroredValue.InvitedUsers, request.Organization.Id)
                             )
                         );
 
@@ -97,34 +101,45 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
                 await eventService.LogOrganizationUserEventsAsync(events);
 
-                return new Success<InviteOrganizationUsersResponse>(new InviteOrganizationUsersResponse(success.Value.InvitedUsers, request.InviteOrganization.OrganizationId)
+                return new Success<InviteOrganizationUsersResponse>(new InviteOrganizationUsersResponse(success.Value.InvitedUsers, request.Organization.Id)
                 );
 
             default:
                 return new Failure<InviteOrganizationUsersResponse>(
                     new InvalidResultTypeError<InviteOrganizationUsersResponse>(
-                        new InviteOrganizationUsersResponse(request.InviteOrganization.OrganizationId)));
+                        new InviteOrganizationUsersResponse(request.Organization.Id)));
         }
     }
 
     private async Task<CommandResult<InviteOrganizationUsersResponse>> InviteOrganizationUsersAsync(InviteOrganizationUsersRequest request)
     {
+        var plan = await pricingClient.GetPlan(request.Organization.PlanType);
+        if (plan is null && !globalSettings.SelfHosted)
+        {
+            return new Failure<InviteOrganizationUsersResponse>(
+                new Error<InviteOrganizationUsersResponse>(
+                    "Organization plan could not be found.",
+                    new InviteOrganizationUsersResponse(request.Organization.Id)));
+        }
+
+        var inviteOrganization = new InviteOrganization(request.Organization, plan);
+
         var invitesToSend = (await FilterExistingUsersAsync(request)).ToArray();
 
         if (invitesToSend.Length == 0)
         {
             return new Failure<InviteOrganizationUsersResponse>(new NoUsersToInviteError(
-                new InviteOrganizationUsersResponse(request.InviteOrganization.OrganizationId)));
+                new InviteOrganizationUsersResponse(inviteOrganization.OrganizationId)));
         }
 
         var validationResult = await inviteUsersValidator.ValidateAsync(new InviteOrganizationUsersValidationRequest
         {
             Invites = invitesToSend.ToArray(),
-            InviteOrganization = request.InviteOrganization,
+            InviteOrganization = inviteOrganization,
             PerformedBy = request.PerformedBy,
             PerformedAt = request.PerformedAt,
-            OccupiedPmSeats = (await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(request.InviteOrganization.OrganizationId)).Total,
-            OccupiedSmSeats = await organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(request.InviteOrganization.OrganizationId)
+            OccupiedPmSeats = (await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(inviteOrganization.OrganizationId)).Total,
+            OccupiedSmSeats = await organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(inviteOrganization.OrganizationId)
         });
 
         if (validationResult is Invalid<InviteOrganizationUsersValidationRequest> invalid)
@@ -177,7 +192,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     private async Task<IEnumerable<OrganizationUserInviteCommandModel>> FilterExistingUsersAsync(InviteOrganizationUsersRequest request)
     {
         var existingEmails = new HashSet<string>(await organizationUserRepository.SelectKnownEmailsAsync(
-                request.InviteOrganization.OrganizationId, request.Invites.Select(i => i.Email), false),
+                request.Organization.Id, request.Invites.Select(i => i.Email), false),
             StringComparer.OrdinalIgnoreCase);
 
         return request.Invites
@@ -198,7 +213,8 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     private async Task RevertSecretsManagerChangesAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult, Organization organization, int? initialSmSeats)
     {
-        if (validatedResult.Value.SecretsManagerSubscriptionUpdate?.SmSeatsChanged is true)
+        if (validatedResult.Value.SecretsManagerSubscriptionUpdate?.SmSeatsChanged is true
+            && validatedResult.Value.InviteOrganization.Plan is not null)
         {
             var smSubscriptionUpdateRevert = new SecretsManagerSubscriptionUpdate(
                 organization: organization,

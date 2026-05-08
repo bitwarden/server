@@ -14,6 +14,7 @@ namespace Bit.Seeder.Steps;
 /// </summary>
 internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false) : IStep
 {
+    private const int RsaPoolSize = 100;
     public void Execute(SeederContext context)
     {
         var org = context.RequireOrganization();
@@ -42,7 +43,7 @@ internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false
 
         Parallel.For(0, count, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, i =>
         {
-            var userKeys = RustSdkService.GenerateUserKeys(mangledEmails[i], password, kdfIterations);
+            var userKeys = RustSdkService.GenerateUserKeys(mangledEmails[i], password, kdfIterations, (uint)(i % RsaPoolSize));
             var (user, _) = UserSeeder.Create(mangledEmails[i], passwordHasher, mangler, keys: userKeys, password: password, kdfIterations: kdfIterations);
 
             var memberOrgKey = StatusRequiresOrgKey(statuses[i])

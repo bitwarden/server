@@ -100,7 +100,7 @@ public class RecipeBuilderValidationTests
 
         builder.AddOwner();
         var ex = Assert.Throws<InvalidOperationException>(() => builder.Validate());
-        Assert.Contains("Organization is required", ex.Message);
+        Assert.Contains("Organization or individual user is required", ex.Message);
     }
 
     [Fact]

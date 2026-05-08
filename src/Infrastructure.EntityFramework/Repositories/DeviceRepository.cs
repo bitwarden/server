@@ -26,6 +26,32 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
         _globalSettings = globalSettings;
     }
 
+    public override async Task ReplaceAsync(Core.Entities.Device obj)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var entity = await GetDbSet(dbContext).FindAsync(obj.Id);
+        if (entity != null)
+        {
+            var originalLastActivityDate = entity.LastActivityDate;
+            var mappedEntity = Mapper.Map<Device>(obj);
+            dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
+
+            // LastActivityDate only moves forward. Mirrors the CASE expression in Device_Update.sql:
+            //   1. NULL passthrough: a general save that does not intend to touch LastActivityDate passes NULL;
+            //      we must not overwrite an existing value with NULL.
+            //   2. Stale non-null overwrite: a thread that loaded the device before a concurrent bump fires
+            //      may call ReplaceAsync with an older date; we must not clobber the fresher DB value.
+            if (obj.LastActivityDate == null ||
+                (originalLastActivityDate != null && obj.LastActivityDate <= originalLastActivityDate))
+            {
+                dbContext.Entry(entity).Property(d => d.LastActivityDate).IsModified = false;
+            }
+
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
     public async Task ClearPushTokenAsync(Guid id)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -91,6 +117,41 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
             var query = new DeviceWithPendingAuthByUserIdQuery();
             return await query.GetQuery(dbContext, userId, expirationMinutes).ToListAsync();
         }
+    }
+
+    public async Task BumpLastActivityDateByIdAsync(Guid deviceId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        // Only update if LastActivityDate has never been set or was last set on a prior calendar day.
+        // This mirrors the CAST AS DATE guard in the MSSQL Device_UpdateLastActivityDateById stored procedure
+        // and acts as a fallback against redundant writes if the application-layer cache is unavailable.
+        // Product only requires day-level granularity (today / this week / last week / etc.).
+        var now = DateTime.UtcNow;
+        await dbContext.Devices
+            .Where(d => d.Id == deviceId &&
+                        (d.LastActivityDate == null || d.LastActivityDate.Value.Date < now.Date))
+            .ExecuteUpdateAsync(s => s.SetProperty(d => d.LastActivityDate, now));
+    }
+
+    public async Task BumpLastActivityDateByIdentifierAndUserIdAsync(string identifier, Guid userId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        // Identifier is unique per user, not globally (unique constraint UX_Device_UserId_Identifier
+        // is on (UserId, Identifier)). Both are required for correctness and to hit the right index.
+        //
+        // Only update if LastActivityDate has never been set or was last set on a prior calendar day.
+        // This mirrors the CAST AS DATE guard in the MSSQL Device_UpdateLastActivityDateByIdentifierUserId stored procedure
+        // and acts as a fallback against redundant writes if the application-layer cache is unavailable.
+        // Product only requires day-level granularity (today / this week / last week / etc.).
+        var now = DateTime.UtcNow;
+        await dbContext.Devices
+            .Where(d => d.Identifier == identifier && d.UserId == userId &&
+                        (d.LastActivityDate == null || d.LastActivityDate.Value.Date < now.Date))
+            .ExecuteUpdateAsync(s => s.SetProperty(d => d.LastActivityDate, now));
     }
 
     public UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<Core.Entities.Device> devices)

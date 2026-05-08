@@ -15,4 +15,12 @@ public interface ICreateOrganizationIntegrationCommand
     /// <exception cref="Exceptions.BadRequestException">Thrown when an integration
     /// of the same type already exists for the organization.</exception>
     Task<OrganizationIntegration> CreateAsync(OrganizationIntegration integration);
+
+    /// <summary>
+    /// Checks if a new organization integration can be created based on existing integrations.
+    /// Enforces a validation to ensure that only one integration of each type can exist per organization.
+    /// </summary>
+    /// <param name="integration"></param>
+    /// <returns></returns>
+    Task<bool> CanCreateAsync(OrganizationIntegration integration);
 }

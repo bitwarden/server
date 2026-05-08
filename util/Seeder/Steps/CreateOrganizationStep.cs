@@ -2,6 +2,7 @@
 using Bit.RustSDK;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
+using Bit.Seeder.Options;
 using Bit.Seeder.Pipeline;
 
 namespace Bit.Seeder.Steps;
@@ -16,8 +17,15 @@ internal sealed class CreateOrganizationStep : IStep
     private readonly string? _domain;
     private readonly int? _seats;
     private readonly PlanType _planType;
+    private readonly OrganizationOverrides? _overrides;
 
-    private CreateOrganizationStep(string? fixtureName, string? name, string? domain, int? seats, PlanType planType)
+    private CreateOrganizationStep(
+        string? fixtureName,
+        string? name,
+        string? domain,
+        int? seats,
+        PlanType planType,
+        OrganizationOverrides? overrides)
     {
         if (fixtureName is null && (name is null || domain is null))
         {
@@ -30,13 +38,23 @@ internal sealed class CreateOrganizationStep : IStep
         _domain = domain;
         _seats = seats;
         _planType = planType;
+        _overrides = overrides;
     }
 
-    internal static CreateOrganizationStep FromFixture(string fixtureName, string? planType = null, int? seats = null) =>
-        new(fixtureName, null, null, seats, PlanFeatures.Parse(planType));
+    internal static CreateOrganizationStep FromFixture(
+        string fixtureName,
+        string? planType = null,
+        int? seats = null,
+        OrganizationOverrides? overrides = null) =>
+        new(fixtureName, null, null, seats, PlanFeatures.Parse(planType), overrides);
 
-    internal static CreateOrganizationStep FromParams(string name, string domain, int? seats = null, PlanType planType = PlanType.EnterpriseAnnually) =>
-        new(null, name, domain, seats, planType);
+    internal static CreateOrganizationStep FromParams(
+        string name,
+        string domain,
+        int? seats = null,
+        PlanType planType = PlanType.EnterpriseAnnually,
+        OrganizationOverrides? overrides = null) =>
+        new(null, name, domain, seats, planType, overrides);
 
     public void Execute(SeederContext context)
     {
@@ -57,6 +75,8 @@ internal sealed class CreateOrganizationStep : IStep
         var seats = _seats ?? PlanFeatures.GenerateRealisticSeatCount(_planType, domain);
         var orgKeys = RustSdkService.GenerateOrganizationKeys();
         var organization = OrganizationSeeder.Create(name, domain, seats, context.GetMangler(), orgKeys.PublicKey, orgKeys.PrivateKey, _planType);
+
+        PlanFeatures.ApplyOrganizationOverrides(organization, _overrides);
 
         context.Organization = organization;
         context.OrgKeys = orgKeys;

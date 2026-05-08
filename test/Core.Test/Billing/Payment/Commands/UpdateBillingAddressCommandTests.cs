@@ -4,6 +4,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Services;
+using Bit.Core.Services;
 using Bit.Core.Test.Billing.Extensions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -16,6 +17,7 @@ using static StripeConstants;
 
 public class UpdateBillingAddressCommandTests
 {
+    private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly ISubscriberService _subscriberService = Substitute.For<ISubscriberService>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly UpdateBillingAddressCommand _command;
@@ -23,6 +25,7 @@ public class UpdateBillingAddressCommandTests
     public UpdateBillingAddressCommandTests()
     {
         _command = new UpdateBillingAddressCommand(
+            _featureService,
             Substitute.For<ILogger<UpdateBillingAddressCommand>>(),
             _subscriberService,
             _stripeAdapter);
@@ -74,7 +77,7 @@ public class UpdateBillingAddressCommandTests
 
         _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions")
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock")
         )).Returns(customer);
 
         var result = await _command.Run(organization, input);
@@ -132,7 +135,7 @@ public class UpdateBillingAddressCommandTests
 
         _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions")
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock")
         )).Returns(customer);
 
         var result = await _command.Run(organization, input);
@@ -196,7 +199,7 @@ public class UpdateBillingAddressCommandTests
 
         _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions", "tax_ids") &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock", "tax_ids") &&
             options.TaxExempt == TaxExempt.None
         )).Returns(customer);
 
@@ -267,7 +270,7 @@ public class UpdateBillingAddressCommandTests
 
         _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions", "tax_ids") &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock", "tax_ids") &&
             options.TaxExempt == TaxExempt.None
         )).Returns(customer);
 
@@ -332,7 +335,7 @@ public class UpdateBillingAddressCommandTests
 
         _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions", "tax_ids") &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock", "tax_ids") &&
             options.TaxExempt == TaxExempt.Reverse
         )).Returns(customer);
 
@@ -395,7 +398,7 @@ public class UpdateBillingAddressCommandTests
 
         _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions", "tax_ids") &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock", "tax_ids") &&
             options.TaxExempt == TaxExempt.None
         )).Returns(customer);
 
@@ -460,7 +463,7 @@ public class UpdateBillingAddressCommandTests
 
         _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions", "tax_ids") &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock", "tax_ids") &&
             options.TaxExempt == TaxExempt.Reverse
         )).Returns(customer);
 
@@ -540,7 +543,7 @@ public class UpdateBillingAddressCommandTests
 
         _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions", "tax_ids") &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock", "tax_ids") &&
             options.TaxExempt == TaxExempt.None
         )).Returns(customer);
 
@@ -619,7 +622,7 @@ public class UpdateBillingAddressCommandTests
 
         _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions", "tax_ids") &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock", "tax_ids") &&
             options.TaxExempt == TaxExempt.None
         )).Returns(customer);
 
@@ -680,7 +683,7 @@ public class UpdateBillingAddressCommandTests
 
         _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions", "tax_ids") &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock", "tax_ids") &&
             options.TaxExempt == TaxExempt.Exempt
         )).Returns(customer);
 
@@ -690,5 +693,161 @@ public class UpdateBillingAddressCommandTests
 
         await _stripeAdapter.Received(1).UpdateCustomerAsync(organization.GatewayCustomerId,
             Arg.Is<CustomerUpdateOptions>(options => options.TaxExempt == TaxExempt.Exempt));
+    }
+
+    [Fact]
+    public async Task Run_PersonalOrganization_FlagOn_SchedulePresent_UpdatesSchedulePhasesAndDefaultSettings()
+    {
+        var organization = new Organization
+        {
+            PlanType = PlanType.FamiliesAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        };
+
+        var input = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345",
+            Line1 = "123 Main St.",
+            City = "New York",
+            State = "NY"
+        };
+
+        var phase1Start = DateTime.UtcNow.AddDays(-10);
+        var phase1End = DateTime.UtcNow.AddDays(5);
+        var phase2End = DateTime.UtcNow.AddDays(370);
+
+        var customer = new Customer
+        {
+            Address = new Address { Country = "US", PostalCode = "12345", Line1 = "123 Main St.", City = "New York", State = "NY" },
+            Subscriptions = new StripeList<Subscription>
+            {
+                Data =
+                [
+                    new Subscription
+                    {
+                        Id = organization.GatewaySubscriptionId,
+                        CustomerId = organization.GatewayCustomerId,
+                        AutomaticTax = new SubscriptionAutomaticTax { Enabled = false }
+                    }
+                ]
+            }
+        };
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+            options.Address.Matches(input) &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock")
+        )).Returns(customer);
+
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data =
+                [
+                    new SubscriptionSchedule
+                    {
+                        Id = "sub_sched_123",
+                        SubscriptionId = organization.GatewaySubscriptionId,
+                        Status = SubscriptionScheduleStatus.Active,
+                        Phases = new List<SubscriptionSchedulePhase>
+                        {
+                            new()
+                            {
+                                StartDate = phase1Start,
+                                EndDate = phase1End,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_old", Quantity = 1 }],
+                                Discounts = [],
+                                ProrationBehavior = "none"
+                            },
+                            new()
+                            {
+                                StartDate = phase1End,
+                                EndDate = phase2End,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_new", Quantity = 1 }],
+                                Discounts = [new SubscriptionSchedulePhaseDiscount { CouponId = "milestone-3" }],
+                                ProrationBehavior = "none"
+                            }
+                        }
+                    }
+                ]
+            });
+
+        var result = await _command.Run(organization, input);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            Arg.Is("sub_sched_123"),
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.DefaultSettings.AutomaticTax.Enabled == true &&
+                o.Phases.Count == 2 &&
+                o.Phases[0].AutomaticTax.Enabled == true &&
+                o.Phases[0].Items[0].Price == "price_old" &&
+                o.Phases[1].AutomaticTax.Enabled == true &&
+                o.Phases[1].Items[0].Price == "price_new" &&
+                o.Phases[1].Discounts[0].Coupon == "milestone-3"));
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task Run_PersonalOrganization_FlagOn_NoSchedule_UpdatesSubscriptionDirectly()
+    {
+        var organization = new Organization
+        {
+            PlanType = PlanType.FamiliesAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        };
+
+        var input = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345",
+            Line1 = "123 Main St.",
+            City = "New York",
+            State = "NY"
+        };
+
+        var customer = new Customer
+        {
+            Address = new Address { Country = "US", PostalCode = "12345", Line1 = "123 Main St.", City = "New York", State = "NY" },
+            Subscriptions = new StripeList<Subscription>
+            {
+                Data =
+                [
+                    new Subscription
+                    {
+                        Id = organization.GatewaySubscriptionId,
+                        CustomerId = organization.GatewayCustomerId,
+                        AutomaticTax = new SubscriptionAutomaticTax { Enabled = false }
+                    }
+                ]
+            }
+        };
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+            options.Address.Matches(input) &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock")
+        )).Returns(customer);
+
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = new List<SubscriptionSchedule>() });
+
+        var result = await _command.Run(organization, input);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionScheduleAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(options => options.AutomaticTax.Enabled == true));
     }
 }

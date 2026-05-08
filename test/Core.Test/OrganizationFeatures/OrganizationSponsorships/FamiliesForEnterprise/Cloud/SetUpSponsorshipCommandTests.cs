@@ -171,6 +171,52 @@ public class SetUpSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
             .UpsertAsync(default);
     }
 
+    [Theory]
+    [BitMemberAutoData(nameof(FamiliesPlanTypes))]
+    public async Task SetUpSponsorship_WithGatewayIds_ReleasesSchedule(PlanType planType,
+        OrganizationSponsorship sponsorship, Organization org,
+        SutProvider<SetUpSponsorshipCommand> sutProvider)
+    {
+        org.PlanType = planType;
+        org.GatewaySubscriptionId = "sub_123";
+        org.GatewayCustomerId = "cus_123";
+        sponsorship.LastSyncDate = DateTime.UtcNow;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
+            .Returns(false);
+
+        await sutProvider.Sut.SetUpSponsorshipAsync(sponsorship, org);
+
+        await sutProvider.GetDependency<IPriceIncreaseScheduler>()
+            .Received(1)
+            .Release("cus_123", "sub_123");
+        await AssertDidSetUpAsync(sutProvider, sponsorship, org);
+    }
+
+    [Theory]
+    [BitMemberAutoData(nameof(FamiliesPlanTypes))]
+    public async Task SetUpSponsorship_NullGatewayIds_DoesNotReleaseSchedule(PlanType planType,
+        OrganizationSponsorship sponsorship, Organization org,
+        SutProvider<SetUpSponsorshipCommand> sutProvider)
+    {
+        org.PlanType = planType;
+        org.GatewaySubscriptionId = null;
+        org.GatewayCustomerId = null;
+        sponsorship.LastSyncDate = DateTime.UtcNow;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
+            .Returns(false);
+
+        await sutProvider.Sut.SetUpSponsorshipAsync(sponsorship, org);
+
+        await sutProvider.GetDependency<IPriceIncreaseScheduler>()
+            .DidNotReceive()
+            .Release(Arg.Any<string>(), Arg.Any<string>());
+        await AssertDidSetUpAsync(sutProvider, sponsorship, org);
+    }
+
     private static async Task AssertDidSetUpAsync(SutProvider<SetUpSponsorshipCommand> sutProvider,
         OrganizationSponsorship sponsorship, Organization org)
     {

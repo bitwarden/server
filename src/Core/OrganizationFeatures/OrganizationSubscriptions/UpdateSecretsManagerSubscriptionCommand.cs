@@ -71,28 +71,22 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     {
         if (_featureService.IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand))
         {
-            var builder = OrganizationSubscriptionChangeSet.Builder();
+            var builder = OrganizationSubscriptionChangeSet.Builder(update.Plan);
 
             if (update.SmSeatsChanged)
             {
-                builder.UpdateItemQuantity(
-                    update.Plan.SecretsManager.StripeSeatPlanId,
-                    update.SmSeatsExcludingBase);
+                builder.UpdateSecretsManagerSeats(update.SmSeatsExcludingBase);
             }
 
             if (update.SmServiceAccountsChanged)
             {
                 if (update.Organization.SmServiceAccounts > update.Plan.SecretsManager.BaseServiceAccount)
                 {
-                    builder.UpdateItemQuantity(
-                        update.Plan.SecretsManager.StripeServiceAccountPlanId,
-                        update.SmServiceAccountsExcludingBase);
+                    builder.UpdateServiceAccounts(update.SmServiceAccountsExcludingBase);
                 }
                 else
                 {
-                    builder.AddItem(
-                        update.Plan.SecretsManager.StripeServiceAccountPlanId,
-                        update.SmServiceAccountsExcludingBase);
+                    builder.AddServiceAccounts(update.SmServiceAccountsExcludingBase);
                 }
             }
 

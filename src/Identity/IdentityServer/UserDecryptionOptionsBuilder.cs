@@ -197,7 +197,7 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
                     Parallelism = _user.KdfParallelism
                 },
                 MasterKeyEncryptedUserKey = _user.Key!,
-                Salt = _user.Email.ToLowerInvariant()
+                Salt = _user.GetMasterPasswordSalt()
             };
         }
         else

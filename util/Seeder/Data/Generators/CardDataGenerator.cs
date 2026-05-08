@@ -68,7 +68,7 @@ internal sealed class CardDataGenerator
         // Latin America
         "Elo" => faker.PickRandom("4011", "4312", "4389", "5041", "5066", "5067", "6277", "6362", "6363") + faker.Random.ReplaceNumbers("############"),
 
-        _ => faker.Finance.CreditCardNumber()
+        _ => throw new ArgumentException($"Unknown card brand: '{brand}'", nameof(brand))
     };
 
     private static string GenerateCode(string brand, Faker faker) =>

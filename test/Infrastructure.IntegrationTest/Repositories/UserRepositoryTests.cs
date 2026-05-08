@@ -45,8 +45,8 @@ public class UserRepositoryTests
 
         var group1 = await groupRepository.CreateTestGroupAsync(organization, "test-group-1");
         var group2 = await groupRepository.CreateTestGroupAsync(organization, "test-group-2");
-        await groupRepository.UpdateUsersAsync(group1.Id, [orgUser1.Id]);
-        await groupRepository.UpdateUsersAsync(group2.Id, [orgUser3.Id]);
+        await groupRepository.UpdateUsersAsync(group1.Id, [orgUser1.Id], DateTime.UtcNow);
+        await groupRepository.UpdateUsersAsync(group2.Id, [orgUser3.Id], DateTime.UtcNow);
 
         var collection1 = new Collection
         {
@@ -627,7 +627,7 @@ public class UserRepositoryTests
     /// <summary>
     /// In this test we are testing that the MasterPasswordUnlockData set's the password data correctly.
     /// including setting the masterPasswordSalt.
-    /// <see cref="TdeSetPasswordCommand.SetMasterPasswordAsync"/> and <see cref="SetInitialMasterPasswordCommand.SetInitialMasterPasswordAsync"/> for reference.
+    /// <see cref="TdeSetPasswordCommand.SetMasterPasswordAsync"/> and <see cref="FinishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync"/> for reference.
     /// </summary>
     [Theory, DatabaseData]
     public async Task UpdateMasterPassword_MasterPasswordSaltIsUpdated(

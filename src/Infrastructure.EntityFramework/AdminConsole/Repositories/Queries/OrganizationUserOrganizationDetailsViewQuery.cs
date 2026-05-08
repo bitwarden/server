@@ -77,7 +77,9 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         UseAutomaticUserConfirmation = o.UseAutomaticUserConfirmation,
                         UseDisableSMAdsForUsers = o.UseDisableSmAdsForUsers,
                         UsePhishingBlocker = o.UsePhishingBlocker,
-                        UseMyItems = o.UseMyItems
+                        UseMyItems = o.UseMyItems,
+                        UseInviteLinks = o.UseInviteLinks,
+                        RevocationReason = ou.RevocationReason
                     };
         return query;
     }

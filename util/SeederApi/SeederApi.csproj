@@ -2,13 +2,13 @@
 
     <PropertyGroup>
         <UserSecretsId>bitwarden-seeder-api</UserSecretsId>
-        <TargetFramework>net8.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\src\Core\Core.csproj" />
       <ProjectReference Include="..\..\src\SharedWeb\SharedWeb.csproj" />
       <ProjectReference Include="..\Seeder\Seeder.csproj" />
     </ItemGroup>

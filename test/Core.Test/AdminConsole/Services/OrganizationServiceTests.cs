@@ -1438,7 +1438,7 @@ public class OrganizationServiceTests
 
         await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().Received(1)
             .Run(organization, Arg.Is<OrganizationSubscriptionChangeSet>(cs =>
-                cs.Changes.Count == 1 && cs.Changes[0].IsItemAddition));
+                cs.Changes.Count == 1 && !cs.ChargeImmediately));
         await sutProvider.GetDependency<IStripePaymentService>().DidNotReceiveWithAnyArgs()
             .AdjustStorageAsync(default, default, default);
         Assert.Equal((short)2, organization.MaxStorageGb);
@@ -1470,7 +1470,7 @@ public class OrganizationServiceTests
 
         await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().Received(1)
             .Run(organization, Arg.Is<OrganizationSubscriptionChangeSet>(cs =>
-                cs.Changes.Count == 1 && cs.Changes[0].IsItemQuantityUpdate));
+                cs.Changes.Count == 1 && !cs.ChargeImmediately));
         await sutProvider.GetDependency<IStripePaymentService>().DidNotReceiveWithAnyArgs()
             .AdjustStorageAsync(default, default, default);
         Assert.Equal((short)3, organization.MaxStorageGb);

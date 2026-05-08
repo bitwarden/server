@@ -403,16 +403,6 @@ public class CurrentContext(
         return ProviderProviderAdmin(providerId);
     }
 
-    public bool AccessProviderOrganizations(Guid providerId)
-    {
-        return ProviderUser(providerId);
-    }
-
-    public bool ManageProviderOrganizations(Guid providerId)
-    {
-        return ProviderProviderAdmin(providerId);
-    }
-
     public bool ProviderUser(Guid providerId)
     {
         return Providers?.Any(o => o.Id == providerId) ?? false;

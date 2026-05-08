@@ -182,7 +182,7 @@ public class BulkUpdateOrganizationSubscriptionsCommandTests
                 Arg.Is<Organization>(x => x.Id == organization.Id),
                 Arg.Is<OrganizationSubscriptionChangeSet>(cs =>
                     cs.Changes.Count == 1 &&
-                    cs.Changes[0].IsItemQuantityUpdate &&
+                    !cs.ChargeImmediately &&
                     cs.Changes[0].AsT3.PriceId == plan.PasswordManager.StripeSeatPlanId &&
                     cs.Changes[0].AsT3.Quantity == organization.Seats!.Value));
 

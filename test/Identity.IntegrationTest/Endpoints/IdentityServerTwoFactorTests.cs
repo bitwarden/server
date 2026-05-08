@@ -504,7 +504,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             new Claim("organizationId", organization.Id.ToString()),
             new Claim(JwtClaimTypes.SessionId, "SOMETHING"),
             new Claim(JwtClaimTypes.AuthenticationMethod, "external"),
-            new Claim(JwtClaimTypes.AuthenticationTime, DateTime.UtcNow.AddMinutes(-1).ToEpochTime().ToString())
+            new Claim(JwtClaimTypes.AuthenticationTime, new DateTimeOffset(DateTime.UtcNow.AddMinutes(-1)).ToUnixTimeSeconds().ToString())
         ], "Duende.IdentityServer", JwtClaimTypes.Name, JwtClaimTypes.Role));
 
         authorizationCode.Subject = subject;

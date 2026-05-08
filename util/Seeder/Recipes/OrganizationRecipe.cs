@@ -1,10 +1,6 @@
-﻿using AutoMapper;
-using Bit.Core.Entities;
-using Bit.Infrastructure.EntityFramework.Repositories;
+﻿using Bit.Seeder.Models;
 using Bit.Seeder.Options;
 using Bit.Seeder.Pipeline;
-using Bit.Seeder.Services;
-using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Seeder.Recipes;
 
@@ -16,31 +12,28 @@ namespace Bit.Seeder.Recipes;
 /// All orchestration logic is encapsulated within the Pipeline, keeping this Recipe simple.
 /// The CLI remains "dumb" - it creates this recipe and calls Seed().
 /// </remarks>
-public class OrganizationRecipe(
-    DatabaseContext db,
-    IMapper mapper,
-    IPasswordHasher<User> passwordHasher,
-    IManglerService manglerService)
+public class OrganizationRecipe(SeederDependencies deps)
 {
-    private readonly RecipeOrchestrator _orchestrator = new(db, mapper);
+    private readonly RecipeOrchestrator _orchestrator = new(deps);
 
     /// <summary>
     /// Seeds an organization from an embedded preset.
     /// </summary>
     /// <param name="presetName">Name of the embedded preset (e.g., "dunder-mifflin-full")</param>
     /// <param name="password">Optional password for all seeded accounts</param>
+    /// <param name="kdfIterations">Optional KDF iteration count override</param>
     /// <returns>The organization ID and summary statistics.</returns>
-    public SeedResult Seed(string presetName, string? password = null, int? kdfIterations = null)
+    public OrganizationSeedResult Seed(string presetName, string? password = null, int? kdfIterations = null)
     {
-        var result = _orchestrator.Execute(presetName, passwordHasher, manglerService, password, kdfIterations);
+        var result = _orchestrator.Execute(presetName, password, kdfIterations);
 
-        return new SeedResult(
-            result.OrganizationId,
-            result.OwnerEmail,
-            result.UsersCount,
-            result.GroupsCount,
-            result.CollectionsCount,
-            result.CiphersCount);
+        if (result.OrganizationId is null)
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' is not an organization preset. Use IndividualUserRecipe instead.");
+        }
+
+        return OrganizationSeedResult.From(result);
     }
 
     /// <summary>
@@ -48,45 +41,9 @@ public class OrganizationRecipe(
     /// </summary>
     /// <param name="options">Options specifying what to seed.</param>
     /// <returns>The organization ID and summary statistics.</returns>
-    public SeedResult Seed(OrganizationVaultOptions options)
+    public OrganizationSeedResult Seed(OrganizationVaultOptions options)
     {
-        var result = _orchestrator.Execute(options, passwordHasher, manglerService);
-
-        return new SeedResult(
-            result.OrganizationId,
-            result.OwnerEmail,
-            result.UsersCount,
-            result.GroupsCount,
-            result.CollectionsCount,
-            result.CiphersCount);
-    }
-
-    /// <summary>
-    /// Lists all available embedded presets and fixtures.
-    /// </summary>
-    /// <returns>Available presets grouped by category.</returns>
-    public static AvailableSeeds ListAvailable()
-    {
-        var internalResult = RecipeOrchestrator.ListAvailable();
-
-        return new AvailableSeeds(internalResult.Presets, internalResult.Fixtures);
+        var result = _orchestrator.Execute(options);
+        return OrganizationSeedResult.From(result);
     }
 }
-
-/// <summary>
-/// Result of seeding operation with summary statistics.
-/// </summary>
-public record SeedResult(
-    Guid OrganizationId,
-    string? OwnerEmail,
-    int UsersCount,
-    int GroupsCount,
-    int CollectionsCount,
-    int CiphersCount);
-
-/// <summary>
-/// Available presets and fixtures grouped by category.
-/// </summary>
-public record AvailableSeeds(
-    IReadOnlyList<string> Presets,
-    IReadOnlyDictionary<string, IReadOnlyList<string>> Fixtures);

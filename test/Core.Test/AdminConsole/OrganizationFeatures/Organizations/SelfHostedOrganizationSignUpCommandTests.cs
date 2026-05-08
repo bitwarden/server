@@ -348,6 +348,10 @@ public class SelfHostedOrganizationSignUpCommandTests
         globalSettings.LicenseDirectory.Returns("/tmp/licenses");
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(owner.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(owner.Id)
             .Returns(SingleOrganizationPolicyRequirementTestFactory.NoSinglePolicyOrganizationsForUser());
     }

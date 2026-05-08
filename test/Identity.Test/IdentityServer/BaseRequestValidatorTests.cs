@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
@@ -6,6 +7,7 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -58,6 +60,7 @@ public class BaseRequestValidatorTests
     private readonly IMailService _mailService;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
     private readonly IClientVersionValidator _clientVersionValidator;
+    private readonly IBumpDeviceLastActivityDateCommand _bumpDeviceLastActivityDateCommand;
 
     private readonly BaseRequestValidatorTestWrapper _sut;
 
@@ -83,6 +86,7 @@ public class BaseRequestValidatorTests
         _mailService = Substitute.For<IMailService>();
         _userAccountKeysQuery = Substitute.For<IUserAccountKeysQuery>();
         _clientVersionValidator = Substitute.For<IClientVersionValidator>();
+        _bumpDeviceLastActivityDateCommand = Substitute.For<IBumpDeviceLastActivityDateCommand>();
 
         _sut = new BaseRequestValidatorTestWrapper(
             _userManager,
@@ -104,7 +108,8 @@ public class BaseRequestValidatorTests
             _authRequestRepository,
             _mailService,
             _userAccountKeysQuery,
-            _clientVersionValidator);
+            _clientVersionValidator,
+            _bumpDeviceLastActivityDateCommand);
 
         // Default client version validator behavior: allow to pass unless a test overrides.
         _clientVersionValidator
@@ -1306,6 +1311,187 @@ public class BaseRequestValidatorTests
         Assert.True(context.GrantResult.IsError);
         var errorResponse = (ErrorResponseModel)context.CustomValidatorRequestContext.CustomResponse[CustomResponseConstants.ResponseKeys.ErrorModel];
         Assert.Equal(SsoConstants.RequestErrors.SsoTwoFactorRecoveryDescription, errorResponse.Message);
+    }
+
+    // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_BumpLastActivityDateThrows_LoginStillSucceeds(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        [AuthFixtures.CustomValidatorRequestContext]
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        _sut.isValid = true;
+
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+        _deviceValidator
+            .ValidateRequestDeviceAsync(tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+        _userService.IsLegacyUser(Arg.Any<string>())
+            .Returns(false);
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+        _userAccountKeysQuery.Run(Arg.Any<User>()).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
+                "test-private-key",
+                "test-public-key"
+            )
+        });
+
+        // Feature flag enabled so the bump is attempted
+        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
+
+        // The bump command throws a transient exception
+        _bumpDeviceLastActivityDateCommand
+            .BumpAsync(Arg.Any<Device>())
+            .Returns<Task>(_ => throw new Exception("Transient failure"));
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert: exception is swallowed — login succeeds
+        Assert.False(context.GrantResult.IsError);
+
+        // Assert: warning was logged
+        var logs = _logger.Collector.GetSnapshot();
+        Assert.Contains(logs, l =>
+            l.Level == LogLevel.Warning &&
+            l.Message.Contains("Failed to bump LastActivityDate for device"));
+    }
+
+    // TODO: PM-34091 - remove this test when cleaning up feature flag (disabled case will no longer exist)
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_BumpLastActivityDate_FeatureFlagDisabled_BumpNotCalled(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        [AuthFixtures.CustomValidatorRequestContext]
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        _sut.isValid = true;
+
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+        _deviceValidator
+            .ValidateRequestDeviceAsync(tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+        _userAccountKeysQuery.Run(Arg.Any<User>()).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
+                "test-private-key",
+                "test-public-key"
+            )
+        });
+
+        // Feature flag is disabled (NSubstitute default: false) — no bump expected
+        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(false);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert: login succeeds and bump is never attempted
+        Assert.False(context.GrantResult.IsError);
+        await _bumpDeviceLastActivityDateCommand
+            .DidNotReceive()
+            .BumpAsync(Arg.Any<Device>());
+    }
+
+    // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_BumpLastActivityDate_NullDevice_BumpNotCalled(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        [AuthFixtures.CustomValidatorRequestContext]
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        requestContext.Device = null;
+
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        _sut.isValid = true;
+
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+        _deviceValidator
+            .ValidateRequestDeviceAsync(tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+        _userAccountKeysQuery.Run(Arg.Any<User>()).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
+                "test-private-key",
+                "test-public-key"
+            )
+        });
+
+        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert: login succeeds and bump is never attempted
+        Assert.False(context.GrantResult.IsError);
+        await _bumpDeviceLastActivityDateCommand
+            .DidNotReceive()
+            .BumpAsync(Arg.Any<Device>());
+    }
+
+    // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_BumpLastActivityDate_Succeeds_BumpCalledAndLoginSucceeds(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        [AuthFixtures.CustomValidatorRequestContext]
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        _sut.isValid = true;
+
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+        _deviceValidator
+            .ValidateRequestDeviceAsync(tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+        _userAccountKeysQuery.Run(Arg.Any<User>()).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
+                "test-private-key",
+                "test-public-key"
+            )
+        });
+
+        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert: login succeeds and bump was called with the correct device
+        Assert.False(context.GrantResult.IsError);
+        await _bumpDeviceLastActivityDateCommand
+            .Received(1)
+            .BumpAsync(requestContext.Device);
     }
 
     private BaseRequestValidationContextFake CreateContext(

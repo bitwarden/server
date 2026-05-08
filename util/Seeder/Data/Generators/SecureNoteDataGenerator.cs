@@ -57,7 +57,7 @@ internal sealed class SecureNoteDataGenerator(int seed)
         "Expense System" => $"{faker.PickRandom("Concur", "Expensify", "SAP", "Corporate Card")} Access",
         "Coffee Machine" => $"{faker.PickRandom("Break Room", "Executive Lounge", "Cafeteria", "Kitchen")} Coffee Machine",
         "Parking Garage" => $"{faker.Address.StreetName()} Parking",
-        _ => faker.Lorem.Sentence(3)
+        _ => throw new ArgumentException($"Unknown note category: '{category}'", nameof(category))
     };
 
     private static string GenerateNoteContent(string category, Faker faker) => category switch
@@ -165,6 +165,6 @@ internal sealed class SecureNoteDataGenerator(int seed)
             Emergency Exit: {faker.PickRandom("Stairwell B", "North ramp", "Elevator to lobby")}
             """,
 
-        _ => faker.Lorem.Paragraph()
+        _ => throw new ArgumentException($"Unknown note category: '{category}'", nameof(category))
     };
 }

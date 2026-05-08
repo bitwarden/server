@@ -571,6 +571,7 @@ public class OrganizationsController : Controller
             organization.UseDisableSmAdsForUsers = model.UseDisableSmAdsForUsers;
             organization.UsePhishingBlocker = model.UsePhishingBlocker;
             organization.UseMyItems = model.UseMyItems;
+            organization.UseInviteLinks = model.UseInviteLinks;
 
             //secrets
             organization.SmSeats = model.SmSeats;
@@ -591,6 +592,7 @@ public class OrganizationsController : Controller
             organization.Gateway = model.Gateway;
             organization.GatewayCustomerId = model.GatewayCustomerId;
             organization.GatewaySubscriptionId = model.GatewaySubscriptionId;
+            organization.ExemptFromBillingAutomation = model.ExemptFromBillingAutomation;
         }
     }
 

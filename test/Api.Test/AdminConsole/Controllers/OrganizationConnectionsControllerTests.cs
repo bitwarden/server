@@ -50,15 +50,54 @@ public class OrganizationConnectionsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task CreateConnection_CloudBillingSync_RequiresOwnerPermissions(SutProvider<OrganizationConnectionsController> sutProvider)
+    public async Task CreateConnection_CloudBillingSync_RequiresOwnerPermissions(Guid organizationId,
+        SutProvider<OrganizationConnectionsController> sutProvider)
     {
         var model = new OrganizationConnectionRequestModel
         {
             Type = OrganizationConnectionType.CloudBillingSync,
+            OrganizationId = organizationId,
         };
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateConnection(model));
 
         Assert.Contains($"You do not have permission to create a connection of type", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CreateConnection_Scim_RequiresManageScimPermission(Guid organizationId,
+        SutProvider<OrganizationConnectionsController> sutProvider)
+    {
+        var model = new OrganizationConnectionRequestModel
+        {
+            Type = OrganizationConnectionType.Scim,
+            OrganizationId = organizationId,
+        };
+
+        sutProvider.GetDependency<ICurrentContext>().ManageScim(organizationId).Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateConnection(model));
+
+        Assert.Contains($"You do not have permission to create a connection of type", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CreateConnection_Scim_Success(OrganizationConnectionRequestModel model, ScimConfig config,
+        SutProvider<OrganizationConnectionsController> sutProvider)
+    {
+        model.Type = OrganizationConnectionType.Scim;
+        model.Config = JsonDocumentFromObject(config);
+        var typedModel = new OrganizationConnectionRequestModel<ScimConfig>(model);
+
+        sutProvider.GetDependency<ICurrentContext>().ManageScim(model.OrganizationId).Returns(true);
+        sutProvider.GetDependency<ICreateOrganizationConnectionCommand>().CreateAsync<ScimConfig>(default)
+            .ReturnsForAnyArgs(typedModel.ToData(Guid.NewGuid()).ToEntity());
+
+        await sutProvider.Sut.CreateConnection(model);
+
+        await sutProvider.GetDependency<ICreateOrganizationConnectionCommand>().Received(1)
+            .CreateAsync(Arg.Is(AssertHelper.AssertPropertyEqual(typedModel.ToData())));
     }
 
     [Theory]
@@ -73,6 +112,7 @@ public class OrganizationConnectionsControllerTests
         var existing = typedModel.ToData(existingEntityId).ToEntity();
 
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(model.OrganizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().ManageScim(model.OrganizationId).Returns(true);
 
         sutProvider.GetDependency<IOrganizationConnectionRepository>().GetByOrganizationIdTypeAsync(model.OrganizationId, type).Returns(new[] { existing });
 

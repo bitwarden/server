@@ -3,9 +3,11 @@
 
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
-using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -17,41 +19,25 @@ public class PolicyService : IPolicyService
 {
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly GlobalSettings _globalSettings;
 
     public PolicyService(
         IApplicationCacheService applicationCacheService,
         IOrganizationUserRepository organizationUserRepository,
-        IPolicyRepository policyRepository,
+        IPolicyRequirementQuery policyRequirementQuery,
         GlobalSettings globalSettings)
     {
         _applicationCacheService = applicationCacheService;
         _organizationUserRepository = organizationUserRepository;
-        _policyRepository = policyRepository;
+        _policyRequirementQuery = policyRequirementQuery;
         _globalSettings = globalSettings;
     }
 
     public async Task<MasterPasswordPolicyData> GetMasterPasswordPolicyForUserAsync(User user)
     {
-        var policies = (await _policyRepository.GetManyByUserIdAsync(user.Id))
-            .Where(p => p.Type == PolicyType.MasterPassword && p.Enabled)
-            .ToList();
-
-        if (!policies.Any())
-        {
-            return null;
-        }
-
-        var enforcedOptions = new MasterPasswordPolicyData();
-
-        foreach (var policy in policies)
-        {
-            enforcedOptions.CombineWith(policy.GetDataModel<MasterPasswordPolicyData>());
-        }
-
-        return enforcedOptions;
-
+        var requirement = await _policyRequirementQuery.GetAsyncVNext<MasterPasswordPolicyRequirement>(user.Id);
+        return requirement.EnforcedOptions;
     }
 
     public async Task<ICollection<OrganizationUserPolicyDetails>> GetPoliciesApplicableToUserAsync(Guid userId, PolicyType policyType, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted)
@@ -70,13 +56,35 @@ public class PolicyService : IPolicyService
     {
         var organizationUserPolicyDetails = await _organizationUserRepository.GetByUserIdWithPolicyDetailsAsync(userId, policyType);
         var excludedUserTypes = GetUserTypesExcludedFromPolicy(policyType);
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-        return organizationUserPolicyDetails.Where(o =>
-            (!orgAbilities.TryGetValue(o.OrganizationId, out var orgAbility) || orgAbility.UsePolicies) &&
-            o.PolicyEnabled &&
-            !excludedUserTypes.Contains(o.OrganizationUserType) &&
-            o.OrganizationUserStatus >= minStatus &&
-            !o.IsProvider);
+
+        var filteredPolicyDetails = organizationUserPolicyDetails
+            .Where(o => !o.IsProvider)
+            .Where(o => o.OrganizationUserStatus >= minStatus)
+            .Where(o => !excludedUserTypes.Contains(o.OrganizationUserType))
+            .Where(o => o.PolicyEnabled)
+            .ToList();
+
+        var orgAbilities = await GetOrganizationAbilitiesAsync(filteredPolicyDetails);
+
+        return filteredPolicyDetails.Where(userPolicyDetails =>
+        {
+            if (orgAbilities.TryGetValue(userPolicyDetails.OrganizationId, out var orgAbility) && !orgAbility.UsePolicies)
+            {
+                return false;
+            }
+
+            return true;
+        });
+    }
+
+    private async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync(List<OrganizationUserPolicyDetails> filteredPolicyDetails)
+    {
+        var orgIds = filteredPolicyDetails
+            .Select(o => o.OrganizationId)
+            .Distinct()
+            .ToList();
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync(orgIds);
+        return orgAbilities;
     }
 
     private OrganizationUserType[] GetUserTypesExcludedFromPolicy(PolicyType policyType)
