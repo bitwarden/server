@@ -44,7 +44,9 @@ public class SyncResponseModel() : ResponseModel("sync")
         bool excludeDomains,
         IEnumerable<Policy> policies,
         IEnumerable<Send> sends,
-        IEnumerable<WebAuthnCredential> webAuthnCredentials)
+        IEnumerable<WebAuthnCredential> webAuthnCredentials,
+        IEnumerable<Policy> policiesNew = null,
+        IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetailsNew = null)
         : this()
     {
         Profile = new ProfileResponseModel(user, userAccountKeysData, organizationUserDetails, providerUserDetails,
@@ -61,6 +63,8 @@ public class SyncResponseModel() : ResponseModel("sync")
             c => new CollectionDetailsResponseModel(c)) ?? new List<CollectionDetailsResponseModel>();
         Domains = excludeDomains ? null : new DomainsResponseModel(user, false);
         Policies = policies?.Select(p => new PolicyResponseModel(p)) ?? new List<PolicyResponseModel>();
+        PoliciesNew = policiesNew?.Select(p => new PolicyResponseModel(p));
+        OrganizationsNew = organizationUserDetailsNew?.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsClaimingingUser));
         Sends = sends.Select(s => new SendResponseModel(s));
         var webAuthnPrfOptions = webAuthnCredentials
             .Where(c => c.GetPrfStatus() == WebAuthnPrfStatus.Enabled)
@@ -119,6 +123,18 @@ public class SyncResponseModel() : ResponseModel("sync")
     public IEnumerable<CipherDetailsResponseModel> Ciphers { get; set; }
     public DomainsResponseModel Domains { get; set; }
     public IEnumerable<PolicyResponseModel> Policies { get; set; }
+    /// <summary>
+    /// Policies for organizations where the user is in the Confirmed or Accepted status.
+    /// Null when the <c>pm-34145-policies-in-accepted-state</c> feature flag is disabled.
+    /// New clients should prefer this property and fall back to <see cref="Policies"/> if absent.
+    /// </summary>
+    public IEnumerable<PolicyResponseModel> PoliciesNew { get; set; }
+    /// <summary>
+    /// Organizations where the user is in the Confirmed or Accepted status.
+    /// Null when the <c>pm-34145-policies-in-accepted-state</c> feature flag is disabled.
+    /// New clients should prefer this property and fall back to <see cref="Profile"/>.<c>Organizations</c> if absent.
+    /// </summary>
+    public IEnumerable<ProfileOrganizationResponseModel> OrganizationsNew { get; set; }
     public IEnumerable<SendResponseModel> Sends { get; set; }
     public UserDecryptionResponseModel UserDecryption { get; set; }
 }

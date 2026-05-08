@@ -172,6 +172,19 @@ public class PriceIncreaseScheduler(
             return null;
         }
 
+        // Detect callers who fetched the subscription without expanding "discounts".
+        // Stripe.NET deserializes the unexpanded ID-array form as a list of null entries,
+        // which would silently drop pre-existing discounts from Phase 2 (the bug PM-35909 fixed).
+        if (subscription.Discounts is { Count: > 0 } && subscription.Discounts.Any(d => d == null))
+        {
+            logger.LogError(
+                "Subscription ({SubscriptionId}) was loaded without expanding 'discounts'; " +
+                "{Count} pre-existing discount(s) would be silently dropped from Phase 2. " +
+                "Caller must include \"discounts\" in the Stripe Expand list.",
+                subscription.Id, subscription.DiscountIds?.Count ?? 0);
+            return null;
+        }
+
         try
         {
             SubscriberId subscriberId = subscription;
@@ -190,7 +203,7 @@ public class PriceIncreaseScheduler(
         catch (Exception ex)
         {
             logger.LogError(ex,
-                "Failed to resolve subscriber type for subscription ({SubscriptionId}), cannot determine price migration path",
+                "Failed to resolve Phase 2 options for subscription ({SubscriptionId}), cannot determine price migration path",
                 subscription.Id);
             return null;
         }
@@ -244,12 +257,21 @@ public class PriceIncreaseScheduler(
             return null;
         }
 
+        var discounts = subscription.Discounts?
+            .Select(d => new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.Coupon.Id })
+            .ToList() ?? [];
+
+        discounts.Add(new SubscriptionSchedulePhaseDiscountOptions
+        {
+            Coupon = CouponIDs.Milestone2SubscriptionDiscount
+        });
+
         return new SubscriptionSchedulePhaseOptions
         {
             StartDate = startDate,
             EndDate = startDate.Value.AddYears(1),
             Items = items,
-            Discounts = [new() { Coupon = CouponIDs.Milestone2SubscriptionDiscount }],
+            Discounts = discounts,
             ProrationBehavior = ProrationBehavior.None
         };
     }
@@ -291,12 +313,17 @@ public class PriceIncreaseScheduler(
             });
         }
 
-        var discounts = oldPlan.Type == PlanType.FamiliesAnnually2019
-            ? new List<SubscriptionSchedulePhaseDiscountOptions>
+        var discounts = subscription.Discounts?
+            .Select(d => new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.Coupon.Id })
+            .ToList() ?? [];
+
+        if (oldPlan.Type == PlanType.FamiliesAnnually2019)
+        {
+            discounts.Add(new SubscriptionSchedulePhaseDiscountOptions
             {
-                new() { Coupon = CouponIDs.Milestone3SubscriptionDiscount }
-            }
-            : null;
+                Coupon = CouponIDs.Milestone3SubscriptionDiscount
+            });
+        }
 
         var startDate = subscription.GetCurrentPeriodEnd();
         if (startDate == null)
@@ -312,7 +339,7 @@ public class PriceIncreaseScheduler(
             StartDate = startDate,
             EndDate = startDate.Value.AddYears(1),
             Items = items,
-            Discounts = discounts,
+            Discounts = discounts.Count > 0 ? discounts : null,
             ProrationBehavior = ProrationBehavior.None
         };
     }
