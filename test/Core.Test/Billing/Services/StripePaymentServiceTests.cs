@@ -66,10 +66,10 @@ public class StripePaymentServiceTests
         var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
 
         // Assert
-        Assert.NotNull(result.CustomerDiscount);
-        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, result.CustomerDiscount.Id);
-        Assert.Equal(20m, result.CustomerDiscount.PercentOff);
-        Assert.Equal(14.00m, result.CustomerDiscount.AmountOff); // Converted from cents
+        var discount = Assert.Single(result.CustomerDiscounts);
+        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, discount.Id);
+        Assert.Equal(20m, discount.PercentOff);
+        Assert.Equal(14.00m, discount.AmountOff); // Converted from cents
     }
 
     [Theory]
@@ -117,14 +117,14 @@ public class StripePaymentServiceTests
         var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
 
         // Assert - Should use subscription discount as fallback
-        Assert.NotNull(result.CustomerDiscount);
-        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, result.CustomerDiscount.Id);
-        Assert.Equal(15m, result.CustomerDiscount.PercentOff);
+        var discount = Assert.Single(result.CustomerDiscounts);
+        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, discount.Id);
+        Assert.Equal(15m, discount.PercentOff);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task GetSubscriptionAsync_WithBothDiscounts_PrefersCustomerDiscount(
+    public async Task GetSubscriptionAsync_WithBothDiscounts_CollectsBothDiscounts(
         SutProvider<StripePaymentService> sutProvider,
         User subscriber)
     {
@@ -175,10 +175,12 @@ public class StripePaymentServiceTests
         // Act
         var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
 
-        // Assert - Should prefer customer discount over subscription discount
-        Assert.NotNull(result.CustomerDiscount);
-        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, result.CustomerDiscount.Id);
-        Assert.Equal(25m, result.CustomerDiscount.PercentOff);
+        // Assert - Should collect both customer and subscription discounts
+        Assert.Equal(2, result.CustomerDiscounts.Count);
+        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, result.CustomerDiscounts[0].Id);
+        Assert.Equal(25m, result.CustomerDiscounts[0].PercentOff);
+        Assert.Equal("different-coupon-id", result.CustomerDiscounts[1].Id);
+        Assert.Equal(10m, result.CustomerDiscounts[1].PercentOff);
     }
 
     [Theory]
@@ -215,12 +217,12 @@ public class StripePaymentServiceTests
         var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
 
         // Assert
-        Assert.Null(result.CustomerDiscount);
+        Assert.Empty(result.CustomerDiscounts);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task GetSubscriptionAsync_WithMultipleSubscriptionDiscounts_SelectsFirstDiscount(
+    public async Task GetSubscriptionAsync_WithMultipleSubscriptionDiscounts_CollectsAllDiscounts(
         SutProvider<StripePaymentService> sutProvider,
         User subscriber)
     {
@@ -272,13 +274,12 @@ public class StripePaymentServiceTests
         // Act
         var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
 
-        // Assert - Should select the first discount from the list (FirstOrDefault() behavior)
-        Assert.NotNull(result.CustomerDiscount);
-        Assert.Equal("coupon-10-percent", result.CustomerDiscount.Id);
-        Assert.Equal(10m, result.CustomerDiscount.PercentOff);
-        // Verify the second discount was not selected
-        Assert.NotEqual("coupon-20-percent", result.CustomerDiscount.Id);
-        Assert.NotEqual(20m, result.CustomerDiscount.PercentOff);
+        // Assert - Should collect all subscription discounts
+        Assert.Equal(2, result.CustomerDiscounts.Count);
+        Assert.Equal("coupon-10-percent", result.CustomerDiscounts[0].Id);
+        Assert.Equal(10m, result.CustomerDiscounts[0].PercentOff);
+        Assert.Equal("coupon-20-percent", result.CustomerDiscounts[1].Id);
+        Assert.Equal(20m, result.CustomerDiscounts[1].PercentOff);
     }
 
     [Theory]
@@ -312,7 +313,7 @@ public class StripePaymentServiceTests
         var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
 
         // Assert - Should handle null Customer gracefully without throwing NullReferenceException
-        Assert.Null(result.CustomerDiscount);
+        Assert.Empty(result.CustomerDiscounts);
     }
 
     [Theory]
@@ -349,7 +350,56 @@ public class StripePaymentServiceTests
         var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
 
         // Assert - Should handle null Discounts gracefully without throwing NullReferenceException
-        Assert.Null(result.CustomerDiscount);
+        Assert.Empty(result.CustomerDiscounts);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_WithNullCouponOnSubscriptionDiscount_SkipsDiscount(
+        SutProvider<StripePaymentService> sutProvider,
+        User subscriber)
+    {
+        // Arrange - One valid customer discount and one subscription discount with null Coupon
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
+            Customer = new Customer
+            {
+                Discount = new Discount
+                {
+                    Coupon = new Coupon
+                    {
+                        Id = "valid-coupon",
+                        PercentOff = 10m
+                    }
+                }
+            },
+            Discounts = new List<Discount>
+            {
+                new() { Coupon = null } // Subscription discount with null Coupon
+            },
+            Items = new StripeList<SubscriptionItem> { Data = [] }
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(
+                subscriber.GatewaySubscriptionId,
+                Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert - Only the valid customer discount should be collected; null coupon is skipped
+        var discount = Assert.Single(result.CustomerDiscounts);
+        Assert.Equal("valid-coupon", discount.Id);
+        Assert.Equal(10m, discount.PercentOff);
     }
 
     [Theory]
@@ -407,7 +457,7 @@ public class StripePaymentServiceTests
         // Assert
         Assert.NotNull(result);
         Assert.Null(result.Subscription);
-        Assert.Null(result.CustomerDiscount);
+        Assert.Empty(result.CustomerDiscounts);
         Assert.Null(result.UpcomingInvoice);
 
         // Verify no Stripe API calls were made
@@ -491,10 +541,10 @@ public class StripePaymentServiceTests
         Assert.Equal(47.88m, item.Amount);
 
         // Assert — discount overridden with Phase 2 discount
-        Assert.NotNull(result.CustomerDiscount);
-        Assert.Equal(CouponIDs.Milestone3SubscriptionDiscount, result.CustomerDiscount.Id);
-        Assert.Equal(25m, result.CustomerDiscount.PercentOff);
-        Assert.True(result.CustomerDiscount.Active);
+        var discount = Assert.Single(result.CustomerDiscounts);
+        Assert.Equal(CouponIDs.Milestone3SubscriptionDiscount, discount.Id);
+        Assert.Equal(25m, discount.PercentOff);
+        Assert.True(discount.Active);
     }
 
     [Theory]
@@ -573,8 +623,8 @@ public class StripePaymentServiceTests
         Assert.Equal(47.88m, item.Amount);
 
         // Assert — original discount preserved (Phase 2 has no discount)
-        Assert.NotNull(result.CustomerDiscount);
-        Assert.Equal("existing-coupon", result.CustomerDiscount.Id);
+        var discount = Assert.Single(result.CustomerDiscounts);
+        Assert.Equal("existing-coupon", discount.Id);
     }
 
     [Theory]
@@ -672,7 +722,7 @@ public class StripePaymentServiceTests
         // Assert — original data preserved despite schedule fetch failure
         var item = Assert.Single(result.Subscription!.Items);
         Assert.Equal(12.00m, item.Amount);
-        Assert.Null(result.CustomerDiscount);
+        Assert.Empty(result.CustomerDiscounts);
     }
 
     [Theory]
@@ -816,7 +866,7 @@ public class StripePaymentServiceTests
         // Assert — original price preserved, Phase 2 already started so no override
         var item = Assert.Single(result.Subscription!.Items);
         Assert.Equal(12.00m, item.Amount);
-        Assert.Null(result.CustomerDiscount);
+        Assert.Empty(result.CustomerDiscounts);
     }
 
     [Theory]
@@ -896,9 +946,9 @@ public class StripePaymentServiceTests
         Assert.Equal("Families", item.Name);
 
         // Assert — discount overridden with Phase 2 discount
-        Assert.NotNull(result.CustomerDiscount);
-        Assert.Equal(CouponIDs.Milestone3SubscriptionDiscount, result.CustomerDiscount.Id);
-        Assert.Equal(25m, result.CustomerDiscount.PercentOff);
+        var discount = Assert.Single(result.CustomerDiscounts);
+        Assert.Equal(CouponIDs.Milestone3SubscriptionDiscount, discount.Id);
+        Assert.Equal(25m, discount.PercentOff);
     }
 
     [Theory]
