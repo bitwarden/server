@@ -385,12 +385,15 @@ public class CloudICloudOrganizationSignUpCommandTests
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(signup.Owner.Id)
             .Returns(new SingleOrganizationPolicyRequirement([]));
+        sutProvider.GetDependency<ITrialInitiationCache>()
+            .GetAndRemoveAsync("valid-initiation-id")
+            .Returns(14);
 
         await sutProvider.Sut.SignUpOrganizationAsync(signup);
 
         await sutProvider.GetDependency<ITrialInitiationCache>()
             .Received(1)
-            .ValidateTrialLengthAsync("valid-initiation-id", 14);
+            .GetAndRemoveAsync("valid-initiation-id");
     }
 
     [Theory, BitAutoData]
@@ -406,7 +409,63 @@ public class CloudICloudOrganizationSignUpCommandTests
 
         await sutProvider.GetDependency<ITrialInitiationCache>()
             .DidNotReceive()
-            .ValidateTrialLengthAsync(Arg.Any<string>(), Arg.Any<int>());
+            .GetAndRemoveAsync(Arg.Any<string>());
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.FamiliesAnnually)]
+    public async Task SignUpOrganizationAsync_WithExpiredOrInvalidTrialInitiationId_ThrowsBadRequestException(
+        PlanType planType, OrganizationSignup signup,
+        SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        signup.Plan = planType;
+        signup.TrialLength = 14;
+        signup.TrialInitiationId = "expired-or-invalid-id";
+        signup.AdditionalSeats = 0;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+        signup.UseSecretsManager = false;
+        signup.IsFromProvider = false;
+
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
+        sutProvider.GetDependency<ITrialInitiationCache>()
+            .GetAndRemoveAsync("expired-or-invalid-id")
+            .Returns((int?)null);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SignUpOrganizationAsync(signup));
+
+        await sutProvider.GetDependency<ITrialInitiationCache>()
+            .Received(1)
+            .GetAndRemoveAsync("expired-or-invalid-id");
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.FamiliesAnnually)]
+    public async Task SignUpOrganizationAsync_WithMismatchedTrialLength_ThrowsBadRequestException(
+        PlanType planType, OrganizationSignup signup,
+        SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        signup.Plan = planType;
+        signup.TrialLength = 30;
+        signup.TrialInitiationId = "valid-initiation-id";
+        signup.AdditionalSeats = 0;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+        signup.UseSecretsManager = false;
+        signup.IsFromProvider = false;
+
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
+        sutProvider.GetDependency<ITrialInitiationCache>()
+            .GetAndRemoveAsync("valid-initiation-id")
+            .Returns(14);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SignUpOrganizationAsync(signup));
+
+        await sutProvider.GetDependency<ITrialInitiationCache>()
+            .Received(1)
+            .GetAndRemoveAsync("valid-initiation-id");
     }
 
     [Theory]
@@ -436,7 +495,7 @@ public class CloudICloudOrganizationSignUpCommandTests
 
         await sutProvider.GetDependency<ITrialInitiationCache>()
             .DidNotReceive()
-            .ValidateTrialLengthAsync(Arg.Any<string>(), Arg.Any<int>());
+            .GetAndRemoveAsync(Arg.Any<string>());
     }
 
 }
