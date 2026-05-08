@@ -69,7 +69,6 @@ public class RequireSsoPolicyRequirementFactoryTests
     [Theory]
     [BitAutoData(OrganizationUserStatusType.Revoked)]
     [BitAutoData(OrganizationUserStatusType.Invited)]
-    [BitAutoData(OrganizationUserStatusType.Accepted)]
     public void SsoRequired_WithoutExemptStatus_ReturnsFalse(
         OrganizationUserStatusType userStatus,
         SutProvider<RequireSsoPolicyRequirementFactory> sutProvider)
@@ -86,8 +85,11 @@ public class RequireSsoPolicyRequirementFactoryTests
         Assert.False(actual.SsoRequired);
     }
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData(OrganizationUserStatusType.Accepted)]
+    [BitAutoData(OrganizationUserStatusType.Confirmed)]
     public void SsoRequired_WithExemptStatus_ReturnsTrue(
+        OrganizationUserStatusType userStatus,
         SutProvider<RequireSsoPolicyRequirementFactory> sutProvider)
     {
         var actual = sutProvider.Sut.Create(
@@ -95,7 +97,7 @@ public class RequireSsoPolicyRequirementFactoryTests
             new PolicyDetails
             {
                 PolicyType = PolicyType.RequireSso,
-                OrganizationUserStatus = OrganizationUserStatusType.Confirmed
+                OrganizationUserStatus = userStatus
             }
         ]);
 

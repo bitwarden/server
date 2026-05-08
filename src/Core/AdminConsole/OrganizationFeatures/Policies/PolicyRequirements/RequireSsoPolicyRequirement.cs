@@ -54,7 +54,7 @@ public class RequireSsoPolicyRequirementFactory : BasePolicyRequirementFactory<R
                 p.OrganizationUserStatus is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed),
 
             SsoRequired = policyDetails.Any(p =>
-                p.OrganizationUserStatus == OrganizationUserStatusType.Confirmed)
+                p.OrganizationUserStatus is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed)
         };
 
         return result;
