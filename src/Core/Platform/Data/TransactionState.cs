@@ -17,7 +17,6 @@ public sealed class TransactionHolder : IAsyncDisposable
 {
     public required DbConnection Connection { get; init; }
     public required DbTransaction Transaction { get; init; }
-    public int ReferenceCount { get; set; } = 1;
     public bool Committed { get; set; }
     public bool Doomed { get; set; }
 

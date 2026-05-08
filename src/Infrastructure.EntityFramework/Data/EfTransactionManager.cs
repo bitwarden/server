@@ -6,29 +6,13 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.EntityFramework.Data;
 
-public sealed class EfTransactionManager : ITransactionManager
+public sealed class EfTransactionManager(IServiceScopeFactory serviceScopeFactory) : TransactionManagerBase
 {
-    private readonly IServiceScopeFactory _serviceScopeFactory;
-
-    public EfTransactionManager(IServiceScopeFactory serviceScopeFactory)
+    protected override async Task<TransactionHolder> CreateRootHolderAsync(
+        IsolationLevel isolationLevel,
+        CancellationToken cancellationToken)
     {
-        _serviceScopeFactory = serviceScopeFactory;
-    }
-
-    public bool HasActiveTransaction => TransactionState.Current is not null;
-
-    public async Task<ITransactionScope> BeginTransactionAsync(
-        IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
-        CancellationToken cancellationToken = default)
-    {
-        var existing = TransactionState.Current;
-        if (existing is not null)
-        {
-            existing.ReferenceCount++;
-            return new NestedTransactionScope(existing);
-        }
-
-        var scope = _serviceScopeFactory.CreateAsyncScope();
+        var scope = serviceScopeFactory.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
         var connection = dbContext.Database.GetDbConnection();
         await connection.OpenAsync(cancellationToken);
@@ -36,7 +20,7 @@ public sealed class EfTransactionManager : ITransactionManager
 
         await dbContext.Database.UseTransactionAsync(transaction, cancellationToken);
 
-        var holder = new TransactionHolder
+        return new TransactionHolder
         {
             Connection = connection,
             Transaction = transaction,
@@ -44,7 +28,5 @@ public sealed class EfTransactionManager : ITransactionManager
             DbContext = dbContext,
             Scope = scope,
         };
-        TransactionState.Current = holder;
-        return new RootTransactionScope(holder);
     }
 }

@@ -31,7 +31,6 @@ public sealed class NestedTransactionScope : ITransactionScope
         }
 
         _disposed = true;
-        _holder.ReferenceCount--;
         return ValueTask.CompletedTask;
     }
 }
