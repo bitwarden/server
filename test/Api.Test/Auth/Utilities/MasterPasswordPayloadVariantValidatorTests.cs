@@ -26,13 +26,16 @@ public class MasterPasswordPayloadVariantValidatorTests
     }
 
     [Fact]
-    public void ValidateExclusivity_WhenBothVariantsPresent_ReturnsNoErrors()
+    public void ValidateExclusivity_WhenBothVariantsPresent_ReturnsConflictError()
     {
         var results = MasterPasswordPayloadVariantValidator
             .ValidateExclusivity(hasNewPayloads: true, hasLegacyPayloads: true)
             .ToList();
 
-        Assert.Empty(results);
+        Assert.Single(results);
+        Assert.Equal(
+            "Cannot provide both new payloads (UnlockData/AuthenticationData) and legacy payloads (NewMasterPasswordHash/Key).",
+            results[0].ErrorMessage);
     }
 
     [Fact]

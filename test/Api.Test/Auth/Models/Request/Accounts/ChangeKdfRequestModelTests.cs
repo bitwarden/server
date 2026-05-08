@@ -95,7 +95,7 @@ public class ChangeKdfRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void Validate_BothNewAndLegacyPayloads_NoErrors(
+    public void Validate_BothNewAndLegacyPayloads_ReturnsConflictError(
         string masterPasswordHash, string newHash, string key)
     {
         var kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600000 };
@@ -121,7 +121,8 @@ public class ChangeKdfRequestModelTests
 
         var result = model.Validate(new ValidationContext(model)).ToList();
 
-        Assert.Empty(result);
+        Assert.Single(result);
+        Assert.Contains("Cannot provide both", result[0].ErrorMessage);
     }
 
     [Theory]
