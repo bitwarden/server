@@ -17,20 +17,27 @@ public class SqlServerTestDatabase : ITestDatabase
     private string _sqlServerConnection { get; set; }
 
     public SqlServerTestDatabase()
+        : this(GetIdentityUserSecretConnectionString())
+    {
+    }
+
+    public SqlServerTestDatabase(string baseConnectionString, string databaseName = "vault_test")
+    {
+        var testConnectionString = new SqlConnectionStringBuilder(baseConnectionString)
+        {
+            InitialCatalog = databaseName
+        }.ConnectionString;
+
+        _sqlServerConnection = testConnectionString;
+    }
+
+    private static string GetIdentityUserSecretConnectionString()
     {
         // Grab the connection string from the Identity project user secrets
         var identityBuilder = new ConfigurationBuilder();
         identityBuilder.AddUserSecrets(typeof(Identity.Startup).Assembly, optional: true);
         var identityConfig = identityBuilder.Build();
-        var identityConnectionString = identityConfig.GetSection("globalSettings:sqlServer:connectionString").Value;
-
-        // Replace the database name in the connection string to use a test database
-        var testConnectionString = new SqlConnectionStringBuilder(identityConnectionString)
-        {
-            InitialCatalog = "vault_test"
-        }.ConnectionString;
-
-        _sqlServerConnection = testConnectionString;
+        return identityConfig.GetSection("globalSettings:sqlServer:connectionString").Value;
     }
 
     public void ModifyGlobalSettings(Dictionary<string, string> config)
@@ -49,6 +56,8 @@ public class SqlServerTestDatabase : ITestDatabase
 
     public void Migrate(IServiceCollection serviceCollection)
     {
+        EnsureDatabaseExists();
+
         var serviceProvider = serviceCollection.BuildServiceProvider();
         using var scope = serviceProvider.CreateScope();
         var services = scope.ServiceProvider;
@@ -60,6 +69,13 @@ public class SqlServerTestDatabase : ITestDatabase
     }
 
     public void Dispose()
+    {
+        // The test DB is persistent across runs — don't drop it. Clear the pool so a
+        // subsequent run doesn't reuse stale physical connections.
+        SqlConnection.ClearAllPools();
+    }
+
+    private void EnsureDatabaseExists()
     {
         var masterConnectionString = new SqlConnectionStringBuilder(_sqlServerConnection)
         {
@@ -73,14 +89,10 @@ public class SqlServerTestDatabase : ITestDatabase
 
         var databaseNameQuoted = new SqlCommandBuilder().QuoteIdentifier(databaseName);
 
-        using (var cmd = new SqlCommand($"ALTER DATABASE {databaseNameQuoted} SET single_user WITH rollback IMMEDIATE", connection))
-        {
-            cmd.ExecuteNonQuery();
-        }
-
-        using (var cmd = new SqlCommand($"DROP DATABASE {databaseNameQuoted}", connection))
-        {
-            cmd.ExecuteNonQuery();
-        }
+        using var cmd = new SqlCommand(
+            $"IF DB_ID(@dbname) IS NULL CREATE DATABASE {databaseNameQuoted}",
+            connection);
+        cmd.Parameters.AddWithValue("@dbname", databaseName);
+        cmd.ExecuteNonQuery();
     }
 }

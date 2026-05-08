@@ -1,5 +1,6 @@
 ﻿using Bit.Core;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Enums;
 using Bit.Core.Services;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.IntegrationTestCommon;
@@ -13,21 +14,38 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2;
 
 /// <summary>
 /// Verifies seat-count integrity when SCIM invite requests run concurrently.
-/// Requires a real SQL Server (vault_test) — SQLite serializes writes globally and
-/// cannot reproduce the read-modify-write race on Organization.Seats.
+/// Runs against every supported real RDBMS (SqlServer, Postgres, MySql) when its
+/// connection string is configured via BW_TEST_DATABASES__N__*. SQLite is excluded
+/// because it serializes writes globally and cannot reproduce the read-modify-write
+/// race on Organization.Seats.
 /// </summary>
 public class UsersControllerConcurrencyTests
 {
-    [Fact]
-    public async Task Post_ConcurrentInvites_DoNotOvershootMaxAutoscaleSeats()
+    [SkippableTheory]
+    [MemberData(nameof(DatabaseProviders))]
+    public async Task Post_ConcurrentInvites_DoNotOvershootMaxAutoscaleSeats(
+        SupportedDatabaseProviders providerType)
     {
+        var baseConnectionString = _configuredConnections.Value.GetValueOrDefault(providerType);
+        Skip.If(baseConnectionString is null,
+            $"{providerType}: not configured (set BW_TEST_DATABASES__N__TYPE/CONNECTIONSTRING).");
+
         const short startingSeats = 3;
         const int availableSeats = 2;
         const int concurrentInvites = 6;
 
+        const string testDatabaseName = "vault_test_scim";
+        ITestDatabase testDatabase = providerType switch
+        {
+            SupportedDatabaseProviders.SqlServer => new SqlServerTestDatabase(baseConnectionString!, testDatabaseName),
+            SupportedDatabaseProviders.Postgres => new PostgresTestDatabase(baseConnectionString!, testDatabaseName),
+            SupportedDatabaseProviders.MySql => new MySqlTestDatabase(baseConnectionString!, testDatabaseName),
+            _ => throw new InvalidOperationException($"Unsupported provider: {providerType}"),
+        };
+
         var factory = new ScimApplicationFactory
         {
-            TestDatabase = new SqlServerTestDatabase()
+            TestDatabase = testDatabase
         };
 
         factory.SubstituteService((IFeatureService f) => f.IsEnabled(FeatureFlagKeys.ScimInviteUserOptimization)
@@ -76,6 +94,66 @@ public class UsersControllerConcurrencyTests
         finally
         {
             await factory.DisposeAsync();
+        }
+    }
+
+    public static IEnumerable<object?[]> DatabaseProviders()
+    {
+        var config = new ConfigurationBuilder()
+            .AddUserSecrets(typeof(Bit.Identity.Startup).Assembly, optional: true)
+            .AddEnvironmentVariables("BW_TEST_")
+            .Build();
+
+        var configured = new Dictionary<SupportedDatabaseProviders, string>();
+
+        // Preferred source: BW_TEST_DATABASES__N__* env vars (set by test-database.yml in CI)
+        for (var i = 0; ; i++)
+        {
+            var rawType = config[$"DATABASES:{i}:TYPE"];
+            var connectionString = config[$"DATABASES:{i}:CONNECTIONSTRING"];
+            if (rawType is null && connectionString is null)
+            {
+                break;
+            }
+            if (rawType is null || connectionString is null)
+            {
+                continue;
+            }
+            if (Enum.TryParse<SupportedDatabaseProviders>(rawType, ignoreCase: true, out var type)
+                && !configured.ContainsKey(type))
+            {
+                configured[type] = connectionString;
+            }
+        }
+
+        // Fallback for local dev: Identity user secrets (globalSettings:<provider>:connectionString)
+        TryAddFromUserSecrets(SupportedDatabaseProviders.SqlServer, "globalSettings:sqlServer:connectionString");
+        TryAddFromUserSecrets(SupportedDatabaseProviders.Postgres, "globalSettings:postgreSql:connectionString");
+        TryAddFromUserSecrets(SupportedDatabaseProviders.MySql, "globalSettings:mySql:connectionString");
+
+        var providers = new[]
+        {
+            SupportedDatabaseProviders.SqlServer,
+            SupportedDatabaseProviders.Postgres,
+            SupportedDatabaseProviders.MySql,
+        };
+
+        foreach (var providerType in providers)
+        {
+            yield return new object?[] { providerType, configured.GetValueOrDefault(providerType) };
+        }
+
+        void TryAddFromUserSecrets(SupportedDatabaseProviders type, string key)
+        {
+            if (configured.ContainsKey(type))
+            {
+                return;
+            }
+            var value = config[key];
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                configured[type] = value;
+            }
         }
     }
 
