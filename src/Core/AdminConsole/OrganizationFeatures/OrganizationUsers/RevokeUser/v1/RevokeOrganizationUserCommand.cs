@@ -1,4 +1,6 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Validators;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -14,7 +16,8 @@ public class RevokeOrganizationUserCommand(
     IPushNotificationService pushNotificationService,
     IOrganizationUserRepository organizationUserRepository,
     ICurrentContext currentContext,
-    IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery)
+    IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
+    ICustomUserActingOnAdminValidator customUserActingOnAdminValidator)
     : IRevokeOrganizationUserCommand
 {
     public async Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId, RevocationReason reason)
@@ -29,6 +32,8 @@ public class RevokeOrganizationUserCommand(
         {
             throw new BadRequestException("Only owners can revoke other owners.");
         }
+
+        await customUserActingOnAdminValidator.EnforceAsync(organizationUser, OrganizationUserActionType.Revoke);
 
         await RepositoryRevokeUserAsync(organizationUser, reason);
         await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);

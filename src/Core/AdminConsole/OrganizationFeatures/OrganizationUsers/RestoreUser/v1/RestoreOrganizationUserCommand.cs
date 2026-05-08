@@ -2,6 +2,8 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Validators;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -31,7 +33,8 @@ public class RestoreOrganizationUserCommand(
     IPolicyRequirementQuery policyRequirementQuery,
     ICollectionRepository collectionRepository,
     IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator,
-    IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand) : IRestoreOrganizationUserCommand
+    IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand,
+    ICustomUserActingOnAdminValidator customUserActingOnAdminValidator) : IRestoreOrganizationUserCommand
 {
     public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, string defaultCollectionName)
     {
@@ -45,6 +48,8 @@ public class RestoreOrganizationUserCommand(
         {
             throw new BadRequestException("Only owners can restore other owners.");
         }
+
+        await customUserActingOnAdminValidator.EnforceAsync(organizationUser, OrganizationUserActionType.Restore);
 
         await RepositoryRestoreUserAsync(organizationUser, defaultCollectionName);
         await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
@@ -217,6 +222,8 @@ public class RestoreOrganizationUserCommand(
                 {
                     throw new BadRequestException("Only owners can restore other owners.");
                 }
+
+                await customUserActingOnAdminValidator.EnforceAsync(organizationUser, OrganizationUserActionType.Restore);
 
                 var twoFactorIsEnabled = organizationUser.UserId.HasValue
                                          && organizationUsersTwoFactorEnabled
