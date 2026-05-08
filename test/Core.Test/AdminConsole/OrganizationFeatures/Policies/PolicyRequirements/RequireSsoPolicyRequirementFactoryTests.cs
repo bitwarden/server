@@ -1,8 +1,10 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.Enums;
+using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -88,16 +90,60 @@ public class RequireSsoPolicyRequirementFactoryTests
     [Theory]
     [BitAutoData(OrganizationUserStatusType.Accepted)]
     [BitAutoData(OrganizationUserStatusType.Confirmed)]
-    public void SsoRequired_WithExemptStatus_ReturnsTrue(
+    public void SsoRequired_PoliciesInAcceptedStateEnabled_AcceptedOrConfirmed_ReturnsTrue(
         OrganizationUserStatusType userStatus,
         SutProvider<RequireSsoPolicyRequirementFactory> sutProvider)
     {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState)
+            .Returns(true);
+
         var actual = sutProvider.Sut.Create(
         [
             new PolicyDetails
             {
                 PolicyType = PolicyType.RequireSso,
                 OrganizationUserStatus = userStatus
+            }
+        ]);
+
+        Assert.True(actual.SsoRequired);
+    }
+
+    [Theory, BitAutoData]
+    public void SsoRequired_PoliciesInAcceptedStateDisabled_Accepted_ReturnsFalse(
+        SutProvider<RequireSsoPolicyRequirementFactory> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState)
+            .Returns(false);
+
+        var actual = sutProvider.Sut.Create(
+        [
+            new PolicyDetails
+            {
+                PolicyType = PolicyType.RequireSso,
+                OrganizationUserStatus = OrganizationUserStatusType.Accepted
+            }
+        ]);
+
+        Assert.False(actual.SsoRequired);
+    }
+
+    [Theory, BitAutoData]
+    public void SsoRequired_PoliciesInAcceptedStateDisabled_Confirmed_ReturnsTrue(
+        SutProvider<RequireSsoPolicyRequirementFactory> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState)
+            .Returns(false);
+
+        var actual = sutProvider.Sut.Create(
+        [
+            new PolicyDetails
+            {
+                PolicyType = PolicyType.RequireSso,
+                OrganizationUserStatus = OrganizationUserStatusType.Confirmed
             }
         ]);
 
