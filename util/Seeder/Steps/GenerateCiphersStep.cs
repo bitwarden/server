@@ -27,7 +27,8 @@ internal sealed class GenerateCiphersStep(
     Distribution<CipherType>? typeDist = null,
     Distribution<PasswordStrength>? pwDist = null,
     bool assignFolders = false,
-    DensityProfile? density = null) : IStep
+    DensityProfile? density = null,
+    int repromptEveryNthCipher = 0) : IStep
 {
     private readonly DensityProfile? _density = density;
 
@@ -57,7 +58,10 @@ internal sealed class GenerateCiphersStep(
         for (var i = 0; i < count; i++)
         {
             var cipherType = typeDistribution.Select(i, count);
-            var cipher = CipherComposer.Compose(i, cipherType, orgKey, companies, generator, passwordDistribution, organizationId: orgId);
+            var reprompt = repromptEveryNthCipher > 0 && i % repromptEveryNthCipher == 0
+                ? CipherRepromptType.Password
+                : CipherRepromptType.None;
+            var cipher = CipherComposer.Compose(i, cipherType, orgKey, companies, generator, passwordDistribution, organizationId: orgId, reprompt: reprompt);
 
             if (userDigests is { Count: > 0 } && userFolderIds is not null)
             {
