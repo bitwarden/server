@@ -4,7 +4,6 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.Billing.Cache;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
@@ -44,15 +43,14 @@ public class CloudOrganizationSignUpCommand(
     ICollectionRepository collectionRepository,
     IDeviceRepository deviceRepository,
     IPricingClient pricingClient,
-    IPolicyRequirementQuery policyRequirementQuery,
-    ITrialInitiationCache trialInitiationCache) : ICloudOrganizationSignUpCommand
+    IPolicyRequirementQuery policyRequirementQuery) : ICloudOrganizationSignUpCommand
 {
     public async Task<SignUpOrganizationResponse> SignUpOrganizationAsync(OrganizationSignup signup)
     {
         var plan = await pricingClient.GetPlanOrThrow(signup.Plan);
 
         ValidatePasswordManagerPlan(plan, signup);
-        await ValidateTrialLengthAsync(signup);
+        ValidateTrialLength(signup);
 
         if (signup.UseSecretsManager)
         {
@@ -347,27 +345,11 @@ public class CloudOrganizationSignUpCommand(
             .Select(d => d.Id.ToString());
     }
 
-    private async Task ValidateTrialLengthAsync(OrganizationSignup signup)
+    private static void ValidateTrialLength(OrganizationSignup signup)
     {
-        if (signup.TrialLength is null)
+        if (signup.TrialLength is < 0 or > 30)
         {
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(signup.TrialInitiationId))
-        {
-            throw new BadRequestException("A trial initiation ID is required when specifying a trial length.");
-        }
-
-        var cachedLength = await trialInitiationCache.GetAndRemoveAsync(signup.TrialInitiationId);
-        if (cachedLength is null)
-        {
-            throw new BadRequestException("Trial initiation has expired or is invalid. Please restart the trial flow.");
-        }
-
-        if (cachedLength != signup.TrialLength.Value)
-        {
-            throw new BadRequestException("Trial length does not match the original trial invitation.");
+            throw new BadRequestException("Trial length must be between 0 and 30 days.");
         }
     }
 }
