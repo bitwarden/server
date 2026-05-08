@@ -20,7 +20,7 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.Upda
 public class UpdateUserResetPasswordEnrollmentCommandTests
 {
     [Theory, BitAutoData]
-    public async Task UpdateUserResetPasswordEnrollmentAsync_WhenKeyIsProvided_EnrollsUserAndLogsEnrollEvent(
+    public async Task UpdateUserResetPasswordEnrollmentAsync_WhenKeyIsProvided_EnrollsUser(
         Guid organizationId, Guid callingUserId, string resetPasswordKey,
         OrganizationUser orgUser, Organization org,
         SutProvider<UpdateUserResetPasswordEnrollmentCommand> sutProvider)
@@ -36,7 +36,7 @@ public class UpdateUserResetPasswordEnrollmentCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateUserResetPasswordEnrollmentAsync_WhenKeyIsNull_WithdrawsUserAndLogsWithdrawEvent(
+    public async Task UpdateUserResetPasswordEnrollmentAsync_WhenKeyIsNull_WithdrawsUser(
         Guid organizationId, Guid callingUserId,
         OrganizationUser orgUser, Organization org,
         SutProvider<UpdateUserResetPasswordEnrollmentCommand> sutProvider)
@@ -52,7 +52,7 @@ public class UpdateUserResetPasswordEnrollmentCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateUserResetPasswordEnrollmentAsync_WhenOrgUserNotFound_ThrowsBadRequest(
+    public async Task UpdateUserResetPasswordEnrollmentAsync_WhenUserNotFound_ThrowsBadRequest(
         Guid organizationId, Guid callingUserId, string resetPasswordKey,
         SutProvider<UpdateUserResetPasswordEnrollmentCommand> sutProvider)
     {
@@ -86,20 +86,15 @@ public class UpdateUserResetPasswordEnrollmentCommandTests
         Assert.Contains("User not valid.", exception.Message);
     }
 
-    [Theory]
-    [BitAutoData(true)]   // orgUser.UserId != callingUserId
-    [BitAutoData(false)]  // orgUser.OrganizationId != organizationId
-    public async Task UpdateUserResetPasswordEnrollmentAsync_WhenUserOrOrgIdDoesNotMatch_ThrowsBadRequest(
-        bool mismatchUserId, Guid organizationId, Guid callingUserId, string resetPasswordKey,
+    [Theory, BitAutoData]
+    public async Task UpdateUserResetPasswordEnrollmentAsync_WhenUserIdMismatch_ThrowsBadRequest(
+        Guid organizationId, Guid callingUserId, string resetPasswordKey,
         OrganizationUser orgUser,
         SutProvider<UpdateUserResetPasswordEnrollmentCommand> sutProvider)
     {
-        orgUser.UserId = mismatchUserId ? Guid.NewGuid() : callingUserId;
-        orgUser.OrganizationId = mismatchUserId ? organizationId : Guid.NewGuid();
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationAsync(organizationId, callingUserId)
-            .Returns(orgUser);
+        orgUser.UserId = Guid.NewGuid();
+        orgUser.OrganizationId = organizationId;
+        SetupOrgUser(sutProvider, organizationId, callingUserId, orgUser);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.UpdateUserResetPasswordEnrollmentAsync(
@@ -108,25 +103,58 @@ public class UpdateUserResetPasswordEnrollmentCommandTests
         Assert.Contains("User not valid.", exception.Message);
     }
 
-    [Theory]
-    [BitAutoData(true)]   // org is null
-    [BitAutoData(false)]  // org.UseResetPassword = false
-    public async Task UpdateUserResetPasswordEnrollmentAsync_WhenOrgCannotUseResetPassword_ThrowsBadRequest(
-        bool orgIsNull, Guid organizationId, Guid callingUserId, string resetPasswordKey,
+    [Theory, BitAutoData]
+    public async Task UpdateUserResetPasswordEnrollmentAsync_WhenOrganizationIdMismatch_ThrowsBadRequest(
+        Guid organizationId, Guid callingUserId, string resetPasswordKey,
+        OrganizationUser orgUser,
+        SutProvider<UpdateUserResetPasswordEnrollmentCommand> sutProvider)
+    {
+        orgUser.UserId = callingUserId;
+        orgUser.OrganizationId = Guid.NewGuid();
+        SetupOrgUser(sutProvider, organizationId, callingUserId, orgUser);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.UpdateUserResetPasswordEnrollmentAsync(
+                organizationId, callingUserId, resetPasswordKey, callingUserId));
+
+        Assert.Contains("User not valid.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateUserResetPasswordEnrollmentAsync_WhenOrganizationNotFound_ThrowsBadRequest(
+        Guid organizationId, Guid callingUserId, string resetPasswordKey,
+        OrganizationUser orgUser,
+        SutProvider<UpdateUserResetPasswordEnrollmentCommand> sutProvider)
+    {
+        orgUser.UserId = callingUserId;
+        orgUser.OrganizationId = organizationId;
+        SetupOrgUser(sutProvider, organizationId, callingUserId, orgUser);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organizationId)
+            .Returns((Organization)null);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.UpdateUserResetPasswordEnrollmentAsync(
+                organizationId, callingUserId, resetPasswordKey, callingUserId));
+
+        Assert.Contains("Organization does not allow password reset enrollment.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateUserResetPasswordEnrollmentAsync_WhenOrgDoesNotUseResetPassword_ThrowsBadRequest(
+        Guid organizationId, Guid callingUserId, string resetPasswordKey,
         OrganizationUser orgUser, Organization org,
         SutProvider<UpdateUserResetPasswordEnrollmentCommand> sutProvider)
     {
         orgUser.UserId = callingUserId;
         orgUser.OrganizationId = organizationId;
         org.UseResetPassword = false;
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationAsync(organizationId, callingUserId)
-            .Returns(orgUser);
+        SetupOrgUser(sutProvider, organizationId, callingUserId, orgUser);
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organizationId)
-            .Returns(orgIsNull ? null : org);
+            .Returns(org);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.UpdateUserResetPasswordEnrollmentAsync(
@@ -179,6 +207,15 @@ public class UpdateUserResetPasswordEnrollmentCommandTests
                 organizationId, callingUserId, null, callingUserId));
 
         Assert.Contains("Due to an Enterprise Policy, you are not allowed to withdraw from account recovery.", exception.Message);
+    }
+
+    private static void SetupOrgUser(
+        SutProvider<UpdateUserResetPasswordEnrollmentCommand> sutProvider,
+        Guid organizationId, Guid callingUserId, OrganizationUser orgUser)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organizationId, callingUserId)
+            .Returns(orgUser);
     }
 
     private static void SetupValidRequest(
