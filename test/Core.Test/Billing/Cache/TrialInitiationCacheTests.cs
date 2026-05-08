@@ -1,7 +1,6 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text;
 using Bit.Core.Billing.Cache;
-using Bit.Core.Exceptions;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Caching.Distributed;
@@ -30,7 +29,7 @@ public class TrialInitiationCacheTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateTrialLengthAsync_MatchingValue_RemovesEntry(
+    public async Task GetAndRemoveAsync_CacheHit_ReturnsValueAndRemovesEntry(
         string trialInitiationId, int trialLength,
         SutProvider<TrialInitiationCache> sutProvider)
     {
@@ -39,42 +38,26 @@ public class TrialInitiationCacheTests
             .GetAsync($"trial-initiation:{trialInitiationId}")
             .Returns(cached);
 
-        await sutProvider.Sut.ValidateTrialLengthAsync(trialInitiationId, trialLength);
+        var result = await sutProvider.Sut.GetAndRemoveAsync(trialInitiationId);
 
+        Assert.Equal(trialLength, result);
         await sutProvider.GetDependency<IDistributedCache>()
             .Received(1)
             .RemoveAsync($"trial-initiation:{trialInitiationId}");
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateTrialLengthAsync_MismatchedValue_ThrowsBadRequestException(
+    public async Task GetAndRemoveAsync_CacheMiss_ReturnsNull(
         string trialInitiationId,
-        SutProvider<TrialInitiationCache> sutProvider)
-    {
-        var cached = Encoding.UTF8.GetBytes("14");
-        sutProvider.GetDependency<IDistributedCache>()
-            .GetAsync($"trial-initiation:{trialInitiationId}")
-            .Returns(cached);
-
-        await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ValidateTrialLengthAsync(trialInitiationId, 7));
-
-        await sutProvider.GetDependency<IDistributedCache>()
-            .DidNotReceive()
-            .RemoveAsync(Arg.Any<string>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateTrialLengthAsync_CacheMiss_DoesNotThrow(
-        string trialInitiationId, int trialLength,
         SutProvider<TrialInitiationCache> sutProvider)
     {
         sutProvider.GetDependency<IDistributedCache>()
             .GetAsync($"trial-initiation:{trialInitiationId}")
             .Returns((byte[])null);
 
-        await sutProvider.Sut.ValidateTrialLengthAsync(trialInitiationId, trialLength);
+        var result = await sutProvider.Sut.GetAndRemoveAsync(trialInitiationId);
 
+        Assert.Null(result);
         await sutProvider.GetDependency<IDistributedCache>()
             .DidNotReceive()
             .RemoveAsync(Arg.Any<string>());
