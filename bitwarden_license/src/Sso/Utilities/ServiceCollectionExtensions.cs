@@ -53,6 +53,7 @@ public static class ServiceCollectionExtensions
             .AddIdentityServer(options =>
             {
                 options.LicenseKey = globalSettings.IdentityServer.LicenseKey;
+                options.Endpoints.EnablePushedAuthorizationEndpoint = false;
                 options.IssuerUri = $"{issuerUri.Scheme}://{issuerUri.Host}";
                 if (env.IsDevelopment())
                 {

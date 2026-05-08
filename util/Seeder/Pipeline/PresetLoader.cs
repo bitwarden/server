@@ -99,7 +99,7 @@ internal static class PresetLoader
 
         if (org.Fixture is not null)
         {
-            builder.UseOrganization(org.Fixture, org.PlanType, org.Seats);
+            builder.UseOrganization(org.Fixture, org.PlanType, org.Seats, ToOverrides(org));
 
             // If using a fixture and domain not explicitly provided, read it from the fixture
             if (domain is null)
@@ -111,7 +111,7 @@ internal static class PresetLoader
         else if (org.Name is not null && org.Domain is not null)
         {
             var planType = PlanFeatures.Parse(org.PlanType);
-            builder.CreateOrganization(org.Name, org.Domain, org.Seats, planType);
+            builder.CreateOrganization(org.Name, org.Domain, org.Seats, planType, ToOverrides(org));
             domain = org.Domain;
         }
 
@@ -197,6 +197,15 @@ internal static class PresetLoader
 
         builder.Validate();
     }
+
+    private static OrganizationOverrides ToOverrides(SeedPresetOrganization org) => new()
+    {
+        UseAutomaticUserConfirmation = org.UseAutomaticUserConfirmation,
+        AllowAdminAccessToAllCollectionItems = org.AllowAdminAccessToAllCollectionItems,
+        LimitItemDeletion = org.LimitItemDeletion,
+        LimitCollectionCreation = org.LimitCollectionCreation,
+        LimitCollectionDeletion = org.LimitCollectionDeletion,
+    };
 
     private static DensityProfile? ParseDensity(SeedPresetDensity? preset)
     {

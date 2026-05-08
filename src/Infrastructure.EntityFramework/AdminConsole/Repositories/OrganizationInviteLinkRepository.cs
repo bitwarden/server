@@ -36,4 +36,22 @@ public class OrganizationInviteLinkRepository
             .FirstOrDefaultAsync(e => e.OrganizationId == organizationId);
         return Mapper.Map<AdminConsoleEntities.OrganizationInviteLink>(result);
     }
+
+    public async Task RefreshAsync(
+        AdminConsoleEntities.OrganizationInviteLink oldLink,
+        AdminConsoleEntities.OrganizationInviteLink newLink)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        await dbContext.OrganizationInviteLinks
+            .Where(e => e.Id == oldLink.Id)
+            .ExecuteDeleteAsync();
+
+        var efNew = Mapper.Map<OrganizationInviteLink>(newLink);
+        await dbContext.OrganizationInviteLinks.AddAsync(efNew);
+        await dbContext.SaveChangesAsync();
+        await transaction.CommitAsync();
+    }
 }

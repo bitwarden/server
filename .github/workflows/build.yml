@@ -545,19 +545,3 @@ jobs:
           azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
           task: deploy-server-dev
           description: "Triggered by server build on main"
-
-  setup-ephemeral-environment:
-    name: Setup Ephemeral Environment
-    needs: build-artifacts
-    if: |
-      needs.build-artifacts.outputs.has_secrets == 'true'
-      && github.event_name == 'pull_request'
-      && contains(github.event.pull_request.labels.*.name, 'ephemeral-environment')
-    uses: bitwarden/gh-actions/.github/workflows/_ephemeral_environment_manager.yml@main
-    with:
-      project: server
-      pull_request_number: ${{ github.event.number || 0 }}
-    secrets: inherit
-    permissions:
-      contents: read
-      id-token: write
