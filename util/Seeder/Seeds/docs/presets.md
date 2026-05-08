@@ -6,9 +6,9 @@ Complete catalog of all seeder presets, organized by purpose. Use `--mangle` to 
 
 These options apply to any preset that uses generated (count-based) ciphers — QA, Scale, and Individual alike. Add them to the `"ciphers"` or `"personalCiphers"` block in the preset JSON. Schema reference: `Seeds/schemas/preset.schema.json`.
 
-| Knob                     | Type    | Default | Description                                                                                                                                                                                                                     |
-| ------------------------ | ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `repromptEveryNthCipher` | integer | 0       | Set `Reprompt=Password` on every Nth generated cipher. `0` = disabled. Example: `5` flags ciphers at indices 0, 5, 10, … ≈ 20% reprompt rate. **SQL Server only** — non-SQL-Server providers log a warning and skip the column. |
+| Knob                     | Type    | Default | Description                                                                                                                                   |
+| ------------------------ | ------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `repromptEveryNthCipher` | integer | 0       | Set `Reprompt=Password` on every Nth generated cipher. `0` = disabled. Example: `5` flags ciphers at indices 0, 5, 10, … ≈ 20% reprompt rate. |
 
 ## Features
 
