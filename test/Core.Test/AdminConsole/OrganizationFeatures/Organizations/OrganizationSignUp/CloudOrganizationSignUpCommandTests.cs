@@ -370,26 +370,34 @@ public class CloudICloudOrganizationSignUpCommandTests
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).CreateAsync(Arg.Any<Organization>());
     }
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData(PlanType.FamiliesAnnually)]
     public async Task SignUpOrganizationAsync_WithTrialLengthAboveMaximum_ThrowsBadRequestException(
-        OrganizationSignup signup,
+        PlanType planType, OrganizationSignup signup,
         SutProvider<CloudOrganizationSignUpCommand> sutProvider)
     {
+        signup.Plan = planType;
         signup.TrialLength = 31;
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
 
-        await Assert.ThrowsAsync<BadRequestException>(
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
+        Assert.Equal("Trial length must be between 0 and 30 days.", ex.Message);
     }
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData(PlanType.FamiliesAnnually)]
     public async Task SignUpOrganizationAsync_WithNegativeTrialLength_ThrowsBadRequestException(
-        OrganizationSignup signup,
+        PlanType planType, OrganizationSignup signup,
         SutProvider<CloudOrganizationSignUpCommand> sutProvider)
     {
+        signup.Plan = planType;
         signup.TrialLength = -1;
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
 
-        await Assert.ThrowsAsync<BadRequestException>(
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
+        Assert.Equal("Trial length must be between 0 and 30 days.", ex.Message);
     }
 
     [Theory]
