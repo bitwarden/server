@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
+
 public interface IOnPolicyPostUpdateEvent : IPolicyUpdateEvent
 {
     /// <summary>

@@ -1080,7 +1080,8 @@ public class UserService : UserManager<User>, IUserService
                                 OrganizationId = o.OrganizationId
                             }
                         ],
-                        new SystemUser(EventSystemUser.TwoFactorDisabled)));
+                        new SystemUser(EventSystemUser.TwoFactorDisabled),
+                        RevocationReason.TwoFactorPolicyNonCompliance));
                 await _mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(),
                     user.Email);
             }).ToArray();
