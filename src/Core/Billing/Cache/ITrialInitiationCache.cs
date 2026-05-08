@@ -1,9 +1,8 @@
-﻿namespace Bit.Core.Billing.Cache;
+namespace Bit.Core.Billing.Cache;
 
 /// <summary>
 /// Short-lived cache (15-minute TTL) that binds a trial length to a unique ID issued when a trial
-/// initiation email is sent. Entries are removed after successful validation to enforce single use.
-/// A cache miss is treated as a no-op (non-trial-email signup path).
+/// initiation email is sent. Entries are removed on retrieval to enforce single use.
 /// </summary>
 public interface ITrialInitiationCache
 {
@@ -11,8 +10,7 @@ public interface ITrialInitiationCache
     Task WriteAsync(string trialInitiationId, int trialLength);
 
     /// <summary>
-    /// Confirms <paramref name="requestedTrialLength"/> matches the cached value and removes the entry.
-    /// Throws <see cref="Bit.Core.Exceptions.BadRequestException"/> on a mismatch.
+    /// Returns the cached trial length and removes the entry, or <c>null</c> if no entry exists.
     /// </summary>
-    Task ValidateTrialLengthAsync(string trialInitiationId, int requestedTrialLength);
+    Task<int?> GetAndRemoveAsync(string trialInitiationId);
 }

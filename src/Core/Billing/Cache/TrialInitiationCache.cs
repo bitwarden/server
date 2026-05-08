@@ -1,6 +1,5 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text;
-using Bit.Core.Exceptions;
 using Microsoft.Extensions.Caching.Distributed;
 
 namespace Bit.Core.Billing.Cache;
@@ -18,21 +17,16 @@ public class TrialInitiationCache(IDistributedCache cache) : ITrialInitiationCac
         await cache.SetAsync(CacheKey(trialInitiationId), value, _cacheOptions);
     }
 
-    public async Task ValidateTrialLengthAsync(string trialInitiationId, int requestedTrialLength)
+    public async Task<int?> GetAndRemoveAsync(string trialInitiationId)
     {
         var cached = await cache.GetAsync(CacheKey(trialInitiationId));
         if (cached is null)
         {
-            return;
-        }
-
-        var cachedTrialLength = int.Parse(Encoding.UTF8.GetString(cached), CultureInfo.InvariantCulture);
-        if (cachedTrialLength != requestedTrialLength)
-        {
-            throw new BadRequestException("Trial length does not match the original trial invitation.");
+            return null;
         }
 
         await cache.RemoveAsync(CacheKey(trialInitiationId));
+        return int.Parse(Encoding.UTF8.GetString(cached), CultureInfo.InvariantCulture);
     }
 
     private static string CacheKey(string trialInitiationId) => $"trial-initiation:{trialInitiationId}";
