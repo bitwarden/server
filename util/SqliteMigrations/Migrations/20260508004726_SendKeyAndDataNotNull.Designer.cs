@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260320004726_SendKeyAndDataNotNull")]
+    [Migration("20260508004726_SendKeyAndDataNotNull")]
     partial class SendKeyAndDataNotNull
     {
         /// <inheritdoc />

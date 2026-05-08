@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260320004721_SendKeyAndDataNotNull")]
+    [Migration("20260508004721_SendKeyAndDataNotNull")]
     partial class SendKeyAndDataNotNull
     {
         /// <inheritdoc />
