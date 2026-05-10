@@ -7,6 +7,8 @@ using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Implementations;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Auth.UserFeatures.UserEmail;
+using Bit.Core.Auth.UserFeatures.UserEmail.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
@@ -33,6 +35,7 @@ public static class UserServiceCollectionExtensions
         services.AddTdeOffboardingPasswordCommands();
         services.AddTwoFactorCommandsQueries();
         services.AddSsoQueries();
+        services.AddUserEmailCommands();
     }
 
     private static void AddEmergencyAccessCommands(this IServiceCollection services)
@@ -87,5 +90,10 @@ public static class UserServiceCollectionExtensions
     private static void AddSsoQueries(this IServiceCollection services)
     {
         services.AddScoped<IUserSsoOrganizationIdentifierQuery, UserSsoOrganizationIdentifierQuery>();
+    }
+
+    private static void AddUserEmailCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IChangeEmailCommand, ChangeEmailCommand>();
     }
 }

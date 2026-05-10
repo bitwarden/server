@@ -85,6 +85,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IAdminRecoverAccountCommand _adminRecoverAccountCommand;
     private readonly AccountRecoveryV2.IAdminRecoverAccountCommand _adminRecoverAccountCommandV2;
     private readonly ISelfRevokeOrganizationUserCommand _selfRevokeOrganizationUserCommand;
+    private readonly IChangeEmailForPasswordlessOrgUserCommand _changeEmailForPasswordlessOrgUserCommand;
+    private readonly IBulkChangeEmailForPasswordlessOrgUserCommand _bulkChangeEmailForPasswordlessOrgUserCommand;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -117,7 +119,9 @@ public class OrganizationUsersController : BaseAdminConsoleController
         AccountRecoveryV2.IAdminRecoverAccountCommand adminRecoverAccountCommandV2,
         IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand,
         V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext,
-        ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand)
+        ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand,
+        IChangeEmailForPasswordlessOrgUserCommand changeEmailForPasswordlessOrgUserCommand,
+        IBulkChangeEmailForPasswordlessOrgUserCommand bulkChangeEmailForPasswordlessOrgUserCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -151,6 +155,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _adminRecoverAccountCommand = adminRecoverAccountCommand;
         _adminRecoverAccountCommandV2 = adminRecoverAccountCommandV2;
         _selfRevokeOrganizationUserCommand = selfRevokeOrganizationUserCommand;
+        _changeEmailForPasswordlessOrgUserCommand = changeEmailForPasswordlessOrgUserCommand;
+        _bulkChangeEmailForPasswordlessOrgUserCommand = bulkChangeEmailForPasswordlessOrgUserCommand;
     }
 
     [HttpGet("{id}")]
@@ -547,6 +553,44 @@ public class OrganizationUsersController : BaseAdminConsoleController
         return TypedResults.BadRequest(ModelState);
     }
 #nullable disable
+
+    /// <summary>
+    /// This is an example of how it should be used. This work should be done by AC and the purpose of this code is to
+    /// just flush out the contracts for how this endpoint will be used.
+    /// </summary>
+    /// <param name="orgId"></param>
+    /// <param name="id"></param>
+    /// <param name="model"></param>
+    /// <returns></returns>
+    [HttpPut("{id}/changeEmailForPasswordlessUser")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<IResult> ChangeEmailForPasswordlessUser(
+        Guid orgId, Guid id,
+        [FromBody] OrganizationUserChangeEmailRequestModel model)
+    {
+        var targetOrganizationUser = await _organizationUserRepository.GetByIdAsync(id);
+        if (targetOrganizationUser == null || targetOrganizationUser.OrganizationId != orgId)
+        {
+            return TypedResults.NotFound();
+        }
+
+        await _changeEmailForPasswordlessOrgUserCommand.ChangeOrganizationUserEmailAsync(orgId, targetOrganizationUser, model.NewEmail);
+        return TypedResults.NoContent();
+    }
+
+    [HttpPost("bulk-change-email-for-passwordless-user")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkChangeEmailForPasswordlessUser(
+        Guid orgId,
+        [FromBody] OrganizationUserBulkChangeEmailRequestModel model)
+    {
+        var requests = model.Requests.Select(r => (r.Id, r.NewEmail));
+        var results = await _bulkChangeEmailForPasswordlessOrgUserCommand
+            .BulkChangeOrganizationUserEmailAsync(orgId, requests);
+
+        return new ListResponseModel<OrganizationUserBulkResponseModel>(
+            results.Select(r => new OrganizationUserBulkResponseModel(r.OrganizationUserId, r.ErrorMessage)));
+    }
 
     [HttpDelete("{id}")]
     [Authorize<ManageUsersRequirement>]
