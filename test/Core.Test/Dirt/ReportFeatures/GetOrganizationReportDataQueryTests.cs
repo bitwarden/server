@@ -24,6 +24,7 @@ public class GetOrganizationReportDataQueryTests
         var organizationId = fixture.Create<Guid>();
         var reportId = fixture.Create<Guid>();
         var reportDataResponse = fixture.Build<OrganizationReportDataResponse>()
+            .With(x => x.OrganizationId, organizationId)
             .Create();
 
         sutProvider.GetDependency<IOrganizationReportRepository>()
@@ -112,5 +113,27 @@ public class GetOrganizationReportDataQueryTests
             await sutProvider.Sut.GetOrganizationReportDataAsync(organizationId, reportId));
 
         Assert.Equal(expectedMessage, exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetOrganizationReportDataAsync_WithInvalidOrganizationId_ShouldThrowNotFoundException(
+        SutProvider<GetOrganizationReportDataQuery> sutProvider)
+    {
+        // Arrange
+        var fixture = new Fixture();
+        var organizationId = fixture.Create<Guid>();
+        var reportId = fixture.Create<Guid>();
+        var reportDataResponse = fixture.Build<OrganizationReportDataResponse>()
+            .With(x => x.OrganizationId, Guid.NewGuid())
+            .Create();
+
+        sutProvider.GetDependency<IOrganizationReportRepository>()
+            .GetReportDataAsync(reportId)
+            .Returns(reportDataResponse);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<NotFoundException>(async () =>
+            await sutProvider.Sut.GetOrganizationReportDataAsync(organizationId, reportId));
     }
 }

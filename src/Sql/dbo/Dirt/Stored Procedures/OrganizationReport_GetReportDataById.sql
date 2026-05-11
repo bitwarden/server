@@ -5,7 +5,10 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT
-        [ReportData]
+        [OrganizationId],
+        [ReportData],
+        [ContentEncryptionKey],
+        [RevisionDate]
     FROM [dbo].[OrganizationReportView]
     WHERE [Id] = @Id
 END

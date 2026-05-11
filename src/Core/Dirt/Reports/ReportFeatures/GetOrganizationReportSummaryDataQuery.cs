@@ -40,7 +40,7 @@ public class GetOrganizationReportSummaryDataQuery : IGetOrganizationReportSumma
 
             var summaryDataResponse = await _organizationReportRepo.GetSummaryDataAsync(reportId);
 
-            if (summaryDataResponse == null)
+            if (summaryDataResponse == null || summaryDataResponse.OrganizationId != organizationId)
             {
                 _logger.LogWarning(Constants.BypassFiltersEventId, "No summary data found for organization {organizationId} and report {reportId}",
                     organizationId, reportId);

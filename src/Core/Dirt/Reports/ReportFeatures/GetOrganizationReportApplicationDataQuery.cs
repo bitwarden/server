@@ -40,7 +40,7 @@ public class GetOrganizationReportApplicationDataQuery : IGetOrganizationReportA
 
             var applicationDataResponse = await _organizationReportRepo.GetApplicationDataAsync(reportId);
 
-            if (applicationDataResponse == null)
+            if (applicationDataResponse == null || applicationDataResponse.OrganizationId != organizationId)
             {
                 _logger.LogWarning(Constants.BypassFiltersEventId, "No application data found for organization {organizationId} and report {reportId}",
                     organizationId, reportId);

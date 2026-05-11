@@ -118,7 +118,10 @@ public class OrganizationReportRepository :
                 .Where(p => p.Id == reportId)
                 .Select(p => new OrganizationReportDataResponse
                 {
-                    ReportData = p.ReportData
+                    OrganizationId = p.OrganizationId,
+                    ContentEncryptionKey = p.ContentEncryptionKey,
+                    ReportData = p.ReportData,
+                    RevisionDate = p.RevisionDate
                 })
                 .FirstOrDefaultAsync();
 
@@ -160,7 +163,10 @@ public class OrganizationReportRepository :
                 .Where(p => p.Id == reportId)
                 .Select(p => new OrganizationReportApplicationDataResponse
                 {
-                    ApplicationData = p.ApplicationData
+                    OrganizationId = p.OrganizationId,
+                    ContentEncryptionKey = p.ContentEncryptionKey,
+                    ApplicationData = p.ApplicationData,
+                    RevisionDate = p.RevisionDate
                 })
                 .FirstOrDefaultAsync();
 

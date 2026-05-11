@@ -40,7 +40,7 @@ public class GetOrganizationReportDataQuery : IGetOrganizationReportDataQuery
 
             var reportDataResponse = await _organizationReportRepo.GetReportDataAsync(reportId);
 
-            if (reportDataResponse == null)
+            if (reportDataResponse == null || reportDataResponse.OrganizationId != organizationId)
             {
                 _logger.LogWarning(Constants.BypassFiltersEventId, "No report data found for organization {organizationId} and report {reportId}",
                     organizationId, reportId);
