@@ -19,7 +19,6 @@ using Bit.Core.Test.Billing.Mocks.Plans;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using NSubstitute;
-using NSubstitute.ExceptionExtensions;
 using NSubstitute.ReturnsExtensions;
 using Stripe;
 using Xunit;
@@ -67,11 +66,6 @@ public class SubscriptionUpdatedHandlerTests
         _pushNotificationAdapter = Substitute.For<IPushNotificationAdapter>();
         _priceIncreaseScheduler = Substitute.For<IPriceIncreaseScheduler>();
         _featureService = Substitute.For<IFeatureService>();
-
-        // Default to "no open invoices" so existing tests that flow through the void loop
-        // (e.g. unpaid-subscription tests) don't NRE. Tests exercising voiding override this.
-        _stripeAdapter.ListInvoicesAsync(Arg.Any<StripeInvoiceListOptions>())
-            .Returns(new List<Invoice>());
 
         _sut = new SubscriptionUpdatedHandler(
             _stripeEventService,
@@ -648,11 +642,8 @@ public class SubscriptionUpdatedHandlerTests
                 options.CancellationDetails.Comment != null));
         await _stripeAdapter.DidNotReceive()
             .CancelSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
-        await _stripeAdapter.Received(1)
-            .ListInvoicesAsync(Arg.Is<StripeInvoiceListOptions>(o =>
-                o.Subscription == subscriptionId &&
-                o.Status == InvoiceStatus.Open &&
-                o.SelectAll));
+        await _stripeAdapter.DidNotReceive()
+            .ListInvoicesAsync(Arg.Any<StripeInvoiceListOptions>());
     }
 
     [Fact]
@@ -1945,11 +1936,13 @@ public class SubscriptionUpdatedHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_UnpaidOrganizationSubscription_VoidsAllOpenInvoices()
+    public async Task HandleAsync_UnpaidOrganizationSubscription_StampsCancellationOriginMetadata()
     {
-        // Arrange
+        // The metadata stamp is the sole signal SubscriptionDeletedHandler uses to recognize
+        // that the eventual customer.subscription.deleted came from the platform-managed
+        // unpaid lifecycle and should void open invoices.
         var organizationId = Guid.NewGuid();
-        const string subscriptionId = "sub_void_unpaid";
+        const string subscriptionId = "sub_metadata_stamp";
 
         var previousSubscription = new Subscription
         {
@@ -1970,7 +1963,7 @@ public class SubscriptionUpdatedHandlerTests
 
         var parsedEvent = new Event
         {
-            Id = "evt_unpaid_void",
+            Id = "evt_metadata_stamp",
             Data = new EventData
             {
                 Object = subscription,
@@ -1980,195 +1973,33 @@ public class SubscriptionUpdatedHandlerTests
 
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
-        _stripeAdapter.ListInvoicesAsync(Arg.Is<StripeInvoiceListOptions>(o =>
-                o.Subscription == subscriptionId &&
-                o.Status == InvoiceStatus.Open &&
-                o.SelectAll))
-            .Returns(new List<Invoice>
-            {
-                new() { Id = "in_001" },
-                new() { Id = "in_002" }
-            });
 
         // Act
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        await _stripeAdapter.Received(1).VoidInvoiceAsync("in_001");
-        await _stripeAdapter.Received(1).VoidInvoiceAsync("in_002");
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            subscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.Metadata != null &&
+                options.Metadata.ContainsKey(MetadataKeys.CancellationOrigin) &&
+                options.Metadata[MetadataKeys.CancellationOrigin] == CancellationOrigins.UnpaidSubscription));
     }
 
     [Fact]
-    public async Task HandleAsync_UnpaidOrganizationSubscription_VoidInvoiceThrows_ContinuesWithRemainingInvoices()
+    public async Task HandleAsync_ActiveFromUnpaidSubscription_ClearsCancellationOriginMetadata()
     {
-        // Arrange — webhook re-delivery against an already-voided invoice is the most likely
-        // cause of a per-invoice failure. The loop should continue rather than abandon the rest.
+        // When the customer pays and the subscription recovers, the marker must be removed
+        // so a future voluntary cancel doesn't trigger an unwanted invoice void.
+        // Stripe removes a metadata key when its value is set to empty string.
         var organizationId = Guid.NewGuid();
-        const string subscriptionId = "sub_void_failure";
-
-        var previousSubscription = new Subscription
-        {
-            Id = subscriptionId,
-            Status = SubscriptionStatus.Active
-        };
-        var subscription = new Subscription
-        {
-            Id = subscriptionId,
-            Status = SubscriptionStatus.Unpaid,
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data = [new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(30) }]
-            },
-            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
-            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
-        };
-
-        var parsedEvent = new Event
-        {
-            Id = "evt_void_failure",
-            Data = new EventData
-            {
-                Object = subscription,
-                PreviousAttributes = JObject.FromObject(previousSubscription)
-            }
-        };
-
-        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
-            .Returns(subscription);
-        _stripeAdapter.ListInvoicesAsync(Arg.Any<StripeInvoiceListOptions>())
-            .Returns(new List<Invoice>
-            {
-                new() { Id = "in_already_voided" },
-                new() { Id = "in_still_open" }
-            });
-        _stripeAdapter.VoidInvoiceAsync("in_already_voided")
-            .Throws(new StripeException("Invoice cannot be voided"));
-
-        // Act
-        await _sut.HandleAsync(parsedEvent);
-
-        // Assert
-        await _stripeAdapter.Received(1).VoidInvoiceAsync("in_already_voided");
-        await _stripeAdapter.Received(1).VoidInvoiceAsync("in_still_open");
-    }
-
-    [Fact]
-    public async Task HandleAsync_UnpaidOrganizationSubscription_VoidInvoiceThrowsTransportError_ContinuesWithRemainingInvoices()
-    {
-        // Arrange — non-Stripe exceptions (HttpRequestException from a socket reset,
-        // TaskCanceledException from an SDK timeout, etc.) must also not abandon the loop.
-        var organizationId = Guid.NewGuid();
-        const string subscriptionId = "sub_transport_failure";
-
-        var previousSubscription = new Subscription
-        {
-            Id = subscriptionId,
-            Status = SubscriptionStatus.Active
-        };
-        var subscription = new Subscription
-        {
-            Id = subscriptionId,
-            Status = SubscriptionStatus.Unpaid,
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data = [new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(30) }]
-            },
-            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
-            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
-        };
-
-        var parsedEvent = new Event
-        {
-            Id = "evt_transport_failure",
-            Data = new EventData
-            {
-                Object = subscription,
-                PreviousAttributes = JObject.FromObject(previousSubscription)
-            }
-        };
-
-        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
-            .Returns(subscription);
-        _stripeAdapter.ListInvoicesAsync(Arg.Any<StripeInvoiceListOptions>())
-            .Returns(new List<Invoice>
-            {
-                new() { Id = "in_transport_fail" },
-                new() { Id = "in_recovers" }
-            });
-        _stripeAdapter.VoidInvoiceAsync("in_transport_fail")
-            .Throws(new HttpRequestException("Connection reset"));
-
-        // Act
-        await _sut.HandleAsync(parsedEvent);
-
-        // Assert — both VoidInvoice calls happened despite the first throwing a non-Stripe exception.
-        await _stripeAdapter.Received(1).VoidInvoiceAsync("in_transport_fail");
-        await _stripeAdapter.Received(1).VoidInvoiceAsync("in_recovers");
-    }
-
-    [Fact]
-    public async Task HandleAsync_UnpaidOrganizationSubscription_ListInvoicesThrows_DoesNotBlockSubscriberDisable()
-    {
-        // Arrange — a Stripe outage during ListInvoices must not prevent the subscriber-disable
-        // path from running. Voiding is best-effort cleanup; disabling is customer-protective.
-        var organizationId = Guid.NewGuid();
-        const string subscriptionId = "sub_list_failure";
+        const string subscriptionId = "sub_metadata_clear";
         var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
 
         var previousSubscription = new Subscription
         {
             Id = subscriptionId,
-            Status = SubscriptionStatus.Active
-        };
-        var subscription = new Subscription
-        {
-            Id = subscriptionId,
-            Status = SubscriptionStatus.Unpaid,
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data = [new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd }]
-            },
-            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
-            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
-        };
-
-        var parsedEvent = new Event
-        {
-            Id = "evt_list_failure",
-            Data = new EventData
-            {
-                Object = subscription,
-                PreviousAttributes = JObject.FromObject(previousSubscription)
-            }
-        };
-
-        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
-            .Returns(subscription);
-        _stripeAdapter.ListInvoicesAsync(Arg.Any<StripeInvoiceListOptions>())
-            .Throws(new StripeException("Stripe upstream timeout"));
-
-        // Act
-        await _sut.HandleAsync(parsedEvent);
-
-        // Assert
-        await _organizationDisableCommand.Received(1).DisableAsync(organizationId, currentPeriodEnd);
-        await _stripeAdapter.DidNotReceiveWithAnyArgs().VoidInvoiceAsync(default!);
-    }
-
-    [Fact]
-    public async Task HandleAsync_NonUnpaidTransition_DoesNotVoidInvoices()
-    {
-        // Arrange — a subscription update that does NOT match the unpaid predicate (e.g.
-        // a quantity change on an Active subscription) must not trigger the void loop.
-        // This guards the narrow-scoping decision: ops needs open invoices preserved on
-        // cancellations driven outside the platform-managed unpaid lifecycle.
-        var organizationId = Guid.NewGuid();
-        const string subscriptionId = "sub_active_update";
-
-        var previousSubscription = new Subscription
-        {
-            Id = subscriptionId,
-            Status = SubscriptionStatus.Active
+            Status = SubscriptionStatus.Unpaid
         };
         var subscription = new Subscription
         {
@@ -2176,15 +2007,19 @@ public class SubscriptionUpdatedHandlerTests
             Status = SubscriptionStatus.Active,
             Items = new StripeList<SubscriptionItem>
             {
-                Data = [new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(30) }]
+                Data = [new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd, Plan = new Plan { Id = "2023-enterprise-org-seat-annually" } }]
             },
-            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            Metadata = new Dictionary<string, string>
+            {
+                { "organizationId", organizationId.ToString() },
+                { MetadataKeys.CancellationOrigin, CancellationOrigins.UnpaidSubscription }
+            },
             LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
         };
 
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.EnterpriseAnnually2023 };
         var parsedEvent = new Event
         {
-            Id = "evt_non_unpaid",
             Data = new EventData
             {
                 Object = subscription,
@@ -2194,12 +2029,19 @@ public class SubscriptionUpdatedHandlerTests
 
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new Enterprise2023Plan(true));
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert — neither the list nor the void was called.
-        await _stripeAdapter.DidNotReceiveWithAnyArgs().ListInvoicesAsync(default!);
-        await _stripeAdapter.DidNotReceiveWithAnyArgs().VoidInvoiceAsync(default!);
+        // Assert
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            subscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.Metadata != null &&
+                options.Metadata.ContainsKey(MetadataKeys.CancellationOrigin) &&
+                options.Metadata[MetadataKeys.CancellationOrigin] == string.Empty));
     }
 }

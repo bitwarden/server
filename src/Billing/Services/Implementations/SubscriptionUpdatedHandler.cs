@@ -8,7 +8,6 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
-using Bit.Core.Models.BitStripe;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -91,10 +90,6 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         {
             await DisableSubscriberAsync(subscriberId, currentPeriodEnd);
             await SetSubscriptionToCancelAsync(subscription);
-            // Voiding is intentionally scoped to the platform-managed unpaid lifecycle.
-            // Cancellations that arrive through other paths (voluntary, off-platform negotiated,
-            // provider migration) leave open invoices intact for ops to reconcile manually.
-            await VoidOpenInvoicesAsync(subscription.Id, parsedEvent.Id);
         }
         else if (SubscriptionBecameActive(parsedEvent, subscription))
         {
@@ -242,66 +237,16 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             CancellationDetails = new SubscriptionCancellationDetailsOptions
             {
                 Comment = $"Automation: Setting unpaid subscription to cancel 7 days from {now:yyyy-MM-dd}."
+            },
+            // Stamp the origin so SubscriptionDeletedHandler can recognize the eventual
+            // customer.subscription.deleted as the tail of this platform-managed unpaid
+            // lifecycle and void any open invoices. Other cancellation paths (voluntary,
+            // off-platform, provider migration) intentionally do not set this.
+            Metadata = new Dictionary<string, string>
+            {
+                [MetadataKeys.CancellationOrigin] = CancellationOrigins.UnpaidSubscription
             }
         });
-    }
-
-    private async Task VoidOpenInvoicesAsync(string subscriptionId, string eventId)
-    {
-        List<Invoice> openInvoices;
-        try
-        {
-            openInvoices = await _stripeAdapter.ListInvoicesAsync(new StripeInvoiceListOptions
-            {
-                Status = InvoiceStatus.Open,
-                Subscription = subscriptionId,
-                SelectAll = true
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex,
-                "Failed to list open invoices for unpaid subscription ({SubscriptionID}) [event: {EventID}]; void cleanup skipped",
-                subscriptionId, eventId);
-            return;
-        }
-
-        foreach (var invoice in openInvoices)
-        {
-            await TryVoidInvoiceAsync(invoice.Id, subscriptionId, eventId);
-        }
-
-        _logger.LogInformation(
-            "Void cleanup completed for unpaid subscription ({SubscriptionID}) [event: {EventID}]: attempted {Count} open invoice(s)",
-            subscriptionId, eventId, openInvoices.Count);
-    }
-
-    private async Task TryVoidInvoiceAsync(string invoiceId, string subscriptionId, string eventId)
-    {
-        try
-        {
-            await _stripeAdapter.VoidInvoiceAsync(invoiceId);
-            _logger.LogInformation(
-                "Voided invoice ({InvoiceID}) for unpaid subscription ({SubscriptionID}) [event: {EventID}]",
-                invoiceId, subscriptionId, eventId);
-        }
-        catch (StripeException ex)
-        {
-            // Likely cause: webhook re-delivery hitting an already-voided invoice. Continue
-            // with remaining invoices rather than aborting the cleanup.
-            _logger.LogWarning(ex,
-                "Could not void invoice ({InvoiceID}) for unpaid subscription ({SubscriptionID}) [event: {EventID}]; continuing with remaining invoices",
-                invoiceId, subscriptionId, eventId);
-        }
-        catch (Exception ex)
-        {
-            // Catch transport-level failures (HttpRequestException, TaskCanceledException, etc.)
-            // so the loop never abandons mid-page. Surface as Error since these are unexpected,
-            // unlike the StripeException case above.
-            _logger.LogError(ex,
-                "Unexpected failure voiding invoice ({InvoiceID}) for unpaid subscription ({SubscriptionID}) [event: {EventID}]; continuing with remaining invoices",
-                invoiceId, subscriptionId, eventId);
-        }
     }
 
     private async Task RemovePendingCancellationAsync(Subscription subscription)
@@ -311,7 +256,14 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         await _stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
         {
             CancelAtPeriodEnd = false,
-            ProrationBehavior = ProrationBehavior.None
+            ProrationBehavior = ProrationBehavior.None,
+            // Clear the origin marker — the customer paid the unpaid invoice and the
+            // subscription is recovering. Stripe removes a metadata key when its value
+            // is set to an empty string.
+            Metadata = new Dictionary<string, string>
+            {
+                [MetadataKeys.CancellationOrigin] = string.Empty
+            }
         });
     }
 
