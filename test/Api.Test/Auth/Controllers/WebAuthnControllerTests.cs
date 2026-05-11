@@ -13,6 +13,10 @@ using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Fido2NetLib;
+using NSubstitute;
+using NSubstitute.ReturnsExtensions;
+using Xunit;
 
 namespace Bit.Api.Test.Auth.Controllers;
 
