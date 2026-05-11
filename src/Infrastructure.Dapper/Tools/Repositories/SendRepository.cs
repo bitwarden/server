@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using System.Data;
+using System.Security.Cryptography;
 using Bit.Core;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Settings;
@@ -11,6 +12,7 @@ using Bit.Infrastructure.Dapper.Tools.Helpers;
 using Dapper;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Infrastructure.Dapper.Tools.Repositories;
 
@@ -18,15 +20,17 @@ namespace Bit.Infrastructure.Dapper.Tools.Repositories;
 public class SendRepository : Repository<Send, Guid>, ISendRepository
 {
     private readonly IDataProtector _dataProtector;
+    private readonly ILogger<SendRepository> _logger;
 
-    public SendRepository(GlobalSettings globalSettings, IDataProtectionProvider dataProtectionProvider)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString, dataProtectionProvider)
+    public SendRepository(GlobalSettings globalSettings, IDataProtectionProvider dataProtectionProvider, ILogger<SendRepository> logger)
+        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString, dataProtectionProvider, logger)
     { }
 
-    public SendRepository(string connectionString, string readOnlyConnectionString, IDataProtectionProvider dataProtectionProvider)
+    public SendRepository(string connectionString, string readOnlyConnectionString, IDataProtectionProvider dataProtectionProvider, ILogger<SendRepository> logger)
         : base(connectionString, readOnlyConnectionString)
     {
         _dataProtector = dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose);
+        _logger = logger;
     }
 
     public override async Task<Send?> GetByIdAsync(Guid id)
@@ -110,9 +114,10 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
                 new { DeletionDate = deletionDateBefore },
                 commandType: CommandType.StoredProcedure);
 
-            var sends = results.ToList();
-            UnprotectData(sends);
-            return sends;
+            // Emails intentionally left protected: this path feeds the cleanup job, which
+            // only needs Id/Type/Data. Decrypting here would also abort the whole batch
+            // if any row's payload can't be unprotected by the current key ring.
+            return results.ToList();
         }
     }
 
@@ -230,10 +235,23 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
             return;
         }
 
-        if (send.Emails?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
+        if (!(send.Emails?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false))
+        {
+            return;
+        }
+
+        try
         {
             send.Emails = _dataProtector.Unprotect(
                 send.Emails.Substring(Constants.DatabaseFieldProtectedPrefix.Length));
+        }
+        catch (CryptographicException ex)
+        {
+            // A single unrecoverable payload must not poison a whole batch (e.g., a Send
+            // protected by a data-protection key whose wrapping cert has been rotated out).
+            // Drop Emails for this row, log the Id for follow-up, and continue.
+            _logger.LogWarning(ex, "Failed to unprotect Emails for Send {SendId}; field will be returned as null.", send.Id);
+            send.Emails = null;
         }
     }
 
