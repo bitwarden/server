@@ -259,7 +259,7 @@ public class AdminRecoverAccountCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task RecoverAccountAsync_WithNewPayload_ServiceSucceeds_SetsForcedReset_PersistsAndInvokesSideEffects(
+    public async Task RecoverAccountAsync_WithUnlockAndAuthenticationData_ServiceSucceeds_SetsForcedReset_PersistsAndInvokesSideEffects(
         Organization organization,
         OrganizationUser organizationUser,
         User user,
@@ -309,7 +309,7 @@ public class AdminRecoverAccountCommandTests
     // no logout push. Recovery is all-or-nothing.
     [Theory]
     [BitAutoData]
-    public async Task RecoverAccountAsync_WithNewPayload_FailureIsAtomic_NoPersistOrInvokeSideEffects(
+    public async Task RecoverAccountAsync_WithUnlockAndAuthenticationData_FailureIsAtomic_NoPersistOrInvokeSideEffects(
         Organization organization,
         OrganizationUser organizationUser,
         User user,
@@ -355,7 +355,7 @@ public class AdminRecoverAccountCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task RecoverAccountAsync_WithNewPayload_SingleServiceCallRegardlessOfUserMasterPasswordState_UserHasPassword(
+    public async Task RecoverAccountAsync_WithUnlockAndAuthenticationData_SingleServiceCallRegardlessOfUserMasterPasswordState_UserHasPassword(
         Organization organization,
         OrganizationUser organizationUser,
         User userWithExistingPassword,
@@ -394,7 +394,7 @@ public class AdminRecoverAccountCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task RecoverAccountAsync_WithNewPayload_SingleServiceCallRegardlessOfUserMasterPasswordState_UserHasNoPassword(
+    public async Task RecoverAccountAsync_WithUnlockAndAuthenticationData_SingleServiceCallRegardlessOfUserMasterPasswordState_UserHasNoPassword(
         Organization organization,
         OrganizationUser organizationUser,
         User userWithoutPassword,
@@ -432,7 +432,7 @@ public class AdminRecoverAccountCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task RecoverAccountAsync_WithNewPayload_UserUsesKeyConnector_ThrowsBadRequest(
+    public async Task RecoverAccountAsync_WithUnlockAndAuthenticationData_UserUsesKeyConnector_ThrowsBadRequest(
         Organization organization,
         OrganizationUser organizationUser,
         User user,
