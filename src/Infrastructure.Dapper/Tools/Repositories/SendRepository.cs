@@ -36,8 +36,11 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
     public override async Task<Send?> GetByIdAsync(Guid id)
     {
         var send = await base.GetByIdAsync(id);
-        UnprotectData(send);
-        return send;
+        if (send == null)
+        {
+            return null;
+        }
+        return UnprotectData(send) ? send : null;
     }
 
     /// <inheritdoc />
@@ -50,9 +53,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
                 new { UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
-            var sends = results.ToList();
-            UnprotectData(sends);
-            return sends;
+            return results.Where(UnprotectData).ToList();
         }
     }
 
@@ -66,9 +67,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
-            var sends = results.ToList();
-            UnprotectData(sends);
-            return sends;
+            return results.Where(UnprotectData).ToList();
         }
     }
 
@@ -82,9 +81,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
                 new { UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
-            var sends = results.ToList();
-            UnprotectData(sends);
-            return sends;
+            return results.Where(UnprotectData).ToList();
         }
     }
 
@@ -98,9 +95,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
-            var sends = results.ToList();
-            UnprotectData(sends);
-            return sends;
+            return results.Where(UnprotectData).ToList();
         }
     }
 
@@ -114,9 +109,8 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
                 new { DeletionDate = deletionDateBefore },
                 commandType: CommandType.StoredProcedure);
 
-            // Emails intentionally left protected: this path feeds the cleanup job, which
-            // only needs Id/Type/Data. Decrypting here would also abort the whole batch
-            // if any row's payload can't be unprotected by the current key ring.
+            // Don't filter or decrypt here — the cleanup job needs to see every row
+            // (including unrecoverable ones) so it can delete them.
             return results.ToList();
         }
     }
@@ -190,10 +184,11 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
                 cmd.ExecuteNonQuery();
             }
 
-            // Unprotect after save
+            // Restore in-memory Emails. The DB write only touched Key/RevisionDate, so
+            // a per-row decryption failure here is benign — discard the bool return.
             foreach (var send in sendsList)
             {
-                UnprotectData(send);
+                _ = UnprotectData(send);
             }
         };
     }
@@ -221,50 +216,32 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
 
     private void ProtectData(Send send)
     {
-        if (!send.Emails?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
+        if (send.Emails == null || send.Emails.StartsWith(Constants.DatabaseFieldProtectedPrefix))
         {
-            send.Emails = string.Concat(Constants.DatabaseFieldProtectedPrefix,
-                _dataProtector.Protect(send.Emails!));
+            return;
         }
+
+        send.Emails = string.Concat(Constants.DatabaseFieldProtectedPrefix,
+            _dataProtector.Protect(send.Emails));
     }
 
-    private void UnprotectData(Send? send)
+    private bool UnprotectData(Send send)
     {
-        if (send == null)
+        if (send.Emails == null || !send.Emails.StartsWith(Constants.DatabaseFieldProtectedPrefix))
         {
-            return;
-        }
-
-        if (!(send.Emails?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false))
-        {
-            return;
+            return true;
         }
 
         try
         {
             send.Emails = _dataProtector.Unprotect(
                 send.Emails.Substring(Constants.DatabaseFieldProtectedPrefix.Length));
+            return true;
         }
         catch (CryptographicException ex)
         {
-            // A single unrecoverable payload must not poison a whole batch (e.g., a Send
-            // protected by a data-protection key whose wrapping cert has been rotated out).
-            // Drop Emails for this row, log the Id for follow-up, and continue.
-            _logger.LogWarning(ex, "Failed to unprotect Emails for Send {SendId}; field will be returned as null.", send.Id);
-            send.Emails = null;
-        }
-    }
-
-    private void UnprotectData(IEnumerable<Send> sends)
-    {
-        if (sends == null)
-        {
-            return;
-        }
-
-        foreach (var send in sends)
-        {
-            UnprotectData(send);
+            _logger.LogWarning(ex, "Failed to unprotect Emails for Send {SendId}.", send.Id);
+            return false;
         }
     }
 }
