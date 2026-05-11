@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.Entities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
@@ -12,12 +13,14 @@ public record AutomaticallyConfirmOrganizationUserRequest
     public required Guid OrganizationId { get; init; }
     public required string Key { get; init; }
     public required string DefaultUserCollectionName { get; init; }
+    public IActingUser? PerformedBy { get; init; }
 }
 
 /// <summary>
 /// Hydrated request passed to the validator. Carries the retrieved <see cref="OrganizationUser"/> and
-/// <see cref="Organization"/> objects directly; <see cref="OrganizationUserId"/> and
-/// <see cref="OrganizationId"/> are derived from those objects to prevent the two copies from diverging.
+/// <see cref="Organization"/> objects directly. <see cref="OrganizationUserId"/> and
+/// <see cref="OrganizationId"/> mirror the IDs from those objects (set explicitly to support
+/// test scenarios where the hydrated objects may be null).
 /// </summary>
 public record AutomaticallyConfirmOrganizationUserValidationRequest
 {
@@ -25,12 +28,9 @@ public record AutomaticallyConfirmOrganizationUserValidationRequest
     public required string DefaultUserCollectionName { get; init; }
     public OrganizationUser? OrganizationUser { get; init; }
     public Organization? Organization { get; init; }
-
-    /// <summary>Derived from <see cref="OrganizationUser"/>.</summary>
-    public Guid OrganizationUserId => OrganizationUser!.Id;
-
-    /// <summary>Derived from <see cref="Organization"/>.</summary>
-    public Guid OrganizationId => Organization!.Id;
+    public IActingUser? PerformedBy { get; init; }
+    public Guid OrganizationUserId { get; init; }
+    public Guid OrganizationId { get; init; }
 }
 
 /// <summary>

@@ -53,14 +53,15 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommand(
             .Where(id => !orgUserById.ContainsKey(id))
             .ToHashSet();
 
-        // Build hydrated validation requests only for users that were actually found so that
-        // OrganizationUserId and OrganizationId can be safely derived from the hydrated objects.
+        // Build hydrated validation requests only for users that were actually found.
         var validationRequests = request.UsersToConfirm
             .Where(u => !notFoundIds.Contains(u.OrganizationUserId))
             .Select(u => new AutomaticallyConfirmOrganizationUserValidationRequest
             {
                 Key = u.Key,
                 DefaultUserCollectionName = request.DefaultUserCollectionName,
+                OrganizationUserId = u.OrganizationUserId,
+                OrganizationId = request.OrganizationId,
                 OrganizationUser = orgUserById[u.OrganizationUserId],
                 Organization = organization
             })

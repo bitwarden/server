@@ -166,6 +166,9 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
         {
             Key = request.Key,
             DefaultUserCollectionName = request.DefaultUserCollectionName,
+            PerformedBy = request.PerformedBy,
+            OrganizationUserId = request.OrganizationUserId,
+            OrganizationId = request.OrganizationId,
             OrganizationUser = await organizationUserRepository.GetByIdAsync(request.OrganizationUserId),
             Organization = await organizationRepository.GetByIdAsync(request.OrganizationId)
         };
