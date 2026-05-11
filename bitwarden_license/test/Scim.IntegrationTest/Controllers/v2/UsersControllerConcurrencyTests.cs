@@ -102,12 +102,12 @@ public class UsersControllerConcurrencyTests
 
     public static IEnumerable<object?[]> DatabaseProviders()
     {
-        yield return new object?[] { SupportedDatabaseProviders.SqlServer };
-        yield return new object?[] { SupportedDatabaseProviders.Postgres };
-        yield return new object?[] { SupportedDatabaseProviders.MySql };
+        yield return [SupportedDatabaseProviders.SqlServer];
+        yield return [SupportedDatabaseProviders.Postgres];
+        yield return [SupportedDatabaseProviders.MySql];
     }
 
-    private static IReadOnlyDictionary<SupportedDatabaseProviders, string> LoadConfiguredConnections()
+    private static Dictionary<SupportedDatabaseProviders, string> LoadConfiguredConnections()
     {
         var config = new ConfigurationBuilder()
             .AddUserSecrets(typeof(Bit.Identity.Startup).Assembly, optional: true)
@@ -129,10 +129,9 @@ public class UsersControllerConcurrencyTests
             {
                 continue;
             }
-            if (Enum.TryParse<SupportedDatabaseProviders>(rawType, ignoreCase: true, out var type)
-                && !configured.ContainsKey(type))
+            if (Enum.TryParse<SupportedDatabaseProviders>(rawType, ignoreCase: true, out var type))
             {
-                configured[type] = connectionString;
+                configured.TryAdd(type, connectionString);
             }
         }
 
@@ -160,12 +159,9 @@ public class UsersControllerConcurrencyTests
     private static ScimUserRequestModel BuildInvite(int i) => new()
     {
         DisplayName = $"Concurrent User {i}",
-        Emails = new List<BaseScimUserModel.EmailModel>
-        {
-            new() { Primary = true, Type = "work", Value = $"concurrent-{i}@example.com" }
-        },
+        Emails = [new() { Primary = true, Type = "work", Value = $"concurrent-{i}@example.com" }],
         ExternalId = $"CONC-{i}",
         Active = true,
-        Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        Schemas = [ScimConstants.Scim2SchemaUser]
     };
 }
