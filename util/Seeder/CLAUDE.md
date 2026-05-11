@@ -171,6 +171,14 @@ Developer-facing documentation in `Seeds/docs/scenarios/`. Each file maps an eng
 - `Seeds/docs/presets.md` → what exists (the catalog) → scenarios link back to it
 - `Seeds/docs/scenarios/` → why you'd use it (problem → command)
 
+## Collection Management Settings
+
+**Collection management settings are not plan-gated.** `AllowAdminAccessToAllCollectionItems`, `LimitCollectionCreation`, `LimitCollectionDeletion`, and `LimitItemDeletion` apply identically across all plan types. They are org-level admin settings, not billing-plan features.
+
+**These settings alter access control behavior.** When seeding scenarios that test member vs. admin permissions, collection creation/deletion policies, or item-level access, set them explicitly in the preset rather than relying on defaults.
+
+**Configurable in presets and CLI.** Use the JSON preset `organization` block (e.g. `"limitCollectionCreation": true`) or the CLI flags: `--limit-collection-creation`, `--limit-collection-deletion`, `--limit-item-deletion`, `--allow-admin-collection-access`.
+
 ## Security Reminders
 
 - Default test password: `asdfasdfasdf` (overridable via `--password` CLI flag or `SeederSettings`)
