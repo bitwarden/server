@@ -11,6 +11,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
@@ -33,13 +34,6 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
-using NSubstitute;
-using OneOf.Types;
-using Xunit;
 
 namespace Bit.Api.Test.AdminConsole.Controllers;
 
@@ -99,7 +93,7 @@ public class OrganizationUsersControllerTests
         sutProvider.GetDependency<ISsoConfigRepository>().GetByOrganizationIdAsync(default).ReturnsForAnyArgs((SsoConfig)null);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(default, default).ReturnsForAnyArgs(orgUser);
         await sutProvider.Sut.PutResetPasswordEnrollment(orgId, userId, model);
-        await sutProvider.GetDependency<IOrganizationService>().Received(1).UpdateUserResetPasswordEnrollmentAsync(
+        await sutProvider.GetDependency<IUpdateUserResetPasswordEnrollmentCommand>().Received(1).UpdateUserResetPasswordEnrollmentAsync(
             orgId,
             userId,
             model.ResetPasswordKey,
@@ -166,7 +160,7 @@ public class OrganizationUsersControllerTests
 
         await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(1)
             .AcceptOrgUserByEmailTokenAsync(orgUserId, user, model.Token, sutProvider.GetDependency<IUserService>());
-        await sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs()
+        await sutProvider.GetDependency<IUpdateUserResetPasswordEnrollmentCommand>().DidNotReceiveWithAnyArgs()
             .UpdateUserResetPasswordEnrollmentAsync(default, default, default, default);
     }
 
@@ -200,7 +194,7 @@ public class OrganizationUsersControllerTests
         // Assert
         await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(1)
             .AcceptOrgUserByEmailTokenAsync(orgUserId, user, model.Token, userService);
-        await sutProvider.GetDependency<IOrganizationService>().Received(1)
+        await sutProvider.GetDependency<IUpdateUserResetPasswordEnrollmentCommand>().Received(1)
             .UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
 
         await userService.Received(1).GetUserByPrincipalAsync(default);
@@ -237,7 +231,7 @@ public class OrganizationUsersControllerTests
         await userService.Received(1).GetUserByPrincipalAsync(default);
         await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(1)
             .AcceptOrgUserByEmailTokenAsync(orgUserId, user, model.Token, userService);
-        await sutProvider.GetDependency<IOrganizationService>().Received(0)
+        await sutProvider.GetDependency<IUpdateUserResetPasswordEnrollmentCommand>().Received(0)
             .UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
     }
 
@@ -497,7 +491,7 @@ public class OrganizationUsersControllerTests
         // Assert
         await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(0)
             .AcceptOrgUserByEmailTokenAsync(orgUserId, user, model.Token, userService);
-        await sutProvider.GetDependency<IOrganizationService>().Received(0)
+        await sutProvider.GetDependency<IUpdateUserResetPasswordEnrollmentCommand>().Received(0)
             .UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
 
         await userService.Received(1).GetUserByPrincipalAsync(default);
