@@ -504,8 +504,10 @@ public class AuthRequestServiceTests
             .PasswordlessAuth.KnownDevicesOnly
             .Returns(false);
 
-        await Assert.ThrowsAsync<BadRequestException>(
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.CreateAuthRequestAsync(createModel));
+
+        Assert.Equal("User or known device not found.", exception.Message);
 
         await sutProvider.GetDependency<IAuthRequestRepository>()
             .DidNotReceiveWithAnyArgs()
