@@ -1079,6 +1079,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
         var confirmedIds = rowsToUpdate.Select(o => o.Id).ToList();
         await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(confirmedIds);
+        await dbContext.SaveChangesAsync();
 
         await transaction.CommitAsync();
 
