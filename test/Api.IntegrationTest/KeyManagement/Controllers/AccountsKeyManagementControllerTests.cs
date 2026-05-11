@@ -769,6 +769,39 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
             signatureKeyPair.VerifyingKey);
     }
 
+    [Theory]
+    [BitAutoData(false)]
+    [BitAutoData(true)]
+    public async Task RotateUserKeysAsync_TdeUserRotation_Success(bool setupAsV2Encryption, RotateUserKeysRequestModel request)
+    {
+        var user = await SetupTdeUserForKeyRotationAsync(setupAsV2Encryption);
+        SetupTdeRotateUserAccount(request);
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
+        response.EnsureSuccessStatusCode();
+
+        var userNewState = await _userRepository.GetByEmailAsync(user.Email);
+        Assert.NotNull(userNewState);
+        Assert.Null(userNewState.Key);
+        Assert.Equal(request.WrappedAccountCryptographicState.PublicKeyEncryptionKeyPair.SignedPublicKey,
+            userNewState.SignedPublicKey);
+        Assert.Equal(request.WrappedAccountCryptographicState.SecurityState.SecurityState, userNewState.SecurityState);
+        Assert.Equal(request.WrappedAccountCryptographicState.SecurityState.SecurityVersion,
+            userNewState.SecurityVersion);
+        Assert.Null(userNewState.V2UpgradeToken);
+        Assert.NotEqual(user.SecurityStamp, userNewState.SecurityStamp);
+
+        var signatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(userNewState.Id);
+        Assert.NotNull(signatureKeyPair);
+        Assert.Equal(SignatureAlgorithm.Ed25519, signatureKeyPair.SignatureAlgorithm);
+        Assert.Equal(request.WrappedAccountCryptographicState.SignatureKeyPair.WrappedSigningKey,
+            signatureKeyPair.WrappedSigningKey);
+        Assert.Equal(request.WrappedAccountCryptographicState.SignatureKeyPair.VerifyingKey,
+            signatureKeyPair.VerifyingKey);
+
+        await _pushNotificationService.Received(1).PushLogOutAsync(userNewState.Id, false, null);
+    }
+
     private async Task<(string, Organization)> SetupKeyConnectorTestAsync(OrganizationUserStatusType userStatusType,
         string organizationSsoIdentifier = "test-sso-identifier")
     {
@@ -978,4 +1011,50 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         SecurityVersion = 2,
         SecurityState = "v2",
     };
+
+    private async Task<User> SetupTdeUserForKeyRotationAsync(bool setupAsV2Encryption)
+    {
+        var tdeUserEmail = $"integration-test-tde{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(tdeUserEmail);
+        await _loginHelper.LoginAsync(tdeUserEmail);
+
+        var user = await _userRepository.GetByEmailAsync(tdeUserEmail)
+            ?? throw new InvalidOperationException("TDE user not found.");
+
+        user.Key = null;
+        user.MasterPassword = null;
+        user.PublicKey = "publicKey";
+        user.PrivateKey = _mockEncryptedString;
+        if (setupAsV2Encryption)
+        {
+            user.PrivateKey = _mockEncryptedType7String;
+            user.SignedPublicKey = "signedPublicKey";
+            user.SecurityVersion = 2;
+            user.SecurityState = "v2-tde";
+        }
+        await _userRepository.ReplaceAsync(user);
+
+        if (setupAsV2Encryption)
+        {
+            await _userSignatureKeyPairRepository.CreateAsync(new UserSignatureKeyPair
+            {
+                UserId = user.Id,
+                SignatureAlgorithm = SignatureAlgorithm.Ed25519,
+                SigningKey = _mockEncryptedType7String,
+                VerifyingKey = "verifyingKey",
+            });
+        }
+
+        return user;
+    }
+
+    private static void SetupTdeRotateUserAccount(RotateUserKeysRequestModel request)
+    {
+        request.UnlockMethodData = new UnlockMethodRequestModel
+        {
+            UnlockMethod = Api.KeyManagement.Enums.UnlockMethod.Tde,
+            MasterPasswordUnlockData = null
+        };
+        SetupCommonRotate(request);
+    }
 }
