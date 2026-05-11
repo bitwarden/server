@@ -9,7 +9,8 @@ public class OrganizationUserPendingAutoConfirmResponseModel : ResponseModel
         : base("OrganizationUserPendingAutoConfirmResponseModel")
     {
         Id = organizationUser.Id;
-        UserId = organizationUser.UserId.Value;
+        UserId = organizationUser.UserId
+            ?? throw new InvalidOperationException($"OrganizationUser {organizationUser.Id} has no associated UserId.");
     }
 
     /// <summary>The OrganizationUser ID.</summary>

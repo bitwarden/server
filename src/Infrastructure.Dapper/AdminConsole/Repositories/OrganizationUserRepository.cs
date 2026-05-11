@@ -768,19 +768,6 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         };
     }
 
-    public async Task<ICollection<OrganizationUser>> GetManyByOrganizationIdWithStatusAsync(Guid organizationId, OrganizationUserStatusType status)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.QueryAsync<OrganizationUser>(
-                "[dbo].[OrganizationUser_ReadByOrganizationIdStatus]",
-                new { OrganizationId = organizationId, Status = (short)status },
-                commandType: CommandType.StoredProcedure);
-
-            return results.ToList();
-        }
-    }
-
     public async Task<ICollection<OrganizationUser>> GetManyPendingAutoConfirmAsync(Guid organizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))

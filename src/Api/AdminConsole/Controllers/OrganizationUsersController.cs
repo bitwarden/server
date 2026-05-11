@@ -827,7 +827,9 @@ public class OrganizationUsersController : BaseAdminConsoleController
         }
 
         var pendingUsers = await _organizationUserRepository.GetManyPendingAutoConfirmAsync(orgId);
-        var responses = pendingUsers.Select(u => new OrganizationUserPendingAutoConfirmResponseModel(u));
+        var responses = pendingUsers
+            .Where(u => u.UserId.HasValue)
+            .Select(u => new OrganizationUserPendingAutoConfirmResponseModel(u));
         return new ListResponseModel<OrganizationUserPendingAutoConfirmResponseModel>(responses);
     }
 
@@ -843,6 +845,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
             OrganizationId = orgId,
             DefaultUserCollectionName = model.DefaultUserCollectionName,
             UsersToConfirm = model.Keys
+                .GroupBy(e => e.Id)
+                .Select(g => g.First())
                 .Select(entry => new BulkAutoConfirmUserEntry
                 {
                     OrganizationUserId = entry.Id,

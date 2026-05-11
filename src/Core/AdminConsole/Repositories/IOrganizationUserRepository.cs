@@ -148,13 +148,6 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
         IEnumerable<AcceptedOrganizationUserToConfirm> usersToConfirm);
 
     /// <summary>
-    /// Returns all organization users with the given <paramref name="status"/> for the given organization.
-    /// </summary>
-    /// <param name="organizationId">The organization to search within.</param>
-    /// <param name="status">The status to filter by.</param>
-    Task<ICollection<OrganizationUser>> GetManyByOrganizationIdWithStatusAsync(Guid organizationId, OrganizationUserStatusType status);
-
-    /// <summary>
     /// Returns all Accepted, User-role organization users pending automatic confirmation for the given organization.
     /// </summary>
     /// <param name="organizationId">The organization to search within.</param>
