@@ -208,7 +208,7 @@ public class AuthRequestsControllerTests
         // Arrange
         SetBaseServiceUri(sutProvider);
 
-        requestModel.Type = AuthRequestType.AuthenticateAndUnlock;
+        requestModel.Type = AuthRequestType.AdminApproval;
         sutProvider.GetDependency<IAuthRequestService>()
             .CreateAuthRequestAsync(requestModel)
             .Returns(authRequest);
@@ -219,6 +219,24 @@ public class AuthRequestsControllerTests
         // Assert
         Assert.NotNull(result);
         Assert.IsType<AuthRequestResponseModel>(result);
+    }
+
+    [Theory]
+    [BitAutoData(AuthRequestType.AuthenticateAndUnlock)]
+    [BitAutoData(AuthRequestType.Unlock)]
+    public async Task PostAdminRequest_NonAdminApprovalType_ThrowsBadRequest(
+        AuthRequestType type,
+        SutProvider<AuthRequestsController> sutProvider,
+        AuthRequestCreateRequestModel requestModel)
+    {
+        requestModel.Type = type;
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.PostAdminRequest(requestModel));
+
+        await sutProvider.GetDependency<IAuthRequestService>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAuthRequestAsync(default!);
     }
 
     [Theory, BitAutoData]
