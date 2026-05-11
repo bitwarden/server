@@ -378,6 +378,9 @@ public class CloudICloudOrganizationSignUpCommandTests
     {
         signup.Plan = planType;
         signup.TrialLength = 31;
+        signup.AdditionalSeats = 0;
+        signup.PremiumAccessAddon = false;
+        signup.UseSecretsManager = false;
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
@@ -393,6 +396,9 @@ public class CloudICloudOrganizationSignUpCommandTests
     {
         signup.Plan = planType;
         signup.TrialLength = -1;
+        signup.AdditionalSeats = 0;
+        signup.PremiumAccessAddon = false;
+        signup.UseSecretsManager = false;
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
