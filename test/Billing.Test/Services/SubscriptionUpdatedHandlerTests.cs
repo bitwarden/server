@@ -618,7 +618,7 @@ public class SubscriptionUpdatedHandlerTests
         // Assert
         await _userService.Received(1)
             .DisablePremiumAsync(userId, currentPeriodEnd);
-        await _userRepository.Received(1).GetByIdAsync(userId);
+        await _userRepository.Received(2).GetByIdAsync(userId);
         await _pushNotificationAdapter.Received(1).NotifyPremiumStatusChangedAsync(user);
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             subscriptionId,
@@ -817,7 +817,7 @@ public class SubscriptionUpdatedHandlerTests
             .EnablePremiumAsync(userId, currentPeriodEnd);
         await _userService.Received(1)
             .UpdatePremiumExpirationAsync(userId, currentPeriodEnd);
-        await _userRepository.Received(1).GetByIdAsync(userId);
+        await _userRepository.Received(2).GetByIdAsync(userId);
         await _pushNotificationAdapter.Received(1).NotifyPremiumStatusChangedAsync(user);
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             subscriptionId,
@@ -1068,7 +1068,7 @@ public class SubscriptionUpdatedHandlerTests
             .Received(1)
             .GetSubscription(parsedEvent, true, Arg.Any<List<string>>());
         await _providerRepository
-            .Received(1)
+            .Received(2)
             .GetByIdAsync(providerId);
         await _providerService
             .Received(1)

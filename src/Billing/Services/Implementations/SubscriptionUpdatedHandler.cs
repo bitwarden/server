@@ -136,7 +136,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 {
                     if (_featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
                     {
-                        await HandleScheduleTriggeredFamiliesMigrationAsync(parsedEvent, subscription, organization);
+                        await HandleScheduleTriggeredFamiliesMigrationAsync(parsedEvent, subscription, organization.Id);
                     }
 
                     await _organizationService.UpdateExpirationDateAsync(organization.Id, currentPeriodEnd);
@@ -146,11 +146,11 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                         await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(organization.Id, currentPeriodEnd.Value);
                     }
 
-                    await RemovePasswordManagerCouponIfRemovingSecretsManagerTrialAsync(parsedEvent, subscription, organization);
+                    await RemovePasswordManagerCouponIfRemovingSecretsManagerTrialAsync(parsedEvent, subscription, organization.Id);
 
                     if (clearOrgBillingAutomationExemption)
                     {
-                        await ClearBillingAutomationExemptionAsync(organization);
+                        await ClearBillingAutomationExemptionAsync(organization.Id);
                     }
                     break;
                 }
@@ -210,64 +210,98 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private Task DisableSubscriberAsync(ISubscriber subscriber, DateTime? currentPeriodEnd) =>
         subscriber switch
         {
-            User user => DisableUserAsync(user, currentPeriodEnd),
-            Organization organization => DisableOrganizationAsync(organization, currentPeriodEnd),
-            Provider provider => DisableProviderAsync(provider),
+            User user => DisableUserAsync(user.Id, currentPeriodEnd),
+            Organization organization => DisableOrganizationAsync(organization.Id, currentPeriodEnd),
+            Provider provider => DisableProviderAsync(provider.Id),
             _ => Task.CompletedTask
         };
 
-    private async Task DisableUserAsync(User user, DateTime? currentPeriodEnd)
+    private async Task DisableUserAsync(Guid userId, DateTime? currentPeriodEnd)
     {
-        await _userService.DisablePremiumAsync(user.Id, currentPeriodEnd);
-        await _pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user);
+        await _userService.DisablePremiumAsync(userId, currentPeriodEnd);
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user != null)
+        {
+            await _pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user);
+        }
     }
 
-    private async Task DisableOrganizationAsync(Organization organization, DateTime? currentPeriodEnd)
+    private async Task DisableOrganizationAsync(Guid organizationId, DateTime? currentPeriodEnd)
     {
-        await _organizationDisableCommand.DisableAsync(organization.Id, currentPeriodEnd);
-        await _pushNotificationAdapter.NotifyEnabledChangedAsync(organization);
+        await _organizationDisableCommand.DisableAsync(organizationId, currentPeriodEnd);
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        if (organization != null)
+        {
+            await _pushNotificationAdapter.NotifyEnabledChangedAsync(organization);
+        }
     }
 
-    private async Task DisableProviderAsync(Provider provider)
+    private async Task DisableProviderAsync(Guid providerId)
     {
+        var provider = await _providerRepository.GetByIdAsync(providerId);
+        if (provider == null)
+        {
+            return;
+        }
+
         provider.Enabled = false;
         await _providerService.UpdateAsync(provider);
     }
 
-    private async Task ClearBillingAutomationExemptionAsync(Organization organization)
+    private async Task ClearBillingAutomationExemptionAsync(Guid organizationId)
     {
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        if (organization == null)
+        {
+            return;
+        }
+
         organization.ExemptFromBillingAutomation = false;
         organization.RevisionDate = DateTime.UtcNow;
         await _organizationRepository.ReplaceAsync(organization);
 
         _logger.LogInformation(
             "Exemption has been cleared for organization ({OrganizationId})",
-            organization.Id);
+            organizationId);
     }
 
     private Task EnableSubscriberAsync(ISubscriber subscriber, DateTime? currentPeriodEnd) =>
         subscriber switch
         {
-            User user => EnableUserAsync(user, currentPeriodEnd),
-            Organization organization => EnableOrganizationAsync(organization, currentPeriodEnd),
-            Provider provider => EnableProviderAsync(provider),
+            User user => EnableUserAsync(user.Id, currentPeriodEnd),
+            Organization organization => EnableOrganizationAsync(organization.Id, currentPeriodEnd),
+            Provider provider => EnableProviderAsync(provider.Id),
             _ => Task.CompletedTask
         };
 
-    private async Task EnableUserAsync(User user, DateTime? currentPeriodEnd)
+    private async Task EnableUserAsync(Guid userId, DateTime? currentPeriodEnd)
     {
-        await _userService.EnablePremiumAsync(user.Id, currentPeriodEnd);
-        await _pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user);
+        await _userService.EnablePremiumAsync(userId, currentPeriodEnd);
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user != null)
+        {
+            await _pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user);
+        }
     }
 
-    private async Task EnableOrganizationAsync(Organization organization, DateTime? currentPeriodEnd)
+    private async Task EnableOrganizationAsync(Guid organizationId, DateTime? currentPeriodEnd)
     {
-        await _organizationEnableCommand.EnableAsync(organization.Id, currentPeriodEnd);
-        await _pushNotificationAdapter.NotifyEnabledChangedAsync(organization);
+        await _organizationEnableCommand.EnableAsync(organizationId, currentPeriodEnd);
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        if (organization != null)
+        {
+            await _pushNotificationAdapter.NotifyEnabledChangedAsync(organization);
+        }
     }
 
-    private async Task EnableProviderAsync(Provider provider)
+    private async Task EnableProviderAsync(Guid providerId)
     {
+        var provider = await _providerRepository.GetByIdAsync(providerId);
+        if (provider == null)
+        {
+            return;
+        }
+
         provider.Enabled = true;
         await _providerService.UpdateAsync(provider);
     }
@@ -311,13 +345,19 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     /// </summary>
     /// <param name="parsedEvent"></param>
     /// <param name="subscription"></param>
-    /// <param name="organization"></param>
+    /// <param name="organizationId"></param>
     private async Task RemovePasswordManagerCouponIfRemovingSecretsManagerTrialAsync(
         Event parsedEvent,
         Subscription subscription,
-        Organization organization)
+        Guid organizationId)
     {
         if (parsedEvent.Data.PreviousAttributes?.items is null)
+        {
+            return;
+        }
+
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        if (organization == null)
         {
             return;
         }
@@ -392,7 +432,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private async Task HandleScheduleTriggeredFamiliesMigrationAsync(
         Event parsedEvent,
         Subscription subscription,
-        Organization organization)
+        Guid organizationId)
     {
         try
         {
@@ -434,6 +474,15 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             }
 
             // Sync org DB to match the plan Stripe already transitioned to
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            if (organization == null)
+            {
+                _logger.LogWarning(
+                    "Organization ({OrganizationId}) not found for schedule-triggered Families migration",
+                    organizationId);
+                return;
+            }
+
             organization.PlanType = familiesPlan.Type;
             organization.Plan = familiesPlan.Name;
             organization.UsersGetPremium = familiesPlan.UsersGetPremium;
@@ -443,7 +492,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
             _logger.LogInformation(
                 "Updated organization ({OrganizationId}) to FamiliesAnnually plan after schedule transition",
-                organization.Id);
+                organizationId);
         }
         catch (BillingException)
         {
@@ -458,7 +507,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             _logger.LogError(
                 exception,
                 "Failed to handle schedule-triggered Families migration for organization ({OrganizationId})",
-                organization.Id);
+                organizationId);
         }
     }
 }
