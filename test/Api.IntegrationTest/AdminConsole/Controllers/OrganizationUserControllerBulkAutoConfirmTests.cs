@@ -58,8 +58,6 @@ public class OrganizationUserControllerBulkAutoConfirmTests : IClassFixture<ApiA
         return Task.CompletedTask;
     }
 
-    // ─── GET pending-auto-confirm ────────────────────────────────────────────────
-
     [Fact]
     public async Task GetPendingAutoConfirm_WhenOwnerRequests_ReturnsPendingUsers()
     {
@@ -127,8 +125,6 @@ public class OrganizationUserControllerBulkAutoConfirmTests : IClassFixture<ApiA
 
         await _factory.GetService<IOrganizationRepository>().DeleteAsync(organization);
     }
-
-    // ─── POST bulk-auto-confirm ──────────────────────────────────────────────────
 
     [Fact]
     public async Task BulkAutoConfirm_WhenOwnerConfirmsAcceptedUsers_ConfirmsAll()
@@ -287,8 +283,6 @@ public class OrganizationUserControllerBulkAutoConfirmTests : IClassFixture<ApiA
 
         await _factory.GetService<IOrganizationRepository>().DeleteAsync(organization);
     }
-
-    // ─── Minimal DTO for response deserialization ────────────────────────────────
 
     private sealed class ResponseListModel
     {

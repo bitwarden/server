@@ -98,12 +98,10 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
             }
 
             // User must have 2FA enabled if the org's RequireTwoFactor policy is active
-            var hasTwoFactor = isTwoFactorByUserId.TryGetValue(userId, out var tf) && tf;
+            var hasTwoFactor = isTwoFactorByUserId.GetValueOrDefault(userId);
             if (!hasTwoFactor)
             {
-                var requireTwoFactor = requireTwoFactorByUserId.TryGetValue(userId, out var req)
-                    ? req
-                    : null;
+                var requireTwoFactor = requireTwoFactorByUserId.GetValueOrDefault(userId);
 
                 if (requireTwoFactor?.IsTwoFactorRequiredForOrganization(orgId) == true)
                 {
@@ -113,9 +111,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
             }
 
             // Enforce the Automatic User Confirmation cross-org policy in-memory using bulk-fetched data.
-            var autoConfirmPolicy = autoConfirmPolicyByUserId.TryGetValue(userId, out var acp)
-                ? acp
-                : null;
+            var autoConfirmPolicy = autoConfirmPolicyByUserId.GetValueOrDefault(userId);
 
             if (autoConfirmPolicy is not null)
             {

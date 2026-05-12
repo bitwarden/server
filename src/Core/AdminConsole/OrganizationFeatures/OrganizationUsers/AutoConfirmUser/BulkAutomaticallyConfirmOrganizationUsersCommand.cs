@@ -38,6 +38,48 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommand(
             return [];
         }
 
+        var (organization, validationRequests, notFoundIds) = await BuildValidationRequestsAsync(request);
+
+        // Bulk-validate; each dependency is fetched once inside the validator.
+        var validationResults = (await validator.ValidateManyAsync(validationRequests)).ToList();
+
+        // Collect the users that passed validation and build the to-confirm list.
+        var validatedRequests = validationResults
+            .Where(r => r.IsValid)
+            .Select(r => r.Request)
+            .ToList();
+
+        if (validatedRequests.Count == 0)
+        {
+            return BuildResults(request.UsersToConfirm, validationResults, notFoundIds);
+        }
+
+        var confirmedRequests = await ConfirmValidatedUsersAsync(validatedRequests);
+
+        if (confirmedRequests.Count == 0)
+        {
+            return BuildResults(request.UsersToConfirm, validationResults, notFoundIds);
+        }
+
+        // Run post-confirmation side effects.
+        await CreateDefaultCollectionsForManyAsync(confirmedRequests, organization!);
+
+        await Task.WhenAll(confirmedRequests.Select(r =>
+            Task.WhenAll(
+                LogOrganizationUserConfirmedEventAsync(r),
+                SendConfirmedOrganizationUserEmailAsync(r, organization!),
+                SyncOrganizationKeysAsync(r)
+            )));
+
+        return BuildResults(request.UsersToConfirm, validationResults, notFoundIds);
+    }
+
+    private async Task<(
+        Organization? Organization,
+        List<AutomaticallyConfirmOrganizationUserValidationRequest> ValidationRequests,
+        HashSet<Guid> NotFoundIds
+    )> BuildValidationRequestsAsync(BulkAutomaticallyConfirmOrganizationUsersRequest request)
+    {
         var orgId = request.OrganizationId;
 
         // Fetch org and all org-users once for the entire batch.
@@ -67,20 +109,12 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommand(
             })
             .ToList();
 
-        // Bulk-validate; each dependency is fetched once inside the validator.
-        var validationResults = (await validator.ValidateManyAsync(validationRequests)).ToList();
+        return (organization, validationRequests, notFoundIds);
+    }
 
-        // Collect the users that passed validation and build the to-confirm list.
-        var validatedRequests = validationResults
-            .Where(r => r.IsValid)
-            .Select(r => r.Request)
-            .ToList();
-
-        if (validatedRequests.Count == 0)
-        {
-            return BuildResults(request.UsersToConfirm, validationResults, new HashSet<Guid>(), notFoundIds);
-        }
-
+    private async Task<List<AutomaticallyConfirmOrganizationUserValidationRequest>> ConfirmValidatedUsersAsync(
+        List<AutomaticallyConfirmOrganizationUserValidationRequest> validatedRequests)
+    {
         var usersToConfirm = validatedRequests
             .Select(r => new AcceptedOrganizationUserToConfirm
             {
@@ -95,33 +129,15 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommand(
         var confirmedIds = (await organizationUserRepository.ConfirmManyOrganizationUsersAsync(usersToConfirm))
             .ToHashSet();
 
-        var confirmedRequests = validatedRequests
+        return validatedRequests
             .Where(r => confirmedIds.Contains(r.OrganizationUserId))
             .ToList();
-
-        if (confirmedRequests.Count == 0)
-        {
-            return BuildResults(request.UsersToConfirm, validationResults, new HashSet<Guid>(), notFoundIds);
-        }
-
-        // Run post-confirmation side effects.
-        await CreateDefaultCollectionsForManyAsync(confirmedRequests, organization!);
-
-        await Task.WhenAll(confirmedRequests.Select(r =>
-            Task.WhenAll(
-                LogOrganizationUserConfirmedEventAsync(r),
-                SendConfirmedOrganizationUserEmailAsync(r, organization!),
-                SyncOrganizationKeysAsync(r)
-            )));
-
-        return BuildResults(request.UsersToConfirm, validationResults, confirmedIds, notFoundIds);
     }
 
     private static IReadOnlyList<(Guid OrganizationUserId, string? Error)> BuildResults(
         IReadOnlyList<BulkAutoConfirmUserEntry> usersToConfirm,
         IReadOnlyList<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>> validationResults,
-        IReadOnlySet<Guid> confirmedIds,
-        IReadOnlySet<Guid> notFoundIds)
+        HashSet<Guid> notFoundIds)
     {
         var errorByOrgUserId = validationResults
             .Where(r => r.IsError)

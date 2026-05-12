@@ -13,7 +13,7 @@ public record AutomaticallyConfirmOrganizationUserRequest
     public required Guid OrganizationId { get; init; }
     public required string Key { get; init; }
     public required string DefaultUserCollectionName { get; init; }
-    public IActingUser? PerformedBy { get; init; }
+    public required IActingUser PerformedBy { get; init; }
 }
 
 /// <summary>
