@@ -33,7 +33,7 @@ public class ChangeKdfRequestModel : IValidatableObject
         var hasNewPayloads = AuthenticationData is not null && UnlockData is not null;
         var hasLegacyPayloads = NewMasterPasswordHash is not null && Key is not null;
 
-        foreach (var validationResult in MasterPasswordPayloadVariantValidator.ValidateExclusivity(
+        foreach (var validationResult in MasterPasswordPayloadVariantValidator.ValidatePresence(
                      hasNewPayloads, hasLegacyPayloads))
         {
             yield return validationResult;

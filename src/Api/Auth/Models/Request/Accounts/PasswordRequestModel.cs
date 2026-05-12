@@ -31,7 +31,7 @@ public class PasswordRequestModel : IValidatableObject
     {
         var hasLegacyPayloads = NewMasterPasswordHash is not null && Key is not null;
 
-        foreach (var validationResult in MasterPasswordPayloadVariantValidator.ValidateExclusivity(
+        foreach (var validationResult in MasterPasswordPayloadVariantValidator.ValidatePresence(
                      RequestHasNewDataTypes(), hasLegacyPayloads))
         {
             yield return validationResult;

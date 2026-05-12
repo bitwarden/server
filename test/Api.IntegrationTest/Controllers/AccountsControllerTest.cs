@@ -244,7 +244,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Must provide either new payloads (UnlockData/AuthenticationData) or legacy payloads (NewMasterPasswordHash/Key).", content);
+        Assert.Contains("AuthenticationData and UnlockData must be provided.", content);
     }
 
     [Fact]
@@ -269,6 +269,8 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         var requestModel = new PasswordRequestModel
         {
             MasterPasswordHash = "wrong-master-password-hash",
+            NewMasterPasswordHash = _newMasterPasswordHash,
+            Key = _masterKeyWrappedUserKey,
             AuthenticationData = authenticationData,
             UnlockData = unlockData
         };
@@ -407,6 +409,8 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         var requestModel = new PasswordRequestModel
         {
             MasterPasswordHash = _masterPasswordHash,
+            NewMasterPasswordHash = newMasterPasswordHash,
+            Key = _masterKeyWrappedUserKey,
             AuthenticationData = authenticationData,
             UnlockData = unlockData
         };
@@ -446,6 +450,8 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         var requestModel = new PasswordRequestModel
         {
             MasterPasswordHash = _masterPasswordHash,
+            NewMasterPasswordHash = _newMasterPasswordHash,
+            Key = _masterKeyWrappedUserKey,
             AuthenticationData = authenticationDataRequest,
             UnlockData = unlockDataRequest
         };
