@@ -32,6 +32,8 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
             DefaultUserCollectionName = string.Empty,
             OrganizationUser = orgUser,
             Organization = organization,
+            OrganizationUserId = orgUser.Id,
+            OrganizationId = organization.Id,
             Key = "test-key"
         };
 
@@ -390,6 +392,8 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
             DefaultUserCollectionName = string.Empty,
             OrganizationUser = mismatchedOrgUser,
             Organization = organization,
+            OrganizationUserId = mismatchedOrgUser.Id,
+            OrganizationId = organization.Id,
             Key = "test-key"
         };
 

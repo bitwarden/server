@@ -432,6 +432,8 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
         {
             Key = entry.Key,
             DefaultUserCollectionName = request.DefaultUserCollectionName,
+            OrganizationUserId = orgUser.Id,
+            OrganizationId = organization.Id,
             OrganizationUser = orgUser,
             Organization = organization
         };
