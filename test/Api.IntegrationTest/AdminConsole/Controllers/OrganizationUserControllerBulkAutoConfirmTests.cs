@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using NSubstitute;
@@ -34,6 +35,12 @@ public class OrganizationUserControllerBulkAutoConfirmTests : IClassFixture<ApiA
             featureService
                 .IsEnabled(FeatureFlagKeys.BulkAutoConfirmOnLogin)
                 .Returns(true);
+        });
+        _factory.SubstituteService<IApplicationCacheService>(cacheService =>
+        {
+            cacheService
+                .GetOrganizationAbilityAsync(Arg.Any<Guid>())
+                .Returns(new OrganizationAbility { UseAutomaticUserConfirmation = true });
         });
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);

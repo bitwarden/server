@@ -3,6 +3,7 @@ using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Request.Organizations;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums;
@@ -13,6 +14,8 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
@@ -29,6 +32,12 @@ public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<Ap
     public OrganizationUsersControllerPutResetPasswordTests(ApiApplicationFactory apiFactory)
     {
         _factory = apiFactory;
+        _factory.SubstituteService<IFeatureService>(featureService =>
+        {
+            featureService
+                .IsEnabled(FeatureFlagKeys.AdminResetTwoFactor)
+                .Returns(true);
+        });
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
@@ -99,7 +108,7 @@ public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<Ap
             resetPasswordRequest);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 
     [Fact]
