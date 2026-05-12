@@ -585,7 +585,10 @@ public class SubscriberService(
 
     public async Task ScheduleUnpaidCancellationAsync(ISubscriber subscriber)
     {
-        var subscription = await GetSubscription(subscriber);
+        var subscription = await GetSubscription(subscriber, new SubscriptionGetOptions
+        {
+            Expand = ["test_clock"]
+        });
 
         if (subscription is null ||
             subscription.Status != SubscriptionStatus.Unpaid ||
@@ -597,7 +600,7 @@ public class SubscriberService(
             return;
         }
 
-        var now = DateTime.UtcNow;
+        var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
 
         await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
         {
