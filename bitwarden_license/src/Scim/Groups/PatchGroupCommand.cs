@@ -171,26 +171,30 @@ public class PatchGroupCommand : IPatchGroupCommand
 
     private async Task HandleExternalIdOperationAsync(Group group, string newExternalId)
     {
+        if (!string.IsNullOrWhiteSpace(newExternalId))
+        {
+            await EnsureExternalIdIsValidAsync(group, newExternalId);
+        }
 
-        if (!string.IsNullOrWhiteSpace(newExternalId) && newExternalId.Length > 300)
+        group.ExternalId = newExternalId;
+        group.RevisionDate = _timeProvider.GetUtcNow().UtcDateTime;
+        await _groupRepository.ReplaceAsync(group);
+    }
+
+    private async Task EnsureExternalIdIsValidAsync(Group group, string newExternalId)
+    {
+        if (newExternalId.Length > 300)
         {
             throw new BadRequestException("ExternalId cannot exceed 300 characters.");
         }
 
-        if (!string.IsNullOrWhiteSpace(newExternalId))
+        var existingGroups = await _groupRepository.GetManyByOrganizationIdAsync(group.OrganizationId);
+        if (existingGroups.Any(g => g.Id != group.Id &&
+                                    !string.IsNullOrWhiteSpace(g.ExternalId) &&
+                                    g.ExternalId.Equals(newExternalId, StringComparison.OrdinalIgnoreCase)))
         {
-            var existingGroups = await _groupRepository.GetManyByOrganizationIdAsync(group.OrganizationId);
-            if (existingGroups.Any(g => g.Id != group.Id &&
-                !string.IsNullOrWhiteSpace(g.ExternalId) &&
-                g.ExternalId.Equals(newExternalId, StringComparison.OrdinalIgnoreCase)))
-            {
-                throw new ConflictException("ExternalId already exists for another group.");
-            }
+            throw new ConflictException("ExternalId already exists for another group.");
         }
-
-        group.ExternalId = string.IsNullOrWhiteSpace(newExternalId) ? null : newExternalId;
-        group.RevisionDate = _timeProvider.GetUtcNow().UtcDateTime;
-        await _groupRepository.ReplaceAsync(group);
     }
 
     private async Task AddMembersAsync(Group group, HashSet<Guid> usersToAdd)
