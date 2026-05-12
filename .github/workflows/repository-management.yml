@@ -177,11 +177,12 @@ jobs:
         if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
         env:
           BRANCH_NAME: ${{ steps.create-branch-name.outputs.branch_name }}
+          VERSION: ${{ steps.set-final-version-output.outputs.version }}
           GH_TOKEN: ${{ github.token }}
         run: |
           git push -u origin "$BRANCH_NAME"
           gh pr create \
-            --title "Bump version to ${{ steps.set-final-version-output.outputs.version }}" \
+            --title "Bump version to $VERSION" \
             --body "Automated version bump created by repository-management workflow" \
             --base main \
             --head "$BRANCH_NAME"
