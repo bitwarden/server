@@ -110,7 +110,8 @@ public class ChangeKdfCommandTests
         await sutProvider.GetDependency<IMasterPasswordService>().Received(1)
             .SaveUpdateExistingMasterPasswordAndKdfAsync(user, Arg.Is<UpdateExistingPasswordAndKdfData>(d =>
                 d.MasterPasswordAuthentication == authenticationData &&
-                d.MasterPasswordUnlock == unlockData));
+                d.MasterPasswordUnlock == unlockData &&
+                d.ValidatePassword == false));
     }
 
     [Theory]
