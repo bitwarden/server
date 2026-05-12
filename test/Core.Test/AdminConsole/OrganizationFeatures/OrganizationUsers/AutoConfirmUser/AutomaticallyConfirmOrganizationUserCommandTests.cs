@@ -37,8 +37,11 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
         // Mock positive validation result
         var validationRequest = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
+            OrganizationUserId = orgUser.Id,
+            OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = collectionName,
+            PerformedBy = null,
             OrganizationUser = orgUser,
             Organization = organization
         };
@@ -66,6 +69,7 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
             OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = collectionName,
+            PerformedBy = null
         };
 
         // Act
@@ -94,8 +98,11 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
         // Mock positive validation result
         var validationRequest = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
+            OrganizationUserId = orgUser.Id,
+            OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = collectionName,
+            PerformedBy = null,
             OrganizationUser = orgUser,
             Organization = organization
         };
@@ -123,6 +130,7 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
             OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = collectionName,
+            PerformedBy = null
         };
 
         // Act
@@ -154,8 +162,11 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
         // Mock positive validation result
         var validationRequest = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
+            OrganizationUserId = orgUser.Id,
+            OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = collectionName,
+            PerformedBy = null,
             OrganizationUser = orgUser,
             Organization = organization
         };
@@ -174,6 +185,7 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
             OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = collectionName,
+            PerformedBy = null
         };
 
         // Act

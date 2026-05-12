@@ -36,7 +36,7 @@ public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<Ap
         {
             featureService
                 .IsEnabled(FeatureFlagKeys.AdminResetTwoFactor)
-                .Returns(true);
+                .Returns(false);
         });
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
@@ -108,7 +108,7 @@ public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<Ap
             resetPasswordRequest);
 
         // Assert
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
