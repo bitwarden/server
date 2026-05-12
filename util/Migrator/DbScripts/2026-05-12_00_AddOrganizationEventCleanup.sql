@@ -26,6 +26,15 @@ BEGIN
 END
 GO
 
+-- Event index to support cleanup queries filtered by OrganizationId
+IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_Event_OrganizationId' AND object_id = OBJECT_ID('[dbo].[Event]'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_Event_OrganizationId]
+        ON [dbo].[Event]([OrganizationId] ASC)
+        WHERE [OrganizationId] IS NOT NULL;
+END
+GO
+
 -- Stored Procedures: Create
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationEventCleanup_Create]
     @Id UNIQUEIDENTIFIER,
