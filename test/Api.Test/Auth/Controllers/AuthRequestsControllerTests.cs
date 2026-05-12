@@ -231,8 +231,10 @@ public class AuthRequestsControllerTests
     {
         requestModel.Type = type;
 
-        await Assert.ThrowsAsync<BadRequestException>(
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.PostAdminRequest(requestModel));
+
+        Assert.Equal("Invalid AuthRequestType. Expected AdminApproval.", exception.Message);
 
         await sutProvider.GetDependency<IAuthRequestService>()
             .DidNotReceiveWithAnyArgs()
