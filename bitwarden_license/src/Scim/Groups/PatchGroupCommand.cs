@@ -122,8 +122,7 @@ public class PatchGroupCommand : IPatchGroupCommand
                     break;
                 }
 
-            // Add externalId from path. SCIM-2.0 IdPs that discover an existing group via displayName
-            // and notice it lacks their externalId issue an Add op so the link can be persisted.
+            // Add externalId from path.
             case PatchOps.Add when operation.Path?.ToLowerInvariant() == PatchPaths.ExternalId:
                 {
                     await HandleExternalIdOperationAsync(group, operation.Value.GetString());
@@ -172,6 +171,7 @@ public class PatchGroupCommand : IPatchGroupCommand
 
     private async Task HandleExternalIdOperationAsync(Group group, string newExternalId)
     {
+
         if (!string.IsNullOrWhiteSpace(newExternalId) && newExternalId.Length > 300)
         {
             throw new BadRequestException("ExternalId cannot exceed 300 characters.");
