@@ -118,6 +118,20 @@ public interface ISubscriberService
     Task ResumeFromUnpaidCancellationAsync(ISubscriber subscriber);
 
     /// <summary>
+    /// Schedules a platform-managed unpaid-lifecycle cancellation on the subscriber's Stripe subscription.
+    /// </summary>
+    /// <remarks>
+    /// Called by Admin Portal flows that disable a subscriber whose subscription is unpaid but was never
+    /// scheduled by the webhook handler. If the subscriber's Stripe subscription is currently <c>unpaid</c>
+    /// without a <c>cancel_at</c> timestamp and without the <c>Metadata[cancellation_origin] = unpaid_subscription</c>
+    /// marker, the method sets <c>cancel_at = now + 7d</c> and stamps the origin so
+    /// <c>SubscriptionDeletedHandler</c> voids open invoices when Stripe ultimately deletes the subscription.
+    /// No-op on any other subscription state.
+    /// </remarks>
+    /// <param name="subscriber">The subscriber whose unpaid-lifecycle cancellation should be scheduled.</param>
+    Task ScheduleUnpaidCancellationAsync(ISubscriber subscriber);
+
+    /// <summary>
     /// Validates whether the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewayCustomerId"/> exists in the gateway.
     /// If the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewayCustomerId"/> is <see langword="null"/> or empty, returns <see langword="true"/>.
     /// </summary>

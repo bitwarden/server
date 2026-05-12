@@ -172,6 +172,23 @@ public class UsersController : Controller
             }
         }
 
+        // Schedule the unpaid-lifecycle cancellation when disabling premium on a user whose Stripe subscription
+        // is unpaid but was never scheduled by the webhook handler.
+        if (originalPremium && !user.Premium)
+        {
+            try
+            {
+                await _subscriberService.ScheduleUnpaidCancellationAsync(user);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to schedule unpaid cancellation for user {UserId} on premium disable.",
+                    user.Id);
+                TempData["Warning"] = "User updated successfully, but scheduling the Stripe cancellation failed.";
+            }
+        }
+
         return RedirectToAction("Edit", new { id });
     }
 

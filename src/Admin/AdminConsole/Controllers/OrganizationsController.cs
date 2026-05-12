@@ -388,6 +388,23 @@ public class OrganizationsController : Controller
             }
         }
 
+        // Schedule the unpaid-lifecycle cancellation when disabling an organization whose Stripe subscription
+        // is unpaid but was never scheduled by the webhook handler.
+        if (existingOrganizationData.Enabled && !organization.Enabled)
+        {
+            try
+            {
+                await _subscriberService.ScheduleUnpaidCancellationAsync(organization);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to schedule unpaid cancellation for organization {OrganizationId} on disable.",
+                    organization.Id);
+                TempData["Warning"] = "Organization updated successfully, but scheduling the Stripe cancellation failed.";
+            }
+        }
+
         return RedirectToAction("Edit", new { id });
     }
 

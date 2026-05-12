@@ -583,6 +583,41 @@ public class SubscriberService(
             subscription.Id);
     }
 
+    public async Task ScheduleUnpaidCancellationAsync(ISubscriber subscriber)
+    {
+        var subscription = await GetSubscription(subscriber);
+
+        if (subscription is null ||
+            subscription.Status != SubscriptionStatus.Unpaid ||
+            subscription.CancelAt.HasValue ||
+            (subscription.Metadata is not null &&
+             subscription.Metadata.TryGetValue(MetadataKeys.CancellationOrigin, out var origin) &&
+             origin == CancellationOrigins.UnpaidSubscription))
+        {
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+
+        await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
+        {
+            CancelAt = now.AddDays(7),
+            ProrationBehavior = ProrationBehavior.None,
+            CancellationDetails = new SubscriptionCancellationDetailsOptions
+            {
+                Comment = $"Admin Portal: scheduling unpaid subscription to cancel 7 days from {now:yyyy-MM-dd}."
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                [MetadataKeys.CancellationOrigin] = CancellationOrigins.UnpaidSubscription
+            }
+        });
+
+        logger.LogInformation(
+            "Scheduled unpaid-lifecycle cancellation for subscription ({SubscriptionId}) after subscriber disable",
+            subscription.Id);
+    }
+
     public async Task<bool> IsValidGatewayCustomerIdAsync(ISubscriber subscriber)
     {
         ArgumentNullException.ThrowIfNull(subscriber);

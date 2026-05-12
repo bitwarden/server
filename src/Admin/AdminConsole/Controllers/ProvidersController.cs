@@ -359,6 +359,23 @@ public class ProvidersController : Controller
             }
         }
 
+        // Schedule the unpaid-lifecycle cancellation when disabling a provider whose Stripe subscription
+        // is unpaid but was never scheduled by the webhook handler.
+        if (originalProviderStatus && !provider.Enabled)
+        {
+            try
+            {
+                await _subscriberService.ScheduleUnpaidCancellationAsync(provider);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to schedule unpaid cancellation for provider {ProviderId} on disable.",
+                    provider.Id);
+                TempData["Warning"] = "Provider updated successfully, but scheduling the Stripe cancellation failed.";
+            }
+        }
+
         if (!provider.IsBillable())
         {
             return RedirectToAction("Edit", new { id });
