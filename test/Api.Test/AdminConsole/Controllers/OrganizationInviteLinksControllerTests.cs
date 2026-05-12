@@ -7,6 +7,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using NSubstitute;
+using Xunit;
 
 namespace Bit.Api.Test.AdminConsole.Controllers;
 
@@ -14,7 +16,6 @@ namespace Bit.Api.Test.AdminConsole.Controllers;
 [SutProviderCustomize]
 public class OrganizationInviteLinksControllerTests
 {
-    [Xunit.Theory]
     [Theory, BitAutoData]
     public async Task Create_WithValidInput_Success(
         Guid orgId,
@@ -50,7 +51,6 @@ public class OrganizationInviteLinksControllerTests
                 r.EncryptedInviteKey == "encrypted-key"));
     }
 
-    [Xunit.Theory]
     [Theory, BitAutoData]
     public async Task Create_WithExistingLink_Returns409(
         Guid orgId,
@@ -72,7 +72,6 @@ public class OrganizationInviteLinksControllerTests
         Assert.Equal(StatusCodes.Status409Conflict, jsonResult.StatusCode);
     }
 
-    [Xunit.Theory]
     [Theory, BitAutoData]
     public async Task Get_WhenLinkExists_ReturnsOkWithModel(
         Guid orgId,
@@ -94,7 +93,6 @@ public class OrganizationInviteLinksControllerTests
         Assert.Equal(orgId, okResult.Value.OrganizationId);
     }
 
-    [Xunit.Theory]
     [Theory, BitAutoData]
     public async Task Get_WhenNoLinkExists_ReturnsNotFound(
         Guid orgId,
@@ -110,7 +108,6 @@ public class OrganizationInviteLinksControllerTests
         Assert.NotNull(notFoundResult.Value);
     }
 
-    [Xunit.Theory]
     [Theory, BitAutoData]
     public async Task Get_WhenInviteLinkNotAvailable_Returns400(
         Guid orgId,
@@ -126,7 +123,6 @@ public class OrganizationInviteLinksControllerTests
         Assert.NotNull(badRequestResult.Value);
     }
 
-    [Xunit.Theory]
     [Theory, BitAutoData]
     public async Task Create_WithValidationError_Returns400(
         Guid orgId,
@@ -148,7 +144,6 @@ public class OrganizationInviteLinksControllerTests
         Assert.NotNull(badRequestResult.Value);
     }
 
-    [Xunit.Theory]
     [Theory, BitAutoData]
     public async Task Update_WithValidInput_ReturnsOk(
         Guid orgId,
@@ -180,7 +175,6 @@ public class OrganizationInviteLinksControllerTests
                 r.OrganizationId == orgId));
     }
 
-    [Xunit.Theory]
     [Theory, BitAutoData]
     public async Task Update_WhenNoLinkExists_ReturnsNotFound(
         Guid orgId,
@@ -201,7 +195,6 @@ public class OrganizationInviteLinksControllerTests
         Assert.NotNull(notFoundResult.Value);
     }
 
-    [Xunit.Theory]
     [Theory, BitAutoData]
     public async Task Update_WithValidationError_Returns400(
         Guid orgId,

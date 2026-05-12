@@ -7,6 +7,10 @@ using Bit.Identity.IdentityServer.RequestValidationConstants;
 using Bit.Identity.IdentityServer.RequestValidators;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Duende.IdentityModel;
+using Duende.IdentityServer.Validation;
+using NSubstitute;
+using Xunit;
 using AuthFixtures = Bit.Identity.Test.AutoFixture;
 
 namespace Bit.Identity.Test.IdentityServer;
@@ -14,7 +18,6 @@ namespace Bit.Identity.Test.IdentityServer;
 [SutProviderCustomize]
 public class SsoRequestValidatorTests
 {
-    [Xunit.Theory]
     [Theory]
     [BitAutoData(OidcConstants.GrantTypes.AuthorizationCode)]
     [BitAutoData(OidcConstants.GrantTypes.ClientCredentials)]
@@ -42,7 +45,6 @@ public class SsoRequestValidatorTests
             .GetAsyncVNext<RequireSsoPolicyRequirement>(Arg.Any<Guid>());
     }
 
-    [Xunit.Theory]
     [Theory, BitAutoData]
     public async void ValidateAsync_SsoNotRequired_ReturnsTrue(
         User user,
@@ -69,7 +71,6 @@ public class SsoRequestValidatorTests
         await sutProvider.GetDependency<IPolicyRequirementQuery>().Received(1).GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id);
     }
 
-    [Xunit.Theory]
     [Theory, BitAutoData]
     public async void ValidateAsync_SsoRequired_ReturnsFalse(
         User user,
@@ -104,7 +105,6 @@ public class SsoRequestValidatorTests
         Assert.False(context.CustomResponse.ContainsKey(CustomResponseConstants.ResponseKeys.SsoOrganizationIdentifier));
     }
 
-    [Xunit.Theory]
     [Theory, BitAutoData]
     public async void ValidateAsync_SsoRequired_TwoFactorRecoveryRequested_ReturnsFalse_WithSpecialMessage(
         User user,
@@ -142,7 +142,6 @@ public class SsoRequestValidatorTests
         Assert.False(context.CustomResponse.ContainsKey("SsoOrganizationIdentifier"));
     }
 
-    [Xunit.Theory]
     [Theory, BitAutoData]
     public async void ValidateAsync_SsoRequired_TwoFactorRequiredButNotRecovery_ReturnsFalse_WithStandardMessage(
         User user,
@@ -177,7 +176,6 @@ public class SsoRequestValidatorTests
         Assert.False(context.CustomResponse.ContainsKey("SsoOrganizationIdentifier"));
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData(OidcConstants.GrantTypes.Password)]
     [BitAutoData(OidcConstants.GrantTypes.RefreshToken)]
@@ -213,7 +211,6 @@ public class SsoRequestValidatorTests
         Assert.NotNull(context.CustomResponse);
     }
 
-    [Xunit.Theory]
     [Theory, BitAutoData]
     public async void ValidateAsync_ContextSsoRequiredUpdated_RegardlessOfInitialValue(
         User user,
@@ -239,7 +236,6 @@ public class SsoRequestValidatorTests
         Assert.Null(context.CustomResponse);
     }
 
-    [Xunit.Theory]
     [Theory, BitAutoData]
     public async void ValidateAsync_SsoRequired_WithOrganizationIdentifier_IncludesIdentifierInResponse(
         User user,
@@ -275,7 +271,6 @@ public class SsoRequestValidatorTests
             .GetSsoOrganizationIdentifierAsync(user.Id);
     }
 
-    [Xunit.Theory]
     [Theory, BitAutoData]
     public async void ValidateAsync_SsoRequired_NoOrganizationIdentifier_DoesNotIncludeIdentifierInResponse(
         User user,
@@ -309,7 +304,6 @@ public class SsoRequestValidatorTests
             .GetSsoOrganizationIdentifierAsync(user.Id);
     }
 
-    [Xunit.Theory]
     [Theory, BitAutoData]
     public async void ValidateAsync_SsoRequired_EmptyOrganizationIdentifier_DoesNotIncludeIdentifierInResponse(
         User user,
@@ -343,7 +337,6 @@ public class SsoRequestValidatorTests
             .GetSsoOrganizationIdentifierAsync(user.Id);
     }
 
-    [Xunit.Theory]
     [Theory, BitAutoData]
     public async void ValidateAsync_SsoNotRequired_DoesNotCallOrganizationIdentifierQuery(
         User user,

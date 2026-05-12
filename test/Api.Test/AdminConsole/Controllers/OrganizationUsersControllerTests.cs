@@ -34,6 +34,13 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using NSubstitute;
+using OneOf.Types;
+using Xunit;
 
 namespace Bit.Api.Test.AdminConsole.Controllers;
 
@@ -41,7 +48,6 @@ namespace Bit.Api.Test.AdminConsole.Controllers;
 [SutProviderCustomize]
 public class OrganizationUsersControllerTests
 {
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task PutResetPasswordEnrollment_InvitedUser_AcceptsInvite(Guid orgId, Guid userId, OrganizationUserResetPasswordEnrollmentRequestModel model,
@@ -57,7 +63,6 @@ public class OrganizationUsersControllerTests
         await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(1).AcceptOrgUserByOrgIdAsync(orgId, user, sutProvider.GetDependency<IUserService>());
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task PutResetPasswordEnrollment_ConfirmedUser_AcceptsInvite(Guid orgId, Guid userId, OrganizationUserResetPasswordEnrollmentRequestModel model,
@@ -73,7 +78,6 @@ public class OrganizationUsersControllerTests
         await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(0).AcceptOrgUserByOrgIdAsync(orgId, user, sutProvider.GetDependency<IUserService>());
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task PutResetPasswordEnrollment_PasswordValidationFails_Throws(Guid orgId, Guid userId, OrganizationUserResetPasswordEnrollmentRequestModel model,
@@ -86,7 +90,6 @@ public class OrganizationUsersControllerTests
         await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.PutResetPasswordEnrollment(orgId, userId, model));
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task PutResetPasswordEnrollment_PasswordValidationPasses_Continues(Guid orgId, Guid userId, OrganizationUserResetPasswordEnrollmentRequestModel model,
@@ -105,7 +108,6 @@ public class OrganizationUsersControllerTests
         );
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task Accept_RequiresKnownUser(Guid orgId, Guid orgUserId, OrganizationUserAcceptRequestModel model,
@@ -116,7 +118,6 @@ public class OrganizationUsersControllerTests
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.Accept(orgId, orgUserId, model));
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task Accept_WhenOrganizationUserNotFound_ThrowsNotFoundException(
@@ -129,7 +130,6 @@ public class OrganizationUsersControllerTests
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Accept(orgId, orgUserId, model));
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task Accept_WhenOrganizationIdMismatch_ThrowsNotFoundException(
@@ -143,7 +143,6 @@ public class OrganizationUsersControllerTests
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Accept(orgId, orgUserId, model));
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task Accept_NoMasterPasswordReset(Guid orgId, Guid orgUserId,
@@ -172,7 +171,6 @@ public class OrganizationUsersControllerTests
             .UpdateUserResetPasswordEnrollmentAsync(default, default, default, default);
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task Accept_WhenOrganizationUsePoliciesIsEnabledAndResetPolicyIsEnabled_ShouldHandleResetPassword(Guid orgId, Guid orgUserId,
@@ -209,7 +207,6 @@ public class OrganizationUsersControllerTests
         await userService.Received(1).GetUserByPrincipalAsync(default);
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task Accept_WhenResetPolicyIsEnabled_WithAutoEnrollDisabled_ShouldNotResetPassword(Guid orgId, Guid orgUserId,
@@ -245,7 +242,6 @@ public class OrganizationUsersControllerTests
             .UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task Invite_Success(OrganizationAbility organizationAbility, OrganizationUserInviteRequestModel model,
@@ -271,7 +267,6 @@ public class OrganizationUsersControllerTests
                 invites.First().Item1.AccessSecretsManager == model.AccessSecretsManager));
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task Invite_NotAuthorizedToGiveAccessToCollections_Throws(OrganizationAbility organizationAbility, OrganizationUserInviteRequestModel model,
@@ -290,7 +285,6 @@ public class OrganizationUsersControllerTests
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Invite(organizationAbility.Id, model));
     }
 
-    [Xunit.Theory]
     [Theory, BitAutoData]
     public async Task Get_ReturnsUser(
         OrganizationUserUserDetails organizationUser, ICollection<CollectionAccessSelection> collections,
@@ -317,7 +311,6 @@ public class OrganizationUsersControllerTests
         Assert.True(response.ClaimedByOrganization);
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task GetMany_ReturnsUsers(
@@ -330,7 +323,6 @@ public class OrganizationUsersControllerTests
         Assert.True(response.Data.All(r => organizationUsers.Any(ou => ou.Id == r.Id)));
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task GetAccountRecoveryDetails_ReturnsDetails(
@@ -359,7 +351,6 @@ public class OrganizationUsersControllerTests
                 ou.MasterPasswordSalt == r.MasterPasswordSalt)));
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task GetResetPasswordDetails_WhenOrganizationUserNotFound_ThrowsNotFound(
@@ -373,7 +364,6 @@ public class OrganizationUsersControllerTests
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetResetPasswordDetails(orgId, orgUserId));
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task GetResetPasswordDetails_WhenOrganizationIdMismatch_ThrowsNotFound(
@@ -389,7 +379,6 @@ public class OrganizationUsersControllerTests
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetResetPasswordDetails(orgId, orgUserId));
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task GetResetPasswordDetails_WhenUserIdIsNull_ThrowsNotFound(
@@ -405,7 +394,6 @@ public class OrganizationUsersControllerTests
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetResetPasswordDetails(orgId, orgUserId));
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task GetResetPasswordDetails_WhenValid_ReturnsDetails(
@@ -430,7 +418,6 @@ public class OrganizationUsersControllerTests
         Assert.Equal(user.MasterPasswordSalt, response.MasterPasswordSalt);
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task DeleteAccount_WhenCurrentUserNotFound_ReturnsUnauthorizedResult(
@@ -443,7 +430,6 @@ public class OrganizationUsersControllerTests
         Assert.IsType<UnauthorizedHttpResult>(result);
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task BulkDeleteAccount_WhenCurrentUserNotFound_ThrowsUnauthorizedAccessException(
@@ -480,7 +466,6 @@ public class OrganizationUsersControllerTests
             .Returns(organizationUsers);
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task Accept_WithInvalidModelResetPasswordKey_ThrowsBadRequestException(Guid orgId, Guid orgUserId,
@@ -521,7 +506,6 @@ public class OrganizationUsersControllerTests
         Assert.Equal("Master Password reset is required, but not provided.", exception.Message);
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task PutRecoverAccount_WhenAuthorizationFails_ReturnsBadRequest(
@@ -541,7 +525,6 @@ public class OrganizationUsersControllerTests
         Assert.IsType<BadRequest<ErrorResponseModel>>(result);
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task PutRecoverAccount_FlagOff_WhenRecoverAccountSucceeds_ReturnsOk(
@@ -569,7 +552,6 @@ public class OrganizationUsersControllerTests
             .RecoverAccountAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUser>(), Arg.Any<string>(), Arg.Any<string>());
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task PutRecoverAccount_FlagOff_WhenRecoverAccountFails_ReturnsBadRequest(
@@ -595,7 +577,6 @@ public class OrganizationUsersControllerTests
         Assert.IsType<BadRequest<ModelStateDictionary>>(result);
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task PutRecoverAccount_FlagOn_WhenRecoverAccountSucceeds_ReturnsNoContent(
@@ -621,7 +602,6 @@ public class OrganizationUsersControllerTests
         Assert.IsType<NoContent>(result);
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task PutRecoverAccount_FlagOn_WhenRecoverAccountFails_ReturnsBadRequest(
@@ -648,7 +628,6 @@ public class OrganizationUsersControllerTests
         Assert.IsType<BadRequest<ErrorResponseModel>>(result);
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task AutomaticallyConfirmOrganizationUserAsync_UserIdNull_ReturnsUnauthorized(
@@ -669,7 +648,6 @@ public class OrganizationUsersControllerTests
         Assert.IsType<UnauthorizedHttpResult>(result);
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task AutomaticallyConfirmOrganizationUserAsync_UserIdEmpty_ReturnsUnauthorized(
@@ -690,7 +668,6 @@ public class OrganizationUsersControllerTests
         Assert.IsType<UnauthorizedHttpResult>(result);
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task AutomaticallyConfirmOrganizationUserAsync_Success_ReturnsOk(
@@ -720,7 +697,6 @@ public class OrganizationUsersControllerTests
         Assert.IsType<NoContent>(result);
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task AutomaticallyConfirmOrganizationUserAsync_NotFoundError_ReturnsNotFound(
@@ -752,7 +728,6 @@ public class OrganizationUsersControllerTests
         Assert.Equal(notFoundError.Message, notFoundResult.Value.Message);
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task AutomaticallyConfirmOrganizationUserAsync_BadRequestError_ReturnsBadRequest(
@@ -784,7 +759,6 @@ public class OrganizationUsersControllerTests
         Assert.Equal(badRequestError.Message, badRequestResult.Value.Message);
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task AutomaticallyConfirmOrganizationUserAsync_InternalError_ReturnsProblem(
@@ -816,7 +790,6 @@ public class OrganizationUsersControllerTests
         Assert.Equal(StatusCodes.Status500InternalServerError, problemResult.StatusCode);
     }
 
-    [Xunit.Theory]
     [Theory]
     [BitAutoData]
     public async Task BulkReinvite_UsesBulkResendOrganizationInvitesCommand(
