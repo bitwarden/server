@@ -1,4 +1,6 @@
 ﻿using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
@@ -8,6 +10,7 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
+using Bit.Core.Entities;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -83,45 +86,75 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         var subscription = await _stripeEventService.GetSubscription(parsedEvent, true, ["customer", "discounts", "latest_invoice", "test_clock"]);
         SubscriberId subscriberId = subscription;
 
+        var subscriber = await GetSubscriberAsync(subscriberId);
+        if (subscriber == null)
+        {
+            _logger.LogWarning(
+                "Subscriber not found for subscription ({SubscriptionId}) in event ({EventId}), skipping handler",
+                subscription.Id,
+                parsedEvent.Id);
+            return;
+        }
+
         var currentPeriodEnd = subscription.GetCurrentPeriodEnd();
+        var clearOrgBillingAutomationExemption = false;
 
         if (SubscriptionWentUnpaid(parsedEvent, subscription))
         {
-            await DisableSubscriberAsync(subscriberId, currentPeriodEnd);
-            await SetSubscriptionToCancelAsync(subscription);
+            if (SkipUnpaidBillingAutomationsForExemptOrganization(subscriber))
+            {
+                _logger.LogInformation(
+                    "Skipping billing automations for exempt organization ({OrganizationId}). Exemption will be cleared after handler completion",
+                    subscriber.Id);
+                clearOrgBillingAutomationExemption = true;
+            }
+            else
+            {
+                await DisableSubscriberAsync(subscriber, currentPeriodEnd);
+                await SetSubscriptionToCancelAsync(subscription);
+            }
         }
         else if (SubscriptionWentIncompleteExpired(parsedEvent, subscription))
         {
             // Subscription is already terminal in Stripe; any attempt to
             // schedule a cancel would be rejected and 500 the webhook,
             // causing Stripe to retry and re-run DisableSubscriberAsync.
-            await DisableSubscriberAsync(subscriberId, currentPeriodEnd);
+            await DisableSubscriberAsync(subscriber, currentPeriodEnd);
         }
         else if (SubscriptionBecameActive(parsedEvent, subscription))
         {
-            await EnableSubscriberAsync(subscriberId, currentPeriodEnd);
+            await EnableSubscriberAsync(subscriber, currentPeriodEnd);
             await RemovePendingCancellationAsync(subscription);
         }
 
-        await subscriberId.Match(
-            userId => _userService.UpdatePremiumExpirationAsync(userId.Value, currentPeriodEnd),
-            async organizationId =>
-            {
-                if (_featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        switch (subscriber)
+        {
+            case User user:
+                await _userService.UpdatePremiumExpirationAsync(user.Id, currentPeriodEnd);
+                break;
+            case Organization organization:
                 {
-                    await HandleScheduleTriggeredFamiliesMigrationAsync(parsedEvent, subscription, organizationId.Value);
+                    if (_featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+                    {
+                        await HandleScheduleTriggeredFamiliesMigrationAsync(parsedEvent, subscription, organization.Id);
+                    }
+
+                    await _organizationService.UpdateExpirationDateAsync(organization.Id, currentPeriodEnd);
+
+                    if (_stripeEventUtilityService.IsSponsoredSubscription(subscription) && currentPeriodEnd.HasValue)
+                    {
+                        await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(organization.Id, currentPeriodEnd.Value);
+                    }
+
+                    await RemovePasswordManagerCouponIfRemovingSecretsManagerTrialAsync(parsedEvent, subscription, organization.Id);
+
+                    if (clearOrgBillingAutomationExemption)
+                    {
+                        await ClearBillingAutomationExemptionAsync(organization.Id);
+                    }
+                    break;
                 }
-
-                await _organizationService.UpdateExpirationDateAsync(organizationId.Value, currentPeriodEnd);
-
-                if (_stripeEventUtilityService.IsSponsoredSubscription(subscription) && currentPeriodEnd.HasValue)
-                {
-                    await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(organizationId.Value, currentPeriodEnd.Value);
-                }
-
-                await RemovePasswordManagerCouponIfRemovingSecretsManagerTrialAsync(parsedEvent, subscription);
-            },
-            _ => Task.CompletedTask);
+        }
     }
 
     private static bool SubscriptionWentUnpaid(
@@ -136,7 +169,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         } && currentSubscription is
         {
             Status: SubscriptionStatus.Unpaid,
-            LatestInvoice.BillingReason: BillingReasons.SubscriptionCreate or BillingReasons.SubscriptionCycle
+            LatestInvoice.BillingReason: BillingReasons.SubscriptionCycle
         };
 
     private static bool SubscriptionWentIncompleteExpired(
@@ -165,65 +198,113 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             LatestInvoice.BillingReason: BillingReasons.SubscriptionCreate or BillingReasons.SubscriptionCycle
         };
 
-    private Task DisableSubscriberAsync(SubscriberId subscriberId, DateTime? currentPeriodEnd) =>
-        subscriberId.Match(
-            async userId =>
-            {
-                await _userService.DisablePremiumAsync(userId.Value, currentPeriodEnd);
-                var user = await _userRepository.GetByIdAsync(userId.Value);
-                if (user != null)
-                {
-                    await _pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user);
-                }
-            },
-            async organizationId =>
-            {
-                await _organizationDisableCommand.DisableAsync(organizationId.Value, currentPeriodEnd);
-                var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
-                if (organization != null)
-                {
-                    await _pushNotificationAdapter.NotifyEnabledChangedAsync(organization);
-                }
-            },
-            async providerId =>
-            {
-                var provider = await _providerRepository.GetByIdAsync(providerId.Value);
-                if (provider != null)
-                {
-                    provider.Enabled = false;
-                    await _providerService.UpdateAsync(provider);
-                }
-            });
+    private static bool SkipUnpaidBillingAutomationsForExemptOrganization(ISubscriber subscriber) =>
+        subscriber is Organization { Enabled: true, ExemptFromBillingAutomation: true };
 
-    private Task EnableSubscriberAsync(SubscriberId subscriberId, DateTime? currentPeriodEnd) =>
-        subscriberId.Match(
-            async userId =>
-            {
-                await _userService.EnablePremiumAsync(userId.Value, currentPeriodEnd);
-                var user = await _userRepository.GetByIdAsync(userId.Value);
-                if (user != null)
-                {
-                    await _pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user!);
-                }
-            },
-            async organizationId =>
-            {
-                await _organizationEnableCommand.EnableAsync(organizationId.Value, currentPeriodEnd);
-                var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
-                if (organization != null)
-                {
-                    await _pushNotificationAdapter.NotifyEnabledChangedAsync(organization);
-                }
-            },
-            async providerId =>
-            {
-                var provider = await _providerRepository.GetByIdAsync(providerId.Value);
-                if (provider != null)
-                {
-                    provider.Enabled = true;
-                    await _providerService.UpdateAsync(provider);
-                }
-            });
+    private Task<ISubscriber?> GetSubscriberAsync(SubscriberId subscriberId) =>
+        subscriberId.Match<Task<ISubscriber?>>(
+            async userId => await _userRepository.GetByIdAsync(userId.Value),
+            async organizationId => await _organizationRepository.GetByIdAsync(organizationId.Value),
+            async providerId => await _providerRepository.GetByIdAsync(providerId.Value));
+
+    private Task DisableSubscriberAsync(ISubscriber subscriber, DateTime? currentPeriodEnd) =>
+        subscriber switch
+        {
+            User user => DisableUserAsync(user.Id, currentPeriodEnd),
+            Organization organization => DisableOrganizationAsync(organization.Id, currentPeriodEnd),
+            Provider provider => DisableProviderAsync(provider.Id),
+            _ => Task.CompletedTask
+        };
+
+    private async Task DisableUserAsync(Guid userId, DateTime? currentPeriodEnd)
+    {
+        await _userService.DisablePremiumAsync(userId, currentPeriodEnd);
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user != null)
+        {
+            await _pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user);
+        }
+    }
+
+    private async Task DisableOrganizationAsync(Guid organizationId, DateTime? currentPeriodEnd)
+    {
+        await _organizationDisableCommand.DisableAsync(organizationId, currentPeriodEnd);
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        if (organization != null)
+        {
+            await _pushNotificationAdapter.NotifyEnabledChangedAsync(organization);
+        }
+    }
+
+    private async Task DisableProviderAsync(Guid providerId)
+    {
+        var provider = await _providerRepository.GetByIdAsync(providerId);
+        if (provider == null)
+        {
+            return;
+        }
+
+        provider.Enabled = false;
+        await _providerService.UpdateAsync(provider);
+    }
+
+    private async Task ClearBillingAutomationExemptionAsync(Guid organizationId)
+    {
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        if (organization == null)
+        {
+            return;
+        }
+
+        organization.ExemptFromBillingAutomation = false;
+        organization.RevisionDate = DateTime.UtcNow;
+        await _organizationRepository.ReplaceAsync(organization);
+
+        _logger.LogInformation(
+            "Exemption has been cleared for organization ({OrganizationId})",
+            organizationId);
+    }
+
+    private Task EnableSubscriberAsync(ISubscriber subscriber, DateTime? currentPeriodEnd) =>
+        subscriber switch
+        {
+            User user => EnableUserAsync(user.Id, currentPeriodEnd),
+            Organization organization => EnableOrganizationAsync(organization.Id, currentPeriodEnd),
+            Provider provider => EnableProviderAsync(provider.Id),
+            _ => Task.CompletedTask
+        };
+
+    private async Task EnableUserAsync(Guid userId, DateTime? currentPeriodEnd)
+    {
+        await _userService.EnablePremiumAsync(userId, currentPeriodEnd);
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user != null)
+        {
+            await _pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user);
+        }
+    }
+
+    private async Task EnableOrganizationAsync(Guid organizationId, DateTime? currentPeriodEnd)
+    {
+        await _organizationEnableCommand.EnableAsync(organizationId, currentPeriodEnd);
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        if (organization != null)
+        {
+            await _pushNotificationAdapter.NotifyEnabledChangedAsync(organization);
+        }
+    }
+
+    private async Task EnableProviderAsync(Guid providerId)
+    {
+        var provider = await _providerRepository.GetByIdAsync(providerId);
+        if (provider == null)
+        {
+            return;
+        }
+
+        provider.Enabled = true;
+        await _providerService.UpdateAsync(provider);
+    }
 
     private async Task SetSubscriptionToCancelAsync(Subscription subscription)
     {
@@ -264,19 +345,18 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     /// </summary>
     /// <param name="parsedEvent"></param>
     /// <param name="subscription"></param>
+    /// <param name="organizationId"></param>
     private async Task RemovePasswordManagerCouponIfRemovingSecretsManagerTrialAsync(
         Event parsedEvent,
-        Subscription subscription)
+        Subscription subscription,
+        Guid organizationId)
     {
         if (parsedEvent.Data.PreviousAttributes?.items is null)
         {
             return;
         }
 
-        var organization = subscription.Metadata.TryGetValue("organizationId", out var organizationId)
-            ? await _organizationRepository.GetByIdAsync(Guid.Parse(organizationId))
-            : null;
-
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
         if (organization == null)
         {
             return;
