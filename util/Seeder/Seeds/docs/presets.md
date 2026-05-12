@@ -2,6 +2,14 @@
 
 Complete catalog of all seeder presets, organized by purpose. Use `--mangle` to avoid collisions with existing data.
 
+## Cipher generation knobs
+
+These options apply to any preset that uses generated (count-based) ciphers — QA, Scale, and Individual alike. Add them to the `"ciphers"` or `"personalCiphers"` block in the preset JSON. Schema reference: `Seeds/schemas/preset.schema.json`.
+
+| Knob                     | Type    | Default | Description                                                                                                                                   |
+| ------------------------ | ------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `repromptEveryNthCipher` | integer | 0       | Set `Reprompt=Password` on every Nth generated cipher. `0` = disabled. Example: `5` flags ciphers at indices 0, 5, 10, … ≈ 20% reprompt rate. |
+
 ## Features
 
 Test specific Bitwarden features. Fixture-based data for deterministic results.
@@ -26,14 +34,14 @@ Known users, groups, collections, and permissions you can point a client to.
 dotnet run -- preset --name qa.{name} --mangle
 ```
 
-| Preset                            | Org Fixture         | Roster                 | Ciphers                | Use Case                                    |
-| --------------------------------- | ------------------- | ---------------------- | ---------------------- | ------------------------------------------- |
-| enterprise-basic                  | redwood-analytics   | enterprise-basic       | enterprise-basic       | Standard enterprise org                     |
-| collection-permissions-enterprise | cobalt-logistics    | collection-permissions | collection-permissions | Permission edge cases                       |
-| dunder-mifflin-enterprise-full    | dunder-mifflin      | dunder-mifflin         | autofill-testing       | Large handcrafted org                       |
-| families-basic                    | adams-family        | family                 | 150 generated          | Families plan with personal vaults          |
-| stark-free-basic                  | stark-industries    | 1 generated user       | autofill-testing       | Free plan personal vault                    |
-| zero-knowledge-labs-enterprise    | zero-knowledge-labs | zero-knowledge-labs    | zero-knowledge-labs    | Full ZKL org with named folders + favorites |
+| Preset                            | Org Fixture         | Roster                 | Ciphers                | Use Case                                      |
+| --------------------------------- | ------------------- | ---------------------- | ---------------------- | --------------------------------------------- |
+| enterprise-basic                  | redwood-analytics   | enterprise-basic       | enterprise-basic       | Standard enterprise org                       |
+| collection-permissions-enterprise | cobalt-logistics    | collection-permissions | collection-permissions | Permission edge cases                         |
+| dunder-mifflin-enterprise-full    | dunder-mifflin      | dunder-mifflin         | autofill-testing       | Large handcrafted org                         |
+| families-basic                    | adams-family        | family                 | 150 generated          | Families plan with personal vaults + reprompt |
+| stark-free-basic                  | stark-industries    | 1 generated user       | autofill-testing       | Free plan personal vault                      |
+| zero-knowledge-labs-enterprise    | zero-knowledge-labs | zero-knowledge-labs    | zero-knowledge-labs    | Full ZKL org with named folders + favorites   |
 
 `families-basic` and `stark-free-basic` mix fixtures with generated data (ciphers and personal ciphers).
 
@@ -76,10 +84,10 @@ Individual user accounts with no organization. Useful for testing personal vault
 dotnet run -- preset --name individual.{name} --mangle
 ```
 
-| Preset        | Account Type | Folders                              | Ciphers                      | Assignments              |
-| ------------- | ------------ | ------------------------------------ | ---------------------------- | ------------------------ |
-| free          | Free         | —                                    | 0                            | —                        |
-| premium       | Premium (1GB)| —                                    | 0                            | —                        |
+| Preset  | Account Type  | Folders | Ciphers | Assignments |
+| ------- | ------------- | ------- | ------- | ----------- |
+| free    | Free          | —       | 0       | —           |
+| premium | Premium (1GB) | —       | 0       | —           |
 
 `free` and `premium` create accounts with no vault data — useful for testing account setup flows. Cipher count is set to 0 (TBD).
 

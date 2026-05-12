@@ -171,4 +171,40 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         var getResponse = await _client.GetAsync($"/organizations/{_organization.Id}/invite-link");
         Assert.Equal(HttpStatusCode.NotFound, getResponse.StatusCode);
     }
+
+    [Fact]
+    public async Task Refresh_AsOwner_ReplacesLink()
+    {
+        var createRequest = new CreateOrganizationInviteLinkRequestModel
+        {
+            AllowedDomains = ["acme.com", "example.com"],
+            EncryptedInviteKey = _validEncryptedKey,
+        };
+        var createResponse = await _client.PostAsJsonAsync(
+            $"/organizations/{_organization.Id}/invite-link", createRequest);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        var original = await createResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkResponseModel>();
+        Assert.NotNull(original);
+
+        var refreshRequest = new RefreshOrganizationInviteLinkRequestModel
+        {
+            EncryptedInviteKey = _validEncryptedKey,
+        };
+        var refreshResponse = await _client.PostAsJsonAsync(
+            $"/organizations/{_organization.Id}/invite-link/refresh", refreshRequest);
+
+        Assert.Equal(HttpStatusCode.OK, refreshResponse.StatusCode);
+        var refreshed = await refreshResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkResponseModel>();
+        Assert.NotNull(refreshed);
+        Assert.NotEqual(original.Id, refreshed.Id);
+        Assert.NotEqual(original.Code, refreshed.Code);
+        Assert.Equal(original.AllowedDomains, refreshed.AllowedDomains);
+        Assert.Equal(_organization.Id, refreshed.OrganizationId);
+
+        var getResponse = await _client.GetAsync($"/organizations/{_organization.Id}/invite-link");
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        var current = await getResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkResponseModel>();
+        Assert.NotNull(current);
+        Assert.Equal(refreshed.Id, current.Id);
+    }
 }

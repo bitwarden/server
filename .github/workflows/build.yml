@@ -515,7 +515,7 @@ jobs:
           repositories: self-host
 
       - name: Trigger Bitwarden lite build
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           github-token: ${{ steps.app-token.outputs.token }}
           script: |
@@ -545,19 +545,3 @@ jobs:
           azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
           task: deploy-server-dev
           description: "Triggered by server build on main"
-
-  setup-ephemeral-environment:
-    name: Setup Ephemeral Environment
-    needs: build-artifacts
-    if: |
-      needs.build-artifacts.outputs.has_secrets == 'true'
-      && github.event_name == 'pull_request'
-      && contains(github.event.pull_request.labels.*.name, 'ephemeral-environment')
-    uses: bitwarden/gh-actions/.github/workflows/_ephemeral_environment_manager.yml@main
-    with:
-      project: server
-      pull_request_number: ${{ github.event.number || 0 }}
-    secrets: inherit
-    permissions:
-      contents: read
-      id-token: write
