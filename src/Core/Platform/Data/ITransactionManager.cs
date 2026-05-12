@@ -11,9 +11,10 @@ public interface ITransactionManager
     /// <summary>
     /// Begins a new ambient transaction. All repository operations on the current
     /// async flow will use the same connection and transaction until disposed.
-    /// Supports nesting: inner calls increment a reference count; only the
-    /// outermost Dispose/Commit actually affects the database. The isolation level
-    /// on a nested call is ignored — the inner scope joins the outer transaction.
+    /// Supports nesting: inner calls return a no-op scope that shares the outer
+    /// transaction. Only the outermost Commit/Dispose actually affects the database.
+    /// The isolation level on nested calls is ignored — inner scopes inherit the
+    /// outer transaction's isolation level.
     /// </summary>
     Task<ITransactionScope> BeginTransactionAsync(
         IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,

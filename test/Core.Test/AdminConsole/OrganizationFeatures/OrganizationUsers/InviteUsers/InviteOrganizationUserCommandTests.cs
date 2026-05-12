@@ -659,17 +659,17 @@ public class InviteOrganizationUserCommandTests
         Assert.IsType<Failure<ScimInviteOrganizationUsersResponse>>(result);
         Assert.Equal(FailedToInviteUsersError.Code, (result as Failure<ScimInviteOrganizationUsersResponse>)!.Error.Message);
 
-        // org user revert
-        // await orgUserRepository.Received(1).DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(x => x.Count() == 1));
+        // DB writes (org user inserts, seat-count increment) are rolled back by the ambient
+        // transaction in PostUserCommand, so no compensating repository calls are expected here.
+        // The assertions below verify the explicit compensating actions for non-transactional
+        // state: the Stripe subscription update and the application cache.
 
-        // SM revert
+        // SM revert (Stripe): once for adjust, once for revert
         await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
             .Received(2)
             .UpdateSubscriptionAsync(Arg.Any<SecretsManagerSubscriptionUpdate>());
 
-        // PM revert
-        // await orgRepository.Received(1).ReplaceAsync(Arg.Any<Organization>());
-
+        // PM revert (application cache): once for adjust, once for revert
         await sutProvider.GetDependency<IApplicationCacheService>().Received(2)
             .UpsertOrganizationAbilityAsync(Arg.Any<Organization>());
     }

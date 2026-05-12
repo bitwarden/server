@@ -37,7 +37,7 @@ public abstract class BaseEntityFrameworkRepository
     /// scope and resolves a fresh DatabaseContext. The caller must dispose the returned
     /// scope only if it is non-null (i.e., when not using the ambient context).
     /// </summary>
-    protected (DatabaseContext DbContext, IServiceScope? OwnedScope) GetDatabaseContextOrAmbient()
+    private (DatabaseContext DbContext, IServiceScope? OwnedScope) GetDatabaseContextOrAmbient()
     {
         var holder = TransactionState.Current;
         if (holder?.DbContext is DatabaseContext ambientContext)

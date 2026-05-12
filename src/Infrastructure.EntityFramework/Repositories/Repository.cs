@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Bit.Core.Entities;
+using Bit.Core.Platform.Data;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
@@ -106,19 +107,14 @@ public abstract class Repository<T, TEntity, TId> : BaseEntityFrameworkRepositor
 
     public IQueryable<Tout> Run<Tout>(IQuery<Tout> query)
     {
-        var (dbContext, ownedScope) = GetDatabaseContextOrAmbient();
-        // Note: IQueryable is deferred, so disposing the scope here would break it.
-        // This matches the existing behavior where the scope is disposed before
-        // the query is materialized. Callers must materialize within scope.
-        if (ownedScope is not null)
+        if (TransactionState.Current?.DbContext is DatabaseContext ambientContext)
         {
-            // Fall back to original behavior for non-transactional context
-            using (var scope = ServiceScopeFactory.CreateScope())
-            {
-                var context = GetDatabaseContext(scope);
-                return query.Run(context);
-            }
+            return query.Run(ambientContext);
         }
-        return query.Run(dbContext);
+
+        // IQueryable is deferred, so the scope is disposed before the query is materialized.
+        // This matches existing behavior — callers must materialize within their own scope.
+        using var scope = ServiceScopeFactory.CreateScope();
+        return query.Run(GetDatabaseContext(scope));
     }
 }

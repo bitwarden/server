@@ -26,6 +26,7 @@ public sealed class RootTransactionScope : ITransactionScope
     {
         _holder.Doomed = true;
         await _holder.Transaction.RollbackAsync(cancellationToken);
+        _holder.RolledBack = true;
     }
 
     public async ValueTask DisposeAsync()

@@ -18,6 +18,7 @@ public sealed class TransactionHolder : IAsyncDisposable
     public required DbConnection Connection { get; init; }
     public required DbTransaction Transaction { get; init; }
     public bool Committed { get; set; }
+    public bool RolledBack { get; set; }
     public bool Doomed { get; set; }
 
     /// <summary>
@@ -39,7 +40,7 @@ public sealed class TransactionHolder : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        if (!Committed)
+        if (!Committed && !RolledBack)
         {
             try
             {
