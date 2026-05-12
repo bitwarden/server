@@ -84,6 +84,7 @@ public static class StripeConstants
     {
         public const string BraintreeCustomerId = "btCustomerId";
         public const string BraintreeTransactionId = "btTransactionId";
+        public const string CancellationOrigin = "cancellation_origin";
         public const string InvoiceApproved = "invoice_approved";
         public const string OrganizationId = "organizationId";
         public const string PayPalTransactionId = "btPayPalTransactionId";
@@ -96,6 +97,11 @@ public static class StripeConstants
         public const string OriginatingAppVersion = "originatingAppVersion";
         public const string TrialInitiationPath = "trialInitiationPath";
         public const string CancelledDuringDeferredPriceIncrease = "cancelled_during_deferred_price_increase";
+    }
+
+    public static class CancellationOrigins
+    {
+        public const string UnpaidSubscription = "unpaid_subscription";
     }
 
     public static class PaymentBehavior

@@ -1940,6 +1940,127 @@ public class SubscriptionUpdatedHandlerTests
     }
 
     [Fact]
+    public async Task HandleAsync_UnpaidOrganizationSubscription_StampsCancellationOriginMetadata()
+    {
+        // The metadata stamp is the sole signal SubscriptionDeletedHandler uses to recognize
+        // that the eventual customer.subscription.deleted came from the platform-managed
+        // unpaid lifecycle and should void open invoices.
+        var organizationId = Guid.NewGuid();
+        const string subscriptionId = "sub_metadata_stamp";
+        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var previousSubscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Active
+        };
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Unpaid,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd, Plan = new Plan { Id = "2023-enterprise-org-seat-annually" } }]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            Enabled = true,
+            PlanType = PlanType.EnterpriseAnnually2023
+        };
+
+        var parsedEvent = new Event
+        {
+            Id = "evt_metadata_stamp",
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new Enterprise2023Plan(true));
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            subscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.Metadata != null &&
+                options.Metadata.ContainsKey(MetadataKeys.CancellationOrigin) &&
+                options.Metadata[MetadataKeys.CancellationOrigin] == CancellationOrigins.UnpaidSubscription));
+    }
+
+    [Fact]
+    public async Task HandleAsync_ActiveFromUnpaidSubscription_ClearsCancellationOriginMetadata()
+    {
+        // When the customer pays and the subscription recovers, the marker must be removed
+        // so a future voluntary cancel doesn't trigger an unwanted invoice void.
+        // Stripe removes a metadata key when its value is set to empty string.
+        var organizationId = Guid.NewGuid();
+        const string subscriptionId = "sub_metadata_clear";
+        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var previousSubscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Unpaid
+        };
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Active,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd, Plan = new Plan { Id = "2023-enterprise-org-seat-annually" } }]
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                { "organizationId", organizationId.ToString() },
+                { MetadataKeys.CancellationOrigin, CancellationOrigins.UnpaidSubscription }
+            },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.EnterpriseAnnually2023 };
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new Enterprise2023Plan(true));
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            subscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.Metadata != null &&
+                options.Metadata.ContainsKey(MetadataKeys.CancellationOrigin) &&
+                options.Metadata[MetadataKeys.CancellationOrigin] == string.Empty));
+    }
+
+    [Fact]
     public async Task HandleAsync_UnpaidOrganizationSubscription_WithExemptOrganization_DoesNotDisableAndClearsExemption()
     {
         // Arrange
