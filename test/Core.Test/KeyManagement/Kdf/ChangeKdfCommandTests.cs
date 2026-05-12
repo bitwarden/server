@@ -25,8 +25,9 @@ public class ChangeKdfCommandTests
     [Theory]
     [BitAutoData]
     public async Task ChangeKdfAsync_ServiceReturnsUser_ReturnsIdentityResultSuccess(
-        SutProvider<ChangeKdfCommand> sutProvider, User user, KdfSettings kdf)
+        SutProvider<ChangeKdfCommand> sutProvider, User user)
     {
+        var kdf = new KdfSettings { KdfType = KdfType.Argon2id, Iterations = 4, Memory = 512, Parallelism = 4 };
         var authenticationData = new MasterPasswordAuthenticationData
         {
             Kdf = kdf,
@@ -53,8 +54,9 @@ public class ChangeKdfCommandTests
     [Theory]
     [BitAutoData]
     public async Task ChangeKdfAsync_ServiceReturnsErrors_ReturnsIdentityResultFailed(
-        SutProvider<ChangeKdfCommand> sutProvider, User user, KdfSettings kdf)
+        SutProvider<ChangeKdfCommand> sutProvider, User user)
     {
+        var kdf = new KdfSettings { KdfType = KdfType.Argon2id, Iterations = 4, Memory = 512, Parallelism = 4 };
         var authenticationData = new MasterPasswordAuthenticationData
         {
             Kdf = kdf,
