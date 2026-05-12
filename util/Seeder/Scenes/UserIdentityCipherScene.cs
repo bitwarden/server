@@ -23,6 +23,7 @@ public class UserIdentityCipherScene(IUserRepository userRepository, ICipherRepo
         public string? MiddleName { get; set; }
         public string? LastName { get; set; }
         public string? Notes { get; set; }
+        public bool Reprompt { get; set; }
     }
 
     public class Result
@@ -54,6 +55,10 @@ public class UserIdentityCipherScene(IUserRepository userRepository, ICipherRepo
             UserId = request.UserId,
             Identity = identity
         });
+        if (request.Reprompt)
+        {
+            cipher.Reprompt = CipherRepromptType.Password;
+        }
 
         await cipherRepository.CreateAsync(cipher);
 

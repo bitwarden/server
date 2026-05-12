@@ -19,7 +19,8 @@ internal static class LoginCipherSeeder
             Notes = options.Notes,
             Type = CipherTypes.Login,
             Login = options.Login,
-            Fields = options.Fields
+            Fields = options.Fields,
+            Reprompt = (int)options.Reprompt
         };
 
         var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!);

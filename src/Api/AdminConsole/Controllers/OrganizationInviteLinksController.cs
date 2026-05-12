@@ -15,7 +15,10 @@ namespace Bit.Api.AdminConsole.Controllers;
 [RequireFeature(FeatureFlagKeys.GenerateInviteLink)]
 public class OrganizationInviteLinksController(
     ICreateOrganizationInviteLinkCommand createOrganizationInviteLinkCommand,
-    IGetOrganizationInviteLinkQuery getOrganizationInviteLinkQuery)
+    IGetOrganizationInviteLinkQuery getOrganizationInviteLinkQuery,
+    IUpdateOrganizationInviteLinkCommand updateOrganizationInviteLinkCommand,
+    IDeleteOrganizationInviteLinkCommand deleteOrganizationInviteLinkCommand,
+    IRefreshOrganizationInviteLinkCommand refreshOrganizationInviteLinkCommand)
     : BaseAdminConsoleController
 {
     [HttpGet("")]
@@ -39,5 +42,35 @@ public class OrganizationInviteLinksController(
             TypedResults.Created(
                 $"organizations/{orgId}/invite-link",
                 new OrganizationInviteLinkResponseModel(link)));
+    }
+
+    [HttpPut("")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<IResult> Update(Guid orgId, [FromBody] UpdateOrganizationInviteLinkRequestModel model)
+    {
+        var result = await updateOrganizationInviteLinkCommand.UpdateAsync(
+            model.ToCommandRequest(orgId));
+
+        return Handle(result, link =>
+            TypedResults.Ok(new OrganizationInviteLinkResponseModel(link)));
+    }
+
+    [HttpDelete("")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<IResult> Delete(Guid orgId)
+    {
+        var result = await deleteOrganizationInviteLinkCommand.DeleteAsync(orgId);
+        return Handle(result);
+    }
+
+    [HttpPost("refresh")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<IResult> Refresh(Guid orgId, [FromBody] RefreshOrganizationInviteLinkRequestModel model)
+    {
+        var result = await refreshOrganizationInviteLinkCommand.RefreshAsync(
+            model.ToCommandRequest(orgId));
+
+        return Handle(result, link =>
+            TypedResults.Ok(new OrganizationInviteLinkResponseModel(link)));
     }
 }
