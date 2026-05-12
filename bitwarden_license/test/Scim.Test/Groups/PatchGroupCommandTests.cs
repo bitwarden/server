@@ -673,6 +673,44 @@ public class PatchGroupCommandTests
     }
 
     [Theory]
+    [BitAutoData("")]
+    [BitAutoData("   ")]
+    public async Task PatchGroup_ReplaceExternalIdFromPath_EmptyOrWhitespace_StoresNull(
+        string externalId,
+        Organization organization,
+        Group group)
+    {
+        // Arrange
+        var sutProvider = SetupSutProvider();
+        group.OrganizationId = organization.Id;
+        group.ExternalId = "original";
+
+        var scimPatchModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new()
+                {
+                    Op = "replace",
+                    Path = "externalId",
+                    Value = JsonDocument.Parse($"\"{externalId}\"").RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaGroup }
+        };
+
+        // Act
+        await sutProvider.Sut.PatchGroupAsync(group, scimPatchModel);
+
+        // Assert
+        await sutProvider.GetDependency<IGroupRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetManyByOrganizationIdAsync(default);
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).ReplaceAsync(group);
+        Assert.Null(group.ExternalId);
+    }
+
+    [Theory]
     [BitAutoData]
     public async Task PatchGroup_InvalidOperation_Success(SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group)
     {
