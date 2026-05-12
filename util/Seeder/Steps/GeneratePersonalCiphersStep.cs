@@ -22,7 +22,8 @@ internal sealed class GeneratePersonalCiphersStep(
     int countPerUser,
     Distribution<CipherType>? typeDist = null,
     Distribution<PasswordStrength>? pwDist = null,
-    DensityProfile? density = null) : IStep
+    DensityProfile? density = null,
+    int repromptEveryNthCipher = 0) : IStep
 {
     public void Execute(SeederContext context)
     {
@@ -78,7 +79,10 @@ internal sealed class GeneratePersonalCiphersStep(
             {
                 var globalIndex = baseOffset + i;
                 var cipherType = typeDistribution.Select(globalIndex, expectedTotal);
-                var cipher = CipherComposer.Compose(globalIndex, cipherType, userDigest.SymmetricKey, companies, generator, passwordDistribution, userId: userDigest.UserId);
+                var reprompt = repromptEveryNthCipher > 0 && globalIndex % repromptEveryNthCipher == 0
+                    ? CipherRepromptType.Password
+                    : CipherRepromptType.None;
+                var cipher = CipherComposer.Compose(globalIndex, cipherType, userDigest.SymmetricKey, companies, generator, passwordDistribution, userId: userDigest.UserId, reprompt: reprompt);
 
                 CipherComposer.AssignFolder(cipher, userDigest.UserId, i, userFolderIds);
 
