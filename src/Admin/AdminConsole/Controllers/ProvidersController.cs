@@ -343,6 +343,22 @@ public class ProvidersController : Controller
             }
         }
 
+        // Clear any pending unpaid-lifecycle cancellation when re-enabling a billing-disabled provider
+        if (!originalProviderStatus && provider.Enabled)
+        {
+            try
+            {
+                await _subscriberService.ResumeFromUnpaidCancellationAsync(provider);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to clear pending unpaid cancellation for provider {ProviderId} on re-enable.",
+                    provider.Id);
+                TempData["Warning"] = "Provider updated successfully, but clearing the pending Stripe cancellation failed.";
+            }
+        }
+
         if (!provider.IsBillable())
         {
             return RedirectToAction("Edit", new { id });
