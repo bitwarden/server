@@ -17,12 +17,8 @@
 # Scanning tools
 .checkmarx/ @bitwarden/team-appsec
 
-## BRE team owns these workflows ##
-.github/workflows/publish.yml @bitwarden/dept-bre
-
 ## These are shared workflows ##
 .github/workflows/_move_edd_db_scripts.yml
-.github/workflows/release.yml
 
 # Database Operations for database changes
 src/Sql/** @bitwarden/dept-dbops
