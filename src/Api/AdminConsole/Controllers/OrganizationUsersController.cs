@@ -799,6 +799,12 @@ public class OrganizationUsersController : BaseAdminConsoleController
         [FromRoute] Guid id,
         [FromBody] OrganizationUserConfirmRequestModel model)
     {
+        var userId = _userService.GetProperUserId(User);
+
+        if (userId is null || userId.Value == Guid.Empty)
+        {
+            return TypedResults.Unauthorized();
+        }
         return Handle(await _automaticallyConfirmOrganizationUserCommand.AutomaticallyConfirmOrganizationUserAsync(
             new AutomaticallyConfirmOrganizationUserRequest
             {
@@ -806,6 +812,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
                 OrganizationUserId = id,
                 Key = model.Key,
                 DefaultUserCollectionName = model.DefaultUserCollectionName,
+                PerformedBy = new StandardUser(userId.Value, await _currentContext.OrganizationOwner(orgId)),
             }));
     }
 
