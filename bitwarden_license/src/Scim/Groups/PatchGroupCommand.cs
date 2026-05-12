@@ -52,159 +52,122 @@ public class PatchGroupCommand : IPatchGroupCommand
     {
         switch (operation.Op?.ToLowerInvariant())
         {
-            case PatchOps.Replace:
-                await HandleReplaceAsync(group, operation);
-                break;
+            // Replace a list of members
+            case PatchOps.Replace when operation.Path?.ToLowerInvariant() == PatchPaths.Members:
+                {
+                    var ids = GetOperationValueIds(operation.Value);
+                    await _groupRepository.UpdateUsersAsync(group.Id, ids, _timeProvider.GetUtcNow().UtcDateTime);
+                    break;
+                }
 
-            case PatchOps.Add:
-                await HandleAddAsync(group, operation);
-                break;
+            // Replace group name from path
+            case PatchOps.Replace when operation.Path?.ToLowerInvariant() == PatchPaths.DisplayName:
+                {
+                    group.Name = operation.Value.GetString();
+                    var organization = await _organizationRepository.GetByIdAsync(group.OrganizationId);
+                    if (organization == null)
+                    {
+                        throw new NotFoundException();
+                    }
+                    await _updateGroupCommand.UpdateGroupAsync(group, organization, EventSystemUser.SCIM);
+                    break;
+                }
 
-            case PatchOps.Remove:
-                await HandleRemoveAsync(group, operation);
-                break;
+            // Replace externalId from path
+            case PatchOps.Replace when operation.Path?.ToLowerInvariant() == PatchPaths.ExternalId:
+                {
+                    await HandleExternalIdOperationAsync(group, operation.Value.GetString());
+                    break;
+                }
 
-            default:
-                LogUnhandledOperation(operation);
-                break;
-        }
-    }
+            // Replace group name from value object
+            case PatchOps.Replace when
+                string.IsNullOrWhiteSpace(operation.Path) &&
+                operation.Value.TryGetProperty("displayName", out var displayNameProperty):
+                {
+                    group.Name = displayNameProperty.GetString();
+                    var organization = await _organizationRepository.GetByIdAsync(group.OrganizationId);
+                    if (organization == null)
+                    {
+                        throw new NotFoundException();
+                    }
+                    await _updateGroupCommand.UpdateGroupAsync(group, organization, EventSystemUser.SCIM);
+                    break;
+                }
 
-    private async Task HandleReplaceAsync(Group group, ScimPatchModel.OperationModel operation)
-    {
-        switch (operation.Path?.ToLowerInvariant())
-        {
-            case PatchPaths.Members:
-                await ReplaceMembersAsync(group, operation);
-                break;
+            // Replace externalId from value object
+            case PatchOps.Replace when
+                string.IsNullOrWhiteSpace(operation.Path) &&
+                operation.Value.TryGetProperty("externalId", out var replaceExternalIdProperty):
+                {
+                    await HandleExternalIdOperationAsync(group, replaceExternalIdProperty.GetString());
+                    break;
+                }
 
-            case PatchPaths.DisplayName:
-                await ReplaceDisplayNameAsync(group, operation.Value.GetString());
-                break;
-
-            case PatchPaths.ExternalId:
-                await HandleExternalIdOperationAsync(group, operation.Value.GetString());
-                break;
-
-            case var path when string.IsNullOrWhiteSpace(path):
-                await ReplaceFromValueObjectAsync(group, operation);
-                break;
-
-            default:
-                LogUnhandledOperation(operation);
-                break;
-        }
-    }
-
-    private async Task ReplaceMembersAsync(Group group, ScimPatchModel.OperationModel operation)
-    {
-        var ids = GetOperationValueIds(operation.Value);
-        await _groupRepository.UpdateUsersAsync(group.Id, ids, _timeProvider.GetUtcNow().UtcDateTime);
-    }
-
-    private async Task ReplaceFromValueObjectAsync(Group group, ScimPatchModel.OperationModel operation)
-    {
-        var handled = false;
-
-        if (operation.Value.TryGetProperty("displayName", out var displayNameProperty))
-        {
-            await ReplaceDisplayNameAsync(group, displayNameProperty.GetString());
-            handled = true;
-        }
-        if (operation.Value.TryGetProperty("externalId", out var externalIdProperty))
-        {
-            await HandleExternalIdOperationAsync(group, externalIdProperty.GetString());
-            handled = true;
-        }
-
-        if (!handled)
-        {
-            LogUnhandledOperation(operation);
-        }
-    }
-
-    // SCIM-2.0 IdPs that discover an existing group via displayName and notice it lacks their
-    // externalId issue an Add op so the link can be persisted.
-    private async Task HandleAddAsync(Group group, ScimPatchModel.OperationModel operation)
-    {
-        switch (operation.Path?.ToLowerInvariant())
-        {
-            case PatchPaths.ExternalId:
-                await HandleExternalIdOperationAsync(group, operation.Value.GetString());
-                break;
-
-            case PatchPaths.Members:
-                await AddMembersAsync(group, GetOperationValueIds(operation.Value));
-                break;
-
-            case var path when
-                !string.IsNullOrWhiteSpace(path) &&
-                path.StartsWith("members[value eq ", StringComparison.OrdinalIgnoreCase) &&
+            // Add a single member
+            case PatchOps.Add when
+                !string.IsNullOrWhiteSpace(operation.Path) &&
+                operation.Path.StartsWith("members[value eq ", StringComparison.OrdinalIgnoreCase) &&
                 TryGetOperationPathId(operation.Path, out var addId):
-                await AddMembersAsync(group, [addId]);
-                break;
+                {
+                    await AddMembersAsync(group, [addId]);
+                    break;
+                }
 
-            case var path when string.IsNullOrWhiteSpace(path):
-                await AddFromValueObjectAsync(group, operation);
-                break;
+            // Add a list of members
+            case PatchOps.Add when
+                operation.Path?.ToLowerInvariant() == PatchPaths.Members:
+                {
+                    await AddMembersAsync(group, GetOperationValueIds(operation.Value));
+                    break;
+                }
 
-            default:
-                LogUnhandledOperation(operation);
-                break;
-        }
-    }
+            // Add externalId from path. SCIM-2.0 IdPs that discover an existing group via displayName
+            // and notice it lacks their externalId issue an Add op so the link can be persisted.
+            case PatchOps.Add when operation.Path?.ToLowerInvariant() == PatchPaths.ExternalId:
+                {
+                    await HandleExternalIdOperationAsync(group, operation.Value.GetString());
+                    break;
+                }
 
-    private async Task AddFromValueObjectAsync(Group group, ScimPatchModel.OperationModel operation)
-    {
-        if (operation.Value.TryGetProperty("externalId", out var externalIdProperty))
-        {
-            await HandleExternalIdOperationAsync(group, externalIdProperty.GetString());
-            return;
-        }
+            // Add externalId from value object
+            case PatchOps.Add when
+                string.IsNullOrWhiteSpace(operation.Path) &&
+                operation.Value.TryGetProperty("externalId", out var addExternalIdProperty):
+                {
+                    await HandleExternalIdOperationAsync(group, addExternalIdProperty.GetString());
+                    break;
+                }
 
-        LogUnhandledOperation(operation);
-    }
-
-    private async Task HandleRemoveAsync(Group group, ScimPatchModel.OperationModel operation)
-    {
-        switch (operation.Path?.ToLowerInvariant())
-        {
-            case PatchPaths.Members:
-                await RemoveMembersAsync(group, operation);
-                break;
-
-            case var path when
-                !string.IsNullOrWhiteSpace(path) &&
-                path.StartsWith("members[value eq ", StringComparison.OrdinalIgnoreCase) &&
+            // Remove a single member
+            case PatchOps.Remove when
+                !string.IsNullOrWhiteSpace(operation.Path) &&
+                operation.Path.StartsWith("members[value eq ", StringComparison.OrdinalIgnoreCase) &&
                 TryGetOperationPathId(operation.Path, out var removeId):
-                await _groupService.DeleteUserAsync(group, removeId, EventSystemUser.SCIM);
-                break;
+                {
+                    await _groupService.DeleteUserAsync(group, removeId, EventSystemUser.SCIM);
+                    break;
+                }
+
+            // Remove a list of members
+            case PatchOps.Remove when
+                operation.Path?.ToLowerInvariant() == PatchPaths.Members:
+                {
+                    var orgUserIds = (await _groupRepository.GetManyUserIdsByIdAsync(group.Id)).ToHashSet();
+                    foreach (var v in GetOperationValueIds(operation.Value))
+                    {
+                        orgUserIds.Remove(v);
+                    }
+                    await _groupRepository.UpdateUsersAsync(group.Id, orgUserIds, _timeProvider.GetUtcNow().UtcDateTime);
+                    break;
+                }
 
             default:
-                LogUnhandledOperation(operation);
-                break;
+                {
+                    _logger.LogWarning("Group patch operation not handled: {OperationOp}:{OperationPath}", operation.Op, operation.Path);
+                    break;
+                }
         }
-    }
-
-    private async Task RemoveMembersAsync(Group group, ScimPatchModel.OperationModel operation)
-    {
-        var orgUserIds = (await _groupRepository.GetManyUserIdsByIdAsync(group.Id)).ToHashSet();
-        foreach (var v in GetOperationValueIds(operation.Value))
-        {
-            orgUserIds.Remove(v);
-        }
-        await _groupRepository.UpdateUsersAsync(group.Id, orgUserIds, _timeProvider.GetUtcNow().UtcDateTime);
-    }
-
-    private async Task ReplaceDisplayNameAsync(Group group, string displayName)
-    {
-        group.Name = displayName;
-        var organization = await _organizationRepository.GetByIdAsync(group.OrganizationId);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-        await _updateGroupCommand.UpdateGroupAsync(group, organization, EventSystemUser.SCIM);
     }
 
     private async Task HandleExternalIdOperationAsync(Group group, string newExternalId)
@@ -243,11 +206,6 @@ public class PatchGroupCommand : IPatchGroupCommand
         }
 
         await _groupRepository.AddGroupUsersByIdAsync(group.Id, usersToAdd, _timeProvider.GetUtcNow().UtcDateTime);
-    }
-
-    private void LogUnhandledOperation(ScimPatchModel.OperationModel operation)
-    {
-        _logger.LogWarning("Group patch operation not handled: {OperationOp}:{OperationPath}", operation.Op, operation.Path);
     }
 
     private static HashSet<Guid> GetOperationValueIds(JsonElement objArray)
