@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Api.Request;
