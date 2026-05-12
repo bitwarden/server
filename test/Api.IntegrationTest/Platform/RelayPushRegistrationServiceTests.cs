@@ -19,7 +19,7 @@ public class RelayPushRegistrationServiceTests
     public RelayPushRegistrationServiceTests()
     {
         var cloudApi = new ApiApplicationFactory();
-        cloudApi.SubstituteService<IPushRegistrationService>(service => {});
+        cloudApi.SubstituteService<IPushRegistrationService>(service => { });
 
         var fakeInstallationId = Guid.NewGuid();
 
