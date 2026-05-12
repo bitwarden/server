@@ -171,14 +171,23 @@ public class PatchGroupCommand : IPatchGroupCommand
 
     private async Task HandleExternalIdOperationAsync(Group group, string newExternalId)
     {
-        if (!string.IsNullOrWhiteSpace(newExternalId))
-        {
-            await EnsureExternalIdIsValidAsync(group, newExternalId);
-        }
+        var validExternalId = await GetValidExternalIdAsync(group, newExternalId);
 
-        group.ExternalId = newExternalId;
+        group.ExternalId = validExternalId;
         group.RevisionDate = _timeProvider.GetUtcNow().UtcDateTime;
         await _groupRepository.ReplaceAsync(group);
+    }
+
+    private async Task<string> GetValidExternalIdAsync(Group group, string newExternalId)
+    {
+        if (string.IsNullOrWhiteSpace(newExternalId))
+        {
+            // Ensure we're not saving empty or just whitespace externalId.
+            return null;
+        }
+
+        await EnsureExternalIdIsValidAsync(group, newExternalId);
+        return newExternalId;
     }
 
     private async Task EnsureExternalIdIsValidAsync(Group group, string newExternalId)
