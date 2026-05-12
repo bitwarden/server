@@ -500,6 +500,8 @@ public class AuthRequestServiceTests
             .UserId
             .Returns(authenticatedUserId);
 
+        // Mock this as false so we pin the test failure to the userId mismatch guard rather than to the first
+        // identically-worded "User or known device not found." exception that could fire earlier.
         sutProvider.GetDependency<IGlobalSettings>()
             .PasswordlessAuth.KnownDevicesOnly
             .Returns(false);
@@ -507,6 +509,8 @@ public class AuthRequestServiceTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.CreateAuthRequestAsync(createModel));
 
+        // For the AuthRequestType.AdminApproval test case, this assertion pins the test failure to the userId mismatch guard
+        // rather than to the "User does not belong to any organizations." exception, which is also of type BadRequestException.
         Assert.Equal("User or known device not found.", exception.Message);
 
         await sutProvider.GetDependency<IAuthRequestRepository>()
