@@ -44,11 +44,11 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
             .Returns([orgUser1.Id, orgUser2.Id]);
 
         // Act
-        var results = await sutProvider.Sut.BulkAutomaticallyConfirmOrganizationUsersAsync(request);
+        var results = (await sutProvider.Sut.BulkAutomaticallyConfirmOrganizationUsersAsync(request)).ToList();
 
         // Assert
         Assert.Equal(2, results.Count);
-        Assert.All(results, r => Assert.Null(r.Error));
+        Assert.All(results, r => Assert.True(r.Result.IsSuccess));
     }
 
     [Theory, BitAutoData]
@@ -355,16 +355,16 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
             .Returns([orgUser1.Id]);
 
         // Act
-        var results = await sutProvider.Sut.BulkAutomaticallyConfirmOrganizationUsersAsync(request);
+        var results = (await sutProvider.Sut.BulkAutomaticallyConfirmOrganizationUsersAsync(request)).ToList();
 
         // Assert
         Assert.Equal(2, results.Count);
 
-        var successResult = results.Single(r => r.OrganizationUserId == orgUser1.Id);
-        Assert.Null(successResult.Error);
+        var successResult = results.Single(r => r.Id == orgUser1.Id);
+        Assert.True(successResult.Result.IsSuccess);
 
-        var errorResult = results.Single(r => r.OrganizationUserId == orgUser2.Id);
-        Assert.NotNull(errorResult.Error);
+        var errorResult = results.Single(r => r.Id == orgUser2.Id);
+        Assert.True(errorResult.Result.IsError);
     }
 
     [Theory, BitAutoData]
@@ -404,11 +404,11 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
             .Returns([orgUser.Id]);
 
         // Act
-        var results = await sutProvider.Sut.BulkAutomaticallyConfirmOrganizationUsersAsync(request);
+        var results = (await sutProvider.Sut.BulkAutomaticallyConfirmOrganizationUsersAsync(request)).ToList();
 
         // Assert
         Assert.Single(results);
-        Assert.Equal(orgUser.Id, results[0].OrganizationUserId);
+        Assert.Equal(orgUser.Id, results[0].Id);
     }
 
     private static BulkAutomaticallyConfirmOrganizationUsersRequest BuildRequest(

@@ -5,12 +5,14 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationConfirmation;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Enums;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
+using OneOf.Types;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 
@@ -30,7 +32,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommand(
     ILogger<BulkAutomaticallyConfirmOrganizationUsersCommand> logger)
     : IBulkAutomaticallyConfirmOrganizationUsersCommand
 {
-    public async Task<IReadOnlyList<(Guid OrganizationUserId, string? Error)>> BulkAutomaticallyConfirmOrganizationUsersAsync(
+    public async Task<IEnumerable<BulkCommandResult>> BulkAutomaticallyConfirmOrganizationUsersAsync(
         BulkAutomaticallyConfirmOrganizationUsersRequest request)
     {
         if (request.UsersToConfirm.Count == 0)
@@ -134,32 +136,30 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommand(
             .ToList();
     }
 
-    private static IReadOnlyList<(Guid OrganizationUserId, string? Error)> BuildResults(
+    private static IEnumerable<BulkCommandResult> BuildResults(
         IReadOnlyList<BulkAutoConfirmUserEntry> usersToConfirm,
         IReadOnlyList<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>> validationResults,
         HashSet<Guid> notFoundIds)
     {
         var errorByOrgUserId = validationResults
             .Where(r => r.IsError)
-            .ToDictionary(r => r.Request.OrganizationUserId, r => r.AsError.Message);
+            .ToDictionary(r => r.Request.OrganizationUserId, r => r.AsError);
 
-        return usersToConfirm
-            .Select(u =>
+        return usersToConfirm.Select(u =>
+        {
+            if (notFoundIds.Contains(u.OrganizationUserId))
             {
-                if (notFoundIds.Contains(u.OrganizationUserId))
-                {
-                    return (u.OrganizationUserId, (string?)new UserNotFoundError().Message);
-                }
+                return new BulkCommandResult(u.OrganizationUserId, new UserNotFoundError());
+            }
 
-                if (errorByOrgUserId.TryGetValue(u.OrganizationUserId, out var errorMessage))
-                {
-                    return (u.OrganizationUserId, (string?)errorMessage);
-                }
+            if (errorByOrgUserId.TryGetValue(u.OrganizationUserId, out var error))
+            {
+                return new BulkCommandResult(u.OrganizationUserId, error);
+            }
 
-                // No error means either confirmed or already-confirmed (idempotent).
-                return (u.OrganizationUserId, (string?)null);
-            })
-            .ToList();
+            // No error means either confirmed or already-confirmed (idempotent).
+            return new BulkCommandResult(u.OrganizationUserId, new None());
+        });
     }
 
     private async Task CreateDefaultCollectionsForManyAsync(

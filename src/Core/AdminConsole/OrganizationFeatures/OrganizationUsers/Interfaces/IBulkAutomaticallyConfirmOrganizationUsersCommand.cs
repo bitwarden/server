@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
+using Bit.Core.AdminConsole.Utilities.v2.Results;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 
@@ -20,9 +21,11 @@ public interface IBulkAutomaticallyConfirmOrganizationUsersCommand
     /// and the per-user entries (organization user ID + encrypted key).
     /// </param>
     /// <returns>
-    /// A list of tuples containing the organization user ID and an optional error message.
-    /// A null error indicates a successful confirmation for that user.
+    /// A per-user <see cref="BulkCommandResult"/> keyed by organization user ID.
+    /// A successful result contains <see cref="OneOf.Types.None"/>; a failed result carries the
+    /// strongly-typed <see cref="Bit.Core.AdminConsole.Utilities.v2.Error"/> that describes why
+    /// confirmation was skipped.
     /// </returns>
-    Task<IReadOnlyList<(Guid OrganizationUserId, string? Error)>> BulkAutomaticallyConfirmOrganizationUsersAsync(
+    Task<IEnumerable<BulkCommandResult>> BulkAutomaticallyConfirmOrganizationUsersAsync(
         BulkAutomaticallyConfirmOrganizationUsersRequest request);
 }

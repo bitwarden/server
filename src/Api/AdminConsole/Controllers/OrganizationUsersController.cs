@@ -865,8 +865,11 @@ public class OrganizationUsersController : BaseAdminConsoleController
         var results = await _bulkAutomaticallyConfirmOrganizationUsersCommand
             .BulkAutomaticallyConfirmOrganizationUsersAsync(request);
 
-        var responses = results.Select(r => new OrganizationUserBulkResponseModel(r.OrganizationUserId, r.Error ?? string.Empty));
-        return TypedResults.Ok(new ListResponseModel<OrganizationUserBulkResponseModel>(responses));
+        return TypedResults.Ok(new ListResponseModel<OrganizationUserBulkResponseModel>(results
+            .Select(r => new OrganizationUserBulkResponseModel(r.Id,
+                r.Result.Match(
+                    error => error.Message,
+                    _ => string.Empty)))));
     }
 
     private async Task RestoreOrRevokeUserAsync(
