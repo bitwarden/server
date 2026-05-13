@@ -7,7 +7,6 @@ namespace Bit.Seeder.Steps;
 
 internal sealed class CreateGroupsStep(int count, DensityProfile? density = null) : IStep
 {
-    private const string Phase = "Creating groups";
     private readonly DensityProfile? _density = density;
 
     public void Execute(SeederContext context)
@@ -20,8 +19,8 @@ internal sealed class CreateGroupsStep(int count, DensityProfile? density = null
         var groupIds = new List<Guid>(count);
         var groupUsers = new List<GroupUser>(hardenedOrgUserIds.Count);
 
-        progress?.Report(new PhaseStarted(Phase, count));
-        var ticker = new ProgressTicker(progress, Phase, count);
+        progress?.Report(new PhaseStarted(SeederPhases.CreatingGroups, count));
+        var ticker = new ProgressTicker(progress, SeederPhases.CreatingGroups, count);
 
         for (var i = 0; i < count; i++)
         {
@@ -70,7 +69,7 @@ internal sealed class CreateGroupsStep(int count, DensityProfile? density = null
 
         context.GroupUsers.AddRange(groupUsers);
 
-        progress?.Report(new PhaseCompleted(Phase));
+        progress?.Report(new PhaseCompleted(SeederPhases.CreatingGroups));
     }
 
     internal int[] ComputeUsersPerGroup(int groupCount, int userCount)

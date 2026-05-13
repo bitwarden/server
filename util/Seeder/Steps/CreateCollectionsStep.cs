@@ -10,7 +10,6 @@ namespace Bit.Seeder.Steps;
 
 internal sealed class CreateCollectionsStep : IStep
 {
-    private const string Phase = "Creating collections";
     private readonly int _count;
     private readonly OrgStructureModel? _structure;
     private readonly DensityProfile? _density;
@@ -39,8 +38,8 @@ internal sealed class CreateCollectionsStep : IStep
         {
             var orgStructure = OrgStructures.GetStructure(_structure.Value);
             var unitCount = orgStructure.Units.Length;
-            progress?.Report(new PhaseStarted(Phase, unitCount));
-            var structTicker = new ProgressTicker(progress, Phase, unitCount);
+            progress?.Report(new PhaseStarted(SeederPhases.CreatingCollections, unitCount));
+            var structTicker = new ProgressTicker(progress, SeederPhases.CreatingCollections, unitCount);
             collections = new List<Collection>(unitCount);
             foreach (var unit in orgStructure.Units)
             {
@@ -51,8 +50,8 @@ internal sealed class CreateCollectionsStep : IStep
         }
         else
         {
-            progress?.Report(new PhaseStarted(Phase, _count));
-            var countTicker = new ProgressTicker(progress, Phase, _count);
+            progress?.Report(new PhaseStarted(SeederPhases.CreatingCollections, _count));
+            var countTicker = new ProgressTicker(progress, SeederPhases.CreatingCollections, _count);
             collections = new List<Collection>(_count);
             for (var i = 0; i < _count; i++)
             {
@@ -69,7 +68,7 @@ internal sealed class CreateCollectionsStep : IStep
 
         if (collections.Count == 0)
         {
-            progress?.Report(new PhaseCompleted(Phase));
+            progress?.Report(new PhaseCompleted(SeederPhases.CreatingCollections));
             return;
         }
 
@@ -92,7 +91,7 @@ internal sealed class CreateCollectionsStep : IStep
                 }
             }
             context.CollectionUsers.AddRange(collectionUsers);
-            progress?.Report(new PhaseCompleted(Phase));
+            progress?.Report(new PhaseCompleted(SeederPhases.CreatingCollections));
             return;
         }
 
@@ -113,7 +112,7 @@ internal sealed class CreateCollectionsStep : IStep
             context.CollectionUsers.AddRange(directUsers);
         }
 
-        progress?.Report(new PhaseCompleted(Phase));
+        progress?.Report(new PhaseCompleted(SeederPhases.CreatingCollections));
     }
 
     internal List<CollectionGroup> BuildCollectionGroups(List<Guid> collectionIds, List<Guid> groupIds)

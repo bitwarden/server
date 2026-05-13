@@ -3,11 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Seeder.Pipeline;
 
-internal static class SeederPhases
-{
-    internal const string CommittingToDatabase = "Committing to database";
-}
-
 /// <summary>
 /// Resolves steps from DI by recipe key and executes them in order.
 /// </summary>

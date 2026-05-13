@@ -24,8 +24,6 @@ internal sealed class GeneratePersonalCiphersStep(
     Distribution<PasswordStrength>? pwDist = null,
     DensityProfile? density = null) : IStep
 {
-    private const string Phase = "Creating personal ciphers";
-
     public void Execute(SeederContext context)
     {
         if (countPerUser == 0 && density?.PersonalCipherDistribution is null)
@@ -70,7 +68,7 @@ internal sealed class GeneratePersonalCiphersStep(
 
         var userCiphers = new Cipher[userDigests.Count][];
 
-        progress?.Report(new PhaseStarted(Phase, expectedTotal));
+        progress?.Report(new PhaseStarted(SeederPhases.CreatingPersonalCiphers, expectedTotal));
         var batchSize = Math.Max(1, expectedTotal / 100);
 
         Parallel.For(
@@ -101,7 +99,7 @@ internal sealed class GeneratePersonalCiphersStep(
                 localTicked += localCount;
                 if (progress is not null && localTicked >= batchSize)
                 {
-                    progress.Report(new PhaseAdvanced(Phase, localTicked));
+                    progress.Report(new PhaseAdvanced(SeederPhases.CreatingPersonalCiphers, localTicked));
                     localTicked = 0;
                 }
                 return localTicked;
@@ -110,7 +108,7 @@ internal sealed class GeneratePersonalCiphersStep(
             {
                 if (progress is not null && localTicked > 0)
                 {
-                    progress.Report(new PhaseAdvanced(Phase, localTicked));
+                    progress.Report(new PhaseAdvanced(SeederPhases.CreatingPersonalCiphers, localTicked));
                 }
             });
 
@@ -131,7 +129,7 @@ internal sealed class GeneratePersonalCiphersStep(
         context.Ciphers.AddRange(ciphers);
         context.Registry.CipherIds.AddRange(cipherIds);
 
-        progress?.Report(new PhaseCompleted(Phase));
+        progress?.Report(new PhaseCompleted(SeederPhases.CreatingPersonalCiphers));
     }
 
     private static int EstimateTotal(int userCount, Distribution<(int Min, int Max)> dist)

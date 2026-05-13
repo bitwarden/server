@@ -15,7 +15,6 @@ namespace Bit.Seeder.Steps;
 internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false) : IStep
 {
     private const int RsaPoolSize = 100;
-    private const string Phase = "Creating users";
 
     public void Execute(SeederContext context)
     {
@@ -44,7 +43,7 @@ internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false
 
         var results = new (User User, OrganizationUser OrgUser, UserKeys Keys, bool IsConfirmed)[count];
 
-        progress?.Report(new PhaseStarted(Phase, count));
+        progress?.Report(new PhaseStarted(SeederPhases.CreatingUsers, count));
         var batchSize = Math.Max(1, count / 100);
 
         Parallel.For(
@@ -69,7 +68,7 @@ internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false
                 localTicked++;
                 if (progress is not null && localTicked >= batchSize)
                 {
-                    progress.Report(new PhaseAdvanced(Phase, localTicked));
+                    progress.Report(new PhaseAdvanced(SeederPhases.CreatingUsers, localTicked));
                     localTicked = 0;
                 }
                 return localTicked;
@@ -78,7 +77,7 @@ internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false
             {
                 if (progress is not null && localTicked > 0)
                 {
-                    progress.Report(new PhaseAdvanced(Phase, localTicked));
+                    progress.Report(new PhaseAdvanced(SeederPhases.CreatingUsers, localTicked));
                 }
             });
 
@@ -105,7 +104,7 @@ internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false
         context.Registry.HardenedOrgUserIds.AddRange(hardenedOrgUserIds);
         context.Registry.UserDigests.AddRange(userDigests);
 
-        progress?.Report(new PhaseCompleted(Phase));
+        progress?.Report(new PhaseCompleted(SeederPhases.CreatingUsers));
     }
 
     private static bool StatusRequiresOrgKey(OrganizationUserStatusType status) =>

@@ -14,7 +14,6 @@ namespace Bit.Seeder.Steps;
 /// </summary>
 internal sealed class CreateCiphersStep : IStep
 {
-    private const string Phase = "Creating ciphers";
     private readonly string _fixtureName;
     private readonly bool _skipCollectionAssignment;
     private readonly bool _personal;
@@ -57,8 +56,8 @@ internal sealed class CreateCiphersStep : IStep
         var ciphers = new List<Cipher>(seedFile.Items.Count);
         var collectionCiphers = new List<CollectionCipher>();
 
-        progress?.Report(new PhaseStarted(Phase, seedFile.Items.Count));
-        var ticker = new ProgressTicker(progress, Phase, seedFile.Items.Count);
+        progress?.Report(new PhaseStarted(SeederPhases.CreatingCiphers, seedFile.Items.Count));
+        var ticker = new ProgressTicker(progress, SeederPhases.CreatingCiphers, seedFile.Items.Count);
 
         for (var i = 0; i < seedFile.Items.Count; i++)
         {
@@ -128,6 +127,6 @@ internal sealed class CreateCiphersStep : IStep
         context.Ciphers.AddRange(ciphers);
         context.CollectionCiphers.AddRange(collectionCiphers);
 
-        progress?.Report(new PhaseCompleted(Phase));
+        progress?.Report(new PhaseCompleted(SeederPhases.CreatingCiphers));
     }
 }
