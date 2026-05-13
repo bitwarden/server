@@ -219,9 +219,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
             $"[{Schema}].[Send_ReadByIds]",
             new { Ids = ids.ToGuidIdArrayTVP() },
             commandType: CommandType.StoredProcedure);
-        var sends = results.ToList();
-        UnprotectData(sends);
-        return sends;
+        return results.Where(UnprotectData).ToList();
     }
 
     private async Task ProtectDataAndSaveAsync(Send send, Func<Task> saveTask)
