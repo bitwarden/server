@@ -184,6 +184,7 @@ jobs:
           gh pr create \
             --title "Bump version to $VERSION" \
             --body "Automated version bump created by repository-management workflow" \
+            --label "version update" \
             --base main \
             --head "$BRANCH_NAME"
 
