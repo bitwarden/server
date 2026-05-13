@@ -108,24 +108,24 @@ public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
         }
     }
 
-    public async Task BumpLastActivityDateByIdAsync(Guid deviceId)
+    public async Task BumpDeviceDataByIdAsync(Guid deviceId, string? clientVersion)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             await connection.ExecuteAsync(
-                $"[{Schema}].[{Table}_UpdateLastActivityDateById]",
-                new { Id = deviceId },
+                $"[{Schema}].[{Table}_BumpDataById]",
+                new { Id = deviceId, ClientVersion = clientVersion },
                 commandType: CommandType.StoredProcedure);
         }
     }
 
-    public async Task BumpLastActivityDateByIdentifierAndUserIdAsync(string identifier, Guid userId)
+    public async Task BumpDeviceDataByIdentifierAndUserIdAsync(string identifier, Guid userId, string? clientVersion)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             await connection.ExecuteAsync(
-                $"[{Schema}].[{Table}_UpdateLastActivityDateByIdentifierUserId]",
-                new { Identifier = identifier, UserId = userId },
+                $"[{Schema}].[{Table}_BumpDataByIdentifierUserId]",
+                new { Identifier = identifier, UserId = userId, ClientVersion = clientVersion },
                 commandType: CommandType.StoredProcedure);
         }
     }

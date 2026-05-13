@@ -9,46 +9,78 @@ namespace Bit.Infrastructure.IntegrationTest.Auth.Repositories;
 
 public class DeviceRepositoryTests
 {
-    /// <summary>
-    /// Verifies that all DeviceAuthDetails fields are correctly populated from the database,
-    /// and that when multiple pending auth requests exist for the same device, only the most
-    /// recent one is returned.
-    /// </summary>
-    [DatabaseTheory]
-    [DatabaseData]
-    public async Task ReplaceAsync_WithNullLastActivityDate_PreservesExistingValue(
-        IDeviceRepository sutRepository,
-        IUserRepository userRepository)
+    // -------------------------------------------------------------------------------------------
+    // Test helpers
+    // -------------------------------------------------------------------------------------------
+
+    private static async Task<User> CreateTestUserAsync(
+        IUserRepository userRepository,
+        string nameSuffix = "")
     {
-        // Arrange
-        var user = await userRepository.CreateAsync(new User
+        return await userRepository.CreateAsync(new User
         {
-            Name = "Test User",
+            Name = string.IsNullOrEmpty(nameSuffix) ? "Test User" : $"Test User {nameSuffix}",
             Email = $"test+{Guid.NewGuid()}@email.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
         });
+    }
 
-        var device = await sutRepository.CreateAsync(new Device
+    private static async Task<Device> CreateTestDeviceAsync(
+        IDeviceRepository sutRepository,
+        Guid userId,
+        string clientVersion = null,
+        string identifier = null,
+        string name = "chrome-test",
+        DeviceType type = DeviceType.ChromeBrowser,
+        bool active = true)
+    {
+        return await sutRepository.CreateAsync(new Device
         {
-            Active = true,
-            Name = "chrome-test",
-            UserId = user.Id,
-            Type = DeviceType.ChromeBrowser,
-            Identifier = Guid.NewGuid().ToString(),
+            Active = active,
+            Name = name,
+            UserId = userId,
+            Type = type,
+            Identifier = identifier ?? Guid.NewGuid().ToString(),
+            ClientVersion = clientVersion,
         });
+    }
 
-        await sutRepository.BumpLastActivityDateByIdAsync(device.Id);
+    // -------------------------------------------------------------------------------------------
+    // ReplaceAsync
+    // -------------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Verifies the Device_Update NULL-passthrough guards: if a general save (ReplaceAsync) passes
+    /// NULL for either bumped column (LastActivityDate or ClientVersion), the stored value must
+    /// be preserved. This covers both columns' guards in a single arrange/act/assert so a regression
+    /// on either guard fails this test loudly.
+    /// </summary>
+    [DatabaseTheory]
+    [DatabaseData]
+    public async Task ReplaceAsync_WithNullBumpedFields_PreservesExistingValues(
+        IDeviceRepository sutRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange — device with a stored ClientVersion, then bump to populate LastActivityDate too.
+        var user = await CreateTestUserAsync(userRepository);
+        var device = await CreateTestDeviceAsync(sutRepository, user.Id, clientVersion: "2026.5.1");
+
+        await sutRepository.BumpDeviceDataByIdAsync(device.Id, clientVersion: null);
         var afterBump = await sutRepository.GetByIdAsync(device.Id);
         Assert.NotNull(afterBump!.LastActivityDate);
+        Assert.Equal("2026.5.1", afterBump.ClientVersion);
 
-        // Act — ReplaceAsync with LastActivityDate = null should not overwrite the bumped value
+        // Act — null out BOTH bumped fields and ReplaceAsync; SP-side ISNULL / CASE guards (and the
+        // EF-side IsModified=false in ReplaceAsync override) should preserve the stored values.
         afterBump.LastActivityDate = null;
+        afterBump.ClientVersion = null;
         await sutRepository.ReplaceAsync(afterBump);
 
-        // Assert
+        // Assert — both columns preserved
         var afterReplace = await sutRepository.GetByIdAsync(device.Id);
         Assert.NotNull(afterReplace!.LastActivityDate);
+        Assert.Equal("2026.5.1", afterReplace.ClientVersion);
     }
 
     [DatabaseTheory]
@@ -58,24 +90,10 @@ public class DeviceRepositoryTests
         IUserRepository userRepository)
     {
         // Arrange
-        var user = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User",
-            Email = $"test+{Guid.NewGuid()}@email.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
+        var user = await CreateTestUserAsync(userRepository);
+        var device = await CreateTestDeviceAsync(sutRepository, user.Id);
 
-        var device = await sutRepository.CreateAsync(new Device
-        {
-            Active = true,
-            Name = "chrome-test",
-            UserId = user.Id,
-            Type = DeviceType.ChromeBrowser,
-            Identifier = Guid.NewGuid().ToString(),
-        });
-
-        await sutRepository.BumpLastActivityDateByIdAsync(device.Id);
+        await sutRepository.BumpDeviceDataByIdAsync(device.Id, clientVersion: null);
         var afterBump = await sutRepository.GetByIdAsync(device.Id);
         var bumpedDate = afterBump!.LastActivityDate;
         Assert.NotNull(bumpedDate);
@@ -89,85 +107,51 @@ public class DeviceRepositoryTests
         Assert.Equal(bumpedDate, afterReplace!.LastActivityDate);
     }
 
+    /// <summary>
+    /// Bumping a freshly-created device via the by-identifier path with no <c>ClientVersion</c>
+    /// supplied at create or at bump is a same-day no-op on both columns: the SP's day-level
+    /// guard fires for <c>LastActivityDate</c> (already today via the entity initializer) and the
+    /// NULL guard fires for <c>ClientVersion</c>. Locks in that the bump path does not silently
+    /// regress either column when both are already in their expected post-bump state.
+    /// </summary>
     [DatabaseTheory]
     [DatabaseData]
-    public async Task BumpLastActivityDateByIdentifierAndUserIdAsync_SetsLastActivityDate(
+    public async Task BumpDeviceDataByIdentifierAndUserIdAsync_OnFreshDeviceWithoutClientVersion_PreservesBumpedColumns(
         IDeviceRepository sutRepository,
         IUserRepository userRepository)
     {
         // Arrange
-        var user = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User",
-            Email = $"test+{Guid.NewGuid()}@email.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
+        var user = await CreateTestUserAsync(userRepository);
+        var device = await CreateTestDeviceAsync(sutRepository, user.Id);
+        var ladBefore = (await sutRepository.GetByIdAsync(device.Id)).LastActivityDate;
 
-        var device = await sutRepository.CreateAsync(new Device
-        {
-            Active = true,
-            Name = "chrome-test",
-            UserId = user.Id,
-            Type = DeviceType.ChromeBrowser,
-            Identifier = Guid.NewGuid().ToString(),
-        });
+        // Act — bump without a ClientVersion on a same-day fresh device
+        await sutRepository.BumpDeviceDataByIdentifierAndUserIdAsync(device.Identifier, user.Id, clientVersion: null);
 
-        // Act
-        await sutRepository.BumpLastActivityDateByIdentifierAndUserIdAsync(device.Identifier, user.Id);
-
-        // Assert
+        // Assert — both columns preserved (LAD same-day; ClientVersion still null)
         var after = await sutRepository.GetByIdAsync(device.Id);
-        Assert.NotNull(after!.LastActivityDate);
+        Assert.Equal(ladBefore, after.LastActivityDate);
+        Assert.Null(after.ClientVersion);
     }
 
     [DatabaseTheory]
     [DatabaseData]
-    public async Task BumpLastActivityDateByIdentifierAndUserIdAsync_DoesNotBumpOtherUsersDevice(
+    public async Task BumpDeviceDataByIdentifierAndUserIdAsync_DoesNotBumpOtherUsersDevice(
         IDeviceRepository sutRepository,
         IUserRepository userRepository)
     {
         // Arrange — two users share the same device identifier
-        var userA = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User A",
-            Email = $"test_user_A+{Guid.NewGuid()}@email.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
-
-        var userB = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User B",
-            Email = $"test_user_B+{Guid.NewGuid()}@email.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
+        var userA = await CreateTestUserAsync(userRepository, "A");
+        var userB = await CreateTestUserAsync(userRepository, "B");
 
         var sharedIdentifier = Guid.NewGuid().ToString();
+        var deviceA = await CreateTestDeviceAsync(sutRepository, userA.Id, identifier: sharedIdentifier);
+        var deviceB = await CreateTestDeviceAsync(sutRepository, userB.Id, identifier: sharedIdentifier);
 
-        var deviceA = await sutRepository.CreateAsync(new Device
-        {
-            Active = true,
-            Name = "chrome-test",
-            UserId = userA.Id,
-            Type = DeviceType.ChromeBrowser,
-            Identifier = sharedIdentifier,
-        });
-
-        var deviceB = await sutRepository.CreateAsync(new Device
-        {
-            Active = true,
-            Name = "chrome-test",
-            UserId = userB.Id,
-            Type = DeviceType.ChromeBrowser,
-            Identifier = sharedIdentifier,
-        });
-
-        var beforeB = (await sutRepository.GetByIdAsync(deviceB.Id))!.LastActivityDate;
+        var beforeB = (await sutRepository.GetByIdAsync(deviceB.Id)).LastActivityDate;
 
         // Act — bump only userA's device
-        await sutRepository.BumpLastActivityDateByIdentifierAndUserIdAsync(sharedIdentifier, userA.Id);
+        await sutRepository.BumpDeviceDataByIdentifierAndUserIdAsync(sharedIdentifier, userA.Id, clientVersion: null);
 
         // Assert — userA's device is bumped, userB's is unchanged
         var afterA = await sutRepository.GetByIdAsync(deviceA.Id);
@@ -175,6 +159,10 @@ public class DeviceRepositoryTests
         Assert.NotNull(afterA!.LastActivityDate);
         Assert.Equal(beforeB, afterB!.LastActivityDate);
     }
+
+    // -------------------------------------------------------------------------------------------
+    // GetManyByUserIdWithDeviceAuth
+    // -------------------------------------------------------------------------------------------
 
     [DatabaseTheory]
     [DatabaseData]
@@ -184,14 +172,9 @@ public class DeviceRepositoryTests
         IAuthRequestRepository authRequestRepository)
     {
         // Arrange
-        var user = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User",
-            Email = $"test+{Guid.NewGuid()}@email.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
+        var user = await CreateTestUserAsync(userRepository);
 
+        // Custom fields (PushToken + Encrypted keys) — keep inline.
         var device = await sutRepository.CreateAsync(new Device
         {
             Active = true,
@@ -269,43 +252,15 @@ public class DeviceRepositoryTests
         IAuthRequestRepository authRequestRepository)
     {
         // Arrange
-        var userA = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User A",
-            Email = $"test_user_A+{Guid.NewGuid()}@email.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
-
-        var userB = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User B",
-            Email = $"test_user_B+{Guid.NewGuid()}@email.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
+        var userA = await CreateTestUserAsync(userRepository, "A");
+        var userB = await CreateTestUserAsync(userRepository, "B");
 
         var sharedDeviceIdentifier = Guid.NewGuid().ToString();
+        var deviceForUserA = await CreateTestDeviceAsync(sutRepository, userA.Id, identifier: sharedDeviceIdentifier);
+        var deviceForUserB = await CreateTestDeviceAsync(sutRepository, userB.Id, identifier: sharedDeviceIdentifier);
 
-        var deviceForUserA = await sutRepository.CreateAsync(new Device
-        {
-            Active = true,
-            Name = "chrome-test",
-            UserId = userA.Id,
-            Type = DeviceType.ChromeBrowser,
-            Identifier = sharedDeviceIdentifier,
-        });
-
-        var deviceForUserB = await sutRepository.CreateAsync(new Device
-        {
-            Active = true,
-            Name = "chrome-test",
-            UserId = userB.Id,
-            Type = DeviceType.ChromeBrowser,
-            Identifier = sharedDeviceIdentifier,
-        });
-
-        var userAAuthRequest = await authRequestRepository.CreateAsync(new AuthRequest
+        // create userAAuthRequest
+        await authRequestRepository.CreateAsync(new AuthRequest
         {
             ResponseDeviceId = null,
             Approved = null,
@@ -321,15 +276,14 @@ public class DeviceRepositoryTests
         // Act
         var response = await sutRepository.GetManyByUserIdWithDeviceAuth(userB.Id);
 
-        // Assert
+        // Assert — userB gets exactly their own device back (not userA's), and userA's pending
+        // auth request does not leak into userB's response.
+        Assert.Single(response);
+        Assert.Equal(deviceForUserB.Id, response.First().Id);
         Assert.Null(response.First().AuthRequestId);
         Assert.Null(response.First().AuthRequestCreationDate);
     }
 
-    /// <summary>
-    /// Verifies that all active devices for a user are returned even when none have
-    /// a pending auth request, and that AuthRequestId is null in that case.
-    /// </summary>
     [DatabaseTheory]
     [DatabaseData]
     public async Task GetManyByUserIdWithDeviceAuth_WorksWithNoAuthRequestAndMultipleDevices_ReturnsExpectedResults(
@@ -337,31 +291,9 @@ public class DeviceRepositoryTests
         IUserRepository userRepository)
     {
         // Arrange
-        var user = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User",
-            Email = $"test+{Guid.NewGuid()}@email.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
-
-        await sutRepository.CreateAsync(new Device
-        {
-            Active = true,
-            Name = "chrome-test",
-            UserId = user.Id,
-            Type = DeviceType.ChromeBrowser,
-            Identifier = Guid.NewGuid().ToString(),
-        });
-
-        await sutRepository.CreateAsync(new Device
-        {
-            Active = true,
-            Name = "macos-test",
-            UserId = user.Id,
-            Type = DeviceType.MacOsDesktop,
-            Identifier = Guid.NewGuid().ToString(),
-        });
+        var user = await CreateTestUserAsync(userRepository);
+        await CreateTestDeviceAsync(sutRepository, user.Id);
+        await CreateTestDeviceAsync(sutRepository, user.Id, name: "macos-test", type: DeviceType.MacOsDesktop);
 
         // Act
         var response = await sutRepository.GetManyByUserIdWithDeviceAuth(user.Id);
@@ -382,14 +314,9 @@ public class DeviceRepositoryTests
         IUserRepository userRepository)
     {
         // Arrange
-        var user = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User",
-            Email = $"test+{Guid.NewGuid()}@email.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
+        var user = await CreateTestUserAsync(userRepository);
 
+        // Trusted device requires all three encrypted keys — keep inline.
         var trustedDevice = await sutRepository.CreateAsync(new Device
         {
             Active = true,
@@ -402,14 +329,7 @@ public class DeviceRepositoryTests
             EncryptedPrivateKey = "encrypted-private-key",
         });
 
-        var untrustedDevice = await sutRepository.CreateAsync(new Device
-        {
-            Active = true,
-            Name = "untrusted-device",
-            UserId = user.Id,
-            Type = DeviceType.ChromeBrowser,
-            Identifier = Guid.NewGuid().ToString(),
-        });
+        var untrustedDevice = await CreateTestDeviceAsync(sutRepository, user.Id, name: "untrusted-device");
 
         // Act
         var response = await sutRepository.GetManyByUserIdWithDeviceAuth(user.Id);
@@ -458,22 +378,8 @@ public class DeviceRepositoryTests
         foreach (var testCase in casesThatCauseNoAuthDataInResponse)
         {
             // Arrange
-            var user = await userRepository.CreateAsync(new User
-            {
-                Name = "Test User",
-                Email = $"test+{Guid.NewGuid()}@email.com",
-                ApiKey = "TEST",
-                SecurityStamp = "stamp",
-            });
-
-            var device = await sutRepository.CreateAsync(new Device
-            {
-                Active = true,
-                Name = "chrome-test",
-                UserId = user.Id,
-                Type = DeviceType.ChromeBrowser,
-                Identifier = Guid.NewGuid().ToString(),
-            });
+            var user = await CreateTestUserAsync(userRepository);
+            var device = await CreateTestDeviceAsync(sutRepository, user.Id);
 
             var authRequest = await authRequestRepository.CreateAsync(new AuthRequest
             {
@@ -513,22 +419,8 @@ public class DeviceRepositoryTests
         IAuthRequestRepository authRequestRepository)
     {
         // Arrange
-        var user = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User",
-            Email = $"test+{Guid.NewGuid()}@email.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
-
-        var device = await sutRepository.CreateAsync(new Device
-        {
-            Active = true,
-            Name = "chrome-test",
-            UserId = user.Id,
-            Type = DeviceType.ChromeBrowser,
-            Identifier = Guid.NewGuid().ToString(),
-        });
+        var user = await CreateTestUserAsync(userRepository);
+        var device = await CreateTestDeviceAsync(sutRepository, user.Id);
 
         var authRequest = await authRequestRepository.CreateAsync(new AuthRequest
         {
@@ -547,6 +439,7 @@ public class DeviceRepositoryTests
         var response = await sutRepository.GetManyByUserIdWithDeviceAuth(user.Id);
 
         // Assert — Unlock type (1) is treated as a valid pending auth request type and populates auth data on the device response
+        Assert.Single(response);
         Assert.Equal(authRequest.Id, response.First().AuthRequestId);
         Assert.NotNull(response.First().AuthRequestCreationDate);
     }
@@ -562,31 +455,9 @@ public class DeviceRepositoryTests
         IUserRepository userRepository)
     {
         // Arrange
-        var user = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User",
-            Email = $"test+{Guid.NewGuid()}@email.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
-
-        var activeDevice = await sutRepository.CreateAsync(new Device
-        {
-            Active = true,
-            Name = "active-device",
-            UserId = user.Id,
-            Type = DeviceType.ChromeBrowser,
-            Identifier = Guid.NewGuid().ToString(),
-        });
-
-        await sutRepository.CreateAsync(new Device
-        {
-            Active = false,
-            Name = "inactive-device",
-            UserId = user.Id,
-            Type = DeviceType.ChromeBrowser,
-            Identifier = Guid.NewGuid().ToString(),
-        });
+        var user = await CreateTestUserAsync(userRepository);
+        var activeDevice = await CreateTestDeviceAsync(sutRepository, user.Id, name: "active-device");
+        await CreateTestDeviceAsync(sutRepository, user.Id, name: "inactive-device", active: false);
 
         // Act
         var response = await sutRepository.GetManyByUserIdWithDeviceAuth(user.Id);
@@ -598,7 +469,7 @@ public class DeviceRepositoryTests
 
     /// <summary>
     /// Verifies that LastActivityDate is correctly returned from GetManyByUserIdWithDeviceAuth
-    /// and matches the value set by BumpLastActivityDateByIdAsync.
+    /// and matches the value set by BumpDeviceDataByIdAsync.
     /// </summary>
     [DatabaseTheory]
     [DatabaseData]
@@ -607,24 +478,10 @@ public class DeviceRepositoryTests
         IUserRepository userRepository)
     {
         // Arrange
-        var user = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User",
-            Email = $"test+{Guid.NewGuid()}@email.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
+        var user = await CreateTestUserAsync(userRepository);
+        var device = await CreateTestDeviceAsync(sutRepository, user.Id);
 
-        var device = await sutRepository.CreateAsync(new Device
-        {
-            Active = true,
-            Name = "chrome-test",
-            UserId = user.Id,
-            Type = DeviceType.ChromeBrowser,
-            Identifier = Guid.NewGuid().ToString(),
-        });
-
-        await sutRepository.BumpLastActivityDateByIdAsync(device.Id);
+        await sutRepository.BumpDeviceDataByIdAsync(device.Id, clientVersion: null);
         var afterBump = await sutRepository.GetByIdAsync(device.Id);
         var expectedLastActivityDate = afterBump!.LastActivityDate;
         Assert.NotNull(expectedLastActivityDate);
@@ -650,31 +507,19 @@ public class DeviceRepositoryTests
         IUserRepository userRepository)
     {
         // Arrange
-        var user = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User",
-            Email = $"test+{Guid.NewGuid()}@email.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
-
+        var user = await CreateTestUserAsync(userRepository);
         var beforeCreation = DateTime.UtcNow;
-
-        await sutRepository.CreateAsync(new Device
-        {
-            Active = true,
-            Name = "chrome-test",
-            UserId = user.Id,
-            Type = DeviceType.ChromeBrowser,
-            Identifier = Guid.NewGuid().ToString(),
-        });
+        await CreateTestDeviceAsync(sutRepository, user.Id);
 
         // Act
         var response = await sutRepository.GetManyByUserIdWithDeviceAuth(user.Id);
         var result = response.Single();
 
-        // Assert — LastActivityDate is set at creation time and returned by the stored procedure
+        // Assert — LastActivityDate is set at creation time (>= beforeCreation) and returned by the
+        // stored procedure. The >= check locks in that the entity initializer's DateTime.UtcNow
+        // flowed through Device_Create rather than the column being set by some default later.
         Assert.NotNull(result.LastActivityDate);
+        Assert.True(result.LastActivityDate >= beforeCreation);
     }
 
     /// <summary>
@@ -688,18 +533,274 @@ public class DeviceRepositoryTests
         IUserRepository userRepository)
     {
         // Arrange
-        var user = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User",
-            Email = $"test+{Guid.NewGuid()}@email.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
+        var user = await CreateTestUserAsync(userRepository);
 
         // Act
         var response = await sutRepository.GetManyByUserIdWithDeviceAuth(user.Id);
 
         // Assert
         Assert.Empty(response);
+    }
+
+    // -------------------------------------------------------------------------------------------
+    // BumpDeviceDataByIdAsync
+    // -------------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Bumping with a different <c>ClientVersion</c> updates only that column when the day-level
+    /// guard is otherwise satisfied. Asserts both columns to catch cross-column regressions — the
+    /// SP/EF query writes both axes via a composite WHERE, so asserting one in isolation could miss
+    /// interaction bugs. <c>LastActivityDate</c> is unchanged here because <c>CreateAsync</c> sets
+    /// it to <c>DateTime.UtcNow</c> via the entity initializer, so a same-day bump's day-level
+    /// guard already evaluates false.
+    /// </summary>
+    [DatabaseTheory]
+    [DatabaseData]
+    public async Task BumpDeviceDataByIdAsync_VersionChanged_UpdatesClientVersion(
+        IDeviceRepository sutRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await CreateTestUserAsync(userRepository);
+        var device = await CreateTestDeviceAsync(sutRepository, user.Id, clientVersion: "2026.4.0");
+        var ladBefore = (await sutRepository.GetByIdAsync(device.Id)).LastActivityDate;
+
+        // Act
+        await sutRepository.BumpDeviceDataByIdAsync(device.Id, "2026.5.1");
+
+        // Assert
+        var after = await sutRepository.GetByIdAsync(device.Id);
+        Assert.Equal("2026.5.1", after!.ClientVersion);
+        Assert.Equal(ladBefore, after.LastActivityDate);
+    }
+
+    /// <summary>
+    /// Bumping with the same <c>ClientVersion</c> on a device whose <c>LastActivityDate</c> is
+    /// already today is a no-op: the composite WHERE evaluates false on both axes. Locks in that
+    /// neither column is touched when nothing needs to change.
+    /// </summary>
+    [DatabaseTheory]
+    [DatabaseData]
+    public async Task BumpDeviceDataByIdAsync_VersionUnchanged_DoesNotUpdate(
+        IDeviceRepository sutRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange — set the device to today's LastActivityDate AND a fixed ClientVersion. Then bumping
+        // with the same version should be a no-op (composite WHERE evaluates false).
+        var user = await CreateTestUserAsync(userRepository);
+        var device = await CreateTestDeviceAsync(sutRepository, user.Id, clientVersion: "2026.5.1");
+
+        // Bump once with the same version to force LastActivityDate to "today" (so the day-level
+        // guard also returns false on the second bump).
+        await sutRepository.BumpDeviceDataByIdAsync(device.Id, "2026.5.1");
+        var afterFirstBump = await sutRepository.GetByIdAsync(device.Id);
+        var lastActivityAfterFirstBump = afterFirstBump!.LastActivityDate;
+
+        // Act — bumping again with the same version should be a no-op
+        await sutRepository.BumpDeviceDataByIdAsync(device.Id, "2026.5.1");
+
+        // Assert — neither column changed
+        var afterSecondBump = await sutRepository.GetByIdAsync(device.Id);
+        Assert.Equal("2026.5.1", afterSecondBump!.ClientVersion);
+        Assert.Equal(lastActivityAfterFirstBump, afterSecondBump.LastActivityDate);
+    }
+
+    /// <summary>
+    /// Bumping with a null <c>ClientVersion</c> (e.g. client missing the header) must not clobber
+    /// a stored value — the per-column NULL guard preserves it. <c>LastActivityDate</c> is also
+    /// unchanged here because the day-level guard already evaluates false (LAD is today from
+    /// <c>CreateAsync</c>).
+    /// </summary>
+    [DatabaseTheory]
+    [DatabaseData]
+    public async Task BumpDeviceDataByIdAsync_VersionNull_LeavesClientVersionAlone(
+        IDeviceRepository sutRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await CreateTestUserAsync(userRepository);
+        var device = await CreateTestDeviceAsync(sutRepository, user.Id, clientVersion: "2026.5.1");
+        var ladBefore = (await sutRepository.GetByIdAsync(device.Id)).LastActivityDate;
+
+        // Act — bump with a null version (e.g. client missing the header)
+        await sutRepository.BumpDeviceDataByIdAsync(device.Id, clientVersion: null);
+
+        // Assert
+        var after = await sutRepository.GetByIdAsync(device.Id);
+        Assert.Equal("2026.5.1", after!.ClientVersion);
+        Assert.Equal(ladBefore, after.LastActivityDate);
+    }
+
+    /// <summary>
+    /// Verifies that a stale-version bump updates <c>ClientVersion</c> and does not regress
+    /// <c>LastActivityDate</c> (LAD never moves backwards as a side effect of a version-only
+    /// update). LAD is "today" here because <c>CreateAsync</c>'s entity initializer set it; the
+    /// SP's day-level guard means LAD itself isn't bumped in this scenario, only CV is.
+    /// </summary>
+    [DatabaseTheory]
+    [DatabaseData]
+    public async Task BumpDeviceDataByIdAsync_StaleVersion_UpdatesVersionWithoutRegressingLastActivityDate(
+        IDeviceRepository sutRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange — device with an old ClientVersion. (LastActivityDate is set to "now" by the
+        // entity initializer at CreateAsync; we capture the pre-bump value to confirm the per-column
+        // guard correctly evaluates the day boundary on the bump call.)
+        var user = await CreateTestUserAsync(userRepository);
+        var device = await CreateTestDeviceAsync(sutRepository, user.Id, clientVersion: "2026.4.0");
+        var ladBefore = (await sutRepository.GetByIdAsync(device.Id)).LastActivityDate;
+
+        // Act
+        await sutRepository.BumpDeviceDataByIdAsync(device.Id, "2026.5.1");
+
+        // Assert — ClientVersion updated; LastActivityDate is still populated and never moves backwards.
+        var after = await sutRepository.GetByIdAsync(device.Id);
+        Assert.Equal("2026.5.1", after!.ClientVersion);
+        Assert.NotNull(after.LastActivityDate);
+        Assert.True(after.LastActivityDate >= ladBefore);
+    }
+
+    /// <summary>
+    /// Verifies that a version downgrade is accepted on <c>ClientVersion</c> — unlike
+    /// <c>LastActivityDate</c>, there is no forward-only guard on version (users can legitimately
+    /// revert installs). <c>LastActivityDate</c> is unchanged because the day-level guard
+    /// evaluates false.
+    /// </summary>
+    [DatabaseTheory]
+    [DatabaseData]
+    public async Task BumpDeviceDataByIdAsync_VersionDowngrade_AcceptsDowngrade(
+        IDeviceRepository sutRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange — stored version is newer than supplied. Downgrades are valid; the column should
+        // update (no forward-only guard, unlike LastActivityDate).
+        var user = await CreateTestUserAsync(userRepository);
+        var device = await CreateTestDeviceAsync(sutRepository, user.Id, clientVersion: "2026.5.1");
+        var ladBefore = (await sutRepository.GetByIdAsync(device.Id)).LastActivityDate;
+
+        // Act
+        await sutRepository.BumpDeviceDataByIdAsync(device.Id, "2026.4.0");
+
+        // Assert
+        var after = await sutRepository.GetByIdAsync(device.Id);
+        Assert.Equal("2026.4.0", after!.ClientVersion);
+        Assert.Equal(ladBefore, after.LastActivityDate);
+    }
+
+    // -------------------------------------------------------------------------------------------
+    // BumpDeviceDataByIdentifierAndUserIdAsync
+    // -------------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Structurally identical SP body to <c>BumpDeviceDataByIdAsync</c>; only the row-lookup
+    /// predicate differs. The tests in this section lock in per-column behavior through that path
+    /// so the two SP bodies can't silently drift apart.
+    /// </summary>
+    [DatabaseTheory]
+    [DatabaseData]
+    public async Task BumpDeviceDataByIdentifierAndUserIdAsync_VersionChanged_UpdatesClientVersion(
+        IDeviceRepository sutRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await CreateTestUserAsync(userRepository);
+        var device = await CreateTestDeviceAsync(sutRepository, user.Id, clientVersion: "2026.4.0");
+        var ladBefore = (await sutRepository.GetByIdAsync(device.Id)).LastActivityDate;
+
+        // Act
+        await sutRepository.BumpDeviceDataByIdentifierAndUserIdAsync(device.Identifier, user.Id, "2026.5.1");
+
+        // Assert — ClientVersion updated; LastActivityDate unchanged (already today).
+        var after = await sutRepository.GetByIdAsync(device.Id);
+        Assert.Equal("2026.5.1", after!.ClientVersion);
+        Assert.Equal(ladBefore, after.LastActivityDate);
+    }
+
+    [DatabaseTheory]
+    [DatabaseData]
+    public async Task BumpDeviceDataByIdentifierAndUserIdAsync_VersionNull_LeavesClientVersionAlone(
+        IDeviceRepository sutRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await CreateTestUserAsync(userRepository);
+        var device = await CreateTestDeviceAsync(sutRepository, user.Id, clientVersion: "2026.5.1");
+        var ladBefore = (await sutRepository.GetByIdAsync(device.Id)).LastActivityDate;
+
+        // Act
+        await sutRepository.BumpDeviceDataByIdentifierAndUserIdAsync(device.Identifier, user.Id, clientVersion: null);
+
+        // Assert — both columns preserved (ClientVersion by NULL guard, LAD by day-level guard).
+        var after = await sutRepository.GetByIdAsync(device.Id);
+        Assert.Equal("2026.5.1", after!.ClientVersion);
+        Assert.Equal(ladBefore, after.LastActivityDate);
+    }
+
+    [DatabaseTheory]
+    [DatabaseData]
+    public async Task BumpDeviceDataByIdentifierAndUserIdAsync_VersionDowngrade_AcceptsDowngrade(
+        IDeviceRepository sutRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange — stored version is newer than supplied. Downgrades are valid via this path too.
+        var user = await CreateTestUserAsync(userRepository);
+        var device = await CreateTestDeviceAsync(sutRepository, user.Id, clientVersion: "2026.5.1");
+        var ladBefore = (await sutRepository.GetByIdAsync(device.Id)).LastActivityDate;
+
+        // Act
+        await sutRepository.BumpDeviceDataByIdentifierAndUserIdAsync(device.Identifier, user.Id, "2026.4.0");
+
+        // Assert — downgrade accepted; LAD unchanged (already today).
+        var after = await sutRepository.GetByIdAsync(device.Id);
+        Assert.Equal("2026.4.0", after!.ClientVersion);
+        Assert.Equal(ladBefore, after.LastActivityDate);
+    }
+
+    // -------------------------------------------------------------------------------------------
+    // CreateAsync
+    // -------------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Locks in that <c>Device_Create</c> persists the bumped fields (<c>LastActivityDate</c> and
+    /// <c>ClientVersion</c>) supplied via the entity. <c>LastActivityDate</c> is set by the entity
+    /// initializer (<c>= DateTime.UtcNow</c>); <c>ClientVersion</c> is whatever the caller supplies.
+    /// Implicit coverage exists via <see cref="GetManyByUserIdWithDeviceAuth_ReturnsLastActivityDate_ForNewDeviceAsync"/>
+    /// (different read SP); these two tests verify the round-trip via <c>Device_ReadById</c>.
+    /// </summary>
+    [DatabaseTheory]
+    [DatabaseData]
+    public async Task CreateAsync_WithClientVersion_PersistsBumpedFields(
+        IDeviceRepository sutRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await CreateTestUserAsync(userRepository);
+
+        // Act
+        var device = await CreateTestDeviceAsync(sutRepository, user.Id, clientVersion: "2026.5.1");
+
+        // Assert — re-read the row and confirm both bumped columns were persisted
+        var after = await sutRepository.GetByIdAsync(device.Id);
+        Assert.Equal("2026.5.1", after!.ClientVersion);
+        Assert.NotNull(after.LastActivityDate);
+    }
+
+    [DatabaseTheory]
+    [DatabaseData]
+    public async Task CreateAsync_WithoutClientVersion_PersistsBumpedFields(
+        IDeviceRepository sutRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await CreateTestUserAsync(userRepository);
+
+        // Act — no ClientVersion supplied (header was absent)
+        var device = await CreateTestDeviceAsync(sutRepository, user.Id);
+
+        // Assert — ClientVersion is null (nothing supplied); LastActivityDate is still set via the
+        // entity initializer and persisted by Device_Create's @LastActivityDate parameter.
+        var after = await sutRepository.GetByIdAsync(device.Id);
+        Assert.Null(after!.ClientVersion);
+        Assert.NotNull(after.LastActivityDate);
     }
 }
