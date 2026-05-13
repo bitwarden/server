@@ -28,7 +28,9 @@ public class ReinstateSubscriptionCommand(
 
     public Task<BillingCommandResult<None>> Run(ISubscriber subscriber) => HandleAsync<None>(async () =>
     {
-        var subscription = await stripeAdapter.GetSubscriptionAsync(subscriber.GatewaySubscriptionId);
+        var subscription = await stripeAdapter.GetSubscriptionAsync(
+            subscriber.GatewaySubscriptionId,
+            new SubscriptionGetOptions { Expand = ["discounts"] });
 
         if (subscription is not
             {
