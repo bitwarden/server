@@ -65,6 +65,7 @@ public class OrganizationsController : Controller
     private readonly IEventService _eventService;
     private readonly IAutomaticUserConfirmationOrganizationPolicyComplianceValidator _automaticUserConfirmationOrganizationPolicyComplianceValidator;
     private readonly IOrganizationAutoConfirmEnabledNotificationCommand _organizationAutoConfirmEnabledNotificationCommand;
+    private readonly ISubscriberService _subscriberService;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -93,7 +94,8 @@ public class OrganizationsController : Controller
         IOrganizationBillingService organizationBillingService,
         IEventService eventService,
         IAutomaticUserConfirmationOrganizationPolicyComplianceValidator automaticUserConfirmationOrganizationPolicyComplianceValidator,
-        IOrganizationAutoConfirmEnabledNotificationCommand organizationAutoConfirmEnabledNotificationCommand)
+        IOrganizationAutoConfirmEnabledNotificationCommand organizationAutoConfirmEnabledNotificationCommand,
+        ISubscriberService subscriberService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -122,6 +124,7 @@ public class OrganizationsController : Controller
         _eventService = eventService;
         _automaticUserConfirmationOrganizationPolicyComplianceValidator = automaticUserConfirmationOrganizationPolicyComplianceValidator;
         _organizationAutoConfirmEnabledNotificationCommand = organizationAutoConfirmEnabledNotificationCommand;
+        _subscriberService = subscriberService;
     }
 
     [RequirePermission(Permission.Org_List_View)]
@@ -269,7 +272,8 @@ public class OrganizationsController : Controller
             Status = organization.Status,
             PlanType = organization.PlanType,
             Seats = organization.Seats,
-            UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation
+            UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation,
+            Enabled = organization.Enabled
         };
 
         if (model.PlanType.HasValue)
@@ -365,6 +369,39 @@ public class OrganizationsController : Controller
                     "Failed to update Stripe customer for organization {OrganizationId}. Database was updated successfully.",
                     organization.Id);
                 TempData["Warning"] = "Organization updated successfully, but Stripe customer name/email synchronization failed.";
+            }
+        }
+
+        // Clear any pending unpaid-lifecycle cancellation when re-enabling a billing-disabled organization
+        if (!existingOrganizationData.Enabled && organization.Enabled)
+        {
+            try
+            {
+                await _subscriberService.ResumeFromUnpaidCancellationAsync(organization);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to clear pending unpaid cancellation for organization {OrganizationId} on re-enable.",
+                    organization.Id);
+                TempData["Warning"] = "Organization updated successfully, but clearing the pending Stripe cancellation failed.";
+            }
+        }
+
+        // Schedule the unpaid-lifecycle cancellation when disabling an organization whose Stripe subscription
+        // is unpaid but was never scheduled by the webhook handler.
+        if (existingOrganizationData.Enabled && !organization.Enabled)
+        {
+            try
+            {
+                await _subscriberService.ScheduleUnpaidCancellationAsync(organization);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to schedule unpaid cancellation for organization {OrganizationId} on disable.",
+                    organization.Id);
+                TempData["Warning"] = "Organization updated successfully, but scheduling the Stripe cancellation failed.";
             }
         }
 
