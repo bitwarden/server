@@ -17,7 +17,7 @@ public static class KdfSettingsValidator
         MasterPasswordAuthenticationData authentication,
         MasterPasswordUnlockData unlock)
     {
-        if (string.IsNullOrEmpty(authentication.Salt))
+        if (string.IsNullOrWhiteSpace(authentication.Salt))
         {
             yield return new ValidationResult(
                 "Master password salt must not be empty.",
@@ -25,7 +25,7 @@ public static class KdfSettingsValidator
             yield break;
         }
 
-        if (string.IsNullOrEmpty(unlock.Salt))
+        if (string.IsNullOrWhiteSpace(unlock.Salt))
         {
             yield return new ValidationResult(
                 "Master password salt must not be empty.",
@@ -74,7 +74,7 @@ public static class KdfSettingsValidator
         MasterPasswordAuthenticationData authentication,
         MasterPasswordUnlockData unlock)
     {
-        if (string.IsNullOrEmpty(authentication.Salt))
+        if (string.IsNullOrWhiteSpace(authentication.Salt))
         {
             yield return new ValidationResult(
                 "Master password salt must not be empty.",
@@ -82,7 +82,7 @@ public static class KdfSettingsValidator
             yield break;
         }
 
-        if (string.IsNullOrEmpty(unlock.Salt))
+        if (string.IsNullOrWhiteSpace(unlock.Salt))
         {
             yield return new ValidationResult(
                 "Master password salt must not be empty.",
