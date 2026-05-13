@@ -20,6 +20,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.SelfRevokeUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
@@ -85,6 +86,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IAdminRecoverAccountCommand _adminRecoverAccountCommand;
     private readonly AccountRecoveryV2.IAdminRecoverAccountCommand _adminRecoverAccountCommandV2;
     private readonly ISelfRevokeOrganizationUserCommand _selfRevokeOrganizationUserCommand;
+    private readonly IUpdateUserResetPasswordEnrollmentCommand _updateUserResetPasswordEnrollmentCommand;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -117,7 +119,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
         AccountRecoveryV2.IAdminRecoverAccountCommand adminRecoverAccountCommandV2,
         IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand,
         V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext,
-        ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand)
+        ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand,
+        IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -151,6 +154,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _adminRecoverAccountCommand = adminRecoverAccountCommand;
         _adminRecoverAccountCommandV2 = adminRecoverAccountCommandV2;
         _selfRevokeOrganizationUserCommand = selfRevokeOrganizationUserCommand;
+        _updateUserResetPasswordEnrollmentCommand = updateUserResetPasswordEnrollmentCommand;
     }
 
     [HttpGet("{id}")]
@@ -355,7 +359,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
         if (autoEnrollEnabled)
         {
-            await _organizationService.UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
+            await _updateUserResetPasswordEnrollmentCommand.UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
         }
     }
 
@@ -489,7 +493,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         }
 
         var callingUserId = user.Id;
-        await _organizationService.UpdateUserResetPasswordEnrollmentAsync(
+        await _updateUserResetPasswordEnrollmentCommand.UpdateUserResetPasswordEnrollmentAsync(
             orgId, userId, model.ResetPasswordKey, callingUserId);
 
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(orgId, user.Id);

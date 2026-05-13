@@ -1,12 +1,7 @@
-﻿using Bit.Core;
-using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.Services;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Sso;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Models.Api;
-using Bit.Core.Services;
 using Bit.Identity.IdentityServer.RequestValidationConstants;
 using Duende.IdentityModel;
 using Duende.IdentityServer.Validation;
@@ -17,8 +12,6 @@ namespace Bit.Identity.IdentityServer.RequestValidators;
 /// Validates whether a user is required to authenticate via SSO based on organization policies.
 /// </summary>
 public class SsoRequestValidator(
-    IPolicyService _policyService,
-    IFeatureService _featureService,
     IUserSsoOrganizationIdentifierQuery _userSsoOrganizationIdentifierQuery,
     IPolicyRequirementQuery _policyRequirementQuery) : ISsoRequestValidator
 {
@@ -79,19 +72,7 @@ public class SsoRequestValidator(
         }
 
         // Check if user belongs to any organization with an active SSO policy
-        var ssoRequired = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            ? (await _policyRequirementQuery.GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id))
-            .SsoRequired
-            : await _policyService.AnyPoliciesApplicableToUserAsync(
-                user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
-
-        if (ssoRequired)
-        {
-            return true;
-        }
-
-        // Default - SSO is not required
-        return false;
+        return (await _policyRequirementQuery.GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)).SsoRequired;
     }
 
     /// <summary>

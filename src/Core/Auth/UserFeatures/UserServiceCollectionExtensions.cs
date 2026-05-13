@@ -69,6 +69,7 @@ public static class UserServiceCollectionExtensions
         services.AddScoped<ICreateWebAuthnLoginCredentialCommand, CreateWebAuthnLoginCredentialCommand>();
         services.AddScoped<IGetWebAuthnLoginCredentialAssertionOptionsCommand, GetWebAuthnLoginCredentialAssertionOptionsCommand>();
         services.AddScoped<IAssertWebAuthnLoginCredentialCommand, AssertWebAuthnLoginCredentialCommand>();
+        services.AddScoped<IWebAuthnChallengeCacheProvider, WebAuthnChallengeCacheProvider>();
     }
 
     private static void AddTwoFactorCommandsQueries(this IServiceCollection services)

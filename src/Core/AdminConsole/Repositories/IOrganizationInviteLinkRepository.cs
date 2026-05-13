@@ -18,4 +18,11 @@ public interface IOrganizationInviteLinkRepository : IRepository<OrganizationInv
     /// <param name="organizationId">The ID of the organization.</param>
     /// <returns>The organization invite link if found, otherwise null.</returns>
     Task<OrganizationInviteLink?> GetByOrganizationIdAsync(Guid organizationId);
+
+    /// <summary>
+    /// Atomically deletes <paramref name="oldLink"/> and inserts <paramref name="newLink"/> in a single transaction.
+    /// If the transaction fails (e.g. constraint violation on the insert), the delete is rolled back so the
+    /// organization is never left without an invite link mid-operation.
+    /// </summary>
+    Task RefreshAsync(OrganizationInviteLink oldLink, OrganizationInviteLink newLink);
 }

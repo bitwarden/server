@@ -1,16 +1,12 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business;
-using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -47,7 +43,6 @@ public class OrganizationService : IOrganizationService
     private readonly IEventService _eventService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IStripePaymentService _paymentService;
-    private readonly IPolicyQuery _policyQuery;
     private readonly ISsoUserRepository _ssoUserRepository;
     private readonly IGlobalSettings _globalSettings;
     private readonly ICurrentContext _currentContext;
@@ -73,7 +68,6 @@ public class OrganizationService : IOrganizationService
         IEventService eventService,
         IApplicationCacheService applicationCacheService,
         IStripePaymentService paymentService,
-        IPolicyQuery policyQuery,
         ISsoUserRepository ssoUserRepository,
         IGlobalSettings globalSettings,
         ICurrentContext currentContext,
@@ -98,7 +92,6 @@ public class OrganizationService : IOrganizationService
         _eventService = eventService;
         _applicationCacheService = applicationCacheService;
         _paymentService = paymentService;
-        _policyQuery = policyQuery;
         _ssoUserRepository = ssoUserRepository;
         _globalSettings = globalSettings;
         _currentContext = currentContext;
@@ -833,54 +826,6 @@ public class OrganizationService : IOrganizationService
             organization.OwnersNotifiedOfAutoscaling = DateTime.UtcNow;
             await _organizationRepository.UpsertAsync(organization);
         }
-    }
-
-
-    public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey,
-        Guid? callingUserId)
-    {
-        // Org User must be the same as the calling user and the organization ID associated with the user must match passed org ID
-        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
-        if (!callingUserId.HasValue || orgUser == null || orgUser.UserId != callingUserId.Value ||
-            orgUser.OrganizationId != organizationId)
-        {
-            throw new BadRequestException("User not valid.");
-        }
-
-        // Make sure the organization has the ability to use password reset
-        var org = await _organizationRepository.GetByIdAsync(organizationId);
-        if (org == null || !org.UseResetPassword)
-        {
-            throw new BadRequestException("Organization does not allow password reset enrollment.");
-        }
-
-        // Make sure the organization has the policy enabled
-        // Todo: Cannot use PolicyRequirements until PM-34092 is complete
-        var resetPasswordPolicy = await _policyQuery.RunAsync(organizationId, PolicyType.ResetPassword);
-        if (!resetPasswordPolicy.Enabled)
-        {
-            throw new BadRequestException("Organization does not have the password reset policy enabled.");
-        }
-
-        // Block the user from withdrawal if auto enrollment is enabled
-        if (resetPasswordKey == null && resetPasswordPolicy.Data != null)
-        {
-            var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data,
-                JsonHelpers.IgnoreCase);
-
-            if (data?.AutoEnrollEnabled ?? false)
-            {
-                throw new BadRequestException(
-                    "Due to an Enterprise Policy, you are not allowed to withdraw from account recovery.");
-            }
-        }
-
-        orgUser.ResetPasswordKey = resetPasswordKey;
-        await _organizationUserRepository.ReplaceAsync(orgUser);
-        await _eventService.LogOrganizationUserEventAsync(orgUser,
-            resetPasswordKey != null
-                ? EventType.OrganizationUser_ResetPassword_Enroll
-                : EventType.OrganizationUser_ResetPassword_Withdraw);
     }
 
 

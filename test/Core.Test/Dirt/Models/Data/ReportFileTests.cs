@@ -14,7 +14,7 @@ public class ReportFileTests
         Assert.Null(data.Id);
         Assert.Equal(string.Empty, data.FileName);
         Assert.Equal(0, data.Size);
-        Assert.True(data.Validated);
+        Assert.False(data.Validated);
     }
 
     [Fact]

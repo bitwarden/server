@@ -110,6 +110,7 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
         UseDisableSmAdsForUsers = org.UseDisableSmAdsForUsers;
         UsePhishingBlocker = org.UsePhishingBlocker;
         UseMyItems = org.UseMyItems;
+        UseInviteLinks = org.UseInviteLinks;
         ExemptFromBillingAutomation = org.ExemptFromBillingAutomation;
 
         _plans = plans;
@@ -206,6 +207,8 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
     public bool UseAutomaticUserConfirmation { get; set; }
     [Display(Name = "Create My Items for organization ownership")]
     public bool UseMyItems { get; set; }
+    [Display(Name = "Invite Links")]
+    public bool UseInviteLinks { get; set; }
     [Display(Name = "Exempt From Billing Automation")]
     public bool ExemptFromBillingAutomation { get; set; }
     /**
@@ -243,6 +246,7 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
                     UsersGetPremium = p.UsersGetPremium,
                     HasCustomPermissions = p.HasCustomPermissions,
                     HasMyItems = p.HasMyItems,
+                    HasInviteLinks = p.HasInviteLinks,
                     UpgradeSortOrder = p.UpgradeSortOrder,
                     DisplaySortOrder = p.DisplaySortOrder,
                     LegacyYear = p.LegacyYear,
@@ -343,6 +347,7 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
         existingOrganization.UseDisableSmAdsForUsers = UseDisableSmAdsForUsers;
         existingOrganization.UsePhishingBlocker = UsePhishingBlocker;
         existingOrganization.UseMyItems = UseMyItems;
+        existingOrganization.UseInviteLinks = UseInviteLinks;
         existingOrganization.ExemptFromBillingAutomation = ExemptFromBillingAutomation;
         return existingOrganization;
     }

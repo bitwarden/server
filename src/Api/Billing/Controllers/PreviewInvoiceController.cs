@@ -1,5 +1,7 @@
-﻿using Bit.Api.Billing.Attributes;
+﻿using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.Billing.Attributes;
 using Bit.Api.Billing.Models.Requests.PreviewInvoice;
+using Bit.Api.Billing.Models.Requirements;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Premium.Commands;
@@ -28,6 +30,7 @@ public class PreviewInvoiceController(
         return Handle(result.Map(pair => new { pair.Tax, pair.Total }));
     }
 
+    [Authorize<ManageOrganizationBillingRequirement>]
     [HttpPost("organizations/{organizationId:guid}/subscription/plan-change")]
     [InjectOrganization]
     public async Task<IResult> PreviewOrganizationSubscriptionPlanChangeTaxAsync(
@@ -39,6 +42,7 @@ public class PreviewInvoiceController(
         return Handle(result.Map(pair => new { pair.Tax, pair.Total }));
     }
 
+    [Authorize<ManageOrganizationBillingRequirement>]
     [HttpPut("organizations/{organizationId:guid}/subscription/update")]
     [InjectOrganization]
     public async Task<IResult> PreviewOrganizationSubscriptionUpdateTaxAsync(

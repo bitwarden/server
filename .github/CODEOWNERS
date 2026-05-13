@@ -4,6 +4,9 @@
 #
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
+# CODEOWNERS owners
+.github/CODEOWNERS @bitwarden/tech-leads
+
 ## Docker-related files
 **/Dockerfile @bitwarden/team-appsec @bitwarden/dept-shot
 **/*.Dockerfile @bitwarden/team-appsec @bitwarden/dept-shot
@@ -14,12 +17,8 @@
 # Scanning tools
 .checkmarx/ @bitwarden/team-appsec
 
-## BRE team owns these workflows ##
-.github/workflows/publish.yml @bitwarden/dept-bre
-
 ## These are shared workflows ##
 .github/workflows/_move_edd_db_scripts.yml
-.github/workflows/release.yml
 
 # Database Operations for database changes
 src/Sql/** @bitwarden/dept-dbops

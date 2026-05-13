@@ -54,6 +54,21 @@ public class OrganizationArgs : IArgumentModel
     [Option("kdf-iterations", Description = "KDF iteration count for all seeded users (default: 5000). Use 600000 for production-realistic e2e testing.")]
     public int KdfIterations { get; set; } = 5_000;
 
+    [Option("auto-confirm-users", Description = "Automatically confirm invited users without manual approval")]
+    public bool? UseAutomaticUserConfirmation { get; set; }
+
+    [Option("allow-admin-collection-access", Description = "Allow admins/owners to access all collection items")]
+    public bool? AllowAdminAccessToAllCollectionItems { get; set; }
+
+    [Option("limit-item-deletion", Description = "Restrict item deletion to members with Can Manage permission")]
+    public bool? LimitItemDeletion { get; set; }
+
+    [Option("limit-collection-creation", Description = "Restrict collection creation to admins/owners")]
+    public bool? LimitCollectionCreation { get; set; }
+
+    [Option("limit-collection-deletion", Description = "Restrict collection deletion to admins/owners")]
+    public bool? LimitCollectionDeletion { get; set; }
+
     public void Validate()
     {
         if (Users < 1)
@@ -103,7 +118,15 @@ public class OrganizationArgs : IArgumentModel
         Density = DensityProfiles.Parse(Density),
         Password = Password,
         PlanType = PlanFeatures.Parse(PlanType),
-        KdfIterations = KdfIterations
+        KdfIterations = KdfIterations,
+        Overrides = new()
+        {
+            UseAutomaticUserConfirmation = UseAutomaticUserConfirmation,
+            AllowAdminAccessToAllCollectionItems = AllowAdminAccessToAllCollectionItems,
+            LimitItemDeletion = LimitItemDeletion,
+            LimitCollectionCreation = LimitCollectionCreation,
+            LimitCollectionDeletion = LimitCollectionDeletion,
+        },
     };
 
     private static OrgStructureModel? ParseOrgStructure(string? structure)

@@ -27,7 +27,6 @@ public interface IOrganizationService
         OrganizationUserInvite invite, string externalId);
     Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId, EventSystemUser? systemUser,
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites);
-    Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey, Guid? callingUserId);
     Task DeleteSsoUserAsync(Guid userId, Guid? organizationId);
     Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null);
     Task<(bool canScale, string failureReason)> CanScaleAsync(Organization organization, int seatsToAdd);

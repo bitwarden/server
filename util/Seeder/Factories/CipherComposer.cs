@@ -23,15 +23,16 @@ internal static class CipherComposer
         GeneratorContext generator,
         Distribution<PasswordStrength> passwordDistribution,
         Guid? organizationId = null,
-        Guid? userId = null)
+        Guid? userId = null,
+        CipherRepromptType reprompt = CipherRepromptType.None)
     {
         return cipherType switch
         {
-            CipherType.Login => ComposeLogin(index, encryptionKey, companies, generator, passwordDistribution, organizationId, userId),
-            CipherType.Card => ComposeCard(index, encryptionKey, generator, organizationId, userId),
-            CipherType.Identity => ComposeIdentity(index, encryptionKey, generator, organizationId, userId),
-            CipherType.SecureNote => ComposeSecureNote(index, encryptionKey, generator, organizationId, userId),
-            CipherType.SSHKey => ComposeSshKey(index, encryptionKey, organizationId, userId),
+            CipherType.Login => ComposeLogin(index, encryptionKey, companies, generator, passwordDistribution, organizationId, userId, reprompt),
+            CipherType.Card => ComposeCard(index, encryptionKey, generator, organizationId, userId, reprompt),
+            CipherType.Identity => ComposeIdentity(index, encryptionKey, generator, organizationId, userId, reprompt),
+            CipherType.SecureNote => ComposeSecureNote(index, encryptionKey, generator, organizationId, userId, reprompt),
+            CipherType.SSHKey => ComposeSshKey(index, encryptionKey, organizationId, userId, reprompt),
             _ => throw new ArgumentException($"Unsupported cipher type: {cipherType}")
         };
     }
@@ -43,7 +44,8 @@ internal static class CipherComposer
         GeneratorContext generator,
         Distribution<PasswordStrength> passwordDistribution,
         Guid? organizationId = null,
-        Guid? userId = null)
+        Guid? userId = null,
+        CipherRepromptType reprompt = CipherRepromptType.None)
     {
         var company = companies[index % companies.Length];
         var uri = $"https://{company.Domain}";
@@ -54,6 +56,7 @@ internal static class CipherComposer
             EncryptionKey = encryptionKey,
             OrganizationId = organizationId,
             UserId = userId,
+            Reprompt = reprompt,
             Login = new LoginViewDto
             {
                 Username = generator.Username.GenerateByIndex(index, totalHint: generator.CipherCount, domain: company.Domain),
@@ -68,7 +71,8 @@ internal static class CipherComposer
         string encryptionKey,
         GeneratorContext generator,
         Guid? organizationId = null,
-        Guid? userId = null)
+        Guid? userId = null,
+        CipherRepromptType reprompt = CipherRepromptType.None)
     {
         var card = generator.Card.GenerateByIndex(index);
         return CardCipherSeeder.Create(new CipherSeed
@@ -78,6 +82,7 @@ internal static class CipherComposer
             EncryptionKey = encryptionKey,
             OrganizationId = organizationId,
             UserId = userId,
+            Reprompt = reprompt,
             Card = card
         });
     }
@@ -87,7 +92,8 @@ internal static class CipherComposer
         string encryptionKey,
         GeneratorContext generator,
         Guid? organizationId = null,
-        Guid? userId = null)
+        Guid? userId = null,
+        CipherRepromptType reprompt = CipherRepromptType.None)
     {
         var identity = generator.Identity.GenerateByIndex(index);
         var name = $"{identity.FirstName} {identity.LastName}";
@@ -102,6 +108,7 @@ internal static class CipherComposer
             EncryptionKey = encryptionKey,
             OrganizationId = organizationId,
             UserId = userId,
+            Reprompt = reprompt,
             Identity = identity
         });
     }
@@ -111,7 +118,8 @@ internal static class CipherComposer
         string encryptionKey,
         GeneratorContext generator,
         Guid? organizationId = null,
-        Guid? userId = null)
+        Guid? userId = null,
+        CipherRepromptType reprompt = CipherRepromptType.None)
     {
         var (name, notes) = generator.SecureNote.GenerateByIndex(index);
         return SecureNoteCipherSeeder.Create(new CipherSeed
@@ -121,7 +129,8 @@ internal static class CipherComposer
             Notes = notes,
             EncryptionKey = encryptionKey,
             OrganizationId = organizationId,
-            UserId = userId
+            UserId = userId,
+            Reprompt = reprompt
         });
     }
 
@@ -129,7 +138,8 @@ internal static class CipherComposer
         int index,
         string encryptionKey,
         Guid? organizationId = null,
-        Guid? userId = null)
+        Guid? userId = null,
+        CipherRepromptType reprompt = CipherRepromptType.None)
     {
         var sshKey = SshKeyDataGenerator.GenerateByIndex(index);
         return SshKeyCipherSeeder.Create(new CipherSeed
@@ -139,6 +149,7 @@ internal static class CipherComposer
             EncryptionKey = encryptionKey,
             OrganizationId = organizationId,
             UserId = userId,
+            Reprompt = reprompt,
             SshKey = sshKey
         });
     }

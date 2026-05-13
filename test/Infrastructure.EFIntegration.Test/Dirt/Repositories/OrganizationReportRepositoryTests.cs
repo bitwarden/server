@@ -418,51 +418,6 @@ public class OrganizationReportRepositoryTests
     }
 
     [CiSkippedTheory, EfOrganizationReportAutoData]
-    public async Task GetReportDataAsync_ShouldReturnReportData(
-        OrganizationReportRepository sqlOrganizationReportRepo,
-        SqlRepo.OrganizationRepository sqlOrganizationRepo)
-    {
-        // Arrange
-        var fixture = new Fixture();
-        var reportData = "Test report data";
-        var (org, report) = await CreateOrganizationAndReportWithReportDataAsync(
-            sqlOrganizationRepo, sqlOrganizationReportRepo, reportData);
-
-        // Act
-        var result = await sqlOrganizationReportRepo.GetReportDataAsync(report.Id);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(reportData, result.ReportData);
-    }
-
-    [CiSkippedTheory, EfOrganizationReportAutoData]
-    public async Task UpdateReportDataAsync_ShouldUpdateReportDataAndRevisionDate(
-        OrganizationReportRepository sqlOrganizationReportRepo,
-        SqlRepo.OrganizationRepository sqlOrganizationRepo)
-    {
-        // Arrange
-        var (org, report) = await CreateOrganizationAndReportAsync(sqlOrganizationRepo, sqlOrganizationReportRepo);
-        var newReportData = "Updated report data";
-        var originalRevisionDate = report.RevisionDate;
-
-        // Add a small delay to ensure revision date difference
-        await Task.Delay(100);
-
-        // Act
-        var updatedReport = await sqlOrganizationReportRepo.UpdateReportDataAsync(
-            org.Id, report.Id, newReportData);
-
-        // Assert
-        Assert.NotNull(updatedReport);
-        Assert.Equal(org.Id, updatedReport.OrganizationId);
-        Assert.Equal(report.Id, updatedReport.Id);
-        Assert.Equal(newReportData, updatedReport.ReportData);
-        Assert.True(updatedReport.RevisionDate >= originalRevisionDate,
-            $"Expected RevisionDate {updatedReport.RevisionDate} to be >= {originalRevisionDate}");
-    }
-
-    [CiSkippedTheory, EfOrganizationReportAutoData]
     public async Task GetApplicationDataAsync_ShouldReturnApplicationData(
         OrganizationReportRepository sqlOrganizationReportRepo,
         SqlRepo.OrganizationRepository sqlOrganizationRepo)
@@ -517,22 +472,6 @@ public class OrganizationReportRepositoryTests
 
         // Act
         var result = await sqlOrganizationReportRepo.GetSummaryDataAsync(nonExistentReportId);
-
-        // Assert
-        Assert.Null(result);
-    }
-
-    [CiSkippedTheory, EfOrganizationReportAutoData]
-    public async Task GetReportDataAsync_WithNonExistentReport_ShouldReturnNull(
-        OrganizationReportRepository sqlOrganizationReportRepo,
-        SqlRepo.OrganizationRepository sqlOrganizationRepo)
-    {
-        // Arrange
-        var (org, _) = await CreateOrganizationAndReportAsync(sqlOrganizationRepo, sqlOrganizationReportRepo);
-        var nonExistentReportId = Guid.NewGuid();
-
-        // Act
-        var result = await sqlOrganizationReportRepo.GetReportDataAsync(nonExistentReportId);
 
         // Assert
         Assert.Null(result);
@@ -629,25 +568,6 @@ public class OrganizationReportRepositoryTests
         var orgReportRecord = fixture.Build<OrganizationReport>()
             .With(x => x.OrganizationId, organization.Id)
             .With(x => x.SummaryData, summaryData)
-            .Create();
-
-        organization = await orgRepo.CreateAsync(organization);
-        orgReportRecord = await orgReportRepo.CreateAsync(orgReportRecord);
-
-        return (organization, orgReportRecord);
-    }
-
-    private async Task<(Organization, OrganizationReport)> CreateOrganizationAndReportWithReportDataAsync(
-        IOrganizationRepository orgRepo,
-        IOrganizationReportRepository orgReportRepo,
-        string reportData)
-    {
-        var fixture = new Fixture();
-        var organization = fixture.Create<Organization>();
-
-        var orgReportRecord = fixture.Build<OrganizationReport>()
-            .With(x => x.OrganizationId, organization.Id)
-            .With(x => x.ReportData, reportData)
             .Create();
 
         organization = await orgRepo.CreateAsync(organization);

@@ -53,7 +53,7 @@ public class PasswordManagerSubscriptionUpdate
     /// </summary>
     public bool MaxSeatsExceeded => UpdatedSeatTotal.HasValue && MaxAutoScaleSeats.HasValue && UpdatedSeatTotal.Value > MaxAutoScaleSeats.Value;
 
-    public Plan.PasswordManagerPlanFeatures PasswordManagerPlan { get; }
+    public Plan.PasswordManagerPlanFeatures? PasswordManagerPlan { get; }
 
     public InviteOrganization InviteOrganization { get; }
 
@@ -61,7 +61,7 @@ public class PasswordManagerSubscriptionUpdate
         int? organizationAutoScaleSeatLimit,
         int currentSeats,
         int newUsersToAdd,
-        Plan.PasswordManagerPlanFeatures plan,
+        Plan.PasswordManagerPlanFeatures? plan,
         InviteOrganization inviteOrganization)
     {
         Seats = organizationSeats;
@@ -78,7 +78,7 @@ public class PasswordManagerSubscriptionUpdate
             organizationAutoScaleSeatLimit: inviteOrganization.MaxAutoScaleSeats,
             currentSeats: occupiedSeats,
             newUsersToAdd: newUsersToAdd,
-            plan: inviteOrganization.Plan.PasswordManager,
+            plan: inviteOrganization.Plan?.PasswordManager,
             inviteOrganization: inviteOrganization)
     { }
 
@@ -88,7 +88,7 @@ public class PasswordManagerSubscriptionUpdate
             organizationAutoScaleSeatLimit: usersValidationRequest.InviteOrganization.MaxAutoScaleSeats,
             currentSeats: usersValidationRequest.OccupiedPmSeats,
             newUsersToAdd: usersValidationRequest.Invites.Length,
-            plan: usersValidationRequest.InviteOrganization.Plan.PasswordManager,
+            plan: usersValidationRequest.InviteOrganization.Plan?.PasswordManager,
             inviteOrganization: usersValidationRequest.InviteOrganization)
     { }
 }

@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using System.Text.Json;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -101,7 +98,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             token.TokenIsValid(WebAuthnLoginAssertionOptionsScope.Authentication);
         var deviceResponse = JsonSerializer.Deserialize<AuthenticatorAssertionRawResponse>(rawDeviceResponse);
 
-        if (!verified)
+        if (!verified || deviceResponse == null || token.Options == null)
         {
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidRequest);
             return;

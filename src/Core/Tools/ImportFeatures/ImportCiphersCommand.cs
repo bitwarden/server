@@ -163,7 +163,9 @@ public class ImportCiphersCommand : IImportCiphersCommand
             }
         }
 
-        var organizationCollectionsIds = (await _collectionRepository.GetManyByOrganizationIdAsync(org.Id)).Select(c => c.Id).ToList();
+        var organizationCollectionsIds = (await _collectionRepository.GetManyByOrganizationIdAsync(org.Id))
+            .Select(c => c.Id)
+            .ToHashSet();
 
         //Assign id to the ones that don't exist in DB
         //Need to keep the list order to create the relationships

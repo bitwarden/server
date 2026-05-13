@@ -12,4 +12,5 @@ public abstract record Error(string Message);
 public abstract record NotFoundError(string Message) : Error(Message);
 
 public abstract record BadRequestError(string Message) : Error(Message);
+public abstract record ConflictError(string Message) : Error(Message);
 public abstract record InternalError(string Message) : Error(Message);

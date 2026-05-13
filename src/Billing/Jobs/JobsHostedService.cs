@@ -29,7 +29,6 @@ public class JobsHostedService(
     public static void AddJobsServices(IServiceCollection services)
     {
         services.AddTransient<AliveJob>();
-        services.AddTransient<SubscriptionCancellationJob>();
         // add this service as a singleton so we can inject it where needed
         services.AddSingleton<JobsHostedService>();
         services.AddHostedService(sp => sp.GetRequiredService<JobsHostedService>());

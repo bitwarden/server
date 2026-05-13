@@ -79,6 +79,7 @@ public class CloudOrganizationSignUpCommand(
             MaxStorageGb = (short)(plan.PasswordManager.BaseStorageGb + signup.AdditionalStorageGb),
             UsePolicies = plan.HasPolicies,
             UseMyItems = plan.HasMyItems,
+            UseInviteLinks = plan.HasInviteLinks,
             UseSso = plan.HasSso,
             UseGroups = plan.HasGroups,
             UseEvents = plan.HasEvents,

@@ -38,4 +38,42 @@ public class OrganizationInviteLinkRepository
             commandType: CommandType.StoredProcedure);
         return results.SingleOrDefault();
     }
+
+    public async Task RefreshAsync(OrganizationInviteLink oldLink, OrganizationInviteLink newLink)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        try
+        {
+            await connection.ExecuteAsync(
+                $"[{Schema}].[{Table}_DeleteById]",
+                new { Id = oldLink.Id },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+
+            await connection.ExecuteAsync(
+                $"[{Schema}].[{Table}_Create]",
+                new
+                {
+                    newLink.Id,
+                    newLink.Code,
+                    newLink.OrganizationId,
+                    newLink.AllowedDomains,
+                    newLink.EncryptedInviteKey,
+                    newLink.EncryptedOrgKey,
+                    newLink.CreationDate,
+                    newLink.RevisionDate,
+                },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
 }

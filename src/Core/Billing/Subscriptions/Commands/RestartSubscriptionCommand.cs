@@ -83,6 +83,7 @@ public class RestartSubscriptionCommand(
             organization.SelfHost = newPlan.HasSelfHost;
             organization.UsePolicies = newPlan.HasPolicies;
             organization.UseMyItems = newPlan.HasMyItems;
+            organization.UseInviteLinks = newPlan.HasInviteLinks;
             organization.UseGroups = newPlan.HasGroups;
             organization.UseDirectory = newPlan.HasDirectory;
             organization.UseEvents = newPlan.HasEvents;

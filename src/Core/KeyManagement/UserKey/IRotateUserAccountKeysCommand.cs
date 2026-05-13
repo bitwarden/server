@@ -32,6 +32,15 @@ public interface IRotateUserAccountKeysCommand
     /// <exception cref="BadRequestException">Thrown when <paramref name="user"/> salt does not match <paramref name="model"/> MasterPasswordUnlockData.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="user"/> KDF settings do not match <paramref name="model"/> MasterPasswordUnlockData.</exception>
     Task MasterPasswordRotateUserAccountKeysAsync(User user, MasterPasswordRotateUserAccountKeysData model);
+
+    /// <summary>
+    /// For a TDE user with no master password, rotates the user key and updates all encrypted data.
+    /// </summary>
+    /// <param name="user"> The target user fetched from the database.</param>
+    /// <param name="model">Rotation data. All encrypted data must be included or the request will be rejected.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="user"/> is null.</exception>
+    /// <exception cref="BadRequestException">Thrown when <paramref name="user"/> is not a TDE user with no master password.</exception>
+    Task TdeRotateUserAccountKeysAsync(User user, TdeRotateUserAccountKeysData model);
 }
 
 /// <summary>

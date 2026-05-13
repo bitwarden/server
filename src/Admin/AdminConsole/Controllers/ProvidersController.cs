@@ -343,6 +343,39 @@ public class ProvidersController : Controller
             }
         }
 
+        // Clear any pending unpaid-lifecycle cancellation when re-enabling a billing-disabled provider
+        if (!originalProviderStatus && provider.Enabled)
+        {
+            try
+            {
+                await _subscriberService.ResumeFromUnpaidCancellationAsync(provider);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to clear pending unpaid cancellation for provider {ProviderId} on re-enable.",
+                    provider.Id);
+                TempData["Warning"] = "Provider updated successfully, but clearing the pending Stripe cancellation failed.";
+            }
+        }
+
+        // Schedule the unpaid-lifecycle cancellation when disabling a provider whose Stripe subscription
+        // is unpaid but was never scheduled by the webhook handler.
+        if (originalProviderStatus && !provider.Enabled)
+        {
+            try
+            {
+                await _subscriberService.ScheduleUnpaidCancellationAsync(provider);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to schedule unpaid cancellation for provider {ProviderId} on disable.",
+                    provider.Id);
+                TempData["Warning"] = "Provider updated successfully, but scheduling the Stripe cancellation failed.";
+            }
+        }
+
         if (!provider.IsBillable())
         {
             return RedirectToAction("Edit", new { id });

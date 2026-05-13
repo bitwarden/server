@@ -6,6 +6,7 @@ using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Auth.Models.Api.Request.Accounts;
+
 using System.ComponentModel.DataAnnotations;
 
 public enum RegisterFinishTokenType : byte

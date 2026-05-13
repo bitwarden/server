@@ -24,6 +24,7 @@ public class UserCardCipherScene(IUserRepository userRepository, ICipherReposito
         public required string ExpYear { get; set; }
         public required string Code { get; set; }
         public string? Notes { get; set; }
+        public bool Reprompt { get; set; }
     }
 
     public class Result
@@ -56,6 +57,10 @@ public class UserCardCipherScene(IUserRepository userRepository, ICipherReposito
             UserId = request.UserId,
             Card = card
         });
+        if (request.Reprompt)
+        {
+            cipher.Reprompt = CipherRepromptType.Password;
+        }
 
         await cipherRepository.CreateAsync(cipher);
 

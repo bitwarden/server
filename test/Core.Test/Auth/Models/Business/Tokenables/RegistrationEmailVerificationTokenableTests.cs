@@ -2,6 +2,7 @@
 using Bit.Core.Tokens;
 
 namespace Bit.Core.Test.Auth.Models.Business.Tokenables;
+
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Xunit;
 

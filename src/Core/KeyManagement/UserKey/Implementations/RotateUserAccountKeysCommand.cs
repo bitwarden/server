@@ -117,6 +117,21 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         await HandlePushNotificationAsync(shouldPersistV2UpgradeToken, user);
     }
 
+    /// <inheritdoc />
+    public async Task TdeRotateUserAccountKeysAsync(User user, TdeRotateUserAccountKeysData model)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        model.ValidateForUser(user);
+
+        List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions = [];
+        var shouldPersistV2UpgradeToken = await BaseRotateUserAccountKeysAsync(model.BaseData, user, saveEncryptedDataActions);
+
+        await _userRepository.UpdateUserKeyAndEncryptedDataV2Async(user, saveEncryptedDataActions);
+
+        await HandlePushNotificationAsync(shouldPersistV2UpgradeToken, user);
+    }
+
     private async Task RotateV2AccountKeysAsync(BaseRotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
     {
         ValidateV2Encryption(model);

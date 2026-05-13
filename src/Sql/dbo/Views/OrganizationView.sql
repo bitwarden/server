@@ -65,6 +65,7 @@ SELECT
     [UsePhishingBlocker],
     [UseDisableSmAdsForUsers],
     [UseMyItems],
-    [ExemptFromBillingAutomation]
+    [ExemptFromBillingAutomation],
+    [UseInviteLinks]
 FROM
     [dbo].[Organization]

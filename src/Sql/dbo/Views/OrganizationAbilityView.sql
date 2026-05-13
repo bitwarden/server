@@ -23,6 +23,7 @@ SELECT
     [UseAutomaticUserConfirmation],
     [UseDisableSmAdsForUsers],
     [UsePhishingBlocker],
-    [UseMyItems]
+    [UseMyItems],
+    [UseInviteLinks]
 FROM
     [dbo].[Organization]
