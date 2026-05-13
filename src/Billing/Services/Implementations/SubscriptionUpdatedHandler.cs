@@ -324,6 +324,14 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             CancellationDetails = new SubscriptionCancellationDetailsOptions
             {
                 Comment = $"Automation: Setting unpaid subscription to cancel 7 days from {now:yyyy-MM-dd}."
+            },
+            // Stamp the origin so SubscriptionDeletedHandler can recognize the eventual
+            // customer.subscription.deleted as the tail of this platform-managed unpaid
+            // lifecycle and void any open invoices. Other cancellation paths (voluntary,
+            // off-platform, provider migration) intentionally do not set this.
+            Metadata = new Dictionary<string, string>
+            {
+                [MetadataKeys.CancellationOrigin] = CancellationOrigins.UnpaidSubscription
             }
         });
     }
@@ -335,7 +343,14 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         await _stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
         {
             CancelAtPeriodEnd = false,
-            ProrationBehavior = ProrationBehavior.None
+            ProrationBehavior = ProrationBehavior.None,
+            // Clear the origin marker — the customer paid the unpaid invoice and the
+            // subscription is recovering. Stripe removes a metadata key when its value
+            // is set to an empty string.
+            Metadata = new Dictionary<string, string>
+            {
+                [MetadataKeys.CancellationOrigin] = string.Empty
+            }
         });
     }
 
