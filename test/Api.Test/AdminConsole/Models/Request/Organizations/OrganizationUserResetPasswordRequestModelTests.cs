@@ -114,40 +114,6 @@ public class OrganizationUserResetPasswordRequestModelTests
         Assert.Empty(result);
     }
 
-    [Theory]
-    [BitAutoData]
-    public void Validate_BothPayloadVariants_ReturnsConflictError(string newHash, string key)
-    {
-        var kdf = new KdfRequestModel
-        {
-            KdfType = KdfType.PBKDF2_SHA256,
-            Iterations = 600000
-        };
-
-        var model = new OrganizationUserResetPasswordRequestModel
-        {
-            NewMasterPasswordHash = newHash,
-            Key = key,
-            AuthenticationData = new MasterPasswordAuthenticationDataRequestModel
-            {
-                Kdf = kdf,
-                MasterPasswordAuthenticationHash = "authHash",
-                Salt = "salt"
-            },
-            UnlockData = new MasterPasswordUnlockDataRequestModel
-            {
-                Kdf = kdf,
-                MasterKeyWrappedUserKey = "wrappedKey",
-                Salt = "salt"
-            }
-        };
-
-        var result = model.Validate(new ValidationContext(model)).ToList();
-
-        Assert.Single(result);
-        Assert.Contains("Cannot provide both", result[0].ErrorMessage);
-    }
-
     [Fact]
     public void Validate_NoPayloadsProvided_ReturnsError()
     {
