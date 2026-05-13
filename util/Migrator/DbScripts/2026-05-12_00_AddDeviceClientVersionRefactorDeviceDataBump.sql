@@ -4,10 +4,8 @@
 -- 1. Add the ClientVersion column. Guarded so reruns are safe.
 IF COL_LENGTH('[dbo].[Device]', 'ClientVersion') IS NULL
 BEGIN
-  ALTER TABLE
-    [dbo].[Device]
-  ADD
-    [ClientVersion] NVARCHAR(20) NULL
+    ALTER TABLE [dbo].[Device]
+        ADD [ClientVersion] NVARCHAR(20) NULL
 END
 GO
 
@@ -18,6 +16,33 @@ AS
         *
     FROM
         [dbo].[Device]
+GO
+
+-- 2a. Refresh read sprocs that consume DeviceView so their cached schema picks up ClientVersion.
+-- The write sprocs (Device_Create / Device_Update / Device_BumpData*) are recreated below, so they
+-- pick up the new column naturally and don't need a refresh.
+IF OBJECT_ID('[dbo].[Device_ReadById]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[Device_ReadById]'
+END
+GO
+
+IF OBJECT_ID('[dbo].[Device_ReadByIdentifierUserId]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[Device_ReadByIdentifierUserId]'
+END
+GO
+
+IF OBJECT_ID('[dbo].[Device_ReadByUserId]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[Device_ReadByUserId]'
+END
+GO
+
+IF OBJECT_ID('[dbo].[Device_ReadByIdentifier]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[Device_ReadByIdentifier]'
+END
 GO
 
 -- 3. Device_Create: accept @ClientVersion and include it in the INSERT list.
@@ -216,10 +241,8 @@ GO
 -- 7. Drop the old single-column bump SPs — replaced by the combined SPs above.
 -- Deployed environments (dev/QA) that already ran the LastActivityDate migration have these in
 -- their dbo schema; removing the .sql files alone wouldn't clean those up.
-IF OBJECT_ID('[dbo].[Device_UpdateLastActivityDateById]', 'P') IS NOT NULL
-    DROP PROCEDURE [dbo].[Device_UpdateLastActivityDateById]
+DROP PROCEDURE IF EXISTS [dbo].[Device_UpdateLastActivityDateById]
 GO
 
-IF OBJECT_ID('[dbo].[Device_UpdateLastActivityDateByIdentifierUserId]', 'P') IS NOT NULL
-    DROP PROCEDURE [dbo].[Device_UpdateLastActivityDateByIdentifierUserId]
+DROP PROCEDURE IF EXISTS [dbo].[Device_UpdateLastActivityDateByIdentifierUserId]
 GO
