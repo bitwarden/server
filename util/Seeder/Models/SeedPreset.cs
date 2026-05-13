@@ -60,11 +60,13 @@ internal record SeedPresetCiphers
     public string? Fixture { get; init; }
     public int Count { get; init; }
     public bool AssignFolders { get; init; }
+    public int RepromptEveryNthCipher { get; init; }
 }
 
 internal record SeedPresetPersonalCiphers
 {
     public int CountPerUser { get; init; }
+    public int RepromptEveryNthCipher { get; init; }
 }
 
 internal record SeedCollectionAssignment
