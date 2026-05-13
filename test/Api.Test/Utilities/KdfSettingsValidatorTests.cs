@@ -124,6 +124,58 @@ public class KdfSettingsValidatorTests
         Assert.Contains("KDF iterations must be between", results[0].ErrorMessage);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("\t")]
+    [InlineData("\n")]
+    public void ValidateAuthenticationAndUnlockData_WhenAuthSaltIsEmptyOrWhitespace_ReturnsSaltError(string salt)
+    {
+        var authentication = new MasterPasswordAuthenticationData
+        {
+            Kdf = new KdfSettings { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600_000 },
+            MasterPasswordAuthenticationHash = "hash",
+            Salt = salt
+        };
+        var unlock = new MasterPasswordUnlockData
+        {
+            Kdf = new KdfSettings { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600_000 },
+            MasterKeyWrappedUserKey = "wrapped",
+            Salt = "salt"
+        };
+
+        var results = KdfSettingsValidator.ValidateAuthenticationAndUnlockData(authentication, unlock).ToList();
+
+        Assert.Single(results);
+        Assert.Equal("Master password salt must not be empty.", results[0].ErrorMessage);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("\t")]
+    [InlineData("\n")]
+    public void ValidateAuthenticationAndUnlockData_WhenUnlockSaltIsEmptyOrWhitespace_ReturnsSaltError(string salt)
+    {
+        var authentication = new MasterPasswordAuthenticationData
+        {
+            Kdf = new KdfSettings { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600_000 },
+            MasterPasswordAuthenticationHash = "hash",
+            Salt = "salt"
+        };
+        var unlock = new MasterPasswordUnlockData
+        {
+            Kdf = new KdfSettings { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600_000 },
+            MasterKeyWrappedUserKey = "wrapped",
+            Salt = salt
+        };
+
+        var results = KdfSettingsValidator.ValidateAuthenticationAndUnlockData(authentication, unlock).ToList();
+
+        Assert.Single(results);
+        Assert.Equal("Master password salt must not be empty.", results[0].ErrorMessage);
+    }
+
     [Fact]
     public void ValidateKdfAndSaltAgreement_WhenMatchingKdfAndSalt_ReturnsNoErrors()
     {
@@ -191,6 +243,58 @@ public class KdfSettingsValidatorTests
 
         Assert.Single(results);
         Assert.Equal("Invalid master password salt.", results[0].ErrorMessage);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("\t")]
+    [InlineData("\n")]
+    public void ValidateKdfAndSaltAgreement_WhenAuthSaltIsEmptyOrWhitespace_ReturnsSaltError(string salt)
+    {
+        var authentication = new MasterPasswordAuthenticationData
+        {
+            Kdf = new KdfSettings { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600_000 },
+            MasterPasswordAuthenticationHash = "hash",
+            Salt = salt
+        };
+        var unlock = new MasterPasswordUnlockData
+        {
+            Kdf = new KdfSettings { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600_000 },
+            MasterKeyWrappedUserKey = "wrapped",
+            Salt = "salt"
+        };
+
+        var results = KdfSettingsValidator.ValidateKdfAndSaltAgreement(authentication, unlock).ToList();
+
+        Assert.Single(results);
+        Assert.Equal("Master password salt must not be empty.", results[0].ErrorMessage);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("\t")]
+    [InlineData("\n")]
+    public void ValidateKdfAndSaltAgreement_WhenUnlockSaltIsEmptyOrWhitespace_ReturnsSaltError(string salt)
+    {
+        var authentication = new MasterPasswordAuthenticationData
+        {
+            Kdf = new KdfSettings { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600_000 },
+            MasterPasswordAuthenticationHash = "hash",
+            Salt = "salt"
+        };
+        var unlock = new MasterPasswordUnlockData
+        {
+            Kdf = new KdfSettings { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600_000 },
+            MasterKeyWrappedUserKey = "wrapped",
+            Salt = salt
+        };
+
+        var results = KdfSettingsValidator.ValidateKdfAndSaltAgreement(authentication, unlock).ToList();
+
+        Assert.Single(results);
+        Assert.Equal("Master password salt must not be empty.", results[0].ErrorMessage);
     }
 
     [Theory]
