@@ -17,6 +17,22 @@ public static class KdfSettingsValidator
         MasterPasswordAuthenticationData authentication,
         MasterPasswordUnlockData unlock)
     {
+        if (string.IsNullOrEmpty(authentication.Salt))
+        {
+            yield return new ValidationResult(
+                "Master password salt must not be empty.",
+                [nameof(authentication.Salt)]);
+            yield break;
+        }
+
+        if (string.IsNullOrEmpty(unlock.Salt))
+        {
+            yield return new ValidationResult(
+                "Master password salt must not be empty.",
+                [nameof(unlock.Salt)]);
+            yield break;
+        }
+
         // Currently KDF settings are not saved separately for authentication and unlock and must therefore be equal
         if (!authentication.Kdf.Equals(unlock.Kdf))
         {
@@ -58,6 +74,22 @@ public static class KdfSettingsValidator
         MasterPasswordAuthenticationData authentication,
         MasterPasswordUnlockData unlock)
     {
+        if (string.IsNullOrEmpty(authentication.Salt))
+        {
+            yield return new ValidationResult(
+                "Master password salt must not be empty.",
+                [nameof(authentication.Salt)]);
+            yield break;
+        }
+
+        if (string.IsNullOrEmpty(unlock.Salt))
+        {
+            yield return new ValidationResult(
+                "Master password salt must not be empty.",
+                [nameof(unlock.Salt)]);
+            yield break;
+        }
+
         if (!authentication.Kdf.Equals(unlock.Kdf))
         {
             yield return new ValidationResult(
