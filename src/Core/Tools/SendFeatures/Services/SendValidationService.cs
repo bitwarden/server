@@ -96,7 +96,7 @@ public class SendValidationService : ISendValidationService
             return emailDomain.Equals(domain, StringComparison.OrdinalIgnoreCase)
                 || emailDomain.EndsWith("." + domain, StringComparison.OrdinalIgnoreCase);
         }));
-    } 
+    }
 
     public async Task<long> StorageRemainingForSendAsync(Send send)
     {

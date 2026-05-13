@@ -54,7 +54,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         var recipeName = "from-options";
         var builder = services.AddRecipe(recipeName);
 
-        builder.CreateOrganization(options.Name, options.Domain, options.Users + 1, options.PlanType);
+        builder.CreateOrganization(options.Name, options.Domain, options.Users + 1, options.PlanType, options.Overrides);
         builder.AddOrganizationApiKey();
         builder.AddOwner();
         builder.WithGenerator(options.Domain);
@@ -96,7 +96,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
     {
         var firstName = options.FirstName ?? new Bogus.Faker().Name.FirstName();
         var lastName = options.LastName ?? new Bogus.Faker().Name.LastName();
-        var email = $"{firstName}.{lastName}@individual.example".ToLowerInvariant();
+        var email = options.Email ?? $"{firstName}.{lastName}@individual.example".ToLowerInvariant();
 
         var premium = options.Premium;
         var maxStorageGb = premium ? (short)1 : (short)0;

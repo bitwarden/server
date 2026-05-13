@@ -68,7 +68,7 @@ public class SelfRevokeOrganizationUserCommandTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
-            .RevokeAsync(organizationUser.Id);
+            .RevokeAsync(organizationUser.Id, RevocationReason.OrganizationDataOwnershipPolicyNonCompliance);
 
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
@@ -224,7 +224,7 @@ public class SelfRevokeOrganizationUserCommandTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
-            .RevokeAsync(organizationUser.Id);
+            .RevokeAsync(organizationUser.Id, RevocationReason.OrganizationDataOwnershipPolicyNonCompliance);
 
         await sutProvider.GetDependency<IEventService>()
             .Received(1)

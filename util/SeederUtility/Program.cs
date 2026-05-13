@@ -73,13 +73,13 @@ public class Program
                     continue;
                 }
 
-                Console.WriteLine($"{color}{line[minIndent..]}{reset}");
+                Console.Error.WriteLine($"{color}{line[minIndent..]}{reset}");
             }
         }
 
-        Console.WriteLine($"  {bold}{cyan}╔══════════════════════════════════════════╗{reset}");
-        Console.WriteLine($"  {bold}{cyan}║            SEEDER    UTILITY             ║{reset}");
-        Console.WriteLine($"  {bold}{cyan}╚══════════════════════════════════════════╝{reset}");
+        Console.Error.WriteLine($"  {bold}{cyan}╔══════════════════════════════════════════╗{reset}");
+        Console.Error.WriteLine($"  {bold}{cyan}║            SEEDER    UTILITY             ║{reset}");
+        Console.Error.WriteLine($"  {bold}{cyan}╚══════════════════════════════════════════╝{reset}");
     }
 
     [Subcommand]

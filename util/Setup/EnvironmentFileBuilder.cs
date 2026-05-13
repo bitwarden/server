@@ -178,13 +178,13 @@ public class EnvironmentFileBuilder
         {
             sw.Write(template(new TemplateModel(_globalValues)));
         }
-        Helpers.Exec($"chmod 600 {_context.App.RootDirectory}/docker/global.env");
+        Helpers.Exec("chmod", ["600", $"{_context.App.RootDirectory}/docker/global.env"]);
 
         using (var sw = File.CreateText($"{_context.App.RootDirectory}/docker/mssql.env"))
         {
             sw.Write(template(new TemplateModel(_mssqlValues)));
         }
-        Helpers.Exec($"chmod 600 {_context.App.RootDirectory}/docker/mssql.env");
+        Helpers.Exec("chmod", ["600", $"{_context.App.RootDirectory}/docker/mssql.env"]);
 
         Helpers.WriteLine(_context, "Building docker environment override files.");
         Directory.CreateDirectory($"{_context.App.RootDirectory}/env/");
@@ -192,13 +192,13 @@ public class EnvironmentFileBuilder
         {
             sw.Write(template(new TemplateModel(_globalOverrideValues)));
         }
-        Helpers.Exec($"chmod 600 {_context.App.RootDirectory}/env/global.override.env");
+        Helpers.Exec("chmod", ["600", $"{_context.App.RootDirectory}/env/global.override.env"]);
 
         using (var sw = File.CreateText($"{_context.App.RootDirectory}/env/mssql.override.env"))
         {
             sw.Write(template(new TemplateModel(_mssqlOverrideValues)));
         }
-        Helpers.Exec($"chmod 600 {_context.App.RootDirectory}/env/mssql.override.env");
+        Helpers.Exec("chmod", ["600", $"{_context.App.RootDirectory}/env/mssql.override.env"]);
 
         if (_context.Config.EnableKeyConnector)
         {
@@ -207,7 +207,7 @@ public class EnvironmentFileBuilder
                 sw.Write(template(new TemplateModel(_keyConnectorOverrideValues)));
             }
 
-            Helpers.Exec($"chmod 600 {_context.App.RootDirectory}/env/key-connector.override.env");
+            Helpers.Exec("chmod", ["600", $"{_context.App.RootDirectory}/env/key-connector.override.env"]);
         }
 
         // Empty uid env file. Only used on Linux hosts.

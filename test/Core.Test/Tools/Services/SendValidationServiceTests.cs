@@ -160,7 +160,7 @@ public class SendValidationServiceTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(userId)
             .Returns(new SendOptionsPolicyRequirement { DisableHideEmail = true });
-        
+
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendControlsPolicyRequirement>(userId)
             .Returns(new SendControlsPolicyRequirement { WhoCanAccess = SendWhoCanAccessType.Any });
 
@@ -179,7 +179,7 @@ public class SendValidationServiceTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(userId)
             .Returns(new SendOptionsPolicyRequirement { DisableHideEmail = false });
-        
+
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendControlsPolicyRequirement>(userId)
             .Returns(new SendControlsPolicyRequirement { WhoCanAccess = SendWhoCanAccessType.Any });
 
@@ -201,7 +201,7 @@ public class SendValidationServiceTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(userId)
             .Returns(new SendOptionsPolicyRequirement { DisableHideEmail = false });
-        
+
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendControlsPolicyRequirement>(userId)
             .Returns(new SendControlsPolicyRequirement { DisableSend = false, DisableHideEmail = false, WhoCanAccess = SendWhoCanAccessType.PasswordProtected });
 
@@ -223,7 +223,7 @@ public class SendValidationServiceTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(userId)
             .Returns(new SendOptionsPolicyRequirement { DisableHideEmail = false });
-        
+
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendControlsPolicyRequirement>(userId)
             .Returns(new SendControlsPolicyRequirement { DisableSend = false, DisableHideEmail = false, WhoCanAccess = SendWhoCanAccessType.SpecificPeople });
 
@@ -245,7 +245,7 @@ public class SendValidationServiceTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(userId)
             .Returns(new SendOptionsPolicyRequirement { DisableHideEmail = false });
-        
+
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendControlsPolicyRequirement>(userId)
             .Returns(new SendControlsPolicyRequirement { DisableSend = false, DisableHideEmail = false, WhoCanAccess = SendWhoCanAccessType.SpecificPeople, AllowedDomains = "bitwarden.com" });
 

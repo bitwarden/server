@@ -2,12 +2,12 @@
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Repositories;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -170,17 +170,17 @@ public class SendControlsSyncPolicyEventTests
             Id = Guid.NewGuid(),
             AuthType = AuthType.Email,
         };
-        var sendIds = new List<Guid>([ nonCompliantSend1.Id, nonCompliantSend2.Id ]);
+        var sendIds = new List<Guid>([nonCompliantSend1.Id, nonCompliantSend2.Id]);
         sutProvider.GetDependency<ISendRepository>()
             .GetIdsByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns(sendIds);
         sutProvider.GetDependency<ISendRepository>()
             .GetManyByIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns([ nonCompliantSend1, nonCompliantSend2 ]);
+            .Returns([nonCompliantSend1, nonCompliantSend2]);
 
         await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(
             new SavePolicyModel(policyUpdate), postUpsertedPolicy, null);
-        
+
         await sutProvider.GetDependency<ISendRepository>()
             .Received(1)
             .UpdateManyDisabledAsync(Arg.Is<List<Guid>>(l => l.Count() == 2 && l.Contains(nonCompliantSend1.Id) && l.Contains(nonCompliantSend2.Id)), false);
@@ -216,17 +216,17 @@ public class SendControlsSyncPolicyEventTests
             Id = Guid.NewGuid(),
             AuthType = AuthType.Password,
         };
-        var sendIds = new List<Guid>([ otherwiseCompliantSend1.Id, otherwiseCompliantSend2.Id ]);
+        var sendIds = new List<Guid>([otherwiseCompliantSend1.Id, otherwiseCompliantSend2.Id]);
         sutProvider.GetDependency<ISendRepository>()
             .GetIdsByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns(sendIds);
         sutProvider.GetDependency<ISendRepository>()
             .GetManyByIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns([ otherwiseCompliantSend1, otherwiseCompliantSend2 ]);
+            .Returns([otherwiseCompliantSend1, otherwiseCompliantSend2]);
 
         await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(
             new SavePolicyModel(policyUpdate), postUpsertedPolicy, null);
-        
+
         await sutProvider.GetDependency<ISendRepository>()
             .Received(1)
             .UpdateManyDisabledAsync(Arg.Is<List<Guid>>(l => l.Count() == 2 && l.Contains(otherwiseCompliantSend1.Id) && l.Contains(otherwiseCompliantSend2.Id)), true);
@@ -262,17 +262,17 @@ public class SendControlsSyncPolicyEventTests
             Id = Guid.NewGuid(),
             HideEmail = true
         };
-        var sendIds = new List<Guid>([ compliantSend.Id, nonCompliantSend.Id ]);
+        var sendIds = new List<Guid>([compliantSend.Id, nonCompliantSend.Id]);
         sutProvider.GetDependency<ISendRepository>()
             .GetIdsByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns(sendIds);
         sutProvider.GetDependency<ISendRepository>()
             .GetManyByIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns([ compliantSend, nonCompliantSend ]);
+            .Returns([compliantSend, nonCompliantSend]);
 
         await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(
             new SavePolicyModel(policyUpdate), postUpsertedPolicy, null);
-        
+
         await sutProvider.GetDependency<ISendRepository>()
             .Received(1)
             .UpdateManyDisabledAsync(Arg.Is<List<Guid>>(l => l.Count == 1 && l.Contains(compliantSend.Id)), false);
@@ -316,17 +316,17 @@ public class SendControlsSyncPolicyEventTests
             Id = Guid.NewGuid(),
             AuthType = AuthType.Email
         };
-        var sendIds = new List<Guid>([ compliantSend.Id, nonCompliantSend1.Id, nonCompliantSend2.Id ]);
+        var sendIds = new List<Guid>([compliantSend.Id, nonCompliantSend1.Id, nonCompliantSend2.Id]);
         sutProvider.GetDependency<ISendRepository>()
             .GetIdsByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns(sendIds);
         sutProvider.GetDependency<ISendRepository>()
             .GetManyByIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns([ compliantSend, nonCompliantSend1, nonCompliantSend2 ]);
+            .Returns([compliantSend, nonCompliantSend1, nonCompliantSend2]);
 
         await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(
             new SavePolicyModel(policyUpdate), postUpsertedPolicy, null);
-        
+
         await sutProvider.GetDependency<ISendRepository>()
             .Received(1)
             .UpdateManyDisabledAsync(Arg.Is<List<Guid>>(l => l.Count == 1 && l.Contains(compliantSend.Id)), false);
@@ -370,17 +370,17 @@ public class SendControlsSyncPolicyEventTests
             Id = Guid.NewGuid(),
             AuthType = AuthType.Password
         };
-        var sendIds = new List<Guid>([ compliantSend.Id, nonCompliantSend1.Id, nonCompliantSend2.Id ]);
+        var sendIds = new List<Guid>([compliantSend.Id, nonCompliantSend1.Id, nonCompliantSend2.Id]);
         sutProvider.GetDependency<ISendRepository>()
             .GetIdsByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns(sendIds);
         sutProvider.GetDependency<ISendRepository>()
             .GetManyByIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns([ compliantSend, nonCompliantSend1, nonCompliantSend2 ]);
+            .Returns([compliantSend, nonCompliantSend1, nonCompliantSend2]);
 
         await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(
             new SavePolicyModel(policyUpdate), postUpsertedPolicy, null);
-        
+
         await sutProvider.GetDependency<ISendRepository>()
             .Received(1)
             .UpdateManyDisabledAsync(Arg.Is<List<Guid>>(l => l.Count == 1 && l.Contains(compliantSend.Id)), false);
@@ -389,13 +389,13 @@ public class SendControlsSyncPolicyEventTests
             .UpdateManyDisabledAsync(Arg.Is<List<Guid>>(l => l.Count == 2 && l.Contains(nonCompliantSend1.Id) && l.Contains(nonCompliantSend2.Id)), true);
     }
 
-[Theory, BitAutoData]
+    [Theory, BitAutoData]
     public async Task ExecutePostUpsertSideEffectAsync_AuthTypeEmailWithDomainDisablesRelevantSends(
-        [PolicyUpdate(PolicyType.SendControls, enabled: true)] PolicyUpdate policyUpdate,
-        [Policy(PolicyType.SendControls, enabled: true)] Policy postUpsertedPolicy,
-        [Policy(PolicyType.DisableSend, enabled: false)] Policy existingDisableSendPolicy,
-        [Policy(PolicyType.SendOptions, enabled: false)] Policy existingSendOptionsPolicy,
-        SutProvider<SendControlsSyncPolicyEvent> sutProvider)
+            [PolicyUpdate(PolicyType.SendControls, enabled: true)] PolicyUpdate policyUpdate,
+            [Policy(PolicyType.SendControls, enabled: true)] Policy postUpsertedPolicy,
+            [Policy(PolicyType.DisableSend, enabled: false)] Policy existingDisableSendPolicy,
+            [Policy(PolicyType.SendOptions, enabled: false)] Policy existingSendOptionsPolicy,
+            SutProvider<SendControlsSyncPolicyEvent> sutProvider)
     {
         postUpsertedPolicy.OrganizationId = policyUpdate.OrganizationId;
         existingDisableSendPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -431,17 +431,17 @@ public class SendControlsSyncPolicyEventTests
             AuthType = AuthType.Email,
             Emails = "marvin@mars.planet"
         };
-        var sendIds = new List<Guid>([ compliantSend.Id, nonCompliantSend1.Id, nonCompliantSend2.Id, nonCompliantSend3.Id ]);
+        var sendIds = new List<Guid>([compliantSend.Id, nonCompliantSend1.Id, nonCompliantSend2.Id, nonCompliantSend3.Id]);
         sutProvider.GetDependency<ISendRepository>()
             .GetIdsByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns(sendIds);
         sutProvider.GetDependency<ISendRepository>()
             .GetManyByIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns([ compliantSend, nonCompliantSend1, nonCompliantSend2, nonCompliantSend3 ]);
+            .Returns([compliantSend, nonCompliantSend1, nonCompliantSend2, nonCompliantSend3]);
 
         await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(
             new SavePolicyModel(policyUpdate), postUpsertedPolicy, null);
-        
+
         await sutProvider.GetDependency<ISendRepository>()
             .Received(1)
             .UpdateManyDisabledAsync(Arg.Is<List<Guid>>(l => l.Count == 1 && l.Contains(compliantSend.Id)), false);
