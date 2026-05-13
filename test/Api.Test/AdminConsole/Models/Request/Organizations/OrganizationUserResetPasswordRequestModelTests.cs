@@ -25,6 +25,7 @@ public class OrganizationUserResetPasswordRequestModelTests
 
         var model = new OrganizationUserResetPasswordRequestModel
         {
+            ResetMasterPassword = true,
             AuthenticationData = new MasterPasswordAuthenticationDataRequestModel
             {
                 Kdf = kdf,
@@ -52,6 +53,7 @@ public class OrganizationUserResetPasswordRequestModelTests
 
         var model = new OrganizationUserResetPasswordRequestModel
         {
+            ResetMasterPassword = true,
             AuthenticationData = new MasterPasswordAuthenticationDataRequestModel
             {
                 Kdf = authKdf,
@@ -79,6 +81,7 @@ public class OrganizationUserResetPasswordRequestModelTests
 
         var model = new OrganizationUserResetPasswordRequestModel
         {
+            ResetMasterPassword = true,
             AuthenticationData = new MasterPasswordAuthenticationDataRequestModel
             {
                 Kdf = kdf,
@@ -99,25 +102,10 @@ public class OrganizationUserResetPasswordRequestModelTests
         Assert.Equal("Invalid master password salt.", result[0].ErrorMessage);
     }
 
-    [Theory]
-    [BitAutoData]
-    public void Validate_HashAndKeyOnly_NoErrors(string newHash, string key)
-    {
-        var model = new OrganizationUserResetPasswordRequestModel
-        {
-            NewMasterPasswordHash = newHash,
-            Key = key
-        };
-
-        var result = model.Validate(new ValidationContext(model)).ToList();
-
-        Assert.Empty(result);
-    }
-
     [Fact]
     public void Validate_NoPayloadsProvided_ReturnsError()
     {
-        var model = new OrganizationUserResetPasswordRequestModel();
+        var model = new OrganizationUserResetPasswordRequestModel { ResetMasterPassword = true };
 
         var result = model.Validate(new ValidationContext(model)).ToList();
 
@@ -134,6 +122,7 @@ public class OrganizationUserResetPasswordRequestModelTests
 
         var model = new OrganizationUserResetPasswordRequestModel
         {
+            ResetMasterPassword = true,
             AuthenticationData = provideAuthenticationData
                 ? new MasterPasswordAuthenticationDataRequestModel
                 {
@@ -156,6 +145,37 @@ public class OrganizationUserResetPasswordRequestModelTests
 
         Assert.Single(result);
         Assert.Contains("Must provide either", result[0].ErrorMessage);
+    }
+
+    [Fact]
+    public void Validate_TwoFactorOnlyReset_NoPayload_NoErrors()
+    {
+        var model = new OrganizationUserResetPasswordRequestModel
+        {
+            ResetMasterPassword = false,
+            ResetTwoFactor = true
+        };
+
+        var result = model.Validate(new ValidationContext(model)).ToList();
+
+        Assert.Empty(result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void Validate_V1LegacyRequest_HashAndKey_NoErrors(string newHash, string key)
+    {
+        // v1 clients do not send ResetMasterPassword; it defaults to false.
+        // Hash+key payload always present on v1 — validation should pass.
+        var model = new OrganizationUserResetPasswordRequestModel
+        {
+            NewMasterPasswordHash = newHash,
+            Key = key
+        };
+
+        var result = model.Validate(new ValidationContext(model)).ToList();
+
+        Assert.Empty(result);
     }
 
     [Fact]
@@ -213,6 +233,7 @@ public class OrganizationUserResetPasswordRequestModelTests
 
         var model = new OrganizationUserResetPasswordRequestModel
         {
+            ResetMasterPassword = true,
             AuthenticationData = new MasterPasswordAuthenticationDataRequestModel
             {
                 Kdf = kdf,
