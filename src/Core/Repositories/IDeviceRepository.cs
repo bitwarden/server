@@ -18,9 +18,16 @@ public interface IDeviceRepository : IRepository<Device, Guid>
     Task<ICollection<DeviceAuthDetails>> GetManyByUserIdWithDeviceAuth(Guid userId);
     Task ClearPushTokenAsync(Guid id);
     UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<Device> devices);
-    /// <summary>Updates <c>LastActivityDate</c> for the device with the given ID, if not already set today.</summary>
-    Task BumpLastActivityDateByIdAsync(Guid deviceId);
+    /// <summary>
+    /// Bumps the device's <c>LastActivityDate</c> to today (if not already today) and writes
+    /// <paramref name="clientVersion"/> to <c>ClientVersion</c> (if non-null and different from
+    /// the stored value). Performs a single DB round trip.
+    /// </summary>
+    Task BumpDeviceDataByIdAsync(Guid deviceId, string? clientVersion);
 
-    /// <summary>Updates <c>LastActivityDate</c> for the device matching <paramref name="identifier"/> and <paramref name="userId"/>, if not already set today.</summary>
-    Task BumpLastActivityDateByIdentifierAndUserIdAsync(string identifier, Guid userId);
+    /// <summary>
+    /// Like <see cref="BumpDeviceDataByIdAsync"/>, but locates the device by
+    /// (<paramref name="identifier"/>, <paramref name="userId"/>).
+    /// </summary>
+    Task BumpDeviceDataByIdentifierAndUserIdAsync(string identifier, Guid userId, string? clientVersion);
 }

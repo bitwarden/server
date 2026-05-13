@@ -49,6 +49,16 @@ public class Device : ITableObject<Guid>
     /// </summary>
     public DateTime? LastActivityDate { get; internal set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// The version of the client software the device was last seen running. Populated from the
+    /// Bitwarden-Client-Version header on device creation and on every successful login / token refresh.
+    /// Null if the device has not authenticated since client version tracking was introduced or if
+    /// the header was absent.
+    /// 20 chars accommodates Bitwarden's <c>YYYY.M.B</c> CalVer (max observed ~9 chars) with headroom.
+    /// </summary>
+    [MaxLength(20)]
+    public string? ClientVersion { get; set; }
+
     public void SetNewId()
     {
         Id = CoreHelpers.GenerateComb();
