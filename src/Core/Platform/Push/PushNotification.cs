@@ -1,4 +1,5 @@
-﻿using Bit.Core.Enums;
+﻿using System.ComponentModel;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Platform.Push;
 
@@ -54,6 +55,10 @@ public record PushNotification<T>
     /// <summary>
     /// When true, only non-mobile engines (SignalR/web/desktop) will deliver this notification. When null or false, all engines process it.
     /// </summary>
+    /// <remarks>
+    /// This property is temporary and tied to a feature flag. Do not use it for new work — it will be removed when the flag is cleaned up.
+    /// </remarks>
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public bool? NonMobileOnly { get; init; }
 
     internal Guid? GetTargetWhen(NotificationTarget notificationTarget)

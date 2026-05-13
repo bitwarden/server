@@ -1,7 +1,6 @@
 ﻿using Azure.Storage.Queues;
 using Bit.Core.Platform.Push;
 using Bit.Core.Platform.Push.Internal;
-using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -28,7 +27,6 @@ public static class PushServiceCollectionExtensions
 
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<IPushNotificationService, MultiServicePushNotificationService>();
-        services.TryAddSingleton<ICollectionCipherRepository, Bit.Core.Repositories.Noop.CollectionCipherRepository>();
 
         if (globalSettings.SelfHosted)
         {
