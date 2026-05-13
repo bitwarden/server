@@ -91,16 +91,6 @@ public class UpdateOrganizationReportCommand : IUpdateOrganizationReportCommand
 
     private async Task<(bool IsValid, string errorMessage)> ValidateRequestAsync(UpdateOrganizationReportRequest request)
     {
-        if (request.OrganizationId == Guid.Empty)
-        {
-            return (false, "OrganizationId is required");
-        }
-
-        if (request.ReportId == Guid.Empty)
-        {
-            return (false, "ReportId is required");
-        }
-
         var organization = await _organizationRepo.GetByIdAsync(request.OrganizationId);
         if (organization == null)
         {
