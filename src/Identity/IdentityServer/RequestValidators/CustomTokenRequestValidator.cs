@@ -50,7 +50,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
         IClientVersionValidator clientVersionValidator,
-        IBumpDeviceLastActivityDateCommand bumpDeviceLastActivityDateCommand)
+        IBumpDeviceDataCommand bumpDeviceDataCommand)
         : base(
             userManager,
             userService,
@@ -72,7 +72,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             mailService,
             userAccountKeysQuery,
             clientVersionValidator,
-            bumpDeviceLastActivityDateCommand)
+            bumpDeviceDataCommand)
     {
         _userManager = userManager;
         _updateInstallationCommand = updateInstallationCommand;
@@ -94,7 +94,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             // TODO: PM-34091 - remove feature flag check when cleaning up
             if (_featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate))
             {
-                await TryBumpDeviceLastActivityForRefreshAsync(context);
+                await TryBumpDeviceDataForRefreshAsync(context);
             }
         }
 
@@ -206,7 +206,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         context.Result.CustomResponse = requestContext.CustomResponse;
     }
 
-    private async Task TryBumpDeviceLastActivityForRefreshAsync(CustomTokenRequestValidationContext context)
+    private async Task TryBumpDeviceDataForRefreshAsync(CustomTokenRequestValidationContext context)
     {
         Debug.Assert(context.Result is not null);
         try
@@ -219,13 +219,14 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
                 return;
             }
 
-            await _bumpDeviceLastActivityDateCommand.BumpByIdentifierAndUserIdAsync(identifier, userId);
+            var clientVersion = CurrentContext.ClientVersion?.ToString();
+            await _bumpDeviceDataCommand.BumpByIdentifierAndUserIdAsync(identifier, userId, clientVersion);
         }
         catch (Exception e)
         {
             // Log and swallow exceptions from this non-critical update, as we don't want to fail logins
-            // due to issues updating the device's last activity date.
-            _logger.LogWarning(e, "Failed to bump LastActivityDate for device with identifier {DeviceIdentifier}.",
+            // due to issues updating the device's bumped data (LastActivityDate / ClientVersion).
+            _logger.LogWarning(e, "Failed to bump device data for device with identifier {DeviceIdentifier}.",
                 context.Result.ValidatedRequest.Subject?.FindFirstValue(Claims.Device));
         }
     }

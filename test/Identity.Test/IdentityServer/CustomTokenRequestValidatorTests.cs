@@ -30,7 +30,7 @@ public class CustomTokenRequestValidatorTests
 {
     private readonly IUserService _userService;
     private readonly IFeatureService _featureService;
-    private readonly IBumpDeviceLastActivityDateCommand _bumpDeviceLastActivityDateCommand;
+    private readonly IBumpDeviceDataCommand _bumpDeviceDataCommand;
     private readonly FakeLogger<CustomTokenRequestValidator> _logger;
 
     private readonly CustomTokenRequestValidator _sut;
@@ -50,7 +50,7 @@ public class CustomTokenRequestValidatorTests
 
         _userService = Substitute.For<IUserService>();
         _featureService = Substitute.For<IFeatureService>();
-        _bumpDeviceLastActivityDateCommand = Substitute.For<IBumpDeviceLastActivityDateCommand>();
+        _bumpDeviceDataCommand = Substitute.For<IBumpDeviceDataCommand>();
         _logger = new FakeLogger<CustomTokenRequestValidator>();
 
         _sut = new CustomTokenRequestValidator(
@@ -75,7 +75,7 @@ public class CustomTokenRequestValidatorTests
             Substitute.For<IMailService>(),
             Substitute.For<IUserAccountKeysQuery>(),
             Substitute.For<IClientVersionValidator>(),
-            _bumpDeviceLastActivityDateCommand);
+            _bumpDeviceDataCommand);
     }
 
     private CustomTokenRequestValidationContext CreateRefreshTokenContext(ClaimsPrincipal subject)
@@ -100,7 +100,7 @@ public class CustomTokenRequestValidatorTests
 
     // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Fact]
-    public async Task TryBumpDeviceLastActivityForRefreshAsync_NullSubject_SkipsBump()
+    public async Task TryBumpDeviceDataForRefreshAsync_NullSubject_SkipsBump()
     {
         // Arrange
         var context = CreateRefreshTokenContext(subject: null);
@@ -113,14 +113,14 @@ public class CustomTokenRequestValidatorTests
 
         // Assert: bump is skipped — no call made
         Assert.False(context.Result.IsError);
-        await _bumpDeviceLastActivityDateCommand
+        await _bumpDeviceDataCommand
             .DidNotReceive()
-            .BumpByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>());
+            .BumpByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<string>());
     }
 
     // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Fact]
-    public async Task TryBumpDeviceLastActivityForRefreshAsync_NoDeviceClaim_SkipsBump()
+    public async Task TryBumpDeviceDataForRefreshAsync_NoDeviceClaim_SkipsBump()
     {
         // Arrange — subject has a valid user ID but no device claim
         var subject = new ClaimsPrincipal(new ClaimsIdentity(
@@ -138,14 +138,14 @@ public class CustomTokenRequestValidatorTests
 
         // Assert: bump is skipped — no call made
         Assert.False(context.Result.IsError);
-        await _bumpDeviceLastActivityDateCommand
+        await _bumpDeviceDataCommand
             .DidNotReceive()
-            .BumpByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>());
+            .BumpByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<string>());
     }
 
     // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Fact]
-    public async Task TryBumpDeviceLastActivityForRefreshAsync_InvalidUserIdGuid_SkipsBump()
+    public async Task TryBumpDeviceDataForRefreshAsync_InvalidUserIdGuid_SkipsBump()
     {
         // Arrange — subject has a device claim but the sub claim is not a valid GUID
         var subject = new ClaimsPrincipal(new ClaimsIdentity(
@@ -164,9 +164,9 @@ public class CustomTokenRequestValidatorTests
 
         // Assert: bump is skipped — no call made
         Assert.False(context.Result.IsError);
-        await _bumpDeviceLastActivityDateCommand
+        await _bumpDeviceDataCommand
             .DidNotReceive()
-            .BumpByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>());
+            .BumpByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<string>());
     }
 
     // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
@@ -187,8 +187,8 @@ public class CustomTokenRequestValidatorTests
 
         _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
         _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
-        _bumpDeviceLastActivityDateCommand
-            .BumpByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>())
+        _bumpDeviceDataCommand
+            .BumpByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<string>())
             .Returns<Task>(_ => throw new Exception("Transient failure"));
 
         // Act
@@ -201,12 +201,12 @@ public class CustomTokenRequestValidatorTests
         var logs = _logger.Collector.GetSnapshot();
         Assert.Contains(logs, l =>
             l.Level == LogLevel.Warning &&
-            l.Message.Contains("Failed to bump LastActivityDate for device with identifier"));
+            l.Message.Contains("Failed to bump device data for device with identifier"));
     }
 
     // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Fact]
-    public async Task TryBumpDeviceLastActivityForRefreshAsync_Succeeds_BumpCalledWithCorrectArgsAsync()
+    public async Task TryBumpDeviceDataForRefreshAsync_Succeeds_BumpCalledWithCorrectArgsAsync()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -226,16 +226,85 @@ public class CustomTokenRequestValidatorTests
         // Act
         await _sut.ValidateAsync(context);
 
-        // Assert: refresh succeeds and bump was called with the correct identifier and userId
+        // Assert: refresh succeeds and bump was called with the correct identifier and userId.
+        // Client version is null because the test setup uses a Substituted ICurrentContext where
+        // ClientVersion is unset (default null).
         Assert.False(context.Result.IsError);
-        await _bumpDeviceLastActivityDateCommand
+        await _bumpDeviceDataCommand
             .Received(1)
-            .BumpByIdentifierAndUserIdAsync(deviceIdentifier, userId);
+            .BumpByIdentifierAndUserIdAsync(deviceIdentifier, userId, null);
+    }
+
+    [Fact]
+    public async Task TryBumpDeviceDataForRefreshAsync_PassesClientVersionFromContext()
+    {
+        // Arrange — substitute a CurrentContext with a non-null ClientVersion
+        var userId = Guid.NewGuid();
+        var deviceIdentifier = "test-device-identifier";
+        var clientVersion = new Version("2026.5.1");
+
+        var currentContext = Substitute.For<ICurrentContext>();
+        currentContext.ClientVersion.Returns(clientVersion);
+
+        var userManager = new UserManager<User>(
+            Substitute.For<IUserStore<User>>(),
+            Substitute.For<IOptions<IdentityOptions>>(),
+            Substitute.For<IPasswordHasher<User>>(),
+            Enumerable.Empty<IUserValidator<User>>(),
+            Enumerable.Empty<IPasswordValidator<User>>(),
+            Substitute.For<ILookupNormalizer>(),
+            Substitute.For<IdentityErrorDescriber>(),
+            Substitute.For<IServiceProvider>(),
+            Substitute.For<ILogger<UserManager<User>>>());
+
+        var bumpCmd = Substitute.For<IBumpDeviceDataCommand>();
+
+        var sut = new CustomTokenRequestValidator(
+            userManager,
+            _userService,
+            Substitute.For<IEventService>(),
+            Substitute.For<IDeviceValidator>(),
+            Substitute.For<ITwoFactorAuthenticationValidator>(),
+            Substitute.For<ISsoRequestValidator>(),
+            Substitute.For<IOrganizationUserRepository>(),
+            _logger,
+            currentContext,
+            Substitute.For<GlobalSettings>(),
+            Substitute.For<IUserRepository>(),
+            Substitute.For<IPolicyService>(),
+            _featureService,
+            Substitute.For<ISsoConfigRepository>(),
+            Substitute.For<IUserDecryptionOptionsBuilder>(),
+            Substitute.For<IUpdateInstallationCommand>(),
+            Substitute.For<IPolicyRequirementQuery>(),
+            Substitute.For<IAuthRequestRepository>(),
+            Substitute.For<IMailService>(),
+            Substitute.For<IUserAccountKeysQuery>(),
+            Substitute.For<IClientVersionValidator>(),
+            bumpCmd);
+
+        var subject = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(JwtClaimTypes.Subject, userId.ToString()),
+            new Claim(Claims.Device, deviceIdentifier),
+        ], "test"));
+        var context = CreateRefreshTokenContext(subject);
+
+        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
+        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
+
+        // Act
+        await sut.ValidateAsync(context);
+
+        // Assert: bump was called with the version string from CurrentContext
+        await bumpCmd
+            .Received(1)
+            .BumpByIdentifierAndUserIdAsync(deviceIdentifier, userId, "2026.5.1");
     }
 
     // TODO: PM-34091 - remove this test when cleaning up feature flag (disabled case will no longer exist)
     [Fact]
-    public async Task TryBumpDeviceLastActivityForRefreshAsync_FeatureFlagDisabled_BumpNotCalledAsync()
+    public async Task TryBumpDeviceDataForRefreshAsync_FeatureFlagDisabled_BumpNotCalledAsync()
     {
         // Arrange
         var subject = new ClaimsPrincipal(new ClaimsIdentity(
@@ -254,8 +323,8 @@ public class CustomTokenRequestValidatorTests
 
         // Assert: bump is skipped — no call made
         Assert.False(context.Result.IsError);
-        await _bumpDeviceLastActivityDateCommand
+        await _bumpDeviceDataCommand
             .DidNotReceive()
-            .BumpByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>());
+            .BumpByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<string>());
     }
 }
