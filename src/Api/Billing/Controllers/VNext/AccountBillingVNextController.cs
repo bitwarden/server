@@ -119,7 +119,6 @@ public class AccountBillingVNextController(
     }
 
     [HttpGet("subscription")]
-    [RequireFeature(FeatureFlagKeys.PM29594_UpdateIndividualSubscriptionPage)]
     [InjectUser]
     public async Task<IResult> GetSubscriptionAsync(
         [BindNever] User user)
@@ -129,7 +128,6 @@ public class AccountBillingVNextController(
     }
 
     [HttpPost("subscription/reinstate")]
-    [RequireFeature(FeatureFlagKeys.PM29594_UpdateIndividualSubscriptionPage)]
     [InjectUser]
     public async Task<IResult> ReinstateSubscriptionAsync(
         [BindNever] User user)
@@ -139,7 +137,6 @@ public class AccountBillingVNextController(
     }
 
     [HttpPut("subscription/storage")]
-    [RequireFeature(FeatureFlagKeys.PM29594_UpdateIndividualSubscriptionPage)]
     [InjectUser]
     public async Task<IResult> UpdateSubscriptionStorageAsync(
         [BindNever] User user,

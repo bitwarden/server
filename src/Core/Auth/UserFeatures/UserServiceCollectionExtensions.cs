@@ -16,6 +16,7 @@ using Bit.Core.KeyManagement.UserKey.Implementations;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bit.Core.Auth.UserFeatures;
 
@@ -24,6 +25,7 @@ public static class UserServiceCollectionExtensions
     public static void AddUserServices(this IServiceCollection services, IGlobalSettings globalSettings)
     {
         services.AddScoped<IUserService, UserService>();
+        services.TryAddScoped<IMasterPasswordService, MasterPasswordService>();
         services.AddEmergencyAccessCommands();
         services.AddUserPasswordCommands();
         services.AddUserRegistrationCommands();
@@ -67,6 +69,7 @@ public static class UserServiceCollectionExtensions
         services.AddScoped<ICreateWebAuthnLoginCredentialCommand, CreateWebAuthnLoginCredentialCommand>();
         services.AddScoped<IGetWebAuthnLoginCredentialAssertionOptionsCommand, GetWebAuthnLoginCredentialAssertionOptionsCommand>();
         services.AddScoped<IAssertWebAuthnLoginCredentialCommand, AssertWebAuthnLoginCredentialCommand>();
+        services.AddScoped<IWebAuthnChallengeCacheProvider, WebAuthnChallengeCacheProvider>();
     }
 
     private static void AddTwoFactorCommandsQueries(this IServiceCollection services)

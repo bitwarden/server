@@ -16,6 +16,7 @@ using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -43,7 +44,7 @@ public class SyncController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly ICurrentContext _currentContext;
     private readonly Version _sshKeyCipherMinimumVersion = new(Constants.SSHKeyCipherMinimumVersion);
-    private readonly Version _bankAccountCipherMinimumVersion = new(Constants.BankAccountCipherMinimumVersion);
+    private readonly Version _pm32009NewItemTypeMinimumVersion = new(Constants.PM32009NewItemTypeMinimumVersion);
     private readonly IFeatureService _featureService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
@@ -126,9 +127,7 @@ public class SyncController : Controller
         var organizationIdsClaimingActiveUser = organizationClaimingActiveUser.Select(o => o.Id);
 
         var organizationAbilities = await GetOrganizationAbilitiesAsync(ciphers);
-        var webAuthnCredentials = _featureService.IsEnabled(FeatureFlagKeys.PM2035PasskeyUnlock)
-            ? await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id)
-            : [];
+        var webAuthnCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
 
         UserAccountKeysData userAccountKeys = null;
         // JIT TDE users and some broken/old users may not have a private key.
@@ -137,9 +136,18 @@ public class SyncController : Controller
             userAccountKeys = await _userAccountKeysQuery.Run(user);
         }
 
+        IEnumerable<Policy> policiesNew = null;
+        IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetailsNew = null;
+        if (_featureService.IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState))
+        {
+            policiesNew = await _policyRepository.GetManyConfirmedAcceptedByUserIdAsync(user.Id);
+            organizationUserDetailsNew = await _organizationUserRepository.GetManyConfirmedAcceptedDetailsByUserAsync(user.Id);
+        }
+
         var response = new SyncResponseModel(_globalSettings, user, userAccountKeys, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
             organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
-            folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends, webAuthnCredentials);
+            folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends, webAuthnCredentials,
+            policiesNew, organizationUserDetailsNew);
         return response;
     }
 
@@ -173,9 +181,11 @@ public class SyncController : Controller
 
         if (!_featureService.IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes)
             || _currentContext.ClientVersion == null
-            || _currentContext.ClientVersion < _bankAccountCipherMinimumVersion)
+            || _currentContext.ClientVersion < _pm32009NewItemTypeMinimumVersion)
         {
             unsupportedTypes.Add(Core.Vault.Enums.CipherType.BankAccount);
+            unsupportedTypes.Add(Core.Vault.Enums.CipherType.DriversLicense);
+            unsupportedTypes.Add(Core.Vault.Enums.CipherType.Passport);
         }
 
         return unsupportedTypes.Count == 0

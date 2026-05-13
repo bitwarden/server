@@ -1,4 +1,5 @@
-﻿using Bit.Seeder.Recipes;
+﻿using System.Text.Json;
+using Bit.Seeder.Recipes;
 using Bit.Seeder.Services;
 using Bit.SeederUtility.Configuration;
 using Bit.SeederUtility.Helpers;
@@ -18,7 +19,7 @@ public class PresetCommand
 
             if (args.List)
             {
-                PrintAvailablePresets();
+                PrintAvailablePresets(args.GetOutputFormat());
                 return;
             }
 
@@ -91,7 +92,7 @@ public class PresetCommand
         ConsoleOutput.PrintMangleMap(deps);
     }
 
-    private static void PrintAvailablePresets()
+    private static void PrintAvailablePresets(OutputFormat format = OutputFormat.Text)
     {
         var available = PresetCatalogService.ListAvailable();
 
@@ -108,6 +109,17 @@ public class PresetCommand
             {
                 orgPresets.Add(presetName);
             }
+        }
+
+        if (format == OutputFormat.Json)
+        {
+            var output = new
+            {
+                organization = orgPresets,
+                individual = individualPresets,
+            };
+            Console.WriteLine(JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true }));
+            return;
         }
 
         Console.WriteLine("Organization Presets:");

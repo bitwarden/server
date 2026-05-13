@@ -2,13 +2,14 @@
 // NOTE: This file is partially migrated to nullable reference types. Remove inline #nullable directives when addressing the FIXME.
 #nullable disable
 
+using Bit.Api.AdminConsole.Attributes;
 using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.AdminConsole.Authorization.Collections;
 using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
-using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
@@ -19,6 +20,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.SelfRevokeUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
@@ -84,6 +86,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IAdminRecoverAccountCommand _adminRecoverAccountCommand;
     private readonly AccountRecoveryV2.IAdminRecoverAccountCommand _adminRecoverAccountCommandV2;
     private readonly ISelfRevokeOrganizationUserCommand _selfRevokeOrganizationUserCommand;
+    private readonly IUpdateUserResetPasswordEnrollmentCommand _updateUserResetPasswordEnrollmentCommand;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -116,7 +119,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
         AccountRecoveryV2.IAdminRecoverAccountCommand adminRecoverAccountCommandV2,
         IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand,
         V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext,
-        ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand)
+        ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand,
+        IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -150,6 +154,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _adminRecoverAccountCommand = adminRecoverAccountCommand;
         _adminRecoverAccountCommandV2 = adminRecoverAccountCommandV2;
         _selfRevokeOrganizationUserCommand = selfRevokeOrganizationUserCommand;
+        _updateUserResetPasswordEnrollmentCommand = updateUserResetPasswordEnrollmentCommand;
     }
 
     [HttpGet("{id}")]
@@ -354,7 +359,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
         if (autoEnrollEnabled)
         {
-            await _organizationService.UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
+            await _updateUserResetPasswordEnrollmentCommand.UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
         }
     }
 
@@ -488,7 +493,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         }
 
         var callingUserId = user.Id;
-        await _organizationService.UpdateUserResetPasswordEnrollmentAsync(
+        await _updateUserResetPasswordEnrollmentCommand.UpdateUserResetPasswordEnrollmentAsync(
             orgId, userId, model.ResetPasswordKey, callingUserId);
 
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(orgId, user.Id);
@@ -504,18 +509,15 @@ public class OrganizationUsersController : BaseAdminConsoleController
     /// </summary>
     [HttpPut("{id}/reset-password")]
     [Authorize<ManageAccountRecoveryRequirement>]
-    public Task<IResult> PutResetPassword(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
-        => PutRecoverAccount(orgId, id, model);
+    public Task<IResult> PutResetPassword(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model,
+        [InjectOrganizationUser] OrganizationUser targetOrganizationUser)
+        => PutRecoverAccount(orgId, id, model, targetOrganizationUser);
 
     [HttpPut("{id}/recover-account")]
     [Authorize<ManageAccountRecoveryRequirement>]
-    public async Task<IResult> PutRecoverAccount(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
+    public async Task<IResult> PutRecoverAccount(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model,
+        [InjectOrganizationUser] OrganizationUser targetOrganizationUser)
     {
-        var targetOrganizationUser = await _organizationUserRepository.GetByIdAsync(id);
-        if (targetOrganizationUser == null || targetOrganizationUser.OrganizationId != orgId)
-        {
-            return TypedResults.NotFound();
-        }
 
         var authorizationResult = await _authorizationService.AuthorizeAsync(User, targetOrganizationUser, new RecoverAccountAuthorizationRequirement());
         if (!authorizationResult.Succeeded)
@@ -644,7 +646,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     [Authorize<ManageUsersRequirement>]
     public async Task RevokeAsync(Guid orgId, Guid id)
     {
-        await RestoreOrRevokeUserAsync(orgId, id, _revokeOrganizationUserCommand.RevokeUserAsync);
+        await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _revokeOrganizationUserCommand.RevokeUserAsync(orgUser, userId, RevocationReason.Manual));
     }
 
     [HttpPut("revoke-self")]
@@ -683,7 +685,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
             new V2_RevokeOrganizationUserCommand.RevokeOrganizationUsersRequest(
                 orgId,
                 model.Ids.ToArray(),
-                new StandardUser(currentUserId.Value, await _currentContext.OrganizationOwner(orgId))));
+                new StandardUser(currentUserId.Value, await _currentContext.OrganizationOwner(orgId)),
+                RevocationReason.Manual));
 
         return new ListResponseModel<OrganizationUserBulkResponseModel>(results
             .Select(result => new OrganizationUserBulkResponseModel(result.Id,

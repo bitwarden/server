@@ -488,6 +488,10 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                     RevisionDate = timestamp,
                     AccountRevisionDate = timestamp,
                     MasterPasswordSalt = masterPasswordUnlockData.Salt
+                    // TODO (PM-35501): Add SecurityStamp so the rotation done in
+                    // MasterPasswordService.BuildUpdateUserDelegateSetInitialMasterPassword
+                    // is persisted.
+                    // TODO Need to add User.LastPasswordChangeDate here in PM-34905
                 },
                 transaction: transaction,
                 commandType: CommandType.StoredProcedure);
@@ -514,6 +518,31 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             await transaction.RollbackAsync();
             throw;
         }
+    }
+
+    public UpdateUserData UpdateMasterPasswordUnlockData(Guid userId, RegisterFinishData registerFinishData)
+    {
+        return async (connection, transaction) =>
+        {
+            var timestamp = DateTime.UtcNow;
+
+            await connection!.ExecuteAsync(
+                "[dbo].[User_UpdateMasterPasswordUnlockData]",
+                new
+                {
+                    Id = userId,
+                    Kdf = registerFinishData.Kdf.KdfType,
+                    KdfIterations = registerFinishData.Kdf.Iterations,
+                    KdfMemory = registerFinishData.Kdf.Memory,
+                    KdfParallelism = registerFinishData.Kdf.Parallelism,
+                    MasterPasswordSalt = registerFinishData.Salt,
+                    Key = registerFinishData.MasterKeyWrappedUserKey,
+                    RevisionDate = timestamp,
+                    AccountRevisionDate = timestamp,
+                },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+        };
     }
 
     private async Task ProtectDataAndSaveAsync(User user, Func<Task> saveTask)
