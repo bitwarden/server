@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Models.Api;
 using Fido2NetLib;
 
@@ -14,6 +15,9 @@ public class WebAuthnCredentialCreateOptionsResponseModel : ResponseModel
     {
     }
 
+    [Required]
     public CredentialCreateOptions Options { get; set; }
+
+    [Required]
     public string Token { get; set; }
 }

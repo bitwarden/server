@@ -17,6 +17,16 @@ public interface IPolicyRequirementQuery
     Task<T> GetAsync<T>(Guid userId) where T : IPolicyRequirement;
 
     /// <summary>
+    /// Get a policy requirement for a specific user using the optimized single-user query.
+    /// The policy requirement represents how one or more policy types should be enforced against the user.
+    /// It will always return a value even if there are no policies that should be enforced.
+    /// This is the vNext version that uses the optimized GetPolicyDetailsByUserIdAndPolicyTypeAsync method.
+    /// </summary>
+    /// <param name="userId">The user that you need to enforce the policy against.</param>
+    /// <typeparam name="T">The IPolicyRequirement that corresponds to the policy you want to enforce.</typeparam>
+    Task<T> GetAsyncVNext<T>(Guid userId) where T : IPolicyRequirement;
+
+    /// <summary>
     /// Get a policy requirement for a list of users.
     /// The policy requirement represents how one or more policy types should be enforced against the users.
     /// </summary>
@@ -26,13 +36,4 @@ public interface IPolicyRequirementQuery
     /// <param name="userIds">The users that you need to enforce the policy against.</param>
     /// <typeparam name="T">The IPolicyRequirement that corresponds to the policy you want to enforce.</typeparam>
     Task<IEnumerable<(Guid UserId, T Requirement)>> GetAsync<T>(IEnumerable<Guid> userIds) where T : IPolicyRequirement;
-
-    /// <summary>
-    /// Get all organization user IDs within an organization that are affected by a given policy type.
-    /// Respects role/status/provider exemptions via the policy factory's Enforce predicate.
-    /// </summary>
-    /// <param name="organizationId">The organization to check.</param>
-    /// <typeparam name="T">The IPolicyRequirement that corresponds to the policy type to evaluate.</typeparam>
-    /// <returns>Organization user IDs for whom the policy applies within the organization.</returns>
-    Task<IEnumerable<Guid>> GetManyByOrganizationIdAsync<T>(Guid organizationId) where T : IPolicyRequirement;
 }

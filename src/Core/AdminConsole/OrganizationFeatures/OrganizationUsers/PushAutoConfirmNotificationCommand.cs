@@ -56,7 +56,8 @@ public class PushAutoConfirmNotificationCommand : IPushAutoConfirmNotificationCo
                     {
                         UserId = adminUserId,
                         OrganizationId = organizationId,
-                        TargetUserId = organizationUser.Id
+                        TargetUserId = userId,
+                        TargetOrganizationUserId = organizationUser.Id
                     },
                     ExcludeCurrentContext = false,
                 });

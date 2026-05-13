@@ -20,6 +20,22 @@ internal static class EncryptedCipherDtoExtensions
             UriChecksum = u.UriChecksum,
             Match = u.Match.HasValue ? (UriMatchType?)u.Match : null
         }),
+        Fido2Credentials = e.Login?.Fido2Credentials?.Select(f => new CipherLoginFido2CredentialData
+        {
+            CredentialId = f.CredentialId,
+            KeyType = f.KeyType,
+            KeyAlgorithm = f.KeyAlgorithm,
+            KeyCurve = f.KeyCurve,
+            KeyValue = f.KeyValue,
+            RpId = f.RpId,
+            RpName = f.RpName,
+            UserHandle = f.UserHandle,
+            UserName = f.UserName,
+            UserDisplayName = f.UserDisplayName,
+            Counter = f.Counter,
+            Discoverable = f.Discoverable,
+            CreationDate = f.CreationDate
+        }).ToArray(),
         Fields = e.ToFields()
     };
 
@@ -76,6 +92,61 @@ internal static class EncryptedCipherDtoExtensions
         PrivateKey = e.SshKey?.PrivateKey,
         PublicKey = e.SshKey?.PublicKey,
         KeyFingerprint = e.SshKey?.Fingerprint,
+        Fields = e.ToFields()
+    };
+
+    internal static CipherBankAccountData ToBankAccountData(this EncryptedCipherDto e) => new()
+    {
+        Name = e.Name,
+        Notes = e.Notes,
+        BankName = e.BankAccount?.BankName,
+        NameOnAccount = e.BankAccount?.NameOnAccount,
+        AccountType = e.BankAccount?.AccountType,
+        AccountNumber = e.BankAccount?.AccountNumber,
+        RoutingNumber = e.BankAccount?.RoutingNumber,
+        BranchNumber = e.BankAccount?.BranchNumber,
+        Pin = e.BankAccount?.Pin,
+        SwiftCode = e.BankAccount?.SwiftCode,
+        Iban = e.BankAccount?.Iban,
+        BankContactPhone = e.BankAccount?.BankContactPhone,
+        Fields = e.ToFields()
+    };
+
+    internal static CipherDriversLicenseData ToDriversLicenseData(this EncryptedCipherDto e) => new()
+    {
+        Name = e.Name,
+        Notes = e.Notes,
+        FirstName = e.DriversLicense?.FirstName,
+        MiddleName = e.DriversLicense?.MiddleName,
+        LastName = e.DriversLicense?.LastName,
+        DateOfBirth = e.DriversLicense?.DateOfBirth,
+        LicenseNumber = e.DriversLicense?.LicenseNumber,
+        IssuingCountry = e.DriversLicense?.IssuingCountry,
+        IssuingState = e.DriversLicense?.IssuingState,
+        IssueDate = e.DriversLicense?.IssueDate,
+        IssuingAuthority = e.DriversLicense?.IssuingAuthority,
+        ExpirationDate = e.DriversLicense?.ExpirationDate,
+        LicenseClass = e.DriversLicense?.LicenseClass,
+        Fields = e.ToFields()
+    };
+
+    internal static CipherPassportData ToPassportData(this EncryptedCipherDto e) => new()
+    {
+        Name = e.Name,
+        Notes = e.Notes,
+        Surname = e.Passport?.Surname,
+        GivenName = e.Passport?.GivenName,
+        DateOfBirth = e.Passport?.DateOfBirth,
+        Sex = e.Passport?.Sex,
+        BirthPlace = e.Passport?.BirthPlace,
+        Nationality = e.Passport?.Nationality,
+        PassportNumber = e.Passport?.PassportNumber,
+        PassportType = e.Passport?.PassportType,
+        IssuingCountry = e.Passport?.IssuingCountry,
+        IssuingAuthority = e.Passport?.IssuingAuthority,
+        IssueDate = e.Passport?.IssueDate,
+        ExpirationDate = e.Passport?.ExpirationDate,
+        NationalIdentificationNumber = e.Passport?.NationalIdentificationNumber,
         Fields = e.ToFields()
     };
 

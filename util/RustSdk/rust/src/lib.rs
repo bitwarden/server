@@ -1,31 +1,38 @@
 #![allow(clippy::missing_safety_doc)]
 
 mod cipher;
+mod rsa_keys;
 
 use std::{
     ffi::{c_char, CStr, CString},
     num::NonZeroU32,
+    sync::LazyLock,
 };
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 
 use bitwarden_crypto::{
-    AsymmetricCryptoKey, AsymmetricPublicCryptoKey, BitwardenLegacyKeyBytes, HashPurpose, Kdf,
-    KeyEncryptable, MasterKey, RsaKeyPair, SpkiPublicKeyBytes, SymmetricCryptoKey,
-    UnsignedSharedKey, UserKey,
+    BitwardenLegacyKeyBytes, HashPurpose, Kdf, KeyEncryptable, MasterKey, Pkcs8PrivateKeyBytes,
+    PrivateKey, PublicKey, RsaKeyPair, SpkiPublicKeyBytes, SymmetricCryptoKey, UnsignedSharedKey,
+    UserKey,
 };
 
 #[no_mangle]
 pub unsafe extern "C" fn generate_user_keys(
     email: *const c_char,
     password: *const c_char,
+    kdf_iterations: u32,
+    pool_index: u32,
 ) -> *const c_char {
     let email = CStr::from_ptr(email).to_str().unwrap();
     let password = CStr::from_ptr(password).to_str().unwrap();
 
-    let kdf = Kdf::PBKDF2 {
-        iterations: NonZeroU32::new(5_000).unwrap(),
+    let iterations = match NonZeroU32::new(kdf_iterations) {
+        Some(iter) => iter,
+        None => return error_response("kdf_iterations must be non-zero"),
     };
+
+    let kdf = Kdf::PBKDF2 { iterations };
 
     let master_key = MasterKey::derive(password, email, &kdf).unwrap();
 
@@ -34,7 +41,7 @@ pub unsafe extern "C" fn generate_user_keys(
 
     let (user_key, encrypted_user_key) = master_key.make_user_key().unwrap();
 
-    let keypair = keypair(&user_key.0);
+    let keypair = keypair(&user_key.0, pool_index);
 
     let json = serde_json::json!({
         "masterPasswordHash": master_password_hash,
@@ -50,44 +57,40 @@ pub unsafe extern "C" fn generate_user_keys(
     result.into_raw()
 }
 
-fn keypair(key: &SymmetricCryptoKey) -> RsaKeyPair {
-    const RSA_PRIVATE_KEY: &str = "-----BEGIN PRIVATE KEY-----
-MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCXRVrCX+2hfOQS
-8HzYUS2oc/jGVTZpv+/Ryuoh9d8ihYX9dd0cYh2tl6KWdFc88lPUH11Oxqy20Rk2
-e5r/RF6T9yM0Me3NPnaKt+hlhLtfoc0h86LnhD56A9FDUfuI0dVnPcrwNv0YJIo9
-4LwxtbqBULNvXl6wJ7WAbODrCQy5ZgMVg+iH+gGpwiqsZqHt+KuoHWcN53MSPDfa
-F4/YMB99U3TziJMOOJask1TEEnakMPln11PczNDazT17DXIxYrbPfutPdh6sLs6A
-QOajdZijfEvepgnOe7cQ7aeatiOJFrjTApKPGxOVRzEMX4XS4xbyhH0QxQeB6l16
-l8C0uxIBAgMBAAECggEASaWfeVDA3cVzOPFSpvJm20OTE+R6uGOU+7vh36TX/POq
-92qBuwbd0h0oMD32FxsXywd2IxtBDUSiFM9699qufTVuM0Q3tZw6lHDTOVG08+tP
-dr8qSbMtw7PGFxN79fHLBxejjO4IrM9lapjWpxEF+11x7r+wM+0xRZQ8sNFYG46a
-PfIaty4BGbL0I2DQ2y8I57iBCAy69eht59NLMm27fRWGJIWCuBIjlpfzET1j2HLX
-UIh5bTBNzqaN039WH49HczGE3mQKVEJZc/efk3HaVd0a1Sjzyn0QY+N1jtZN3jTR
-buDWA1AknkX1LX/0tUhuS3/7C3ejHxjw4Dk1ZLo5/QKBgQDIWvqFn0+IKRSu6Ua2
-hDsufIHHUNLelbfLUMmFthxabcUn4zlvIscJO00Tq/ezopSRRvbGiqnxjv/mYxuc
-vOUBeZtlus0Q9RTACBtw9TGoNTmQbEunJ2FOSlqbQxkBBAjgGEppRPt30iGj/VjA
-hCATq2MYOa/X4dVR51BqQAFIEwKBgQDBSIfTFKC/hDk6FKZlgwvupWYJyU9Rkyfs
-tPErZFmzoKhPkQ3YORo2oeAYmVUbS9I2iIYpYpYQJHX8jMuCbCz4ONxTCuSIXYQY
-UcUq4PglCKp31xBAE6TN8SvhfME9/MvuDssnQinAHuF0GDAhF646T3LLS1not6Vs
-zv7brwSoGwKBgQC88v/8cGfi80ssQZeMnVvq1UTXIeQcQnoY5lGHJl3K8mbS3TnX
-E6c9j417Fdz+rj8KWzBzwWXQB5pSPflWcdZO886Xu/mVGmy9RWgLuVFhXwCwsVEP
-jNX5ramRb0/vY0yzenUCninBsIxFSbIfrPtLUYCc4hpxr+sr2Mg/y6jpvQKBgBez
-MRRs3xkcuXepuI2R+BCXL1/b02IJTUf1F+1eLLGd7YV0H+J3fgNc7gGWK51hOrF9
-JBZHBGeOUPlaukmPwiPdtQZpu4QNE3l37VlIpKTF30E6mb+BqR+nht3rUjarnMXg
-AoEZ18y6/KIjpSMpqC92Nnk/EBM9EYe6Cf4eA9ApAoGAeqEUg46UTlJySkBKURGp
-Is3v1kkf5I0X8DnOhwb+HPxNaiEdmO7ckm8+tPVgppLcG0+tMdLjigFQiDUQk2y3
-WjyxP5ZvXu7U96jaJRI8PFMoE06WeVYcdIzrID2HvqH+w0UQJFrLJ/0Mn4stFAEz
-XKZBokBGnjFnTnKcs7nv/O8=
------END PRIVATE KEY-----";
+fn error_response(message: &str) -> *const c_char {
+    let json = serde_json::json!({ "error": message }).to_string();
+    CString::new(json).unwrap().into_raw()
+}
 
-    let private_key = AsymmetricCryptoKey::from_pem(RSA_PRIVATE_KEY).unwrap();
-    let public_key = private_key.to_public_key().to_der().unwrap();
+struct CachedRsaMaterial {
+    private_der: Pkcs8PrivateKeyBytes,
+    public_der: SpkiPublicKeyBytes,
+}
 
-    let p = private_key.to_der().unwrap();
+/// Pre-parsed DER keypairs from `rsa_keys.rs`, lazily initialized on first access.
+static RSA_POOL: LazyLock<Vec<CachedRsaMaterial>> = LazyLock::new(|| {
+    rsa_keys::TEST_FAKE_RSA_KEYS
+        .iter()
+        .map(|pem| {
+            let pk = PrivateKey::from_pem(pem).expect("seeded RSA PEM must be valid");
+            CachedRsaMaterial {
+                public_der: pk
+                    .to_public_key()
+                    .to_der()
+                    .expect("public DER conversion failed"),
+                private_der: pk.to_der().expect("private DER conversion failed"),
+            }
+        })
+        .collect()
+});
+
+fn keypair(key: &SymmetricCryptoKey, pool_index: u32) -> RsaKeyPair {
+    let pool = &*RSA_POOL;
+    let material = &pool[pool_index as usize % pool.len()];
 
     RsaKeyPair {
-        private: p.encrypt_with_key(key).unwrap(),
-        public: public_key.into(),
+        private: material.private_der.encrypt_with_key(key).unwrap(),
+        public: material.public_der.clone().into(),
     }
 }
 
@@ -125,8 +128,11 @@ pub unsafe extern "C" fn generate_user_organization_key(
     let organization_key = STANDARD.decode(organization_key).unwrap();
 
     let encapsulation_key =
-        AsymmetricPublicCryptoKey::from_der(&SpkiPublicKeyBytes::from(user_public_key)).unwrap();
+        PublicKey::from_der(&SpkiPublicKeyBytes::from(user_public_key)).unwrap();
 
+    // The Seeder uses unsigned key encapsulation for test data generation.
+    // When the SDK removes this deprecated API, migrate to signed encapsulation.
+    #[allow(deprecated)]
     let encrypted_key = UnsignedSharedKey::encapsulate_key_unsigned(
         &SymmetricCryptoKey::try_from(&BitwardenLegacyKeyBytes::from(organization_key)).unwrap(),
         &encapsulation_key,
@@ -146,5 +152,71 @@ pub unsafe extern "C" fn generate_user_organization_key(
 pub unsafe extern "C" fn free_c_string(str: *mut c_char) {
     unsafe {
         drop(CString::from_raw(str));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+
+    use bitwarden_crypto::SymmetricCryptoKey;
+
+    use super::RSA_POOL;
+    use crate::keypair;
+
+    #[test]
+    fn rsa_pool_initializes_all_entries() {
+        let pool = &*RSA_POOL;
+        assert_eq!(pool.len(), 100, "pool should contain exactly 100 keypairs");
+    }
+
+    #[test]
+    fn rsa_pool_keys_are_unique() {
+        let pool = &*RSA_POOL;
+        let distinct: HashSet<Vec<u8>> = pool
+            .iter()
+            .map(|m| m.public_der.as_ref().to_vec())
+            .collect();
+        assert_eq!(
+            distinct.len(),
+            pool.len(),
+            "every pool entry should have a distinct public key"
+        );
+    }
+
+    #[test]
+    fn keypair_different_indices_produce_different_public_keys() {
+        let key = SymmetricCryptoKey::make_aes256_cbc_hmac_key();
+        let kp0 = keypair(&key, 0);
+        let kp1 = keypair(&key, 1);
+        assert_ne!(
+            kp0.public.to_string(),
+            kp1.public.to_string(),
+            "different pool indices should yield different public keys"
+        );
+    }
+
+    #[test]
+    fn keypair_same_index_produces_same_public_key() {
+        let key = SymmetricCryptoKey::make_aes256_cbc_hmac_key();
+        let kp_a = keypair(&key, 42);
+        let kp_b = keypair(&key, 42);
+        assert_eq!(
+            kp_a.public.to_string(),
+            kp_b.public.to_string(),
+            "same pool index should always produce the same public key"
+        );
+    }
+
+    #[test]
+    fn keypair_index_wraps_at_pool_boundary() {
+        let key = SymmetricCryptoKey::make_aes256_cbc_hmac_key();
+        let kp_zero = keypair(&key, 0);
+        let kp_wrapped = keypair(&key, 100);
+        assert_eq!(
+            kp_zero.public.to_string(),
+            kp_wrapped.public.to_string(),
+            "index 100 should wrap to index 0"
+        );
     }
 }

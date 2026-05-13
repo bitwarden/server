@@ -159,6 +159,8 @@ public class SelfHostedOrganizationDetails : Organization
             UsePhishingBlocker = UsePhishingBlocker,
             UseOrganizationDomains = UseOrganizationDomains,
             UseAutomaticUserConfirmation = UseAutomaticUserConfirmation,
+            UseMyItems = UseMyItems,
+            UseInviteLinks = UseInviteLinks,
         };
     }
 }

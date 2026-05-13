@@ -6,24 +6,22 @@ namespace Bit.Seeder.Factories;
 
 internal static class SshKeyCipherSeeder
 {
-    internal static Cipher Create(
-        string encryptionKey,
-        string name,
-        SshKeyViewDto sshKey,
-        Guid? organizationId = null,
-        Guid? userId = null,
-        string? notes = null)
+    internal static Cipher Create(CipherSeed options)
     {
+
         var cipherView = new CipherViewDto
         {
-            OrganizationId = organizationId,
-            Name = name,
-            Notes = notes,
+            OrganizationId = options.OrganizationId,
+            Name = options.Name,
+            Notes = options.Notes,
             Type = CipherTypes.SshKey,
-            SshKey = sshKey
+            SshKey = options.SshKey,
+            Fields = options.Fields,
+            Reprompt = (int)options.Reprompt
         };
 
-        var encrypted = CipherEncryption.Encrypt(cipherView, encryptionKey);
-        return CipherEncryption.CreateEntity(encrypted, encrypted.ToSshKeyData(), CipherType.SSHKey, organizationId, userId);
+        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!);
+        return CipherEncryption.CreateEntity(encrypted, encrypted.ToSshKeyData(), CipherType.SSHKey, options.OrganizationId, options.UserId);
     }
+
 }

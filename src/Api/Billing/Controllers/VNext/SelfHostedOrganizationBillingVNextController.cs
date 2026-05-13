@@ -1,7 +1,6 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.Billing.Attributes;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Utilities;
@@ -19,7 +18,6 @@ public class SelfHostedOrganizationBillingVNextController(
 {
     [Authorize<MemberOrProviderRequirement>]
     [HttpGet("metadata")]
-    [RequireFeature(FeatureFlagKeys.PM25379_UseNewOrganizationMetadataStructure)]
     [InjectOrganization]
     public async Task<IResult> GetMetadataAsync([BindNever] Organization organization)
     {

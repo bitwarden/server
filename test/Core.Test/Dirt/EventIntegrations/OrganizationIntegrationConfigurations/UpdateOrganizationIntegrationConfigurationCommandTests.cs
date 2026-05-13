@@ -169,7 +169,7 @@ public class UpdateOrganizationIntegrationConfigurationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAsync_IntegrationDoesNotExist_ThrowsNotFound(
+    public async Task UpdateAsync_IntegrationDoesNotExist_ThrowsBadRequest(
         SutProvider<UpdateOrganizationIntegrationConfigurationCommand> sutProvider,
         Guid organizationId,
         Guid integrationId,
@@ -180,7 +180,7 @@ public class UpdateOrganizationIntegrationConfigurationCommandTests
             .GetByIdAsync(integrationId)
             .Returns((OrganizationIntegration)null);
 
-        await Assert.ThrowsAsync<NotFoundException>(
+        await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateAsync(organizationId, integrationId, configurationId, updatedConfiguration));
 
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().DidNotReceive()
@@ -194,7 +194,7 @@ public class UpdateOrganizationIntegrationConfigurationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAsync_IntegrationDoesNotBelongToOrganization_ThrowsNotFound(
+    public async Task UpdateAsync_IntegrationDoesNotBelongToOrganization_ThrowsBadRequest(
         SutProvider<UpdateOrganizationIntegrationConfigurationCommand> sutProvider,
         Guid organizationId,
         Guid integrationId,
@@ -209,7 +209,7 @@ public class UpdateOrganizationIntegrationConfigurationCommandTests
             .GetByIdAsync(integrationId)
             .Returns(integration);
 
-        await Assert.ThrowsAsync<NotFoundException>(
+        await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateAsync(organizationId, integrationId, configurationId, updatedConfiguration));
 
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().DidNotReceive()
@@ -223,7 +223,7 @@ public class UpdateOrganizationIntegrationConfigurationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAsync_ConfigurationDoesNotExist_ThrowsNotFound(
+    public async Task UpdateAsync_ConfigurationDoesNotExist_ThrowsBadRequest(
         SutProvider<UpdateOrganizationIntegrationConfigurationCommand> sutProvider,
         Guid organizationId,
         Guid integrationId,
@@ -241,7 +241,7 @@ public class UpdateOrganizationIntegrationConfigurationCommandTests
             .GetByIdAsync(configurationId)
             .Returns((OrganizationIntegrationConfiguration)null);
 
-        await Assert.ThrowsAsync<NotFoundException>(
+        await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateAsync(organizationId, integrationId, configurationId, updatedConfiguration));
 
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().DidNotReceive()
@@ -253,7 +253,7 @@ public class UpdateOrganizationIntegrationConfigurationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAsync_ConfigurationDoesNotBelongToIntegration_ThrowsNotFound(
+    public async Task UpdateAsync_ConfigurationDoesNotBelongToIntegration_ThrowsBadRequest(
         SutProvider<UpdateOrganizationIntegrationConfigurationCommand> sutProvider,
         Guid organizationId,
         Guid integrationId,
@@ -274,7 +274,7 @@ public class UpdateOrganizationIntegrationConfigurationCommandTests
             .GetByIdAsync(configurationId)
             .Returns(existingConfiguration);
 
-        await Assert.ThrowsAsync<NotFoundException>(
+        await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateAsync(organizationId, integrationId, configurationId, updatedConfiguration));
 
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().DidNotReceive()

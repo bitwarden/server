@@ -20,4 +20,3 @@ public class SendUtilities
         return AuthType.None;
     }
 }
-

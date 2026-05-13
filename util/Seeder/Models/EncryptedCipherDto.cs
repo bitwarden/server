@@ -37,6 +37,21 @@ public class EncryptedCipherDto
     [JsonPropertyName("sshKey")]
     public EncryptedSshKeyDto? SshKey { get; set; }
 
+    // TODO: Remove JsonIgnore condition when Rust SDK supports BankAccount cipher type
+    [JsonPropertyName("bankAccount")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public EncryptedBankAccountDto? BankAccount { get; set; }
+
+    // TODO: Remove JsonIgnore condition when Rust SDK supports DriversLicense cipher type
+    [JsonPropertyName("driversLicense")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public EncryptedDriversLicenseDto? DriversLicense { get; set; }
+
+    // TODO: Remove JsonIgnore condition when Rust SDK supports Passport cipher type
+    [JsonPropertyName("passport")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public EncryptedPassportDto? Passport { get; set; }
+
     [JsonPropertyName("fields")]
     public List<EncryptedFieldDto>? Fields { get; set; }
 
@@ -77,7 +92,7 @@ public class EncryptedLoginDto
     public DateTime? PasswordRevisionDate { get; set; }
 
     [JsonPropertyName("fido2Credentials")]
-    public object? Fido2Credentials { get; set; }
+    public List<EncryptedFido2CredentialDto>? Fido2Credentials { get; set; }
 }
 
 public class EncryptedLoginUriDto
@@ -90,6 +105,36 @@ public class EncryptedLoginUriDto
 
     [JsonPropertyName("uriChecksum")]
     public string? UriChecksum { get; set; }
+}
+
+public class EncryptedFido2CredentialDto
+{
+    [JsonPropertyName("creationDate")]
+    public DateTime CreationDate { get; set; }
+    [JsonPropertyName("discoverable")]
+    public required string Discoverable { get; set; }
+    [JsonPropertyName("credentialId")]
+    public required string CredentialId { get; set; }
+    [JsonPropertyName("keyType")]
+    public required string KeyType { get; set; }
+    [JsonPropertyName("keyAlgorithm")]
+    public required string KeyAlgorithm { get; set; }
+    [JsonPropertyName("keyCurve")]
+    public required string KeyCurve { get; set; }
+    [JsonPropertyName("keyValue")]
+    public required string KeyValue { get; set; }
+    [JsonPropertyName("counter")]
+    public required string Counter { get; set; }
+    [JsonPropertyName("rpId")]
+    public required string RpId { get; set; }
+    [JsonPropertyName("rpName")]
+    public required string RpName { get; set; }
+    [JsonPropertyName("userHandle")]
+    public required string UserHandle { get; set; }
+    [JsonPropertyName("userName")]
+    public required string UserName { get; set; }
+    [JsonPropertyName("userDisplayName")]
+    public required string UserDisplayName { get; set; }
 }
 
 public class EncryptedFieldDto
@@ -201,4 +246,115 @@ public class EncryptedSshKeyDto
 
     [JsonPropertyName("fingerprint")]
     public string? Fingerprint { get; set; }
+}
+
+public class EncryptedBankAccountDto
+{
+    [JsonPropertyName("bankName")]
+    public string? BankName { get; set; }
+
+    [JsonPropertyName("nameOnAccount")]
+    public string? NameOnAccount { get; set; }
+
+    [JsonPropertyName("accountType")]
+    public string? AccountType { get; set; }
+
+    [JsonPropertyName("accountNumber")]
+    public string? AccountNumber { get; set; }
+
+    [JsonPropertyName("routingNumber")]
+    public string? RoutingNumber { get; set; }
+
+    [JsonPropertyName("branchNumber")]
+    public string? BranchNumber { get; set; }
+
+    [JsonPropertyName("pin")]
+    public string? Pin { get; set; }
+
+    [JsonPropertyName("swiftCode")]
+    public string? SwiftCode { get; set; }
+
+    [JsonPropertyName("iban")]
+    public string? Iban { get; set; }
+
+    [JsonPropertyName("bankContactPhone")]
+    public string? BankContactPhone { get; set; }
+}
+
+public class EncryptedDriversLicenseDto
+{
+    [JsonPropertyName("firstName")]
+    public string? FirstName { get; set; }
+
+    [JsonPropertyName("middleName")]
+    public string? MiddleName { get; set; }
+
+    [JsonPropertyName("lastName")]
+    public string? LastName { get; set; }
+
+    [JsonPropertyName("dateOfBirth")]
+    public string? DateOfBirth { get; set; }
+
+    [JsonPropertyName("licenseNumber")]
+    public string? LicenseNumber { get; set; }
+
+    [JsonPropertyName("issuingCountry")]
+    public string? IssuingCountry { get; set; }
+
+    [JsonPropertyName("issuingState")]
+    public string? IssuingState { get; set; }
+
+    [JsonPropertyName("issueDate")]
+    public string? IssueDate { get; set; }
+
+    [JsonPropertyName("issuingAuthority")]
+    public string? IssuingAuthority { get; set; }
+
+    [JsonPropertyName("expirationDate")]
+    public string? ExpirationDate { get; set; }
+
+    [JsonPropertyName("licenseClass")]
+    public string? LicenseClass { get; set; }
+}
+
+public class EncryptedPassportDto
+{
+    [JsonPropertyName("surname")]
+    public string? Surname { get; set; }
+
+    [JsonPropertyName("givenName")]
+    public string? GivenName { get; set; }
+
+    [JsonPropertyName("dateOfBirth")]
+    public string? DateOfBirth { get; set; }
+
+    [JsonPropertyName("sex")]
+    public string? Sex { get; set; }
+
+    [JsonPropertyName("birthPlace")]
+    public string? BirthPlace { get; set; }
+
+    [JsonPropertyName("nationality")]
+    public string? Nationality { get; set; }
+
+    [JsonPropertyName("passportNumber")]
+    public string? PassportNumber { get; set; }
+
+    [JsonPropertyName("passportType")]
+    public string? PassportType { get; set; }
+
+    [JsonPropertyName("issuingCountry")]
+    public string? IssuingCountry { get; set; }
+
+    [JsonPropertyName("issuingAuthority")]
+    public string? IssuingAuthority { get; set; }
+
+    [JsonPropertyName("issueDate")]
+    public string? IssueDate { get; set; }
+
+    [JsonPropertyName("expirationDate")]
+    public string? ExpirationDate { get; set; }
+
+    [JsonPropertyName("nationalIdentificationNumber")]
+    public string? NationalIdentificationNumber { get; set; }
 }

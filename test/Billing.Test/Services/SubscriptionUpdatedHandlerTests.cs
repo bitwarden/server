@@ -1,5 +1,6 @@
 ﻿using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
@@ -7,13 +8,18 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
+using Bit.Core.Entities;
+using Bit.Core.Models.BitStripe;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Test.Billing.Mocks.Plans;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using NSubstitute.ReturnsExtensions;
 using Stripe;
 using Xunit;
@@ -27,9 +33,10 @@ public class SubscriptionUpdatedHandlerTests
     private readonly IStripeEventService _stripeEventService;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
     private readonly IOrganizationService _organizationService;
-    private readonly IStripeFacade _stripeFacade;
+    private readonly IStripeAdapter _stripeAdapter;
     private readonly IOrganizationSponsorshipRenewCommand _organizationSponsorshipRenewCommand;
     private readonly IUserService _userService;
+    private readonly IUserRepository _userRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationEnableCommand _organizationEnableCommand;
     private readonly IOrganizationDisableCommand _organizationDisableCommand;
@@ -37,6 +44,8 @@ public class SubscriptionUpdatedHandlerTests
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderService _providerService;
     private readonly IPushNotificationAdapter _pushNotificationAdapter;
+    private readonly IPriceIncreaseScheduler _priceIncreaseScheduler;
+    private readonly IFeatureService _featureService;
     private readonly SubscriptionUpdatedHandler _sut;
 
     public SubscriptionUpdatedHandlerTests()
@@ -44,9 +53,10 @@ public class SubscriptionUpdatedHandlerTests
         _stripeEventService = Substitute.For<IStripeEventService>();
         _stripeEventUtilityService = Substitute.For<IStripeEventUtilityService>();
         _organizationService = Substitute.For<IOrganizationService>();
-        _stripeFacade = Substitute.For<IStripeFacade>();
+        _stripeAdapter = Substitute.For<IStripeAdapter>();
         _organizationSponsorshipRenewCommand = Substitute.For<IOrganizationSponsorshipRenewCommand>();
         _userService = Substitute.For<IUserService>();
+        _userRepository = Substitute.For<IUserRepository>();
         _providerService = Substitute.For<IProviderService>();
         _organizationRepository = Substitute.For<IOrganizationRepository>();
         _organizationEnableCommand = Substitute.For<IOrganizationEnableCommand>();
@@ -55,21 +65,27 @@ public class SubscriptionUpdatedHandlerTests
         _providerRepository = Substitute.For<IProviderRepository>();
         _providerService = Substitute.For<IProviderService>();
         _pushNotificationAdapter = Substitute.For<IPushNotificationAdapter>();
+        _priceIncreaseScheduler = Substitute.For<IPriceIncreaseScheduler>();
+        _featureService = Substitute.For<IFeatureService>();
 
         _sut = new SubscriptionUpdatedHandler(
             _stripeEventService,
             _stripeEventUtilityService,
             _organizationService,
-            _stripeFacade,
+            _stripeAdapter,
             _organizationSponsorshipRenewCommand,
             _userService,
+            _userRepository,
             _organizationRepository,
             _organizationEnableCommand,
             _organizationDisableCommand,
             _pricingClient,
             _providerRepository,
             _providerService,
-            _pushNotificationAdapter);
+            _pushNotificationAdapter,
+            _priceIncreaseScheduler,
+            _featureService,
+            Substitute.For<ILogger<SubscriptionUpdatedHandler>>());
     }
 
     [Fact]
@@ -133,7 +149,7 @@ public class SubscriptionUpdatedHandlerTests
             .DisableAsync(organizationId, currentPeriodEnd);
         await _pushNotificationAdapter.Received(1)
             .NotifyEnabledChangedAsync(organization);
-        await _stripeFacade.Received(1).UpdateSubscription(
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             subscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>
                 options.CancelAt.HasValue &&
@@ -141,6 +157,8 @@ public class SubscriptionUpdatedHandlerTests
                 options.ProrationBehavior == ProrationBehavior.None &&
                 options.CancellationDetails != null &&
                 options.CancellationDetails.Comment != null));
+        await _organizationRepository.DidNotReceive()
+            .ReplaceAsync(Arg.Any<Organization>());
     }
 
     [Fact]
@@ -195,7 +213,7 @@ public class SubscriptionUpdatedHandlerTests
         await _providerService.Received(1).UpdateAsync(provider);
 
         // Verify that UpdateSubscription was called with CancelAt
-        await _stripeFacade.Received(1).UpdateSubscription(
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             subscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>
                 options.CancelAt.HasValue &&
@@ -256,7 +274,7 @@ public class SubscriptionUpdatedHandlerTests
         // Assert - No disable or cancellation since there was no valid status transition
         Assert.True(provider.Enabled);
         await _providerService.DidNotReceive().UpdateAsync(Arg.Any<Provider>());
-        await _stripeFacade.DidNotReceive().UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Fact]
@@ -311,11 +329,11 @@ public class SubscriptionUpdatedHandlerTests
         // Assert - No disable or cancellation since the previous status (Canceled) is not a valid transition source
         Assert.True(provider.Enabled);
         await _providerService.DidNotReceive().UpdateAsync(Arg.Any<Provider>());
-        await _stripeFacade.DidNotReceive().UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Fact]
-    public async Task HandleAsync_IncompleteToIncompleteExpiredTransition_DisablesProviderAndSetsCancellation()
+    public async Task HandleAsync_IncompleteToIncompleteExpiredTransition_DisablesProvider()
     {
         // Arrange
         var providerId = Guid.NewGuid();
@@ -364,21 +382,18 @@ public class SubscriptionUpdatedHandlerTests
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert - Incomplete to IncompleteExpired should trigger disable and cancellation
+        // Assert - Incomplete to IncompleteExpired should disable the subscriber but
+        // must NOT call UpdateSubscriptionAsync: the subscription is already terminal
+        // and Stripe would reject the update, causing a 500-retry disable loop.
         Assert.False(provider.Enabled);
         await _providerService.Received(1).UpdateAsync(provider);
-        await _stripeFacade.Received(1).UpdateSubscription(
-            subscriptionId,
-            Arg.Is<SubscriptionUpdateOptions>(options =>
-                options.CancelAt.HasValue &&
-                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
-                options.ProrationBehavior == ProrationBehavior.None &&
-                options.CancellationDetails != null &&
-                options.CancellationDetails.Comment != null));
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(),
+            Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Fact]
-    public async Task HandleAsync_IncompleteToIncompleteExpiredUserSubscription_DisablesPremiumAndSetsCancellation()
+    public async Task HandleAsync_IncompleteToIncompleteExpiredUserSubscription_DisablesPremium()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -415,26 +430,25 @@ public class SubscriptionUpdatedHandlerTests
             }
         };
 
+        var user = new User { Id = userId };
+
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
+        _userRepository.GetByIdAsync(userId).Returns(user);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert
+        // Assert - disables Premium but must NOT call UpdateSubscriptionAsync
+        // on the already-terminal subscription (would 500-retry and re-disable).
         await _userService.Received(1).DisablePremiumAsync(userId, currentPeriodEnd);
-        await _stripeFacade.Received(1).UpdateSubscription(
-            subscriptionId,
-            Arg.Is<SubscriptionUpdateOptions>(options =>
-                options.CancelAt.HasValue &&
-                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
-                options.ProrationBehavior == ProrationBehavior.None &&
-                options.CancellationDetails != null &&
-                options.CancellationDetails.Comment != null));
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(),
+            Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Fact]
-    public async Task HandleAsync_IncompleteToIncompleteExpiredOrganizationSubscription_DisablesOrganizationAndSetsCancellation()
+    public async Task HandleAsync_IncompleteToIncompleteExpiredOrganizationSubscription_DisablesOrganization()
     {
         // Arrange
         var organizationId = Guid.NewGuid();
@@ -489,26 +503,21 @@ public class SubscriptionUpdatedHandlerTests
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert
+        // Assert - disables organization but must NOT call UpdateSubscriptionAsync
+        // on the already-terminal subscription (would 500-retry and re-disable).
         await _organizationDisableCommand.Received(1).DisableAsync(organizationId, currentPeriodEnd);
         await _pushNotificationAdapter.Received(1).NotifyEnabledChangedAsync(organization);
-        await _stripeFacade.Received(1).UpdateSubscription(
-            subscriptionId,
-            Arg.Is<SubscriptionUpdateOptions>(options =>
-                options.CancelAt.HasValue &&
-                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
-                options.ProrationBehavior == ProrationBehavior.None &&
-                options.CancellationDetails != null &&
-                options.CancellationDetails.Comment != null));
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(),
+            Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Fact]
-    public async Task HandleAsync_UnpaidProviderSubscription_WhenProviderNotFound_StillSetsCancellation()
+    public async Task HandleAsync_WhenProviderNotFound_SkipsHandler()
     {
         // Arrange
         var providerId = Guid.NewGuid();
         var subscriptionId = "sub_123";
-        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
 
         var previousSubscription = new Subscription
         {
@@ -524,7 +533,7 @@ public class SubscriptionUpdatedHandlerTests
             {
                 Data =
                 [
-                    new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd }
+                    new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(30) }
                 ]
             },
             Metadata = new Dictionary<string, string> { { "providerId", providerId.ToString() } },
@@ -549,16 +558,10 @@ public class SubscriptionUpdatedHandlerTests
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert - Provider not updated (since not found), but cancellation is still set
+        // Assert — guard exits early, no side effects
         await _providerService.DidNotReceive().UpdateAsync(Arg.Any<Provider>());
-        await _stripeFacade.Received(1).UpdateSubscription(
-            subscriptionId,
-            Arg.Is<SubscriptionUpdateOptions>(options =>
-                options.CancelAt.HasValue &&
-                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
-                options.ProrationBehavior == ProrationBehavior.None &&
-                options.CancellationDetails != null &&
-                options.CancellationDetails.Comment != null));
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Fact]
@@ -599,11 +602,15 @@ public class SubscriptionUpdatedHandlerTests
             }
         };
 
+        var user = new User { Id = userId, Premium = false, PremiumExpirationDate = currentPeriodEnd };
+
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
 
         _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
             .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
+
+        _userRepository.GetByIdAsync(userId).Returns(user);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -611,7 +618,9 @@ public class SubscriptionUpdatedHandlerTests
         // Assert
         await _userService.Received(1)
             .DisablePremiumAsync(userId, currentPeriodEnd);
-        await _stripeFacade.Received(1).UpdateSubscription(
+        await _userRepository.Received(2).GetByIdAsync(userId);
+        await _pushNotificationAdapter.Received(1).NotifyPremiumStatusChangedAsync(user);
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             subscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>
                 options.CancelAt.HasValue &&
@@ -619,10 +628,10 @@ public class SubscriptionUpdatedHandlerTests
                 options.ProrationBehavior == ProrationBehavior.None &&
                 options.CancellationDetails != null &&
                 options.CancellationDetails.Comment != null));
-        await _stripeFacade.DidNotReceive()
-            .CancelSubscription(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
-        await _stripeFacade.DidNotReceive()
-            .ListInvoices(Arg.Any<InvoiceListOptions>());
+        await _stripeAdapter.DidNotReceive()
+            .CancelSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
+        await _stripeAdapter.DidNotReceive()
+            .ListInvoicesAsync(Arg.Any<StripeInvoiceListOptions>());
     }
 
     [Fact]
@@ -669,17 +678,19 @@ public class SubscriptionUpdatedHandlerTests
         _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
             .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
 
+        _userRepository.GetByIdAsync(userId).Returns(new User { Id = userId });
+
         // Act
         await _sut.HandleAsync(parsedEvent);
 
         // Assert - IncompleteExpired is no longer handled specially, only expiration is updated
         await _userService.DidNotReceive().DisablePremiumAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>());
         await _userService.Received(1).UpdatePremiumExpirationAsync(userId, currentPeriodEnd);
-        await _stripeFacade.DidNotReceive().UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
-        await _stripeFacade.DidNotReceive()
-            .CancelSubscription(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
-        await _stripeFacade.DidNotReceive()
-            .ListInvoices(Arg.Any<InvoiceListOptions>());
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+        await _stripeAdapter.DidNotReceive()
+            .CancelSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
+        await _stripeAdapter.DidNotReceive()
+            .ListInvoicesAsync(Arg.Any<StripeInvoiceListOptions>());
     }
 
     [Fact]
@@ -747,7 +758,7 @@ public class SubscriptionUpdatedHandlerTests
             .UpdateExpirationDateAsync(organizationId, currentPeriodEnd);
         await _pushNotificationAdapter.Received(1)
             .NotifyEnabledChangedAsync(organization);
-        await _stripeFacade.Received(1).UpdateSubscription(
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             subscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>
                 options.CancelAtPeriodEnd == false &&
@@ -792,8 +803,11 @@ public class SubscriptionUpdatedHandlerTests
             }
         };
 
+        var user = new User { Id = userId, Premium = true, PremiumExpirationDate = currentPeriodEnd };
+
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
+        _userRepository.GetByIdAsync(userId).Returns(user);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -803,7 +817,9 @@ public class SubscriptionUpdatedHandlerTests
             .EnablePremiumAsync(userId, currentPeriodEnd);
         await _userService.Received(1)
             .UpdatePremiumExpirationAsync(userId, currentPeriodEnd);
-        await _stripeFacade.Received(1).UpdateSubscription(
+        await _userRepository.Received(2).GetByIdAsync(userId);
+        await _pushNotificationAdapter.Received(1).NotifyPremiumStatusChangedAsync(user);
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             subscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>
                 options.CancelAtPeriodEnd == false &&
@@ -850,6 +866,9 @@ public class SubscriptionUpdatedHandlerTests
 
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
+
+        _organizationRepository.GetByIdAsync(organizationId).Returns(new Organization { Id = organizationId, PlanType = PlanType.FamiliesAnnually });
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(new FamiliesPlan());
 
         _stripeEventUtilityService.IsSponsoredSubscription(subscription)
             .Returns(true);
@@ -933,8 +952,8 @@ public class SubscriptionUpdatedHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        await _stripeFacade.Received(1).DeleteCustomerDiscount(subscription.CustomerId);
-        await _stripeFacade.Received(1).DeleteSubscriptionDiscount(subscription.Id);
+        await _stripeAdapter.Received(1).DeleteCustomerDiscountAsync(subscription.CustomerId);
+        await _stripeAdapter.Received(1).DeleteSubscriptionDiscountAsync(subscription.Id);
     }
     [Fact]
     public async Task
@@ -1016,8 +1035,8 @@ public class SubscriptionUpdatedHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        await _stripeFacade.DidNotReceive().DeleteCustomerDiscount(subscription.CustomerId);
-        await _stripeFacade.DidNotReceive().DeleteSubscriptionDiscount(subscription.Id);
+        await _stripeAdapter.DidNotReceive().DeleteCustomerDiscountAsync(subscription.CustomerId);
+        await _stripeAdapter.DidNotReceive().DeleteSubscriptionDiscountAsync(subscription.Id);
     }
 
     [Theory]
@@ -1037,8 +1056,8 @@ public class SubscriptionUpdatedHandlerTests
         _providerRepository
             .GetByIdAsync(Arg.Any<Guid>())
             .Returns(provider);
-        _stripeFacade
-            .UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+        _stripeAdapter
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(newSubscription);
 
         // Act
@@ -1049,14 +1068,14 @@ public class SubscriptionUpdatedHandlerTests
             .Received(1)
             .GetSubscription(parsedEvent, true, Arg.Any<List<string>>());
         await _providerRepository
-            .Received(1)
+            .Received(2)
             .GetByIdAsync(providerId);
         await _providerService
             .Received(1)
             .UpdateAsync(Arg.Is<Provider>(p => p.Id == providerId && p.Enabled == true));
-        await _stripeFacade
+        await _stripeAdapter
             .Received(1)
-            .UpdateSubscription(newSubscription.Id,
+            .UpdateSubscriptionAsync(newSubscription.Id,
                 Arg.Is<SubscriptionUpdateOptions>(options =>
                     options.CancelAtPeriodEnd == false &&
                     options.ProrationBehavior == ProrationBehavior.None));
@@ -1085,13 +1104,13 @@ public class SubscriptionUpdatedHandlerTests
         await _stripeEventService
             .Received(1)
             .GetSubscription(parsedEvent, true, Arg.Any<List<string>>());
-        await _providerRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
+        await _providerRepository.Received(1).GetByIdAsync(providerId);
         await _providerService
             .DidNotReceive()
             .UpdateAsync(Arg.Any<Provider>());
-        await _stripeFacade
+        await _stripeAdapter
             .DidNotReceiveWithAnyArgs()
-            .UpdateSubscription(Arg.Any<string>());
+            .UpdateSubscriptionAsync(Arg.Any<string>());
     }
 
     [Fact]
@@ -1117,13 +1136,13 @@ public class SubscriptionUpdatedHandlerTests
         await _stripeEventService
             .Received(1)
             .GetSubscription(parsedEvent, true, Arg.Any<List<string>>());
-        await _providerRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
+        await _providerRepository.Received(1).GetByIdAsync(providerId);
         await _providerService
             .DidNotReceive()
             .UpdateAsync(Arg.Any<Provider>());
-        await _stripeFacade
+        await _stripeAdapter
             .DidNotReceiveWithAnyArgs()
-            .UpdateSubscription(Arg.Any<string>());
+            .UpdateSubscriptionAsync(Arg.Any<string>());
     }
 
     [Fact]
@@ -1149,13 +1168,13 @@ public class SubscriptionUpdatedHandlerTests
         await _stripeEventService
             .Received(1)
             .GetSubscription(parsedEvent, true, Arg.Any<List<string>>());
-        await _providerRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
+        await _providerRepository.Received(1).GetByIdAsync(providerId);
         await _providerService
             .DidNotReceive()
             .UpdateAsync(Arg.Any<Provider>());
-        await _stripeFacade
+        await _stripeAdapter
             .DidNotReceiveWithAnyArgs()
-            .UpdateSubscription(Arg.Any<string>());
+            .UpdateSubscriptionAsync(Arg.Any<string>());
     }
 
     [Fact]
@@ -1181,13 +1200,13 @@ public class SubscriptionUpdatedHandlerTests
         await _stripeEventService
             .Received(1)
             .GetSubscription(parsedEvent, true, Arg.Any<List<string>>());
-        await _providerRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
+        await _providerRepository.Received(1).GetByIdAsync(providerId);
         await _providerService
             .DidNotReceive()
             .UpdateAsync(Arg.Any<Provider>());
-        await _stripeFacade
+        await _stripeAdapter
             .DidNotReceiveWithAnyArgs()
-            .UpdateSubscription(Arg.Any<string>());
+            .UpdateSubscriptionAsync(Arg.Any<string>());
     }
 
     [Fact]
@@ -1218,9 +1237,9 @@ public class SubscriptionUpdatedHandlerTests
         await _providerService
             .DidNotReceive()
             .UpdateAsync(Arg.Any<Provider>());
-        await _stripeFacade
+        await _stripeAdapter
             .DidNotReceive()
-            .UpdateSubscription(Arg.Any<string>());
+            .UpdateSubscriptionAsync(Arg.Any<string>());
     }
 
     [Fact]
@@ -1245,13 +1264,13 @@ public class SubscriptionUpdatedHandlerTests
         await _stripeEventService
             .Received(1)
             .GetSubscription(parsedEvent, true, Arg.Any<List<string>>());
-        await _providerRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
+        await _providerRepository.Received(1).GetByIdAsync(providerId);
         await _providerService
             .DidNotReceive()
             .UpdateAsync(Arg.Any<Provider>());
-        await _stripeFacade
+        await _stripeAdapter
             .DidNotReceive()
-            .UpdateSubscription(Arg.Any<string>());
+            .UpdateSubscriptionAsync(Arg.Any<string>());
     }
 
     private static (Guid providerId, Subscription newSubscription, Provider provider, Event parsedEvent)
@@ -1328,13 +1347,97 @@ public class SubscriptionUpdatedHandlerTests
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
 
+        _userRepository.GetByIdAsync(userId).Returns(new User { Id = userId });
+
         // Act
         await _sut.HandleAsync(parsedEvent);
 
         // Assert - Incomplete status is no longer handled specially, only expiration is updated
         await _userService.DidNotReceive().DisablePremiumAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>());
         await _userService.Received(1).UpdatePremiumExpirationAsync(userId, currentPeriodEnd);
-        await _stripeFacade.DidNotReceive().UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_UnpaidSubscription_ReleasesScheduleBeforeCancellation()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var subscriptionId = "sub_123";
+        var customerId = "cus_123";
+        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var previousSubscription = new Subscription { Id = subscriptionId, Status = SubscriptionStatus.Active };
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            CustomerId = customerId,
+            Status = SubscriptionStatus.Unpaid,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd, Plan = new Plan { Id = "2023-enterprise-org-seat-annually" } }]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.EnterpriseAnnually2023 };
+        var parsedEvent = new Event
+        {
+            Data = new EventData { Object = subscription, PreviousAttributes = JObject.FromObject(previousSubscription) }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>()).Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new Enterprise2023Plan(true));
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _priceIncreaseScheduler.Received(1).Release(customerId, subscriptionId);
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_ActiveSubscription_SchedulesBeforeRemovingCancellation()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var subscriptionId = "sub_123";
+        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var previousSubscription = new Subscription { Id = subscriptionId, Status = SubscriptionStatus.Unpaid };
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Active,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd, Plan = new Plan { Id = "2023-enterprise-org-seat-annually" } }]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.EnterpriseAnnually2023 };
+        var parsedEvent = new Event
+        {
+            Data = new EventData { Object = subscription, PreviousAttributes = JObject.FromObject(previousSubscription) }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>()).Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new Enterprise2023Plan(true));
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _priceIncreaseScheduler.Received(1).Schedule(subscription);
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscriptionId, Arg.Is<SubscriptionUpdateOptions>(o => o.CancelAtPeriodEnd == false));
     }
 
     public static IEnumerable<object[]> GetValidTransitionToActiveSubscriptions()
@@ -1345,5 +1448,991 @@ public class SubscriptionUpdatedHandlerTests
             new object[] { new Subscription { Id = "sub_123", Status = SubscriptionStatus.Unpaid } },
             new object[] { new Subscription { Id = "sub_123", Status = SubscriptionStatus.Incomplete } }
         };
+    }
+
+    [Fact]
+    public async Task HandleAsync_ScheduleTriggeredFamiliesMigration_FlagOn_UpdatesOrganization()
+    {
+        // Arrange — Families 2019 → FamiliesAnnually migration via schedule
+        var organizationId = Guid.NewGuid();
+        var subscriptionId = "sub_123";
+        var familiesPlan = new FamiliesPlan();
+        var families2019Plan = new Families2019Plan();
+        var families2025Plan = new Families2025Plan();
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Active,
+            ScheduleId = "sub_sched_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = DateTime.UtcNow.AddDays(365),
+                        Price = new Price { Id = familiesPlan.PasswordManager.StripePlanId }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                { "organizationId", organizationId.ToString() }
+            }
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(new
+                {
+                    items = new
+                    {
+                        data = new[] { new { price = new { id = families2019Plan.PasswordManager.StripePlanId } } }
+                    }
+                })
+            }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.FamiliesAnnually2019,
+            Plan = "Families 2019",
+            UsersGetPremium = false,
+            Seats = 5
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025Plan);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        Assert.Equal(PlanType.FamiliesAnnually, organization.PlanType);
+        Assert.Equal("Families", organization.Plan);
+        Assert.True(organization.UsersGetPremium);
+        Assert.Equal(6, organization.Seats);
+        await _organizationRepository.Received(1).ReplaceAsync(
+            Arg.Is<Organization>(o =>
+                o.Id == organizationId &&
+                o.PlanType == PlanType.FamiliesAnnually &&
+                o.UsersGetPremium));
+    }
+
+    [Fact]
+    public async Task HandleAsync_ScheduleTriggeredMigration_FlagOff_DoesNotUpdateOrganization()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            Status = SubscriptionStatus.Active,
+            ScheduleId = "sub_sched_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(365) }]
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                { "organizationId", organizationId.ToString() }
+            }
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(new
+                {
+                    items = new
+                    {
+                        data = new[] { new { price = new { id = "personal-org-annually" } } }
+                    }
+                })
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(false);
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.FamiliesAnnually };
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(new FamiliesPlan());
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_NoSchedule_FlagOn_DoesNotUpdateOrganization()
+    {
+        // Arrange — no ScheduleId means this isn't a schedule transition
+        var organizationId = Guid.NewGuid();
+
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            Status = SubscriptionStatus.Active,
+            ScheduleId = null,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(365) }]
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                { "organizationId", organizationId.ToString() }
+            }
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(new
+                {
+                    items = new
+                    {
+                        data = new[] { new { price = new { id = "personal-org-annually" } } }
+                    }
+                })
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(true);
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.FamiliesAnnually };
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(new FamiliesPlan());
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_ScheduleTriggered_PreviousPriceNotOldFamilies_DoesNotUpdateOrganization()
+    {
+        // Arrange — schedule-triggered item change, but previous price is not an old Families price
+        // (e.g., a storage update on a Families org that happens to have a schedule)
+        var organizationId = Guid.NewGuid();
+        var familiesPlan = new FamiliesPlan();
+        var families2019Plan = new Families2019Plan();
+        var families2025Plan = new Families2025Plan();
+
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            Status = SubscriptionStatus.Active,
+            ScheduleId = "sub_sched_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = DateTime.UtcNow.AddDays(365),
+                        Price = new Price { Id = familiesPlan.PasswordManager.StripePlanId }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                { "organizationId", organizationId.ToString() }
+            }
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(new
+                {
+                    items = new
+                    {
+                        data = new[] { new { price = new { id = "personal-storage-gb-annually" } } }
+                    }
+                })
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025Plan);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(new Organization { Id = organizationId, PlanType = PlanType.FamiliesAnnually });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_ScheduleTriggered_CurrentPriceNotNewFamilies_DoesNotUpdateOrganization()
+    {
+        // Arrange — previous had old Families price but current doesn't have new Families price
+        var organizationId = Guid.NewGuid();
+        var familiesPlan = new FamiliesPlan();
+
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            Status = SubscriptionStatus.Active,
+            ScheduleId = "sub_sched_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = DateTime.UtcNow.AddDays(365),
+                        Price = new Price { Id = "some-other-price-id" }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                { "organizationId", organizationId.ToString() }
+            }
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(new
+                {
+                    items = new
+                    {
+                        data = new[] { new { price = new { id = "personal-org-annually" } } }
+                    }
+                })
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(new Organization { Id = organizationId, PlanType = PlanType.FamiliesAnnually });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_ScheduleTriggered_NoItemChanges_DoesNotUpdateOrganization()
+    {
+        // Arrange — schedule present but PreviousAttributes has no items (e.g., status-only change)
+        var organizationId = Guid.NewGuid();
+
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            Status = SubscriptionStatus.Active,
+            ScheduleId = "sub_sched_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(365) }]
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                { "organizationId", organizationId.ToString() }
+            }
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(new { status = "active" })
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(true);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(new Organization { Id = organizationId });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_ScheduleTriggeredMigration_WhenOrganizationNotFound_SkipsHandler()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var familiesPlan = new FamiliesPlan();
+        var families2019Plan = new Families2019Plan();
+        var families2025Plan = new Families2025Plan();
+
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            Status = SubscriptionStatus.Active,
+            ScheduleId = "sub_sched_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = DateTime.UtcNow.AddDays(365),
+                        Price = new Price { Id = familiesPlan.PasswordManager.StripePlanId }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                { "organizationId", organizationId.ToString() }
+            }
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(new
+                {
+                    items = new
+                    {
+                        data = new[] { new { price = new { id = families2019Plan.PasswordManager.StripePlanId } } }
+                    }
+                })
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025Plan);
+        _organizationRepository.GetByIdAsync(organizationId).ReturnsNull();
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — guard exits early — logs warning, does not throw, does not update
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_ScheduleTriggered_MultipleItems_MatchesFamiliesPrice_UpdatesOrganization()
+    {
+        // Arrange — subscription has storage add-on alongside the Families price
+        var organizationId = Guid.NewGuid();
+        var familiesPlan = new FamiliesPlan();
+        var families2019Plan = new Families2019Plan();
+        var families2025Plan = new Families2025Plan();
+
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            Status = SubscriptionStatus.Active,
+            ScheduleId = "sub_sched_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = DateTime.UtcNow.AddDays(365),
+                        Price = new Price { Id = familiesPlan.PasswordManager.StripePlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = DateTime.UtcNow.AddDays(365),
+                        Price = new Price { Id = "personal-storage-gb-annually" },
+                        Quantity = 2
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                { "organizationId", organizationId.ToString() }
+            }
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(new
+                {
+                    items = new
+                    {
+                        data = new[] { new { price = new { id = families2019Plan.PasswordManager.StripePlanId } } }
+                    }
+                })
+            }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.FamiliesAnnually2019,
+            Plan = "Families 2019",
+            UsersGetPremium = false,
+            Seats = 5
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025Plan);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        Assert.Equal(PlanType.FamiliesAnnually, organization.PlanType);
+        Assert.True(organization.UsersGetPremium);
+        Assert.Equal(6, organization.Seats);
+        await _organizationRepository.Received(1).ReplaceAsync(
+            Arg.Is<Organization>(o => o.Id == organizationId));
+    }
+
+    [Fact]
+    public async Task HandleAsync_UnpaidOrganizationSubscription_StampsCancellationOriginMetadata()
+    {
+        // The metadata stamp is the sole signal SubscriptionDeletedHandler uses to recognize
+        // that the eventual customer.subscription.deleted came from the platform-managed
+        // unpaid lifecycle and should void open invoices.
+        var organizationId = Guid.NewGuid();
+        const string subscriptionId = "sub_metadata_stamp";
+        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var previousSubscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Active
+        };
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Unpaid,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd, Plan = new Plan { Id = "2023-enterprise-org-seat-annually" } }]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            Enabled = true,
+            PlanType = PlanType.EnterpriseAnnually2023
+        };
+
+        var parsedEvent = new Event
+        {
+            Id = "evt_metadata_stamp",
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new Enterprise2023Plan(true));
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            subscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.Metadata != null &&
+                options.Metadata.ContainsKey(MetadataKeys.CancellationOrigin) &&
+                options.Metadata[MetadataKeys.CancellationOrigin] == CancellationOrigins.UnpaidSubscription));
+    }
+
+    [Fact]
+    public async Task HandleAsync_ActiveFromUnpaidSubscription_ClearsCancellationOriginMetadata()
+    {
+        // When the customer pays and the subscription recovers, the marker must be removed
+        // so a future voluntary cancel doesn't trigger an unwanted invoice void.
+        // Stripe removes a metadata key when its value is set to empty string.
+        var organizationId = Guid.NewGuid();
+        const string subscriptionId = "sub_metadata_clear";
+        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var previousSubscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Unpaid
+        };
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Active,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd, Plan = new Plan { Id = "2023-enterprise-org-seat-annually" } }]
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                { "organizationId", organizationId.ToString() },
+                { MetadataKeys.CancellationOrigin, CancellationOrigins.UnpaidSubscription }
+            },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.EnterpriseAnnually2023 };
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new Enterprise2023Plan(true));
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            subscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.Metadata != null &&
+                options.Metadata.ContainsKey(MetadataKeys.CancellationOrigin) &&
+                options.Metadata[MetadataKeys.CancellationOrigin] == string.Empty));
+    }
+
+    [Fact]
+    public async Task HandleAsync_UnpaidOrganizationSubscription_WithExemptOrganization_DoesNotDisableAndClearsExemption()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var subscriptionId = "sub_123";
+        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var previousSubscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Active
+        };
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Unpaid,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = currentPeriodEnd,
+                        Plan = new Plan { Id = "2023-enterprise-org-seat-annually" }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            Enabled = true,
+            ExemptFromBillingAutomation = true,
+            PlanType = PlanType.EnterpriseAnnually2023
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+
+        var plan = new Enterprise2023Plan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _organizationDisableCommand.DidNotReceive()
+            .DisableAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>());
+        await _stripeAdapter.DidNotReceive()
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+        await _organizationRepository.Received(1).ReplaceAsync(
+            Arg.Is<Organization>(o => o.Id == organizationId && !o.ExemptFromBillingAutomation));
+    }
+
+    [Fact]
+    public async Task HandleAsync_UnpaidOrganizationSubscription_WithSubscriptionUpdateBillingReason_DoesNotDisableAndPreservesExemption()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var subscriptionId = "sub_123";
+        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var previousSubscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Active
+        };
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Unpaid,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = currentPeriodEnd,
+                        Plan = new Plan { Id = "2023-enterprise-org-seat-annually" }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionUpdate }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            Enabled = true,
+            ExemptFromBillingAutomation = true,
+            PlanType = PlanType.EnterpriseAnnually2023
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+
+        var plan = new Enterprise2023Plan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — subscription_update billing reason does not match SubscriptionWentUnpaid
+        // (which filters on subscription_create and subscription_cycle only), so no disable,
+        // no cancellation, and the exempt flag is left unchanged.
+        await _organizationDisableCommand.DidNotReceive()
+            .DisableAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>());
+        await _stripeAdapter.DidNotReceive()
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+        await _organizationRepository.DidNotReceive()
+            .ReplaceAsync(Arg.Any<Organization>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_UnpaidOrganizationSubscription_WithAutomaticPendingInvoiceItemInvoiceBillingReason_DoesNotDisableAndPreservesExemption()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var subscriptionId = "sub_123";
+        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var previousSubscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Active
+        };
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Unpaid,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = currentPeriodEnd,
+                        Plan = new Plan { Id = "2023-enterprise-org-seat-annually" }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.AutomaticPendingInvoiceItemInvoice }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            Enabled = true,
+            ExemptFromBillingAutomation = true,
+            PlanType = PlanType.EnterpriseAnnually2023
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+
+        var plan = new Enterprise2023Plan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — automatic_pending_invoice_item_invoice does not match SubscriptionWentUnpaid
+        // (which filters on subscription_create and subscription_cycle only), so no disable,
+        // no cancellation, and the exempt flag is left unchanged.
+        await _organizationDisableCommand.DidNotReceive()
+            .DisableAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>());
+        await _stripeAdapter.DidNotReceive()
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+        await _organizationRepository.DidNotReceive()
+            .ReplaceAsync(Arg.Any<Organization>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_UnpaidOrganizationSubscription_WithExemptOrganization_WhenSubsequentWorkFails_DoesNotClearExemption()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var subscriptionId = "sub_123";
+        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var previousSubscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Active
+        };
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Unpaid,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = currentPeriodEnd,
+                        Plan = new Plan { Id = "2023-enterprise-org-seat-annually" }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            Enabled = true,
+            ExemptFromBillingAutomation = true,
+            PlanType = PlanType.EnterpriseAnnually2023
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+
+        _organizationService.UpdateExpirationDateAsync(organizationId, Arg.Any<DateTime?>())
+            .ThrowsAsync(new Exception("Simulated failure in subsequent work"));
+
+        // Act
+        await Assert.ThrowsAsync<Exception>(() => _sut.HandleAsync(parsedEvent));
+
+        // Assert — the flag clear must not have been persisted
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenUserNotFound_SkipsHandler()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var subscriptionId = "sub_123";
+
+        var previousSubscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Active
+        };
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Unpaid,
+            Metadata = new Dictionary<string, string> { { "userId", userId.ToString() } },
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(30) }]
+            },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _userRepository.GetByIdAsync(userId).ReturnsNull();
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — guard exits early, no side effects
+        await _userService.DidNotReceive().DisablePremiumAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>());
+        await _userService.DidNotReceive().UpdatePremiumExpirationAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>());
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenOrganizationNotFound_SkipsHandler()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var subscriptionId = "sub_123";
+
+        var previousSubscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Active
+        };
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Unpaid,
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(30) }]
+            },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).ReturnsNull();
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — guard exits early, no side effects
+        await _organizationDisableCommand.DidNotReceive().DisableAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>());
+        await _organizationService.DidNotReceive().UpdateExpirationDateAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>());
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 }

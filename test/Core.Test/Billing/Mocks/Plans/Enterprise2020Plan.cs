@@ -32,6 +32,8 @@ public record Enterprise2020Plan : Plan
         HasResetPassword = true;
         UsersGetPremium = true;
         HasCustomPermissions = true;
+        HasMyItems = true;
+        HasInviteLinks = true;
 
         UpgradeSortOrder = 4;
         DisplaySortOrder = 4;

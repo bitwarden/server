@@ -3,9 +3,9 @@ using Bit.Billing.Services.Implementations;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stripe;
 using Xunit;
@@ -18,28 +18,28 @@ public class SetupIntentSucceededHandlerTests
     private static readonly Event _mockEvent = new() { Id = "evt_test", Type = "setup_intent.succeeded" };
     private static readonly string[] _expand = ["payment_method"];
 
+    private readonly ILogger<SetupIntentSucceededHandler> _logger;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IProviderRepository _providerRepository;
     private readonly IPushNotificationAdapter _pushNotificationAdapter;
-    private readonly ISetupIntentCache _setupIntentCache;
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IStripeEventService _stripeEventService;
     private readonly SetupIntentSucceededHandler _handler;
 
     public SetupIntentSucceededHandlerTests()
     {
+        _logger = Substitute.For<ILogger<SetupIntentSucceededHandler>>();
         _organizationRepository = Substitute.For<IOrganizationRepository>();
         _providerRepository = Substitute.For<IProviderRepository>();
         _pushNotificationAdapter = Substitute.For<IPushNotificationAdapter>();
-        _setupIntentCache = Substitute.For<ISetupIntentCache>();
         _stripeAdapter = Substitute.For<IStripeAdapter>();
         _stripeEventService = Substitute.For<IStripeEventService>();
 
         _handler = new SetupIntentSucceededHandler(
+            _logger,
             _organizationRepository,
             _providerRepository,
             _pushNotificationAdapter,
-            _setupIntentCache,
             _stripeAdapter,
             _stripeEventService);
     }
@@ -60,7 +60,7 @@ public class SetupIntentSucceededHandlerTests
         await _handler.HandleAsync(_mockEvent);
 
         // Assert
-        await _setupIntentCache.DidNotReceiveWithAnyArgs().GetSubscriberIdForSetupIntent(Arg.Any<string>());
+        await _organizationRepository.DidNotReceiveWithAnyArgs().GetByGatewayCustomerIdAsync(Arg.Any<string>());
         await _stripeAdapter.DidNotReceiveWithAnyArgs().AttachPaymentMethodAsync(
             Arg.Any<string>(), Arg.Any<PaymentMethodAttachOptions>());
         await _pushNotificationAdapter.DidNotReceiveWithAnyArgs().NotifyBankAccountVerifiedAsync(Arg.Any<Organization>());
@@ -68,10 +68,10 @@ public class SetupIntentSucceededHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_NoSubscriberIdInCache_Returns()
+    public async Task HandleAsync_NoCustomerIdOnSetupIntent_Returns()
     {
         // Arrange
-        var setupIntent = CreateSetupIntent();
+        var setupIntent = CreateSetupIntent(customerId: null);
 
         _stripeEventService.GetSetupIntent(
                 _mockEvent,
@@ -79,8 +79,35 @@ public class SetupIntentSucceededHandlerTests
                 Arg.Is<List<string>>(options => options.SequenceEqual(_expand)))
             .Returns(setupIntent);
 
-        _setupIntentCache.GetSubscriberIdForSetupIntent(setupIntent.Id)
-            .Returns((Guid?)null);
+        // Act
+        await _handler.HandleAsync(_mockEvent);
+
+        // Assert
+        await _organizationRepository.DidNotReceiveWithAnyArgs().GetByGatewayCustomerIdAsync(Arg.Any<string>());
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().AttachPaymentMethodAsync(
+            Arg.Any<string>(), Arg.Any<PaymentMethodAttachOptions>());
+        await _pushNotificationAdapter.DidNotReceiveWithAnyArgs().NotifyBankAccountVerifiedAsync(Arg.Any<Organization>());
+        await _pushNotificationAdapter.DidNotReceiveWithAnyArgs().NotifyBankAccountVerifiedAsync(Arg.Any<Provider>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_NoOrganizationOrProviderFound_LogsErrorAndReturns()
+    {
+        // Arrange
+        var customerId = "cus_test";
+        var setupIntent = CreateSetupIntent(customerId: customerId);
+
+        _stripeEventService.GetSetupIntent(
+                _mockEvent,
+                true,
+                Arg.Is<List<string>>(options => options.SequenceEqual(_expand)))
+            .Returns(setupIntent);
+
+        _organizationRepository.GetByGatewayCustomerIdAsync(customerId)
+            .Returns((Organization?)null);
+
+        _providerRepository.GetByGatewayCustomerIdAsync(customerId)
+            .Returns((Provider?)null);
 
         // Act
         await _handler.HandleAsync(_mockEvent);
@@ -96,9 +123,9 @@ public class SetupIntentSucceededHandlerTests
     public async Task HandleAsync_ValidOrganization_AttachesPaymentMethodAndSendsNotification()
     {
         // Arrange
-        var organizationId = Guid.NewGuid();
-        var organization = new Organization { Id = organizationId, Name = "Test Org", GatewayCustomerId = "cus_test" };
-        var setupIntent = CreateSetupIntent();
+        var customerId = "cus_test";
+        var organization = new Organization { Id = Guid.NewGuid(), Name = "Test Org", GatewayCustomerId = customerId };
+        var setupIntent = CreateSetupIntent(customerId: customerId);
 
         _stripeEventService.GetSetupIntent(
                 _mockEvent,
@@ -106,10 +133,7 @@ public class SetupIntentSucceededHandlerTests
                 Arg.Is<List<string>>(options => options.SequenceEqual(_expand)))
             .Returns(setupIntent);
 
-        _setupIntentCache.GetSubscriberIdForSetupIntent(setupIntent.Id)
-            .Returns(organizationId);
-
-        _organizationRepository.GetByIdAsync(organizationId)
+        _organizationRepository.GetByGatewayCustomerIdAsync(customerId)
             .Returns(organization);
 
         // Act
@@ -122,15 +146,18 @@ public class SetupIntentSucceededHandlerTests
 
         await _pushNotificationAdapter.Received(1).NotifyBankAccountVerifiedAsync(organization);
         await _pushNotificationAdapter.DidNotReceiveWithAnyArgs().NotifyBankAccountVerifiedAsync(Arg.Any<Provider>());
+
+        // Provider should not be queried when organization is found
+        await _providerRepository.DidNotReceiveWithAnyArgs().GetByGatewayCustomerIdAsync(Arg.Any<string>());
     }
 
     [Fact]
     public async Task HandleAsync_ValidProvider_AttachesPaymentMethodAndSendsNotification()
     {
         // Arrange
-        var providerId = Guid.NewGuid();
-        var provider = new Provider { Id = providerId, Name = "Test Provider", GatewayCustomerId = "cus_test" };
-        var setupIntent = CreateSetupIntent();
+        var customerId = "cus_test";
+        var provider = new Provider { Id = Guid.NewGuid(), Name = "Test Provider", GatewayCustomerId = customerId };
+        var setupIntent = CreateSetupIntent(customerId: customerId);
 
         _stripeEventService.GetSetupIntent(
                 _mockEvent,
@@ -138,13 +165,10 @@ public class SetupIntentSucceededHandlerTests
                 Arg.Is<List<string>>(options => options.SequenceEqual(_expand)))
             .Returns(setupIntent);
 
-        _setupIntentCache.GetSubscriberIdForSetupIntent(setupIntent.Id)
-            .Returns(providerId);
-
-        _organizationRepository.GetByIdAsync(providerId)
+        _organizationRepository.GetByGatewayCustomerIdAsync(customerId)
             .Returns((Organization?)null);
 
-        _providerRepository.GetByIdAsync(providerId)
+        _providerRepository.GetByGatewayCustomerIdAsync(customerId)
             .Returns(provider);
 
         // Act
@@ -163,9 +187,9 @@ public class SetupIntentSucceededHandlerTests
     public async Task HandleAsync_OrganizationWithoutGatewayCustomerId_DoesNotAttachPaymentMethod()
     {
         // Arrange
-        var organizationId = Guid.NewGuid();
-        var organization = new Organization { Id = organizationId, Name = "Test Org", GatewayCustomerId = null };
-        var setupIntent = CreateSetupIntent();
+        var customerId = "cus_test";
+        var organization = new Organization { Id = Guid.NewGuid(), Name = "Test Org", GatewayCustomerId = null };
+        var setupIntent = CreateSetupIntent(customerId: customerId);
 
         _stripeEventService.GetSetupIntent(
                 _mockEvent,
@@ -173,10 +197,7 @@ public class SetupIntentSucceededHandlerTests
                 Arg.Is<List<string>>(options => options.SequenceEqual(_expand)))
             .Returns(setupIntent);
 
-        _setupIntentCache.GetSubscriberIdForSetupIntent(setupIntent.Id)
-            .Returns(organizationId);
-
-        _organizationRepository.GetByIdAsync(organizationId)
+        _organizationRepository.GetByGatewayCustomerIdAsync(customerId)
             .Returns(organization);
 
         // Act
@@ -193,9 +214,9 @@ public class SetupIntentSucceededHandlerTests
     public async Task HandleAsync_ProviderWithoutGatewayCustomerId_DoesNotAttachPaymentMethod()
     {
         // Arrange
-        var providerId = Guid.NewGuid();
-        var provider = new Provider { Id = providerId, Name = "Test Provider", GatewayCustomerId = null };
-        var setupIntent = CreateSetupIntent();
+        var customerId = "cus_test";
+        var provider = new Provider { Id = Guid.NewGuid(), Name = "Test Provider", GatewayCustomerId = null };
+        var setupIntent = CreateSetupIntent(customerId: customerId);
 
         _stripeEventService.GetSetupIntent(
                 _mockEvent,
@@ -203,13 +224,10 @@ public class SetupIntentSucceededHandlerTests
                 Arg.Is<List<string>>(options => options.SequenceEqual(_expand)))
             .Returns(setupIntent);
 
-        _setupIntentCache.GetSubscriberIdForSetupIntent(setupIntent.Id)
-            .Returns(providerId);
-
-        _organizationRepository.GetByIdAsync(providerId)
+        _organizationRepository.GetByGatewayCustomerIdAsync(customerId)
             .Returns((Organization?)null);
 
-        _providerRepository.GetByIdAsync(providerId)
+        _providerRepository.GetByGatewayCustomerIdAsync(customerId)
             .Returns(provider);
 
         // Act
@@ -222,7 +240,7 @@ public class SetupIntentSucceededHandlerTests
         await _pushNotificationAdapter.DidNotReceiveWithAnyArgs().NotifyBankAccountVerifiedAsync(Arg.Any<Provider>());
     }
 
-    private static SetupIntent CreateSetupIntent(bool hasUSBankAccount = true)
+    private static SetupIntent CreateSetupIntent(bool hasUSBankAccount = true, string? customerId = "cus_default")
     {
         var paymentMethod = new PaymentMethod
         {
@@ -234,6 +252,7 @@ public class SetupIntentSucceededHandlerTests
         var setupIntent = new SetupIntent
         {
             Id = "seti_test",
+            CustomerId = customerId,
             PaymentMethod = paymentMethod
         };
 

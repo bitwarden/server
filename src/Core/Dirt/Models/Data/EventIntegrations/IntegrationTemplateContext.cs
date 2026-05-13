@@ -13,10 +13,12 @@ public class IntegrationTemplateContext(EventMessage eventMessage)
     public string DomainName => Event.DomainName;
     public string IpAddress => Event.IpAddress;
     public DeviceType? DeviceType => Event.DeviceType;
+    public int? DeviceTypeId => Event.DeviceType is not null ? (int)Event.DeviceType : null;
     public Guid? ActingUserId => Event.ActingUserId;
     public Guid? OrganizationUserId => Event.OrganizationUserId;
     public DateTime Date => Event.Date;
     public EventType Type => Event.Type;
+    public int TypeId => (int)Event.Type;
     public Guid? UserId => Event.UserId;
     public Guid? OrganizationId => Event.OrganizationId;
     public Guid? CipherId => Event.CipherId;
@@ -51,4 +53,6 @@ public class IntegrationTemplateContext(EventMessage eventMessage)
 
     public Organization? Organization { get; set; }
     public string? OrganizationName => Organization?.DisplayName();
+
+    public int? SystemUser => Event.SystemUser is not null ? (int)Event.SystemUser : null;
 }

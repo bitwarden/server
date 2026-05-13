@@ -10,7 +10,7 @@ public class DestroyBatchScenesCommand(
     {
         var exceptions = new List<Exception>();
 
-        var deleteTasks = playIds.Select(async playId =>
+        foreach (var playId in playIds)
         {
             try
             {
@@ -18,15 +18,10 @@ public class DestroyBatchScenesCommand(
             }
             catch (Exception ex)
             {
-                lock (exceptions)
-                {
-                    exceptions.Add(ex);
-                }
+                exceptions.Add(ex);
                 logger.LogError(ex, "Error deleting seeded data: {PlayId}", playId);
             }
-        });
-
-        await Task.WhenAll(deleteTasks);
+        }
 
         if (exceptions.Count > 0)
         {

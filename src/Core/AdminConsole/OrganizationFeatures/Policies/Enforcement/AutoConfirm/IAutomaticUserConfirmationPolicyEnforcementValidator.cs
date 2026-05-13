@@ -25,4 +25,21 @@ public interface IAutomaticUserConfirmationPolicyEnforcementValidator
     /// </remarks>
     /// <returns>A validation result with the error message if applicable.</returns>
     Task<ValidationResult<AutomaticUserConfirmationPolicyEnforcementRequest>> IsCompliantAsync(AutomaticUserConfirmationPolicyEnforcementRequest request);
+
+    /// <summary>
+    /// Checks if the given user is compliant with the Automatic User Confirmation policy, using the passed-in
+    /// <see cref="AutomaticUserConfirmationPolicyRequirement"/> as the source of truth for the validation request.
+    ///
+    /// To be compliant, a user must
+    /// - not be a member of a provider
+    /// - not be a member of another organization
+    /// </summary>
+    /// <param name="request"></param>
+    /// <remarks>
+    /// This uses the validation result pattern to avoid throwing exceptions.
+    /// </remarks>
+    /// <returns>A validation result with the error message if applicable.</returns>
+    Task<ValidationResult<AutomaticUserConfirmationPolicyEnforcementRequest>> IsCompliantAsync(
+        AutomaticUserConfirmationPolicyEnforcementRequest request,
+        AutomaticUserConfirmationPolicyRequirement policyRequirement);
 }

@@ -7,6 +7,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 
 namespace Bit.Core.Models.Mail;
+
 public class OrganizationInvitesInfo
 {
     public OrganizationInvitesInfo(
@@ -15,7 +16,8 @@ public class OrganizationInvitesInfo
         bool orgSsoLoginRequiredPolicyEnabled,
         IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> orgUserTokenPairs,
         Dictionary<Guid, bool> orgUserHasExistingUserDict,
-        bool initOrganization = false
+        bool initOrganization = false,
+        string inviterEmail = null
         )
     {
         OrganizationName = org.DisplayName();
@@ -30,6 +32,7 @@ public class OrganizationInvitesInfo
 
         OrgUserTokenPairs = orgUserTokenPairs;
         OrgUserHasExistingUserDict = orgUserHasExistingUserDict;
+        InviterEmail = inviterEmail;
     }
 
     public string OrganizationName { get; }
@@ -41,5 +44,6 @@ public class OrganizationInvitesInfo
     public bool OrgSsoLoginRequiredPolicyEnabled { get; }
     public IEnumerable<(OrganizationUser OrgUser, ExpiringToken Token)> OrgUserTokenPairs { get; }
     public Dictionary<Guid, bool> OrgUserHasExistingUserDict { get; }
+    public string InviterEmail { get; }
 
 }

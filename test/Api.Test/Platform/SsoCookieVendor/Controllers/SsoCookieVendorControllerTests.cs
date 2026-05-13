@@ -4,6 +4,7 @@ using Bit.Api.Platform.SsoCookieVendor;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
 
@@ -27,7 +28,8 @@ public class SsoCookieVendorControllerTests : IDisposable
                 }
             }
         };
-        _sut = new SsoCookieVendorController(_globalSettings);
+        var logger = Substitute.For<ILogger<SsoCookieVendorController>>();
+        _sut = new SsoCookieVendorController(_globalSettings, logger);
     }
 
     public void Dispose()
@@ -81,7 +83,11 @@ public class SsoCookieVendorControllerTests : IDisposable
         var result = _sut.Get();
 
         // Assert
-        Assert.IsType<NotFoundResult>(result);
+        var result404 = Assert.IsType<ContentResult>(result);
+        Assert.Equal(404, result404.StatusCode);
+        Assert.Equal("text/html", result404.ContentType);
+        Assert.Contains("Error code 404", result404.Content);
+        Assert.Contains("Please return to the Bitwarden app and try again", result404.Content);
     }
 
     [Fact]
@@ -95,8 +101,12 @@ public class SsoCookieVendorControllerTests : IDisposable
         var result = _sut.Get();
 
         // Assert
-        var statusCodeResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(500, statusCodeResult.StatusCode);
+        var contentResult = Assert.IsType<ContentResult>(result);
+        Assert.Equal(500, contentResult.StatusCode);
+        Assert.Equal("text/html", contentResult.ContentType);
+        Assert.Contains("Error code 500", contentResult.Content);
+        Assert.Contains("Please return to the Bitwarden app and try again", contentResult.Content);
+        Assert.DoesNotContain("SSO cookie vendor is not properly configured", contentResult.Content);
     }
 
     [Fact]
@@ -110,8 +120,12 @@ public class SsoCookieVendorControllerTests : IDisposable
         var result = _sut.Get();
 
         // Assert
-        var statusCodeResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(500, statusCodeResult.StatusCode);
+        var contentResult = Assert.IsType<ContentResult>(result);
+        Assert.Equal(500, contentResult.StatusCode);
+        Assert.Equal("text/html", contentResult.ContentType);
+        Assert.Contains("Error code 500", contentResult.Content);
+        Assert.Contains("Please return to the Bitwarden app and try again", contentResult.Content);
+        Assert.DoesNotContain("SSO cookie vendor is not properly configured", contentResult.Content);
     }
 
     [Fact]
@@ -218,7 +232,12 @@ public class SsoCookieVendorControllerTests : IDisposable
         var result = _sut.Get();
 
         // Assert
-        Assert.IsType<NotFoundObjectResult>(result);
+        var contentResult = Assert.IsType<ContentResult>(result);
+        Assert.Equal(404, contentResult.StatusCode);
+        Assert.Equal("text/html", contentResult.ContentType);
+        Assert.Contains("Error code 404", contentResult.Content);
+        Assert.Contains("Please return to the Bitwarden app and try again", contentResult.Content);
+        Assert.DoesNotContain("No SSO cookies found", contentResult.Content);
     }
 
     [Fact]
@@ -231,7 +250,12 @@ public class SsoCookieVendorControllerTests : IDisposable
         var result = _sut.Get();
 
         // Assert
-        Assert.IsType<NotFoundObjectResult>(result);
+        var contentResult = Assert.IsType<ContentResult>(result);
+        Assert.Equal(404, contentResult.StatusCode);
+        Assert.Equal("text/html", contentResult.ContentType);
+        Assert.Contains("Error code 404", contentResult.Content);
+        Assert.Contains("Please return to the Bitwarden app and try again", contentResult.Content);
+        Assert.DoesNotContain("No SSO cookies found", contentResult.Content);
     }
 
     [Fact]
@@ -249,7 +273,12 @@ public class SsoCookieVendorControllerTests : IDisposable
         var result = _sut.Get();
 
         // Assert
-        Assert.IsType<NotFoundObjectResult>(result);
+        var contentResult = Assert.IsType<ContentResult>(result);
+        Assert.Equal(404, contentResult.StatusCode);
+        Assert.Equal("text/html", contentResult.ContentType);
+        Assert.Contains("Error code 404", contentResult.Content);
+        Assert.Contains("Please return to the Bitwarden app and try again", contentResult.Content);
+        Assert.DoesNotContain("No SSO cookies found", contentResult.Content);
     }
 
     [Fact]
@@ -269,7 +298,11 @@ public class SsoCookieVendorControllerTests : IDisposable
         var result = _sut.Get();
 
         // Assert
-        Assert.IsType<BadRequestResult>(result);
+        var contentResult = Assert.IsType<ContentResult>(result);
+        Assert.Equal(400, contentResult.StatusCode);
+        Assert.Equal("text/html", contentResult.ContentType);
+        Assert.Contains("Error code 400", contentResult.Content);
+        Assert.Contains("Please return to the Bitwarden app and try again", contentResult.Content);
     }
 
     [Fact]
@@ -306,7 +339,12 @@ public class SsoCookieVendorControllerTests : IDisposable
         var result = _sut.Get();
 
         // Assert
-        Assert.IsType<NotFoundObjectResult>(result);
+        var contentResult = Assert.IsType<ContentResult>(result);
+        Assert.Equal(404, contentResult.StatusCode);
+        Assert.Equal("text/html", contentResult.ContentType);
+        Assert.Contains("Error code 404", contentResult.Content);
+        Assert.Contains("Please return to the Bitwarden app and try again", contentResult.Content);
+        Assert.DoesNotContain("No SSO cookies found", contentResult.Content);
     }
 
     [Fact]

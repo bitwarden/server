@@ -35,6 +35,34 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         return user;
     }
 
+    public async Task<User?> GetByGatewayCustomerIdAsync(string gatewayCustomerId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<User>(
+                "[dbo].[User_ReadByGatewayCustomerId]",
+                new { GatewayCustomerId = gatewayCustomerId },
+                commandType: CommandType.StoredProcedure);
+
+            UnprotectData(results);
+            return results.FirstOrDefault();
+        }
+    }
+
+    public async Task<User?> GetByGatewaySubscriptionIdAsync(string gatewaySubscriptionId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<User>(
+                "[dbo].[User_ReadByGatewaySubscriptionId]",
+                new { GatewaySubscriptionId = gatewaySubscriptionId },
+                commandType: CommandType.StoredProcedure);
+
+            UnprotectData(results);
+            return results.FirstOrDefault();
+        }
+    }
+
     public async Task<User?> GetByEmailAsync(string email)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -458,7 +486,12 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                     KdfMemory = masterPasswordUnlockData.Kdf.Memory,
                     KdfParallelism = masterPasswordUnlockData.Kdf.Parallelism,
                     RevisionDate = timestamp,
-                    AccountRevisionDate = timestamp
+                    AccountRevisionDate = timestamp,
+                    MasterPasswordSalt = masterPasswordUnlockData.Salt
+                    // TODO (PM-35501): Add SecurityStamp so the rotation done in
+                    // MasterPasswordService.BuildUpdateUserDelegateSetInitialMasterPassword
+                    // is persisted.
+                    // TODO Need to add User.LastPasswordChangeDate here in PM-34905
                 },
                 transaction: transaction,
                 commandType: CommandType.StoredProcedure);
@@ -485,6 +518,31 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             await transaction.RollbackAsync();
             throw;
         }
+    }
+
+    public UpdateUserData UpdateMasterPasswordUnlockData(Guid userId, RegisterFinishData registerFinishData)
+    {
+        return async (connection, transaction) =>
+        {
+            var timestamp = DateTime.UtcNow;
+
+            await connection!.ExecuteAsync(
+                "[dbo].[User_UpdateMasterPasswordUnlockData]",
+                new
+                {
+                    Id = userId,
+                    Kdf = registerFinishData.Kdf.KdfType,
+                    KdfIterations = registerFinishData.Kdf.Iterations,
+                    KdfMemory = registerFinishData.Kdf.Memory,
+                    KdfParallelism = registerFinishData.Kdf.Parallelism,
+                    MasterPasswordSalt = registerFinishData.Salt,
+                    Key = registerFinishData.MasterKeyWrappedUserKey,
+                    RevisionDate = timestamp,
+                    AccountRevisionDate = timestamp,
+                },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+        };
     }
 
     private async Task ProtectDataAndSaveAsync(User user, Func<Task> saveTask)

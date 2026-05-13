@@ -88,6 +88,7 @@ public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<Ap
 
         var resetPasswordRequest = new OrganizationUserResetPasswordRequestModel
         {
+            ResetMasterPassword = true,
             NewMasterPasswordHash = "new-master-password-hash",
             Key = "encrypted-recovery-key"
         };
@@ -115,6 +116,7 @@ public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<Ap
 
         var resetPasswordRequest = new OrganizationUserResetPasswordRequestModel
         {
+            ResetMasterPassword = true,
             NewMasterPasswordHash = "new-master-password-hash",
             Key = "encrypted-recovery-key"
         };
@@ -171,6 +173,7 @@ public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<Ap
 
         var resetPasswordRequest = new OrganizationUserResetPasswordRequestModel
         {
+            ResetMasterPassword = true,
             NewMasterPasswordHash = "new-master-password-hash",
             Key = "encrypted-recovery-key"
         };

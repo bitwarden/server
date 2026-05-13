@@ -1,7 +1,10 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Pricing.Premium;
 using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
@@ -116,5 +119,64 @@ public class SendValidationServiceTests
 
         // Assert - should NOT call pricing service for org sends
         await sutProvider.GetDependency<IPricingClient>().DidNotReceive().GetAvailablePremiumPlan();
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_WhenDisableSendPolicyEnforced_CannotCreateSend(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId)
+    {
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<DisableSendPolicyRequirement>(userId)
+            .Returns(new DisableSendPolicyRequirement { DisableSend = true });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ValidateUserCanSaveAsync(userId, send));
+        Assert.Contains("you are only able to delete an existing Send", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_WhenSendOptionsPolicyProhibitsHidingEmail_CannotHideEmail(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId)
+    {
+        send.HideEmail = true;
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<DisableSendPolicyRequirement>(userId)
+            .Returns(new DisableSendPolicyRequirement { DisableSend = false });
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(userId)
+            .Returns(new SendOptionsPolicyRequirement { DisableHideEmail = true });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ValidateUserCanSaveAsync(userId, send));
+        Assert.Contains("you are not allowed to hide your email address", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_WhenSendOptionsPolicyProhibitsHidingEmail_CanShowEmail(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId)
+    {
+        send.HideEmail = false;
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<DisableSendPolicyRequirement>(userId)
+            .Returns(new DisableSendPolicyRequirement { DisableSend = false });
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(userId)
+            .Returns(new SendOptionsPolicyRequirement { DisableHideEmail = true });
+
+        // No exception implies success
+        await sutProvider.Sut.ValidateUserCanSaveAsync(userId, send);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_WhenPoliciesDoNotApply_Success(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId)
+    {
+        send.HideEmail = true;
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<DisableSendPolicyRequirement>(userId)
+            .Returns(new DisableSendPolicyRequirement { DisableSend = false });
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(userId)
+            .Returns(new SendOptionsPolicyRequirement { DisableHideEmail = false });
+
+        // No exception implies success
+        await sutProvider.Sut.ValidateUserCanSaveAsync(userId, send);
     }
 }

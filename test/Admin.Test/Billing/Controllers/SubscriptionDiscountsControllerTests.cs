@@ -456,4 +456,276 @@ public class SubscriptionDiscountsControllerTests
         Assert.False(sutProvider.Sut.ModelState.IsValid);
         Assert.Contains("error occurred", sutProvider.Sut.ModelState[string.Empty]!.Errors[0].ErrorMessage);
     }
+
+    [Theory, BitAutoData]
+    public async Task Edit_Get_ReturnsViewWithModel(
+        SubscriptionDiscount discount,
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByIdAsync(discount.Id)
+            .Returns(discount);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .ListProductsAsync(Arg.Any<ProductListOptions>())
+            .Returns(new List<Stripe.Product>());
+
+        var result = await sutProvider.Sut.Edit(discount.Id);
+
+        Assert.IsType<ViewResult>(result);
+        var viewResult = (ViewResult)result;
+        var model = Assert.IsType<EditSubscriptionDiscountModel>(viewResult.Model);
+        Assert.Equal(discount.Id, model.Id);
+        Assert.Equal(discount.StripeCouponId, model.StripeCouponId);
+        Assert.Equal(discount.StartDate, model.StartDate);
+        Assert.Equal(discount.EndDate, model.EndDate);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Edit_Get_WithStripeProducts_PopulatesAppliesToProducts(
+        SubscriptionDiscount discount,
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        discount.StripeProductIds = new List<string> { "prod_1", "prod_2" };
+        var stripeProducts = new List<Stripe.Product>
+        {
+            new() { Id = "prod_1", Name = "Product One" },
+            new() { Id = "prod_2", Name = "Product Two" }
+        };
+
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByIdAsync(discount.Id)
+            .Returns(discount);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .ListProductsAsync(Arg.Any<ProductListOptions>())
+            .Returns(stripeProducts);
+
+        var result = await sutProvider.Sut.Edit(discount.Id);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<EditSubscriptionDiscountModel>(viewResult.Model);
+        Assert.NotNull(model.AppliesToProducts);
+        Assert.Equal(2, model.AppliesToProducts.Count);
+        Assert.Equal("Product One", model.AppliesToProducts["prod_1"]);
+        Assert.Equal("Product Two", model.AppliesToProducts["prod_2"]);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Edit_Get_WhenStripeProductLookupFails_StillReturnsView(
+        SubscriptionDiscount discount,
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        discount.StripeProductIds = new List<string> { "prod_1" };
+
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByIdAsync(discount.Id)
+            .Returns(discount);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .ListProductsAsync(Arg.Any<ProductListOptions>())
+            .Throws(new StripeException());
+
+        var result = await sutProvider.Sut.Edit(discount.Id);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<EditSubscriptionDiscountModel>(viewResult.Model);
+        Assert.Null(model.AppliesToProducts);
+        Assert.False(sutProvider.Sut.ModelState.IsValid);
+        Assert.Contains("Failed to fetch", sutProvider.Sut.ModelState[string.Empty]!.Errors[0].ErrorMessage);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Edit_Get_WhenNotFound_ReturnsNotFound(
+        Guid id,
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByIdAsync(id)
+            .Returns((SubscriptionDiscount?)null);
+
+        var result = await sutProvider.Sut.Edit(id);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Edit_Post_ValidModel_UpdatesBitwardenFieldsAndRedirects(
+        SubscriptionDiscount discount,
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        var model = new EditSubscriptionDiscountModel
+        {
+            StartDate = DateTime.UtcNow.Date.AddDays(1),
+            EndDate = DateTime.UtcNow.Date.AddMonths(2),
+            RestrictToNewUsersOnly = true
+        };
+
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByIdAsync(discount.Id)
+            .Returns(discount);
+
+        var tempData = new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+        sutProvider.Sut.TempData = tempData;
+
+        var result = await sutProvider.Sut.Edit(discount.Id, model);
+
+        Assert.IsType<RedirectToActionResult>(result);
+        var redirectResult = (RedirectToActionResult)result;
+        Assert.Equal(nameof(SubscriptionDiscountsController.Index), redirectResult.ActionName);
+
+        await sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<SubscriptionDiscount>(d =>
+                d.StartDate == model.StartDate &&
+                d.EndDate == model.EndDate &&
+                d.AudienceType == DiscountAudienceType.UserHasNoPreviousSubscriptions));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Edit_Post_ValidModel_DoesNotUpdateStripeFields(
+        SubscriptionDiscount discount,
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        var originalStripeCouponId = discount.StripeCouponId;
+        var originalPercentOff = discount.PercentOff;
+        var originalAmountOff = discount.AmountOff;
+        var originalDuration = discount.Duration;
+
+        var model = new EditSubscriptionDiscountModel
+        {
+            StartDate = DateTime.UtcNow.Date,
+            EndDate = DateTime.UtcNow.Date.AddMonths(1),
+            RestrictToNewUsersOnly = false
+        };
+
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByIdAsync(discount.Id)
+            .Returns(discount);
+
+        var tempData = new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+        sutProvider.Sut.TempData = tempData;
+
+        await sutProvider.Sut.Edit(discount.Id, model);
+
+        await sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<SubscriptionDiscount>(d =>
+                d.StripeCouponId == originalStripeCouponId &&
+                d.PercentOff == originalPercentOff &&
+                d.AmountOff == originalAmountOff &&
+                d.Duration == originalDuration));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Edit_Post_InvalidModelState_ReturnsView(
+        Guid id,
+        EditSubscriptionDiscountModel model,
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        sutProvider.Sut.ModelState.AddModelError(nameof(model.EndDate), "End Date must be on or after Start Date.");
+
+        var result = await sutProvider.Sut.Edit(id, model);
+
+        Assert.IsType<ViewResult>(result);
+        await sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .DidNotReceive()
+            .ReplaceAsync(Arg.Any<SubscriptionDiscount>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Edit_Post_RepositoryThrowsException_ReturnsViewWithError(
+        SubscriptionDiscount discount,
+        EditSubscriptionDiscountModel model,
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByIdAsync(discount.Id)
+            .Returns(discount);
+
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .ReplaceAsync(Arg.Any<SubscriptionDiscount>())
+            .Throws(new Exception("Database error"));
+
+        var result = await sutProvider.Sut.Edit(discount.Id, model);
+
+        Assert.IsType<ViewResult>(result);
+        Assert.False(sutProvider.Sut.ModelState.IsValid);
+        Assert.Contains("error occurred", sutProvider.Sut.ModelState[string.Empty]!.Errors[0].ErrorMessage);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Edit_Post_WhenNotFound_ReturnsNotFound(
+        Guid id,
+        EditSubscriptionDiscountModel model,
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByIdAsync(id)
+            .Returns((SubscriptionDiscount?)null);
+
+        var result = await sutProvider.Sut.Edit(id, model);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Delete_Post_DeletesDiscountAndRedirectsToIndex(
+        SubscriptionDiscount discount,
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByIdAsync(discount.Id)
+            .Returns(discount);
+
+        var tempData = new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+        sutProvider.Sut.TempData = tempData;
+
+        var result = await sutProvider.Sut.Delete(discount.Id);
+
+        Assert.IsType<RedirectToActionResult>(result);
+        var redirectResult = (RedirectToActionResult)result;
+        Assert.Equal(nameof(SubscriptionDiscountsController.Index), redirectResult.ActionName);
+
+        await sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .Received(1)
+            .DeleteAsync(discount);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Delete_Post_RepositoryThrowsException_RedirectsToEditWithError(
+        SubscriptionDiscount discount,
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByIdAsync(discount.Id)
+            .Returns(discount);
+
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .DeleteAsync(discount)
+            .Throws(new Exception("Database error"));
+
+        var tempData = new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+        sutProvider.Sut.TempData = tempData;
+
+        var result = await sutProvider.Sut.Delete(discount.Id);
+
+        var redirectResult = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(SubscriptionDiscountsController.Edit), redirectResult.ActionName);
+        Assert.Contains("attempting to delete", sutProvider.Sut.TempData["Error"]!.ToString());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Delete_Post_WhenNotFound_ReturnsNotFound(
+        Guid id,
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByIdAsync(id)
+            .Returns((SubscriptionDiscount?)null);
+
+        var result = await sutProvider.Sut.Delete(id);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
 }

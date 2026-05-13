@@ -63,6 +63,9 @@ SELECT
     [SyncSeats],
     [UseAutomaticUserConfirmation],
     [UsePhishingBlocker],
-    [UseDisableSmAdsForUsers]
+    [UseDisableSmAdsForUsers],
+    [UseMyItems],
+    [ExemptFromBillingAutomation],
+    [UseInviteLinks]
 FROM
     [dbo].[Organization]

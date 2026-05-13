@@ -60,6 +60,19 @@ public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEme
         }
     }
 
+    public async Task<ICollection<EmergencyAccessDetails>> GetManyDetailsByUserIdsAsync(ICollection<Guid> userIds)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<EmergencyAccessDetails>(
+                "[dbo].[EmergencyAccessDetails_ReadManyByUserIds]",
+                new { UserIds = userIds.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
     public async Task<EmergencyAccessDetails?> GetDetailsByIdGrantorIdAsync(Guid id, Guid grantorId)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -67,6 +80,19 @@ public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEme
             var results = await connection.QueryAsync<EmergencyAccessDetails>(
                 "[dbo].[EmergencyAccessDetails_ReadByIdGrantorId]",
                 new { Id = id, GrantorId = grantorId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.FirstOrDefault();
+        }
+    }
+
+    public async Task<EmergencyAccessDetails?> GetDetailsByIdAsync(Guid id)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<EmergencyAccessDetails>(
+                "[dbo].[EmergencyAccessDetails_ReadById]",
+                new { Id = id },
                 commandType: CommandType.StoredProcedure);
 
             return results.FirstOrDefault();

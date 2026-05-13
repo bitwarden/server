@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Data.Common;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -10,7 +11,6 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
-using LinqToDB.Tools;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -29,6 +29,30 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         : base(serviceScopeFactory, mapper, context => context.Organizations)
     {
         _logger = logger;
+    }
+
+    public async Task<Core.AdminConsole.Entities.Organization> GetByGatewayCustomerIdAsync(string gatewayCustomerId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var organization = await GetDbSet(dbContext)
+                .Where(e => e.GatewayCustomerId == gatewayCustomerId)
+                .FirstOrDefaultAsync();
+            return organization;
+        }
+    }
+
+    public async Task<Core.AdminConsole.Entities.Organization> GetByGatewaySubscriptionIdAsync(string gatewaySubscriptionId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var organization = await GetDbSet(dbContext)
+                .Where(e => e.GatewaySubscriptionId == gatewaySubscriptionId)
+                .FirstOrDefaultAsync();
+            return organization;
+        }
     }
 
     public async Task<Core.AdminConsole.Entities.Organization> GetByIdentifierAsync(string identifier)
@@ -115,10 +139,26 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 UseAdminSponsoredFamilies = e.UseAdminSponsoredFamilies,
                 UseAutomaticUserConfirmation = e.UseAutomaticUserConfirmation,
                 UseDisableSmAdsForUsers = e.UseDisableSmAdsForUsers,
-                UsePhishingBlocker = e.UsePhishingBlocker
+                UsePhishingBlocker = e.UsePhishingBlocker,
+                UseMyItems = e.UseMyItems,
+                UseInviteLinks = e.UseInviteLinks
             }).ToListAsync();
         }
     }
+
+#nullable enable
+    public async Task<OrganizationAbility?> GetAbilityAsync(Guid organizationId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+
+        var dbContext = GetDatabaseContext(scope);
+
+        return await GetDbSet(dbContext)
+            .Where(e => e.Id == organizationId)
+            .Select(e => new OrganizationAbility(e))
+            .SingleOrDefaultAsync();
+    }
+#nullable disable
 
     public async Task<ICollection<Core.AdminConsole.Entities.Organization>> SearchUnassignedToProviderAsync(string name, string ownerEmail, int skip, int take)
     {
@@ -137,7 +177,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 
         var query =
             from o in dbContext.Organizations
-            where o.PlanType.NotIn(disallowedPlanTypes) &&
+            where !disallowedPlanTypes.Contains(o.PlanType) &&
                   !dbContext.ProviderOrganizations.Any(po => po.OrganizationId == o.Id) &&
                   (string.IsNullOrWhiteSpace(name) || EF.Functions.Like(o.Name, $"%{name}%"))
             select o;
@@ -226,6 +266,9 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             await dbContext.NotificationStatuses.Where(ns => ns.Notification.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
             await dbContext.Notifications.Where(n => n.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+
+            await dbContext.Sends.Where(s => s.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
 
             // The below section are 3 SPROCS in SQL Server but are only called by here
@@ -360,7 +403,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                     organization.Seats > 0 &&
                     organization.Status == OrganizationStatusType.Created &&
                     !organization.UseSecretsManager &&
-                    organization.PlanType.In(planTypes)
+                    planTypes.Contains(organization.PlanType)
                 select organization;
 
             return await query.ToArrayAsync();
@@ -439,5 +482,44 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .SetProperty(o => o.Seats, o => o.Seats + increaseAmount)
                 .SetProperty(o => o.SyncSeats, true)
                 .SetProperty(o => o.RevisionDate, requestDate));
+    }
+
+    public async Task InitializeOrganizationAsync(Core.AdminConsole.Entities.Organization organization, Func<DbConnection, DbTransaction, Task> confirmOwnerAction)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var connection = dbContext.Database.GetDbConnection();
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        await dbContext.Database.UseTransactionAsync(transaction);
+
+        try
+        {
+            var efOrganization = await dbContext.Organizations.FindAsync(organization.Id);
+            if (efOrganization is null)
+            {
+                throw new InvalidOperationException($"Organization {organization.Id} was not found during initialization.");
+            }
+
+            efOrganization.Enabled = organization.Enabled;
+            efOrganization.Status = organization.Status;
+            efOrganization.PublicKey = organization.PublicKey;
+            efOrganization.PrivateKey = organization.PrivateKey;
+            efOrganization.RevisionDate = organization.RevisionDate;
+
+            await dbContext.SaveChangesAsync();
+
+            await confirmOwnerAction(connection, transaction);
+
+            await transaction.CommitAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to initialize organization. Rolling back transaction.");
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 }

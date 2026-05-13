@@ -81,7 +81,7 @@ public interface INonAnonymousSendCommand
         if (send.MaxAccessCount.GetValueOrDefault(int.MaxValue) <= send.AccessCount ||
             send.ExpirationDate.GetValueOrDefault(DateTime.MaxValue) < now ||
             send.Disabled ||
-            send.DeletionDate < now)
+            send.DeletionDate <= now)
         {
             return false;
         }

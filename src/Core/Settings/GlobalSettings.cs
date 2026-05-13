@@ -1,6 +1,8 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Globalization;
+
 using Bit.Core.Auth.Settings;
 
 namespace Bit.Core.Settings;
@@ -15,12 +17,14 @@ public class GlobalSettings : IGlobalSettings
         BaseServiceUri = new BaseServiceUriSettings(this);
         Attachment = new FileStorageSettings(this, "attachments", "attachments");
         Send = new FileStorageSettings(this, "attachments/send", "attachments/send");
+        OrganizationReport = new FileStorageSettings(this, "attachments/reports", "attachments/reports");
         DataProtection = new DataProtectionSettings(this);
     }
 
     public bool SelfHosted { get; set; }
     public bool LiteDeployment { get; set; }
     public virtual string KnownProxies { get; set; }
+    public virtual string KnownNetworks { get; set; }
     public virtual string SiteName { get; set; }
     public virtual string ProjectName { get; set; }
     public virtual string LicenseDirectory
@@ -34,6 +38,7 @@ public class GlobalSettings : IGlobalSettings
         set => _mailTemplateDirectory = value;
     }
     public string LicenseCertificatePassword { get; set; }
+    public string LicenseCertificatePath { get; set; }
     public virtual string PushRelayBaseUri { get; set; }
     public virtual string InternalIdentityKey { get; set; }
     public virtual string OidcIdentityClientKey { get; set; }
@@ -62,6 +67,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
     public virtual IFileStorageSettings Attachment { get; set; }
     public virtual FileStorageSettings Send { get; set; }
+    public virtual FileStorageSettings OrganizationReport { get; set; }
     public virtual IdentityServerSettings IdentityServer { get; set; } = new IdentityServerSettings();
     public virtual DataProtectionSettings DataProtection { get; set; }
     public virtual NotificationHubPoolSettings NotificationHubPool { get; set; } = new();
@@ -104,7 +110,7 @@ public class GlobalSettings : IGlobalSettings
         {
             return null;
         }
-        return string.Format("{0}/{1}", BaseServiceUri.Vault, name);
+        return string.Format(CultureInfo.InvariantCulture, "{0}/{1}", BaseServiceUri.Vault, name);
     }
 
     public string BuildInternalUri(string explicitValue, string name)
@@ -117,7 +123,7 @@ public class GlobalSettings : IGlobalSettings
         {
             return null;
         }
-        return string.Format("http://{0}:5000", name);
+        return string.Format(CultureInfo.InvariantCulture, "http://{0}:5000", name);
     }
 
     public string BuildDirectory(string explicitValue, string appendedPath)
@@ -143,6 +149,7 @@ public class GlobalSettings : IGlobalSettings
         private string _notifications;
         private string _sso;
         private string _scim;
+        private string _fillAssistRules;
         private string _internalApi;
         private string _internalIdentity;
         private string _internalAdmin;
@@ -192,6 +199,13 @@ public class GlobalSettings : IGlobalSettings
         {
             get => _globalSettings.BuildExternalUri(_scim, "scim");
             set => _scim = value;
+        }
+        // Simple passthrough — not derived from the Vault URL because
+        // this points to an external resource, not a Bitwarden service.
+        public string FillAssistRules
+        {
+            get => _fillAssistRules;
+            set => _fillAssistRules = value;
         }
 
         public string InternalNotifications
@@ -258,7 +272,7 @@ public class GlobalSettings : IGlobalSettings
                     _readOnlyConnectionString = null;
                 }
 
-                _connectionString = value.Trim('"');
+                _connectionString = value?.Trim('"');
             }
         }
 
@@ -266,13 +280,13 @@ public class GlobalSettings : IGlobalSettings
         {
             get => string.IsNullOrWhiteSpace(_readOnlyConnectionString) ?
                 _connectionString : _readOnlyConnectionString;
-            set => _readOnlyConnectionString = value.Trim('"');
+            set => _readOnlyConnectionString = value?.Trim('"');
         }
 
         public string JobSchedulerConnectionString
         {
             get => _jobSchedulerConnectionString;
-            set => _jobSchedulerConnectionString = value.Trim('"');
+            set => _jobSchedulerConnectionString = value?.Trim('"');
         }
     }
 
@@ -324,19 +338,19 @@ public class GlobalSettings : IGlobalSettings
             public string ConnectionString
             {
                 get => _connectionString;
-                set => _connectionString = value.Trim('"');
+                set => _connectionString = value?.Trim('"');
             }
 
             public string EventTopicName
             {
                 get => _eventTopicName;
-                set => _eventTopicName = value.Trim('"');
+                set => _eventTopicName = value?.Trim('"');
             }
 
             public string IntegrationTopicName
             {
                 get => _integrationTopicName;
-                set => _integrationTopicName = value.Trim('"');
+                set => _integrationTopicName = value?.Trim('"');
             }
         }
 
@@ -371,27 +385,27 @@ public class GlobalSettings : IGlobalSettings
             public string HostName
             {
                 get => _hostName;
-                set => _hostName = value.Trim('"');
+                set => _hostName = value?.Trim('"');
             }
             public string Username
             {
                 get => _username;
-                set => _username = value.Trim('"');
+                set => _username = value?.Trim('"');
             }
             public string Password
             {
                 get => _password;
-                set => _password = value.Trim('"');
+                set => _password = value?.Trim('"');
             }
             public string EventExchangeName
             {
                 get => _eventExchangeName;
-                set => _eventExchangeName = value.Trim('"');
+                set => _eventExchangeName = value?.Trim('"');
             }
             public string IntegrationExchangeName
             {
                 get => _integrationExchangeName;
-                set => _integrationExchangeName = value.Trim('"');
+                set => _integrationExchangeName = value?.Trim('"');
             }
         }
     }
@@ -421,7 +435,7 @@ public class GlobalSettings : IGlobalSettings
         public string ConnectionString
         {
             get => _connectionString;
-            set => _connectionString = value.Trim('"');
+            set => _connectionString = value?.Trim('"');
         }
     }
 
@@ -444,7 +458,7 @@ public class GlobalSettings : IGlobalSettings
         public string ConnectionString
         {
             get => _connectionString;
-            set => _connectionString = value.Trim('"');
+            set => _connectionString = value?.Trim('"');
         }
 
         public string BaseDirectory
@@ -534,25 +548,38 @@ public class GlobalSettings : IGlobalSettings
         public bool ApplyAbsoluteExpirationOnRefreshToken { get; set; } = false;
     }
 
+#nullable enable
     public class DataProtectionSettings
     {
         private readonly GlobalSettings _globalSettings;
 
-        private string _directory;
+        private string? _directory;
 
         public DataProtectionSettings(GlobalSettings globalSettings)
         {
             _globalSettings = globalSettings;
         }
 
-        public string CertificateThumbprint { get; set; }
-        public string CertificatePassword { get; set; }
+        public string? CertificateThumbprint { get; set; }
+
+        public string BlobName { get; set; } = "dataprotection.pfx";
+
+        public string? CertificatePassword { get; set; }
         public string Directory
         {
             get => _globalSettings.BuildDirectory(_directory, "/core/aspnet-dataprotection");
             set => _directory = value;
         }
+
+        public CertificateInfo[] UnprotectCertificates { get; set; } = [];
+
+        public class CertificateInfo
+        {
+            public required string FileName { get; set; }
+            public required string Password { get; set; }
+        }
     }
+#nullable disable
 
     public class NotificationsSettings : ConnectionStringSettings
     {
@@ -695,6 +722,8 @@ public class GlobalSettings : IGlobalSettings
     {
         public string ApiKey { get; set; }
         public int MaxNetworkRetries { get; set; } = 2;
+        public string PremiumCheckoutSuccessUrl { get; set; }
+        public string PremiumCheckoutCancelUrl { get; set; }
     }
 
     public class DistributedIpRateLimitingSettings

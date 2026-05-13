@@ -17,7 +17,180 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.Organizat
 
 public class OrganizationUserRepositoryTests
 {
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
+    public async Task GetCountByOnlyOwnerAsync_WhenUserIsNotInAnyOrg_ReturnsZero(
+        IOrganizationUserRepository organizationUserRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+
+        // Act
+        var count = await organizationUserRepository.GetCountByOnlyOwnerAsync(user.Id);
+
+        // Assert
+        Assert.Equal(0, count);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetCountByOnlyOwnerAsync_WhenUserIsSoleConfirmedOwner_ReturnsOne(
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        var org = await organizationRepository.CreateTestOrganizationAsync();
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = org.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Owner,
+        });
+
+        // Act
+        var count = await organizationUserRepository.GetCountByOnlyOwnerAsync(user.Id);
+
+        // Assert
+        Assert.Equal(1, count);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetCountByOnlyOwnerAsync_WhenOrgHasMultipleConfirmedOwners_ReturnsZero(
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        var otherUser = await userRepository.CreateTestUserAsync();
+        var org = await organizationRepository.CreateTestOrganizationAsync();
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = org.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Owner,
+        });
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = org.Id,
+            UserId = otherUser.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Owner,
+        });
+
+        // Act
+        var count = await organizationUserRepository.GetCountByOnlyOwnerAsync(user.Id);
+
+        // Assert
+        Assert.Equal(0, count);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetCountByOnlyOwnerAsync_WhenUserIsSoleOwnerInOneOrgAndSharedOwnerInAnother_ReturnsOne(
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        var otherUser = await userRepository.CreateTestUserAsync();
+
+        // Org1: user is the sole confirmed owner
+        var org1 = await organizationRepository.CreateTestOrganizationAsync();
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = org1.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Owner,
+        });
+
+        // Org2: user shares ownership with another confirmed owner
+        var org2 = await organizationRepository.CreateTestOrganizationAsync();
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = org2.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Owner,
+        });
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = org2.Id,
+            UserId = otherUser.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Owner,
+        });
+
+        // Act
+        var count = await organizationUserRepository.GetCountByOnlyOwnerAsync(user.Id);
+
+        // Assert — only org1 qualifies; org2 is excluded because it has two owners
+        Assert.Equal(1, count);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetCountByOnlyOwnerAsync_WhenOwnerIsNotConfirmed_ReturnsZero(
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        var org = await organizationRepository.CreateTestOrganizationAsync();
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = org.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Invited,
+            Type = OrganizationUserType.Owner,
+        });
+
+        // Act
+        var count = await organizationUserRepository.GetCountByOnlyOwnerAsync(user.Id);
+
+        // Assert
+        Assert.Equal(0, count);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetCountByOnlyOwnerAsync_WhenUserIsSoleOwnerOfMultipleOrgs_ReturnsCorrectCount(
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        var org1 = await organizationRepository.CreateTestOrganizationAsync();
+        var org2 = await organizationRepository.CreateTestOrganizationAsync();
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = org1.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Owner,
+        });
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = org2.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Owner,
+        });
+
+        // Act
+        var count = await organizationUserRepository.GetCountByOnlyOwnerAsync(user.Id);
+
+        // Assert
+        Assert.Equal(2, count);
+    }
+
+
+
+    [Theory, DatabaseData]
     public async Task DeleteAsync_Works(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository)
@@ -52,7 +225,7 @@ public class OrganizationUserRepositoryTests
         Assert.NotEqual(newUser.AccountRevisionDate, user.AccountRevisionDate);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task DeleteManyAsync_Migrates_UserDefaultCollection(IUserRepository userRepository,
         ICollectionRepository collectionRepository,
         IOrganizationRepository organizationRepository,
@@ -154,7 +327,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(user2.Email, updatedCollection2.DefaultUserCollectionEmail);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task DeleteAsync_Migrates_UserDefaultCollection(IUserRepository userRepository,
         ICollectionRepository collectionRepository,
         IOrganizationRepository organizationRepository,
@@ -217,7 +390,7 @@ public class OrganizationUserRepositoryTests
     }
 
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task DeleteManyAsync_Works(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository)
@@ -276,7 +449,7 @@ public class OrganizationUserRepositoryTests
         Assert.NotEqual(updatedUser2.AccountRevisionDate, user2.AccountRevisionDate);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetManyAccountRecoveryDetailsByOrganizationUserAsync_Works(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository)
@@ -290,7 +463,8 @@ public class OrganizationUserRepositoryTests
             Kdf = KdfType.PBKDF2_SHA256,
             KdfIterations = 1,
             KdfMemory = 2,
-            KdfParallelism = 3
+            KdfParallelism = 3,
+            MasterPasswordSalt = "master-salt1"
         });
 
         var user2 = await userRepository.CreateAsync(new User
@@ -302,7 +476,8 @@ public class OrganizationUserRepositoryTests
             Kdf = KdfType.Argon2id,
             KdfIterations = 4,
             KdfMemory = 5,
-            KdfParallelism = 6
+            KdfParallelism = 6,
+            MasterPasswordSalt = "master-salt2"
         });
 
         var organization = await organizationRepository.CreateAsync(new Organization
@@ -352,7 +527,8 @@ public class OrganizationUserRepositoryTests
             r.KdfMemory == 2 &&
             r.KdfParallelism == 3 &&
             r.ResetPasswordKey == "resetpasswordkey1" &&
-            r.EncryptedPrivateKey == "privatekey");
+            r.EncryptedPrivateKey == "privatekey" &&
+            r.MasterPasswordSalt == "master-salt1");
         Assert.Contains(recoveryDetails, r =>
             r.OrganizationUserId == orgUser2.Id &&
             r.Kdf == KdfType.Argon2id &&
@@ -360,10 +536,11 @@ public class OrganizationUserRepositoryTests
             r.KdfMemory == 5 &&
             r.KdfParallelism == 6 &&
             r.ResetPasswordKey == "resetpasswordkey2" &&
-            r.EncryptedPrivateKey == "privatekey");
+            r.EncryptedPrivateKey == "privatekey" &&
+            r.MasterPasswordSalt == "master-salt2");
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetManyDetailsByOrganizationAsync_WithIncludeCollections_ExcludesDefaultCollections(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -444,7 +621,7 @@ public class OrganizationUserRepositoryTests
         Assert.DoesNotContain(orgUserWithCollections.Collections, c => c.Id == defaultCollection.Id);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetDetailsByIdWithSharedCollectionsAsync_ExcludesDefaultCollections(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -521,7 +698,7 @@ public class OrganizationUserRepositoryTests
         Assert.DoesNotContain(collections, c => c.Id == defaultCollection.Id);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetManyDetailsByUserAsync_Works(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -614,6 +791,8 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(organization.UseOrganizationDomains, result.UseOrganizationDomains);
         Assert.Equal(organization.UseAdminSponsoredFamilies, result.UseAdminSponsoredFamilies);
         Assert.Equal(organization.UseAutomaticUserConfirmation, result.UseAutomaticUserConfirmation);
+        Assert.Equal(organization.UseInviteLinks, result.UseInviteLinks);
+        Assert.Equal(orgUser1.RevocationReason, result.RevocationReason);
     }
 
     [Theory, DatabaseData]
@@ -676,7 +855,7 @@ public class OrganizationUserRepositoryTests
         Assert.Null(orgWithoutSsoDetails.SsoConfig);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task CreateManyAsync_NoId_Works(IOrganizationRepository organizationRepository,
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository)
@@ -710,7 +889,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(createdOrgUserIds.ToHashSet(), readOrgUserIds.ToHashSet());
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task CreateManyAsync_WithId_Works(IOrganizationRepository organizationRepository,
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository)
@@ -745,7 +924,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(createdOrgUserIds.ToHashSet(), readOrgUserIds.ToHashSet());
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task CreateManyAsync_WithCollectionAndGroup_SaveSuccessfully(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
@@ -936,7 +1115,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(group3.Id, group3Database.First());
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetManyDetailsByOrganizationAsync_vNext_WithoutGroupsAndCollections_ReturnsBasicUserDetails(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -999,10 +1178,11 @@ public class OrganizationUserRepositoryTests
             Id = CoreHelpers.GenerateComb(),
             OrganizationId = organization.Id,
             UserId = user2.Id,
-            Status = OrganizationUserStatusType.Invited,
+            Status = OrganizationUserStatusType.Revoked,
             Type = OrganizationUserType.User,
             ResetPasswordKey = "resetpasswordkey2",
-            AccessSecretsManager = true
+            AccessSecretsManager = true,
+            RevocationReason = RevocationReason.TwoFactorPolicyNonCompliance
         });
 
         var responseModel = await organizationUserRepository.GetManyDetailsByOrganizationAsync_vNext(organization.Id, includeGroups: false, includeSharedCollections: false);
@@ -1018,6 +1198,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(orgUser1.Type, user1Result.Type);
         Assert.Equal(organization.Id, user1Result.OrganizationId);
         Assert.Equal(user1.Id, user1Result.UserId);
+        Assert.Null(user1Result.RevocationReason);
         Assert.Empty(user1Result.Groups);
         Assert.Empty(user1Result.Collections);
 
@@ -1029,11 +1210,12 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(orgUser2.Type, user2Result.Type);
         Assert.Equal(organization.Id, user2Result.OrganizationId);
         Assert.Equal(user2.Id, user2Result.UserId);
+        Assert.Equal(RevocationReason.TwoFactorPolicyNonCompliance, user2Result.RevocationReason);
         Assert.Empty(user2Result.Groups);
         Assert.Empty(user2Result.Collections);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetManyDetailsByOrganizationAsync_vNext_WithGroupsAndCollections_ReturnsUserDetailsWithBoth(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -1184,7 +1366,7 @@ public class OrganizationUserRepositoryTests
         Assert.DoesNotContain(user1Result.Collections, c => c.Id == defaultUserCollection.Id);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task DeleteAsync_WithNullEmail_DoesNotSetDefaultUserCollectionEmail(IUserRepository userRepository,
         ICollectionRepository collectionRepository,
         IOrganizationRepository organizationRepository,
@@ -1241,7 +1423,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(user.Email, updatedCollection.DefaultUserCollectionEmail);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task DeleteAsync_WithEmptyEmail_DoesNotSetDefaultUserCollectionEmail(IUserRepository userRepository,
         ICollectionRepository collectionRepository,
         IOrganizationRepository organizationRepository,
@@ -1298,7 +1480,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(user.Email, updatedCollection.DefaultUserCollectionEmail);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task ReplaceAsync_PreservesDefaultCollections_WhenUpdatingCollectionAccess(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -1389,10 +1571,6 @@ public class OrganizationUserRepositoryTests
         Assert.NotNull(updatedUser);
         Assert.Equal(OrganizationUserStatusType.Confirmed, updatedUser.Status);
         Assert.Equal(key, updatedUser.Key);
-
-        // Annul
-        await organizationRepository.DeleteAsync(organization);
-        await userRepository.DeleteAsync(user);
     }
 
     [Theory, DatabaseData]
@@ -1422,10 +1600,6 @@ public class OrganizationUserRepositoryTests
         var unchangedUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
         Assert.NotNull(unchangedUser);
         Assert.Equal(OrganizationUserStatusType.Confirmed, unchangedUser.Status);
-
-        // Annul
-        await organizationRepository.DeleteAsync(organization);
-        await userRepository.DeleteAsync(user);
     }
 
     [Theory, DatabaseData]
@@ -1456,10 +1630,6 @@ public class OrganizationUserRepositoryTests
         var finalUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
         Assert.NotNull(finalUser);
         Assert.Equal(OrganizationUserStatusType.Confirmed, finalUser.Status);
-
-        // Annul
-        await organizationRepository.DeleteAsync(organization);
-        await userRepository.DeleteAsync(user);
     }
 
     [Theory, DatabaseData]
@@ -1479,5 +1649,33 @@ public class OrganizationUserRepositoryTests
 
         // Assert
         Assert.False(result);
+    }
+
+    [Theory, DatabaseData]
+    public async Task UpdateGroupsAsync_BumpsGroupRevisionDate(
+        IGroupRepository groupRepository,
+        IUserRepository userRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        var org = await organizationRepository.CreateTestOrganizationAsync();
+        var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(org, user);
+        var group1 = await groupRepository.CreateTestGroupAsync(org, "group1");
+        var group2 = await groupRepository.CreateTestGroupAsync(org, "group2");
+
+        var expectedRevisionDate = DateTime.UtcNow.AddMinutes(10);
+
+        // Act
+        await organizationUserRepository.UpdateGroupsAsync(orgUser.Id, [group1.Id, group2.Id], expectedRevisionDate);
+
+        // Assert
+        var actualGroup1 = await groupRepository.GetByIdAsync(group1.Id);
+        var actualGroup2 = await groupRepository.GetByIdAsync(group2.Id);
+        Assert.NotNull(actualGroup1);
+        Assert.NotNull(actualGroup2);
+        Assert.Equal(expectedRevisionDate, actualGroup1.RevisionDate, TimeSpan.FromMilliseconds(10));
+        Assert.Equal(expectedRevisionDate, actualGroup2.RevisionDate, TimeSpan.FromMilliseconds(10));
     }
 }

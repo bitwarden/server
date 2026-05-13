@@ -70,6 +70,8 @@ public class Startup
         services.AddScoped<IPaymentSucceededHandler, PaymentSucceededHandler>();
         services.AddScoped<IInvoiceFinalizedHandler, InvoiceFinalizedHandler>();
         services.AddScoped<ISetupIntentSucceededHandler, SetupIntentSucceededHandler>();
+        services.AddScoped<ICouponDeletedHandler, CouponDeletedHandler>();
+        services.AddScoped<ICheckoutSessionCompletedHandler, CheckoutSessionCompletedHandler>();
         services.AddScoped<IStripeEventProcessor, StripeEventProcessor>();
 
         // Identity

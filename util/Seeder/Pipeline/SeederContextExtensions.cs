@@ -19,4 +19,18 @@ internal static class SeederContextExtensions
 
     internal static ISeedReader GetSeedReader(this SeederContext context) =>
         context.Services.GetRequiredService<ISeedReader>();
+
+    internal static SeederSettings GetSettings(this SeederContext context) =>
+        context.Services.GetRequiredService<SeederSettings>();
+
+    internal static string GetPassword(this SeederContext context) =>
+        context.GetSettings().Password ?? Factories.UserSeeder.DefaultPassword;
+
+    internal static int GetKdfIterations(this SeederContext context) =>
+        context.GetSettings().KdfIterations;
 }
+
+/// <summary>
+/// Runtime settings for a seeding operation, registered in DI.
+/// </summary>
+internal sealed record SeederSettings(string? Password = null, int KdfIterations = 5_000);

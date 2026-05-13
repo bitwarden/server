@@ -124,7 +124,12 @@ public class AutoConfirmPushNotification
     public Guid OrganizationId { get; set; }
 
     /// <summary>
-    /// The user who accepted the organization invite (will be auto-confirmed)
+    /// The user id who accepted the organization invite (Needed for key-exchange on the client)
     /// </summary>
     public Guid TargetUserId { get; set; }
+    ///
+    /// <summary>
+    /// The organization user id who accepted the organization invite (will be auto-confirmed)
+    /// </summary>
+    public Guid TargetOrganizationUserId { get; set; }
 }

@@ -15,4 +15,10 @@ public class UserDecryptionResponseModel
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public WebAuthnPrfDecryptionOption[]? WebAuthnPrfOptions { get; set; }
+
+    /// <summary>
+    /// V2 upgrade token returned when available, allowing unlock after V1→V2 upgrade.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public V2UpgradeTokenResponseModel? V2UpgradeToken { get; set; }
 }

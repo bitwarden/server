@@ -1,110 +1,13 @@
-﻿using System.Net;
-using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Models.Mail.Mailer.OrganizationConfirmation;
-using Bit.Core.Billing.Enums;
-using Bit.Core.Platform.Mail.Mailer;
-using Bit.Core.Settings;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationConfirmation;
 
-public class SendOrganizationConfirmationCommand(IMailer mailer, GlobalSettings globalSettings) : ISendOrganizationConfirmationCommand
+public class SendOrganizationConfirmationCommand(IMailService mailService)
+    : ISendOrganizationConfirmationCommand
 {
-    private const string _titleFirst = "You're confirmed as a member of ";
-    private const string _titleThird = "!";
-
-    private static string GetConfirmationSubject(string organizationName) =>
-        $"You can now access items from {organizationName}";
-    private string GetWebVaultUrl(bool accessSecretsManager) => accessSecretsManager
-        ? globalSettings.BaseServiceUri.VaultWithHashAndSecretManagerProduct
-        : globalSettings.BaseServiceUri.VaultWithHash;
-
     public async Task SendConfirmationAsync(Organization organization, string userEmail, bool accessSecretsManager = false)
     {
-        await SendConfirmationsAsync(organization, [userEmail], accessSecretsManager);
-    }
-
-    public async Task SendConfirmationsAsync(Organization organization, IEnumerable<string> userEmails, bool accessSecretsManager = false)
-    {
-        var userEmailsList = userEmails.ToList();
-
-        if (userEmailsList.Count == 0)
-        {
-            return;
-        }
-
-        var organizationName = WebUtility.HtmlDecode(organization.Name);
-
-        if (IsEnterpriseOrTeamsPlan(organization.PlanType))
-        {
-            await SendEnterpriseTeamsEmailsAsync(userEmailsList, organizationName, accessSecretsManager);
-            return;
-        }
-
-        await SendFamilyFreeConfirmEmailsAsync(userEmailsList, organizationName, accessSecretsManager);
-    }
-
-    private async Task SendEnterpriseTeamsEmailsAsync(List<string> userEmailsList, string organizationName, bool accessSecretsManager)
-    {
-        var mail = new OrganizationConfirmationEnterpriseTeams
-        {
-            ToEmails = userEmailsList,
-            Subject = GetConfirmationSubject(organizationName),
-            View = new OrganizationConfirmationEnterpriseTeamsView
-            {
-                OrganizationName = organizationName,
-                TitleFirst = _titleFirst,
-                TitleSecondBold = organizationName,
-                TitleThird = _titleThird,
-                WebVaultUrl = GetWebVaultUrl(accessSecretsManager)
-            }
-        };
-
-        await mailer.SendEmail(mail);
-    }
-
-    private async Task SendFamilyFreeConfirmEmailsAsync(List<string> userEmailsList, string organizationName, bool accessSecretsManager)
-    {
-        var mail = new OrganizationConfirmationFamilyFree
-        {
-            ToEmails = userEmailsList,
-            Subject = GetConfirmationSubject(organizationName),
-            View = new OrganizationConfirmationFamilyFreeView
-            {
-                OrganizationName = organizationName,
-                TitleFirst = _titleFirst,
-                TitleSecondBold = organizationName,
-                TitleThird = _titleThird,
-                WebVaultUrl = GetWebVaultUrl(accessSecretsManager)
-            }
-        };
-
-        await mailer.SendEmail(mail);
-    }
-
-
-    private static bool IsEnterpriseOrTeamsPlan(PlanType planType)
-    {
-        return planType switch
-        {
-            PlanType.TeamsMonthly2019 or
-            PlanType.TeamsAnnually2019 or
-            PlanType.TeamsMonthly2020 or
-            PlanType.TeamsAnnually2020 or
-            PlanType.TeamsMonthly2023 or
-            PlanType.TeamsAnnually2023 or
-            PlanType.TeamsStarter2023 or
-            PlanType.TeamsMonthly or
-            PlanType.TeamsAnnually or
-            PlanType.TeamsStarter or
-            PlanType.EnterpriseMonthly2019 or
-            PlanType.EnterpriseAnnually2019 or
-            PlanType.EnterpriseMonthly2020 or
-            PlanType.EnterpriseAnnually2020 or
-            PlanType.EnterpriseMonthly2023 or
-            PlanType.EnterpriseAnnually2023 or
-            PlanType.EnterpriseMonthly or
-            PlanType.EnterpriseAnnually => true,
-            _ => false
-        };
+        await mailService.SendUpdatedOrganizationConfirmedEmailAsync(organization, userEmail, accessSecretsManager);
     }
 }

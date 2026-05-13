@@ -108,6 +108,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("Enabled")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("ExemptFromBillingAutomation")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("TEXT");
 
@@ -233,7 +236,13 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("UseGroups")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("UseInviteLinks")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("UseKeyConnector")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("UseMyItems")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseOrganizationDomains")
@@ -271,10 +280,55 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("GatewayCustomerId");
+
+                    b.HasIndex("GatewaySubscriptionId");
+
                     b.HasIndex("Id", "Enabled")
                         .HasAnnotation("Npgsql:IndexInclude", new[] { "UseTotp", "UsersGetPremium" });
 
                     b.ToTable("Organization", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.OrganizationInviteLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AllowedDomains")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("Code")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EncryptedInviteKey")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EncryptedOrgKey")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("OrganizationId")
+                        .IsUnique()
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.ToTable("OrganizationInviteLink", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Policy", b =>
@@ -354,9 +408,11 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("GatewayCustomerId")
+                        .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("GatewaySubscriptionId")
+                        .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
@@ -375,6 +431,10 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GatewayCustomerId");
+
+                    b.HasIndex("GatewaySubscriptionId");
 
                     b.ToTable("Provider", (string)null);
                 });
@@ -940,6 +1000,7 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<decimal?>("PercentOff")
+                        .HasPrecision(5, 2)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")
@@ -963,8 +1024,7 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasIndex("StartDate", "EndDate")
                         .HasDatabaseName("IX_SubscriptionDiscount_DateRange")
-                        .HasAnnotation("SqlServer:Clustered", false)
-                        .HasAnnotation("SqlServer:Include", new[] { "StripeProductIds", "AudienceType" });
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("SubscriptionDiscount", (string)null);
                 });
@@ -1123,6 +1183,9 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<string>("ReportData")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReportFile")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")
@@ -1321,6 +1384,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<string>("Identifier")
                         .IsRequired()
                         .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastActivityDate")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
@@ -1659,6 +1725,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<byte?>("RevocationReason")
+                        .HasColumnType("INTEGER");
+
                     b.Property<short>("Status")
                         .HasColumnType("INTEGER");
 
@@ -1976,6 +2045,10 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("MasterPasswordSalt")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
                     b.Property<short?>("MaxStorageGb")
                         .HasColumnType("INTEGER");
 
@@ -2031,6 +2104,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("V2UpgradeToken")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("VerifyDevices")
                         .HasColumnType("INTEGER");
 
@@ -2039,6 +2115,10 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasIndex("Email")
                         .IsUnique()
                         .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("GatewayCustomerId");
+
+                    b.HasIndex("GatewaySubscriptionId");
 
                     b.HasIndex("Premium", "PremiumExpirationDate", "RenewalReminderDate")
                         .HasAnnotation("SqlServer:Clustered", false);
@@ -2693,6 +2773,17 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasIndex("OrganizationUserId");
 
                     b.HasDiscriminator().HasValue("user_service_account");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.OrganizationInviteLink", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Policy", b =>

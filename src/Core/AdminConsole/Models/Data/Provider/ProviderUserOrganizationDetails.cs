@@ -58,4 +58,6 @@ public class ProviderUserOrganizationDetails : IProfileOrganizationDetails
     public string? ResetPasswordKey { get; set; }
     public bool UseDisableSMAdsForUsers { get; set; }
     public bool UsePhishingBlocker { get; set; }
+    public bool UseMyItems { get; set; }
+    public bool UseInviteLinks { get; set; }
 }

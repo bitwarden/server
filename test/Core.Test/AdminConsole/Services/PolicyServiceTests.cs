@@ -1,12 +1,11 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
+﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services.Implementations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -124,42 +123,66 @@ public class PolicyServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetMasterPasswordPolicyForUserAsync_WithFeatureFlagEnabled_EvaluatesPolicyRequirement(User user, SutProvider<PolicyService> sutProvider)
+    public async Task GetMasterPasswordPolicyForUserAsync_ReturnsEnforcedOptions(User user, SutProvider<PolicyService> sutProvider)
     {
-        SetupUserPolicies(user.Id, sutProvider);
-        var policyRequirement = new MasterPasswordPolicyRequirement
-        {
-            Enabled = true,
-            EnforcedOptions = new MasterPasswordPolicyData()
-        };
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
-        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<MasterPasswordPolicyRequirement>(user.Id).Returns(policyRequirement);
+        var enforcedOptions = new MasterPasswordPolicyData { MinLength = 12, RequireUpper = true };
+        var requirement = new MasterPasswordPolicyRequirement { EnforcedOptions = enforcedOptions };
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsyncVNext<MasterPasswordPolicyRequirement>(user.Id)
+            .Returns(requirement);
 
         var result = await sutProvider.Sut.GetMasterPasswordPolicyForUserAsync(user);
 
-        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.PolicyRequirements);
-        await sutProvider.GetDependency<IPolicyRepository>().DidNotReceive().GetManyByUserIdAsync(user.Id);
-        await sutProvider.GetDependency<IPolicyRequirementQuery>().Received(1).GetAsync<MasterPasswordPolicyRequirement>(user.Id);
+        Assert.NotNull(result);
+        Assert.Equal(12, result.MinLength);
+        Assert.True(result.RequireUpper);
     }
 
     [Theory, BitAutoData]
-    public async Task GetMasterPasswordPolicyForUserAsync_WithFeatureFlagDisabled_EvaluatesPolicyDetails(User user, SutProvider<PolicyService> sutProvider)
+    public async Task GetMasterPasswordPolicyForUserAsync_WithNoPolicies_ReturnsNull(User user, SutProvider<PolicyService> sutProvider)
     {
-        SetupUserPolicies(user.Id, sutProvider);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(false);
+        var requirement = new MasterPasswordPolicyRequirement();
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsyncVNext<MasterPasswordPolicyRequirement>(user.Id)
+            .Returns(requirement);
 
         var result = await sutProvider.Sut.GetMasterPasswordPolicyForUserAsync(user);
 
-        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.PolicyRequirements);
-        await sutProvider.GetDependency<IPolicyRepository>().Received(1).GetManyByUserIdAsync(user.Id);
-        await sutProvider.GetDependency<IPolicyRequirementQuery>().DidNotReceive().GetAsync<MasterPasswordPolicyRequirement>(user.Id);
+        Assert.Null(result);
     }
 
-    private static void SetupOrg(SutProvider<PolicyService> sutProvider, Guid organizationId, Organization organization)
+    [Theory, BitAutoData]
+    public async Task GetPoliciesApplicableToUserAsync_OnlyFetchesAbilitiesForFilteredOrgs(
+        Guid userId, SutProvider<PolicyService> sutProvider)
     {
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organizationId)
-            .Returns(Task.FromResult(organization));
+        var includedOrgId = Guid.NewGuid();
+        var excludedOrgId = Guid.NewGuid(); // filtered out because IsProvider = true
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByUserIdWithPolicyDetailsAsync(userId, PolicyType.DisableSend)
+            .Returns(new List<OrganizationUserPolicyDetails>
+            {
+                new() { OrganizationId = includedOrgId, PolicyType = PolicyType.DisableSend, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Invited, IsProvider = false },
+                new() { OrganizationId = excludedOrgId, PolicyType = PolicyType.DisableSend, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Invited, IsProvider = true }
+            });
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, OrganizationAbility>
+            {
+                { includedOrgId, new OrganizationAbility { Id = includedOrgId, UsePolicies = true } }
+            });
+
+        await sutProvider.Sut.GetPoliciesApplicableToUserAsync(userId, PolicyType.DisableSend, OrganizationUserStatusType.Invited);
+
+        // Assert - only the non-provider org ID should be requested
+        await sutProvider.GetDependency<IApplicationCacheService>()
+            .Received(1)
+            .GetOrganizationAbilitiesAsync(Arg.Is<IEnumerable<Guid>>(ids =>
+                ids.Contains(includedOrgId) &&
+                !ids.Contains(excludedOrgId)));
     }
 
     private static void SetupUserPolicies(Guid userId, SutProvider<PolicyService> sutProvider)

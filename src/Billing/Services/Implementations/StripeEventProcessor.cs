@@ -16,7 +16,9 @@ public class StripeEventProcessor(
     IPaymentMethodAttachedHandler paymentMethodAttachedHandler,
     ICustomerUpdatedHandler customerUpdatedHandler,
     IInvoiceFinalizedHandler invoiceFinalizedHandler,
-    ISetupIntentSucceededHandler setupIntentSucceededHandler)
+    ISetupIntentSucceededHandler setupIntentSucceededHandler,
+    ICouponDeletedHandler couponDeletedHandler,
+    ICheckoutSessionCompletedHandler checkoutSessionCompletedHandler)
     : IStripeEventProcessor
 {
     public async Task ProcessEventAsync(Event parsedEvent)
@@ -58,6 +60,12 @@ public class StripeEventProcessor(
                 break;
             case HandledStripeWebhook.SetupIntentSucceeded:
                 await setupIntentSucceededHandler.HandleAsync(parsedEvent);
+                break;
+            case HandledStripeWebhook.CouponDeleted:
+                await couponDeletedHandler.HandleAsync(parsedEvent);
+                break;
+            case HandledStripeWebhook.CheckoutSessionCompleted:
+                await checkoutSessionCompletedHandler.HandleAsync(parsedEvent);
                 break;
             default:
                 logger.LogWarning("Unsupported event received. {EventType}", parsedEvent.Type);

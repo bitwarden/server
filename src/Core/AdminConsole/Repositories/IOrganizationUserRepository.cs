@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Enums;
+﻿using System.Data.Common;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Entities;
@@ -45,9 +46,16 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync_vNext(Guid organizationId, bool includeGroups = false, bool includeSharedCollections = false);
     Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
         OrganizationUserStatusType? status = null);
+    Task<ICollection<OrganizationUserOrganizationDetails>> GetManyConfirmedAcceptedDetailsByUserAsync(Guid userId);
     Task<OrganizationUserOrganizationDetails?> GetDetailsByUserAsync(Guid userId, Guid organizationId,
         OrganizationUserStatusType? status = null);
-    Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds);
+    /// <summary>
+    /// Replace the group memberships for an organization user.
+    /// </summary>
+    /// <param name="orgUserId">The organization user whose group memberships will be replaced.</param>
+    /// <param name="groupIds">The full set of group ids the user should belong to.</param>
+    /// <param name="revisionDate">The timestamp to set as each affected group's new revision date.</param>
+    Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds, DateTime revisionDate);
     Task UpsertManyAsync(IEnumerable<OrganizationUser> organizationUsers);
     Task<Guid> CreateAsync(OrganizationUser obj, IEnumerable<CollectionAccessSelection> collections);
     Task<ICollection<Guid>?> CreateManyAsync(IEnumerable<OrganizationUser> organizationIdUsers);
@@ -59,7 +67,18 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<OrganizationUser?> GetByOrganizationEmailAsync(Guid organizationId, string email);
     Task<IEnumerable<OrganizationUserPublicKey>> GetManyPublicKeysByOrganizationUserAsync(Guid organizationId, IEnumerable<Guid> Ids);
     Task<IEnumerable<OrganizationUserUserDetails>> GetManyByMinimumRoleAsync(Guid organizationId, OrganizationUserType minRole);
-    Task RevokeAsync(Guid id);
+    /// <summary>
+    /// Revokes access for a single organization user. This is a convenience wrapper
+    /// around <see cref="RevokeManyAsync"/> for single-user operations.
+    /// </summary>
+    /// <param name="id">The ID of the organization user to revoke.</param>
+    Task RevokeAsync(Guid id, RevocationReason reason);
+    /// <summary>
+    /// Restores access for a single revoked organization user. This is a convenience wrapper
+    /// around <see cref="RestoreManyAsync"/> for single-user operations.
+    /// </summary>
+    /// <param name="id">The ID of the organization user to restore.</param>
+    /// <param name="status">The status to restore the user to (their status prior to being revoked).</param>
     Task RestoreAsync(Guid id, OrganizationUserStatusType status);
     Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId, PolicyType policyType);
     Task<int> GetOccupiedSmSeatCountByOrganizationIdAsync(Guid organizationId);
@@ -77,7 +96,22 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// Returns a list of OrganizationUsers with email domains that match one of the Organization's claimed domains.
     /// </summary>
     Task<ICollection<OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync(Guid organizationId);
-    Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds);
+    /// <summary>
+    /// Revokes access for one or more organization users, setting their status to
+    /// <see cref="OrganizationUserStatusType.Revoked"/> and optionally recording a
+    /// <see cref="RevocationReason"/>.
+    /// </summary>
+    /// <param name="organizationUserIds">The IDs of the organization users to revoke.</param>
+    /// <param name="reason">The reason for revocation. May be null if the reason is not known.</param>
+    Task RevokeManyAsync(IEnumerable<Guid> organizationUserIds, RevocationReason reason);
+    /// <summary>
+    /// Restores access for one or more revoked organization users, clearing their
+    /// <see cref="Core.Entities.OrganizationUser.RevocationReason"/>. Only affects users
+    /// whose current status is <see cref="OrganizationUserStatusType.Revoked"/>.
+    /// </summary>
+    /// <param name="organizationUserIds">The IDs of the organization users to restore.</param>
+    /// <param name="status">The status to restore each user to (their status prior to being revoked).</param>
+    Task RestoreManyAsync(IEnumerable<Guid> organizationUserIds, OrganizationUserStatusType status);
 
     /// <summary>
     /// Returns a list of OrganizationUsersUserDetails with the specified role.
@@ -108,4 +142,14 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// Similar to GetByOrganizationAsync, but returns the user details.
     /// </remarks>
     Task<OrganizationUserUserDetails?> GetDetailsByOrganizationIdUserIdAsync(Guid organizationId, Guid userId);
+
+    /// <summary>
+    /// Builds an action that confirms the organization owner within a shared transaction.
+    /// The returned action is intended to be passed to
+    /// <see cref="IOrganizationRepository.InitializeOrganizationAsync"/> to execute atomically
+    /// alongside the organization update.
+    /// </summary>
+    /// <param name="organizationUser">The organization user entity with updated properties (status, userId, key)</param>
+    /// <returns>An action that can be executed within a transaction</returns>
+    Func<DbConnection, DbTransaction, Task> BuildConfirmOwnerAction(OrganizationUser organizationUser);
 }

@@ -67,6 +67,55 @@ public class PostUserCommandTests
 
     [Theory]
     [BitAutoData]
+    public async Task PostUser_EmptyPrimaryEmail_WithNonEmptyFallbackEmail_UsesNonEmptyEmail(
+        SutProvider<PostUserCommand> sutProvider,
+        string externalId,
+        Guid organizationId,
+        ICollection<OrganizationUserUserDetails> organizationUsers,
+        Core.Entities.OrganizationUser newUser,
+        Organization organization)
+    {
+        const string nonEmptyEmail = "user1@minimumviable.horse";
+        var scimUserRequestModel = new ScimUserRequestModel
+        {
+            ExternalId = externalId,
+            Active = true,
+            Schemas = [ScimConstants.Scim2SchemaUser],
+            Emails =
+            [
+                new BaseScimUserModel.EmailModel { Primary = true, Type = "internal", Value = "" },
+                new BaseScimUserModel.EmailModel { Primary = false, Type = "external", Value = nonEmptyEmail }
+            ]
+        };
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(organizationId)
+            .Returns(organizationUsers);
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
+
+        sutProvider.GetDependency<IStripePaymentService>().HasSecretsManagerStandalone(organization).Returns(true);
+
+        sutProvider.GetDependency<IOrganizationService>()
+            .InviteUserAsync(organizationId,
+                invitingUserId: null,
+                EventSystemUser.SCIM,
+                Arg.Is<OrganizationUserInvite>(i => i.Emails.Single().Equals(nonEmptyEmail)),
+                externalId)
+            .Returns(newUser);
+
+        var user = await sutProvider.Sut.PostUserAsync(organizationId, scimUserRequestModel);
+
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).InviteUserAsync(
+            organizationId,
+            invitingUserId: null,
+            EventSystemUser.SCIM,
+            Arg.Is<OrganizationUserInvite>(i => i.Emails.Single().Equals(nonEmptyEmail)),
+            externalId);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task PostUser_NullEmail_Throws(SutProvider<PostUserCommand> sutProvider, Guid organizationId)
     {
         var scimUserRequestModel = new ScimUserRequestModel

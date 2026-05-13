@@ -1,0 +1,46 @@
+{
+  "$schema": "../../schemas/roster.schema.json",
+  "users": [
+    { "firstName": "StarterTeam", "lastName": "Owner", "role": "owner" },
+    { "firstName": "StarterTeam", "lastName": "Admin", "role": "admin" },
+    { "firstName": "StarterTeam", "lastName": "Custom", "role": "custom" },
+    { "firstName": "StarterTeam", "lastName": "UserOne", "role": "user" },
+    { "firstName": "StarterTeam", "lastName": "UserTwo", "role": "user" },
+    { "firstName": "StarterTeam", "lastName": "UserThree", "role": "user" },
+    { "firstName": "StarterTeam", "lastName": "UserFour", "role": "user" },
+    { "firstName": "StarterTeam", "lastName": "Provisioning", "role": "user" },
+    {
+      "firstName": "StarterTeam",
+      "lastName": "Mp-Non-Trusted",
+      "role": "user"
+    },
+    {
+      "firstName": "StarterTeam",
+      "lastName": "No-Mp-Non-Trusted",
+      "role": "user"
+    }
+  ],
+  "groups": [
+    {
+      "name": "Everyone",
+      "members": [
+        "starterteam.owner",
+        "starterteam.admin",
+        "starterteam.custom",
+        "starterteam.userone",
+        "starterteam.usertwo",
+        "starterteam.userthree",
+        "starterteam.userfour",
+        "starterteam.provisioning",
+        "starterteam.mp-non-trusted",
+        "starterteam.no-mp-non-trusted"
+      ]
+    }
+  ],
+  "collections": [
+    {
+      "name": "Default collection",
+      "users": [{ "user": "starterteam.no-mp-non-trusted", "manage": true }]
+    }
+  ]
+}

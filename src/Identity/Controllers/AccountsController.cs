@@ -6,13 +6,11 @@ using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
@@ -28,14 +26,11 @@ namespace Bit.Identity.Controllers;
 [ExceptionHandlerFilter]
 public class AccountsController : Controller
 {
-    private readonly ICurrentContext _currentContext;
-    private readonly ILogger<AccountsController> _logger;
     private readonly IUserRepository _userRepository;
     private readonly IRegisterUserCommand _registerUserCommand;
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
     private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
     private readonly ISendVerificationEmailForRegistrationCommand _sendVerificationEmailForRegistrationCommand;
-    private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
 
     private readonly byte[]? _defaultKdfHmacKey = null;
@@ -74,26 +69,20 @@ public class AccountsController : Controller
     ];
 
     public AccountsController(
-        ICurrentContext currentContext,
-        ILogger<AccountsController> logger,
         IUserRepository userRepository,
         IRegisterUserCommand registerUserCommand,
         IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
         IGetWebAuthnLoginCredentialAssertionOptionsCommand getWebAuthnLoginCredentialAssertionOptionsCommand,
         ISendVerificationEmailForRegistrationCommand sendVerificationEmailForRegistrationCommand,
-        IFeatureService featureService,
         IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,
         GlobalSettings globalSettings
         )
     {
-        _currentContext = currentContext;
-        _logger = logger;
         _userRepository = userRepository;
         _registerUserCommand = registerUserCommand;
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
         _getWebAuthnLoginCredentialAssertionOptionsCommand = getWebAuthnLoginCredentialAssertionOptionsCommand;
         _sendVerificationEmailForRegistrationCommand = sendVerificationEmailForRegistrationCommand;
-        _featureService = featureService;
         _registrationEmailVerificationTokenDataFactory = registrationEmailVerificationTokenDataFactory;
 
         if (CoreHelpers.SettingHasValue(globalSettings.KdfDefaultHashKey))
@@ -105,12 +94,8 @@ public class AccountsController : Controller
     [HttpPost("register/send-verification-email")]
     public async Task<IActionResult> PostRegisterSendVerificationEmail([FromBody] RegisterSendVerificationEmailRequestModel model)
     {
-        // Only pass fromMarketing if the feature flag is enabled
-        var isMarketingFeatureEnabled = _featureService.IsEnabled(FeatureFlagKeys.MarketingInitiatedPremiumFlow);
-        var fromMarketing = isMarketingFeatureEnabled ? model.FromMarketing : null;
-
         var token = await _sendVerificationEmailForRegistrationCommand.Run(model.Email, model.Name,
-            model.ReceiveMarketingEmails, fromMarketing);
+            model.ReceiveMarketingEmails, model.FromMarketing);
 
         if (token != null)
         {
@@ -141,28 +126,25 @@ public class AccountsController : Controller
     [HttpPost("register/finish")]
     public async Task<RegisterFinishResponseModel> PostRegisterFinish([FromBody] RegisterFinishRequestModel model)
     {
-        User user = model.ToUser();
+        var registerFinishData = model.ToData();
+        var user = model.ToUser(registerFinishData.IsV2Encryption());
 
         // Users will either have an emailed token or an email verification token - not both.
         IdentityResult? identityResult = null;
-
-        // PM-28143 - Just use the MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash
-        string masterPasswordAuthenticationHash = model.MasterPasswordAuthentication?.MasterPasswordAuthenticationHash
-                                                  ?? model.MasterPasswordHash!;
 
         switch (model.GetTokenType())
         {
             case RegisterFinishTokenType.EmailVerification:
                 identityResult = await _registerUserCommand.RegisterUserViaEmailVerificationToken(
                     user,
-                    masterPasswordAuthenticationHash,
+                    registerFinishData,
                     model.EmailVerificationToken!);
                 return ProcessRegistrationResult(identityResult, user);
 
             case RegisterFinishTokenType.OrganizationInvite:
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(
                     user,
-                    masterPasswordAuthenticationHash,
+                    registerFinishData,
                     model.OrgInviteToken!,
                     model.OrganizationUserId);
                 return ProcessRegistrationResult(identityResult, user);
@@ -170,14 +152,14 @@ public class AccountsController : Controller
             case RegisterFinishTokenType.OrgSponsoredFreeFamilyPlan:
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(
                     user,
-                    masterPasswordAuthenticationHash,
+                    registerFinishData,
                     model.OrgSponsoredFreeFamilyPlanToken!);
                 return ProcessRegistrationResult(identityResult, user);
 
             case RegisterFinishTokenType.EmergencyAccessInvite:
                 identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(
                     user,
-                    masterPasswordAuthenticationHash,
+                    registerFinishData,
                     model.AcceptEmergencyAccessInviteToken!,
                     (Guid)model.AcceptEmergencyAccessId!);
                 return ProcessRegistrationResult(identityResult, user);
@@ -185,7 +167,7 @@ public class AccountsController : Controller
             case RegisterFinishTokenType.ProviderInvite:
                 identityResult = await _registerUserCommand.RegisterUserViaProviderInviteToken(
                     user,
-                    masterPasswordAuthenticationHash,
+                    registerFinishData,
                     model.ProviderInviteToken!,
                     (Guid)model.ProviderUserId!);
                 return ProcessRegistrationResult(identityResult, user);
@@ -233,12 +215,8 @@ public class AccountsController : Controller
 
     private async Task<PasswordPreloginResponseModel> MakePasswordPreloginCall(PasswordPreloginRequestModel model)
     {
-        var kdfInformation = await _userRepository.GetKdfInformationByEmailAsync(model.Email);
-        if (kdfInformation == null)
-        {
-            kdfInformation = GetDefaultKdf(model.Email);
-        }
-        return new PasswordPreloginResponseModel(kdfInformation, model.Email);
+        var kdfInformation = await _userRepository.GetKdfInformationByEmailAsync(model.Email) ?? GetDefaultKdf(model.Email);
+        return new PasswordPreloginResponseModel(kdfInformation, kdfInformation.MasterPasswordSalt);
     }
 
     [HttpGet("webauthn/assertion-options")]
@@ -258,21 +236,24 @@ public class AccountsController : Controller
 
     private UserKdfInformation GetDefaultKdf(string email)
     {
-        if (_defaultKdfHmacKey == null)
-        {
-            return _defaultKdfResults[0];
-        }
+        // Always normalize email before use so casing differences in the request do not affect the response.
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+        var kdfIndex = EnumerationProtectionHelpers.GetIndexForInputHash(_defaultKdfHmacKey, normalizedEmail, _defaultKdfResults.Count);
+        // PM-31702: In the future we may need to generate a deterministic random salt, for the time being we will use email and null.
+        var saltOptions = new string?[] { normalizedEmail, null };
+        // we add the suffix ":salt" so the calculated index is independent of the kdfIndex calculation.
+        var saltIndex = EnumerationProtectionHelpers.GetIndexForInputHash(_defaultKdfHmacKey, normalizedEmail + ":salt", saltOptions.Length);
 
-        // Compute the HMAC hash of the email
-        var hmacMessage = Encoding.UTF8.GetBytes(email.Trim().ToLowerInvariant());
-        using var hmac = new System.Security.Cryptography.HMACSHA256(_defaultKdfHmacKey);
-        var hmacHash = hmac.ComputeHash(hmacMessage);
-        // Convert the hash to a number
-        var hashHex = BitConverter.ToString(hmacHash).Replace("-", string.Empty).ToLowerInvariant();
-        var hashFirst8Bytes = hashHex.Substring(0, 16);
-        var hashNumber = long.Parse(hashFirst8Bytes, System.Globalization.NumberStyles.HexNumber);
-        // Find the default KDF value for this hash number
-        var hashIndex = (int)(Math.Abs(hashNumber) % _defaultKdfResults.Count);
-        return _defaultKdfResults[hashIndex];
+        // deep copy to avoid thread issues with the static list
+        var result = new UserKdfInformation()
+        {
+            Kdf = _defaultKdfResults[kdfIndex].Kdf,
+            KdfIterations = _defaultKdfResults[kdfIndex].KdfIterations,
+            KdfMemory = _defaultKdfResults[kdfIndex].KdfMemory,
+            KdfParallelism = _defaultKdfResults[kdfIndex].KdfParallelism,
+            MasterPasswordSalt = saltOptions[saltIndex]
+        };
+
+        return result;
     }
 }

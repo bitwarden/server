@@ -8,10 +8,12 @@ public interface IGlobalSettings
     bool SelfHosted { get; set; }
     bool LiteDeployment { get; set; }
     string KnownProxies { get; set; }
+    string KnownNetworks { get; set; }
     string ProjectName { get; set; }
     bool EnableCloudCommunication { get; set; }
     string LicenseDirectory { get; set; }
     string LicenseCertificatePassword { get; set; }
+    string LicenseCertificatePath { get; set; }
     int OrganizationInviteExpirationHours { get; set; }
     bool DisableUserRegistration { get; set; }
     bool EnableNewDeviceVerification { get; set; }
@@ -25,6 +27,7 @@ public interface IGlobalSettings
     ILaunchDarklySettings LaunchDarkly { get; set; }
     string DatabaseProvider { get; set; }
     GlobalSettings.SqlSettings SqlServer { get; set; }
+    GlobalSettings.StripeSettings Stripe { get; set; }
     string DevelopmentDirectory { get; set; }
     IWebPushSettings WebPush { get; set; }
     GlobalSettings.EventLoggingSettings EventLogging { get; set; }

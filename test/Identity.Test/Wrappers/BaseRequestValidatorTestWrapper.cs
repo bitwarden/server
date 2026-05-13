@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Queries.Interfaces;
@@ -67,7 +68,9 @@ IBaseRequestValidatorTestWrapper
         IPolicyRequirementQuery policyRequirementQuery,
         IAuthRequestRepository authRequestRepository,
         IMailService mailService,
-        IUserAccountKeysQuery userAccountKeysQuery) :
+        IUserAccountKeysQuery userAccountKeysQuery,
+        IClientVersionValidator clientVersionValidator,
+        IBumpDeviceLastActivityDateCommand bumpDeviceLastActivityDateCommand) :
          base(
             userManager,
             userService,
@@ -87,7 +90,9 @@ IBaseRequestValidatorTestWrapper
             policyRequirementQuery,
             authRequestRepository,
             mailService,
-            userAccountKeysQuery)
+            userAccountKeysQuery,
+            clientVersionValidator,
+            bumpDeviceLastActivityDateCommand)
     {
     }
 

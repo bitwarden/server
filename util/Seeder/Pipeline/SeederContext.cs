@@ -52,6 +52,8 @@ public sealed class SeederContext(IServiceProvider services)
 
     internal OrganizationUser? OwnerOrgUser { get; set; }
 
+    internal OrganizationApiKey? OrganizationApiKey { get; set; }
+
     internal List<Organization> Organizations { get; } = [];
 
     internal List<User> Users { get; } = [];
@@ -71,6 +73,8 @@ public sealed class SeederContext(IServiceProvider services)
     internal List<CollectionGroup> CollectionGroups { get; } = [];
 
     internal List<CollectionCipher> CollectionCiphers { get; } = [];
+
+    internal List<Folder> Folders { get; } = [];
 
     internal EntityRegistry Registry { get; } = new();
 

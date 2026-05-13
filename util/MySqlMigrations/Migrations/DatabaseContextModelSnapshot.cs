@@ -113,6 +113,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("Enabled")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("ExemptFromBillingAutomation")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("datetime(6)");
 
@@ -238,7 +241,13 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("UseGroups")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("UseInviteLinks")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("UseKeyConnector")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("UseMyItems")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("UseOrganizationDomains")
@@ -276,10 +285,55 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("GatewayCustomerId");
+
+                    b.HasIndex("GatewaySubscriptionId");
+
                     b.HasIndex("Id", "Enabled")
                         .HasAnnotation("Npgsql:IndexInclude", new[] { "UseTotp", "UsersGetPremium" });
 
                     b.ToTable("Organization", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.OrganizationInviteLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("AllowedDomains")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid>("Code")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("EncryptedInviteKey")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("EncryptedOrgKey")
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("OrganizationId")
+                        .IsUnique()
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.ToTable("OrganizationInviteLink", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Policy", b =>
@@ -359,10 +413,12 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("tinyint unsigned");
 
                     b.Property<string>("GatewayCustomerId")
-                        .HasColumnType("longtext");
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
 
                     b.Property<string>("GatewaySubscriptionId")
-                        .HasColumnType("longtext");
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
 
                     b.Property<string>("Name")
                         .HasColumnType("longtext");
@@ -380,6 +436,10 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("tinyint(1)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GatewayCustomerId");
+
+                    b.HasIndex("GatewaySubscriptionId");
 
                     b.ToTable("Provider", (string)null);
                 });
@@ -975,8 +1035,7 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("StartDate", "EndDate")
                         .HasDatabaseName("IX_SubscriptionDiscount_DateRange")
-                        .HasAnnotation("SqlServer:Clustered", false)
-                        .HasAnnotation("SqlServer:Include", new[] { "StripeProductIds", "AudienceType" });
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("SubscriptionDiscount", (string)null);
                 });
@@ -1135,6 +1194,9 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<string>("ReportData")
                         .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("ReportFile")
                         .HasColumnType("longtext");
 
                     b.Property<DateTime>("RevisionDate")
@@ -1334,6 +1396,9 @@ namespace Bit.MySqlMigrations.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime?>("LastActivityDate")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -1671,6 +1736,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<byte?>("RevocationReason")
+                        .HasColumnType("tinyint unsigned");
+
                     b.Property<short>("Status")
                         .HasColumnType("smallint");
 
@@ -1988,6 +2056,10 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
 
+                    b.Property<string>("MasterPasswordSalt")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
                     b.Property<short?>("MaxStorageGb")
                         .HasColumnType("smallint");
 
@@ -2043,6 +2115,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<string>("V2UpgradeToken")
+                        .HasColumnType("longtext");
+
                     b.Property<bool>("VerifyDevices")
                         .HasColumnType("tinyint(1)");
 
@@ -2051,6 +2126,10 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasIndex("Email")
                         .IsUnique()
                         .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("GatewayCustomerId");
+
+                    b.HasIndex("GatewaySubscriptionId");
 
                     b.HasIndex("Premium", "PremiumExpirationDate", "RenewalReminderDate")
                         .HasAnnotation("SqlServer:Clustered", false);
@@ -2705,6 +2784,17 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasIndex("OrganizationUserId");
 
                     b.HasDiscriminator().HasValue("user_service_account");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.OrganizationInviteLink", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Policy", b =>

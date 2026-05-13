@@ -185,7 +185,7 @@ public class Startup
         services.AddOrganizationSubscriptionServices();
         services.AddCoreLocalizationServices();
         services.AddBillingOperations();
-        services.AddReportingServices();
+        services.AddReportingServices(globalSettings);
         services.AddImportServices();
 
         services.AddSendServices();
@@ -336,9 +336,12 @@ public class Startup
                     [
                         new OpenApiSecurityRequirement
                         {
-                            [new OpenApiSecuritySchemeReference("oauth2-client-credentials")] = [ApiScopes.ApiOrganization]
+                            [new OpenApiSecuritySchemeReference("oauth2-client-credentials", swaggerDoc)] = [ApiScopes.ApiOrganization]
                         },
                     ];
+
+                    swaggerDoc.Workspace = new OpenApiWorkspace();
+                    swaggerDoc.RegisterComponents();
                 });
             });
 

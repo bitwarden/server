@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Services;
@@ -20,7 +19,6 @@ using static StripeConstants;
 public class GetPaymentMethodQueryTests
 {
     private readonly IBraintreeService _braintreeService = Substitute.For<IBraintreeService>();
-    private readonly ISetupIntentCache _setupIntentCache = Substitute.For<ISetupIntentCache>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly ISubscriberService _subscriberService = Substitute.For<ISubscriberService>();
     private readonly GetPaymentMethodQuery _query;
@@ -29,7 +27,6 @@ public class GetPaymentMethodQueryTests
     {
         _query = new GetPaymentMethodQuery(
             _braintreeService,
-            _setupIntentCache,
             _stripeAdapter,
             _subscriberService);
     }
@@ -181,6 +178,7 @@ public class GetPaymentMethodQueryTests
 
         var customer = new Customer
         {
+            Id = "cus_123",
             InvoiceSettings = new CustomerInvoiceSettings(),
             Metadata = new Dictionary<string, string>()
         };
@@ -189,11 +187,12 @@ public class GetPaymentMethodQueryTests
             Arg.Is<CustomerGetOptions>(options =>
                 options.HasExpansions("default_source", "invoice_settings.default_payment_method"))).Returns(customer);
 
-        _setupIntentCache.GetSetupIntentIdForSubscriber(organization.Id).Returns("seti_123");
-
         _stripeAdapter
-            .GetSetupIntentAsync("seti_123",
-                Arg.Is<SetupIntentGetOptions>(options => options.HasExpansions("payment_method"))).Returns(
+            .ListSetupIntentsAsync(Arg.Is<SetupIntentListOptions>(options =>
+                options.Customer == customer.Id &&
+                options.HasExpansions("data.payment_method")))
+            .Returns(
+            [
                 new SetupIntent
                 {
                     PaymentMethod = new PaymentMethod
@@ -209,7 +208,8 @@ public class GetPaymentMethodQueryTests
                         }
                     },
                     Status = "requires_action"
-                });
+                }
+            ]);
 
         var maskedPaymentMethod = await _query.Run(organization);
 

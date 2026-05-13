@@ -29,7 +29,8 @@ public class RevokeOrganizationUsersValidator(IHasConfirmedOwnersExceptQuery has
                     Invalid(x, new UserAlreadyRevoked()),
                 { Type: OrganizationUserType.Owner } when !hasRemainingOwner =>
                     Invalid(x, new MustHaveConfirmedOwner()),
-                { Type: OrganizationUserType.Owner } when !request.PerformedBy.IsOrganizationOwnerOrProvider =>
+                { Type: OrganizationUserType.Owner } when request.PerformedBy is not SystemUser
+                                                        && !request.PerformedBy.IsOrganizationOwnerOrProvider =>
                     Invalid(x, new OnlyOwnersCanRevokeOwners()),
 
                 _ => Valid(x)

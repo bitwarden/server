@@ -28,6 +28,8 @@ public record PlanAdapter : Core.Models.StaticStore.Plan
         HasResetPassword = HasFeature("resetPassword");
         UsersGetPremium = HasFeature("usersGetPremium");
         HasCustomPermissions = HasFeature("customPermissions");
+        HasMyItems = HasFeature("myItems");
+        HasInviteLinks = HasFeature("inviteLinks");
         UpgradeSortOrder = plan.AdditionalData.TryGetValue("upgradeSortOrder", out var upgradeSortOrder)
             ? int.Parse(upgradeSortOrder)
             : 0;

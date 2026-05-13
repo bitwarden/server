@@ -13,13 +13,16 @@ namespace Bit.Admin.Controllers;
 
 public class HomeController : Controller
 {
+    public const string ExternalHttpClientName = "HomeControllerExternal";
+
     private readonly GlobalSettings _globalSettings;
-    private readonly HttpClient _httpClient = new HttpClient();
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<HomeController> _logger;
 
-    public HomeController(GlobalSettings globalSettings, ILogger<HomeController> logger)
+    public HomeController(GlobalSettings globalSettings, IHttpClientFactory httpClientFactory, ILogger<HomeController> logger)
     {
         _globalSettings = globalSettings;
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
@@ -47,7 +50,7 @@ public class HomeController : Controller
         var requestUri = $"https://selfhost.bitwarden.com/version.json";
         try
         {
-            var response = await _httpClient.GetAsync(requestUri, cancellationToken);
+            var response = await _httpClientFactory.CreateClient(ExternalHttpClientName).GetAsync(requestUri, cancellationToken);
             if (response.IsSuccessStatusCode)
             {
                 var latestVersions = JsonConvert.DeserializeObject<LatestVersions>(await response.Content.ReadAsStringAsync());
@@ -73,7 +76,7 @@ public class HomeController : Controller
         var requestUri = $"{_globalSettings.BaseServiceUri.InternalVault}/version.json";
         try
         {
-            var response = await _httpClient.GetAsync(requestUri, cancellationToken);
+            var response = await _httpClientFactory.CreateClient().GetAsync(requestUri, cancellationToken);
             if (response.IsSuccessStatusCode)
             {
                 using var jsonDocument = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);

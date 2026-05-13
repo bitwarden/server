@@ -19,6 +19,7 @@ public class SubscriptionDiscountsController(
     ILogger<SubscriptionDiscountsController> logger) : Controller
 {
     private const string SuccessKey = "Success";
+    private const string ErrorKey = "Error";
 
     [HttpGet]
     [RequirePermission(Permission.Tools_CreateEditTransaction)]
@@ -205,5 +206,100 @@ public class SubscriptionDiscountsController(
         }
     }
 
+    [HttpGet("{id}")]
+    [RequirePermission(Permission.Tools_CreateEditTransaction)]
+    public async Task<IActionResult> Edit(Guid id)
+    {
+        var discount = await subscriptionDiscountRepository.GetByIdAsync(id);
+        if (discount == null)
+        {
+            return NotFound();
+        }
+
+        var model = new EditSubscriptionDiscountModel(discount);
+
+        if (model.StripeProductIds is { Count: > 0 })
+        {
+            try
+            {
+                var products = await stripeAdapter.ListProductsAsync(new ProductListOptions
+                {
+                    Ids = model.StripeProductIds.ToList()
+                });
+                model.AppliesToProducts = products.ToDictionary(p => p.Id, p => p.Name);
+            }
+            catch (StripeException ex)
+            {
+                logger.LogError(ex, "Failed to fetch the coupon's associated products from Stripe. Coupon ID: {CouponId}", model.StripeCouponId);
+                ModelState.AddModelError(string.Empty, "Failed to fetch the coupon's associated products from Stripe. However, editing is still possible.");
+            }
+        }
+
+        return View(model);
+    }
+
+    [HttpPost("{id}")]
+    [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Tools_CreateEditTransaction)]
+    public async Task<IActionResult> Edit(Guid id, EditSubscriptionDiscountModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var discount = await subscriptionDiscountRepository.GetByIdAsync(id);
+        if (discount == null)
+        {
+            return NotFound();
+        }
+
+        try
+        {
+            discount.StartDate = model.StartDate;
+            discount.EndDate = model.EndDate;
+            discount.AudienceType = model.AudienceType;
+            discount.RevisionDate = DateTime.UtcNow;
+
+            await subscriptionDiscountRepository.ReplaceAsync(discount);
+
+            PersistSuccessMessage($"Discount '{discount.StripeCouponId}' updated successfully.");
+            return RedirectToAction(nameof(Index));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error updating subscription discount. Coupon ID: {CouponId}", discount.StripeCouponId);
+            ModelState.AddModelError(string.Empty, "An error occurred while updating the discount.");
+            return View(model);
+        }
+    }
+
+    [HttpPost("{id}/delete")]
+    [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Tools_CreateEditTransaction)]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var discount = await subscriptionDiscountRepository.GetByIdAsync(id);
+        if (discount == null)
+        {
+            return NotFound();
+        }
+
+        try
+        {
+            await subscriptionDiscountRepository.DeleteAsync(discount);
+
+            PersistSuccessMessage($"Discount '{discount.StripeCouponId}' deleted successfully.");
+            return RedirectToAction(nameof(Index));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error deleting subscription discount. Coupon ID: {CouponId}", discount.StripeCouponId);
+            PersistErrorMessage("An error occurred while attempting to delete the discount.");
+            return RedirectToAction(nameof(Edit), new { id });
+        }
+    }
+
     private void PersistSuccessMessage(string message) => TempData[SuccessKey] = message;
+    private void PersistErrorMessage(string message) => TempData[ErrorKey] = message;
 }

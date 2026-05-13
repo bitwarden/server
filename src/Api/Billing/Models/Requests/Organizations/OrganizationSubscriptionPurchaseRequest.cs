@@ -20,6 +20,8 @@ public record OrganizationSubscriptionPurchaseRequest : IValidatableObject
 
     public SecretsManagerPurchaseSelections? SecretsManager { get; set; }
 
+    public string[]? Coupons { get; set; }
+
     public OrganizationSubscriptionPurchase ToDomain() => new()
     {
         Tier = Tier,
@@ -35,7 +37,8 @@ public record OrganizationSubscriptionPurchaseRequest : IValidatableObject
             Seats = SecretsManager.Seats,
             AdditionalServiceAccounts = SecretsManager.AdditionalServiceAccounts,
             Standalone = SecretsManager.Standalone
-        } : null
+        } : null,
+        Coupons = Coupons
     };
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

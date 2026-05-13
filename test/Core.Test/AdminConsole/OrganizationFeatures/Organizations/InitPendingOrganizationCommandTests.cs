@@ -1,15 +1,14 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Data.Common;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
-using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Entities;
-using Bit.Core.Exceptions;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
-using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Bit.Test.Common.Fakes;
 using NSubstitute;
 using Xunit;
 
@@ -18,152 +17,142 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Organizations;
 [SutProviderCustomize]
 public class InitPendingOrganizationCommandTests
 {
-
-    private readonly IOrgUserInviteTokenableFactory _orgUserInviteTokenableFactory = Substitute.For<IOrgUserInviteTokenableFactory>();
-    private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory = new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>();
-
     [Theory, BitAutoData]
-    public async Task Init_Organization_Success(User user, Guid orgId, Guid orgUserId, string publicKey,
-            string privateKey, SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, OrganizationUser orgUser)
+    public async Task InitPendingOrganizationAsync_NullOrgUser_ReturnsError(
+        InitPendingOrganizationRequest request,
+        SutProvider<InitPendingOrganizationCommand> sutProvider)
     {
-        var token = CreateToken(orgUser, orgUserId, sutProvider);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(request.OrganizationUserId)
+            .Returns((OrganizationUser?)null);
 
-        org.PrivateKey = null;
-        org.PublicKey = null;
+        var result = await sutProvider.Sut.InitPendingOrganizationAsync(request);
 
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        organizationRepository.GetByIdAsync(orgId).Returns(org);
-
-        var organizationServcie = sutProvider.GetDependency<IOrganizationService>();
-        var collectionRepository = sutProvider.GetDependency<ICollectionRepository>();
-
-        await sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, "", token);
-
-        await organizationRepository.Received().GetByIdAsync(orgId);
-        await organizationServcie.Received().UpdateAsync(org);
-        await collectionRepository.DidNotReceiveWithAnyArgs().CreateAsync(default);
-
+        Assert.True(result.IsError);
+        Assert.IsType<OrganizationUserNotFoundError>(result.AsError);
     }
 
     [Theory, BitAutoData]
-    public async Task Init_Organization_With_CollectionName_Success(User user, Guid orgId, Guid orgUserId, string publicKey,
-            string privateKey, SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, string collectionName, OrganizationUser orgUser)
+    public async Task InitPendingOrganizationAsync_NullOrg_ReturnsError(
+        OrganizationUser orgUser,
+        InitPendingOrganizationRequest request,
+        SutProvider<InitPendingOrganizationCommand> sutProvider)
     {
-        var token = CreateToken(orgUser, orgUserId, sutProvider);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(request.OrganizationUserId)
+            .Returns(orgUser);
 
-        org.PrivateKey = null;
-        org.PublicKey = null;
-        org.Id = orgId;
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(request.OrganizationId)
+            .Returns((Organization?)null);
 
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        organizationRepository.GetByIdAsync(orgId).Returns(org);
+        var result = await sutProvider.Sut.InitPendingOrganizationAsync(request);
 
-        var organizationServcie = sutProvider.GetDependency<IOrganizationService>();
-        var collectionRepository = sutProvider.GetDependency<ICollectionRepository>();
-
-        await sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, collectionName, token);
-
-        await organizationRepository.Received().GetByIdAsync(orgId);
-        await organizationServcie.Received().UpdateAsync(org);
-
-        await collectionRepository.Received().CreateAsync(
-            Arg.Any<Collection>(),
-            Arg.Is<List<CollectionAccessSelection>>(l => l == null),
-            Arg.Is<List<CollectionAccessSelection>>(l => l.Any(i => i.Manage == true)));
-
+        Assert.True(result.IsError);
+        Assert.IsType<OrganizationNotFoundError>(result.AsError);
     }
 
     [Theory, BitAutoData]
-    public async Task Init_Organization_When_Organization_Is_Enabled(User user, Guid orgId, Guid orgUserId, string publicKey,
-            string privateKey, SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, OrganizationUser orgUser)
-
+    public async Task InitPendingOrganizationAsync_ValidationFails_ReturnsError(
+        Organization org,
+        OrganizationUser orgUser,
+        InitPendingOrganizationRequest request,
+        SutProvider<InitPendingOrganizationCommand> sutProvider)
     {
-        var token = CreateToken(orgUser, orgUserId, sutProvider);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(request.OrganizationUserId)
+            .Returns(orgUser);
 
-        org.Enabled = true;
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(request.OrganizationId)
+            .Returns(org);
 
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        organizationRepository.GetByIdAsync(orgId).Returns(org);
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidateAsync(Arg.Any<InitPendingOrganizationValidationRequest>())
+            .Returns(callInfo =>
+            {
+                var req = callInfo.Arg<InitPendingOrganizationValidationRequest>();
+                return new ValidationResult<InitPendingOrganizationValidationRequest>(req, new InvalidTokenError());
+            });
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, "", token));
+        var result = await sutProvider.Sut.InitPendingOrganizationAsync(request);
 
-        Assert.Equal("Organization is already enabled.", exception.Message);
+        Assert.True(result.IsError);
+        Assert.IsType<InvalidTokenError>(result.AsError);
 
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .DidNotReceive()
+            .InitializeOrganizationAsync(Arg.Any<Organization>(), Arg.Any<Func<DbConnection, DbTransaction, Task>>());
     }
 
     [Theory, BitAutoData]
-    public async Task Init_Organization_When_Organization_Is_Not_Pending(User user, Guid orgId, Guid orgUserId, string publicKey,
-            string privateKey, SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, OrganizationUser orgUser)
-
+    public async Task InitPendingOrganizationAsync_Success(
+        Organization org,
+        OrganizationUser orgUser,
+        InitPendingOrganizationRequest request,
+        SutProvider<InitPendingOrganizationCommand> sutProvider)
     {
+        var requestWithCollection = request with { CollectionName = "My Collection" };
+        SetupSuccessfulValidation(org, orgUser, requestWithCollection, sutProvider);
 
+        var result = await sutProvider.Sut.InitPendingOrganizationAsync(requestWithCollection);
 
-        var token = CreateToken(orgUser, orgUserId, sutProvider);
+        Assert.False(result.IsError);
 
-        org.Status = Enums.OrganizationStatusType.Created;
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .Received(1)
+            .InitializeOrganizationAsync(
+                Arg.Is<Organization>(o =>
+                    o.Enabled == true &&
+                    o.Status == OrganizationStatusType.Created &&
+                    o.PublicKey == requestWithCollection.OrganizationKeys.PublicKey &&
+                    o.PrivateKey == requestWithCollection.OrganizationKeys.WrappedPrivateKey),
+                Arg.Any<Func<DbConnection, DbTransaction, Task>>());
 
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        organizationRepository.GetByIdAsync(orgId).Returns(org);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .BuildConfirmOwnerAction(
+                Arg.Is<OrganizationUser>(ou =>
+                    ou.Status == OrganizationUserStatusType.Confirmed &&
+                    ou.UserId == requestWithCollection.User.Id &&
+                    ou.Key == requestWithCollection.EncryptedOrganizationSymmetricKey &&
+                    ou.Email == null));
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, "", token));
-
-        Assert.Equal("Organization is not on a Pending status.", exception.Message);
-
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1)
+            .CreateAsync(
+                Arg.Is<Collection>(c => c.Name == "My Collection" && c.OrganizationId == requestWithCollection.OrganizationId),
+                Arg.Is<IEnumerable<CollectionAccessSelection>>(l => l == null),
+                Arg.Is<IEnumerable<CollectionAccessSelection>>(l => l.Any(i => i.Manage)));
     }
 
-    [Theory, BitAutoData]
-    public async Task Init_Organization_When_Organization_Has_Public_Key(User user, Guid orgId, Guid orgUserId, string publicKey,
-            string privateKey, SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, OrganizationUser orgUser)
-
+    private static void SetupSuccessfulValidation(
+        Organization org,
+        OrganizationUser orgUser,
+        InitPendingOrganizationRequest request,
+        SutProvider<InitPendingOrganizationCommand> sutProvider)
     {
-        var token = CreateToken(orgUser, orgUserId, sutProvider);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(request.OrganizationUserId)
+            .Returns(orgUser);
 
-        org.PublicKey = publicKey;
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(request.OrganizationId)
+            .Returns(org);
 
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        organizationRepository.GetByIdAsync(orgId).Returns(org);
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidateAsync(Arg.Any<InitPendingOrganizationValidationRequest>())
+            .Returns(callInfo =>
+            {
+                var req = callInfo.Arg<InitPendingOrganizationValidationRequest>();
+                return new ValidationResult<InitPendingOrganizationValidationRequest>(req, new OneOf.Types.None());
+            });
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, "", token));
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .BuildConfirmOwnerAction(Arg.Any<OrganizationUser>())
+            .Returns((_, __) => Task.CompletedTask);
 
-        Assert.Equal("Organization already has a Public Key.", exception.Message);
-
-    }
-
-    [Theory, BitAutoData]
-    public async Task Init_Organization_When_Organization_Has_Private_Key(User user, Guid orgId, Guid orgUserId, string publicKey,
-            string privateKey, SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, OrganizationUser orgUser)
-
-    {
-
-        var token = CreateToken(orgUser, orgUserId, sutProvider);
-
-        org.PublicKey = null;
-        org.PrivateKey = privateKey;
-        org.Enabled = false;
-
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        organizationRepository.GetByIdAsync(orgId).Returns(org);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, "", token));
-
-        Assert.Equal("Organization already has a Private Key.", exception.Message);
-
-    }
-
-    public string CreateToken(OrganizationUser orgUser, Guid orgUserId, SutProvider<InitPendingOrganizationCommand> sutProvider)
-    {
-        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
-        sutProvider.Create();
-
-        _orgUserInviteTokenableFactory.CreateToken(orgUser).Returns(new OrgUserInviteTokenable(orgUser)
-        {
-            ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
-        });
-
-        var orgUserInviteTokenable = _orgUserInviteTokenableFactory.CreateToken(orgUser);
-        var protectedToken = _orgUserInviteTokenDataFactory.Protect(orgUserInviteTokenable);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(orgUser);
-
-        return protectedToken;
+        sutProvider.GetDependency<IDeviceRepository>()
+            .GetManyByUserIdAsync(request.User.Id)
+            .Returns(new List<Device>());
     }
 }

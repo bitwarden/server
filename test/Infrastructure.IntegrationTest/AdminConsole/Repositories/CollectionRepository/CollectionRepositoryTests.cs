@@ -116,7 +116,7 @@ public class CollectionRepositoryTests
         });
 
         // Assign the test user to the test group
-        await groupRepository.UpdateUsersAsync(group.Id, new[] { orgUser.Id });
+        await groupRepository.UpdateUsersAsync(group.Id, new[] { orgUser.Id }, DateTime.UtcNow);
 
         var collection = new Collection { Name = "Test Collection", OrganizationId = organization.Id, };
 
@@ -191,8 +191,8 @@ public class CollectionRepositoryTests
         });
 
         // Assign the test user to the test groups
-        await groupRepository.UpdateUsersAsync(group.Id, new[] { orgUser.Id });
-        await groupRepository.UpdateUsersAsync(group2.Id, new[] { orgUser.Id });
+        await groupRepository.UpdateUsersAsync(group.Id, new[] { orgUser.Id }, DateTime.UtcNow);
+        await groupRepository.UpdateUsersAsync(group2.Id, new[] { orgUser.Id }, DateTime.UtcNow);
 
         var collection = new Collection { Name = "Test Collection", OrganizationId = organization.Id, };
 
@@ -399,8 +399,8 @@ public class CollectionRepositoryTests
         });
 
         // Assign the test user to the test groups
-        await groupRepository.UpdateUsersAsync(group.Id, new[] { orgUser.Id });
-        await groupRepository.UpdateUsersAsync(group2.Id, new[] { orgUser.Id });
+        await groupRepository.UpdateUsersAsync(group.Id, new[] { orgUser.Id }, DateTime.UtcNow);
+        await groupRepository.UpdateUsersAsync(group2.Id, new[] { orgUser.Id }, DateTime.UtcNow);
 
         var collection1 = new Collection { Name = "Collection 1", OrganizationId = organization.Id, };
 
@@ -607,5 +607,43 @@ public class CollectionRepositoryTests
         Assert.Contains(collections, c => c.Name == "Collection 2");
         Assert.Contains(collections, c => c.Name == "Collection 3");
         Assert.DoesNotContain(collections, c => c.Name == "My Items");
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task CreateOrUpdateAccessForManyAsync_CreatesAccessAndBumpsRevisionDate(
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository,
+        ICollectionRepository collectionRepository,
+        IUserRepository userRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var user = await userRepository.CreateTestUserAsync();
+        var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+        var group = await groupRepository.CreateTestGroupAsync(organization);
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+
+        var revisionDate = DateTime.UtcNow.AddMinutes(10);
+
+        await collectionRepository.CreateOrUpdateAccessForManyAsync(
+            organization.Id,
+            [collection.Id],
+            [new CollectionAccessSelection { Id = orgUser.Id, Manage = true, HidePasswords = false, ReadOnly = false }],
+            [new CollectionAccessSelection { Id = group.Id, Manage = false, HidePasswords = true, ReadOnly = true }],
+            revisionDate
+        );
+
+        var (actualCollection, actualAccess) = await collectionRepository.GetByIdWithAccessAsync(collection.Id);
+        Assert.NotNull(actualCollection);
+        Assert.Equal(revisionDate, actualCollection.RevisionDate, TimeSpan.FromMilliseconds(10));
+
+        var userAccess = Assert.Single(actualAccess.Users);
+        Assert.Equal(orgUser.Id, userAccess.Id);
+        Assert.True(userAccess.Manage);
+
+        var groupAccess = Assert.Single(actualAccess.Groups);
+        Assert.Equal(group.Id, groupAccess.Id);
+        Assert.True(groupAccess.ReadOnly);
+        Assert.True(groupAccess.HidePasswords);
     }
 }

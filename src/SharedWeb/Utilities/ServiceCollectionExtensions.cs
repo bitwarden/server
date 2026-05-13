@@ -6,7 +6,6 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
-using Bit.Core;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -22,12 +21,16 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Services.Implementations;
 using Bit.Core.Auth.UserFeatures;
+using Bit.Core.Auth.UserFeatures.Devices;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess;
 using Bit.Core.Auth.UserFeatures.PasswordValidation;
+using Bit.Core.Billing.Providers.Services;
+using Bit.Core.Billing.Providers.Services.NoopImplementations;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Billing.TrialInitiation;
 using Bit.Core.Dirt.Reports.ReportFeatures;
+using Bit.Core.Dirt.Reports.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.HostedServices;
@@ -83,6 +86,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
 using StackExchange.Redis;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using Constants = Bit.Core.Constants;
 using NoopRepos = Bit.Core.Repositories.Noop;
 using Role = Bit.Core.Entities.Role;
 using TableStorageRepos = Bit.Core.Repositories.TableStorage;
@@ -164,13 +168,14 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEventService, EventService>();
         services.AddScoped<IEmergencyAccessService, EmergencyAccessService>();
         services.AddSingleton<IDeviceService, DeviceService>();
+        services.AddDeviceServices();
         services.AddScoped<ISsoConfigService, SsoConfigService>();
         services.AddScoped<IAuthRequestService, AuthRequestService>();
         services.AddScoped<IDuoUniversalTokenService, DuoUniversalTokenService>();
         services.AddScoped<ISendAuthorizationService, SendAuthorizationService>();
         services.AddScoped<IOrganizationDomainService, OrganizationDomainService>();
         services.AddVaultServices();
-        services.AddReportingServices();
+        services.AddReportingServices(globalSettings);
         services.AddKeyManagementServices();
         services.AddNotificationCenterServices();
         services.AddPlatformServices();
@@ -291,20 +296,18 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDnsResolverService, DnsResolverService>();
         services.AddOptionality();
         services.AddTokenizers();
-
-        services.AddSingleton<IVNextInMemoryApplicationCacheService, VNextInMemoryApplicationCacheService>();
         services.AddScoped<IApplicationCacheService, FeatureRoutedCacheService>();
+        services.AddOrganizationAbilityCache(globalSettings);
+        services.AddProviderAbilityCache(globalSettings);
 
         if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
             CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
         {
             services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryServiceBusApplicationCacheService>();
-            services.AddSingleton<IApplicationCacheServiceBusMessaging, ServiceBusApplicationCacheMessaging>();
         }
         else
         {
             services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryApplicationCacheService>();
-            services.AddSingleton<IApplicationCacheServiceBusMessaging, NoOpApplicationCacheMessaging>();
         }
 
         var awsConfigured = CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret);
@@ -364,6 +367,19 @@ public static class ServiceCollectionExtensions
         {
             services.AddSingleton<ISendFileStorageService, NoopSendFileStorageService>();
         }
+
+        if (CoreHelpers.SettingHasValue(globalSettings.OrganizationReport.ConnectionString))
+        {
+            services.AddSingleton<IOrganizationReportStorageService, AzureOrganizationReportStorageService>();
+        }
+        else if (CoreHelpers.SettingHasValue(globalSettings.OrganizationReport.BaseDirectory))
+        {
+            services.AddSingleton<IOrganizationReportStorageService, LocalOrganizationReportStorageService>();
+        }
+        else
+        {
+            services.AddSingleton<IOrganizationReportStorageService, NoopOrganizationReportStorageService>();
+        }
     }
 
     public static void AddOosServices(this IServiceCollection services)
@@ -373,6 +389,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISecretRepository, NoopSecretRepository>();
         services.AddScoped<ISecretVersionRepository, NoopSecretVersionRepository>();
         services.AddScoped<IProjectRepository, NoopProjectRepository>();
+        services.AddTransient<IBusinessUnitConverter, NoopBusinessUnitConverter>();
     }
 
     public static void AddNoopServices(this IServiceCollection services)
@@ -478,10 +495,6 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services, IWebHostEnvironment env, GlobalSettings globalSettings)
     {
         var builder = services.AddDataProtection().SetApplicationName("Bitwarden");
-        if (env.IsDevelopment())
-        {
-            return;
-        }
 
         if (globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.DataProtection.Directory))
         {
@@ -498,13 +511,34 @@ public static class ServiceCollectionExtensions
             }
             else if (CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificatePassword))
             {
-                dataProtectionCert = CoreHelpers.GetBlobCertificateAsync(globalSettings.Storage.ConnectionString, "certificates",
-                    "dataprotection.pfx", globalSettings.DataProtection.CertificatePassword)
+                dataProtectionCert = CoreHelpers.GetBlobCertificateAsync(
+                    globalSettings.Storage.ConnectionString,
+                    "certificates",
+                    globalSettings.DataProtection.BlobName,
+                    globalSettings.DataProtection.CertificatePassword)
                     .GetAwaiter().GetResult();
             }
-            builder
-                .PersistKeysToAzureBlobStorage(globalSettings.Storage.ConnectionString, "aspnet-dataprotection", "keys.xml")
-                .ProtectKeysWithCertificate(dataProtectionCert);
+
+            if (!env.IsDevelopment())
+            {
+                builder
+                    .PersistKeysToAzureBlobStorage(globalSettings.Storage.ConnectionString, "aspnet-dataprotection", "keys.xml")
+                    .ProtectKeysWithCertificate(dataProtectionCert);
+
+                if (globalSettings.DataProtection.UnprotectCertificates.Length > 0)
+                {
+                    var unprotectCertificates = Task.WhenAll(globalSettings.DataProtection.UnprotectCertificates
+                        .Select(ci => CoreHelpers.GetBlobCertificateAsync(
+                            globalSettings.Storage.ConnectionString,
+                            "certificates",
+                            ci.FileName,
+                            ci.Password
+                        ))
+                    ).GetAwaiter().GetResult();
+
+                    builder.UnprotectKeysWithAnyCertificate(unprotectCertificates);
+                }
+            }
         }
     }
 
@@ -594,10 +628,24 @@ public static class ServiceCollectionExtensions
                 }
             }
         }
-        if (options.KnownProxies.Count > 1)
+
+        if (!string.IsNullOrWhiteSpace(globalSettings.KnownNetworks))
+        {
+            var proxyNetworks = globalSettings.KnownNetworks.Split(',');
+            foreach (var proxyNetwork in proxyNetworks)
+            {
+                if (System.Net.IPNetwork.TryParse(proxyNetwork.Trim(), out var ipn))
+                {
+                    options.KnownIPNetworks.Add(ipn);
+                }
+            }
+        }
+
+        if (options.KnownProxies.Count > 1 || options.KnownIPNetworks.Count > 1)
         {
             options.ForwardLimit = null;
         }
+
         app.UseForwardedHeaders(options);
     }
 

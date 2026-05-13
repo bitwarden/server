@@ -1,49 +1,43 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Security.Cryptography;
+using System.Text;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
-
+using Bit.Seeder.Services;
 namespace Bit.Seeder.Factories;
 
 internal static class OrganizationSeeder
 {
-    internal static Organization Create(string name, string domain, int seats, string? publicKey = null, string? privateKey = null)
+    internal static Organization Create(string name, string domain, int seats, IManglerService manglerService, string? publicKey = null, string? privateKey = null, PlanType planType = PlanType.EnterpriseAnnually)
     {
-        return new Organization
+        var billingHash = DeriveShortHash(domain);
+        var org = new Organization
         {
             Id = CoreHelpers.GenerateComb(),
-            Name = name,
-            BillingEmail = $"billing@{domain}",
-            Plan = "Enterprise (Annually)",
-            PlanType = PlanType.EnterpriseAnnually,
+            Identifier = manglerService.Mangle(domain),
+            Name = manglerService.Mangle(name),
+            BillingEmail = $"billing{billingHash}@{billingHash}.{domain}",
             Seats = seats,
-            UseCustomPermissions = true,
-            UseOrganizationDomains = true,
-            UseSecretsManager = true,
-            UseGroups = true,
-            UseDirectory = true,
-            UseEvents = true,
-            UseTotp = true,
-            Use2fa = true,
-            UseApi = true,
-            UseResetPassword = true,
-            UsePasswordManager = true,
-            UseAutomaticUserConfirmation = true,
-            SelfHost = true,
-            UsersGetPremium = true,
-            LimitCollectionCreation = true,
-            LimitCollectionDeletion = true,
-            LimitItemDeletion = true,
-            AllowAdminAccessToAllCollectionItems = true,
-            UseRiskInsights = true,
-            UseAdminSponsoredFamilies = true,
-            SyncSeats = true,
             Status = OrganizationStatusType.Created,
-            MaxStorageGb = 10,
             PublicKey = publicKey,
             PrivateKey = privateKey
         };
+
+        PlanFeatures.Apply(org, planType);
+
+        return org;
+    }
+
+    /// <summary>
+    /// Derives a deterministic 8-char hex string from a domain for safe billing email generation.
+    /// Always applied regardless of mangle flag — billing emails must never be deliverable.
+    /// </summary>
+    private static string DeriveShortHash(string domain)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(domain));
+        return Convert.ToHexString(bytes, 0, 4).ToLowerInvariant();
     }
 }
 

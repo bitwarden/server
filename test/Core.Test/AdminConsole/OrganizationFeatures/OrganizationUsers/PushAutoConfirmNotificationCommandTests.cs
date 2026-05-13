@@ -51,7 +51,8 @@ public class PushAutoConfirmNotificationCommandTests
                 pn.Type == PushType.AutoConfirm &&
                 pn.Target == NotificationTarget.User &&
                 pn.Payload.OrganizationId == organizationId &&
-                pn.Payload.TargetUserId == orgUser.Id &&
+                pn.Payload.TargetUserId == userId &&
+                pn.Payload.TargetOrganizationUserId == orgUser.Id &&
                 pn.ExcludeCurrentContext == false));
     }
 
@@ -92,7 +93,8 @@ public class PushAutoConfirmNotificationCommandTests
                 pn.Type == PushType.AutoConfirm &&
                 pn.Target == NotificationTarget.User &&
                 pn.Payload.OrganizationId == organizationId &&
-                pn.Payload.TargetUserId == orgUser.Id &&
+                pn.Payload.TargetUserId == userId &&
+                pn.Payload.TargetOrganizationUserId == orgUser.Id &&
                 pn.ExcludeCurrentContext == false));
     }
 
@@ -185,7 +187,8 @@ public class PushAutoConfirmNotificationCommandTests
                 pn.Type == PushType.AutoConfirm &&
                 pn.Target == NotificationTarget.User &&
                 pn.Payload.OrganizationId == organizationId &&
-                pn.Payload.TargetUserId == orgUser.Id &&
+                pn.Payload.TargetUserId == userId &&
+                pn.Payload.TargetOrganizationUserId == orgUser.Id &&
                 pn.ExcludeCurrentContext == false));
     }
 
