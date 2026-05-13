@@ -19,6 +19,7 @@ public class UserSecureNoteCipherScene(IUserRepository userRepository, ICipherRe
         [Required]
         public required string Name { get; set; }
         public string? Notes { get; set; }
+        public bool Reprompt { get; set; }
     }
 
     public class Result
@@ -42,6 +43,10 @@ public class UserSecureNoteCipherScene(IUserRepository userRepository, ICipherRe
             EncryptionKey = request.UserKeyB64,
             UserId = request.UserId
         });
+        if (request.Reprompt)
+        {
+            cipher.Reprompt = CipherRepromptType.Password;
+        }
 
         await cipherRepository.CreateAsync(cipher);
 

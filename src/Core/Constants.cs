@@ -159,7 +159,6 @@ public static class AuthenticationSchemes
 public static class FeatureFlagKeys
 {
     /* Admin Console Team */
-    public const string PolicyRequirements = "pm-14439-policy-requirements";
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
     public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
     public const string AdminResetTwoFactor = "pm-15489-reset-two-factor-account-recovery";
@@ -171,6 +170,7 @@ public static class FeatureFlagKeys
     public const string PolicyDrawers = "pm-34804-policy-drawers";
     public const string PM35153CollectionSdkDecryption = "pm-35153-collection-sdk-decryption";
     public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
+    public const string PM36859RefactorOrgCollectionsVaultComponent = "pm-36859-refactor-org-collections-vault-component";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
@@ -211,6 +211,7 @@ public static class FeatureFlagKeys
     public const string PM29593_PremiumToOrganizationUpgrade = "pm-29593-premium-to-organization-upgrade";
     public const string PM32581_UseUpdateOrganizationSubscriptionCommand = "pm-32581-use-update-organization-subscription-command";
     public const string PM32645_DeferPriceMigrationToRenewal = "pm-32645-defer-price-migration-to-renewal";
+    public const string PM34515_BrowserDesktopCheckout = "pm-34515-browser-desktop-checkout";
 
     /* Key Management Team */
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
@@ -302,6 +303,7 @@ public static class FeatureFlagKeys
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
 
     /* DIRT Team */
+    public const string AccessIntelligenceVersion2 = "pm-31920-access-intelligence-azure-file-storage";
     public const string EventManagementForBlumira = "event-management-for-blumira";
     public const string EventManagementForDataDogAndCrowdStrike = "event-management-for-datadog-and-crowdstrike";
     public const string EventDiagnosticLogging = "pm-27666-siem-event-log-debugging";
