@@ -30,6 +30,13 @@ public class OrganizationUserResetPasswordRequestModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
+        // 2FA-only resets carry no password payload; password validation does not apply.
+        if (!ResetMasterPassword)
+        {
+            yield break;
+        }
+
+        // Require at least one payload form (new or legacy) when a password reset is requested.
         var hasLegacyPayloads = NewMasterPasswordHash is not null && Key is not null;
 
         foreach (var validationResult in MasterPasswordPayloadVariantValidator.ValidatePresence(
