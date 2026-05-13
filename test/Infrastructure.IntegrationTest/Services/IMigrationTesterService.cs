@@ -9,6 +9,7 @@
 /// Each implementation should receive the migration name as a parameter in the constructor
 /// to specify which migration is to be applied.
 /// </remarks>
+[Obsolete("DO NOT USE as this interferes with subsequent database migrations by other teams.")]
 public interface IMigrationTesterService
 {
     /// <summary>
