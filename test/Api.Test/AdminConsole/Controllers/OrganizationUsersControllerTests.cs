@@ -21,6 +21,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
@@ -527,11 +528,13 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task PutRecoverAccount_FlagOff_WhenRecoverAccountSucceeds_ReturnsOk(
+    public async Task PutRecoverAccount_FlagOff_WithHashAndKey_WhenSucceeds_RoutesToLegacyOverloadAndReturnsOk(
         Guid orgId, Guid orgUserId, OrganizationUserResetPasswordRequestModel model, OrganizationUser organizationUser,
         SutProvider<OrganizationUsersController> sutProvider)
     {
         organizationUser.OrganizationId = orgId;
+        model.UnlockData = null;
+        model.AuthenticationData = null;
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(
                 Arg.Any<ClaimsPrincipal>(),
@@ -550,15 +553,23 @@ public class OrganizationUsersControllerTests
         Assert.IsType<Ok>(result);
         await sutProvider.GetDependency<IAdminRecoverAccountCommand>().Received(1)
             .RecoverAccountAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUser>(), Arg.Any<string>(), Arg.Any<string>());
+        await sutProvider.GetDependency<IAdminRecoverAccountCommand>().DidNotReceive()
+            .RecoverAccountAsync(
+                Arg.Any<Guid>(),
+                Arg.Any<OrganizationUser>(),
+                Arg.Any<Bit.Core.KeyManagement.Models.Data.MasterPasswordUnlockData>(),
+                Arg.Any<Bit.Core.KeyManagement.Models.Data.MasterPasswordAuthenticationData>());
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PutRecoverAccount_FlagOff_WhenRecoverAccountFails_ReturnsBadRequest(
+    public async Task PutRecoverAccount_FlagOff_WithHashAndKey_WhenFails_ReturnsBadRequest(
         Guid orgId, Guid orgUserId, OrganizationUserResetPasswordRequestModel model, OrganizationUser organizationUser,
         SutProvider<OrganizationUsersController> sutProvider)
     {
         organizationUser.OrganizationId = orgId;
+        model.UnlockData = null;
+        model.AuthenticationData = null;
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(
                 Arg.Any<ClaimsPrincipal>(),
@@ -571,6 +582,105 @@ public class OrganizationUsersControllerTests
         sutProvider.GetDependency<IAdminRecoverAccountCommand>()
             .RecoverAccountAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUser>(), Arg.Any<string>(), Arg.Any<string>())
             .Returns(Microsoft.AspNetCore.Identity.IdentityResult.Failed(new Microsoft.AspNetCore.Identity.IdentityError { Description = "Error message" }));
+
+        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model, organizationUser);
+
+        Assert.IsType<BadRequest<ModelStateDictionary>>(result);
+    }
+
+    // Flag-off dispatch to data-typed overload (UnlockData + AuthenticationData present)
+
+    [Theory]
+    [BitAutoData]
+    public async Task PutRecoverAccount_FlagOff_WithUnlockAndAuthenticationData_WhenSucceeds_RoutesToDataTypedOverloadAndReturnsOk(
+        Guid orgId, Guid orgUserId, OrganizationUserResetPasswordRequestModel model, OrganizationUser organizationUser,
+        KdfRequestModel kdf, string masterKeyWrappedUserKey, string salt, string masterPasswordAuthenticationHash,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        organizationUser.OrganizationId = orgId;
+        model.NewMasterPasswordHash = null;
+        model.Key = null;
+        model.UnlockData = new MasterPasswordUnlockDataRequestModel
+        {
+            Kdf = kdf,
+            MasterKeyWrappedUserKey = masterKeyWrappedUserKey,
+            Salt = salt
+        };
+        model.AuthenticationData = new MasterPasswordAuthenticationDataRequestModel
+        {
+            Kdf = kdf,
+            MasterPasswordAuthenticationHash = masterPasswordAuthenticationHash,
+            Salt = salt
+        };
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                organizationUser,
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(x => x.SingleOrDefault() is RecoverAccountAuthorizationRequirement))
+            .Returns(AuthorizationResult.Success());
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AdminResetTwoFactor)
+            .Returns(false);
+        sutProvider.GetDependency<IAdminRecoverAccountCommand>()
+            .RecoverAccountAsync(
+                Arg.Any<Guid>(),
+                Arg.Any<OrganizationUser>(),
+                Arg.Any<Bit.Core.KeyManagement.Models.Data.MasterPasswordUnlockData>(),
+                Arg.Any<Bit.Core.KeyManagement.Models.Data.MasterPasswordAuthenticationData>())
+            .Returns(Microsoft.AspNetCore.Identity.IdentityResult.Success);
+
+        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model, organizationUser);
+
+        Assert.IsType<Ok>(result);
+        await sutProvider.GetDependency<IAdminRecoverAccountCommand>().Received(1)
+            .RecoverAccountAsync(
+                Arg.Any<Guid>(),
+                Arg.Any<OrganizationUser>(),
+                Arg.Any<Bit.Core.KeyManagement.Models.Data.MasterPasswordUnlockData>(),
+                Arg.Any<Bit.Core.KeyManagement.Models.Data.MasterPasswordAuthenticationData>());
+        await sutProvider.GetDependency<IAdminRecoverAccountCommand>().DidNotReceive()
+            .RecoverAccountAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUser>(), Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PutRecoverAccount_FlagOff_WithUnlockAndAuthenticationData_WhenFails_ReturnsBadRequest(
+        Guid orgId, Guid orgUserId, OrganizationUserResetPasswordRequestModel model, OrganizationUser organizationUser,
+        KdfRequestModel kdf, string masterKeyWrappedUserKey, string salt, string masterPasswordAuthenticationHash,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        organizationUser.OrganizationId = orgId;
+        model.NewMasterPasswordHash = null;
+        model.Key = null;
+        model.UnlockData = new MasterPasswordUnlockDataRequestModel
+        {
+            Kdf = kdf,
+            MasterKeyWrappedUserKey = masterKeyWrappedUserKey,
+            Salt = salt
+        };
+        model.AuthenticationData = new MasterPasswordAuthenticationDataRequestModel
+        {
+            Kdf = kdf,
+            MasterPasswordAuthenticationHash = masterPasswordAuthenticationHash,
+            Salt = salt
+        };
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                organizationUser,
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(x => x.SingleOrDefault() is RecoverAccountAuthorizationRequirement))
+            .Returns(AuthorizationResult.Success());
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AdminResetTwoFactor)
+            .Returns(false);
+        sutProvider.GetDependency<IAdminRecoverAccountCommand>()
+            .RecoverAccountAsync(
+                Arg.Any<Guid>(),
+                Arg.Any<OrganizationUser>(),
+                Arg.Any<Bit.Core.KeyManagement.Models.Data.MasterPasswordUnlockData>(),
+                Arg.Any<Bit.Core.KeyManagement.Models.Data.MasterPasswordAuthenticationData>())
+            .Returns(Microsoft.AspNetCore.Identity.IdentityResult.Failed(
+                new Microsoft.AspNetCore.Identity.IdentityError { Description = "Error message" }));
 
         var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model, organizationUser);
 

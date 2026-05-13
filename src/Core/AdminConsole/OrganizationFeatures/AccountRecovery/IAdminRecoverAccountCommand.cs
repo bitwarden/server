@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
 using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
@@ -21,4 +22,20 @@ public interface IAdminRecoverAccountCommand
     /// <exception cref="NotFoundException">When the user does not exist.</exception>
     Task<IdentityResult> RecoverAccountAsync(Guid orgId, OrganizationUser organizationUser,
         string newMasterPassword, string key);
+
+    /// <summary>
+    /// Recovers an organization user's account by resetting their master password. 
+    /// </summary>
+    /// <param name="orgId">The organization the user belongs to.</param>
+    /// <param name="organizationUser">The organization user being recovered.</param>
+    /// <param name="unlockData">Master-password unlock data (KDF parameters and wrapped user key).</param>
+    /// <param name="authenticationData">Master-password authentication data.</param>
+    /// <returns>An IdentityResult indicating success or failure.</returns>
+    /// <exception cref="BadRequestException">When organization settings, policy, or user state is invalid.</exception>
+    /// <exception cref="NotFoundException">When the user does not exist.</exception>
+    Task<IdentityResult> RecoverAccountAsync(
+        Guid orgId,
+        OrganizationUser organizationUser,
+        MasterPasswordUnlockData unlockData,
+        MasterPasswordAuthenticationData authenticationData);
 }
