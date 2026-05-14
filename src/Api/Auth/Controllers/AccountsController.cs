@@ -642,7 +642,9 @@ public class AccountsController : Controller
         }
         else
         {
-#pragma warning disable CS0618 // legacy path while PM37165_RotateUserApiKeyCommand rolls out
+            // legacy path while PM37165_RotateUserApiKeyCommand rolls out
+            // so temporarily disable the obsolete warning for RotateApiKeyAsync
+#pragma warning disable CS0618 
             await _userService.RotateApiKeyAsync(user);
 #pragma warning restore CS0618
         }
