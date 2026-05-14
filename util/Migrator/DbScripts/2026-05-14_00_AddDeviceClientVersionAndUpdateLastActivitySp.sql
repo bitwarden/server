@@ -249,11 +249,8 @@ BEGIN
 END
 GO
 
--- 7. Drop the old single-column SPs — replaced by the combined SPs above.
--- Deployed environments that already ran the LastActivityDate migration have these in
--- their dbo schema; removing the .sql files alone wouldn't clean those up.
-DROP PROCEDURE IF EXISTS [dbo].[Device_UpdateLastActivityDateById]
-GO
-
-DROP PROCEDURE IF EXISTS [dbo].[Device_UpdateLastActivityDateByIdentifierUserId]
-GO
+-- Note: the old single-column SPs (Device_UpdateLastActivityDateById /
+-- Device_UpdateLastActivityDateByIdentifierUserId) are intentionally NOT dropped here.
+-- Server and DB deploys are decoupled, so the server could roll back to a version that
+-- still calls the old SPs after this migration has run. A follow-up ticket will drop
+-- them in a later migration once we're confident no deployed server version calls them.
