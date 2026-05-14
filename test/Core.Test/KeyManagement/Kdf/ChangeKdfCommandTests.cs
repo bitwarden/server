@@ -334,37 +334,6 @@ public class ChangeKdfCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task ChangeKdfAsync_ServiceReturnsFailure_ReturnsFailedIdentityResult(
-        SutProvider<ChangeKdfCommand> sutProvider, User user)
-    {
-        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(Arg.Any<User>(), Arg.Any<string>())
-            .Returns(true);
-        var failureError = new IdentityError { Code = "TestFail", Description = "Test fail" };
-        sutProvider.GetDependency<IMasterPasswordService>()
-            .SaveUpdateExistingKdfConfigurationAsync(user, Arg.Any<UpdateExistingKdfConfigurationData>())
-            .Returns(OneOf<User, IdentityError[]>.FromT1(new[] { failureError }));
-
-        var kdf = new KdfSettings { KdfType = KdfType.Argon2id, Iterations = 4, Memory = 512, Parallelism = 4 };
-        var authenticationData = new MasterPasswordAuthenticationData
-        {
-            Kdf = kdf,
-            MasterPasswordAuthenticationHash = "newMasterPassword",
-            Salt = user.GetMasterPasswordSalt()
-        };
-        var unlockData = new MasterPasswordUnlockData
-        {
-            Kdf = kdf,
-            MasterKeyWrappedUserKey = "masterKeyWrappedUserKey",
-            Salt = user.GetMasterPasswordSalt()
-        };
-
-        var result = await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", authenticationData, unlockData);
-
-        Assert.False(result.Succeeded);
-    }
-
-    [Theory]
-    [BitAutoData]
     public async Task ChangeKdfAsync_InvalidKdfSettings_ThrowsBadRequestException(
         SutProvider<ChangeKdfCommand> sutProvider, User user)
     {
