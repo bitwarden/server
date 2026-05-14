@@ -65,7 +65,7 @@ public class ChangeKdfCommand : IChangeKdfCommand
         {
             MasterPasswordAuthentication = authenticationData,
             MasterPasswordUnlock = unlockData,
-            ValidatePassword = false, // password already verified by CheckPasswordAsync above
+            ValidatePassword = true,
             RefreshStamp = logoutOnKdfChange,
             MasterPasswordHint = user.MasterPasswordHint, // KDF rotation does not change the hint; carry existing value through
         };
