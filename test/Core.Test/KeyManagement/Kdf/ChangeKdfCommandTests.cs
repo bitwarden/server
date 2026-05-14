@@ -110,7 +110,7 @@ public class ChangeKdfCommandTests
             .SaveUpdateExistingKdfConfigurationAsync(user, Arg.Is<UpdateExistingKdfConfigurationData>(d =>
                 d.MasterPasswordAuthentication == authenticationData &&
                 d.MasterPasswordUnlock == unlockData &&
-                d.ValidatePassword == false &&
+                d.ValidatePassword == true &&
                 d.MasterPasswordHint == user.MasterPasswordHint));
     }
 
