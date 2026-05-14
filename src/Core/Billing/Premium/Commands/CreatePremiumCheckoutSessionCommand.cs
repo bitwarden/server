@@ -96,6 +96,7 @@ public class CreatePremiumCheckoutSessionCommand(
             ],
             SubscriptionData = new SessionSubscriptionDataOptions
             {
+                BillingMode = new SessionSubscriptionDataBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
                 Metadata = new Dictionary<string, string>
                 {
                     [StripeConstants.MetadataKeys.UserId] = user.Id.ToString(),

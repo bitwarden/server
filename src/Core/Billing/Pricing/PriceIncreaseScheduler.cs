@@ -81,7 +81,8 @@ public class PriceIncreaseScheduler(
         var schedule = await stripeAdapter.CreateSubscriptionScheduleAsync(
             new SubscriptionScheduleCreateOptions
             {
-                FromSubscription = subscription.Id
+                FromSubscription = subscription.Id,
+                BillingMode = new SubscriptionScheduleBillingModeOptions { Type = BillingMode.Classic }
             });
 
         try

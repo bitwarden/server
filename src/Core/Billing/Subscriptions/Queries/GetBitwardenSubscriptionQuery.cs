@@ -191,7 +191,8 @@ public class GetBitwardenSubscriptionQuery(
                             Price = isSeatItem ? availablePlan.Seat.StripePriceId : item.Price.Id,
                             Quantity = item.Quantity
                         };
-                    })]
+                    })],
+                    BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = BillingMode.Classic }
                 };
 
                 if (couponIds is { Count: > 0 })
@@ -202,6 +203,10 @@ public class GetBitwardenSubscriptionQuery(
             else
             {
                 options.Subscription = subscription.Id;
+                options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
+                {
+                    BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = BillingMode.Classic }
+                };
             }
 
             var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);

@@ -152,7 +152,11 @@ public class PreviewOrganizationTaxCommand(
                     break;
             }
 
-            options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
+            options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
+            {
+                BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
+                Items = items
+            };
 
             var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
             return GetAmounts(invoice);
@@ -192,7 +196,11 @@ public class PreviewOrganizationTaxCommand(
                     });
                 }
 
-                options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
+                options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
+            {
+                BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
+                Items = items
+            };
 
                 var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
                 return GetAmounts(invoice);
@@ -286,7 +294,11 @@ public class PreviewOrganizationTaxCommand(
                     }
                 }
 
-                options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
+                options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
+            {
+                BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
+                Items = items
+            };
 
                 var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
                 return GetAmounts(invoice);
@@ -363,7 +375,11 @@ public class PreviewOrganizationTaxCommand(
                 }
             }
 
-            options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
+            options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
+            {
+                BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
+                Items = items
+            };
 
             var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
             return GetAmounts(invoice);
