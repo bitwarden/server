@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
@@ -13,7 +13,6 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
-using NSubstitute.ExceptionExtensions;
 using OneOf;
 using Xunit;
 
