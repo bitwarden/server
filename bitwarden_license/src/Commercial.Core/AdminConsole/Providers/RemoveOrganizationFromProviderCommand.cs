@@ -162,7 +162,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 Email = organization.BillingEmail
             });
 
-            if (subscription.Customer.Discount?.Coupon != null)
+            if (subscription.Customer.Discount?.Source?.Coupon != null)
             {
                 await _stripeAdapter.DeleteCustomerDiscountAsync(subscription.CustomerId);
             }

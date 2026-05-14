@@ -1,4 +1,4 @@
-﻿using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
@@ -233,7 +233,7 @@ public class GetBitwardenSubscriptionQuery(
 
         if (subscription.Customer.Discount.IsValid())
         {
-            coupons.Add(subscription.Customer.Discount.Coupon);
+            coupons.Add(subscription.Customer.Discount.Source.Coupon);
         }
 
         if (!string.IsNullOrEmpty(subscription.ScheduleId))
@@ -244,7 +244,7 @@ public class GetBitwardenSubscriptionQuery(
         {
             coupons.AddRange((subscription.Discounts ?? [])
                 .Where(d => d.IsValid())
-                .Select(d => d.Coupon));
+                .Select(d => d.Source.Coupon));
         }
 
         return coupons;
@@ -280,7 +280,7 @@ public class GetBitwardenSubscriptionQuery(
             var schedule = await stripeAdapter.GetSubscriptionScheduleAsync(subscription.ScheduleId,
                 new SubscriptionScheduleGetOptions
                 {
-                    Expand = ["phases.discounts.coupon.applies_to"]
+                    Expand = ["phases.discounts.source.coupon.applies_to"]
                 });
 
             if (schedule.Status != SubscriptionScheduleStatus.Active || schedule.Phases.Count < 2)
@@ -324,8 +324,8 @@ public class GetBitwardenSubscriptionQuery(
             {
                 Expand =
                 [
-                    "customer.discount.coupon.applies_to",
-                    "discounts.coupon.applies_to",
+                    "customer.discount.source.coupon.applies_to",
+                    "discounts.source.coupon.applies_to",
                     "items.data.price.product",
                     "test_clock"
                 ]

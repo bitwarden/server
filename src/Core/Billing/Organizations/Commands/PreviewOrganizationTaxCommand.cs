@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
@@ -217,7 +217,7 @@ public class PreviewOrganizationTaxCommand(
                 {
                     options.Discounts =
                     [
-                        new InvoiceDiscountOptions { Coupon = subscription.Customer.Discount.Coupon.Id }
+                        new InvoiceDiscountOptions { Coupon = subscription.Customer.Discount.Source.Coupon.Id }
                     ];
                 }
 
@@ -317,7 +317,7 @@ public class PreviewOrganizationTaxCommand(
             {
                 options.Discounts =
                 [
-                    new InvoiceDiscountOptions { Coupon = subscription.Customer.Discount.Coupon.Id }
+                    new InvoiceDiscountOptions { Coupon = subscription.Customer.Discount.Source.Coupon.Id }
                 ];
             }
 
