@@ -124,6 +124,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
             var subscriptionCreateOptions = new SubscriptionCreateOptions
             {
+                BillingMode = new SubscriptionBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
                 Customer = organization.GatewayCustomerId,
                 CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
                 DaysUntilDue = 30,
