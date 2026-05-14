@@ -190,6 +190,7 @@ public static class FeatureFlagKeys
     public const string PM32413_MultiClientPasswordManagement = "pm-32413-multi-client-password-management";
     public const string DevicesLastActivityDate = "pm-4516-devices-add-last-activity-date";
     public const string PM34210_DesktopAddDevices = "pm-34210-desktop-add-devices";
+    public const string PM37165_RotateUserApiKeyCommand = "pm-37165-rotate-user-api-key-command";
 
     /* Autofill Team */
     public const string NotificationRefresh = "notification-refresh";
