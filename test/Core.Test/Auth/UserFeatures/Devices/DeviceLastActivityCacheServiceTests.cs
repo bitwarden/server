@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
 using Bit.Core.Auth.UserFeatures.Devices;
 using Bit.Test.Common.AutoFixture;
