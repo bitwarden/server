@@ -144,6 +144,7 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
             CoreHelpers.ReadableBytesSize(organization.Storage.Value) : null;
         StorageGb = organization.Storage.HasValue ?
             Math.Round(organization.Storage.Value / 1073741824D, 2) : 0; // 1 GB
+        ExemptFromBillingAutomation = organization.ExemptFromBillingAutomation;
     }
 
     public OrganizationSubscriptionResponseModel(
@@ -225,4 +226,6 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
     /// Date when a self-hosted organization expires (includes grace period).
     /// </summary>
     public DateTime? Expiration { get; set; }
+
+    public bool ExemptFromBillingAutomation { get; set; }
 }

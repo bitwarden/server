@@ -48,6 +48,7 @@
     [MaxStorageGbIncreased]            SMALLINT         NULL,
     [V2UpgradeToken]                   VARCHAR(MAX)     NULL,
     [MasterPasswordSalt]               NVARCHAR (256)   NULL,
+    [LastApiKeyRotationDate]           DATETIME2 (7)    NULL,
     CONSTRAINT [PK_User] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
