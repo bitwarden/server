@@ -111,7 +111,8 @@ public class ChangeKdfCommandTests
             .SaveUpdateExistingMasterPasswordAndKdfAsync(user, Arg.Is<UpdateExistingPasswordAndKdfData>(d =>
                 d.MasterPasswordAuthentication == authenticationData &&
                 d.MasterPasswordUnlock == unlockData &&
-                d.ValidatePassword == false));
+                d.ValidatePassword == false &&
+                d.MasterPasswordHint == user.MasterPasswordHint));
     }
 
     [Theory]
