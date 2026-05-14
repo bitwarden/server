@@ -2033,6 +2033,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<string>("Key")
                         .HasColumnType("longtext");
 
+                    b.Property<DateTime?>("LastApiKeyRotationDate")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<DateTime?>("LastEmailChangeDate")
                         .HasColumnType("datetime(6)");
 

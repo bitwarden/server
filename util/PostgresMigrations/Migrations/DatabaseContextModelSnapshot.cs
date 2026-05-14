@@ -2039,6 +2039,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<string>("Key")
                         .HasColumnType("text");
 
+                    b.Property<DateTime?>("LastApiKeyRotationDate")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime?>("LastEmailChangeDate")
                         .HasColumnType("timestamp with time zone");
 
