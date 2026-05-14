@@ -199,9 +199,10 @@ internal class MasterPasswordService(
         // Always override the master password hint, even if it's null
         user.MasterPasswordHint = updateExistingData.MasterPasswordHint;
 
-        // Update time markers on the user
+        // Update time markers on the user.
+        // LastPasswordChangeDate is intentionally not set: KDF rotation re-derives the authentication
+        // hash from the same password using new KDF parameters — the user's password has not changed.
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        user.LastPasswordChangeDate = now;
         user.LastKdfChangeDate = now;
         user.RevisionDate = user.AccountRevisionDate = now;
 
