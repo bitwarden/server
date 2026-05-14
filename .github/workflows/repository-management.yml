@@ -110,14 +110,14 @@ jobs:
           fi
 
       - name: Calculate next release version
-        if: ${{ inputs.version_number_override == '' && needs.setup.outputs.branch != 'hotfix-rc' }}
+        if: ${{ inputs.version_number_override == '' && !contains(needs.setup.outputs.branch, 'hotfix') }}
         id: calculate-next-version
         uses: bitwarden/gh-actions/version-next@main
         with:
           version: ${{ steps.current-version.outputs.version }}
 
       - name: Calculate next hotfix release version
-        if: ${{ inputs.version_number_override == '' && needs.setup.outputs.branch == 'hotfix-rc' }}
+        if: ${{ inputs.version_number_override == '' && contains(needs.setup.outputs.branch, 'hotfix') }}
         id: calculate-next-hotfix-version
         env:
           CURRENT_VERSION: ${{ steps.current-version.outputs.version }}
@@ -137,7 +137,7 @@ jobs:
           version: ${{ inputs.version_number_override }}
 
       - name: Bump version props - Automatic Calculation
-        if: ${{ inputs.version_number_override == '' && needs.setup.outputs.branch != 'hotfix-rc' }}
+        if: ${{ inputs.version_number_override == '' && !contains(needs.setup.outputs.branch, 'hotfix') }}
         id: bump-version-automatic
         uses: bitwarden/gh-actions/version-bump@main
         with:
@@ -145,7 +145,7 @@ jobs:
           version: ${{ steps.calculate-next-version.outputs.version }}
 
       - name: Bump version props - Hotfix Calculation
-        if: ${{ inputs.version_number_override == '' && needs.setup.outputs.branch == 'hotfix-rc' }}
+        if: ${{ inputs.version_number_override == '' && contains(needs.setup.outputs.branch, 'hotfix') }}
         id: bump-version-hotfix
         uses: bitwarden/gh-actions/version-bump@main
         with:
@@ -231,9 +231,22 @@ jobs:
           persist-credentials: true
           fetch-depth: 0
 
-      - name: Check if ${{ needs.setup.outputs.branch }} branch exists
+      - name: Resolve final branch name
+        id: resolve-branch-name
         env:
-          BRANCH_NAME: ${{ needs.setup.outputs.branch }}
+          BRANCH: ${{ needs.setup.outputs.branch }}
+          VERSION: ${{ needs.bump_version.outputs.version }}
+        run: |
+          if [[ "$BRANCH" == *hotfix* ]]; then
+            FINAL_BRANCH="${BRANCH}-${VERSION}"
+          else
+            FINAL_BRANCH="$BRANCH"
+          fi
+          echo "branch_name=$FINAL_BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Check if ${{ steps.resolve-branch-name.outputs.branch_name }} branch exists
+        env:
+          BRANCH_NAME: ${{ steps.resolve-branch-name.outputs.branch_name }}
         run: |
           if [[ $(git ls-remote --heads origin "$BRANCH_NAME") ]]; then
             echo "$BRANCH_NAME already exists! Please delete $BRANCH_NAME before running again." >> "$GITHUB_STEP_SUMMARY"
@@ -242,7 +255,7 @@ jobs:
 
       - name: Cut branch
         env:
-          BRANCH_NAME: ${{ needs.setup.outputs.branch }}
+          BRANCH_NAME: ${{ steps.resolve-branch-name.outputs.branch_name }}
         run: |
           git switch --quiet --create "$BRANCH_NAME"
           git push --quiet --set-upstream origin "$BRANCH_NAME"
