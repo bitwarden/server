@@ -495,6 +495,12 @@ public class StripePaymentServiceTests
         Assert.Equal(CouponIDs.Milestone3SubscriptionDiscount, result.CustomerDiscount.Id);
         Assert.Equal(25m, result.CustomerDiscount.PercentOff);
         Assert.True(result.CustomerDiscount.Active);
+
+        // Assert — schedule was fetched with source.coupon expand path
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).GetSubscriptionScheduleAsync(
+            "sub_sched_test123",
+            Arg.Is<SubscriptionScheduleGetOptions>(o =>
+                o.Expand.Contains("phases.discounts.source.coupon.applies_to")));
     }
 
     [Theory]
