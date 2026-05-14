@@ -829,7 +829,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     [HttpPost("bulk-auto-confirm")]
     [Authorize<ManageUsersRequirement>]
     [RequireFeature(FeatureFlagKeys.BulkAutoConfirmOnLogin)]
-    public async Task<IResult> BulkAutomaticallyConfirmOrganizationUsersAsync(
+    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkAutomaticallyConfirmOrganizationUsersAsync(
         [InjectOrganization] Organization organization,
         [FromBody] OrganizationUserBulkConfirmRequestModel model)
     {
@@ -848,9 +848,13 @@ public class OrganizationUsersController : BaseAdminConsoleController
                 .ToList(),
         };
 
-        await _bulkAutomaticallyConfirmOrganizationUsersCommand.RunAsync(request);
+        var results = await _bulkAutomaticallyConfirmOrganizationUsersCommand.RunAsync(request);
 
-        return TypedResults.NoContent();
+        return new ListResponseModel<OrganizationUserBulkResponseModel>(results
+            .Select(r => new OrganizationUserBulkResponseModel(r.Id,
+                r.Result.Match(
+                    error => error.Message,
+                    _ => string.Empty))));
     }
 
     private async Task RestoreOrRevokeUserAsync(
