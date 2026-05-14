@@ -114,7 +114,7 @@ public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
         {
             await connection.ExecuteAsync(
                 $"[{Schema}].[{Table}_UpdateLastActivityById]",
-                new { Id = deviceId, ClientVersion = clientVersion },
+                new { Id = deviceId, LastActivityDate = DateTime.UtcNow, ClientVersion = clientVersion },
                 commandType: CommandType.StoredProcedure);
         }
     }
@@ -125,7 +125,7 @@ public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
         {
             await connection.ExecuteAsync(
                 $"[{Schema}].[{Table}_UpdateLastActivityByIdentifierUserId]",
-                new { Identifier = identifier, UserId = userId, ClientVersion = clientVersion },
+                new { Identifier = identifier, UserId = userId, LastActivityDate = DateTime.UtcNow, ClientVersion = clientVersion },
                 commandType: CommandType.StoredProcedure);
         }
     }

@@ -163,6 +163,7 @@ GO
 -- 5. Device_UpdateLastActivityById: new combined SP. Replaces Device_UpdateLastActivityDateById.
 CREATE OR ALTER PROCEDURE [dbo].[Device_UpdateLastActivityById]
     @Id UNIQUEIDENTIFIER,
+    @LastActivityDate DATETIME2(7),
     @ClientVersion NVARCHAR(43) = NULL
 AS
 BEGIN
@@ -186,8 +187,8 @@ BEGIN
     SET
         [LastActivityDate] =
             CASE
-                WHEN [LastActivityDate] IS NULL OR CAST([LastActivityDate] AS DATE) < CAST(GETUTCDATE() AS DATE)
-                    THEN GETUTCDATE()
+                WHEN [LastActivityDate] IS NULL OR CAST([LastActivityDate] AS DATE) < CAST(@LastActivityDate AS DATE)
+                    THEN @LastActivityDate
                 ELSE [LastActivityDate]
             END,
         [ClientVersion] =
@@ -200,7 +201,7 @@ BEGIN
         [Id] = @Id
         AND (
             [LastActivityDate] IS NULL
-            OR CAST([LastActivityDate] AS DATE) < CAST(GETUTCDATE() AS DATE)
+            OR CAST([LastActivityDate] AS DATE) < CAST(@LastActivityDate AS DATE)
             OR (@ClientVersion IS NOT NULL AND ([ClientVersion] IS NULL OR [ClientVersion] <> @ClientVersion))
         )
 END
@@ -211,6 +212,7 @@ GO
 CREATE OR ALTER PROCEDURE [dbo].[Device_UpdateLastActivityByIdentifierUserId]
     @Identifier NVARCHAR(50),
     @UserId UNIQUEIDENTIFIER,
+    @LastActivityDate DATETIME2(7),
     @ClientVersion NVARCHAR(43) = NULL
 AS
 BEGIN
@@ -228,8 +230,8 @@ BEGIN
     SET
         [LastActivityDate] =
             CASE
-                WHEN [LastActivityDate] IS NULL OR CAST([LastActivityDate] AS DATE) < CAST(GETUTCDATE() AS DATE)
-                    THEN GETUTCDATE()
+                WHEN [LastActivityDate] IS NULL OR CAST([LastActivityDate] AS DATE) < CAST(@LastActivityDate AS DATE)
+                    THEN @LastActivityDate
                 ELSE [LastActivityDate]
             END,
         [ClientVersion] =
@@ -243,7 +245,7 @@ BEGIN
         AND [UserId] = @UserId
         AND (
             [LastActivityDate] IS NULL
-            OR CAST([LastActivityDate] AS DATE) < CAST(GETUTCDATE() AS DATE)
+            OR CAST([LastActivityDate] AS DATE) < CAST(@LastActivityDate AS DATE)
             OR (@ClientVersion IS NOT NULL AND ([ClientVersion] IS NULL OR [ClientVersion] <> @ClientVersion))
         )
 END
