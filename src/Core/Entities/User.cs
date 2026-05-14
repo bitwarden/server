@@ -105,6 +105,7 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public DateTime? LastKdfChangeDate { get; set; }
     public DateTime? LastKeyRotationDate { get; set; }
     public DateTime? LastEmailChangeDate { get; set; }
+    public DateTime? LastApiKeyRotationDate { get; set; }
     public bool VerifyDevices { get; set; } = true;
     /// <summary>
     /// V2 upgrade token stored as JSON containing two wrapped user keys.

@@ -43,6 +43,7 @@ SELECT
     [LastKdfChangeDate],
     [LastKeyRotationDate],
     [LastEmailChangeDate],
+    [LastApiKeyRotationDate],
     [VerifyDevices],
     [SecurityState],
     [SecurityVersion],
