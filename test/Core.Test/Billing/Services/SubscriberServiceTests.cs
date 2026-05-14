@@ -1811,9 +1811,9 @@ public class SubscriberServiceTests
         await stripeAdapter.Received(1).UpdateSubscriptionAsync(
             organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>
-                options.CancelAt.HasValue &&
-                options.CancelAt.Value > before &&
-                options.CancelAt.Value < after &&
+                ((DateTime?)options.CancelAt).HasValue &&
+                (DateTime?)options.CancelAt > before &&
+                (DateTime?)options.CancelAt < after &&
                 options.Metadata != null &&
                 options.Metadata.ContainsKey(StripeConstants.MetadataKeys.CancellationOrigin) &&
                 options.Metadata[StripeConstants.MetadataKeys.CancellationOrigin] == StripeConstants.CancellationOrigins.UnpaidSubscription));
