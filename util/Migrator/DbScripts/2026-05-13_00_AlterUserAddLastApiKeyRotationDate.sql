@@ -50,13 +50,13 @@ AS
         [LastKdfChangeDate],
         [LastKeyRotationDate],
         [LastEmailChangeDate],
-        [LastApiKeyRotationDate],
         [VerifyDevices],
         [SecurityState],
         [SecurityVersion],
         [SignedPublicKey],
         [V2UpgradeToken],
-        [MasterPasswordSalt]
+        [MasterPasswordSalt],
+        [LastApiKeyRotationDate]
     FROM
         [dbo].[User]
 GO

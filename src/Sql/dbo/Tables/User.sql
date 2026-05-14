@@ -41,7 +41,6 @@
     [LastKdfChangeDate]                DATETIME2 (7)    NULL,
     [LastKeyRotationDate]              DATETIME2 (7)    NULL,
     [LastEmailChangeDate]              DATETIME2 (7)    NULL,
-    [LastApiKeyRotationDate]           DATETIME2 (7)    NULL,
     [VerifyDevices]                    BIT              DEFAULT ((1)) NOT NULL,
     [SecurityState]                    VARCHAR (MAX)    NULL,
     [SecurityVersion]                  INT              NULL,
@@ -49,6 +48,7 @@
     [MaxStorageGbIncreased]            SMALLINT         NULL,
     [V2UpgradeToken]                   VARCHAR(MAX)     NULL,
     [MasterPasswordSalt]               NVARCHAR (256)   NULL,
+    [LastApiKeyRotationDate]           DATETIME2 (7)    NULL,
     CONSTRAINT [PK_User] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
