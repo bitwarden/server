@@ -46,6 +46,16 @@ public class DeviceRepositoryTests
         });
     }
 
+    /// <summary>
+    /// Truncates a <see cref="DateTime"/> to second-level precision (preserving <see cref="DateTime.Kind"/>).
+    /// Used to compare a SqlServer-round-tripped <c>DateTime</c> against an in-memory <c>DateTime.UtcNow</c>:
+    /// Dapper binds <c>DateTime</c> parameters as legacy <c>datetime</c> (~3.33ms granularity), so the stored
+    /// value can be a few ms earlier than the in-memory capture. Truncating to the second absorbs that drift
+    /// while still detecting stale or defaulted values (which would be off by seconds, not milliseconds).
+    /// </summary>
+    private static DateTime TruncateToSecond(DateTime value) =>
+        new(value.Ticks - value.Ticks % TimeSpan.TicksPerSecond, value.Kind);
+
     // -------------------------------------------------------------------------------------------
     // ReplaceAsync
     // -------------------------------------------------------------------------------------------
@@ -518,8 +528,11 @@ public class DeviceRepositoryTests
         // Assert — LastActivityDate is set at creation time (>= beforeCreation) and returned by the
         // stored procedure. The >= check locks in that the entity initializer's DateTime.UtcNow
         // flowed through Device_Create rather than the column being set by some default later.
+        // Compared at second-level precision to absorb Dapper's legacy-`datetime` rounding on
+        // SqlServer — see TruncateToSecond for details.
         Assert.NotNull(result.LastActivityDate);
-        Assert.True(result.LastActivityDate >= beforeCreation);
+        Assert.True(TruncateToSecond(result.LastActivityDate.Value) >= TruncateToSecond(beforeCreation),
+            $"LastActivityDate {result.LastActivityDate:O} precedes beforeCreation {beforeCreation:O} at second-level precision.");
     }
 
     /// <summary>
