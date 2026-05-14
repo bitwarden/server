@@ -69,6 +69,8 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
         // Arrange
         orgUser1.OrganizationId = organization.Id;
         orgUser2.OrganizationId = organization.Id;
+        user1.Id = orgUser1.UserId!.Value;
+        user2.Id = orgUser2.UserId!.Value;
 
         sutProvider.GetDependency<IUserRepository>()
             .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
@@ -220,6 +222,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
         // Arrange
         orgUser1.OrganizationId = organization.Id;
         orgUser2.OrganizationId = organization.Id;
+        user1.Id = orgUser1.UserId!.Value;
 
         sutProvider.GetDependency<IUserRepository>()
             .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
