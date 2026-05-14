@@ -1,4 +1,4 @@
-﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
@@ -81,7 +81,8 @@ public class PriceIncreaseScheduler(
         var schedule = await stripeAdapter.CreateSubscriptionScheduleAsync(
             new SubscriptionScheduleCreateOptions
             {
-                FromSubscription = subscription.Id
+                FromSubscription = subscription.Id,
+                BillingMode = new SubscriptionScheduleBillingModeOptions { Type = BillingMode.Classic }
             });
 
         try
@@ -258,7 +259,7 @@ public class PriceIncreaseScheduler(
         }
 
         var discounts = subscription.Discounts?
-            .Select(d => new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.Coupon.Id })
+            .Select(d => new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.Source.Coupon.Id })
             .ToList() ?? [];
 
         discounts.Add(new SubscriptionSchedulePhaseDiscountOptions
@@ -314,7 +315,7 @@ public class PriceIncreaseScheduler(
         }
 
         var discounts = subscription.Discounts?
-            .Select(d => new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.Coupon.Id })
+            .Select(d => new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.Source.Coupon.Id })
             .ToList() ?? [];
 
         if (oldPlan.Type == PlanType.FamiliesAnnually2019)
