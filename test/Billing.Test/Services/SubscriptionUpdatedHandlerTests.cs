@@ -152,8 +152,8 @@ public class SubscriptionUpdatedHandlerTests
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             subscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>
-                options.CancelAt.HasValue &&
-                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
+                ((DateTime?)options.CancelAt).HasValue &&
+                (DateTime?)options.CancelAt <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
                 options.ProrationBehavior == ProrationBehavior.None &&
                 options.CancellationDetails != null &&
                 options.CancellationDetails.Comment != null));
@@ -216,8 +216,8 @@ public class SubscriptionUpdatedHandlerTests
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             subscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>
-                options.CancelAt.HasValue &&
-                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
+                ((DateTime?)options.CancelAt).HasValue &&
+                (DateTime?)options.CancelAt <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
                 options.ProrationBehavior == ProrationBehavior.None &&
                 options.CancellationDetails != null &&
                 options.CancellationDetails.Comment != null));
@@ -623,8 +623,8 @@ public class SubscriptionUpdatedHandlerTests
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             subscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>
-                options.CancelAt.HasValue &&
-                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
+                ((DateTime?)options.CancelAt).HasValue &&
+                (DateTime?)options.CancelAt <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
                 options.ProrationBehavior == ProrationBehavior.None &&
                 options.CancellationDetails != null &&
                 options.CancellationDetails.Comment != null));
