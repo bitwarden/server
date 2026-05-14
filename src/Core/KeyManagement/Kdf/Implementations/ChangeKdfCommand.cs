@@ -43,7 +43,7 @@ public class ChangeKdfCommand : IChangeKdfCommand
         // Validate to prevent user account from becoming un-decryptable from invalid parameters
         //
         // Prevent a de-synced salt value from creating an un-decryptable unlock method.
-        // Also checked in the MasterPasswordService via UpdateExistingPasswordAndKdfData.ValidateDataForUser.
+        // Also checked in the MasterPasswordService via UpdateExistingKdfConfigurationData.ValidateDataForUser.
         authenticationData.ValidateSaltUnchangedForUser(user);
         unlockData.ValidateSaltUnchangedForUser(user);
 
@@ -61,7 +61,7 @@ public class ChangeKdfCommand : IChangeKdfCommand
 
         var logoutOnKdfChange = !_featureService.IsEnabled(FeatureFlagKeys.NoLogoutOnKdfChange);
 
-        var data = new UpdateExistingPasswordAndKdfData
+        var data = new UpdateExistingKdfConfigurationData
         {
             MasterPasswordAuthentication = authenticationData,
             MasterPasswordUnlock = unlockData,
@@ -70,7 +70,7 @@ public class ChangeKdfCommand : IChangeKdfCommand
             MasterPasswordHint = user.MasterPasswordHint, // KDF rotation does not change the hint; carry existing value through
         };
 
-        var result = await _masterPasswordService.SaveUpdateExistingMasterPasswordAndKdfAsync(user, data);
+        var result = await _masterPasswordService.SaveUpdateExistingKdfConfigurationAsync(user, data);
         if (result.TryPickT1(out var errors, out _))
         {
             return IdentityResult.Failed(errors);

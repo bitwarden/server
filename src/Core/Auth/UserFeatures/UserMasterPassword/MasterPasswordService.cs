@@ -171,9 +171,9 @@ internal class MasterPasswordService(
         return user;
     }
 
-    public async Task<OneOf<User, IdentityError[]>> SaveUpdateExistingMasterPasswordAndKdfAsync(
+    public async Task<OneOf<User, IdentityError[]>> SaveUpdateExistingKdfConfigurationAsync(
         User user,
-        UpdateExistingPasswordAndKdfData updateExistingData)
+        UpdateExistingKdfConfigurationData updateExistingData)
     {
         EnsureUserIsHydrated(user);
         updateExistingData.ValidateDataForUser(user);
