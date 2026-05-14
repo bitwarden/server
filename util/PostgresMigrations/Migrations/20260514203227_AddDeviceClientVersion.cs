@@ -13,8 +13,8 @@ public partial class AddDeviceClientVersion : Migration
         migrationBuilder.AddColumn<string>(
             name: "ClientVersion",
             table: "Device",
-            type: "character varying(20)",
-            maxLength: 20,
+            type: "character varying(43)",
+            maxLength: 43,
             nullable: true);
     }
 

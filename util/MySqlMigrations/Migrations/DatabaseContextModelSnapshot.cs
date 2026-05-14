@@ -1381,8 +1381,8 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasDefaultValue(true);
 
                     b.Property<string>("ClientVersion")
-                        .HasMaxLength(20)
-                        .HasColumnType("varchar(20)");
+                        .HasMaxLength(43)
+                        .HasColumnType("varchar(43)");
 
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");

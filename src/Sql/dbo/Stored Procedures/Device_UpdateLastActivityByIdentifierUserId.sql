@@ -1,7 +1,7 @@
 CREATE PROCEDURE [dbo].[Device_UpdateLastActivityByIdentifierUserId]
     @Identifier NVARCHAR(50),
     @UserId UNIQUEIDENTIFIER,
-    @ClientVersion NVARCHAR(20) = NULL
+    @ClientVersion NVARCHAR(43) = NULL
 AS
 BEGIN
     SET NOCOUNT ON

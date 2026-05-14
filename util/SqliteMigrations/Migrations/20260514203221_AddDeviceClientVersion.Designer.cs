@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260514192457_AddDeviceClientVersion")]
+    [Migration("20260514203221_AddDeviceClientVersion")]
     partial class AddDeviceClientVersion
     {
         /// <inheritdoc />
@@ -1373,7 +1373,7 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasDefaultValue(true);
 
                     b.Property<string>("ClientVersion")
-                        .HasMaxLength(20)
+                        .HasMaxLength(43)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")

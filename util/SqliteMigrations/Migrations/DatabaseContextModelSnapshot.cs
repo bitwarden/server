@@ -1370,7 +1370,7 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasDefaultValue(true);
 
                     b.Property<string>("ClientVersion")
-                        .HasMaxLength(20)
+                        .HasMaxLength(43)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")

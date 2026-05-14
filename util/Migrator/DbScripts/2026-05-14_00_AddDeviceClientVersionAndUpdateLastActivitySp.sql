@@ -8,7 +8,7 @@
 IF COL_LENGTH('[dbo].[Device]', 'ClientVersion') IS NULL
 BEGIN
     ALTER TABLE [dbo].[Device]
-        ADD [ClientVersion] NVARCHAR(20) NULL
+        ADD [ClientVersion] NVARCHAR(43) NULL
 END
 GO
 
@@ -63,7 +63,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Device_Create]
     @EncryptedPrivateKey VARCHAR(MAX) = NULL,
     @Active BIT = 1,
     @LastActivityDate DATETIME2(7) = NULL,
-    @ClientVersion NVARCHAR(20) = NULL
+    @ClientVersion NVARCHAR(43) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -120,7 +120,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Device_Update]
     @EncryptedPrivateKey VARCHAR(MAX) = NULL,
     @Active BIT = 1,
     @LastActivityDate DATETIME2(7) = NULL,
-    @ClientVersion NVARCHAR(20) = NULL
+    @ClientVersion NVARCHAR(43) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -163,7 +163,7 @@ GO
 -- 5. Device_UpdateLastActivityById: new combined SP. Replaces Device_UpdateLastActivityDateById.
 CREATE OR ALTER PROCEDURE [dbo].[Device_UpdateLastActivityById]
     @Id UNIQUEIDENTIFIER,
-    @ClientVersion NVARCHAR(20) = NULL
+    @ClientVersion NVARCHAR(43) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -211,7 +211,7 @@ GO
 CREATE OR ALTER PROCEDURE [dbo].[Device_UpdateLastActivityByIdentifierUserId]
     @Identifier NVARCHAR(50),
     @UserId UNIQUEIDENTIFIER,
-    @ClientVersion NVARCHAR(20) = NULL
+    @ClientVersion NVARCHAR(43) = NULL
 AS
 BEGIN
     SET NOCOUNT ON

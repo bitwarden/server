@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260514192446_AddDeviceClientVersion")]
+    [Migration("20260514203227_AddDeviceClientVersion")]
     partial class AddDeviceClientVersion
     {
         /// <inheritdoc />
@@ -1389,8 +1389,8 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasDefaultValue(true);
 
                     b.Property<string>("ClientVersion")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                        .HasMaxLength(43)
+                        .HasColumnType("character varying(43)");
 
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");

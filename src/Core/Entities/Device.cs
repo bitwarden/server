@@ -54,9 +54,13 @@ public class Device : ITableObject<Guid>
     /// Bitwarden-Client-Version header on device creation and on every successful login / token refresh.
     /// Null if the device has not authenticated since client version tracking was introduced or if
     /// the header was absent.
-    /// 20 chars accommodates Bitwarden's <c>YYYY.M.B</c> CalVer (max observed ~9 chars) with headroom.
+    /// Sized to 43 chars — the upper bound of <see cref="Version.ToString()"/> for any input
+    /// accepted by <see cref="Version.TryParse(string?, out Version?)"/>: four
+    /// <see cref="int"/> components (max <see cref="int.MaxValue"/> = 10 digits) joined by 3 dots.
+    /// Real Bitwarden CalVer <c>YYYY.M.B</c> is ~9 chars; the extra headroom prevents truncation
+    /// errors from malformed/hostile headers that still parse as a <see cref="Version"/>.
     /// </summary>
-    [MaxLength(20)]
+    [MaxLength(43)]
     public string? ClientVersion { get; set; }
 
     public void SetNewId()
