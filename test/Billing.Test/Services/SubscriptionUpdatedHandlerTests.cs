@@ -1,4 +1,4 @@
-﻿using Bit.Billing.Services;
+using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
@@ -906,9 +906,9 @@ public class SubscriptionUpdatedHandlerTests
             Customer = new Customer
             {
                 Balance = 0,
-                Discount = new Discount { Coupon = new Coupon { Id = "sm-standalone" } }
+                Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "sm-standalone" } } }
             },
-            Discounts = [new Discount { Coupon = new Coupon { Id = "sm-standalone" } }],
+            Discounts = [new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "sm-standalone" } } }],
             Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } }
         };
 
@@ -985,9 +985,9 @@ public class SubscriptionUpdatedHandlerTests
             Customer = new Customer
             {
                 Balance = 0,
-                Discount = new Discount { Coupon = new Coupon { Id = "sm-standalone" } }
+                Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "sm-standalone" } } }
             },
-            Discounts = [new Discount { Coupon = new Coupon { Id = "sm-standalone" } }],
+            Discounts = [new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "sm-standalone" } } }],
             Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } }
         };
 

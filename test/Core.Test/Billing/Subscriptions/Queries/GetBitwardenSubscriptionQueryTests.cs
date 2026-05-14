@@ -821,7 +821,7 @@ public class GetBitwardenSubscriptionQueryTests
         var user = CreateUser();
         var subscription = CreateSubscription(SubscriptionStatus.Active, legacyPricing: true);
         subscription.Customer.Discount = CreateDiscount(discountType: "cart");
-        subscription.Customer.Discount.Coupon.Id = "customer-coupon";
+        subscription.Customer.Discount.Source.Coupon.Id = "customer-coupon";
         subscription.ScheduleId = "sub_sched_test";
         var premiumPlans = CreatePremiumPlans();
         var schedule = CreateSubscriptionSchedule(percentOff: 30, couponId: "milestone-2c");
@@ -1138,7 +1138,7 @@ public class GetBitwardenSubscriptionQueryTests
 
         return new Discount
         {
-            Coupon = coupon
+            Source = new DiscountSource { Coupon = coupon }
         };
     }
 
