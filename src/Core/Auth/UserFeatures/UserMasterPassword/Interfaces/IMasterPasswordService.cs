@@ -255,11 +255,13 @@ public interface IMasterPasswordService
     Task<OneOf<User, IdentityError[]>> PrepareUpdateExistingMasterPasswordAsync(User user, UpdateExistingPasswordData updateExistingData);
 
     /// <summary>
-    /// Applies a new master password and updated KDF parameters over the user's existing ones
-    /// and persists the updated user to the database. KDF validation is intentionally skipped.
+    /// Updates the user's KDF parameters and persists the updated user to the database.
+    /// The user's master password authentication hash is re-derived
+    /// from the existing password using the new KDF parameters.
+
     ///
     /// <para>
-    /// Use when: rotating KDF parameters.
+    /// Use when: rotating KDF parameters.     
     /// </para>
     ///
     /// <para>

@@ -782,7 +782,6 @@ public class MasterPasswordServiceTests
         Assert.Equal(data.MasterPasswordUnlock.Kdf.KdfType, user.Kdf);
         Assert.Equal(data.MasterPasswordUnlock.Kdf.Iterations, user.KdfIterations);
         Assert.Equal("test-hint", user.MasterPasswordHint);
-        Assert.Equal(expectedTime, user.LastPasswordChangeDate);
         Assert.Equal(expectedTime, user.LastKdfChangeDate);
         Assert.Equal(expectedTime, user.RevisionDate);
         Assert.Equal(user.RevisionDate, user.AccountRevisionDate);
