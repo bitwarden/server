@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260513214608_AddDeviceClientVersionRefactorDeviceDataBump")]
-    partial class AddDeviceClientVersionRefactorDeviceDataBump
+    [Migration("20260514173616_AddDeviceClientVersion")]
+    partial class AddDeviceClientVersion
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

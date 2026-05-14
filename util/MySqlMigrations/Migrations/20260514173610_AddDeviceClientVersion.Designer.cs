@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260513214603_AddDeviceClientVersionRefactorDeviceDataBump")]
-    partial class AddDeviceClientVersionRefactorDeviceDataBump
+    [Migration("20260514173610_AddDeviceClientVersion")]
+    partial class AddDeviceClientVersion
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

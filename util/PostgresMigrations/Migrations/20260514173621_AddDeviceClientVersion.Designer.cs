@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260513214614_AddDeviceClientVersionRefactorDeviceDataBump")]
-    partial class AddDeviceClientVersionRefactorDeviceDataBump
+    [Migration("20260514173621_AddDeviceClientVersion")]
+    partial class AddDeviceClientVersion
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

@@ -2,10 +2,10 @@
 
 #nullable disable
 
-namespace Bit.MySqlMigrations.Migrations;
+namespace Bit.SqliteMigrations.Migrations;
 
 /// <inheritdoc />
-public partial class AddDeviceClientVersionRefactorDeviceDataBump : Migration
+public partial class AddDeviceClientVersion : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
@@ -13,10 +13,9 @@ public partial class AddDeviceClientVersionRefactorDeviceDataBump : Migration
         migrationBuilder.AddColumn<string>(
             name: "ClientVersion",
             table: "Device",
-            type: "varchar(20)",
+            type: "TEXT",
             maxLength: 20,
-            nullable: true)
-            .Annotation("MySql:CharSet", "utf8mb4");
+            nullable: true);
     }
 
     /// <inheritdoc />

@@ -5,7 +5,7 @@
 namespace Bit.PostgresMigrations.Migrations;
 
 /// <inheritdoc />
-public partial class AddDeviceClientVersionRefactorDeviceDataBump : Migration
+public partial class AddDeviceClientVersion : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
