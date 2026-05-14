@@ -285,9 +285,6 @@ public class ChangeKdfCommandTests
     {
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(Arg.Any<User>(), Arg.Any<string>())
             .Returns(true);
-        sutProvider.GetDependency<IMasterPasswordService>()
-            .SaveUpdateExistingKdfConfigurationAsync(user, Arg.Any<UpdateExistingKdfConfigurationData>())
-            .ThrowsAsync(new BadRequestException("Salt mismatch."));
 
         var authenticationData = new MasterPasswordAuthenticationData
         {
@@ -303,6 +300,9 @@ public class ChangeKdfCommandTests
         };
         await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", authenticationData, unlockData));
+        await sutProvider.GetDependency<IMasterPasswordService>()
+            .Received(0)
+            .SaveUpdateExistingKdfConfigurationAsync(Arg.Any<User>(), Arg.Any<UpdateExistingKdfConfigurationData>());
     }
 
     [Theory]
@@ -312,9 +312,6 @@ public class ChangeKdfCommandTests
     {
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(Arg.Any<User>(), Arg.Any<string>())
             .Returns(true);
-        sutProvider.GetDependency<IMasterPasswordService>()
-            .SaveUpdateExistingKdfConfigurationAsync(user, Arg.Any<UpdateExistingKdfConfigurationData>())
-            .ThrowsAsync(new BadRequestException("Salt mismatch."));
 
         var authenticationData = new MasterPasswordAuthenticationData
         {
@@ -330,6 +327,9 @@ public class ChangeKdfCommandTests
         };
         await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", authenticationData, unlockData));
+        await sutProvider.GetDependency<IMasterPasswordService>()
+            .Received(0)
+            .SaveUpdateExistingKdfConfigurationAsync(Arg.Any<User>(), Arg.Any<UpdateExistingKdfConfigurationData>());
     }
 
     [Theory]

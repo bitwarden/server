@@ -260,7 +260,8 @@ public interface IMasterPasswordService
     /// authentication hash is re-derived from the existing password using the new KDF parameters.
     ///
     /// <para>
-    /// Use when: updating KDF parameters.     /// </para>
+    /// Use when: updating KDF parameters.
+    /// </para>
     ///
     /// <para>
     /// Constraints:
