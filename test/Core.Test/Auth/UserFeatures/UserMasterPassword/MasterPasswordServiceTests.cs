@@ -789,7 +789,7 @@ public class MasterPasswordServiceTests
         // as a result of KDF update does not affect a change to this date;
         // doing so would confuse the data. LastKdfChangeDate neatly separates
         // this concern.
-        Assert.Equal(originalLastPasswordChangeDate, user.LastPasswordChangeDate); 
+        Assert.Equal(originalLastPasswordChangeDate, user.LastPasswordChangeDate);
         Assert.Equal(expectedTime, user.RevisionDate);
         Assert.Equal(user.RevisionDate, user.AccountRevisionDate);
         await sutProvider.GetDependency<IUserRepository>().Received().ReplaceAsync(user);

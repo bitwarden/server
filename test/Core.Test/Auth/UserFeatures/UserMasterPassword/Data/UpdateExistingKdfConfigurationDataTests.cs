@@ -1,4 +1,4 @@
-using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
+﻿using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
