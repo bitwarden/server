@@ -19,15 +19,18 @@ public interface IDeviceRepository : IRepository<Device, Guid>
     Task ClearPushTokenAsync(Guid id);
     UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<Device> devices);
     /// <summary>
-    /// Bumps the device's <c>LastActivityDate</c> to today (if not already today) and writes
-    /// <paramref name="clientVersion"/> to <c>ClientVersion</c> (if non-null and different from
-    /// the stored value). Performs a single DB round trip.
+    /// Updates the device's last-activity state: moves <c>LastActivityDate</c> to today (if not
+    /// already today) and writes <paramref name="clientVersion"/> to <c>ClientVersion</c> (if
+    /// non-null and different from the stored value). Performs a single DB round trip.
+    /// See <see cref="Bit.Core.Auth.UserFeatures.Devices.Interfaces.IUpdateDeviceLastActivityCommand"/>
+    /// for why <c>ClientVersion</c> belongs under "last activity" and how this surface extends to
+    /// additional last-observed properties.
     /// </summary>
-    Task BumpDeviceDataByIdAsync(Guid deviceId, string? clientVersion);
+    Task UpdateLastActivityByIdAsync(Guid deviceId, string? clientVersion);
 
     /// <summary>
-    /// Like <see cref="BumpDeviceDataByIdAsync"/>, but locates the device by
+    /// Like <see cref="UpdateLastActivityByIdAsync"/>, but locates the device by
     /// (<paramref name="identifier"/>, <paramref name="userId"/>).
     /// </summary>
-    Task BumpDeviceDataByIdentifierAndUserIdAsync(string identifier, Guid userId, string? clientVersion);
+    Task UpdateLastActivityByIdentifierAndUserIdAsync(string identifier, Guid userId, string? clientVersion);
 }

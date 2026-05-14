@@ -53,7 +53,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
         IClientVersionValidator clientVersionValidator,
-        IBumpDeviceDataCommand bumpDeviceDataCommand)
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand)
         : base(
             userManager,
             userService,
@@ -75,7 +75,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             mailService,
             userAccountKeysQuery,
             clientVersionValidator,
-            bumpDeviceDataCommand)
+            updateDeviceLastActivityCommand)
     {
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
         _assertWebAuthnLoginCredentialCommand = assertWebAuthnLoginCredentialCommand;

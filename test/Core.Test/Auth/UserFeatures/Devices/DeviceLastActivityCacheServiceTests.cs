@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text;
 using Bit.Core.Auth.UserFeatures.Devices;
 using Bit.Test.Common.AutoFixture;
@@ -11,7 +11,7 @@ using Xunit;
 namespace Bit.Core.Test.Auth.UserFeatures.Devices;
 
 [SutProviderCustomize]
-public class DeviceDataCacheServiceTests
+public class DeviceLastActivityCacheServiceTests
 {
     // --- IsUpToDateAsync ---
 
@@ -21,7 +21,7 @@ public class DeviceDataCacheServiceTests
         string identifier,
         string clientVersion)
     {
-        var sutProvider = new SutProvider<DeviceDataCacheService>()
+        var sutProvider = new SutProvider<DeviceLastActivityCacheService>()
             .WithFakeTimeProvider()
             .Create();
 
@@ -42,7 +42,7 @@ public class DeviceDataCacheServiceTests
         string identifier,
         string clientVersion)
     {
-        var sutProvider = new SutProvider<DeviceDataCacheService>()
+        var sutProvider = new SutProvider<DeviceLastActivityCacheService>()
             .WithFakeTimeProvider()
             .Create();
 
@@ -62,7 +62,7 @@ public class DeviceDataCacheServiceTests
         Guid userId,
         string identifier)
     {
-        var sutProvider = new SutProvider<DeviceDataCacheService>()
+        var sutProvider = new SutProvider<DeviceLastActivityCacheService>()
             .WithFakeTimeProvider()
             .Create();
 
@@ -82,7 +82,7 @@ public class DeviceDataCacheServiceTests
         Guid userId,
         string identifier)
     {
-        var sutProvider = new SutProvider<DeviceDataCacheService>()
+        var sutProvider = new SutProvider<DeviceLastActivityCacheService>()
             .WithFakeTimeProvider()
             .Create();
 
@@ -99,7 +99,7 @@ public class DeviceDataCacheServiceTests
 
     [Theory, BitAutoData]
     public async Task IsUpToDateAsync_GivenCacheMiss_ReturnsFalse(
-        SutProvider<DeviceDataCacheService> sutProvider,
+        SutProvider<DeviceLastActivityCacheService> sutProvider,
         Guid userId,
         string identifier,
         string clientVersion)
@@ -113,22 +113,22 @@ public class DeviceDataCacheServiceTests
         Assert.False(result);
     }
 
-    // --- RecordBumpAsync ---
+    // --- RecordUpdateAsync ---
 
     [Theory, BitAutoData]
-    public async Task RecordBumpAsync_StoresCorrectCompositeValueAndTtl(
+    public async Task RecordUpdateAsync_StoresCorrectCompositeValueAndTtl(
         Guid userId,
         string identifier,
         string clientVersion)
     {
-        var sutProvider = new SutProvider<DeviceDataCacheService>()
+        var sutProvider = new SutProvider<DeviceLastActivityCacheService>()
             .WithFakeTimeProvider()
             .Create();
 
         var today = sutProvider.GetDependency<FakeTimeProvider>().GetUtcNow().UtcDateTime.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         var expectedValue = $"{today}|{clientVersion}";
 
-        await sutProvider.Sut.RecordBumpAsync(userId, identifier, clientVersion);
+        await sutProvider.Sut.RecordUpdateAsync(userId, identifier, clientVersion);
 
         await sutProvider.GetDependency<IDistributedCache>()
             .Received(1)
@@ -140,18 +140,18 @@ public class DeviceDataCacheServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task RecordBumpAsync_GivenNullClientVersion_StoresEmptyVersionSegment(
+    public async Task RecordUpdateAsync_GivenNullClientVersion_StoresEmptyVersionSegment(
         Guid userId,
         string identifier)
     {
-        var sutProvider = new SutProvider<DeviceDataCacheService>()
+        var sutProvider = new SutProvider<DeviceLastActivityCacheService>()
             .WithFakeTimeProvider()
             .Create();
 
         var today = sutProvider.GetDependency<FakeTimeProvider>().GetUtcNow().UtcDateTime.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         var expectedValue = $"{today}|"; // trailing pipe with empty version
 
-        await sutProvider.Sut.RecordBumpAsync(userId, identifier, null);
+        await sutProvider.Sut.RecordUpdateAsync(userId, identifier, null);
 
         await sutProvider.GetDependency<IDistributedCache>()
             .Received(1)
@@ -163,19 +163,19 @@ public class DeviceDataCacheServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task RecordBumpAsync_UsesCacheKeyFormat(
-        SutProvider<DeviceDataCacheService> sutProvider,
+    public async Task RecordUpdateAsync_UsesCacheKeyFormat(
+        SutProvider<DeviceLastActivityCacheService> sutProvider,
         string clientVersion)
     {
         var userId = Guid.Parse("00000000-0000-0000-0000-000000000001");
         var identifier = "my-device-id";
 
-        await sutProvider.Sut.RecordBumpAsync(userId, identifier, clientVersion);
+        await sutProvider.Sut.RecordUpdateAsync(userId, identifier, clientVersion);
 
         await sutProvider.GetDependency<IDistributedCache>()
             .Received(1)
             .SetAsync(
-                "device:data:00000000-0000-0000-0000-000000000001:my-device-id",
+                "device:last-activity:00000000-0000-0000-0000-000000000001:my-device-id",
                 Arg.Any<byte[]>(),
                 Arg.Any<DistributedCacheEntryOptions>(),
                 Arg.Any<CancellationToken>());

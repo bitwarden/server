@@ -70,7 +70,7 @@ IBaseRequestValidatorTestWrapper
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
         IClientVersionValidator clientVersionValidator,
-        IBumpDeviceDataCommand bumpDeviceDataCommand) :
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand) :
          base(
             userManager,
             userService,
@@ -92,7 +92,7 @@ IBaseRequestValidatorTestWrapper
             mailService,
             userAccountKeysQuery,
             clientVersionValidator,
-            bumpDeviceDataCommand)
+            updateDeviceLastActivityCommand)
     {
     }
 

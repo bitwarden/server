@@ -52,30 +52,30 @@ public class DeviceRepositoryTests
 
     /// <summary>
     /// Verifies the Device_Update NULL-passthrough guards: if a general save (ReplaceAsync) passes
-    /// NULL for either bumped column (LastActivityDate or ClientVersion), the stored value must
-    /// be preserved. This covers both columns' guards in a single arrange/act/assert so a regression
-    /// on either guard fails this test loudly.
+    /// NULL for either last-activity column (LastActivityDate or ClientVersion), the stored value
+    /// must be preserved. This covers both columns' guards in a single arrange/act/assert so a
+    /// regression on either guard fails this test loudly.
     /// </summary>
     [DatabaseTheory]
     [DatabaseData]
-    public async Task ReplaceAsync_WithNullBumpedFields_PreservesExistingValues(
+    public async Task ReplaceAsync_WithNullLastActivityFields_PreservesExistingValues(
         IDeviceRepository sutRepository,
         IUserRepository userRepository)
     {
-        // Arrange — device with a stored ClientVersion, then bump to populate LastActivityDate too.
+        // Arrange — device with a stored ClientVersion, then update to populate LastActivityDate too.
         var user = await CreateTestUserAsync(userRepository);
         var device = await CreateTestDeviceAsync(sutRepository, user.Id, clientVersion: "2026.5.1");
 
-        await sutRepository.BumpDeviceDataByIdAsync(device.Id, clientVersion: null);
-        var afterBump = await sutRepository.GetByIdAsync(device.Id);
-        Assert.NotNull(afterBump!.LastActivityDate);
-        Assert.Equal("2026.5.1", afterBump.ClientVersion);
+        await sutRepository.UpdateLastActivityByIdAsync(device.Id, clientVersion: null);
+        var afterUpdate = await sutRepository.GetByIdAsync(device.Id);
+        Assert.NotNull(afterUpdate!.LastActivityDate);
+        Assert.Equal("2026.5.1", afterUpdate.ClientVersion);
 
-        // Act — null out BOTH bumped fields and ReplaceAsync; SP-side ISNULL / CASE guards (and the
-        // EF-side IsModified=false in ReplaceAsync override) should preserve the stored values.
-        afterBump.LastActivityDate = null;
-        afterBump.ClientVersion = null;
-        await sutRepository.ReplaceAsync(afterBump);
+        // Act — null out BOTH last-activity fields and ReplaceAsync; SP-side ISNULL / CASE guards
+        // (and the EF-side IsModified=false in ReplaceAsync override) should preserve the stored values.
+        afterUpdate.LastActivityDate = null;
+        afterUpdate.ClientVersion = null;
+        await sutRepository.ReplaceAsync(afterUpdate);
 
         // Assert — both columns preserved
         var afterReplace = await sutRepository.GetByIdAsync(device.Id);
@@ -93,30 +93,30 @@ public class DeviceRepositoryTests
         var user = await CreateTestUserAsync(userRepository);
         var device = await CreateTestDeviceAsync(sutRepository, user.Id);
 
-        await sutRepository.BumpDeviceDataByIdAsync(device.Id, clientVersion: null);
-        var afterBump = await sutRepository.GetByIdAsync(device.Id);
-        var bumpedDate = afterBump!.LastActivityDate;
-        Assert.NotNull(bumpedDate);
+        await sutRepository.UpdateLastActivityByIdAsync(device.Id, clientVersion: null);
+        var afterUpdate = await sutRepository.GetByIdAsync(device.Id);
+        var updatedDate = afterUpdate!.LastActivityDate;
+        Assert.NotNull(updatedDate);
 
-        // Act — ReplaceAsync with a stale (older) LastActivityDate should not overwrite the newer bumped value
-        afterBump.LastActivityDate = bumpedDate.Value.AddDays(-1);
-        await sutRepository.ReplaceAsync(afterBump);
+        // Act — ReplaceAsync with a stale (older) LastActivityDate should not overwrite the newer value
+        afterUpdate.LastActivityDate = updatedDate.Value.AddDays(-1);
+        await sutRepository.ReplaceAsync(afterUpdate);
 
         // Assert
         var afterReplace = await sutRepository.GetByIdAsync(device.Id);
-        Assert.Equal(bumpedDate, afterReplace!.LastActivityDate);
+        Assert.Equal(updatedDate, afterReplace!.LastActivityDate);
     }
 
     /// <summary>
-    /// Bumping a freshly-created device via the by-identifier path with no <c>ClientVersion</c>
-    /// supplied at create or at bump is a same-day no-op on both columns: the SP's day-level
-    /// guard fires for <c>LastActivityDate</c> (already today via the entity initializer) and the
-    /// NULL guard fires for <c>ClientVersion</c>. Locks in that the bump path does not silently
-    /// regress either column when both are already in their expected post-bump state.
+    /// Updating the last-activity state on a freshly-created device via the by-identifier path with
+    /// no <c>ClientVersion</c> supplied at create or at update is a same-day no-op on both columns:
+    /// the SP's day-level guard fires for <c>LastActivityDate</c> (already today via the entity
+    /// initializer) and the NULL guard fires for <c>ClientVersion</c>. Locks in that the update
+    /// path does not silently regress either column when both are already in their expected state.
     /// </summary>
     [DatabaseTheory]
     [DatabaseData]
-    public async Task BumpDeviceDataByIdentifierAndUserIdAsync_OnFreshDeviceWithoutClientVersion_PreservesBumpedColumns(
+    public async Task UpdateLastActivityByIdentifierAndUserIdAsync_OnFreshDeviceWithoutClientVersion_PreservesColumns(
         IDeviceRepository sutRepository,
         IUserRepository userRepository)
     {
@@ -125,8 +125,8 @@ public class DeviceRepositoryTests
         var device = await CreateTestDeviceAsync(sutRepository, user.Id);
         var ladBefore = (await sutRepository.GetByIdAsync(device.Id)).LastActivityDate;
 
-        // Act — bump without a ClientVersion on a same-day fresh device
-        await sutRepository.BumpDeviceDataByIdentifierAndUserIdAsync(device.Identifier, user.Id, clientVersion: null);
+        // Act — update without a ClientVersion on a same-day fresh device
+        await sutRepository.UpdateLastActivityByIdentifierAndUserIdAsync(device.Identifier, user.Id, clientVersion: null);
 
         // Assert — both columns preserved (LAD same-day; ClientVersion still null)
         var after = await sutRepository.GetByIdAsync(device.Id);
@@ -136,7 +136,7 @@ public class DeviceRepositoryTests
 
     [DatabaseTheory]
     [DatabaseData]
-    public async Task BumpDeviceDataByIdentifierAndUserIdAsync_DoesNotBumpOtherUsersDevice(
+    public async Task UpdateLastActivityByIdentifierAndUserIdAsync_DoesNotAffectOtherUsersDevice(
         IDeviceRepository sutRepository,
         IUserRepository userRepository)
     {
@@ -150,10 +150,10 @@ public class DeviceRepositoryTests
 
         var beforeB = (await sutRepository.GetByIdAsync(deviceB.Id)).LastActivityDate;
 
-        // Act — bump only userA's device
-        await sutRepository.BumpDeviceDataByIdentifierAndUserIdAsync(sharedIdentifier, userA.Id, clientVersion: null);
+        // Act — update only userA's device
+        await sutRepository.UpdateLastActivityByIdentifierAndUserIdAsync(sharedIdentifier, userA.Id, clientVersion: null);
 
-        // Assert — userA's device is bumped, userB's is unchanged
+        // Assert — userA's device is updated, userB's is unchanged
         var afterA = await sutRepository.GetByIdAsync(deviceA.Id);
         var afterB = await sutRepository.GetByIdAsync(deviceB.Id);
         Assert.NotNull(afterA!.LastActivityDate);
@@ -469,11 +469,11 @@ public class DeviceRepositoryTests
 
     /// <summary>
     /// Verifies that LastActivityDate is correctly returned from GetManyByUserIdWithDeviceAuth
-    /// and matches the value set by BumpDeviceDataByIdAsync.
+    /// and matches the value set by UpdateLastActivityByIdAsync.
     /// </summary>
     [DatabaseTheory]
     [DatabaseData]
-    public async Task GetManyByUserIdWithDeviceAuth_ReturnsLastActivityDate_WhenBumped(
+    public async Task GetManyByUserIdWithDeviceAuth_ReturnsLastActivityDate_WhenUpdated(
         IDeviceRepository sutRepository,
         IUserRepository userRepository)
     {
@@ -481,17 +481,17 @@ public class DeviceRepositoryTests
         var user = await CreateTestUserAsync(userRepository);
         var device = await CreateTestDeviceAsync(sutRepository, user.Id);
 
-        await sutRepository.BumpDeviceDataByIdAsync(device.Id, clientVersion: null);
-        var afterBump = await sutRepository.GetByIdAsync(device.Id);
-        var expectedLastActivityDate = afterBump!.LastActivityDate;
+        await sutRepository.UpdateLastActivityByIdAsync(device.Id, clientVersion: null);
+        var afterUpdate = await sutRepository.GetByIdAsync(device.Id);
+        var expectedLastActivityDate = afterUpdate!.LastActivityDate;
         Assert.NotNull(expectedLastActivityDate);
 
         // Act
         var response = await sutRepository.GetManyByUserIdWithDeviceAuth(user.Id);
         var result = response.Single();
 
-        // Assert — LastActivityDate from the stored procedure must match the bumped value,
-        // not null and not the C# property initializer default (DateTime.UtcNow).
+        // Assert — LastActivityDate from the stored procedure must match the value written by the
+        // update, not null and not the C# property initializer default (DateTime.UtcNow).
         Assert.Equal(expectedLastActivityDate, result.LastActivityDate);
     }
 
@@ -543,20 +543,20 @@ public class DeviceRepositoryTests
     }
 
     // -------------------------------------------------------------------------------------------
-    // BumpDeviceDataByIdAsync
+    // UpdateLastActivityByIdAsync
     // -------------------------------------------------------------------------------------------
 
     /// <summary>
-    /// Bumping with a different <c>ClientVersion</c> updates only that column when the day-level
+    /// Updating with a different <c>ClientVersion</c> writes only that column when the day-level
     /// guard is otherwise satisfied. Asserts both columns to catch cross-column regressions — the
     /// SP/EF query writes both axes via a composite WHERE, so asserting one in isolation could miss
     /// interaction bugs. <c>LastActivityDate</c> is unchanged here because <c>CreateAsync</c> sets
-    /// it to <c>DateTime.UtcNow</c> via the entity initializer, so a same-day bump's day-level
+    /// it to <c>DateTime.UtcNow</c> via the entity initializer, so a same-day update's day-level
     /// guard already evaluates false.
     /// </summary>
     [DatabaseTheory]
     [DatabaseData]
-    public async Task BumpDeviceDataByIdAsync_VersionChanged_UpdatesClientVersion(
+    public async Task UpdateLastActivityByIdAsync_VersionChanged_UpdatesClientVersion(
         IDeviceRepository sutRepository,
         IUserRepository userRepository)
     {
@@ -566,7 +566,7 @@ public class DeviceRepositoryTests
         var ladBefore = (await sutRepository.GetByIdAsync(device.Id)).LastActivityDate;
 
         // Act
-        await sutRepository.BumpDeviceDataByIdAsync(device.Id, "2026.5.1");
+        await sutRepository.UpdateLastActivityByIdAsync(device.Id, "2026.5.1");
 
         // Assert
         var after = await sutRepository.GetByIdAsync(device.Id);
@@ -575,45 +575,45 @@ public class DeviceRepositoryTests
     }
 
     /// <summary>
-    /// Bumping with the same <c>ClientVersion</c> on a device whose <c>LastActivityDate</c> is
+    /// Updating with the same <c>ClientVersion</c> on a device whose <c>LastActivityDate</c> is
     /// already today is a no-op: the composite WHERE evaluates false on both axes. Locks in that
     /// neither column is touched when nothing needs to change.
     /// </summary>
     [DatabaseTheory]
     [DatabaseData]
-    public async Task BumpDeviceDataByIdAsync_VersionUnchanged_DoesNotUpdate(
+    public async Task UpdateLastActivityByIdAsync_VersionUnchanged_DoesNotUpdate(
         IDeviceRepository sutRepository,
         IUserRepository userRepository)
     {
-        // Arrange — set the device to today's LastActivityDate AND a fixed ClientVersion. Then bumping
+        // Arrange — set the device to today's LastActivityDate AND a fixed ClientVersion. Then updating
         // with the same version should be a no-op (composite WHERE evaluates false).
         var user = await CreateTestUserAsync(userRepository);
         var device = await CreateTestDeviceAsync(sutRepository, user.Id, clientVersion: "2026.5.1");
 
-        // Bump once with the same version to force LastActivityDate to "today" (so the day-level
-        // guard also returns false on the second bump).
-        await sutRepository.BumpDeviceDataByIdAsync(device.Id, "2026.5.1");
-        var afterFirstBump = await sutRepository.GetByIdAsync(device.Id);
-        var lastActivityAfterFirstBump = afterFirstBump!.LastActivityDate;
+        // Run once with the same version to force LastActivityDate to "today" (so the day-level
+        // guard also returns false on the second call).
+        await sutRepository.UpdateLastActivityByIdAsync(device.Id, "2026.5.1");
+        var afterFirstUpdate = await sutRepository.GetByIdAsync(device.Id);
+        var lastActivityAfterFirstUpdate = afterFirstUpdate!.LastActivityDate;
 
-        // Act — bumping again with the same version should be a no-op
-        await sutRepository.BumpDeviceDataByIdAsync(device.Id, "2026.5.1");
+        // Act — running again with the same version should be a no-op
+        await sutRepository.UpdateLastActivityByIdAsync(device.Id, "2026.5.1");
 
         // Assert — neither column changed
-        var afterSecondBump = await sutRepository.GetByIdAsync(device.Id);
-        Assert.Equal("2026.5.1", afterSecondBump!.ClientVersion);
-        Assert.Equal(lastActivityAfterFirstBump, afterSecondBump.LastActivityDate);
+        var afterSecondUpdate = await sutRepository.GetByIdAsync(device.Id);
+        Assert.Equal("2026.5.1", afterSecondUpdate!.ClientVersion);
+        Assert.Equal(lastActivityAfterFirstUpdate, afterSecondUpdate.LastActivityDate);
     }
 
     /// <summary>
-    /// Bumping with a null <c>ClientVersion</c> (e.g. client missing the header) must not clobber
+    /// Updating with a null <c>ClientVersion</c> (e.g. client missing the header) must not clobber
     /// a stored value — the per-column NULL guard preserves it. <c>LastActivityDate</c> is also
     /// unchanged here because the day-level guard already evaluates false (LAD is today from
     /// <c>CreateAsync</c>).
     /// </summary>
     [DatabaseTheory]
     [DatabaseData]
-    public async Task BumpDeviceDataByIdAsync_VersionNull_LeavesClientVersionAlone(
+    public async Task UpdateLastActivityByIdAsync_VersionNull_LeavesClientVersionAlone(
         IDeviceRepository sutRepository,
         IUserRepository userRepository)
     {
@@ -622,8 +622,8 @@ public class DeviceRepositoryTests
         var device = await CreateTestDeviceAsync(sutRepository, user.Id, clientVersion: "2026.5.1");
         var ladBefore = (await sutRepository.GetByIdAsync(device.Id)).LastActivityDate;
 
-        // Act — bump with a null version (e.g. client missing the header)
-        await sutRepository.BumpDeviceDataByIdAsync(device.Id, clientVersion: null);
+        // Act — call with a null version (e.g. client missing the header)
+        await sutRepository.UpdateLastActivityByIdAsync(device.Id, clientVersion: null);
 
         // Assert
         var after = await sutRepository.GetByIdAsync(device.Id);
@@ -632,26 +632,26 @@ public class DeviceRepositoryTests
     }
 
     /// <summary>
-    /// Verifies that a stale-version bump updates <c>ClientVersion</c> and does not regress
+    /// Verifies that a stale-version update writes <c>ClientVersion</c> and does not regress
     /// <c>LastActivityDate</c> (LAD never moves backwards as a side effect of a version-only
     /// update). LAD is "today" here because <c>CreateAsync</c>'s entity initializer set it; the
-    /// SP's day-level guard means LAD itself isn't bumped in this scenario, only CV is.
+    /// SP's day-level guard means LAD itself isn't written in this scenario, only CV is.
     /// </summary>
     [DatabaseTheory]
     [DatabaseData]
-    public async Task BumpDeviceDataByIdAsync_StaleVersion_UpdatesVersionWithoutRegressingLastActivityDate(
+    public async Task UpdateLastActivityByIdAsync_StaleVersion_UpdatesVersionWithoutRegressingLastActivityDate(
         IDeviceRepository sutRepository,
         IUserRepository userRepository)
     {
         // Arrange — device with an old ClientVersion. (LastActivityDate is set to "now" by the
-        // entity initializer at CreateAsync; we capture the pre-bump value to confirm the per-column
-        // guard correctly evaluates the day boundary on the bump call.)
+        // entity initializer at CreateAsync; we capture the pre-update value to confirm the per-column
+        // guard correctly evaluates the day boundary on the update call.)
         var user = await CreateTestUserAsync(userRepository);
         var device = await CreateTestDeviceAsync(sutRepository, user.Id, clientVersion: "2026.4.0");
         var ladBefore = (await sutRepository.GetByIdAsync(device.Id)).LastActivityDate;
 
         // Act
-        await sutRepository.BumpDeviceDataByIdAsync(device.Id, "2026.5.1");
+        await sutRepository.UpdateLastActivityByIdAsync(device.Id, "2026.5.1");
 
         // Assert — ClientVersion updated; LastActivityDate is still populated and never moves backwards.
         var after = await sutRepository.GetByIdAsync(device.Id);
@@ -668,7 +668,7 @@ public class DeviceRepositoryTests
     /// </summary>
     [DatabaseTheory]
     [DatabaseData]
-    public async Task BumpDeviceDataByIdAsync_VersionDowngrade_AcceptsDowngrade(
+    public async Task UpdateLastActivityByIdAsync_VersionDowngrade_AcceptsDowngrade(
         IDeviceRepository sutRepository,
         IUserRepository userRepository)
     {
@@ -679,7 +679,7 @@ public class DeviceRepositoryTests
         var ladBefore = (await sutRepository.GetByIdAsync(device.Id)).LastActivityDate;
 
         // Act
-        await sutRepository.BumpDeviceDataByIdAsync(device.Id, "2026.4.0");
+        await sutRepository.UpdateLastActivityByIdAsync(device.Id, "2026.4.0");
 
         // Assert
         var after = await sutRepository.GetByIdAsync(device.Id);
@@ -688,17 +688,17 @@ public class DeviceRepositoryTests
     }
 
     // -------------------------------------------------------------------------------------------
-    // BumpDeviceDataByIdentifierAndUserIdAsync
+    // UpdateLastActivityByIdentifierAndUserIdAsync
     // -------------------------------------------------------------------------------------------
 
     /// <summary>
-    /// Structurally identical SP body to <c>BumpDeviceDataByIdAsync</c>; only the row-lookup
+    /// Structurally identical SP body to <c>UpdateLastActivityByIdAsync</c>; only the row-lookup
     /// predicate differs. The tests in this section lock in per-column behavior through that path
     /// so the two SP bodies can't silently drift apart.
     /// </summary>
     [DatabaseTheory]
     [DatabaseData]
-    public async Task BumpDeviceDataByIdentifierAndUserIdAsync_VersionChanged_UpdatesClientVersion(
+    public async Task UpdateLastActivityByIdentifierAndUserIdAsync_VersionChanged_UpdatesClientVersion(
         IDeviceRepository sutRepository,
         IUserRepository userRepository)
     {
@@ -708,7 +708,7 @@ public class DeviceRepositoryTests
         var ladBefore = (await sutRepository.GetByIdAsync(device.Id)).LastActivityDate;
 
         // Act
-        await sutRepository.BumpDeviceDataByIdentifierAndUserIdAsync(device.Identifier, user.Id, "2026.5.1");
+        await sutRepository.UpdateLastActivityByIdentifierAndUserIdAsync(device.Identifier, user.Id, "2026.5.1");
 
         // Assert — ClientVersion updated; LastActivityDate unchanged (already today).
         var after = await sutRepository.GetByIdAsync(device.Id);
@@ -718,7 +718,7 @@ public class DeviceRepositoryTests
 
     [DatabaseTheory]
     [DatabaseData]
-    public async Task BumpDeviceDataByIdentifierAndUserIdAsync_VersionNull_LeavesClientVersionAlone(
+    public async Task UpdateLastActivityByIdentifierAndUserIdAsync_VersionNull_LeavesClientVersionAlone(
         IDeviceRepository sutRepository,
         IUserRepository userRepository)
     {
@@ -728,7 +728,7 @@ public class DeviceRepositoryTests
         var ladBefore = (await sutRepository.GetByIdAsync(device.Id)).LastActivityDate;
 
         // Act
-        await sutRepository.BumpDeviceDataByIdentifierAndUserIdAsync(device.Identifier, user.Id, clientVersion: null);
+        await sutRepository.UpdateLastActivityByIdentifierAndUserIdAsync(device.Identifier, user.Id, clientVersion: null);
 
         // Assert — both columns preserved (ClientVersion by NULL guard, LAD by day-level guard).
         var after = await sutRepository.GetByIdAsync(device.Id);
@@ -738,7 +738,7 @@ public class DeviceRepositoryTests
 
     [DatabaseTheory]
     [DatabaseData]
-    public async Task BumpDeviceDataByIdentifierAndUserIdAsync_VersionDowngrade_AcceptsDowngrade(
+    public async Task UpdateLastActivityByIdentifierAndUserIdAsync_VersionDowngrade_AcceptsDowngrade(
         IDeviceRepository sutRepository,
         IUserRepository userRepository)
     {
@@ -748,7 +748,7 @@ public class DeviceRepositoryTests
         var ladBefore = (await sutRepository.GetByIdAsync(device.Id)).LastActivityDate;
 
         // Act
-        await sutRepository.BumpDeviceDataByIdentifierAndUserIdAsync(device.Identifier, user.Id, "2026.4.0");
+        await sutRepository.UpdateLastActivityByIdentifierAndUserIdAsync(device.Identifier, user.Id, "2026.4.0");
 
         // Assert — downgrade accepted; LAD unchanged (already today).
         var after = await sutRepository.GetByIdAsync(device.Id);
@@ -761,15 +761,16 @@ public class DeviceRepositoryTests
     // -------------------------------------------------------------------------------------------
 
     /// <summary>
-    /// Locks in that <c>Device_Create</c> persists the bumped fields (<c>LastActivityDate</c> and
-    /// <c>ClientVersion</c>) supplied via the entity. <c>LastActivityDate</c> is set by the entity
-    /// initializer (<c>= DateTime.UtcNow</c>); <c>ClientVersion</c> is whatever the caller supplies.
-    /// Implicit coverage exists via <see cref="GetManyByUserIdWithDeviceAuth_ReturnsLastActivityDate_ForNewDeviceAsync"/>
+    /// Locks in that <c>Device_Create</c> persists the last-activity fields (<c>LastActivityDate</c>
+    /// and <c>ClientVersion</c>) supplied via the entity. <c>LastActivityDate</c> is set by the
+    /// entity initializer (<c>= DateTime.UtcNow</c>); <c>ClientVersion</c> is whatever the caller
+    /// supplies. Implicit coverage exists via
+    /// <see cref="GetManyByUserIdWithDeviceAuth_ReturnsLastActivityDate_ForNewDeviceAsync"/>
     /// (different read SP); these two tests verify the round-trip via <c>Device_ReadById</c>.
     /// </summary>
     [DatabaseTheory]
     [DatabaseData]
-    public async Task CreateAsync_WithClientVersion_PersistsBumpedFields(
+    public async Task CreateAsync_WithClientVersion_PersistsLastActivityFields(
         IDeviceRepository sutRepository,
         IUserRepository userRepository)
     {
@@ -779,7 +780,7 @@ public class DeviceRepositoryTests
         // Act
         var device = await CreateTestDeviceAsync(sutRepository, user.Id, clientVersion: "2026.5.1");
 
-        // Assert — re-read the row and confirm both bumped columns were persisted
+        // Assert — re-read the row and confirm both last-activity columns were persisted
         var after = await sutRepository.GetByIdAsync(device.Id);
         Assert.Equal("2026.5.1", after!.ClientVersion);
         Assert.NotNull(after.LastActivityDate);
@@ -787,7 +788,7 @@ public class DeviceRepositoryTests
 
     [DatabaseTheory]
     [DatabaseData]
-    public async Task CreateAsync_WithoutClientVersion_PersistsBumpedFields(
+    public async Task CreateAsync_WithoutClientVersion_PersistsLastActivityFields(
         IDeviceRepository sutRepository,
         IUserRepository userRepository)
     {

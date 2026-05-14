@@ -40,8 +40,9 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
             // LastActivityDate only moves forward. Mirrors the CASE expression in Device_Update.sql:
             //   1. NULL passthrough: a general save that does not intend to touch LastActivityDate passes NULL;
             //      we must not overwrite an existing value with NULL.
-            //   2. Stale non-null overwrite: a thread that loaded the device before a concurrent bump fires
-            //      may call ReplaceAsync with an older date; we must not clobber the fresher DB value.
+            //   2. Stale non-null overwrite: a thread that loaded the device before a concurrent
+            //      last-activity update fires may call ReplaceAsync with an older date; we must not
+            //      clobber the fresher DB value.
             if (obj.LastActivityDate == null ||
                 (originalLastActivityDate != null && obj.LastActivityDate <= originalLastActivityDate))
             {
@@ -127,15 +128,21 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
         }
     }
 
-    public async Task BumpDeviceDataByIdAsync(Guid deviceId, string? clientVersion)
+    public async Task UpdateLastActivityByIdAsync(Guid deviceId, string? clientVersion)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Mirrors the per-column guards in Device_BumpDataById.sql. Acts as a fallback against
-        // redundant writes if the application-layer cache is unavailable; the cache is the primary
-        // protection. The composite Where ensures we only issue an UPDATE when at least one column
-        // actually needs writing.
+        // "Last activity" names the event of the device's most recent appearance. The columns
+        // written here are facts we observed about that event — LastActivityDate (when) and
+        // ClientVersion (what was running). ClientVersion is a property of the activity event,
+        // not an independent value; future last-observed properties (e.g. last IP, OS) would slot
+        // in here without renaming. See IUpdateDeviceLastActivityCommand for the contract-level note.
+        //
+        // Mirrors the per-column guards in Device_UpdateLastActivityById.sql. Acts as a fallback
+        // against redundant writes if the application-layer cache is unavailable; the cache is the
+        // primary protection. The composite Where ensures we only issue an UPDATE when at least one
+        // column actually needs writing.
         //
         // Per-column semantics:
         //   - LastActivityDate: day-level idempotence (move forward to now only if today's date hasn't
@@ -163,7 +170,7 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
                         : d.ClientVersion));
     }
 
-    public async Task BumpDeviceDataByIdentifierAndUserIdAsync(string identifier, Guid userId, string? clientVersion)
+    public async Task UpdateLastActivityByIdentifierAndUserIdAsync(string identifier, Guid userId, string? clientVersion)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -171,7 +178,7 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
         // Identifier is unique per user, not globally (unique constraint UX_Device_UserId_Identifier
         // is on (UserId, Identifier)). Both are required for correctness and to hit the right index.
         //
-        // Per-column semantics: see BumpDeviceDataByIdAsync above — same guards, different lookup key.
+        // Per-column semantics: see UpdateLastActivityByIdAsync above — same guards, different lookup key.
         var now = DateTime.UtcNow;
         var today = now.Date;
 

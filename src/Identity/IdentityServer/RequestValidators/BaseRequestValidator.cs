@@ -42,7 +42,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IAuthRequestRepository _authRequestRepository;
     private readonly IMailService _mailService;
     private readonly IClientVersionValidator _clientVersionValidator;
-    protected readonly IBumpDeviceDataCommand _bumpDeviceDataCommand;
+    protected readonly IUpdateDeviceLastActivityCommand _updateDeviceLastActivityCommand;
 
     protected ICurrentContext CurrentContext { get; }
     protected IPolicyService PolicyService { get; }
@@ -74,7 +74,7 @@ public abstract class BaseRequestValidator<T> where T : class
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
         IClientVersionValidator clientVersionValidator,
-        IBumpDeviceDataCommand bumpDeviceDataCommand
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand
     )
     {
         _userManager = userManager;
@@ -97,7 +97,7 @@ public abstract class BaseRequestValidator<T> where T : class
         _mailService = mailService;
         _accountKeysQuery = userAccountKeysQuery;
         _clientVersionValidator = clientVersionValidator;
-        _bumpDeviceDataCommand = bumpDeviceDataCommand;
+        _updateDeviceLastActivityCommand = updateDeviceLastActivityCommand;
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
@@ -451,13 +451,13 @@ public abstract class BaseRequestValidator<T> where T : class
             try
             {
                 var clientVersion = CurrentContext.ClientVersion?.ToString();
-                await _bumpDeviceDataCommand.BumpAsync(device, clientVersion);
+                await _updateDeviceLastActivityCommand.UpdateAsync(device, clientVersion);
             }
             catch (Exception e)
             {
                 // Log and swallow exceptions from this non-critical update, as we don't want to fail logins
-                // due to issues updating the device's bumped data (LastActivityDate / ClientVersion).
-                _logger.LogWarning(e, "Failed to bump device data for device {DeviceId}.", device.Id);
+                // due to issues updating the device's last-activity state (LastActivityDate / ClientVersion).
+                _logger.LogWarning(e, "Failed to update device last activity for device {DeviceId}.", device.Id);
             }
         }
 

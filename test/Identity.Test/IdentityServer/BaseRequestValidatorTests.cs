@@ -60,7 +60,7 @@ public class BaseRequestValidatorTests
     private readonly IMailService _mailService;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
     private readonly IClientVersionValidator _clientVersionValidator;
-    private readonly IBumpDeviceDataCommand _bumpDeviceDataCommand;
+    private readonly IUpdateDeviceLastActivityCommand _updateDeviceLastActivityCommand;
 
     private readonly BaseRequestValidatorTestWrapper _sut;
 
@@ -86,7 +86,7 @@ public class BaseRequestValidatorTests
         _mailService = Substitute.For<IMailService>();
         _userAccountKeysQuery = Substitute.For<IUserAccountKeysQuery>();
         _clientVersionValidator = Substitute.For<IClientVersionValidator>();
-        _bumpDeviceDataCommand = Substitute.For<IBumpDeviceDataCommand>();
+        _updateDeviceLastActivityCommand = Substitute.For<IUpdateDeviceLastActivityCommand>();
 
         _sut = new BaseRequestValidatorTestWrapper(
             _userManager,
@@ -109,7 +109,7 @@ public class BaseRequestValidatorTests
             _mailService,
             _userAccountKeysQuery,
             _clientVersionValidator,
-            _bumpDeviceDataCommand);
+            _updateDeviceLastActivityCommand);
 
         // Default client version validator behavior: allow to pass unless a test overrides.
         _clientVersionValidator
@@ -1316,7 +1316,7 @@ public class BaseRequestValidatorTests
     // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Theory]
     [BitAutoData]
-    public async Task ValidateAsync_BumpDeviceDataThrows_LoginStillSucceeds(
+    public async Task ValidateAsync_UpdateDeviceLastActivityThrows_LoginStillSucceeds(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         [AuthFixtures.CustomValidatorRequestContext]
         CustomValidatorRequestContext requestContext,
@@ -1344,12 +1344,12 @@ public class BaseRequestValidatorTests
             )
         });
 
-        // Feature flag enabled so the bump is attempted
+        // Feature flag enabled so the update is attempted
         _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
 
-        // The bump command throws a transient exception
-        _bumpDeviceDataCommand
-            .BumpAsync(Arg.Any<Device>(), Arg.Any<string>())
+        // The update command throws a transient exception
+        _updateDeviceLastActivityCommand
+            .UpdateAsync(Arg.Any<Device>(), Arg.Any<string>())
             .Returns<Task>(_ => throw new Exception("Transient failure"));
 
         // Act
@@ -1362,13 +1362,13 @@ public class BaseRequestValidatorTests
         var logs = _logger.Collector.GetSnapshot();
         Assert.Contains(logs, l =>
             l.Level == LogLevel.Warning &&
-            l.Message.Contains("Failed to bump device data for device"));
+            l.Message.Contains("Failed to update device last activity for device"));
     }
 
     // TODO: PM-34091 - remove this test when cleaning up feature flag (disabled case will no longer exist)
     [Theory]
     [BitAutoData]
-    public async Task ValidateAsync_BumpDeviceData_FeatureFlagDisabled_BumpNotCalled(
+    public async Task ValidateAsync_UpdateDeviceLastActivity_FeatureFlagDisabled_UpdateNotCalled(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         [AuthFixtures.CustomValidatorRequestContext]
         CustomValidatorRequestContext requestContext,
@@ -1395,23 +1395,23 @@ public class BaseRequestValidatorTests
             )
         });
 
-        // Feature flag is disabled (NSubstitute default: false) — no bump expected
+        // Feature flag is disabled (NSubstitute default: false) — no update expected
         _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(false);
 
         // Act
         await _sut.ValidateAsync(context);
 
-        // Assert: login succeeds and bump is never attempted
+        // Assert: login succeeds and update is never attempted
         Assert.False(context.GrantResult.IsError);
-        await _bumpDeviceDataCommand
+        await _updateDeviceLastActivityCommand
             .DidNotReceive()
-            .BumpAsync(Arg.Any<Device>(), Arg.Any<string>());
+            .UpdateAsync(Arg.Any<Device>(), Arg.Any<string>());
     }
 
     // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Theory]
     [BitAutoData]
-    public async Task ValidateAsync_BumpDeviceData_NullDevice_BumpNotCalled(
+    public async Task ValidateAsync_UpdateDeviceLastActivity_NullDevice_UpdateNotCalled(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         [AuthFixtures.CustomValidatorRequestContext]
         CustomValidatorRequestContext requestContext,
@@ -1445,17 +1445,17 @@ public class BaseRequestValidatorTests
         // Act
         await _sut.ValidateAsync(context);
 
-        // Assert: login succeeds and bump is never attempted
+        // Assert: login succeeds and update is never attempted
         Assert.False(context.GrantResult.IsError);
-        await _bumpDeviceDataCommand
+        await _updateDeviceLastActivityCommand
             .DidNotReceive()
-            .BumpAsync(Arg.Any<Device>(), Arg.Any<string>());
+            .UpdateAsync(Arg.Any<Device>(), Arg.Any<string>());
     }
 
     // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Theory]
     [BitAutoData]
-    public async Task ValidateAsync_BumpDeviceData_Succeeds_BumpCalledAndLoginSucceeds(
+    public async Task ValidateAsync_UpdateDeviceLastActivity_Succeeds_UpdateCalledAndLoginSucceeds(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         [AuthFixtures.CustomValidatorRequestContext]
         CustomValidatorRequestContext requestContext,
@@ -1487,17 +1487,17 @@ public class BaseRequestValidatorTests
         // Act
         await _sut.ValidateAsync(context);
 
-        // Assert: login succeeds and bump was called with the correct device.
+        // Assert: login succeeds and update was called with the correct device.
         // ClientVersion is null because the test's substituted ICurrentContext has no version set.
         Assert.False(context.GrantResult.IsError);
-        await _bumpDeviceDataCommand
+        await _updateDeviceLastActivityCommand
             .Received(1)
-            .BumpAsync(requestContext.Device, null);
+            .UpdateAsync(requestContext.Device, null);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task ValidateAsync_BumpDeviceData_Succeeds_PassesClientVersionFromContext(
+    public async Task ValidateAsync_UpdateDeviceLastActivity_Succeeds_PassesClientVersionFromContext(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         [AuthFixtures.CustomValidatorRequestContext]
         CustomValidatorRequestContext requestContext,
@@ -1531,16 +1531,16 @@ public class BaseRequestValidatorTests
         // Act
         await _sut.ValidateAsync(context);
 
-        // Assert: bump was called with the version string from CurrentContext (not null)
+        // Assert: update was called with the version string from CurrentContext (not null)
         Assert.False(context.GrantResult.IsError);
-        await _bumpDeviceDataCommand
+        await _updateDeviceLastActivityCommand
             .Received(1)
-            .BumpAsync(requestContext.Device, "2026.5.1");
+            .UpdateAsync(requestContext.Device, "2026.5.1");
     }
 
     [Theory]
     [BitAutoData]
-    public async Task ValidateAsync_BumpDeviceData_NullClientVersion_PassesNull(
+    public async Task ValidateAsync_UpdateDeviceLastActivity_NullClientVersion_PassesNull(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         [AuthFixtures.CustomValidatorRequestContext]
         CustomValidatorRequestContext requestContext,
@@ -1573,11 +1573,11 @@ public class BaseRequestValidatorTests
         // Act
         await _sut.ValidateAsync(context);
 
-        // Assert: bump was called with null clientVersion — not swapped or defaulted
+        // Assert: update was called with null clientVersion — not swapped or defaulted
         Assert.False(context.GrantResult.IsError);
-        await _bumpDeviceDataCommand
+        await _updateDeviceLastActivityCommand
             .Received(1)
-            .BumpAsync(requestContext.Device, null);
+            .UpdateAsync(requestContext.Device, null);
     }
 
     private BaseRequestValidationContextFake CreateContext(

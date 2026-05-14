@@ -1,5 +1,8 @@
--- PM-37166 — Add ClientVersion column to Device and refactor the LastActivityDate bump pathway
--- into a combined "BumpData" pathway that handles both columns in a single DB round trip.
+-- PM-37166 — Add ClientVersion column to Device and refactor the LastActivityDate update pathway
+-- into a combined "UpdateLastActivity" pathway that handles both columns in a single DB round trip.
+-- "Last activity" names the event of the device's most recent appearance; LastActivityDate and
+-- ClientVersion are the facts we observed about that event. See IUpdateDeviceLastActivityCommand
+-- for the contract-level extensibility note (additional last-observed properties slot in here).
 
 -- 1. Add the ClientVersion column. Guarded so reruns are safe.
 IF COL_LENGTH('[dbo].[Device]', 'ClientVersion') IS NULL
@@ -19,8 +22,8 @@ AS
 GO
 
 -- 2a. Refresh read sprocs that consume DeviceView so their cached schema picks up ClientVersion.
--- The write sprocs (Device_Create / Device_Update / Device_BumpData*) are recreated below, so they
--- pick up the new column naturally and don't need a refresh.
+-- The write sprocs (Device_Create / Device_Update / Device_UpdateLastActivity*) are recreated below,
+-- so they pick up the new column naturally and don't need a refresh.
 IF OBJECT_ID('[dbo].[Device_ReadById]') IS NOT NULL
 BEGIN
     EXECUTE sp_refreshsqlmodule N'[dbo].[Device_ReadById]'
@@ -136,11 +139,12 @@ BEGIN
         [EncryptedPublicKey] = @EncryptedPublicKey,
         [EncryptedPrivateKey] = @EncryptedPrivateKey,
         [Active] = @Active,
-        -- LastActivityDate only moves forward. Two scenarios could silently clobber a valid bump:
+        -- LastActivityDate only moves forward. Two scenarios could silently clobber a valid update:
         --   1. NULL passthrough: a general save that does not intend to touch LastActivityDate passes NULL
         --      (the default); we must not overwrite an existing value with NULL.
-        --   2. Stale non-null overwrite: a thread that loaded the device before a concurrent bump fires
-        --      may call SaveAsync with an older date; we must not clobber the fresher DB value.
+        --   2. Stale non-null overwrite: a thread that loaded the device before a concurrent
+        --      last-activity update fires may call SaveAsync with an older date; we must not
+        --      clobber the fresher DB value.
         -- The CASE expression handles both: LastActivityDate is updated only when the incoming value is
         -- strictly greater than the current DB value (ISNULL baseline of '1900-01-01' handles NULL DB values).
         [LastActivityDate] = CASE
@@ -156,20 +160,27 @@ BEGIN
 END
 GO
 
--- 5. Device_BumpDataById: new combined bump SP. Replaces Device_UpdateLastActivityDateById.
-CREATE OR ALTER PROCEDURE [dbo].[Device_BumpDataById]
+-- 5. Device_UpdateLastActivityById: new combined SP. Replaces Device_UpdateLastActivityDateById.
+CREATE OR ALTER PROCEDURE [dbo].[Device_UpdateLastActivityById]
     @Id UNIQUEIDENTIFIER,
     @ClientVersion NVARCHAR(20) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
 
+    -- "Last activity" names the *event* of the device's most recent appearance, not just one column.
+    -- The fields written here are the set of facts we observed about that event:
+    --   LastActivityDate — when it occurred (day-level idempotence: only move forward to today).
+    --   ClientVersion    — what the client was running at the time (value-level idempotence: only
+    --                       write when @ClientVersion is non-null and differs from the stored value).
+    -- ClientVersion is treated as a property of the activity event rather than an independent value.
+    -- Additional last-observed properties (e.g. last IP, OS) would slot in here without renaming.
+    -- See IUpdateDeviceLastActivityCommand for the contract-level extensibility note.
+    --
     -- One UPDATE handles both columns. The WHERE clause ensures we only issue a write when at least
-    -- one column actually needs changing. Each SET expression independently guards its column:
-    --   LastActivityDate: day-level idempotence (only move forward to today).
-    --   ClientVersion:    value-level idempotence (only write when @ClientVersion is non-null and differs).
-    -- The application-layer cache is the primary protection against redundant calls; these SP-side
-    -- guards are a safety net in case the cache is unavailable or evicted.
+    -- one column actually needs changing. The application-layer cache is the primary protection
+    -- against redundant calls; these SP-side guards are a safety net in case the cache is unavailable
+    -- or evicted.
     UPDATE
         [dbo].[Device]
     SET
@@ -195,9 +206,9 @@ BEGIN
 END
 GO
 
--- 6. Device_BumpDataByIdentifierUserId: new combined bump SP. Replaces
+-- 6. Device_UpdateLastActivityByIdentifierUserId: new combined SP. Replaces
 -- Device_UpdateLastActivityDateByIdentifierUserId.
-CREATE OR ALTER PROCEDURE [dbo].[Device_BumpDataByIdentifierUserId]
+CREATE OR ALTER PROCEDURE [dbo].[Device_UpdateLastActivityByIdentifierUserId]
     @Identifier NVARCHAR(50),
     @UserId UNIQUEIDENTIFIER,
     @ClientVersion NVARCHAR(20) = NULL
@@ -211,7 +222,7 @@ BEGIN
     -- UX_Device_UserId_Identifier; without it the query falls back to IX_Device_Identifier,
     -- which is non-unique and would require a scan across all users.
     --
-    -- See Device_BumpDataById for the per-column guard rationale.
+    -- See Device_UpdateLastActivityById for the event-oriented naming rationale and per-column guards.
     UPDATE
         [dbo].[Device]
     SET
@@ -238,7 +249,7 @@ BEGIN
 END
 GO
 
--- 7. Drop the old single-column bump SPs — replaced by the combined SPs above.
+-- 7. Drop the old single-column SPs — replaced by the combined SPs above.
 -- Deployed environments (dev/QA) that already ran the LastActivityDate migration have these in
 -- their dbo schema; removing the .sql files alone wouldn't clean those up.
 DROP PROCEDURE IF EXISTS [dbo].[Device_UpdateLastActivityDateById]

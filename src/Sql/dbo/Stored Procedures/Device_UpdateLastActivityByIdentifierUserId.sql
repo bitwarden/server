@@ -1,16 +1,19 @@
-CREATE PROCEDURE [dbo].[Device_BumpDataById]
-    @Id UNIQUEIDENTIFIER,
+CREATE PROCEDURE [dbo].[Device_UpdateLastActivityByIdentifierUserId]
+    @Identifier NVARCHAR(50),
+    @UserId UNIQUEIDENTIFIER,
     @ClientVersion NVARCHAR(20) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
 
-    -- One UPDATE handles both columns. The WHERE clause ensures we only issue a write when at least
-    -- one column actually needs changing. Each SET expression independently guards its column:
-    --   LastActivityDate: day-level idempotence (only move forward to today).
-    --   ClientVersion:    value-level idempotence (only write when @ClientVersion is non-null and differs).
-    -- The application-layer cache is the primary protection against redundant calls; these SP-side
-    -- guards are a safety net in case the cache is unavailable or evicted.
+    -- Both @Identifier and @UserId are required: Identifier is unique per user, not globally
+    -- (unique constraint UX_Device_UserId_Identifier is on (UserId, Identifier)). Including
+    -- UserId scopes the write to the authenticated user's device and ensures the query hits
+    -- UX_Device_UserId_Identifier; without it the query falls back to IX_Device_Identifier,
+    -- which is non-unique and would require a scan across all users.
+    --
+    -- See Device_UpdateLastActivityById for the event-oriented naming rationale and the per-column
+    -- guard semantics — same body, different row-lookup key.
     UPDATE
         [dbo].[Device]
     SET
@@ -27,7 +30,8 @@ BEGIN
                 ELSE [ClientVersion]
             END
     WHERE
-        [Id] = @Id
+        [Identifier] = @Identifier
+        AND [UserId] = @UserId
         AND (
             [LastActivityDate] IS NULL
             OR CAST([LastActivityDate] AS DATE) < CAST(GETUTCDATE() AS DATE)

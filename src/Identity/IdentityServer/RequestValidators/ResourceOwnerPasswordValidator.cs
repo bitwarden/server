@@ -47,7 +47,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
         IClientVersionValidator clientVersionValidator,
-        IBumpDeviceDataCommand bumpDeviceDataCommand)
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand)
         : base(
             userManager,
             userService,
@@ -69,7 +69,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             mailService,
             userAccountKeysQuery,
             clientVersionValidator,
-            bumpDeviceDataCommand)
+            updateDeviceLastActivityCommand)
     {
         _userManager = userManager;
         _currentContext = currentContext;

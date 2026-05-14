@@ -10,8 +10,8 @@ public static class DeviceServiceCollectionExtensions
     public static void AddDeviceServices(this IServiceCollection services)
     {
         services.TryAddSingleton(TimeProvider.System);
-        services.TryAddScoped<IDeviceDataCacheService, DeviceDataCacheService>();
+        services.TryAddScoped<IDeviceLastActivityCacheService, DeviceLastActivityCacheService>();
         services.TryAddScoped<IUntrustDevicesCommand, UntrustDevicesCommand>();
-        services.TryAddScoped<IBumpDeviceDataCommand, BumpDeviceDataCommand>();
+        services.TryAddScoped<IUpdateDeviceLastActivityCommand, UpdateDeviceLastActivityCommand>();
     }
 }
