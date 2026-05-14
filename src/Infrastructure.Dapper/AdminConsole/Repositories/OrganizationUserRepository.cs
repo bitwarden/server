@@ -730,8 +730,6 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                     u.UserId,
                     u.Key,
                 })),
-                NewStatus = (short)OrganizationUserStatusType.Confirmed,
-                RequiredCurrentStatus = (short)OrganizationUserStatusType.Accepted,
                 RevisionDate = DateTime.UtcNow
             },
             commandType: CommandType.StoredProcedure);

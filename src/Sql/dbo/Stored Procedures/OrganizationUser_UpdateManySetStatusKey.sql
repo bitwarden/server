@@ -1,8 +1,6 @@
 CREATE PROCEDURE [dbo].[OrganizationUser_UpdateManySetStatusKey]
-    @UsersJson             NVARCHAR(MAX),
-    @NewStatus             TINYINT,
-    @RequiredCurrentStatus TINYINT,
-    @RevisionDate          DATETIME2(7)
+    @UsersJson    NVARCHAR(MAX),
+    @RevisionDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -29,7 +27,7 @@ BEGIN
 
     UPDATE OU
     SET
-        OU.[Status]       = @NewStatus,
+        OU.[Status]       = 2, -- Confirmed
         OU.[Key]          = U.[Key],
         OU.[RevisionDate] = @RevisionDate
     OUTPUT
@@ -39,7 +37,7 @@ BEGIN
     INNER JOIN
         @UsersToUpdate U ON U.[Id] = OU.[Id]
     WHERE
-        OU.[Status] = @RequiredCurrentStatus
+        OU.[Status] = 1 -- Accepted
 
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserIds] @UpdatedIds
 

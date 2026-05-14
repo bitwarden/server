@@ -160,7 +160,6 @@ public static class DapperHelpers
         return ids.ToArrayTVP("GuidId");
     }
 
-
     public static DataTable ToTwoGuidIdArrayTVP(this IEnumerable<(Guid id1, Guid id2)> values)
     {
         var table = new DataTable();

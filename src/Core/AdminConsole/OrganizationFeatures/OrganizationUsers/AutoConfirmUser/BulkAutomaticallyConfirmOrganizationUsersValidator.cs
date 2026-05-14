@@ -1,13 +1,12 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Enums;
+﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
@@ -19,10 +18,12 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
     IPolicyRequirementQuery policyRequirementQuery,
     IPolicyQuery policyQuery,
     IOrganizationUserRepository organizationUserRepository,
-    IProviderUserRepository providerUserRepository) : IBulkAutomaticallyConfirmOrganizationUsersValidator
+    IProviderUserRepository providerUserRepository,
+    IAutomaticUserConfirmationPolicyEnforcementValidator autoConfirmPolicyEnforcementValidator) : IBulkAutomaticallyConfirmOrganizationUsersValidator
 {
     public async Task<IEnumerable<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>>> ValidateManyAsync(
-        IEnumerable<AutomaticallyConfirmOrganizationUserValidationRequest> requests)
+        IEnumerable<AutomaticallyConfirmOrganizationUserValidationRequest> requests,
+        Guid orgId)
     {
         var requestsList = requests.ToList();
 
@@ -47,10 +48,6 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
             return structuralResults;
         }
 
-        // All valid requests are for the same organization — verified by the bulk command before
-        // calling here. OrganizationId is derived from the hydrated Organization object.
-        var orgId = validRequests[0].OrganizationId;
-
         var userIds = validRequests
             .Select(r => r.OrganizationUser!.UserId!.Value)
             .Distinct()
@@ -59,30 +56,12 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
         // Fetch all data dependencies in parallel, once for the entire batch.
         var (
             policyStatus,
-            twoFactorResults,
-            requireTwoFactorResults,
-            autoConfirmPolicyResults,
-            allOrgUsersForUsers,
-            allProviderUsersForUsers
+            isTwoFactorByUserId,
+            requireTwoFactorByUserId,
+            autoConfirmPolicyByUserId,
+            orgUserCountByUserId,
+            providerUserIds
         ) = await FetchBulkDataAsync(orgId, userIds);
-
-        var isTwoFactorByUserId = twoFactorResults.ToDictionary(r => r.userId, r => r.twoFactorIsEnabled);
-        var requireTwoFactorByUserId = requireTwoFactorResults.ToDictionary(r => r.UserId, r => r.Requirement);
-        var autoConfirmPolicyByUserId = autoConfirmPolicyResults.ToDictionary(r => r.UserId, r => r.Requirement);
-
-        // Group all org memberships by the user so we can do the multi-org check in memory.
-        // GetManyByManyUsersAsync queries by UserId only (WHERE UserId IN (...)), matching the
-        // single-user path's GetManyByUserAsync. Neither returns Invited rows with a null UserId.
-        // The || Email fallback in AutomaticUserConfirmationPolicyEnforcementValidator is only
-        // used to locate the current org-user row defensively and does not extend the data fetched here.
-        var orgUserCountByUserId = allOrgUsersForUsers
-            .GroupBy(ou => ou.UserId!.Value)
-            .ToDictionary(g => g.Key, g => g.Count());
-
-        // Track which users are provider members.
-        var providerUserIds = allProviderUsersForUsers
-            .Select(pu => pu.UserId!.Value)
-            .ToHashSet();
 
         // Org-level check: the policy must be enabled for the organization. Since all valid requests
         // share the same organization, this either passes or fails for the entire batch.
@@ -108,7 +87,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
     /// Validates a single request against the bulk-fetched data for the organization.
     /// All parameters are pre-computed dictionaries/sets to avoid per-user DB calls.
     /// </summary>
-    private static ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest> ValidateRequest(
+    private ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest> ValidateRequest(
         AutomaticallyConfirmOrganizationUserValidationRequest request,
         Guid orgId,
         Dictionary<Guid, bool> isTwoFactorByUserId,
@@ -120,39 +99,21 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
         var userId = request.OrganizationUser!.UserId!.Value;
 
         // User must have 2FA enabled if the org's RequireTwoFactor policy is active.
-        if (!isTwoFactorByUserId.GetValueOrDefault(userId))
+        if (!isTwoFactorByUserId.GetValueOrDefault(userId) &&
+            requireTwoFactorByUserId.TryGetValue(userId, out var req) &&
+            req.IsTwoFactorRequiredForOrganization(orgId))
         {
-            var requireTwoFactor = requireTwoFactorByUserId.GetValueOrDefault(userId);
-            if (requireTwoFactor?.IsTwoFactorRequiredForOrganization(orgId) == true)
-            {
-                return Invalid(request, new UserDoesNotHaveTwoFactorEnabled());
-            }
+            return Invalid(request, new UserDoesNotHaveTwoFactorEnabled());
         }
 
-        // Enforce the Automatic User Confirmation cross-org policy in-memory using bulk-fetched data.
-        var autoConfirmPolicy = autoConfirmPolicyByUserId.GetValueOrDefault(userId);
-
-        if (autoConfirmPolicy is not null)
+        if (autoConfirmPolicyByUserId.TryGetValue(userId, out var autoConfirmPolicyRequirement))
         {
-            if (autoConfirmPolicy.IsEnabled(orgId))
+            var orgMembershipCount = orgUserCountByUserId.TryGetValue(userId, out var count) ? count : 0;
+            var violation = autoConfirmPolicyEnforcementValidator.GetAutoConfirmPolicyViolation(
+                autoConfirmPolicyRequirement, orgId, providerUserIds.Contains(userId), orgMembershipCount);
+            if (violation is not null)
             {
-                // Provider users cannot be confirmed into an auto-confirm org.
-                if (providerUserIds.Contains(userId))
-                {
-                    return Invalid(request, new ProviderUsersCannotJoin());
-                }
-
-                // Users cannot belong to more than one organization.
-                var totalOrgMemberships = orgUserCountByUserId.TryGetValue(userId, out var count) ? count : 0;
-                if (totalOrgMemberships > 1)
-                {
-                    return Invalid(request, new UserCannotBelongToAnotherOrganization());
-                }
-            }
-
-            if (autoConfirmPolicy.IsEnabledForOrganizationsOtherThan(orgId))
-            {
-                return Invalid(request, new OtherOrganizationDoesNotAllowOtherMembership());
+                return Invalid(request, violation);
             }
         }
 
@@ -196,12 +157,12 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
     }
 
     private async Task<(
-        PolicyStatus policyStatus,
-        IEnumerable<(Guid userId, bool twoFactorIsEnabled)> twoFactorResults,
-        IEnumerable<(Guid UserId, RequireTwoFactorPolicyRequirement Requirement)> requireTwoFactorResults,
-        IEnumerable<(Guid UserId, AutomaticUserConfirmationPolicyRequirement Requirement)> autoConfirmPolicyResults,
-        ICollection<OrganizationUser> allOrgUsersForUsers,
-        ICollection<ProviderUser> allProviderUsersForUsers
+        PolicyStatus PolicyStatus,
+        Dictionary<Guid, bool> IsTwoFactorByUserId,
+        Dictionary<Guid, RequireTwoFactorPolicyRequirement> RequireTwoFactorByUserId,
+        Dictionary<Guid, AutomaticUserConfirmationPolicyRequirement> AutoConfirmPolicyByUserId,
+        Dictionary<Guid, int> OrgUserCountByUserId,
+        HashSet<Guid> ProviderUserIds
     )> FetchBulkDataAsync(Guid orgId, IReadOnlyCollection<Guid> userIds)
     {
         var policyTask = policyQuery.RunAsync(orgId, PolicyType.AutomaticUserConfirmation);
@@ -215,11 +176,11 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
 
         return (
             policyTask.Result,
-            twoFactorTask.Result,
-            requireTwoFactorTask.Result,
-            autoConfirmTask.Result,
-            orgUsersTask.Result,
-            providerUsersTask.Result
+            twoFactorTask.Result.ToDictionary(r => r.userId, r => r.twoFactorIsEnabled),
+            requireTwoFactorTask.Result.ToDictionary(r => r.UserId, r => r.Requirement),
+            autoConfirmTask.Result.ToDictionary(r => r.UserId, r => r.Requirement),
+            orgUsersTask.Result.GroupBy(ou => ou.UserId!.Value).ToDictionary(g => g.Key, g => g.Count()),
+            providerUsersTask.Result.Select(pu => pu.UserId!.Value).ToHashSet()
         );
     }
 }

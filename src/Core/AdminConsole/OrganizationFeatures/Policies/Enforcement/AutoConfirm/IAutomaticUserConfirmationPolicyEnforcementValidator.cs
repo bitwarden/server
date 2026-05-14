@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
@@ -42,4 +43,14 @@ public interface IAutomaticUserConfirmationPolicyEnforcementValidator
     Task<ValidationResult<AutomaticUserConfirmationPolicyEnforcementRequest>> IsCompliantAsync(
         AutomaticUserConfirmationPolicyEnforcementRequest request,
         AutomaticUserConfirmationPolicyRequirement policyRequirement);
+
+    /// <summary>
+    /// Returns the first policy violation for the given pre-fetched data, or <c>null</c> if the user is compliant.
+    /// Use this overload in bulk validation flows where data has already been fetched for the entire batch.
+    /// </summary>
+    Error? GetAutoConfirmPolicyViolation(
+        AutomaticUserConfirmationPolicyRequirement policyRequirement,
+        Guid organizationId,
+        bool isProviderUser,
+        int orgMembershipCount);
 }

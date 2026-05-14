@@ -19,7 +19,9 @@ public interface IBulkAutomaticallyConfirmOrganizationUsersValidator
     /// All requests must belong to the same organization.
     /// </remarks>
     /// <param name="requests">The hydrated validation requests to validate.</param>
+    /// <param name="orgId">The organization ID shared by all requests.</param>
     /// <returns>One <see cref="ValidationResult{T}"/> per input request, preserving order.</returns>
     Task<IEnumerable<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>>> ValidateManyAsync(
-        IEnumerable<AutomaticallyConfirmOrganizationUserValidationRequest> requests);
+        IEnumerable<AutomaticallyConfirmOrganizationUserValidationRequest> requests,
+        Guid orgId);
 }

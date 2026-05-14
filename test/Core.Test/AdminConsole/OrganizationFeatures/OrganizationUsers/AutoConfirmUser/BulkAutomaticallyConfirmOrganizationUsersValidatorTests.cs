@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
@@ -82,7 +83,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
     public async Task ValidateManyAsync_EmptyInput_ReturnsEmpty(
         SutProvider<BulkAutomaticallyConfirmOrganizationUsersValidator> sutProvider)
     {
-        var results = await sutProvider.Sut.ValidateManyAsync([]);
+        var results = await sutProvider.Sut.ValidateManyAsync([], Guid.Empty);
 
         Assert.Empty(results);
     }
@@ -96,7 +97,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
         orgUser.UserId = null;
         orgUser.OrganizationId = organization.Id;
 
-        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)])).ToList();
+        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization.Id)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsError);
@@ -113,7 +114,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
         orgUser.UserId = userId;
         orgUser.OrganizationId = Guid.NewGuid(); // Different from organization.Id
 
-        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)])).ToList();
+        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization.Id)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsError);
@@ -135,7 +136,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
         orgUser.OrganizationId = organization.Id;
         orgUser.Status = status;
 
-        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)])).ToList();
+        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization.Id)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsError);
@@ -157,7 +158,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
         orgUser.OrganizationId = organization.Id;
         orgUser.Type = type;
 
-        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)])).ToList();
+        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization.Id)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsError);
@@ -177,7 +178,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
 
         SetupPassingBulkDataStubs(sutProvider, organization, [orgUser], disabledPolicy);
 
-        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)])).ToList();
+        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization.Id)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsError);
@@ -197,7 +198,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
 
         SetupPassingBulkDataStubs(sutProvider, organization, [orgUser], enabledPolicy);
 
-        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)])).ToList();
+        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization.Id)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsError);
@@ -230,7 +231,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
             .GetAsync<RequireTwoFactorPolicyRequirement>(Arg.Any<IEnumerable<Guid>>())
             .Returns([(userId, new RequireTwoFactorPolicyRequirement([twoFactorPolicyDetails]))]);
 
-        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)])).ToList();
+        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization.Id)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsError);
@@ -258,7 +259,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
             .GetAsync<RequireTwoFactorPolicyRequirement>(Arg.Any<IEnumerable<Guid>>())
             .Returns([(userId, new RequireTwoFactorPolicyRequirement([]))]);
 
-        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)])).ToList();
+        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization.Id)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsValid);
@@ -277,17 +278,17 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
 
         SetupPassingBulkDataStubs(sutProvider, organization, [orgUser], enabledPolicy);
 
-        // AutoConfirm policy is enabled for this org (triggers provider + multi-org checks).
+        // AutoConfirm policy requirement exists for this user — triggers GetAutoConfirmPolicyViolation.
         var autoConfirmDetails = new PolicyDetails { OrganizationId = organization.Id };
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<IEnumerable<Guid>>())
             .Returns([(userId, new AutomaticUserConfirmationPolicyRequirement([autoConfirmDetails]))]);
 
-        sutProvider.GetDependency<IProviderUserRepository>()
-            .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns([new ProviderUser { UserId = userId }]);
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+            .GetAutoConfirmPolicyViolation(Arg.Any<AutomaticUserConfirmationPolicyRequirement>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<int>())
+            .Returns(new ProviderUsersCannotJoin());
 
-        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)])).ToList();
+        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization.Id)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsError);
@@ -315,12 +316,11 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<IEnumerable<Guid>>())
             .Returns([(userId, new AutomaticUserConfirmationPolicyRequirement([autoConfirmDetails]))]);
 
-        // Two org memberships for the same userId.
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns([orgUser, otherOrgUser]);
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+            .GetAutoConfirmPolicyViolation(Arg.Any<AutomaticUserConfirmationPolicyRequirement>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<int>())
+            .Returns(new UserCannotBelongToAnotherOrganization());
 
-        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)])).ToList();
+        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization.Id)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsError);
@@ -340,13 +340,17 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
 
         SetupPassingBulkDataStubs(sutProvider, organization, [orgUser], enabledPolicy);
 
-        // AutoConfirm policy is enabled for a *different* org, not the target org.
+        // AutoConfirm policy requirement exists for another org.
         var otherOrgDetails = new PolicyDetails { OrganizationId = Guid.NewGuid() };
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<IEnumerable<Guid>>())
             .Returns([(userId, new AutomaticUserConfirmationPolicyRequirement([otherOrgDetails]))]);
 
-        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)])).ToList();
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+            .GetAutoConfirmPolicyViolation(Arg.Any<AutomaticUserConfirmationPolicyRequirement>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<int>())
+            .Returns(new OtherOrganizationDoesNotAllowOtherMembership());
+
+        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization.Id)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsError);
@@ -366,7 +370,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
 
         SetupPassingBulkDataStubs(sutProvider, organization, [orgUser], enabledPolicy);
 
-        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)])).ToList();
+        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization.Id)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsValid);
@@ -400,7 +404,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
         SetupPassingBulkDataStubs(sutProvider, organization, [validOrgUser], enabledPolicy);
 
         var results = (await sutProvider.Sut.ValidateManyAsync(
-            [BuildRequest(validOrgUser, organization), invalidRequest])).ToList();
+            [BuildRequest(validOrgUser, organization), invalidRequest], organization.Id)).ToList();
 
         Assert.Equal(2, results.Count);
 
