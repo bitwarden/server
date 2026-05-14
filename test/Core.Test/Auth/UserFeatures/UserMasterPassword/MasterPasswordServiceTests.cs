@@ -759,10 +759,10 @@ public class MasterPasswordServiceTests
             () => sutProvider.Sut.PrepareSetInitialOrUpdateExistingMasterPasswordAsync(user, data));
     }
 
-    // --- SaveUpdateExistingMasterPasswordAndKdf ---
+    // --- SaveUpdateExistingKdfConfiguration ---
 
     [Theory, BitAutoData]
-    public async Task SaveUpdateExistingMasterPasswordAndKdf_Success(User user)
+    public async Task SaveUpdateExistingKdfConfiguration_Success(User user)
     {
         var sutProvider = CreateSutProvider();
         user.MasterPassword = "existing-hash";
@@ -772,6 +772,7 @@ public class MasterPasswordServiceTests
         sutProvider.GetDependency<IPasswordHasher<User>>()
             .HashPassword(Arg.Any<User>(), Arg.Any<string>())
             .Returns("new-hash");
+        var originalLastPasswordChangeDate = user.LastPasswordChangeDate;
 
         var result = await sutProvider.Sut.SaveUpdateExistingKdfConfigurationAsync(user, data);
 
@@ -783,13 +784,19 @@ public class MasterPasswordServiceTests
         Assert.Equal(data.MasterPasswordUnlock.Kdf.Iterations, user.KdfIterations);
         Assert.Equal("test-hint", user.MasterPasswordHint);
         Assert.Equal(expectedTime, user.LastKdfChangeDate);
+        // LastPasswordChangeDate marks a user's action to change the password;
+        // the fact that the hash-of-hash which is stored in the database changes
+        // as a result of KDF update does not affect a change to this date;
+        // doing so would confuse the data. LastKdfChangeDate neatly separates
+        // this concern.
+        Assert.Equal(originalLastPasswordChangeDate, user.LastPasswordChangeDate); 
         Assert.Equal(expectedTime, user.RevisionDate);
         Assert.Equal(user.RevisionDate, user.AccountRevisionDate);
         await sutProvider.GetDependency<IUserRepository>().Received().ReplaceAsync(user);
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUpdateExistingMasterPasswordAndKdf_RotatesPbkdf2ToArgon2id(User user)
+    public async Task SaveUpdateExistingKdfConfiguration_RotatesPbkdf2ToArgon2id(User user)
     {
         var sutProvider = CreateSutProvider();
         user.MasterPassword = "existing-hash";
@@ -821,7 +828,7 @@ public class MasterPasswordServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUpdateExistingMasterPasswordAndKdf_RotatesArgon2idToPbkdf2(User user)
+    public async Task SaveUpdateExistingKdfConfiguration_RotatesArgon2idToPbkdf2(User user)
     {
         var sutProvider = CreateSutProvider();
         user.MasterPassword = "existing-hash";
@@ -853,7 +860,7 @@ public class MasterPasswordServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUpdateExistingMasterPasswordAndKdf_WhenValidationFails_ReturnsErrorsAndDoesNotPersist(User user)
+    public async Task SaveUpdateExistingKdfConfiguration_WhenValidationFails_ReturnsErrorsAndDoesNotPersist(User user)
     {
         var error = new IdentityError { Code = "pwd-invalid", Description = "Password is too weak." };
         var validator = Substitute.For<IPasswordValidator<User>>();
@@ -875,7 +882,7 @@ public class MasterPasswordServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUpdateExistingMasterPasswordAndKdf_ThrowsWhenSaltChanged(User user)
+    public async Task SaveUpdateExistingKdfConfiguration_ThrowsWhenSaltChanged(User user)
     {
         var sutProvider = CreateSutProvider();
         user.MasterPassword = "existing-hash";
@@ -912,7 +919,7 @@ public class MasterPasswordServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUpdateExistingMasterPasswordAndKdf_ThrowsWhenNoExistingPassword(User user)
+    public async Task SaveUpdateExistingKdfConfiguration_ThrowsWhenNoExistingPassword(User user)
     {
         var sutProvider = CreateSutProvider();
         user.MasterPassword = null;
@@ -924,7 +931,7 @@ public class MasterPasswordServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUpdateExistingMasterPasswordAndKdf_ThrowsWhenUserNotHydrated(User user)
+    public async Task SaveUpdateExistingKdfConfiguration_ThrowsWhenUserNotHydrated(User user)
     {
         var sutProvider = CreateSutProvider();
         user.Id = default;
@@ -937,7 +944,7 @@ public class MasterPasswordServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUpdateExistingMasterPasswordAndKdf_ThrowsForKeyConnectorUser(User user)
+    public async Task SaveUpdateExistingKdfConfiguration_ThrowsForKeyConnectorUser(User user)
     {
         var sutProvider = CreateSutProvider();
         user.MasterPassword = "existing-hash";
@@ -952,7 +959,7 @@ public class MasterPasswordServiceTests
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public async Task SaveUpdateExistingMasterPasswordAndKdf_SecurityStampRotation_HonorsRefreshStampFlag(bool refreshStamp)
+    public async Task SaveUpdateExistingKdfConfiguration_SecurityStampRotation_HonorsRefreshStampFlag(bool refreshStamp)
     {
         var sutProvider = CreateSutProvider();
         var user = new User
