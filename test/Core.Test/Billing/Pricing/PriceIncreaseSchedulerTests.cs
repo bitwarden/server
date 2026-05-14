@@ -134,7 +134,7 @@ public class PriceIncreaseSchedulerTests
             CreateSubscriptionItem("premium-old-seat", 1));
         subscription.Discounts =
         [
-            new Discount { Coupon = new Coupon { Id = "existing-grandfather-discount" } }
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "existing-grandfather-discount" } } }
         ];
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
@@ -264,7 +264,7 @@ public class PriceIncreaseSchedulerTests
             CreateSubscriptionItem(families2019.PasswordManager.StripePlanId, 1));
         subscription.Discounts =
         [
-            new Discount { Coupon = new Coupon { Id = "existing-partner-discount" } }
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "existing-partner-discount" } } }
         ];
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
@@ -347,7 +347,7 @@ public class PriceIncreaseSchedulerTests
             CreateSubscriptionItem(families2025.PasswordManager.StripePlanId, 1));
         subscription.Discounts =
         [
-            new Discount { Coupon = new Coupon { Id = "existing-retention-discount" } }
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "existing-retention-discount" } } }
         ];
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
@@ -671,7 +671,7 @@ public class PriceIncreaseSchedulerTests
         subscription.Items.Data[0].CurrentPeriodEnd = currentPeriodEnd;
         subscription.Discounts =
         [
-            new Discount { Coupon = new Coupon { Id = "existing-grandfather-discount" } }
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "existing-grandfather-discount" } } }
         ];
 
         var sut = CreateSut();
@@ -714,8 +714,8 @@ public class PriceIncreaseSchedulerTests
         subscription.Items.Data[0].CurrentPeriodEnd = currentPeriodEnd;
         subscription.Discounts =
         [
-            new Discount { Coupon = new Coupon { Id = "existing-grandfather-discount" } },
-            new Discount { Coupon = new Coupon { Id = "existing-nfr-discount" } }
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "existing-grandfather-discount" } } },
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "existing-nfr-discount" } } }
         ];
 
         var sut = CreateSut();
@@ -832,7 +832,7 @@ public class PriceIncreaseSchedulerTests
         subscription.Items.Data[0].CurrentPeriodEnd = currentPeriodEnd;
         subscription.Discounts =
         [
-            new Discount { Coupon = new Coupon { Id = "existing-partner-discount" } }
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "existing-partner-discount" } } }
         ];
 
         var sut = CreateSut();
@@ -902,7 +902,7 @@ public class PriceIncreaseSchedulerTests
         subscription.Items.Data[0].CurrentPeriodEnd = currentPeriodEnd;
         subscription.Discounts =
         [
-            new Discount { Coupon = new Coupon { Id = "existing-retention-discount" } }
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "existing-retention-discount" } } }
         ];
 
         var sut = CreateSut();
