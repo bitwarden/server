@@ -43,7 +43,7 @@ public class ChangeKdfCommandTests
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, Arg.Any<string>())
             .Returns(true);
         sutProvider.GetDependency<IMasterPasswordService>()
-            .SaveUpdateExistingMasterPasswordAndKdfAsync(user, Arg.Any<UpdateExistingPasswordAndKdfData>())
+            .SaveUpdateExistingKdfConfigurationAsync(user, Arg.Any<UpdateExistingKdfConfigurationData>())
             .Returns(OneOf<User, IdentityError[]>.FromT0(user));
 
         var result = await sutProvider.Sut.ChangeKdfAsync(user, "current-password", authenticationData, unlockData);
@@ -73,7 +73,7 @@ public class ChangeKdfCommandTests
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, Arg.Any<string>())
             .Returns(true);
         sutProvider.GetDependency<IMasterPasswordService>()
-            .SaveUpdateExistingMasterPasswordAndKdfAsync(user, Arg.Any<UpdateExistingPasswordAndKdfData>())
+            .SaveUpdateExistingKdfConfigurationAsync(user, Arg.Any<UpdateExistingKdfConfigurationData>())
             .Returns(OneOf<User, IdentityError[]>.FromT1(new[] { serviceError }));
 
         var result = await sutProvider.Sut.ChangeKdfAsync(user, "current-password", authenticationData, unlockData);
@@ -102,13 +102,13 @@ public class ChangeKdfCommandTests
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(Arg.Any<User>(), Arg.Any<string>())
             .Returns(true);
         sutProvider.GetDependency<IMasterPasswordService>()
-            .SaveUpdateExistingMasterPasswordAndKdfAsync(user, Arg.Any<UpdateExistingPasswordAndKdfData>())
+            .SaveUpdateExistingKdfConfigurationAsync(user, Arg.Any<UpdateExistingKdfConfigurationData>())
             .Returns(OneOf<User, IdentityError[]>.FromT0(user));
 
         await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", authenticationData, unlockData);
 
         await sutProvider.GetDependency<IMasterPasswordService>().Received(1)
-            .SaveUpdateExistingMasterPasswordAndKdfAsync(user, Arg.Is<UpdateExistingPasswordAndKdfData>(d =>
+            .SaveUpdateExistingKdfConfigurationAsync(user, Arg.Is<UpdateExistingKdfConfigurationData>(d =>
                 d.MasterPasswordAuthentication == authenticationData &&
                 d.MasterPasswordUnlock == unlockData &&
                 d.ValidatePassword == false &&
@@ -193,13 +193,13 @@ public class ChangeKdfCommandTests
             .Returns(true);
         sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(false);
         sutProvider.GetDependency<IMasterPasswordService>()
-            .SaveUpdateExistingMasterPasswordAndKdfAsync(user, Arg.Any<UpdateExistingPasswordAndKdfData>())
+            .SaveUpdateExistingKdfConfigurationAsync(user, Arg.Any<UpdateExistingKdfConfigurationData>())
             .Returns(OneOf<User, IdentityError[]>.FromT0(user));
 
         await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", authenticationData, unlockData);
 
         await sutProvider.GetDependency<IMasterPasswordService>().Received(1)
-            .SaveUpdateExistingMasterPasswordAndKdfAsync(user, Arg.Is<UpdateExistingPasswordAndKdfData>(d =>
+            .SaveUpdateExistingKdfConfigurationAsync(user, Arg.Is<UpdateExistingKdfConfigurationData>(d =>
                 d.RefreshStamp == true));
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushLogOutAsync(user.Id);
         sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.NoLogoutOnKdfChange);
@@ -234,13 +234,13 @@ public class ChangeKdfCommandTests
             .Returns(true);
         sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
         sutProvider.GetDependency<IMasterPasswordService>()
-            .SaveUpdateExistingMasterPasswordAndKdfAsync(user, Arg.Any<UpdateExistingPasswordAndKdfData>())
+            .SaveUpdateExistingKdfConfigurationAsync(user, Arg.Any<UpdateExistingKdfConfigurationData>())
             .Returns(OneOf<User, IdentityError[]>.FromT0(user));
 
         await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", authenticationData, unlockData);
 
         await sutProvider.GetDependency<IMasterPasswordService>().Received(1)
-            .SaveUpdateExistingMasterPasswordAndKdfAsync(user, Arg.Is<UpdateExistingPasswordAndKdfData>(d =>
+            .SaveUpdateExistingKdfConfigurationAsync(user, Arg.Is<UpdateExistingKdfConfigurationData>(d =>
                 d.RefreshStamp == false));
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
             .PushLogOutAsync(user.Id, false, PushNotificationLogOutReason.KdfChange);
@@ -286,7 +286,7 @@ public class ChangeKdfCommandTests
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(Arg.Any<User>(), Arg.Any<string>())
             .Returns(true);
         sutProvider.GetDependency<IMasterPasswordService>()
-            .SaveUpdateExistingMasterPasswordAndKdfAsync(user, Arg.Any<UpdateExistingPasswordAndKdfData>())
+            .SaveUpdateExistingKdfConfigurationAsync(user, Arg.Any<UpdateExistingKdfConfigurationData>())
             .ThrowsAsync(new BadRequestException("Salt mismatch."));
 
         var authenticationData = new MasterPasswordAuthenticationData
@@ -313,7 +313,7 @@ public class ChangeKdfCommandTests
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(Arg.Any<User>(), Arg.Any<string>())
             .Returns(true);
         sutProvider.GetDependency<IMasterPasswordService>()
-            .SaveUpdateExistingMasterPasswordAndKdfAsync(user, Arg.Any<UpdateExistingPasswordAndKdfData>())
+            .SaveUpdateExistingKdfConfigurationAsync(user, Arg.Any<UpdateExistingKdfConfigurationData>())
             .ThrowsAsync(new BadRequestException("Salt mismatch."));
 
         var authenticationData = new MasterPasswordAuthenticationData
@@ -341,7 +341,7 @@ public class ChangeKdfCommandTests
             .Returns(true);
         var failureError = new IdentityError { Code = "TestFail", Description = "Test fail" };
         sutProvider.GetDependency<IMasterPasswordService>()
-            .SaveUpdateExistingMasterPasswordAndKdfAsync(user, Arg.Any<UpdateExistingPasswordAndKdfData>())
+            .SaveUpdateExistingKdfConfigurationAsync(user, Arg.Any<UpdateExistingKdfConfigurationData>())
             .Returns(OneOf<User, IdentityError[]>.FromT1(new[] { failureError }));
 
         var kdf = new KdfSettings { KdfType = KdfType.Argon2id, Iterations = 4, Memory = 512, Parallelism = 4 };
