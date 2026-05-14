@@ -156,6 +156,12 @@
           "type": "boolean",
           "default": false,
           "description": "When true, assigns generated ciphers to user folders round-robin. Requires 'folders' to be true."
+        },
+        "repromptEveryNthCipher": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Set Reprompt=Password on every Nth generated cipher. 0 = disabled."
         }
       }
     },
@@ -168,6 +174,12 @@
           "type": "integer",
           "minimum": 1,
           "description": "Number of personal ciphers to generate per user."
+        },
+        "repromptEveryNthCipher": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Set Reprompt=Password on every Nth generated personal cipher. 0 = disabled."
         }
       },
       "required": ["countPerUser"]

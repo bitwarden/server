@@ -316,6 +316,7 @@ public static class RecipeBuilderExtensions
     /// <param name="pwDist">Distribution of password strengths. Uses realistic defaults if null.</param>
     /// <param name="assignFolders">When true, assigns ciphers to user folders round-robin.</param>
     /// <param name="density">Optional density profile for cipher-to-collection assignment control</param>
+    /// <param name="repromptEveryNthCipher">When &gt; 0, sets Reprompt=Password on every Nth generated cipher. 0 disables.</param>
     /// <returns>The builder for fluent chaining</returns>
     /// <exception cref="InvalidOperationException">Thrown when UseCiphers() was already called</exception>
     public static RecipeBuilder AddCiphers(
@@ -324,7 +325,8 @@ public static class RecipeBuilderExtensions
         Distribution<CipherType>? typeDist = null,
         Distribution<PasswordStrength>? pwDist = null,
         bool assignFolders = false,
-        DensityProfile? density = null)
+        DensityProfile? density = null,
+        int repromptEveryNthCipher = 0)
     {
         if (builder.HasFixtureCiphers)
         {
@@ -337,7 +339,7 @@ public static class RecipeBuilderExtensions
         {
             builder.HasCipherFolderAssignment = true;
         }
-        builder.AddStep(_ => new GenerateCiphersStep(count, typeDist, pwDist, assignFolders, density));
+        builder.AddStep(_ => new GenerateCiphersStep(count, typeDist, pwDist, assignFolders, density, repromptEveryNthCipher));
         return builder;
     }
 
@@ -427,13 +429,15 @@ public static class RecipeBuilderExtensions
     /// <param name="typeDist">Distribution of cipher types. Uses realistic defaults if null.</param>
     /// <param name="pwDist">Distribution of password strengths. Uses realistic defaults if null.</param>
     /// <param name="density">Optional density profile for per-user personal cipher count distribution</param>
+    /// <param name="repromptEveryNthCipher">When &gt; 0, sets Reprompt=Password on every Nth generated personal cipher. 0 disables.</param>
     /// <returns>The builder for fluent chaining</returns>
     /// <exception cref="InvalidOperationException">Thrown when no users exist</exception>
     public static RecipeBuilder AddPersonalCiphers(
         this RecipeBuilder builder, int countPerUser,
         Distribution<CipherType>? typeDist = null,
         Distribution<PasswordStrength>? pwDist = null,
-        DensityProfile? density = null)
+        DensityProfile? density = null,
+        int repromptEveryNthCipher = 0)
     {
         if (!builder.HasRosterUsers && !builder.HasGeneratedUsers && !builder.HasIndividualUser)
         {
@@ -442,7 +446,7 @@ public static class RecipeBuilderExtensions
         }
 
         builder.HasPersonalCiphers = true;
-        builder.AddStep(_ => new GeneratePersonalCiphersStep(countPerUser, typeDist, pwDist, density));
+        builder.AddStep(_ => new GeneratePersonalCiphersStep(countPerUser, typeDist, pwDist, density, repromptEveryNthCipher));
         return builder;
     }
 
