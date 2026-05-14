@@ -11,7 +11,7 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Core;
-using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
@@ -22,7 +22,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.SelfRevokeUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2;
@@ -74,7 +73,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IDeleteClaimedOrganizationUserAccountCommand _deleteClaimedOrganizationUserAccountCommand;
     private readonly IGetOrganizationUsersClaimedStatusQuery _getOrganizationUsersClaimedStatusQuery;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
-    private readonly IPolicyQuery _policyQuery;
+    private readonly IGetPendingAutoConfirmUsersQuery _getPendingAutoConfirmUsersQuery;
     private readonly IFeatureService _featureService;
     private readonly IPricingClient _pricingClient;
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
@@ -125,7 +124,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext,
         ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand,
         IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand,
-        IPolicyQuery policyQuery)
+        IGetPendingAutoConfirmUsersQuery getPendingAutoConfirmUsersQuery)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -146,7 +145,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _deleteClaimedOrganizationUserAccountCommand = deleteClaimedOrganizationUserAccountCommand;
         _getOrganizationUsersClaimedStatusQuery = getOrganizationUsersClaimedStatusQuery;
         _policyRequirementQuery = policyRequirementQuery;
-        _policyQuery = policyQuery;
+        _getPendingAutoConfirmUsersQuery = getPendingAutoConfirmUsersQuery;
         _featureService = featureService;
         _pricingClient = pricingClient;
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
@@ -821,35 +820,21 @@ public class OrganizationUsersController : BaseAdminConsoleController
     [RequireFeature(FeatureFlagKeys.BulkAutoConfirmOnLogin)]
     public async Task<ListResponseModel<OrganizationUserPendingAutoConfirmResponseModel>> GetPendingAutoConfirmUsersAsync(Guid orgId)
     {
-        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
-        if (orgAbility is not { UseAutomaticUserConfirmation: true })
-        {
-            return new ListResponseModel<OrganizationUserPendingAutoConfirmResponseModel>([]);
-        }
-
-        var autoConfirmPolicy = await _policyQuery.RunAsync(orgId, PolicyType.AutomaticUserConfirmation);
-        if (!autoConfirmPolicy.Enabled)
-        {
-            return new ListResponseModel<OrganizationUserPendingAutoConfirmResponseModel>([]);
-        }
-
-        var pendingUsers = await _organizationUserRepository.GetManyPendingAutoConfirmAsync(orgId);
-        var responses = pendingUsers
-            .Where(u => u.UserId.HasValue)
-            .Select(u => new OrganizationUserPendingAutoConfirmResponseModel(u));
-        return new ListResponseModel<OrganizationUserPendingAutoConfirmResponseModel>(responses);
+        var pendingUsers = await _getPendingAutoConfirmUsersQuery.GetPendingAutoConfirmUsersAsync(orgId);
+        return new ListResponseModel<OrganizationUserPendingAutoConfirmResponseModel>(
+            pendingUsers.Select(u => new OrganizationUserPendingAutoConfirmResponseModel(u)));
     }
 
     [HttpPost("bulk-auto-confirm")]
     [Authorize<ManageUsersRequirement>]
     [RequireFeature(FeatureFlagKeys.BulkAutoConfirmOnLogin)]
     public async Task<IResult> BulkAutomaticallyConfirmOrganizationUsersAsync(
-        Guid orgId,
+        [InjectOrganization] Organization organization,
         [FromBody] OrganizationUserBulkConfirmRequestModel model)
     {
         var request = new BulkAutomaticallyConfirmOrganizationUsersRequest
         {
-            OrganizationId = orgId,
+            Organization = organization,
             DefaultUserCollectionName = model.DefaultUserCollectionName,
             UsersToConfirm = model.Keys
                 .GroupBy(e => e.Id)

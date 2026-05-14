@@ -49,7 +49,8 @@ public record BulkAutoConfirmUserEntry
 /// </summary>
 public record BulkAutomaticallyConfirmOrganizationUsersRequest
 {
-    public required Guid OrganizationId { get; init; }
+    public required Organization Organization { get; init; }
+    public Guid OrganizationId => Organization.Id;
     public required string DefaultUserCollectionName { get; init; }
     public required IReadOnlyList<BulkAutoConfirmUserEntry> UsersToConfirm { get; init; }
 }

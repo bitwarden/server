@@ -75,7 +75,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
         // single-user path's GetManyByUserAsync. Neither returns Invited rows with a null UserId.
         // The || Email fallback in AutomaticUserConfirmationPolicyEnforcementValidator is only
         // used to locate the current org-user row defensively and does not extend the data fetched here.
-        var orgUsersByUserId = allOrgUsersForUsers
+        var orgUserCountByUserId = allOrgUsersForUsers
             .GroupBy(ou => ou.UserId!.Value)
             .ToDictionary(g => g.Key, g => g.Count());
 
@@ -84,68 +84,79 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
             .Select(pu => pu.UserId!.Value)
             .ToHashSet();
 
-        var resultsByRequest = structuralResults.ToDictionary(r => r.Request);
-
-        foreach (var request in validRequests)
+        // Org-level check: the policy must be enabled for the organization. Since all valid requests
+        // share the same organization, this either passes or fails for the entire batch.
+        if (!policyStatus.Enabled || validRequests[0].Organization is not { UseAutomaticUserConfirmation: true })
         {
-            var userId = request.OrganizationUser!.UserId!.Value;
-
-            // Org must have the Automatic User Confirmation policy enabled
-            if (!policyStatus.Enabled || request.Organization is not { UseAutomaticUserConfirmation: true })
-            {
-                resultsByRequest[request] = Invalid(request, new AutomaticallyConfirmUsersPolicyIsNotEnabled());
-                continue;
-            }
-
-            // User must have 2FA enabled if the org's RequireTwoFactor policy is active
-            var hasTwoFactor = isTwoFactorByUserId.GetValueOrDefault(userId);
-            if (!hasTwoFactor)
-            {
-                var requireTwoFactor = requireTwoFactorByUserId.GetValueOrDefault(userId);
-
-                if (requireTwoFactor?.IsTwoFactorRequiredForOrganization(orgId) == true)
-                {
-                    resultsByRequest[request] = Invalid(request, new UserDoesNotHaveTwoFactorEnabled());
-                    continue;
-                }
-            }
-
-            // Enforce the Automatic User Confirmation cross-org policy in-memory using bulk-fetched data.
-            var autoConfirmPolicy = autoConfirmPolicyByUserId.GetValueOrDefault(userId);
-
-            if (autoConfirmPolicy is not null)
-            {
-                if (autoConfirmPolicy.IsEnabled(orgId))
-                {
-                    // Provider users cannot be confirmed into an auto-confirm org.
-                    if (providerUserIds.Contains(userId))
-                    {
-                        resultsByRequest[request] = Invalid(request, new ProviderUsersCannotJoin());
-                        continue;
-                    }
-
-                    // Users cannot belong to more than one organization.
-                    var totalOrgMemberships = orgUsersByUserId.TryGetValue(userId, out var count) ? count : 0;
-                    if (totalOrgMemberships > 1)
-                    {
-                        resultsByRequest[request] = Invalid(request, new UserCannotBelongToAnotherOrganization());
-                        continue;
-                    }
-                }
-
-                if (autoConfirmPolicy.IsEnabledForOrganizationsOtherThan(orgId))
-                {
-                    resultsByRequest[request] = Invalid(request, new OtherOrganizationDoesNotAllowOtherMembership());
-                    continue;
-                }
-            }
-
-            // All checks passed.
-            resultsByRequest[request] = Valid(request);
+            return structuralResults.Select(r => r.IsValid
+                ? Invalid(r.Request, new AutomaticallyConfirmUsersPolicyIsNotEnabled())
+                : r);
         }
 
-        // Return results in the original input order.
-        return requestsList.Select(r => resultsByRequest[r]);
+        // Per-user validation using bulk-fetched data — pure mapping, no side effects.
+        var bulkResultByRequest = validRequests
+            .Select(r => ValidateRequest(r, orgId, isTwoFactorByUserId, requireTwoFactorByUserId,
+                autoConfirmPolicyByUserId, providerUserIds, orgUserCountByUserId))
+            .ToDictionary(r => r.Request);
+
+        // structuralResults is already in input order; replace valid entries with their bulk result.
+        return structuralResults.Select(r =>
+            bulkResultByRequest.TryGetValue(r.Request, out var bulk) ? bulk : r);
+    }
+
+    /// <summary>
+    /// Validates a single request against the bulk-fetched data for the organization.
+    /// All parameters are pre-computed dictionaries/sets to avoid per-user DB calls.
+    /// </summary>
+    private static ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest> ValidateRequest(
+        AutomaticallyConfirmOrganizationUserValidationRequest request,
+        Guid orgId,
+        Dictionary<Guid, bool> isTwoFactorByUserId,
+        Dictionary<Guid, RequireTwoFactorPolicyRequirement> requireTwoFactorByUserId,
+        Dictionary<Guid, AutomaticUserConfirmationPolicyRequirement> autoConfirmPolicyByUserId,
+        HashSet<Guid> providerUserIds,
+        Dictionary<Guid, int> orgUserCountByUserId)
+    {
+        var userId = request.OrganizationUser!.UserId!.Value;
+
+        // User must have 2FA enabled if the org's RequireTwoFactor policy is active.
+        if (!isTwoFactorByUserId.GetValueOrDefault(userId))
+        {
+            var requireTwoFactor = requireTwoFactorByUserId.GetValueOrDefault(userId);
+            if (requireTwoFactor?.IsTwoFactorRequiredForOrganization(orgId) == true)
+            {
+                return Invalid(request, new UserDoesNotHaveTwoFactorEnabled());
+            }
+        }
+
+        // Enforce the Automatic User Confirmation cross-org policy in-memory using bulk-fetched data.
+        var autoConfirmPolicy = autoConfirmPolicyByUserId.GetValueOrDefault(userId);
+
+        if (autoConfirmPolicy is not null)
+        {
+            if (autoConfirmPolicy.IsEnabled(orgId))
+            {
+                // Provider users cannot be confirmed into an auto-confirm org.
+                if (providerUserIds.Contains(userId))
+                {
+                    return Invalid(request, new ProviderUsersCannotJoin());
+                }
+
+                // Users cannot belong to more than one organization.
+                var totalOrgMemberships = orgUserCountByUserId.TryGetValue(userId, out var count) ? count : 0;
+                if (totalOrgMemberships > 1)
+                {
+                    return Invalid(request, new UserCannotBelongToAnotherOrganization());
+                }
+            }
+
+            if (autoConfirmPolicy.IsEnabledForOrganizationsOtherThan(orgId))
+            {
+                return Invalid(request, new OtherOrganizationDoesNotAllowOtherMembership());
+            }
+        }
+
+        return Valid(request);
     }
 
     /// <summary>

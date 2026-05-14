@@ -12,13 +12,11 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 
 public class BulkAutomaticallyConfirmOrganizationUsersCommand(
     IOrganizationUserRepository organizationUserRepository,
-    IOrganizationRepository organizationRepository,
     IBulkAutomaticallyConfirmOrganizationUsersValidator validator,
     IEventService eventService,
     IUserRepository userRepository,
@@ -46,34 +44,34 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommand(
         var validationResults = (await validator.ValidateManyAsync(validationRequests)).ToList();
 
         // Collect the users that passed validation and build the to-confirm list.
-        var validatedRequests = validationResults
+        var validRequests = validationResults
             .Where(r => r.IsValid)
             .Select(r => r.Request)
             .ToList();
 
-        if (validatedRequests.Count == 0)
+        if (validRequests.Count == 0)
         {
-            return BuildResults(request.UsersToConfirm, validationResults, notFoundIds);
+            return BuildResults(validationResults, notFoundIds);
         }
 
-        var confirmedRequests = await ConfirmValidatedUsersAsync(validatedRequests);
+        var confirmedRequests = await ConfirmValidatedUsersAsync(validRequests);
 
         if (confirmedRequests.Count == 0)
         {
-            return BuildResults(request.UsersToConfirm, validationResults, notFoundIds);
+            return BuildResults(validationResults, notFoundIds);
         }
 
         // Run post-confirmation side effects.
         await CreateDefaultCollectionsForManyAsync(confirmedRequests, organization!);
 
-        await Task.WhenAll(confirmedRequests.Select(r =>
-            Task.WhenAll(
-                LogOrganizationUserConfirmedEventAsync(r),
-                SendConfirmedOrganizationUserEmailAsync(r, organization!),
-                SyncOrganizationKeysAsync(r)
-            )));
+        await Task.WhenAll(confirmedRequests.SelectMany<AutomaticallyConfirmOrganizationUserValidationRequest, Task>(r =>
+        [
+            LogOrganizationUserConfirmedEventAsync(r),
+            SendConfirmedOrganizationUserEmailAsync(r, organization!),
+            SyncOrganizationKeysAsync(r)
+        ]));
 
-        return BuildResults(request.UsersToConfirm, validationResults, notFoundIds);
+        return BuildResults(validationResults, notFoundIds);
     }
 
     private async Task<(
@@ -82,10 +80,9 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommand(
         HashSet<Guid> NotFoundIds
     )> BuildValidationRequestsAsync(BulkAutomaticallyConfirmOrganizationUsersRequest request)
     {
-        var orgId = request.OrganizationId;
+        var organization = request.Organization;
+        var orgId = organization.Id;
 
-        // Fetch org and all org-users once for the entire batch.
-        var organization = await organizationRepository.GetByIdAsync(orgId);
         var orgUserIds = request.UsersToConfirm.Select(u => u.OrganizationUserId).ToList();
         var orgUsers = await organizationUserRepository.GetManyAsync(orgUserIds);
         var orgUserById = orgUsers.ToDictionary(ou => ou.Id);
@@ -115,9 +112,9 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommand(
     }
 
     private async Task<List<AutomaticallyConfirmOrganizationUserValidationRequest>> ConfirmValidatedUsersAsync(
-        List<AutomaticallyConfirmOrganizationUserValidationRequest> validatedRequests)
+        List<AutomaticallyConfirmOrganizationUserValidationRequest> validRequests)
     {
-        var usersToConfirm = validatedRequests
+        var usersToConfirm = validRequests
             .Select(r => new AcceptedOrganizationUserToConfirm
             {
                 OrganizationUserId = r.OrganizationUser!.Id,
@@ -131,36 +128,18 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommand(
         var confirmedIds = (await organizationUserRepository.ConfirmManyOrganizationUsersAsync(usersToConfirm))
             .ToHashSet();
 
-        return validatedRequests
+        return validRequests
             .Where(r => confirmedIds.Contains(r.OrganizationUserId))
             .ToList();
     }
 
     private static IEnumerable<BulkCommandResult> BuildResults(
-        IReadOnlyList<BulkAutoConfirmUserEntry> usersToConfirm,
         IReadOnlyList<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>> validationResults,
         HashSet<Guid> notFoundIds)
-    {
-        var errorByOrgUserId = validationResults
-            .Where(r => r.IsError)
-            .ToDictionary(r => r.Request.OrganizationUserId, r => r.AsError);
-
-        return usersToConfirm.Select(u =>
-        {
-            if (notFoundIds.Contains(u.OrganizationUserId))
-            {
-                return new BulkCommandResult(u.OrganizationUserId, new UserNotFoundError());
-            }
-
-            if (errorByOrgUserId.TryGetValue(u.OrganizationUserId, out var error))
-            {
-                return new BulkCommandResult(u.OrganizationUserId, error);
-            }
-
-            // No error means either confirmed or already-confirmed (idempotent).
-            return new BulkCommandResult(u.OrganizationUserId, new None());
-        });
-    }
+        => notFoundIds.Select(notFound => new BulkCommandResult(notFound, new UserNotFoundError()))
+            .Concat(validationResults.Select(result => result.Match(
+                invalid => new BulkCommandResult(result.Request.OrganizationUserId, invalid),
+                valid => new BulkCommandResult(result.Request.OrganizationUserId, valid))));
 
     private async Task CreateDefaultCollectionsForManyAsync(
         IEnumerable<AutomaticallyConfirmOrganizationUserValidationRequest> requests,
