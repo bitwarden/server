@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Api.AdminConsole.Authorization;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Mvc;
@@ -22,7 +23,7 @@ namespace Bit.Api.AdminConsole.Attributes;
 /// ]]></code>
 /// </example>
 [AttributeUsage(AttributeTargets.Parameter)]
-public sealed class InjectOrganizationAttribute : ModelBinderAttribute(typeof(OrganizationModelBinder));
+public sealed class InjectOrganizationAttribute() : ModelBinderAttribute(typeof(OrganizationModelBinder));
 
 /// <summary>
 /// Custom model binder that loads an <see cref="Organization"/> from the database
