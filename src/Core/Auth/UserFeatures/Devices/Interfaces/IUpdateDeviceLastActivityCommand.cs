@@ -3,25 +3,20 @@
 namespace Bit.Core.Auth.UserFeatures.Devices.Interfaces;
 
 /// <summary>
-/// Updates a device's last-activity state, gated by a distributed cache to avoid redundant
-/// database writes. A single DB round-trip is issued when a write is needed; otherwise the
-/// call short-circuits on cache hit.
+/// Updates a device's last-activity state, gated by a distributed cache: a single DB round-trip
+/// when a write is needed, short-circuit on cache hit.
 ///
 /// <para>
-/// "Last activity" names the <em>event</em> of the device's most recent appearance, not just one
-/// column. The fields written are the set of facts we observed about that event: today that's
-/// <c>LastActivityDate</c> (when it occurred) and <c>ClientVersion</c> (what was running at the
-/// time). <c>ClientVersion</c> is treated as a property of the activity event rather than an
-/// independent value — readers should think of it the same way "last seen on Chrome 124" pairs
-/// a timestamp with the client observed at that moment.
+/// "Last activity" names the <em>event</em> of the device's most recent appearance — the fields
+/// written are facts observed at that moment: <c>LastActivityDate</c> (when) and
+/// <c>ClientVersion</c> (what was running). Think "last seen on Chrome 124" — version is a
+/// property of the event, not an independent value.
 /// </para>
 ///
 /// <para>
-/// The contract is intentionally event-oriented so additional last-observed properties (e.g. last
-/// IP, OS, device model) can be added without renaming this command. New fields would flow through
-/// as additional parameters (or a single options object as the surface grows), into the repository
-/// methods, and into the SP / EF execute-update — the event-based naming holds regardless of how
-/// many facets we track.
+/// The event-oriented contract lets us add other last-observed facets (last IP, OS, device model)
+/// as parameters without renaming the command — they flow through to the repository and SP / EF
+/// execute-update the same way.
 /// </para>
 /// </summary>
 public interface IUpdateDeviceLastActivityCommand
@@ -31,11 +26,17 @@ public interface IUpdateDeviceLastActivityCommand
     /// today) and <c>ClientVersion</c> to <paramref name="clientVersion"/> (if non-null and
     /// different from the stored value) — using the resolved <see cref="Device"/> object.
     /// </summary>
+    /// <param name="clientVersion">
+    /// The client version observed for this activity event. A <c>null</c> value is treated as
+    /// "no opinion" and leaves the stored value untouched — it does <em>not</em> clear an existing
+    /// version. Clearing would require a separate code path / sentinel.
+    /// </param>
     Task UpdateAsync(Device device, string? clientVersion);
 
     /// <summary>
     /// Same as <see cref="UpdateAsync"/>, but for callers that don't have the <see cref="Device"/>
-    /// entity loaded (e.g. refresh-token path).
+    /// entity loaded (e.g. refresh-token path). <paramref name="clientVersion"/> follows the same
+    /// null-is-no-op semantics described on <see cref="UpdateAsync"/>.
     /// </summary>
     Task UpdateByIdentifierAndUserIdAsync(string identifier, Guid userId, string? clientVersion);
 }
