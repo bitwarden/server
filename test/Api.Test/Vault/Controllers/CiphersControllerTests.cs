@@ -1,6 +1,8 @@
 ﻿using System.Security.Claims;
+using System.Text;
 using System.Text.Json;
 using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Api.Utilities;
 using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models;
 using Bit.Api.Vault.Models.Request;
@@ -2441,5 +2443,55 @@ public class CiphersControllerTests
         Assert.Equal("application/octet-stream", fileResult.ContentType);
         Assert.Equal(fileName, fileResult.FileDownloadName);
         Assert.Same(stream, fileResult.FileStream);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AzureValidateFile_WhenCipherNotFound_DeletesOrphanedBlob(
+        Guid cipherId,
+        string attachmentId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        var eventGridKey = "test-event-grid-key";
+        var previousEventGridKey = ApiHelpers.EventGridKey;
+        ApiHelpers.EventGridKey = eventGridKey;
+
+        try
+        {
+            var requestPayload = $$"""
+            [
+              {
+                "id": "{{Guid.NewGuid()}}",
+                "eventType": "Microsoft.Storage.BlobCreated",
+                "subject": "/blobServices/default/containers/{{AzureAttachmentStorageService.EventGridEnabledContainerName}}/blobs/{{cipherId}}/{{attachmentId}}",
+                "eventTime": "{{DateTime.UtcNow:O}}",
+                "data": {},
+                "dataVersion": "1"
+              }
+            ]
+            """;
+
+            var httpContext = new DefaultHttpContext();
+            httpContext.Request.QueryString = new QueryString($"?key={eventGridKey}");
+            httpContext.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(requestPayload));
+
+            sutProvider.Sut.ControllerContext = new ControllerContext
+            {
+                HttpContext = httpContext,
+            };
+
+            sutProvider.GetDependency<IAttachmentStorageService>().FileUploadType.Returns(FileUploadType.Azure);
+            sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId).ReturnsNull();
+
+            await sutProvider.Sut.AzureValidateFile();
+
+            await sutProvider.GetDependency<IAttachmentStorageService>().Received(1)
+                .DeleteAttachmentAsync(cipherId, Arg.Is<CipherAttachment.MetaData>(metadata =>
+                    metadata.AttachmentId == attachmentId &&
+                    metadata.ContainerName == AzureAttachmentStorageService.EventGridEnabledContainerName));
+        }
+        finally
+        {
+            ApiHelpers.EventGridKey = previousEventGridKey;
+        }
     }
 }
