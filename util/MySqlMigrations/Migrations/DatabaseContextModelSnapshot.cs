@@ -1817,6 +1817,7 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("Data")
+                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.Property<DateTime>("DeletionDate")
@@ -1836,6 +1837,7 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("tinyint(1)");
 
                     b.Property<string>("Key")
+                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.Property<int?>("MaxAccessCount")
