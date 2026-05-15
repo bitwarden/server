@@ -1678,4 +1678,45 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(expectedRevisionDate, actualGroup1.RevisionDate, TimeSpan.FromMilliseconds(10));
         Assert.Equal(expectedRevisionDate, actualGroup2.RevisionDate, TimeSpan.FromMilliseconds(10));
     }
+
+    [Theory, DatabaseData]
+    public async Task SetStatusToAcceptedForPublicKeyPairRegeneration_ConfirmedUser_SetsToAcceptedAndClearsKey(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        Database database,
+        IServiceProvider serviceProvider)
+    {
+        var user = await userRepository.CreateTestUserAsync();
+        var org = await organizationRepository.CreateTestOrganizationAsync();
+        var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(org, user);
+        orgUser.Key = "old-org-key";
+        await organizationUserRepository.ReplaceAsync(orgUser);
+
+        var action = organizationUserRepository.SetStatusToAcceptedForPublicKeyPairRegeneration([orgUser]);
+        await DatabaseTransactionActionTestHelper.ExecuteAsync(database, action, serviceProvider);
+
+        var updatedOrgUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
+        Assert.NotNull(updatedOrgUser);
+        Assert.Equal(OrganizationUserStatusType.Accepted, updatedOrgUser.Status);
+        Assert.Null(updatedOrgUser.Key);
+    }
+
+    [Theory, DatabaseData]
+    public async Task RemoveForPublicKeyPairRegeneration_RevokedUser_DeletesUser(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        Database database,
+        IServiceProvider serviceProvider)
+    {
+        var user = await userRepository.CreateTestUserAsync();
+        var org = await organizationRepository.CreateTestOrganizationAsync();
+        var orgUser = await organizationUserRepository.CreateRevokedTestOrganizationUserAsync(org, user);
+
+        var action = organizationUserRepository.RemoveForPublicKeyPairRegeneration([orgUser]);
+        await DatabaseTransactionActionTestHelper.ExecuteAsync(database, action, serviceProvider);
+
+        Assert.Null(await organizationUserRepository.GetByIdAsync(orgUser.Id));
+    }
 }

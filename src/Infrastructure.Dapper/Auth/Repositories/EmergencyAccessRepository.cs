@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
@@ -174,6 +175,32 @@ public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEme
                 cmd.Parameters.Add("@GrantorId", SqlDbType.UniqueIdentifier).Value = grantorId;
                 cmd.ExecuteNonQuery();
             }
+        };
+    }
+
+    /// <inheritdoc />
+    public DatabaseTransactionAction SetStatusToAcceptedForPublicKeyPairRegeneration(IEnumerable<EmergencyAccess> emergencyAccesses)
+    {
+        return async (connection, transaction) =>
+        {
+            var ids = emergencyAccesses.Select(ea => ea.Id).ToList();
+            if (ids.Count == 0)
+            {
+                return;
+            }
+
+            var utcNow = DateTime.UtcNow;
+
+            await connection.ExecuteAsync(
+                "[dbo].[EmergencyAccess_UpdateManySetStatus]",
+                new
+                {
+                    Ids = ids.ToGuidIdArrayTVP(),
+                    Status = (byte)EmergencyAccessStatusType.Accepted,
+                    RevisionDate = utcNow
+                },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
         };
     }
 

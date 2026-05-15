@@ -152,4 +152,19 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// <param name="organizationUser">The organization user entity with updated properties (status, userId, key)</param>
     /// <returns>An action that can be executed within a transaction</returns>
     Func<DbConnection, DbTransaction, Task> BuildConfirmOwnerAction(OrganizationUser organizationUser);
+
+    /// <summary>
+    /// Returns a delegate that sets organization user status to accepted and clears
+    /// their copy of the shared organization key.
+    /// Used during key regeneration when the user's public key changes.
+    /// </summary>
+    /// <param name="organizationUsers">Organization users to update</param>
+    DatabaseTransactionAction SetStatusToAcceptedForPublicKeyPairRegeneration(IEnumerable<OrganizationUser> organizationUsers);
+
+    /// <summary>
+    /// Returns a delegate that deletes organization users and their associated data.
+    /// Used during key regeneration when the user's public key changes.
+    /// </summary>
+    /// <param name="organizationUsers">Organization users to delete</param>
+    DatabaseTransactionAction RemoveForPublicKeyPairRegeneration(IEnumerable<OrganizationUser> organizationUsers);
 }

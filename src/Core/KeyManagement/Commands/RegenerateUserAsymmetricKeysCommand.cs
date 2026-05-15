@@ -9,6 +9,8 @@ using Bit.Core.KeyManagement.Commands.Interfaces;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.Platform.Push;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.KeyManagement.Commands;
@@ -19,17 +21,29 @@ public class RegenerateUserAsymmetricKeysCommand : IRegenerateUserAsymmetricKeys
     private readonly ILogger<RegenerateUserAsymmetricKeysCommand> _logger;
     private readonly IUserAsymmetricKeysRepository _userAsymmetricKeysRepository;
     private readonly IPushNotificationService _pushService;
+    private readonly IEmergencyAccessRepository _emergencyAccessRepository;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IEventService _eventService;
+    private readonly IMailService _mailService;
 
     public RegenerateUserAsymmetricKeysCommand(
         ICurrentContext currentContext,
         IUserAsymmetricKeysRepository userAsymmetricKeysRepository,
         IPushNotificationService pushService,
-        ILogger<RegenerateUserAsymmetricKeysCommand> logger)
+        ILogger<RegenerateUserAsymmetricKeysCommand> logger,
+        IEmergencyAccessRepository emergencyAccessRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IEventService eventService,
+        IMailService mailService)
     {
         _currentContext = currentContext;
         _logger = logger;
         _userAsymmetricKeysRepository = userAsymmetricKeysRepository;
         _pushService = pushService;
+        _emergencyAccessRepository = emergencyAccessRepository;
+        _organizationUserRepository = organizationUserRepository;
+        _eventService = eventService;
+        _mailService = mailService;
     }
 
     public async Task RegenerateKeysAsync(UserAsymmetricKeys userAsymmetricKeys,
@@ -55,17 +69,60 @@ public class RegenerateUserAsymmetricKeysCommand : IRegenerateUserAsymmetricKeys
             "User asymmetric keys regeneration requested. UserId: {userId} OrganizationMembership: {inOrganizations} DesignatedEmergencyAccess: {hasDesignatedEmergencyAccess} DeviceType: {deviceType}",
             userAsymmetricKeys.UserId, inOrganizations, hasDesignatedEmergencyAccess, _currentContext.DeviceType);
 
-        // For now, don't regenerate asymmetric keys for user's with organization membership and designated emergency access.
-        if (inOrganizations || hasDesignatedEmergencyAccess)
+        var updateDataActions = new List<DatabaseTransactionAction>();
+
+        var eaToReset = designatedEmergencyAccess
+            .Where(ea => ea.Status is EmergencyAccessStatusType.Confirmed
+                or EmergencyAccessStatusType.RecoveryInitiated
+                or EmergencyAccessStatusType.RecoveryApproved)
+            .ToList();
+        if (eaToReset.Count > 0)
         {
-            throw new BadRequestException("Key regeneration not supported for this user.");
+            updateDataActions.Add(
+                _emergencyAccessRepository.SetStatusToAcceptedForPublicKeyPairRegeneration(eaToReset));
         }
 
-        await _userAsymmetricKeysRepository.RegenerateUserAsymmetricKeysAsync(userAsymmetricKeys);
+        var orgUsersToReset = usersOrganizationAccounts
+            .Where(ou => ou.Status == OrganizationUserStatusType.Confirmed)
+            .ToList();
+        if (orgUsersToReset.Count > 0)
+        {
+            updateDataActions.Add(
+                _organizationUserRepository.SetStatusToAcceptedForPublicKeyPairRegeneration(orgUsersToReset));
+        }
+
+        var orgUsersToRemove = usersOrganizationAccounts
+            .Where(ou => ou.Status == OrganizationUserStatusType.Revoked)
+            .ToList();
+        if (orgUsersToRemove.Count > 0)
+        {
+            updateDataActions.Add(
+                _organizationUserRepository.RemoveForPublicKeyPairRegeneration(orgUsersToRemove));
+        }
+
+        await _userAsymmetricKeysRepository.RegenerateUserAsymmetricKeysAsync(
+            userAsymmetricKeys, updateDataActions);
+
         _logger.LogInformation(
             "User's asymmetric keys regenerated. UserId: {userId} OrganizationMembership: {inOrganizations} DesignatedEmergencyAccess: {hasDesignatedEmergencyAccess} DeviceType: {deviceType}",
             userAsymmetricKeys.UserId, inOrganizations, hasDesignatedEmergencyAccess, _currentContext.DeviceType);
 
         await _pushService.PushSyncSettingsAsync(userId.Value);
+
+        foreach (var orgUser in orgUsersToRemove)
+        {
+            await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Left);
+        }
+
+        foreach (var ea in eaToReset)
+        {
+            if (ea.GranteeEmail is null || ea.GrantorEmail is null)
+            {
+                continue;
+            }
+
+            await _mailService.SendEmergencyAccessAcceptedEmailAsync(
+                ea.GranteeEmail, ea.GrantorEmail);
+        }
     }
 }

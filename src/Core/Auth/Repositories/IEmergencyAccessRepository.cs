@@ -44,6 +44,13 @@ public interface IEmergencyAccessRepository : IRepository<EmergencyAccess, Guid>
         IEnumerable<EmergencyAccess> emergencyAccessKeys);
 
     /// <summary>
+    /// Returns a delegate that sets emergency access records to Accepted status and clears KeyEncrypted.
+    /// Used during key regeneration when the grantee's public key changes.
+    /// </summary>
+    /// <param name="emergencyAccesses">Emergency access records to update</param>
+    DatabaseTransactionAction SetStatusToAcceptedForPublicKeyPairRegeneration(IEnumerable<EmergencyAccess> emergencyAccesses);
+
+    /// <summary>
     /// Deletes multiple emergency access records by their IDs
     /// </summary>
     /// <param name="emergencyAccessIds">Ids of records to be deleted</param>

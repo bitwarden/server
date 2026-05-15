@@ -29,7 +29,7 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            // TODO: in future, this probably is not necessary as we have no synced EA data. 
+            // TODO: in future, this probably is not necessary as we have no synced EA data.
             // if we delete from here, also delete from stored proc as well + update repo tests.
             await dbContext.UserBumpAccountRevisionDateByEmergencyAccessGranteeIdAsync(emergencyAccess.Id);
             await dbContext.SaveChangesAsync();
@@ -174,6 +174,31 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
             }
 
             await dbContext.SaveChangesAsync();
+        };
+    }
+
+    /// <inheritdoc />
+    public DatabaseTransactionAction SetStatusToAcceptedForPublicKeyPairRegeneration(
+        IEnumerable<Core.Auth.Entities.EmergencyAccess> emergencyAccesses)
+    {
+        return async (connection, transaction) =>
+        {
+            var ids = emergencyAccesses.Select(ea => ea.Id).ToList();
+            if (ids.Count == 0)
+            {
+                return;
+            }
+
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetTransactionalDatabaseContext(scope, connection, transaction);
+            var utcNow = DateTime.UtcNow;
+
+            await GetDbSet(dbContext)
+                .Where(ea => ids.Contains(ea.Id))
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(ea => ea.Status, EmergencyAccessStatusType.Accepted)
+                    .SetProperty(ea => ea.KeyEncrypted, (string?)null)
+                    .SetProperty(ea => ea.RevisionDate, utcNow));
         };
     }
 
