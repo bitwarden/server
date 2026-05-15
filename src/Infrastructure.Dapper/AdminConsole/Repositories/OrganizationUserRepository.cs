@@ -94,15 +94,16 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
     public async Task<int> GetOccupiedSmSeatCountByOrganizationIdAsync(Guid organizationId)
     {
-        using (var connection = new SqlConnection(ConnectionString))
+        return await ExecuteWithConnectionAsync(async (connection, transaction) =>
         {
             var result = await connection.ExecuteScalarAsync<int>(
                 "[dbo].[OrganizationUser_ReadOccupiedSmSeatCountByOrganizationId]",
                 new { OrganizationId = organizationId },
+                transaction: transaction,
                 commandType: CommandType.StoredProcedure);
 
             return result;
-        }
+        });
     }
 
     public async Task<ICollection<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails,
@@ -205,11 +206,12 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
     public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups, bool includeSharedCollections)
     {
-        using (var connection = new SqlConnection(ConnectionString))
+        return await ExecuteWithConnectionAsync(async (connection, transaction) =>
         {
             var results = await connection.QueryAsync<OrganizationUserUserDetails>(
                 "[dbo].[OrganizationUserUserDetails_ReadByOrganizationId]",
                 new { OrganizationId = organizationId },
+                transaction: transaction,
                 commandType: CommandType.StoredProcedure);
 
             List<IGrouping<Guid, GroupUser>>? userGroups = null;
@@ -229,6 +231,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                 userGroups = (await connection.QueryAsync<GroupUser>(
                     "[dbo].[GroupUser_ReadByOrganizationUserIds]",
                     new { OrganizationUserIds = orgUserIds },
+                    transaction: transaction,
                     commandType: CommandType.StoredProcedure)).GroupBy(u => u.OrganizationUserId).ToList();
             }
 
@@ -237,6 +240,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                 userCollections = (await connection.QueryAsync<CollectionUser>(
                     "[dbo].[CollectionUser_ReadSharedCollectionsByOrganizationUserIds]",
                     new { OrganizationUserIds = orgUserIds },
+                    transaction: transaction,
                     commandType: CommandType.StoredProcedure)).GroupBy(u => u.OrganizationUserId).ToList();
             }
 
@@ -265,7 +269,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             }
 
             return users;
-        }
+        });
     }
 
     public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync_vNext(Guid organizationId, bool includeGroups, bool includeSharedCollections)
@@ -664,38 +668,40 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
     public async Task CreateManyAsync(IEnumerable<CreateOrganizationUser> organizationUserCollection)
     {
-        await using var connection = new SqlConnection(_marsConnectionString);
-
         var organizationUsersList = organizationUserCollection.ToList();
         if (organizationUsersList.Count == 0)
         {
             return;
         }
 
-        await connection.ExecuteAsync(
-            $"[{Schema}].[OrganizationUser_CreateManyWithCollectionsAndGroups]",
-            new
-            {
-                OrganizationUserData = JsonSerializer.Serialize(organizationUsersList.Select(x => x.OrganizationUser)),
-                CollectionData = JsonSerializer.Serialize(organizationUsersList
-                    .SelectMany(x => x.Collections, (user, collection) => new CollectionUser
-                    {
-                        CollectionId = collection.Id,
-                        OrganizationUserId = user.OrganizationUser.Id,
-                        ReadOnly = collection.ReadOnly,
-                        HidePasswords = collection.HidePasswords,
-                        Manage = collection.Manage
-                    })),
-                GroupData = JsonSerializer.Serialize(organizationUsersList
-                    .SelectMany(x => x.Groups, (user, group) => new GroupUser
-                    {
-                        GroupId = group,
-                        OrganizationUserId = user.OrganizationUser.Id
-                    })),
-                // Use the same RevisionDate as the created OrganizationUsers
-                RevisionDate = organizationUsersList.First().OrganizationUser.RevisionDate
-            },
-            commandType: CommandType.StoredProcedure);
+        await ExecuteWithConnectionAsync(async (connection, transaction) =>
+        {
+            await connection.ExecuteAsync(
+                $"[{Schema}].[OrganizationUser_CreateManyWithCollectionsAndGroups]",
+                new
+                {
+                    OrganizationUserData =
+                        JsonSerializer.Serialize(organizationUsersList.Select(x => x.OrganizationUser)),
+                    CollectionData = JsonSerializer.Serialize(organizationUsersList
+                        .SelectMany(x => x.Collections,
+                            (user, collection) => new CollectionUser
+                            {
+                                CollectionId = collection.Id,
+                                OrganizationUserId = user.OrganizationUser.Id,
+                                ReadOnly = collection.ReadOnly,
+                                HidePasswords = collection.HidePasswords,
+                                Manage = collection.Manage
+                            })),
+                    GroupData = JsonSerializer.Serialize(organizationUsersList
+                        .SelectMany(x => x.Groups,
+                            (user, group) =>
+                                new GroupUser { GroupId = group, OrganizationUserId = user.OrganizationUser.Id })),
+                    // Use the same RevisionDate as the created OrganizationUsers
+                    RevisionDate = organizationUsersList.First().OrganizationUser.RevisionDate
+                },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+        });
     }
 
     public async Task<bool> ConfirmOrganizationUserAsync(AcceptedOrganizationUserToConfirm organizationUserToConfirm)

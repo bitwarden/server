@@ -9,6 +9,8 @@ on:
       - "hotfix-rc"
     paths:
       - ".github/workflows/test-database.yml" # This file
+      - "bitwarden_license/src/Scim/**" # SCIM source — concurrency tests cover it
+      - "bitwarden_license/test/Scim.IntegrationTest/**" # SCIM integration tests
       - "src/Sql/**" # SQL Server Database Changes
       - "util/Migrator/**" # New SQL Server Migrations
       - "util/MySqlMigrations/**" # Changes to MySQL
@@ -17,10 +19,13 @@ on:
       - "src/Infrastructure.Dapper/**" # Changes to SQL Server Dapper Repository Layer
       - "src/Infrastructure.EntityFramework/**" # Changes to Entity Framework Repository Layer
       - "test/Infrastructure.IntegrationTest/**" # Any changes to the tests
+      - "test/IntegrationTestCommon/**" # Shared test database infrastructure
       - "src/**/Entities/**/*.cs" # Database entity definitions
   pull_request:
     paths:
       - ".github/workflows/test-database.yml" # This file
+      - "bitwarden_license/src/Scim/**" # SCIM source — concurrency tests cover it
+      - "bitwarden_license/test/Scim.IntegrationTest/**" # SCIM integration tests
       - "src/Sql/**" # SQL Server Database Changes
       - "util/Migrator/**" # New SQL Server Migrations
       - "util/MySqlMigrations/**" # Changes to MySQL
@@ -29,6 +34,7 @@ on:
       - "src/Infrastructure.Dapper/**" # Changes to SQL Server Dapper Repository Layer
       - "src/Infrastructure.EntityFramework/**" # Changes to Entity Framework Repository Layer
       - "test/Infrastructure.IntegrationTest/**" # Any changes to the tests
+      - "test/IntegrationTestCommon/**" # Shared test database infrastructure
       - "src/**/Entities/**/*.cs" # Database entity definitions
 
 permissions:
@@ -137,6 +143,21 @@ jobs:
           BW_TEST_DATABASES__4__TYPE: "MySql"
           BW_TEST_DATABASES__4__CONNECTIONSTRING: "server=localhost;port=4306;uid=root;pwd=mariadb-password;database=vault_dev;Allow User Variables=true"
         run: dotnet test --logger "trx;LogFileName=infrastructure-test-results.trx" /p:CoverletOutputFormatter="cobertura" --collect:"XPlat Code Coverage"
+        shell: pwsh
+
+      - name: Run SCIM concurrency tests
+        working-directory: "bitwarden_license/test/Scim.IntegrationTest"
+        env:
+          # Each provider's Database= points at a system DB that always exists; the
+          # *TestDatabase classes create their own per-run vault_test_<guid> and use
+          # the admin endpoint for CREATE/DROP DATABASE.
+          BW_TEST_DATABASES__0__TYPE: "Postgres"
+          BW_TEST_DATABASES__0__CONNECTIONSTRING: "Host=localhost;Username=postgres;Password=SET_A_PASSWORD_HERE_123;Database=postgres"
+          BW_TEST_DATABASES__1__TYPE: "MySql"
+          BW_TEST_DATABASES__1__CONNECTIONSTRING: "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=mysql"
+          BW_TEST_DATABASES__2__TYPE: "SqlServer"
+          BW_TEST_DATABASES__2__CONNECTIONSTRING: "Server=localhost;Database=master;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;"
+        run: dotnet test --filter "FullyQualifiedName~UsersControllerConcurrencyTests" --logger "trx;LogFileName=scim-concurrency-test-results.trx"
         shell: pwsh
 
       - name: Print MySQL Logs
