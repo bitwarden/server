@@ -1,3 +1,6 @@
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.PlanMigration.Enums;
+
 namespace Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 
 /// <summary>
@@ -6,12 +9,12 @@ namespace Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="Id"/> byte value is persisted on
-/// <see cref="Entities.OrganizationPlanMigrationCohort.MigrationPathId"/> and is referenced
-/// downstream by Stripe coupon decisions, scheduler routing, and audit history. Once a
-/// cohort has been assigned a byte value, that value can never be renumbered or reused
-/// for a different path. See <see cref="MigrationPaths"/> for the registry and its
-/// snapshot tests for the immortality guard.
+/// <see cref="Id"/> is persisted on
+/// <see cref="Entities.OrganizationPlanMigrationCohort.MigrationPathId"/> and is
+/// referenced downstream by Stripe coupon decisions, scheduler routing, and audit
+/// history. The underlying byte value can never be renumbered or reused for a
+/// different path; see <see cref="MigrationPathId"/> and its snapshot tests for the
+/// immortality guard.
 /// </para>
 /// </remarks>
-public sealed record MigrationPath(byte Id, string Name, string FromPlan, string ToPlan);
+public sealed record MigrationPath(MigrationPathId Id, string Name, PlanType FromPlan, PlanType ToPlan);

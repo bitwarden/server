@@ -1,3 +1,4 @@
+using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Xunit;
 
@@ -19,7 +20,7 @@ public class MigrationPathTests
         // 0 is reserved as "not assigned" and 255 is not registered. Both should
         // resolve to null so callers can decide how to handle data referencing a
         // path that has not yet been registered.
-        Assert.Null(MigrationPaths.FromId(0));
-        Assert.Null(MigrationPaths.FromId(byte.MaxValue));
+        Assert.Null(MigrationPaths.FromId((MigrationPathId)0));
+        Assert.Null(MigrationPaths.FromId((MigrationPathId)byte.MaxValue));
     }
 }

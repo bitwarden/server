@@ -1,3 +1,4 @@
+using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
@@ -23,10 +24,10 @@ public class OrganizationPlanMigrationCohort : ITableObject<Guid>
     /// Nullable so a cohort can be created and named before its path is decided.
     /// </summary>
     /// <remarks>
-    /// Byte values are immortal once persisted; see <see cref="ValueObjects.MigrationPaths"/>
+    /// Byte values are immortal once persisted; see <see cref="MigrationPathId"/>
     /// and its snapshot tests.
     /// </remarks>
-    public byte? MigrationPathId { get; set; }
+    public MigrationPathId? MigrationPathId { get; set; }
 
     /// <summary>
     /// Optional Stripe coupon applied proactively when a cohort member is migrated to the

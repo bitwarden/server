@@ -1,4 +1,5 @@
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
+using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Xunit;
@@ -9,7 +10,7 @@ public class OrganizationPlanMigrationCohortRepositoryTests
 {
     private static OrganizationPlanMigrationCohort CreateTestCohort(
         string? name = null,
-        byte? migrationPathId = null,
+        MigrationPathId? migrationPathId = null,
         string? proactiveCoupon = null,
         string? churnCoupon = null,
         bool isActive = false)

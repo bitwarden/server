@@ -1,14 +1,16 @@
+using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Xunit;
 
 namespace Bit.Core.Test.Billing.Organizations.PlanMigration.ValueObjects;
 
 /// <summary>
-/// Snapshot tests for <see cref="MigrationPaths"/>. The byte
-/// <see cref="MigrationPath.Id"/> for every registered path is persisted on
+/// Snapshot tests for <see cref="MigrationPathId"/> and <see cref="MigrationPaths"/>.
+/// The byte value of every registered path is persisted on
 /// <c>OrganizationPlanMigrationCohort.MigrationPathId</c> and referenced by Stripe
-/// coupon decisions, scheduler routing, and audit history. Once a customer record cites
-/// byte <c>N</c>, that byte means a specific FromPlan -> ToPlan transition forever.
+/// coupon decisions, scheduler routing, and audit history. Once a customer record
+/// cites byte <c>N</c>, that byte means a specific FromPlan -> ToPlan transition
+/// forever.
 ///
 /// <para>
 /// IF YOU NEED TO ADD A PATH: append a new <c>Assert.Equal</c> below and bump the
@@ -25,13 +27,25 @@ namespace Bit.Core.Test.Billing.Organizations.PlanMigration.ValueObjects;
 public class MigrationPathIdsSnapshotTests
 {
     [Fact]
-    public void MigrationPath_Ids_AreImmutable()
+    public void MigrationPathId_ByteValues_AreImmutable()
     {
         // These byte values are persisted into customer records. They cannot be
         // renumbered. Adding a new path? Append a new assertion below; do not change
         // existing ones.
-        Assert.Equal(1, MigrationPaths.Enterprise2020AnnualToCurrent.Id);
-        Assert.Equal(2, MigrationPaths.Enterprise2020MonthlyToCurrent.Id);
+        Assert.Equal((byte)1, (byte)MigrationPathId.Enterprise2020AnnualToCurrent);
+        Assert.Equal((byte)2, (byte)MigrationPathId.Enterprise2020MonthlyToCurrent);
+    }
+
+    [Fact]
+    public void MigrationPaths_RegistryEntries_PointAtMatchingIds()
+    {
+        // Sanity check that the registry's MigrationPath value object exposes the
+        // expected MigrationPathId. Catches accidental copy/paste mistakes when
+        // adding a new path.
+        Assert.Equal(MigrationPathId.Enterprise2020AnnualToCurrent,
+            MigrationPaths.Enterprise2020AnnualToCurrent.Id);
+        Assert.Equal(MigrationPathId.Enterprise2020MonthlyToCurrent,
+            MigrationPaths.Enterprise2020MonthlyToCurrent.Id);
     }
 
     [Fact]
