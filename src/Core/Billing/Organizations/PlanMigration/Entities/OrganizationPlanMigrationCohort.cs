@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;

@@ -1,4 +1,4 @@
-using Bit.Infrastructure.EntityFramework.Billing.Models;
+﻿using Bit.Infrastructure.EntityFramework.Billing.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

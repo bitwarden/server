@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Organizations.PlanMigration.Entities;
+﻿using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.Billing.Organizations.PlanMigration.Repositories;

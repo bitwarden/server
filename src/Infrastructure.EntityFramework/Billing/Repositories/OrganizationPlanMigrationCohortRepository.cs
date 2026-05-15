@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.Extensions.DependencyInjection;
