@@ -1,0 +1,92 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".dockerignore" />
+    <File Path=".editorconfig" />
+    <File Path=".gitignore" />
+    <File Path="CONTRIBUTING.md" />
+    <File Path="Directory.Build.props" />
+    <File Path="global.json" />
+    <File Path="LICENSE.txt" />
+    <File Path="LICENSE_AGPL.txt" />
+    <File Path="LICENSE_BITWARDEN.txt" />
+    <File Path="LICENSE_FAQ.md" />
+    <File Path="README.md" />
+    <File Path="SECURITY.md" />
+    <File Path="TRADEMARK_GUIDELINES.md" />
+  </Folder>
+  <Folder Name="/src - AGPL/">
+    <Project Path="src/Admin/Admin.csproj" />
+    <Project Path="src/Api/Api.csproj" />
+    <Project Path="src/Billing/Billing.csproj" />
+    <Project Path="src/Core/Core.csproj" />
+    <Project Path="src/Events/Events.csproj" />
+    <Project Path="src/EventsProcessor/EventsProcessor.csproj" />
+    <Project Path="src/Icons/Icons.csproj" />
+    <Project Path="src/Identity/Identity.csproj" />
+    <Project Path="src/Infrastructure.Dapper/Infrastructure.Dapper.csproj" />
+    <Project Path="src/Infrastructure.EntityFramework/Infrastructure.EntityFramework.csproj" />
+    <Project Path="src/Notifications/Notifications.csproj" />
+    <Project Path="src/SharedWeb/SharedWeb.csproj" />
+    <Project Path="src/Sql/Sql.sqlproj">
+      <Build />
+      <Deploy />
+    </Project>
+  </Folder>
+  <Folder Name="/src - Bitwarden License/">
+    <Project Path="bitwarden_license/src/Commercial.Core/Commercial.Core.csproj">
+      <BuildDependency Project="src/Core/Core.csproj" />
+    </Project>
+    <Project Path="bitwarden_license/src/Commercial.Infrastructure.EntityFramework/Commercial.Infrastructure.EntityFramework.csproj" />
+    <Project Path="bitwarden_license/src/Scim/Scim.csproj" />
+    <Project Path="bitwarden_license/src/Sso/Sso.csproj" />
+  </Folder>
+  <Folder Name="/test - Bitwarden License/">
+    <Project Path="bitwarden_license/test/Commercial.Core.Test/Commercial.Core.Test.csproj" />
+    <Project Path="bitwarden_license/test/Scim.IntegrationTest/Scim.IntegrationTest.csproj" />
+    <Project Path="bitwarden_license/test/Scim.Test/Scim.Test.csproj" />
+    <Project Path="bitwarden_license/test/Sso.IntegrationTest/Sso.IntegrationTest.csproj" />
+    <Project Path="bitwarden_license/test/SSO.Test/SSO.Test.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/Admin.Test/Admin.Test.csproj" />
+    <Project Path="test/Api.IntegrationTest/Api.IntegrationTest.csproj" />
+    <Project Path="test/Api.Test/Api.Test.csproj" />
+    <Project Path="test/Billing.Test/Billing.Test.csproj" />
+    <Project Path="test/Common/Common.csproj" />
+    <Project Path="test/Core.IntegrationTest/Core.IntegrationTest.csproj" />
+    <Project Path="test/Core.Test/Core.Test.csproj" />
+    <Project Path="test/Events.IntegrationTest/Events.IntegrationTest.csproj" />
+    <Project Path="test/Events.Test/Events.Test.csproj" />
+    <Project Path="test/EventsProcessor.Test/EventsProcessor.Test.csproj" />
+    <Project Path="test/Icons.Test/Icons.Test.csproj" />
+    <Project Path="test/Identity.IntegrationTest/Identity.IntegrationTest.csproj" />
+    <Project Path="test/Identity.Test/Identity.Test.csproj" />
+    <Project Path="test/Infrastructure.Dapper.Test/Infrastructure.Dapper.Test.csproj" />
+    <Project Path="test/Infrastructure.EFIntegration.Test/Infrastructure.EFIntegration.Test.csproj" />
+    <Project Path="test/Infrastructure.IntegrationTest/Infrastructure.IntegrationTest.csproj" />
+    <Project Path="test/IntegrationTestCommon/IntegrationTestCommon.csproj" />
+    <Project Path="test/Notifications.Test/Notifications.Test.csproj" />
+    <Project Path="test/SeederApi.IntegrationTest/SeederApi.IntegrationTest.csproj" />
+    <Project Path="test/Server.IntegrationTest/Server.IntegrationTest.csproj" />
+    <Project Path="test/Setup.Test/Setup.Test.csproj" />
+    <Project Path="test/SharedWeb.Test/SharedWeb.Test.csproj" />
+  </Folder>
+  <Folder Name="/util/">
+    <Project Path="util/Migrator/Migrator.csproj" />
+    <Project Path="util/MsSqlMigratorUtility/MsSqlMigratorUtility.csproj" />
+    <Project Path="util/MySqlMigrations/MySqlMigrations.csproj" />
+    <Project Path="util/PostgresMigrations/PostgresMigrations.csproj" />
+    <Project Path="util/RustSdk/RustSdk.csproj" />
+    <Project Path="util/Seeder/Seeder.csproj" />
+    <Project Path="util/SeederApi/SeederApi.csproj" />
+    <Project Path="util/SeederUtility/SeederUtility.csproj" />
+    <Project Path="util/Server/Server.csproj" />
+    <Project Path="util/Setup/Setup.csproj" />
+    <Project Path="util/SqliteMigrations/SqliteMigrations.csproj" />
+    <Project Path="util/SqlServerEFScaffold/SqlServerEFScaffold.csproj" />
+  </Folder>
+  <Folder Name="/perf/">
+    <Project Path="perf/MicroBenchmarks/MicroBenchmarks.csproj" />
+  </Folder>
+  <Project Path="AppHost/AppHost.csproj" />
+</Solution>
