@@ -124,7 +124,6 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
             var subscriptionCreateOptions = new SubscriptionCreateOptions
             {
-                BillingMode = new SubscriptionBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
                 Customer = organization.GatewayCustomerId,
                 CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
                 DaysUntilDue = 30,
@@ -163,7 +162,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 Email = organization.BillingEmail
             });
 
-            if (subscription.Customer.Discount?.Source?.Coupon != null)
+            if (subscription.Customer.Discount?.Coupon != null)
             {
                 await _stripeAdapter.DeleteCustomerDiscountAsync(subscription.CustomerId);
             }

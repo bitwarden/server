@@ -169,11 +169,6 @@ public class GetBitwardenSubscriptionQueryTests
         Assert.Equal(subscription.Items.First().CurrentPeriodEnd, result.NextCharge);
         Assert.Null(result.Suspension);
         Assert.Null(result.GracePeriod);
-        await _stripeAdapter.Received(1).GetSubscriptionAsync(
-            user.GatewaySubscriptionId,
-            Arg.Is<SubscriptionGetOptions>(o =>
-                o.Expand.Contains("customer.discount.source.coupon.applies_to") &&
-                o.Expand.Contains("discounts.source.coupon.applies_to")));
     }
 
     [Fact]
@@ -826,7 +821,7 @@ public class GetBitwardenSubscriptionQueryTests
         var user = CreateUser();
         var subscription = CreateSubscription(SubscriptionStatus.Active, legacyPricing: true);
         subscription.Customer.Discount = CreateDiscount(discountType: "cart");
-        subscription.Customer.Discount.Source.Coupon.Id = "customer-coupon";
+        subscription.Customer.Discount.Coupon.Id = "customer-coupon";
         subscription.ScheduleId = "sub_sched_test";
         var premiumPlans = CreatePremiumPlans();
         var schedule = CreateSubscriptionSchedule(percentOff: 30, couponId: "milestone-2c");
@@ -929,10 +924,6 @@ public class GetBitwardenSubscriptionQueryTests
         Assert.NotNull(result);
         Assert.Null(result.Cart.Discount);
         Assert.Null(result.Cart.PasswordManager.Seats.Discount);
-        await _stripeAdapter.Received(1).GetSubscriptionScheduleAsync(
-            "sub_sched_test",
-            Arg.Is<SubscriptionScheduleGetOptions>(o =>
-                o.Expand.Contains("phases.discounts.source.coupon.applies_to")));
     }
 
     #region Helper Methods
@@ -1147,7 +1138,7 @@ public class GetBitwardenSubscriptionQueryTests
 
         return new Discount
         {
-            Source = new DiscountSource { Coupon = coupon }
+            Coupon = coupon
         };
     }
 

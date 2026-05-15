@@ -1,4 +1,4 @@
-using Bit.Billing.Services;
+﻿using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
@@ -152,8 +152,8 @@ public class SubscriptionUpdatedHandlerTests
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             subscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>
-                ((DateTime?)options.CancelAt).HasValue &&
-                (DateTime?)options.CancelAt <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
+                options.CancelAt.HasValue &&
+                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
                 options.ProrationBehavior == ProrationBehavior.None &&
                 options.CancellationDetails != null &&
                 options.CancellationDetails.Comment != null));
@@ -216,8 +216,8 @@ public class SubscriptionUpdatedHandlerTests
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             subscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>
-                ((DateTime?)options.CancelAt).HasValue &&
-                (DateTime?)options.CancelAt <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
+                options.CancelAt.HasValue &&
+                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
                 options.ProrationBehavior == ProrationBehavior.None &&
                 options.CancellationDetails != null &&
                 options.CancellationDetails.Comment != null));
@@ -623,8 +623,8 @@ public class SubscriptionUpdatedHandlerTests
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             subscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>
-                ((DateTime?)options.CancelAt).HasValue &&
-                (DateTime?)options.CancelAt <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
+                options.CancelAt.HasValue &&
+                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
                 options.ProrationBehavior == ProrationBehavior.None &&
                 options.CancellationDetails != null &&
                 options.CancellationDetails.Comment != null));
@@ -906,9 +906,9 @@ public class SubscriptionUpdatedHandlerTests
             Customer = new Customer
             {
                 Balance = 0,
-                Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "sm-standalone" } } }
+                Discount = new Discount { Coupon = new Coupon { Id = "sm-standalone" } }
             },
-            Discounts = [new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "sm-standalone" } } }],
+            Discounts = [new Discount { Coupon = new Coupon { Id = "sm-standalone" } }],
             Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } }
         };
 
@@ -985,9 +985,9 @@ public class SubscriptionUpdatedHandlerTests
             Customer = new Customer
             {
                 Balance = 0,
-                Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "sm-standalone" } } }
+                Discount = new Discount { Coupon = new Coupon { Id = "sm-standalone" } }
             },
-            Discounts = [new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "sm-standalone" } } }],
+            Discounts = [new Discount { Coupon = new Coupon { Id = "sm-standalone" } }],
             Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } }
         };
 

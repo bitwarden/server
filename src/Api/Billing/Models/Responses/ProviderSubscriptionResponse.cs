@@ -57,7 +57,7 @@ public record ProviderSubscriptionResponse(
         return new ProviderSubscriptionResponse(
             subscription.Status,
             subscription.GetCurrentPeriodEnd(),
-            discount?.Source?.Coupon?.PercentOff,
+            discount?.Coupon?.PercentOff,
             subscription.CollectionMethod,
             providerPlanResponses,
             accountCredit,

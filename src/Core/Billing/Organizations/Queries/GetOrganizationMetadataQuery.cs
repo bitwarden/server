@@ -41,7 +41,7 @@ public class GetOrganizationMetadataQuery(
 
         var subscription = await subscriberService.GetSubscription(organization, new SubscriptionGetOptions
         {
-            Expand = ["discounts.source.coupon.applies_to"]
+            Expand = ["discounts.coupon.applies_to"]
         });
 
         if (customer == null || subscription == null)
@@ -77,7 +77,7 @@ public class GetOrganizationMetadataQuery(
         }
 
         var coupon = subscription.Discounts?.FirstOrDefault(discount =>
-            discount.Source?.Coupon?.Id == StripeConstants.CouponIDs.SecretsManagerStandalone)?.Source?.Coupon;
+            discount.Coupon?.Id == StripeConstants.CouponIDs.SecretsManagerStandalone)?.Coupon;
 
         if (coupon == null)
         {

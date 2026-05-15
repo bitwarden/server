@@ -343,7 +343,6 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             {
                 Enabled = true
             },
-            BillingMode = new SubscriptionBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
             CollectionMethod = CollectionMethod.ChargeAutomatically,
             Customer = customer.Id,
             Items = subscriptionItemOptionsList,

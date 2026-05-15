@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Billing.Commands;
-using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Premium.Models;
@@ -47,7 +46,6 @@ public class PreviewPremiumTaxCommand(
                 Currency = "usd",
                 SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
                 {
-                    BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
                     Items =
                     [
                         new InvoiceSubscriptionDetailsItemOptions { Price = premiumPlan.Seat.StripePriceId, Quantity = 1 }

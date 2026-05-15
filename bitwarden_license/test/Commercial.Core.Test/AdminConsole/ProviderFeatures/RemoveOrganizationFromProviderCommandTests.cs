@@ -381,7 +381,10 @@ public class RemoveOrganizationFromProviderCommandTests
             {
                 Discount = new Discount
                 {
-                    Source = new DiscountSource { Coupon = new Coupon { Id = "coupon-id" } }
+                    Coupon = new Coupon
+                    {
+                        Id = "coupon-id"
+                    }
                 }
             },
             Status = StripeConstants.SubscriptionStatus.Active,

@@ -1478,7 +1478,7 @@ public class PreviewOrganizationTaxCommandTests
             {
                 Discount = new Discount
                 {
-                    Source = new DiscountSource { Coupon = new Coupon { Id = "EXISTING_DISCOUNT_50" } }
+                    Coupon = new Coupon { Id = "EXISTING_DISCOUNT_50" }
                 }
             }
         };
@@ -1856,7 +1856,7 @@ public class PreviewOrganizationTaxCommandTests
             Address = new Address { Country = "ES", PostalCode = "28001" },
             Discount = new Discount
             {
-                Source = new DiscountSource { Coupon = new Coupon { Id = "ENTERPRISE_DISCOUNT_20" } }
+                Coupon = new Coupon { Id = "ENTERPRISE_DISCOUNT_20" }
             },
             TaxIds = new StripeList<TaxId>
             {

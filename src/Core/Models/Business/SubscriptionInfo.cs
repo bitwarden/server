@@ -42,14 +42,14 @@ public class SubscriptionInfo
         /// <param name="discount">The Stripe discount containing coupon and expiration information.</param>
         public BillingCustomerDiscount(Discount discount)
         {
-            Id = discount.Source?.Coupon?.Id;
+            Id = discount.Coupon?.Id;
             // Active = true only for perpetual/recurring discounts (no end date)
             // This is intentional for Milestone 2 - only perpetual discounts are shown in UI
             Active = discount.End == null;
-            PercentOff = discount.Source?.Coupon?.PercentOff;
-            AmountOff = ConvertFromStripeMinorUnits(discount.Source?.Coupon?.AmountOff);
+            PercentOff = discount.Coupon?.PercentOff;
+            AmountOff = ConvertFromStripeMinorUnits(discount.Coupon?.AmountOff);
             // Stripe's CouponAppliesTo.Products is already IReadOnlyList<string>, so no conversion needed
-            AppliesTo = discount.Source?.Coupon?.AppliesTo?.Products;
+            AppliesTo = discount.Coupon?.AppliesTo?.Products;
         }
 
         /// <summary>
