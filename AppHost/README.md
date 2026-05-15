@@ -6,11 +6,11 @@ replacing the manual docker-compose workflow.
 
 ## Prerequisites
 
-| Requirement | Notes |
-|---|---|
-| .NET SDK 10 | Required by Aspire |
-| Docker Desktop | Runs SQL Server, Azurite, and MailCatcher containers |
-| PowerShell (`pwsh`) | Used by migration and secrets scripts |
+| Requirement            | Notes                                                                                                                            |
+|------------------------|----------------------------------------------------------------------------------------------------------------------------------|
+| .NET SDK 10            | Required by Aspire                                                                                                               |
+| Docker Desktop         | Runs SQL Server, Azurite, and MailCatcher containers                                                                             |
+| PowerShell (`pwsh`)    | Used by migration and secrets scripts                                                                                            |
 | Completed server setup | `dev/secrets.json` must exist — follow the [setup guide](https://contributing.bitwarden.com/getting-started/server/guide/) first |
 
 ## Quick Start
@@ -25,19 +25,19 @@ the services wait for the database and secrets setup to finish before launching.
 
 ## What Gets Started
 
-| Resource | Type | Purpose |
-|---|---|---|
-| `setup-secrets` | Executable | Runs `dev/setup_secrets.ps1` — applies `dev/secrets.json` to all projects |
-| `mssql` | SQL Server 2022 container | Persistent data volume, port 1433 |
-| `run-db-migrations` | Executable | Runs `dev/migrate.ps1` against `vault_dev` (or `self_host_dev`) |
-| `azurite` | Azure Storage emulator | Blob :10000 · Queue :10001 · Table :10002 |
-| `azurite-setup` | Executable | Runs `dev/setup_azurite.ps1` after Azurite is ready |
-| `mailcatcher` | Container | SMTP :10250 · Web UI :1080 |
-| `admin` | .NET project | Admin portal |
-| `api` | .NET project | Main API (waits for Azurite) |
-| `billing` | .NET project | Billing service |
-| `identity` | .NET project | Identity / auth service |
-| `notifications` | .NET project | Notifications service (waits for Azurite) |
+| Resource            | Type                      | Purpose                                                                   |
+|---------------------|---------------------------|---------------------------------------------------------------------------|
+| `setup-secrets`     | Executable                | Runs `dev/setup_secrets.ps1` — applies `dev/secrets.json` to all projects |
+| `mssql`             | SQL Server 2022 container | Persistent data volume, port 1433                                         |
+| `run-db-migrations` | Executable                | Runs `dev/migrate.ps1` against `vault_dev` (or `self_host_dev`)           |
+| `azurite`           | Azure Storage emulator    | Blob :10000 · Queue :10001 · Table :10002                                 |
+| `azurite-setup`     | Executable                | Runs `dev/setup_azurite.ps1` after Azurite is ready                       |
+| `mailcatcher`       | Container                 | SMTP :10250 · Web UI :1080                                                |
+| `admin`             | .NET project              | Admin portal                                                              |
+| `api`               | .NET project              | Main API (waits for Azurite)                                              |
+| `billing`           | .NET project              | Billing service                                                           |
+| `identity`          | .NET project              | Identity / auth service                                                   |
+| `notifications`     | .NET project              | Notifications service (waits for Azurite)                                 |
 
 ## Configuration
 
@@ -165,10 +165,10 @@ In self-hosted mode:
 
 The dashboard opens automatically when you run the AppHost. You can also navigate to it directly:
 
-| Profile | URL |
-|---|---|
+| Profile         | URL                       |
+|-----------------|---------------------------|
 | HTTPS (default) | `https://localhost:17271` |
-| HTTP | `http://localhost:15055` |
+| HTTP            | `http://localhost:15055`  |
 
 The dashboard shows live resource status, structured logs, distributed traces, and environment
 variables for every resource.
@@ -189,10 +189,10 @@ variables for every resource.
 
 ## Troubleshooting
 
-| Symptom | Fix |
-|---|---|
-| Secrets not applied to services | Re-run `setup-secrets` from the Aspire dashboard, or verify `dev/secrets.json` exists |
-| SQL Server container won't start | Confirm Docker Desktop is running and port 1433 is free |
-| Migrations fail immediately | Ensure `pwsh` (PowerShell) is on your `$PATH` |
-| Port conflicts on startup | Set the conflicting `Services:<name>:BasePort` to a free port via user secrets |
-| Services stuck waiting | Check the dashboard logs for `setup-secrets` or `run-db-migrations` errors |
+| Symptom                          | Fix                                                                                   |
+|----------------------------------|---------------------------------------------------------------------------------------|
+| Secrets not applied to services  | Re-run `setup-secrets` from the Aspire dashboard, or verify `dev/secrets.json` exists |
+| SQL Server container won't start | Confirm Docker Desktop is running and port 1433 is free                               |
+| Migrations fail immediately      | Ensure `pwsh` (PowerShell) is on your `$PATH`                                         |
+| Port conflicts on startup        | Set the conflicting `Services:<name>:BasePort` to a free port via user secrets        |
+| Services stuck waiting           | Check the dashboard logs for `setup-secrets` or `run-db-migrations` errors            |
