@@ -56,8 +56,8 @@ public static class BuilderExtensions
         var azurite = builder
             .AddAzureStorage("azurite").ConfigureInfrastructure(c =>
             {
-                var blobStorage = c.GetProvisionableResources().OfType<BlobService>().Single();
-                blobStorage.CorsRules.Add(new BicepValue<StorageCorsRule>(new StorageCorsRule
+                var blobStorage = c.GetProvisionableResources().OfType<BlobService>().SingleOrDefault();
+                blobStorage?.CorsRules.Add(new BicepValue<StorageCorsRule>(new StorageCorsRule
                 {
                     AllowedOrigins = [new BicepValue<string>("*")],
                     AllowedMethods = [CorsRuleAllowedMethod.Get, CorsRuleAllowedMethod.Put],
