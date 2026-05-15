@@ -16,7 +16,7 @@ builder.ConfigureWebFrontend(api);
 #endif
 
 #if ENABLE_NGROK_COMMUNITY_PLUGIN
-builder.ConfigureNgrok((billing, "billing-http"));
+builder.ConfigureNgrok((billing, "http"));
 #endif
 
 builder.Build().Run();
