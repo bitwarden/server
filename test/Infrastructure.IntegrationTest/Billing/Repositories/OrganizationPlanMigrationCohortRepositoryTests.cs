@@ -70,10 +70,9 @@ public class OrganizationPlanMigrationCohortRepositoryTests
     public async Task ReplaceAsync_UpdatesMutableColumns_AndIgnoresCreatedAt(
         IOrganizationPlanMigrationCohortRepository repository)
     {
-        var originalCreatedAt = DateTime.UtcNow.AddDays(-30);
+        // The Update SP / EF override both ignore CreatedAt, so the baseline is whatever
+        // CreatedAt the row was inserted with.
         var cohort = await repository.CreateAsync(CreateTestCohort());
-        cohort.CreatedAt = originalCreatedAt;
-        await repository.ReplaceAsync(cohort); // Establish a baseline CreatedAt via direct write
         var baseline = await repository.GetByIdAsync(cohort.Id);
         Assert.NotNull(baseline);
         var baselineCreatedAt = baseline.CreatedAt;
@@ -85,7 +84,7 @@ public class OrganizationPlanMigrationCohortRepositoryTests
         baseline.ChurnDiscountCouponCode = "NEW-CHURN";
         baseline.IsActive = true;
         baseline.RevisionDate = DateTime.UtcNow;
-        baseline.CreatedAt = DateTime.UtcNow.AddYears(-10); // Should be ignored by the SP
+        baseline.CreatedAt = DateTime.UtcNow.AddYears(-10); // Should be ignored on every provider
 
         await repository.ReplaceAsync(baseline);
 
@@ -96,7 +95,7 @@ public class OrganizationPlanMigrationCohortRepositoryTests
         Assert.Equal("NEW-PROACTIVE", result.ProactiveDiscountCouponCode);
         Assert.Equal("NEW-CHURN", result.ChurnDiscountCouponCode);
         Assert.True(result.IsActive);
-        // CreatedAt should not have moved -- the Update SP accepts the parameter but does not assign it.
+        // CreatedAt should not have moved -- the Update SP and EF override both drop the write.
         Assert.Equal(baselineCreatedAt, result.CreatedAt);
 
         // Cleanup

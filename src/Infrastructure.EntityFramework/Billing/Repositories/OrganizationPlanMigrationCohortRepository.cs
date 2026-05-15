@@ -15,4 +15,25 @@ public class OrganizationPlanMigrationCohortRepository(
         serviceScopeFactory,
         mapper,
         context => context.OrganizationPlanMigrationCohorts),
-        IOrganizationPlanMigrationCohortRepository;
+        IOrganizationPlanMigrationCohortRepository
+{
+    public override async Task ReplaceAsync(CoreEntities.OrganizationPlanMigrationCohort obj)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var entity = await GetDbSet(dbContext).FindAsync(obj.Id);
+        if (entity == null)
+        {
+            return;
+        }
+
+        var mappedEntity = Mapper.Map<EFOrganizationPlanMigrationCohort>(obj);
+        dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
+
+        // Mirror the OrganizationPlanMigrationCohort_Update SP -- CreatedAt is accepted but
+        // not assigned; it is immutable once the row is inserted.
+        dbContext.Entry(entity).Property(c => c.CreatedAt).IsModified = false;
+
+        await dbContext.SaveChangesAsync();
+    }
+}
