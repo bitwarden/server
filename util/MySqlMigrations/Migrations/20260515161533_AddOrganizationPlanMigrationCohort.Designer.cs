@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260515143910_AddOrganizationPlanMigrationCohort")]
+    [Migration("20260515161533_AddOrganizationPlanMigrationCohort")]
     partial class AddOrganizationPlanMigrationCohort
     {
         /// <inheritdoc />
@@ -990,7 +990,8 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("char(36)");
 
                     b.Property<string>("ChurnDiscountCouponCode")
-                        .HasColumnType("longtext");
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
@@ -1003,10 +1004,12 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
+                        .HasMaxLength(255)
                         .HasColumnType("varchar(255)");
 
                     b.Property<string>("ProactiveDiscountCouponCode")
-                        .HasColumnType("longtext");
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
 
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");

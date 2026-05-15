@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
@@ -17,7 +18,7 @@ public class OrganizationPlanMigrationCohort : ITableObject<Guid>
     /// A human-readable, globally unique cohort identifier. Used as the join key when
     /// importing assignments from CSV.
     /// </summary>
-    public string Name { get; set; } = null!;
+    [MaxLength(255)] public string Name { get; set; } = null!;
 
     /// <summary>
     /// Identifies which <see cref="ValueObjects.MigrationPath"/> this cohort follows.
@@ -33,13 +34,13 @@ public class OrganizationPlanMigrationCohort : ITableObject<Guid>
     /// Optional Stripe coupon applied proactively when a cohort member is migrated to the
     /// current plan.
     /// </summary>
-    public string? ProactiveDiscountCouponCode { get; set; }
+    [MaxLength(64)] public string? ProactiveDiscountCouponCode { get; set; }
 
     /// <summary>
     /// Optional Stripe coupon applied during the churn-mitigation flow if a cohort member
     /// initiates cancellation.
     /// </summary>
-    public string? ChurnDiscountCouponCode { get; set; }
+    [MaxLength(64)] public string? ChurnDiscountCouponCode { get; set; }
 
     /// <summary>
     /// When false, no automated migration actions are taken for assignments in this cohort.

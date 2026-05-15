@@ -1,6 +1,6 @@
 CREATE PROCEDURE [dbo].[OrganizationPlanMigrationCohort_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
-    @Name NVARCHAR(64),
+    @Name NVARCHAR(255),
     @MigrationPathId TINYINT,
     @ProactiveDiscountCouponCode NVARCHAR(64),
     @ChurnDiscountCouponCode NVARCHAR(64),

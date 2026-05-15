@@ -7,7 +7,7 @@ BEGIN
     CREATE TABLE [dbo].[OrganizationPlanMigrationCohort]
     (
         [Id]                          UNIQUEIDENTIFIER NOT NULL,
-        [Name]                        NVARCHAR (64)    NOT NULL,
+        [Name]                        NVARCHAR (255)   NOT NULL,
         [MigrationPathId]             TINYINT          NULL,
         [ProactiveDiscountCouponCode] NVARCHAR (64)    NULL,
         [ChurnDiscountCouponCode]     NVARCHAR (64)    NULL,
@@ -74,7 +74,7 @@ GO
 -- Stored Procedures: OrganizationPlanMigrationCohort
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationPlanMigrationCohort_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
-    @Name NVARCHAR(64),
+    @Name NVARCHAR(255),
     @MigrationPathId TINYINT,
     @ProactiveDiscountCouponCode NVARCHAR(64),
     @ChurnDiscountCouponCode NVARCHAR(64),
@@ -127,7 +127,7 @@ GO
 
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationPlanMigrationCohort_Update]
     @Id UNIQUEIDENTIFIER,
-    @Name NVARCHAR(64),
+    @Name NVARCHAR(255),
     @MigrationPathId TINYINT,
     @ProactiveDiscountCouponCode NVARCHAR(64),
     @ChurnDiscountCouponCode NVARCHAR(64),

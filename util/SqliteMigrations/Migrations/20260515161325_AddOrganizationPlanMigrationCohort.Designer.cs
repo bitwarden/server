@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260515144020_AddOrganizationPlanMigrationCohort")]
+    [Migration("20260515161325_AddOrganizationPlanMigrationCohort")]
     partial class AddOrganizationPlanMigrationCohort
     {
         /// <inheritdoc />
@@ -979,6 +979,7 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ChurnDiscountCouponCode")
+                        .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
@@ -992,9 +993,11 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
+                        .HasMaxLength(255)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ProactiveDiscountCouponCode")
+                        .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")

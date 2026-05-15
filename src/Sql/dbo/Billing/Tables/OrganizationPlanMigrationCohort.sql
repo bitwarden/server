@@ -1,6 +1,6 @@
 CREATE TABLE [dbo].[OrganizationPlanMigrationCohort] (
     [Id]                          UNIQUEIDENTIFIER NOT NULL,
-    [Name]                        NVARCHAR (64)    NOT NULL,
+    [Name]                        NVARCHAR (255)   NOT NULL,
     [MigrationPathId]             TINYINT          NULL,
     [ProactiveDiscountCouponCode] NVARCHAR (64)    NULL,
     [ChurnDiscountCouponCode]     NVARCHAR (64)    NULL,

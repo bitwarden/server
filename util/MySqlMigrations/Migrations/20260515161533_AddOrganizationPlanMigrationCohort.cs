@@ -16,12 +16,12 @@ namespace Bit.MySqlMigrations.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    Name = table.Column<string>(type: "varchar(255)", nullable: false)
+                    Name = table.Column<string>(type: "varchar(255)", maxLength: 255, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     MigrationPathId = table.Column<byte>(type: "tinyint unsigned", nullable: true),
-                    ProactiveDiscountCouponCode = table.Column<string>(type: "longtext", nullable: true)
+                    ProactiveDiscountCouponCode = table.Column<string>(type: "varchar(64)", maxLength: 64, nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    ChurnDiscountCouponCode = table.Column<string>(type: "longtext", nullable: true)
+                    ChurnDiscountCouponCode = table.Column<string>(type: "varchar(64)", maxLength: 64, nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     IsActive = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime(6)", nullable: false),
