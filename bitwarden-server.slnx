@@ -88,4 +88,5 @@
   <Folder Name="/perf/">
     <Project Path="perf/MicroBenchmarks/MicroBenchmarks.csproj" />
   </Folder>
+  <Project Path="AppHost/AppHost.csproj" />
 </Solution>
