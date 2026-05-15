@@ -21,13 +21,22 @@ public class OrganizationReportRepository :
         IMapper mapper) : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.OrganizationReports)
     { }
 
-    public async Task<OrganizationReport> GetLatestByOrganizationIdAsync(Guid organizationId)
+    public async Task<OrganizationReport> GetLatestByOrganizationIdAsync(Guid organizationId, bool filterByValidated = false)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var result = await dbContext.OrganizationReports
-                .Where(p => p.OrganizationId == organizationId)
+
+            IQueryable<Models.OrganizationReport> query = dbContext.OrganizationReports
+                .Where(p => p.OrganizationId == organizationId);
+
+            if (filterByValidated)
+            {
+                query = query.Where(p => p.ReportFile != null
+                    && p.ReportFile.Contains("\"Validated\":true"));
+            }
+
+            var result = await query
                 .OrderByDescending(p => p.RevisionDate)
                 .Take(1)
                 .FirstOrDefaultAsync();

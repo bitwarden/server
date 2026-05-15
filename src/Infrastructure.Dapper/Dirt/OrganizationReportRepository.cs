@@ -25,13 +25,13 @@ public class OrganizationReportRepository : Repository<OrganizationReport, Guid>
     {
     }
 
-    public async Task<OrganizationReport> GetLatestByOrganizationIdAsync(Guid organizationId)
+    public async Task<OrganizationReport> GetLatestByOrganizationIdAsync(Guid organizationId, bool filterByValidated = false)
     {
         using (var connection = new SqlConnection(ReadOnlyConnectionString))
         {
             var result = await connection.QuerySingleOrDefaultAsync<OrganizationReport>(
                 $"[{Schema}].[OrganizationReport_GetLatestByOrganizationId]",
-                new { OrganizationId = organizationId },
+                new { OrganizationId = organizationId, FilterByValidated = filterByValidated },
                 commandType: CommandType.StoredProcedure);
 
             return result;
