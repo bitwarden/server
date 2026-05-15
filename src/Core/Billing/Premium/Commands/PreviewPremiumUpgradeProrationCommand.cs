@@ -110,6 +110,7 @@ public class PreviewPremiumUpgradeProrationCommand(
             },
             SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
             {
+                BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
                 Items = subscriptionItems,
                 ProrationBehavior = StripeConstants.ProrationBehavior.AlwaysInvoice
             }
