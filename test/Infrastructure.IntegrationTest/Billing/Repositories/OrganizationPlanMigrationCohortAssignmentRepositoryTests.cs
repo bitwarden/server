@@ -4,6 +4,7 @@ using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
+using Bit.Infrastructure.IntegrationTest.Comparers;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Billing.Repositories;
@@ -149,12 +150,17 @@ public class OrganizationPlanMigrationCohortAssignmentRepositoryTests
         var result = await assignmentRepository.GetByIdAsync(assignment.Id);
         Assert.NotNull(result);
         Assert.NotNull(result.ScheduledAt);
-        Assert.Equal(migratedAt, result.MigratedAt);
-        Assert.Equal(churnAt, result.ChurnDiscountAppliedAt);
+        Assert.NotNull(result.MigratedAt);
+        Assert.NotNull(result.ChurnDiscountAppliedAt);
+        // Postgres timestamp and MySQL datetime(6) both store microsecond precision; .NET
+        // DateTime has 100ns ticks. Round-tripping truncates the last digit, so compare with
+        // LaxDateTimeComparer rather than exact equality.
+        Assert.Equal(migratedAt, result.MigratedAt.Value, LaxDateTimeComparer.Default);
+        Assert.Equal(churnAt, result.ChurnDiscountAppliedAt.Value, LaxDateTimeComparer.Default);
         // Immutable columns must not have moved.
         Assert.Equal(organization.Id, result.OrganizationId);
         Assert.Equal(cohort.Id, result.CohortId);
-        Assert.Equal(baselineCreatedAt, result.CreatedAt);
+        Assert.Equal(baselineCreatedAt, result.CreatedAt, LaxDateTimeComparer.Default);
 
         // Cleanup
         await assignmentRepository.DeleteAsync(result);
