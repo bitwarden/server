@@ -270,6 +270,7 @@ public static class FeatureFlagKeys
     public const string SendEmailOTP = "pm-19051-send-email-verification";
     public const string SendControls = "pm-31885-send-controls";
     public const string SdkSendsApi = "pm-30110-sdk-sends-api";
+    public const string SendEventLogging = "pm-36560-send-event-logging";
 
     /* Vault Team */
     public const string CipherKeyEncryption = "cipher-key-encryption";
@@ -280,7 +281,6 @@ public static class FeatureFlagKeys
     public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
     public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
     public const string PM23904_RiskInsightsForPremium = "pm-23904-risk-insights-for-premium";
-    public const string PM25083_AutofillConfirmFromSearch = "pm-25083-autofill-confirm-from-search";
     public const string VaultLoadingSkeletons = "pm-25081-vault-skeleton-loaders";
     public const string BrowserPremiumSpotlight = "pm-23384-browser-premium-spotlight";
     public const string MigrateMyVaultToMyItems = "pm-20558-migrate-myvault-to-myitems";
@@ -296,6 +296,7 @@ public static class FeatureFlagKeys
     public const string PM34500_StrictCipherDecryption = "pm-34500-strict-cipher-decryption";
     public const string PM28091_AddCopyAndQuickLaunchActions = "pm-28091-add-copy-and-quick-launch-actions";
     public const string PM28192_CipherAttachmentOps = "pm-28192-cipher-attachment-ops-to-sdk";
+    public const string PM32016_RemoveAtRiskCallouts = "pm-32016-remove-at-risk-callouts";
 
     /* Secrets Manager Team */
     public const string SecretsVersioning = "sm-1587-secrets-versioning";
