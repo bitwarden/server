@@ -15,8 +15,9 @@ using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Mail.Billing.BusinessUnitConversionInvite;
+using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
@@ -30,7 +31,7 @@ public class BusinessUnitConverter(
     IDataProtectionProvider dataProtectionProvider,
     GlobalSettings globalSettings,
     ILogger<BusinessUnitConverter> logger,
-    IMailService mailService,
+    IMailer mailer,
     IOrganizationRepository organizationRepository,
     IOrganizationUserRepository organizationUserRepository,
     IPricingClient pricingClient,
@@ -319,7 +320,19 @@ public class BusinessUnitConverter(
         var token = _dataProtector.Protect(
             $"BusinessUnitConversionInvite {organization.Id} {providerAdminEmail} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
 
-        await mailService.SendBusinessUnitConversionInviteAsync(organization, token, providerAdminEmail);
+        var mail = new BusinessUnitConversionInviteMail
+        {
+            ToEmails = [providerAdminEmail],
+            View = new BusinessUnitConversionInviteMailView
+            {
+                OrganizationId = organization.Id.ToString(),
+                Email = System.Net.WebUtility.UrlEncode(providerAdminEmail),
+                Token = System.Net.WebUtility.UrlEncode(token),
+                WebVaultUrl = globalSettings.BaseServiceUri.VaultWithHash
+            }
+        };
+
+        await mailer.SendEmail(mail);
     }
 
     private async Task<(Subscription, Provider, ProviderOrganization, ProviderUser)> ValidateFinalizationAsync(
