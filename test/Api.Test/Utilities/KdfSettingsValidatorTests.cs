@@ -123,4 +123,114 @@ public class KdfSettingsValidatorTests
         Assert.Single(results);
         Assert.Contains("KDF iterations must be between", results[0].ErrorMessage);
     }
+
+    [Fact]
+    public void ValidateKdfAndSaltAgreement_WhenMatchingKdfAndSalt_ReturnsNoErrors()
+    {
+        var kdf = new KdfSettings { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600_000 };
+        var authentication = new MasterPasswordAuthenticationData
+        {
+            Kdf = kdf,
+            MasterPasswordAuthenticationHash = "hash",
+            Salt = "salt"
+        };
+        var unlock = new MasterPasswordUnlockData
+        {
+            Kdf = new KdfSettings { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600_000 },
+            MasterKeyWrappedUserKey = "wrapped",
+            Salt = "salt"
+        };
+
+        var results = KdfSettingsValidator.ValidateKdfAndSaltAgreement(authentication, unlock).ToList();
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public void ValidateKdfAndSaltAgreement_WhenKdfMismatch_ReturnsKdfEqualityErrorAndShortCircuits()
+    {
+        var authentication = new MasterPasswordAuthenticationData
+        {
+            Kdf = new KdfSettings { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600_000 },
+            MasterPasswordAuthenticationHash = "hash",
+            Salt = "salt-auth"
+        };
+        var unlock = new MasterPasswordUnlockData
+        {
+            Kdf = new KdfSettings { KdfType = KdfType.Argon2id, Iterations = 3, Memory = 64, Parallelism = 4 },
+            MasterKeyWrappedUserKey = "wrapped",
+            Salt = "salt-unlock"
+        };
+
+        var results = KdfSettingsValidator.ValidateKdfAndSaltAgreement(authentication, unlock).ToList();
+
+        // Asserts both that the KDF mismatch is reported AND that the salt-mismatch
+        // check does not also fire — KDF mismatch should short-circuit the validator,
+        // matching the behavior of ValidateAuthenticationAndUnlockData.
+        Assert.Single(results);
+        Assert.Equal("AuthenticationData and UnlockData must have the same KDF configuration.", results[0].ErrorMessage);
+    }
+
+    [Fact]
+    public void ValidateKdfAndSaltAgreement_WhenSaltMismatch_ReturnsSaltEqualityError()
+    {
+        var authentication = new MasterPasswordAuthenticationData
+        {
+            Kdf = new KdfSettings { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600_000 },
+            MasterPasswordAuthenticationHash = "hash",
+            Salt = "salt-auth"
+        };
+        var unlock = new MasterPasswordUnlockData
+        {
+            Kdf = new KdfSettings { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600_000 },
+            MasterKeyWrappedUserKey = "wrapped",
+            Salt = "salt-unlock"
+        };
+
+        var results = KdfSettingsValidator.ValidateKdfAndSaltAgreement(authentication, unlock).ToList();
+
+        Assert.Single(results);
+        Assert.Equal("Invalid master password salt.", results[0].ErrorMessage);
+    }
+
+    [Theory]
+    [InlineData(KdfType.PBKDF2_SHA256, 1, null, null)] // far below minimum
+    [InlineData(KdfType.PBKDF2_SHA256, 100_000, null, null)] // sub-minimum but plausible legacy
+    [InlineData(KdfType.Argon2id, 1, 8, 1)] // sub-minimum Argon2id
+    public void ValidateKdfAndSaltAgreement_WhenKdfBelowMinimum_DoesNotEmitRangeError(
+        KdfType kdfType, int iterations, int? memory, int? parallelism)
+    {
+        // PM-27892 regression guard: this validator MUST NOT range-check the KDF — it
+        // exists specifically so legacy-KDF users (whose stored KDF predates current
+        // minimums) are not locked out of flows backed by UpdateExistingPasswordData
+        // (change password, replace temp password, emergency-access takeover for
+        // grantors with master password). Range enforcement at the boundary is the
+        // job of ValidateAuthenticationAndUnlockData and is reserved for KDF-being-
+        // chosen flows. If this test fails, the validator has been incorrectly
+        // expanded to perform range validation and legacy-KDF users will be silently
+        // rejected at the boundary.
+        var kdf = new KdfSettings
+        {
+            KdfType = kdfType,
+            Iterations = iterations,
+            Memory = memory,
+            Parallelism = parallelism
+        };
+        var authentication = new MasterPasswordAuthenticationData
+        {
+            Kdf = kdf,
+            MasterPasswordAuthenticationHash = "hash",
+            Salt = "salt"
+        };
+        var unlock = new MasterPasswordUnlockData
+        {
+            Kdf = kdf,
+            MasterKeyWrappedUserKey = "wrapped",
+            Salt = "salt"
+        };
+
+        var results = KdfSettingsValidator.ValidateKdfAndSaltAgreement(authentication, unlock).ToList();
+
+        Assert.Empty(results);
+    }
 }
