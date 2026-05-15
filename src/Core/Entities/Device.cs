@@ -49,6 +49,20 @@ public class Device : ITableObject<Guid>
     /// </summary>
     public DateTime? LastActivityDate { get; internal set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// The version of the client software the device was last seen running. Populated from the
+    /// Bitwarden-Client-Version header on device creation and on every successful login / token refresh.
+    /// Null if the device has not authenticated since client version tracking was introduced or if
+    /// the header was absent.
+    /// Sized to 43 chars — the upper bound of <see cref="Version.ToString()"/> for any input
+    /// accepted by <see cref="Version.TryParse(string?, out Version?)"/>: four
+    /// <see cref="int"/> components (max <see cref="int.MaxValue"/> = 10 digits) joined by 3 dots.
+    /// Real Bitwarden CalVer <c>YYYY.M.B</c> is ~9 chars; the extra headroom prevents truncation
+    /// errors from malformed/hostile headers that still parse as a <see cref="Version"/>.
+    /// </summary>
+    [MaxLength(43)]
+    public string? ClientVersion { get; set; }
+
     public void SetNewId()
     {
         Id = CoreHelpers.GenerateComb();

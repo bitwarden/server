@@ -43,9 +43,7 @@ public interface IUserService
     Task<IdentityResult> DeleteAsync(User user, string token);
     Task SendDeleteConfirmationAsync(string email);
     Task UpdateLicenseAsync(User user, UserLicense license);
-    Task<string> AdjustStorageAsync(User user, short storageAdjustmentGb);
     Task CancelPremiumAsync(User user, bool? endOfPeriod = null);
-    Task ReinstatePremiumAsync(User user);
     Task EnablePremiumAsync(Guid userId, DateTime? expirationDate);
     Task DisablePremiumAsync(Guid userId, DateTime? expirationDate);
     Task UpdatePremiumExpirationAsync(Guid userId, DateTime? expirationDate);
@@ -75,6 +73,8 @@ public interface IUserService
 
     Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,
         bool validatePassword = true, bool refreshStamp = true);
+    // TODO: Remove this method when the PM37165_RotateUserApiKeyCommand feature flag is cleaned up.
+    [Obsolete("Use IRotateUserApiKeyCommand instead. This method will be removed once the PM37165_RotateUserApiKeyCommand feature flag is removed.")]
     Task RotateApiKeyAsync(User user);
     string GetUserName(ClaimsPrincipal principal);
     Task SendOTPAsync(User user);
