@@ -88,10 +88,14 @@ dotnet user-secrets set "Database:Password" "<your-sa-password>"
 Runs the web client alongside the server services. Requires the Bitwarden
 [clients](https://github.com/bitwarden/clients) repo cloned as a sibling to `server`.
 
-1. Enable the plugin in `AppHost.csproj`:
+1. Create an `AppHost.csproj.user` file next to `AppHost.csproj` (it is covered by `.gitignore`):
 
    ```xml
-   <EnableNodeJsCommunityPlugin>true</EnableNodeJsCommunityPlugin>
+   <Project>
+     <PropertyGroup>
+       <EnableNodeJsCommunityPlugin>true</EnableNodeJsCommunityPlugin>
+     </PropertyGroup>
+   </Project>
    ```
 
 2. If the clients repo is not at `../../clients/apps`, override the path:
@@ -108,10 +112,14 @@ Runs the web client alongside the server services. Requires the Bitwarden
 Exposes the billing service through a public ngrok tunnel, useful for testing Stripe webhooks
 locally.
 
-1. Enable the plugin in `AppHost.csproj`:
+1. Create an `AppHost.csproj.user` file next to `AppHost.csproj` (it is covered by `.gitignore`):
 
    ```xml
-   <EnableNgrokCommunityPlugin>true</EnableNgrokCommunityPlugin>
+   <Project>
+     <PropertyGroup>
+       <EnableNgrokCommunityPlugin>true</EnableNgrokCommunityPlugin>
+     </PropertyGroup>
+   </Project>
    ```
 
 2. Set your ngrok auth token:
