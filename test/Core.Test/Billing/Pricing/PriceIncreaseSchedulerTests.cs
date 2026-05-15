@@ -25,20 +25,20 @@ public class PriceIncreaseSchedulerTests
         new(_stripeAdapter, _featureService, _pricingClient, _logger);
 
     [Fact]
-    public async Task Schedule_FeatureFlagOff_DoesNothing()
+    public async Task SchedulePersonalPriceIncrease_FeatureFlagOff_DoesNothing()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(false);
 
         var sut = CreateSut();
 
-        await sut.Schedule(CreateSubscription("sub_1", "cus_1"));
+        await sut.SchedulePersonalPriceIncrease(CreateSubscription("sub_1", "cus_1"));
 
         await _stripeAdapter.DidNotReceiveWithAnyArgs()
             .ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>());
     }
 
     [Fact]
-    public async Task Schedule_ActiveScheduleAlreadyExists_Skips()
+    public async Task SchedulePersonalPriceIncrease_ActiveScheduleAlreadyExists_Skips()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
@@ -52,14 +52,14 @@ public class PriceIncreaseSchedulerTests
 
         var sut = CreateSut();
 
-        await sut.Schedule(subscription);
+        await sut.SchedulePersonalPriceIncrease(subscription);
 
         await _stripeAdapter.DidNotReceiveWithAnyArgs()
             .CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
     }
 
     [Fact]
-    public async Task Schedule_PremiumSubscription_CreatesScheduleWithMilestone2Discount()
+    public async Task SchedulePersonalPriceIncrease_PremiumSubscription_CreatesScheduleWithMilestone2Discount()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
@@ -94,7 +94,7 @@ public class PriceIncreaseSchedulerTests
 
         var sut = CreateSut();
 
-        await sut.Schedule(subscription);
+        await sut.SchedulePersonalPriceIncrease(subscription);
 
         await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
             "sched_1",
@@ -108,7 +108,7 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
-    public async Task Schedule_PremiumSubscriptionWithExistingDiscount_PreservesDiscountAndAppendsMilestone2()
+    public async Task SchedulePersonalPriceIncrease_PremiumSubscriptionWithExistingDiscount_PreservesDiscountAndAppendsMilestone2()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
@@ -145,7 +145,7 @@ public class PriceIncreaseSchedulerTests
 
         var sut = CreateSut();
 
-        await sut.Schedule(subscription);
+        await sut.SchedulePersonalPriceIncrease(subscription);
 
         await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
             "sched_1",
@@ -157,7 +157,7 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
-    public async Task Schedule_PremiumSubscriptionWithStorage_IncludesStorageInPhase2()
+    public async Task SchedulePersonalPriceIncrease_PremiumSubscriptionWithStorage_IncludesStorageInPhase2()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
@@ -191,7 +191,7 @@ public class PriceIncreaseSchedulerTests
 
         var sut = CreateSut();
 
-        await sut.Schedule(subscription);
+        await sut.SchedulePersonalPriceIncrease(subscription);
 
         await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
             "sched_1",
@@ -202,7 +202,7 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
-    public async Task Schedule_Families2019Subscription_CreatesScheduleWithMilestone3Discount()
+    public async Task SchedulePersonalPriceIncrease_Families2019Subscription_CreatesScheduleWithMilestone3Discount()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
@@ -231,7 +231,7 @@ public class PriceIncreaseSchedulerTests
 
         var sut = CreateSut();
 
-        await sut.Schedule(subscription);
+        await sut.SchedulePersonalPriceIncrease(subscription);
 
         await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
             "sched_1",
@@ -245,7 +245,7 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
-    public async Task Schedule_Families2019SubscriptionWithExistingDiscount_PreservesDiscountAndAppendsMilestone3()
+    public async Task SchedulePersonalPriceIncrease_Families2019SubscriptionWithExistingDiscount_PreservesDiscountAndAppendsMilestone3()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
@@ -275,7 +275,7 @@ public class PriceIncreaseSchedulerTests
 
         var sut = CreateSut();
 
-        await sut.Schedule(subscription);
+        await sut.SchedulePersonalPriceIncrease(subscription);
 
         await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
             "sched_1",
@@ -287,7 +287,7 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
-    public async Task Schedule_Families2025Subscription_CreatesScheduleWithNoDiscount()
+    public async Task SchedulePersonalPriceIncrease_Families2025Subscription_CreatesScheduleWithNoDiscount()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
@@ -315,7 +315,7 @@ public class PriceIncreaseSchedulerTests
 
         var sut = CreateSut();
 
-        await sut.Schedule(subscription);
+        await sut.SchedulePersonalPriceIncrease(subscription);
 
         await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
             "sched_1",
@@ -328,7 +328,7 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
-    public async Task Schedule_Families2025SubscriptionWithExistingDiscount_PreservesDiscountWithoutMilestone()
+    public async Task SchedulePersonalPriceIncrease_Families2025SubscriptionWithExistingDiscount_PreservesDiscountWithoutMilestone()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
@@ -358,7 +358,7 @@ public class PriceIncreaseSchedulerTests
 
         var sut = CreateSut();
 
-        await sut.Schedule(subscription);
+        await sut.SchedulePersonalPriceIncrease(subscription);
 
         await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
             "sched_1",
@@ -370,7 +370,7 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
-    public async Task Schedule_FamiliesSubscriptionWithStorage_IncludesStorageInPhase2()
+    public async Task SchedulePersonalPriceIncrease_FamiliesSubscriptionWithStorage_IncludesStorageInPhase2()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
@@ -397,7 +397,7 @@ public class PriceIncreaseSchedulerTests
 
         var sut = CreateSut();
 
-        await sut.Schedule(subscription);
+        await sut.SchedulePersonalPriceIncrease(subscription);
 
         await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
             "sched_1",
@@ -408,7 +408,7 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
-    public async Task Schedule_UpdateFails_ReleasesOrphanedScheduleAndRethrows()
+    public async Task SchedulePersonalPriceIncrease_UpdateFails_ReleasesOrphanedScheduleAndRethrows()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
@@ -439,13 +439,13 @@ public class PriceIncreaseSchedulerTests
 
         var sut = CreateSut();
 
-        await Assert.ThrowsAsync<StripeException>(() => sut.Schedule(subscription));
+        await Assert.ThrowsAsync<StripeException>(() => sut.SchedulePersonalPriceIncrease(subscription));
 
         await _stripeAdapter.Received(1).ReleaseSubscriptionScheduleAsync("sched_1", null);
     }
 
     [Fact]
-    public async Task Schedule_NoMatchingPlan_LogsWarningAndDoesNothing()
+    public async Task SchedulePersonalPriceIncrease_NoMatchingPlan_LogsWarningAndDoesNothing()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
@@ -469,7 +469,7 @@ public class PriceIncreaseSchedulerTests
 
         var sut = CreateSut();
 
-        await sut.Schedule(subscription);
+        await sut.SchedulePersonalPriceIncrease(subscription);
 
         await _stripeAdapter.DidNotReceiveWithAnyArgs()
             .CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
@@ -556,20 +556,20 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
-    public async Task ResolvePhase2Async_FeatureFlagOff_ReturnsNull()
+    public async Task ResolvePersonalPhase2Async_FeatureFlagOff_ReturnsNull()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(false);
 
         var sut = CreateSut();
 
-        var result = await sut.ResolvePhase2Async(CreateSubscription("sub_1", "cus_1"));
+        var result = await sut.ResolvePersonalPhase2Async(CreateSubscription("sub_1", "cus_1"));
 
         Assert.Null(result);
         await _pricingClient.DidNotReceiveWithAnyArgs().ListPremiumPlans();
     }
 
     [Fact]
-    public async Task ResolvePhase2Async_SubscriptionLoadedWithoutDiscountsExpand_ReturnsNullAndDoesNotResolve()
+    public async Task ResolvePersonalPhase2Async_SubscriptionLoadedWithoutDiscountsExpand_ReturnsNullAndDoesNotResolve()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
@@ -591,7 +591,7 @@ public class PriceIncreaseSchedulerTests
 
         var sut = CreateSut();
 
-        var result = await sut.ResolvePhase2Async(subscription);
+        var result = await sut.ResolvePersonalPhase2Async(subscription);
 
         Assert.Null(result);
         await _pricingClient.DidNotReceiveWithAnyArgs().ListPremiumPlans();
@@ -599,7 +599,7 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
-    public async Task ResolvePhase2Async_PremiumSubscription_ReturnsPhase2WithDiscount()
+    public async Task ResolvePersonalPhase2Async_PremiumSubscription_ReturnsPhase2WithDiscount()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
@@ -628,7 +628,7 @@ public class PriceIncreaseSchedulerTests
 
         var sut = CreateSut();
 
-        var result = await sut.ResolvePhase2Async(subscription);
+        var result = await sut.ResolvePersonalPhase2Async(subscription);
 
         Assert.NotNull(result);
         Assert.Equal(currentPeriodEnd, (DateTime)result.StartDate);
@@ -643,7 +643,7 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
-    public async Task ResolvePhase2Async_PremiumSubscriptionWithExistingDiscount_PreservesAndAppendsMilestone2()
+    public async Task ResolvePersonalPhase2Async_PremiumSubscriptionWithExistingDiscount_PreservesAndAppendsMilestone2()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
@@ -676,7 +676,7 @@ public class PriceIncreaseSchedulerTests
 
         var sut = CreateSut();
 
-        var result = await sut.ResolvePhase2Async(subscription);
+        var result = await sut.ResolvePersonalPhase2Async(subscription);
 
         Assert.NotNull(result);
         Assert.NotNull(result.Discounts);
@@ -686,7 +686,7 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
-    public async Task ResolvePhase2Async_PremiumSubscriptionWithMultipleExistingDiscounts_PreservesAllAndAppendsMilestone2()
+    public async Task ResolvePersonalPhase2Async_PremiumSubscriptionWithMultipleExistingDiscounts_PreservesAllAndAppendsMilestone2()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
@@ -720,7 +720,7 @@ public class PriceIncreaseSchedulerTests
 
         var sut = CreateSut();
 
-        var result = await sut.ResolvePhase2Async(subscription);
+        var result = await sut.ResolvePersonalPhase2Async(subscription);
 
         Assert.NotNull(result);
         Assert.NotNull(result.Discounts);
@@ -731,7 +731,7 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
-    public async Task ResolvePhase2Async_PremiumSubscriptionWithStorage_IncludesStorageInPhase2()
+    public async Task ResolvePersonalPhase2Async_PremiumSubscriptionWithStorage_IncludesStorageInPhase2()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
@@ -761,7 +761,7 @@ public class PriceIncreaseSchedulerTests
 
         var sut = CreateSut();
 
-        var result = await sut.ResolvePhase2Async(subscription);
+        var result = await sut.ResolvePersonalPhase2Async(subscription);
 
         Assert.NotNull(result);
         Assert.Equal(currentPeriodEnd, (DateTime)result.StartDate);
@@ -775,7 +775,7 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
-    public async Task ResolvePhase2Async_Families2019Subscription_ReturnsPhase2WithMilestone3Discount()
+    public async Task ResolvePersonalPhase2Async_Families2019Subscription_ReturnsPhase2WithMilestone3Discount()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
@@ -797,7 +797,7 @@ public class PriceIncreaseSchedulerTests
 
         var sut = CreateSut();
 
-        var result = await sut.ResolvePhase2Async(subscription);
+        var result = await sut.ResolvePersonalPhase2Async(subscription);
 
         Assert.NotNull(result);
         Assert.Equal(currentPeriodEnd, (DateTime)result.StartDate);
@@ -811,7 +811,7 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
-    public async Task ResolvePhase2Async_Families2019SubscriptionWithExistingDiscount_PreservesAndAppendsMilestone3()
+    public async Task ResolvePersonalPhase2Async_Families2019SubscriptionWithExistingDiscount_PreservesAndAppendsMilestone3()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
@@ -837,7 +837,7 @@ public class PriceIncreaseSchedulerTests
 
         var sut = CreateSut();
 
-        var result = await sut.ResolvePhase2Async(subscription);
+        var result = await sut.ResolvePersonalPhase2Async(subscription);
 
         Assert.NotNull(result);
         Assert.NotNull(result.Discounts);
@@ -847,7 +847,7 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
-    public async Task ResolvePhase2Async_Families2025Subscription_ReturnsPhase2WithoutDiscount()
+    public async Task ResolvePersonalPhase2Async_Families2025Subscription_ReturnsPhase2WithoutDiscount()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
@@ -869,7 +869,7 @@ public class PriceIncreaseSchedulerTests
 
         var sut = CreateSut();
 
-        var result = await sut.ResolvePhase2Async(subscription);
+        var result = await sut.ResolvePersonalPhase2Async(subscription);
 
         Assert.NotNull(result);
         Assert.Equal(currentPeriodEnd, (DateTime)result.StartDate);
@@ -881,7 +881,7 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
-    public async Task ResolvePhase2Async_Families2025SubscriptionWithExistingDiscount_PreservesDiscountWithoutMilestone()
+    public async Task ResolvePersonalPhase2Async_Families2025SubscriptionWithExistingDiscount_PreservesDiscountWithoutMilestone()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
@@ -907,7 +907,7 @@ public class PriceIncreaseSchedulerTests
 
         var sut = CreateSut();
 
-        var result = await sut.ResolvePhase2Async(subscription);
+        var result = await sut.ResolvePersonalPhase2Async(subscription);
 
         Assert.NotNull(result);
         Assert.NotNull(result.Discounts);
@@ -916,7 +916,7 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
-    public async Task ResolvePhase2Async_Families2019SubscriptionWithStorage_IncludesStorageInPhase2()
+    public async Task ResolvePersonalPhase2Async_Families2019SubscriptionWithStorage_IncludesStorageInPhase2()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
@@ -939,7 +939,7 @@ public class PriceIncreaseSchedulerTests
 
         var sut = CreateSut();
 
-        var result = await sut.ResolvePhase2Async(subscription);
+        var result = await sut.ResolvePersonalPhase2Async(subscription);
 
         Assert.NotNull(result);
         Assert.Equal(currentPeriodEnd, (DateTime)result.StartDate);
@@ -953,7 +953,7 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
-    public async Task ResolvePhase2Async_ProviderSubscription_ReturnsNull()
+    public async Task ResolvePersonalPhase2Async_ProviderSubscription_ReturnsNull()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
@@ -963,13 +963,13 @@ public class PriceIncreaseSchedulerTests
 
         var sut = CreateSut();
 
-        var result = await sut.ResolvePhase2Async(subscription);
+        var result = await sut.ResolvePersonalPhase2Async(subscription);
 
         Assert.Null(result);
     }
 
     [Fact]
-    public async Task ResolvePhase2Async_UnknownPlan_ReturnsNull()
+    public async Task ResolvePersonalPhase2Async_UnknownPlan_ReturnsNull()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
 
@@ -1005,7 +1005,7 @@ public class PriceIncreaseSchedulerTests
 
         var sut = CreateSut();
 
-        var result = await sut.ResolvePhase2Async(subscription);
+        var result = await sut.ResolvePersonalPhase2Async(subscription);
 
         Assert.Null(result);
     }

@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.Services;
@@ -19,7 +20,20 @@ public interface IPriceIncreaseScheduler
     /// </summary>
     /// <param name="subscription">The Stripe subscription to schedule a price increase for.</param>
     /// <returns>True if a new schedule was created; false if skipped.</returns>
-    Task<bool> Schedule(Subscription subscription);
+    Task<bool> SchedulePersonalPriceIncrease(Subscription subscription);
+
+    /// <summary>
+    /// Creates a two-phase subscription schedule that defers an organization price increase to the subscription's
+    /// renewal date, driven by the supplied <paramref name="cohort"/>. Phase 1 echoes the current subscription
+    /// state; Phase 2 applies the cohort's target price (and discount where applicable). Gated behind the
+    /// <c>PM32645_DeferPriceMigrationToRenewal</c> feature flag. No-ops if the flag is off, an active schedule
+    /// already exists, or the cohort's <see cref="OrganizationPlanMigrationCohort.MigrationPathId"/> does not
+    /// resolve to a known migration path.
+    /// </summary>
+    /// <param name="subscription">The Stripe subscription to schedule a price increase for.</param>
+    /// <param name="cohort">The plan migration cohort that determines the target price and discount.</param>
+    /// <returns>True if a new schedule was created; false if skipped.</returns>
+    Task<bool> ScheduleBusinessPriceIncrease(Subscription subscription, OrganizationPlanMigrationCohort cohort);
 
     /// <summary>
     /// Releases any active subscription schedule for the given subscription, cancelling a pending
@@ -44,7 +58,7 @@ public interface IPriceIncreaseScheduler
     /// migration path is found; otherwise, null if the feature flag is disabled, the subscription does not
     /// match a known migration path, or an error occurs during resolution.
     /// </returns>
-    Task<SubscriptionSchedulePhaseOptions?> ResolvePhase2Async(Subscription subscription);
+    Task<SubscriptionSchedulePhaseOptions?> ResolvePersonalPhase2Async(Subscription subscription);
 }
 
 public class PriceIncreaseScheduler(
@@ -53,7 +67,7 @@ public class PriceIncreaseScheduler(
     IPricingClient pricingClient,
     ILogger<PriceIncreaseScheduler> logger) : IPriceIncreaseScheduler
 {
-    public async Task<bool> Schedule(Subscription subscription)
+    public async Task<bool> SchedulePersonalPriceIncrease(Subscription subscription)
     {
         if (!featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
         {
@@ -71,7 +85,7 @@ public class PriceIncreaseScheduler(
             return false;
         }
 
-        var phase2 = await ResolvePhase2Async(subscription);
+        var phase2 = await ResolvePersonalPhase2Async(subscription);
 
         if (phase2 == null)
         {
@@ -136,6 +150,11 @@ public class PriceIncreaseScheduler(
         return true;
     }
 
+    public Task<bool> ScheduleBusinessPriceIncrease(
+        Subscription subscription,
+        OrganizationPlanMigrationCohort cohort)
+        => throw new NotImplementedException();
+
     public async Task Release(string customerId, string subscriptionId)
     {
         if (!featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
@@ -165,7 +184,7 @@ public class PriceIncreaseScheduler(
         }
     }
 
-    public async Task<SubscriptionSchedulePhaseOptions?> ResolvePhase2Async(Subscription subscription)
+    public async Task<SubscriptionSchedulePhaseOptions?> ResolvePersonalPhase2Async(Subscription subscription)
     {
         if (!featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
         {

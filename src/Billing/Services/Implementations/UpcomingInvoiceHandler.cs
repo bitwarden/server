@@ -48,7 +48,7 @@ public class UpcomingInvoiceHandler(
     {
         var invoice = await stripeEventService.GetInvoice(parsedEvent);
 
-        // "subscriptions.data.discounts" is required by IPriceIncreaseScheduler.Schedule
+        // "subscriptions.data.discounts" is required by IPriceIncreaseScheduler.SchedulePersonalPriceIncrease
         // to preserve pre-existing subscription-level discounts when constructing Phase 2.
         // See PM-35909.
         var customer =
@@ -238,7 +238,7 @@ public class UpcomingInvoiceHandler(
         {
             if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
             {
-                var scheduled = await priceIncreaseScheduler.Schedule(subscription);
+                var scheduled = await priceIncreaseScheduler.SchedulePersonalPriceIncrease(subscription);
                 if (!scheduled)
                 {
                     return true;
@@ -405,7 +405,7 @@ public class UpcomingInvoiceHandler(
         {
             if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
             {
-                var scheduled = await priceIncreaseScheduler.Schedule(subscription);
+                var scheduled = await priceIncreaseScheduler.SchedulePersonalPriceIncrease(subscription);
                 if (!scheduled)
                 {
                     return true;
