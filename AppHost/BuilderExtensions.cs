@@ -109,13 +109,13 @@ public static class BuilderExtensions
     /// <param name="secretsSetup">The executable resource builder for configuring secrets.</param>
     /// <param name="mail">The container resource builder for setting up the mail service.</param>
     /// <param name="azurite">The Azure Storage resource builder used to configure Azurite storage services.</param>
-    /// <returns>A tuple containing resource builders for the admin, API, billing, identity, and notifications projects.</returns>
+    /// <returns>A tuple containing the configured resource builders for each project service.</returns>
     public static (
-        IResourceBuilder<ProjectResource> admin,
-        IResourceBuilder<ProjectResource> api,
-        IResourceBuilder<ProjectResource> billing,
-        IResourceBuilder<ProjectResource> identity,
-        IResourceBuilder<ProjectResource> notifications
+        IResourceBuilder<ProjectResource> Admin,
+        IResourceBuilder<ProjectResource> Api,
+        IResourceBuilder<ProjectResource> Billing,
+        IResourceBuilder<ProjectResource> Identity,
+        IResourceBuilder<ProjectResource> Notifications
         ) ConfigureServices(
             this IDistributedApplicationBuilder builder,
             IResourceBuilder<SqlServerDatabaseResource> db,
