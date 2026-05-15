@@ -54,7 +54,7 @@ public class GetOrganizationWarningsQuery(
 
         warnings.InactiveSubscription = await GetInactiveSubscriptionWarningAsync(organization, provider, subscription);
 
-        warnings.ResellerRenewal = await GetResellerRenewalWarningAsync(provider, subscription);
+        warnings.ResellerRenewal = await GetResellerRenewalWarningAsync(organization, provider, subscription);
 
         warnings.TaxId = await GetTaxIdWarningAsync(organization, subscription.Customer, provider);
 
@@ -99,6 +99,11 @@ public class GetOrganizationWarningsQuery(
         Provider? provider,
         Subscription subscription)
     {
+        if (organization.ExemptFromBillingAutomation)
+        {
+            return null;
+        }
+
         // If the organization is enabled or the subscription is active, don't return a warning.
         if (organization.Enabled || subscription is not
             {
@@ -139,9 +144,15 @@ public class GetOrganizationWarningsQuery(
     }
 
     private async Task<ResellerRenewalWarning?> GetResellerRenewalWarningAsync(
+        Organization organization,
         Provider? provider,
         Subscription subscription)
     {
+        if (organization.ExemptFromBillingAutomation)
+        {
+            return null;
+        }
+
         if (provider is not
             {
                 Type: ProviderType.Reseller

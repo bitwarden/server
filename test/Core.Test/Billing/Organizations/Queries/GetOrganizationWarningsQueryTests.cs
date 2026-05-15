@@ -152,6 +152,7 @@ public class GetOrganizationWarningsQueryTests
         SutProvider<GetOrganizationWarningsQuery> sutProvider)
     {
         organization.Enabled = false;
+        organization.ExemptFromBillingAutomation = false;
 
         sutProvider.GetDependency<ISubscriberService>()
             .GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
@@ -180,6 +181,7 @@ public class GetOrganizationWarningsQueryTests
         SutProvider<GetOrganizationWarningsQuery> sutProvider)
     {
         organization.Enabled = false;
+        organization.ExemptFromBillingAutomation = false;
 
         sutProvider.GetDependency<ISubscriberService>()
             .GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
@@ -207,6 +209,7 @@ public class GetOrganizationWarningsQueryTests
         SutProvider<GetOrganizationWarningsQuery> sutProvider)
     {
         organization.Enabled = false;
+        organization.ExemptFromBillingAutomation = false;
 
         sutProvider.GetDependency<ISubscriberService>()
             .GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
@@ -234,6 +237,7 @@ public class GetOrganizationWarningsQueryTests
         SutProvider<GetOrganizationWarningsQuery> sutProvider)
     {
         organization.Enabled = false;
+        organization.ExemptFromBillingAutomation = false;
 
         sutProvider.GetDependency<ISubscriberService>()
             .GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
@@ -260,6 +264,8 @@ public class GetOrganizationWarningsQueryTests
         Organization organization,
         SutProvider<GetOrganizationWarningsQuery> sutProvider)
     {
+        organization.ExemptFromBillingAutomation = false;
+
         var now = DateTime.UtcNow;
 
         sutProvider.GetDependency<ISubscriberService>()
@@ -308,6 +314,8 @@ public class GetOrganizationWarningsQueryTests
         Organization organization,
         SutProvider<GetOrganizationWarningsQuery> sutProvider)
     {
+        organization.ExemptFromBillingAutomation = false;
+
         var now = DateTime.UtcNow;
 
         sutProvider.GetDependency<ISubscriberService>()
@@ -353,6 +361,8 @@ public class GetOrganizationWarningsQueryTests
         Organization organization,
         SutProvider<GetOrganizationWarningsQuery> sutProvider)
     {
+        organization.ExemptFromBillingAutomation = false;
+
         var now = DateTime.UtcNow;
 
         const string subscriptionId = "subscription_id";
@@ -821,5 +831,75 @@ public class GetOrganizationWarningsQueryTests
         var response = await sutProvider.Sut.Run(organization);
 
         Assert.Null(response.TaxId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_ExemptFromBillingAutomation_NoInactiveSubscriptionWarning(
+        Organization organization,
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
+    {
+        organization.Enabled = false;
+        organization.ExemptFromBillingAutomation = true;
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.SequenceEqual(_requiredExpansions)
+            ))
+            .Returns(new Subscription
+            {
+                Customer = new Customer(),
+                Status = SubscriptionStatus.Unpaid
+            });
+
+        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
+
+        var response = await sutProvider.Sut.Run(organization);
+
+        Assert.Null(response.InactiveSubscription);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_ExemptFromBillingAutomation_NoResellerRenewalWarning(
+        Organization organization,
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
+    {
+        organization.ExemptFromBillingAutomation = true;
+
+        var now = DateTime.UtcNow;
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.SequenceEqual(_requiredExpansions)
+            ))
+            .Returns(new Subscription
+            {
+                CollectionMethod = CollectionMethod.SendInvoice,
+                Customer = new Customer(),
+                Status = SubscriptionStatus.Active,
+                Items = new StripeList<SubscriptionItem>
+                {
+                    Data =
+                    [
+                        new SubscriptionItem
+                        {
+                            CurrentPeriodEnd = now.AddDays(10)
+                        }
+                    ]
+                },
+                TestClock = new TestClock
+                {
+                    FrozenTime = now
+                }
+            });
+
+        sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id)
+            .Returns(new Provider
+            {
+                Type = ProviderType.Reseller
+            });
+
+        var response = await sutProvider.Sut.Run(organization);
+
+        Assert.Null(response.ResellerRenewal);
     }
 }

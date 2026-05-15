@@ -35,6 +35,10 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         services.AddSingleton<ISeedReader>(reader);
         services.AddSingleton(new SeederSettings(password, effectiveKdf));
         services.AddSingleton(deps.Db);
+        if (deps.Progress is not null)
+        {
+            services.AddSingleton(deps.Progress);
+        }
 
         PresetLoader.RegisterRecipe(presetName, reader, services);
 
@@ -50,6 +54,10 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
         services.AddSingleton(new SeederSettings(options.Password, options.KdfIterations));
+        if (deps.Progress is not null)
+        {
+            services.AddSingleton(deps.Progress);
+        }
 
         var recipeName = "from-options";
         var builder = services.AddRecipe(recipeName);
@@ -105,6 +113,10 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
         services.AddSingleton(new SeederSettings(options.Password, options.KdfIterations));
+        if (deps.Progress is not null)
+        {
+            services.AddSingleton(deps.Progress);
+        }
 
         var recipeName = "individual-from-options";
         var builder = services.AddRecipe(recipeName);
