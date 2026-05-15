@@ -45,25 +45,12 @@ All configuration lives in `appsettings.Development.json`(see [Security](#securi
 
 ### Service Ports
 
-Each service's `BasePort` must match the port defined in its own `Properties/launchSettings.json`.
-The defaults are:
-
-| Service | BasePort |
-|---|---|
-| `admin` | `62911` |
-| `api` | `4000` |
-| `billing` | `44519` |
-| `identity` | `33656` |
-| `notifications` | `61840` |
-
-Set them via user secrets (run from the `AppHost` directory):
+Each service's `BasePort` is pre-filled in `appsettings.Development.json` to match the port
+defined in each service's own `Properties/launchSettings.json`. No action is needed unless a port
+conflicts with something else on your machine — in that case override it via user secrets:
 
 ```bash
-dotnet user-secrets set "Services:admin:BasePort" "62911"
-dotnet user-secrets set "Services:api:BasePort" "4000"
-dotnet user-secrets set "Services:billing:BasePort" "44519"
-dotnet user-secrets set "Services:identity:BasePort" "33656"
-dotnet user-secrets set "Services:notifications:BasePort" "61840"
+dotnet user-secrets set "Services:api:BasePort" "4001"
 ```
 
 ### Database Password
@@ -74,25 +61,25 @@ dotnet user-secrets set "Database:Password" "<your-sa-password>"
 
 ### Full Configuration Reference
 
-| Key | Default | Description |
-|---|---|---|
-| `SelfHost` | `false` | Switch to self-hosted mode (see [Self-Hosted Mode](#self-hosted-mode)) |
-| `ClientsPath` | `../../clients/apps` | Path to the `clients` repo's `apps/` directory (used by the Node.js plugin) |
-| `WorkingDirectory` | `../dev` | Directory where dev scripts are resolved |
-| `Services:<name>:BasePort` | _(empty)_ | HTTP port for each service |
-| `Database:Image` | `mssql/server:2022-latest` | Docker image for SQL Server |
-| `Database:Port` | `1433` | Host port mapped to the SQL Server container |
-| `Database:Password` | _(empty)_ | SA password for the SQL Server container |
-| `Database:SelfHostPassword` | _(empty)_ | SA password used in self-hosted mode |
-| `Scripts:DbMigration` | `migrate.ps1` | Migration script filename (relative to `WorkingDirectory`) |
-| `Scripts:AzuriteSetup` | `setup_azurite.ps1` | Azurite setup script filename |
-| `Scripts:SecretsSetup` | `setup_secrets.ps1` | Secrets setup script filename |
-| `MailCatcher:Image` | `sj26/mailcatcher:latest` | Docker image for MailCatcher |
-| `MailCatcher:SmtpPort` | `10250` | Host SMTP port |
-| `MailCatcher:WebPort` | `1080` | MailCatcher web UI port |
-| `NgrokAuthToken` | _(empty)_ | ngrok auth token (used only when ngrok plugin is enabled) |
-| `WebFrontend:Port` | `8080` | Web frontend port (used only when Node.js plugin is enabled) |
-| `WebFrontend:Url` | `https://bitwarden.test:8080` | Web frontend URL shown in the dashboard |
+| Key                         | Default                            | Description                                                                          |
+|-----------------------------|------------------------------------|--------------------------------------------------------------------------------------|
+| `SelfHost`                  | `false`                            | Switch to self-hosted mode (see [Self-Hosted Mode](#self-hosted-mode))               |
+| `ClientsPath`               | `../../clients/apps`               | Path to the `clients` repo's `apps/` directory (used by the Node.js plugin)          |
+| `WorkingDirectory`          | `../dev`                           | Directory where dev scripts are resolved                                             |
+| `Services:<name>:BasePort`  | see `appsettings.Development.json` | HTTP port for each service; pre-filled to match each service's `launchSettings.json` |
+| `Database:Image`            | `mssql/server:2022-latest`         | Docker image for SQL Server                                                          |
+| `Database:Port`             | `1433`                             | Host port mapped to the SQL Server container                                         |
+| `Database:Password`         | _(empty)_                          | SA password for the SQL Server container                                             |
+| `Database:SelfHostPassword` | _(empty)_                          | SA password used in self-hosted mode                                                 |
+| `Scripts:DbMigration`       | `migrate.ps1`                      | Migration script filename (relative to `WorkingDirectory`)                           |
+| `Scripts:AzuriteSetup`      | `setup_azurite.ps1`                | Azurite setup script filename                                                        |
+| `Scripts:SecretsSetup`      | `setup_secrets.ps1`                | Secrets setup script filename                                                        |
+| `MailCatcher:Image`         | `sj26/mailcatcher:latest`          | Docker image for MailCatcher                                                         |
+| `MailCatcher:SmtpPort`      | `10250`                            | Host SMTP port                                                                       |
+| `MailCatcher:WebPort`       | `1080`                             | MailCatcher web UI port                                                              |
+| `NgrokAuthToken`            | _(empty)_                          | ngrok auth token (used only when ngrok plugin is enabled)                            |
+| `WebFrontend:Port`          | `8080`                             | Web frontend port (used only when Node.js plugin is enabled)                         |
+| `WebFrontend:Url`           | `https://bitwarden.test:8080`      | Web frontend URL shown in the dashboard                                              |
 
 ## Optional Features
 
