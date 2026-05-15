@@ -242,6 +242,15 @@ public class RestartSubscriptionCommandTests
             Metadata = new Dictionary<string, string> { ["organizationId"] = organizationId.ToString() }
         };
 
+        var customer = new Customer
+        {
+            Id = "cus_123",
+            InvoiceSettings = new CustomerInvoiceSettings
+            {
+                DefaultPaymentMethodId = "pm_test123"
+            }
+        };
+
         var newSubscription = new Subscription
         {
             Id = "sub_new",
@@ -252,6 +261,7 @@ public class RestartSubscriptionCommandTests
         };
 
         _subscriberService.GetSubscription(organization).Returns(existingSubscription);
+        _subscriberService.GetCustomer(organization).Returns(customer);
         _pricingClient.ListPlans().Returns([plan]);
         _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
 
@@ -263,6 +273,7 @@ public class RestartSubscriptionCommandTests
             options.AutomaticTax.Enabled == true &&
             options.CollectionMethod == CollectionMethod.ChargeAutomatically &&
             options.Customer == "cus_123" &&
+            options.DefaultPaymentMethod == "pm_test123" &&
             options.Items.Count == 1 &&
             options.Items[0].Price == plan.PasswordManager.StripeSeatPlanId &&
             options.Items[0].Quantity == 10 &&
@@ -306,6 +317,15 @@ public class RestartSubscriptionCommandTests
             Metadata = new Dictionary<string, string> { ["organizationId"] = organizationId.ToString() }
         };
 
+        var customer = new Customer
+        {
+            Id = "cus_456",
+            InvoiceSettings = new CustomerInvoiceSettings
+            {
+                DefaultPaymentMethodId = "pm_456"
+            }
+        };
+
         var newSubscription = new Subscription
         {
             Id = "sub_new_2",
@@ -316,6 +336,7 @@ public class RestartSubscriptionCommandTests
         };
 
         _subscriberService.GetSubscription(organization).Returns(existingSubscription);
+        _subscriberService.GetCustomer(organization).Returns(customer);
         _pricingClient.ListPlans().Returns([plan]);
         _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
 
@@ -324,6 +345,7 @@ public class RestartSubscriptionCommandTests
         Assert.True(result.IsT0);
 
         await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(options =>
+            options.DefaultPaymentMethod == "pm_456" &&
             options.Items.Count == 2 &&
             options.Items[0].Price == plan.PasswordManager.StripeSeatPlanId &&
             options.Items[0].Quantity == 5 &&
@@ -375,7 +397,17 @@ public class RestartSubscriptionCommandTests
             }
         };
 
+        var customer = new Customer
+        {
+            Id = "cus_789",
+            InvoiceSettings = new CustomerInvoiceSettings
+            {
+                DefaultPaymentMethodId = "pm_789"
+            }
+        };
+
         _subscriberService.GetSubscription(organization).Returns(existingSubscription);
+        _subscriberService.GetCustomer(organization).Returns(customer);
         _pricingClient.ListPlans().Returns([plan]);
         _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
 
@@ -384,6 +416,7 @@ public class RestartSubscriptionCommandTests
         Assert.True(result.IsT0);
 
         await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(options =>
+            options.DefaultPaymentMethod == "pm_789" &&
             options.Items.Count == 4 &&
             options.Items[0].Price == plan.PasswordManager.StripeSeatPlanId &&
             options.Items[0].Quantity == 15 &&
@@ -438,7 +471,17 @@ public class RestartSubscriptionCommandTests
             }
         };
 
+        var customer = new Customer
+        {
+            Id = "cus_old",
+            InvoiceSettings = new CustomerInvoiceSettings
+            {
+                DefaultPaymentMethodId = "pm_old"
+            }
+        };
+
         _subscriberService.GetSubscription(organization).Returns(existingSubscription);
+        _subscriberService.GetCustomer(organization).Returns(customer);
         _pricingClient.ListPlans().Returns([oldPlan, newPlan]);
         _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
 
@@ -447,6 +490,7 @@ public class RestartSubscriptionCommandTests
         Assert.True(result.IsT0);
 
         await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(options =>
+            options.DefaultPaymentMethod == "pm_old" &&
             options.Items.Count == 2 &&
             options.Items[0].Price == newPlan.PasswordManager.StripeSeatPlanId &&
             options.Items[0].Quantity == 20 &&
@@ -514,7 +558,17 @@ public class RestartSubscriptionCommandTests
             }
         };
 
+        var customer = new Customer
+        {
+            Id = "cus_complex",
+            InvoiceSettings = new CustomerInvoiceSettings
+            {
+                DefaultPaymentMethodId = "pm_complex"
+            }
+        };
+
         _subscriberService.GetSubscription(organization).Returns(existingSubscription);
+        _subscriberService.GetCustomer(organization).Returns(customer);
         _pricingClient.ListPlans().Returns([plan]);
         _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
 
@@ -523,6 +577,7 @@ public class RestartSubscriptionCommandTests
         Assert.True(result.IsT0);
 
         await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(options =>
+            options.DefaultPaymentMethod == "pm_complex" &&
             options.Items.Count == 3 &&
             options.Items[0].Price == plan.PasswordManager.StripeSeatPlanId &&
             options.Items[0].Quantity == 12 &&
@@ -574,7 +629,17 @@ public class RestartSubscriptionCommandTests
             }
         };
 
+        var customer = new Customer
+        {
+            Id = "cus_sm",
+            InvoiceSettings = new CustomerInvoiceSettings
+            {
+                DefaultPaymentMethodId = "pm_sm"
+            }
+        };
+
         _subscriberService.GetSubscription(organization).Returns(existingSubscription);
+        _subscriberService.GetCustomer(organization).Returns(customer);
         _pricingClient.ListPlans().Returns([plan]);
         _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
 
@@ -583,6 +648,7 @@ public class RestartSubscriptionCommandTests
         Assert.True(result.IsT0);
 
         await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(options =>
+            options.DefaultPaymentMethod == "pm_sm" &&
             options.Items.Count == 2 &&
             options.Items[0].Price == plan.PasswordManager.StripeSeatPlanId &&
             options.Items[0].Quantity == 8 &&
