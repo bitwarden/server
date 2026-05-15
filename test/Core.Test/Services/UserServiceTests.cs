@@ -692,6 +692,22 @@ public class UserServiceTests
             .Received(1).DeleteFilesForUserAsync(user.Id);
         Assert.Equal(new[] { "file", "db" }, callOrder);
     }
+
+    // PM-37165: locks in the legacy path's non-write of LastApiKeyRotationDate. Once the
+    // PM37165_RotateUserApiKeyCommand flag is cleaned up and this method is deleted, this
+    // test goes with it.
+    [Theory, BitAutoData]
+    public async Task RotateApiKeyAsync_LegacyPath_DoesNotSetLastApiKeyRotationDate(
+        SutProvider<UserService> sutProvider, User user)
+    {
+        user.LastApiKeyRotationDate = null;
+
+#pragma warning disable CS0618 // intentionally exercising the obsolete legacy path
+        await sutProvider.Sut.RotateApiKeyAsync(user);
+#pragma warning restore CS0618
+
+        Assert.Null(user.LastApiKeyRotationDate);
+    }
 }
 
 public static class UserServiceSutProviderExtensions

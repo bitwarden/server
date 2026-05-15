@@ -14,6 +14,7 @@ using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Auth.UserFeatures.UserApiKey.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -48,6 +49,7 @@ public class AccountsController : Controller
     private readonly ITwoFactorEmailService _twoFactorEmailService;
     private readonly IChangeKdfCommand _changeKdfCommand;
     private readonly IUserRepository _userRepository;
+    private readonly IRotateUserApiKeyCommand _rotateUserApiKeyCommand;
 
     public AccountsController(
         IOrganizationService organizationService,
@@ -64,7 +66,8 @@ public class AccountsController : Controller
         IUserAccountKeysQuery userAccountKeysQuery,
         ITwoFactorEmailService twoFactorEmailService,
         IChangeKdfCommand changeKdfCommand,
-        IUserRepository userRepository
+        IUserRepository userRepository,
+        IRotateUserApiKeyCommand rotateUserApiKeyCommand
         )
     {
         _organizationService = organizationService;
@@ -82,6 +85,7 @@ public class AccountsController : Controller
         _twoFactorEmailService = twoFactorEmailService;
         _changeKdfCommand = changeKdfCommand;
         _userRepository = userRepository;
+        _rotateUserApiKeyCommand = rotateUserApiKeyCommand;
     }
 
 
@@ -632,7 +636,18 @@ public class AccountsController : Controller
             throw new BadRequestException(string.Empty, "User verification failed.");
         }
 
-        await _userService.RotateApiKeyAsync(user);
+        if (_featureService.IsEnabled(FeatureFlagKeys.PM37165_RotateUserApiKeyCommand))
+        {
+            await _rotateUserApiKeyCommand.RotateApiKeyAsync(user);
+        }
+        else
+        {
+            // legacy path while PM37165_RotateUserApiKeyCommand rolls out
+            // so temporarily disable the obsolete warning for RotateApiKeyAsync
+#pragma warning disable CS0618 
+            await _userService.RotateApiKeyAsync(user);
+#pragma warning restore CS0618
+        }
         var response = new ApiKeyResponseModel(user);
         return response;
     }

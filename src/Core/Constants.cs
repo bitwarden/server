@@ -190,6 +190,7 @@ public static class FeatureFlagKeys
     public const string PM32413_MultiClientPasswordManagement = "pm-32413-multi-client-password-management";
     public const string DevicesLastActivityDate = "pm-4516-devices-add-last-activity-date";
     public const string PM34210_DesktopAddDevices = "pm-34210-desktop-add-devices";
+    public const string PM37165_RotateUserApiKeyCommand = "pm-37165-rotate-user-api-key-command";
 
     /* Autofill Team */
     public const string NotificationRefresh = "notification-refresh";
@@ -279,7 +280,6 @@ public static class FeatureFlagKeys
     public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
     public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
     public const string PM23904_RiskInsightsForPremium = "pm-23904-risk-insights-for-premium";
-    public const string PM25083_AutofillConfirmFromSearch = "pm-25083-autofill-confirm-from-search";
     public const string VaultLoadingSkeletons = "pm-25081-vault-skeleton-loaders";
     public const string BrowserPremiumSpotlight = "pm-23384-browser-premium-spotlight";
     public const string MigrateMyVaultToMyItems = "pm-20558-migrate-myvault-to-myitems";
@@ -295,6 +295,7 @@ public static class FeatureFlagKeys
     public const string PM34500_StrictCipherDecryption = "pm-34500-strict-cipher-decryption";
     public const string PM28091_AddCopyAndQuickLaunchActions = "pm-28091-add-copy-and-quick-launch-actions";
     public const string PM28192_CipherAttachmentOps = "pm-28192-cipher-attachment-ops-to-sdk";
+    public const string PM32016_RemoveAtRiskCallouts = "pm-32016-remove-at-risk-callouts";
 
     /* Secrets Manager Team */
     public const string SecretsVersioning = "sm-1587-secrets-versioning";

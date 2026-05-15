@@ -15,6 +15,7 @@ namespace Bit.Seeder.Steps;
 internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false) : IStep
 {
     private const int RsaPoolSize = 100;
+
     public void Execute(SeederContext context)
     {
         var org = context.RequireOrganization();
@@ -29,6 +30,7 @@ internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false
         var kdfIterations = context.GetKdfIterations();
         var mangler = context.GetMangler();
         var passwordHasher = context.GetPasswordHasher();
+        var progress = context.GetProgress();
 
         // Pre-compute mangled emails and statuses (ManglerService is not thread-safe)
         var mangledEmails = new string[count];
@@ -41,20 +43,43 @@ internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false
 
         var results = new (User User, OrganizationUser OrgUser, UserKeys Keys, bool IsConfirmed)[count];
 
-        Parallel.For(0, count, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, i =>
-        {
-            var userKeys = RustSdkService.GenerateUserKeys(mangledEmails[i], password, kdfIterations, (uint)(i % RsaPoolSize));
-            var (user, _) = UserSeeder.Create(mangledEmails[i], passwordHasher, mangler, keys: userKeys, password: password, kdfIterations: kdfIterations);
+        progress?.Report(new PhaseStarted(SeederPhases.CreatingUsers, count));
+        var batchSize = Math.Max(1, count / 100);
 
-            var memberOrgKey = StatusRequiresOrgKey(statuses[i])
-                ? RustSdkService.GenerateUserOrganizationKey(user.PublicKey!, orgKey)
-                : null;
+        Parallel.For(
+            0,
+            count,
+            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+            localInit: () => 0,
+            body: (i, _, localTicked) =>
+            {
+                var userKeys = RustSdkService.GenerateUserKeys(mangledEmails[i], password, kdfIterations, (uint)(i % RsaPoolSize));
+                var (user, _) = UserSeeder.Create(mangledEmails[i], passwordHasher, mangler, keys: userKeys, password: password, kdfIterations: kdfIterations);
 
-            var orgUser = org.CreateOrganizationUserWithKey(
-                user, OrganizationUserType.User, statuses[i], memberOrgKey);
+                var memberOrgKey = StatusRequiresOrgKey(statuses[i])
+                    ? RustSdkService.GenerateUserOrganizationKey(user.PublicKey!, orgKey)
+                    : null;
 
-            results[i] = (user, orgUser, userKeys, statuses[i] == OrganizationUserStatusType.Confirmed);
-        });
+                var orgUser = org.CreateOrganizationUserWithKey(
+                    user, OrganizationUserType.User, statuses[i], memberOrgKey);
+
+                results[i] = (user, orgUser, userKeys, statuses[i] == OrganizationUserStatusType.Confirmed);
+
+                localTicked++;
+                if (progress is not null && localTicked >= batchSize)
+                {
+                    progress.Report(new PhaseAdvanced(SeederPhases.CreatingUsers, localTicked));
+                    localTicked = 0;
+                }
+                return localTicked;
+            },
+            localFinally: localTicked =>
+            {
+                if (progress is not null && localTicked > 0)
+                {
+                    progress.Report(new PhaseAdvanced(SeederPhases.CreatingUsers, localTicked));
+                }
+            });
 
         var users = new List<User>(count);
         var organizationUsers = new List<OrganizationUser>(count);
@@ -78,6 +103,8 @@ internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false
         context.OrganizationUsers.AddRange(organizationUsers);
         context.Registry.HardenedOrgUserIds.AddRange(hardenedOrgUserIds);
         context.Registry.UserDigests.AddRange(userDigests);
+
+        progress?.Report(new PhaseCompleted(SeederPhases.CreatingUsers));
     }
 
     private static bool StatusRequiresOrgKey(OrganizationUserStatusType status) =>
