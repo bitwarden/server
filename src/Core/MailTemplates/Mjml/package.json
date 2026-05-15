@@ -22,7 +22,7 @@
     "prettier": "prettier --cache --write ."
   },
   "dependencies": {
-    "mjml": "4.15.3",
+    "mjml": "4.18.0",
     "mjml-core": "4.15.3"
   },
   "devDependencies": {
