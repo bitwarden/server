@@ -1,4 +1,8 @@
-﻿namespace Bit.AppHost;
+﻿using Aspire.Hosting.Azure;
+using Azure.Provisioning;
+using Azure.Provisioning.Storage;
+
+namespace Bit.AppHost;
 
 public static class BuilderExtensions
 {
