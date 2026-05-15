@@ -161,9 +161,18 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         {
             var dbContext = GetDatabaseContext(scope);
             var folderEntities = Mapper.Map<List<Folder>>(folders);
-            await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, folderEntities);
             var cipherEntities = Mapper.Map<List<Cipher>>(ciphers);
-            await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, cipherEntities);
+            // SQLite does not support LinqToDB BulkCopy; use EF Core directly instead
+            if (dbContext.Database.IsSqlite())
+            {
+                await dbContext.AddRangeAsync(folderEntities);
+                await dbContext.AddRangeAsync(cipherEntities);
+            }
+            else
+            {
+                await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, folderEntities);
+                await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, cipherEntities);
+            }
             await dbContext.UserBumpAccountRevisionDateAsync(userId);
 
             await dbContext.SaveChangesAsync();
@@ -183,24 +192,44 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         {
             var dbContext = GetDatabaseContext(scope);
             var cipherEntities = Mapper.Map<List<Cipher>>(ciphers);
-            await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, cipherEntities);
-
-            if (collections.Any())
+            // SQLite does not support LinqToDB BulkCopy; use EF Core directly instead
+            if (dbContext.Database.IsSqlite())
             {
-                var collectionEntities = Mapper.Map<List<Collection>>(collections);
-                await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, collectionEntities);
+                await dbContext.AddRangeAsync(cipherEntities);
+                if (collections.Any())
+                {
+                    await dbContext.AddRangeAsync(Mapper.Map<List<Collection>>(collections));
+                }
+                if (collectionCiphers.Any())
+                {
+                    await dbContext.AddRangeAsync(Mapper.Map<List<CollectionCipher>>(collectionCiphers));
+                }
+                if (collectionUsers.Any())
+                {
+                    await dbContext.AddRangeAsync(Mapper.Map<List<CollectionUser>>(collectionUsers));
+                }
             }
-
-            if (collectionCiphers.Any())
+            else
             {
-                var collectionCipherEntities = Mapper.Map<List<CollectionCipher>>(collectionCiphers);
-                await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, collectionCipherEntities);
-            }
+                await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, cipherEntities);
 
-            if (collectionUsers.Any())
-            {
-                var collectionUserEntities = Mapper.Map<List<CollectionUser>>(collectionUsers);
-                await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, collectionUserEntities);
+                if (collections.Any())
+                {
+                    var collectionEntities = Mapper.Map<List<Collection>>(collections);
+                    await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, collectionEntities);
+                }
+
+                if (collectionCiphers.Any())
+                {
+                    var collectionCipherEntities = Mapper.Map<List<CollectionCipher>>(collectionCiphers);
+                    await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, collectionCipherEntities);
+                }
+
+                if (collectionUsers.Any())
+                {
+                    var collectionUserEntities = Mapper.Map<List<CollectionUser>>(collectionUsers);
+                    await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, collectionUserEntities);
+                }
             }
 
             await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(ciphers.First().OrganizationId.Value);
