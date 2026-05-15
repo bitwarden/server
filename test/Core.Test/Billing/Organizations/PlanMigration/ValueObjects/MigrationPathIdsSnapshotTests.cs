@@ -1,3 +1,4 @@
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Xunit;
@@ -46,6 +47,23 @@ public class MigrationPathIdsSnapshotTests
             MigrationPaths.Enterprise2020AnnualToCurrent.Id);
         Assert.Equal(MigrationPathId.Enterprise2020MonthlyToCurrent,
             MigrationPaths.Enterprise2020MonthlyToCurrent.Id);
+    }
+
+    [Fact]
+    public void MigrationPaths_RegistryEntries_HaveImmutableFromAndToPlans()
+    {
+        // Each registered byte means a specific FromPlan -> ToPlan transition forever.
+        // Locking byte values (above) without locking the FromPlan/ToPlan they map to
+        // would let a refactor silently mis-route existing cohort rows. Adding a new
+        // path? Append a new pair of assertions below; do not change existing ones.
+        Assert.Equal(PlanType.EnterpriseAnnually2020,
+            MigrationPaths.Enterprise2020AnnualToCurrent.FromPlan);
+        Assert.Equal(PlanType.EnterpriseAnnually,
+            MigrationPaths.Enterprise2020AnnualToCurrent.ToPlan);
+        Assert.Equal(PlanType.EnterpriseMonthly2020,
+            MigrationPaths.Enterprise2020MonthlyToCurrent.FromPlan);
+        Assert.Equal(PlanType.EnterpriseMonthly,
+            MigrationPaths.Enterprise2020MonthlyToCurrent.ToPlan);
     }
 
     [Fact]
