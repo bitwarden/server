@@ -34,12 +34,15 @@ public class StripePaymentServiceTests
 
         var customerDiscount = new Discount
         {
-            Source = new DiscountSource { Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
-                PercentOff = 20m,
-                AmountOff = 1400
-            } },
+                Coupon = new Coupon
+                {
+                    Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+                    PercentOff = 20m,
+                    AmountOff = 1400
+                }
+            },
             End = null
         };
 
@@ -85,12 +88,15 @@ public class StripePaymentServiceTests
 
         var subscriptionDiscount = new Discount
         {
-            Source = new DiscountSource { Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
-                PercentOff = 15m,
-                AmountOff = null
-            } },
+                Coupon = new Coupon
+                {
+                    Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+                    PercentOff = 15m,
+                    AmountOff = null
+                }
+            },
             End = null
         };
 
@@ -135,21 +141,27 @@ public class StripePaymentServiceTests
 
         var customerDiscount = new Discount
         {
-            Source = new DiscountSource { Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
-                PercentOff = 25m
-            } },
+                Coupon = new Coupon
+                {
+                    Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+                    PercentOff = 25m
+                }
+            },
             End = null
         };
 
         var subscriptionDiscount = new Discount
         {
-            Source = new DiscountSource { Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = "different-coupon-id",
-                PercentOff = 10m
-            } },
+                Coupon = new Coupon
+                {
+                    Id = "different-coupon-id",
+                    PercentOff = 10m
+                }
+            },
             End = null
         };
 
@@ -231,21 +243,27 @@ public class StripePaymentServiceTests
 
         var firstDiscount = new Discount
         {
-            Source = new DiscountSource { Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = "coupon-10-percent",
-                PercentOff = 10m
-            } },
+                Coupon = new Coupon
+                {
+                    Id = "coupon-10-percent",
+                    PercentOff = 10m
+                }
+            },
             End = null
         };
 
         var secondDiscount = new Discount
         {
-            Source = new DiscountSource { Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = "coupon-20-percent",
-                PercentOff = 20m
-            } },
+                Coupon = new Coupon
+                {
+                    Id = "coupon-20-percent",
+                    PercentOff = 20m
+                }
+            },
             End = null
         };
 

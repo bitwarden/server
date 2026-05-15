@@ -1,4 +1,4 @@
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
@@ -197,10 +197,10 @@ public class PreviewOrganizationTaxCommand(
                 }
 
                 options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
-            {
-                BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
-                Items = items
-            };
+                {
+                    BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
+                    Items = items
+                };
 
                 var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
                 return GetAmounts(invoice);
@@ -295,10 +295,10 @@ public class PreviewOrganizationTaxCommand(
                 }
 
                 options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
-            {
-                BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
-                Items = items
-            };
+                {
+                    BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
+                    Items = items
+                };
 
                 var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
                 return GetAmounts(invoice);
