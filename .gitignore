@@ -74,6 +74,9 @@ ipch/
 *.sdf
 *.cachefile
 
+# Roslyn / C# language server cache
+*.lscache
+
 # Visual Studio profiler
 *.psess
 *.vsp
