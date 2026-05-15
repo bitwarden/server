@@ -1464,6 +1464,10 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
+                    b.Property<string>("ClientVersion")
+                        .HasMaxLength(43)
+                        .HasColumnType("character varying(43)");
+
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 

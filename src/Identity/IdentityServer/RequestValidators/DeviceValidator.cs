@@ -44,8 +44,10 @@ public class DeviceValidator(
 
     public async Task<bool> ValidateRequestDeviceAsync(ValidatedTokenRequest request, CustomValidatorRequestContext context)
     {
-        // Parse device from request and return early if no device information is provided
-        var requestDevice = context.Device ?? GetDeviceFromRequest(request);
+        // Parse device from request and return early if no device information is provided.
+        // Pass through the client version from CurrentContext so a brand-new device row gets
+        // ClientVersion populated at Device_Create time (no temporary-NULL window).
+        var requestDevice = context.Device ?? GetDeviceFromRequest(request, _currentContext.ClientVersion?.ToString());
         // If context.Device and request device information are null then return error
         // backwards compatibility -- check if user is null
         // PM-13340: Null user check happens in the HandleNewDeviceVerificationAsync method and can be removed from here
@@ -221,7 +223,7 @@ public class DeviceValidator(
         return await _deviceRepository.GetByIdentifierAsync(device.Identifier, user.Id);
     }
 
-    public static Device GetDeviceFromRequest(ValidatedRequest request)
+    public static Device GetDeviceFromRequest(ValidatedRequest request, string clientVersion)
     {
         var deviceIdentifier = request.Raw["DeviceIdentifier"]?.ToString();
         var requestDeviceType = request.Raw["DeviceType"]?.ToString();
@@ -241,7 +243,8 @@ public class DeviceValidator(
             Identifier = deviceIdentifier,
             Name = deviceName,
             Type = parsedDeviceType,
-            PushToken = string.IsNullOrWhiteSpace(devicePushToken) ? null : devicePushToken
+            PushToken = string.IsNullOrWhiteSpace(devicePushToken) ? null : devicePushToken,
+            ClientVersion = clientVersion,
         };
     }
 

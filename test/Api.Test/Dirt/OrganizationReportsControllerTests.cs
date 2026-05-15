@@ -11,7 +11,6 @@ using Bit.Core.Dirt.Reports.Services;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
@@ -114,28 +113,29 @@ public class OrganizationReportControllerTests
             .GetLatestOrganizationReportAsync(Arg.Any<Guid>());
     }
 
-    [Theory, BitAutoData]
-    public async Task GetLatestOrganizationReportAsync_NoUseRiskInsights_ThrowsBadRequestException(
-        SutProvider<OrganizationReportsController> sutProvider,
-        Guid orgId)
-    {
-        // Arrange
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(true);
-
-        sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilityAsync(orgId)
-            .Returns(new OrganizationAbility { UseRiskInsights = false });
-
-        // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.GetLatestOrganizationReportAsync(orgId));
-
-        await sutProvider.GetDependency<IGetOrganizationReportQuery>()
-            .DidNotReceive()
-            .GetLatestOrganizationReportAsync(Arg.Any<Guid>());
-    }
+    // TODO: Re-enable in PM-37469 when UseRiskInsights access control is restored
+    // [Theory, BitAutoData]
+    // public async Task GetLatestOrganizationReportAsync_NoUseRiskInsights_ThrowsBadRequestException(
+    //     SutProvider<OrganizationReportsController> sutProvider,
+    //     Guid orgId)
+    // {
+    //     // Arrange
+    //     sutProvider.GetDependency<ICurrentContext>()
+    //         .AccessReports(orgId)
+    //         .Returns(true);
+    //
+    //     sutProvider.GetDependency<IApplicationCacheService>()
+    //         .GetOrganizationAbilityAsync(orgId)
+    //         .Returns(new OrganizationAbility { UseRiskInsights = false });
+    //
+    //     // Act & Assert
+    //     await Assert.ThrowsAsync<BadRequestException>(() =>
+    //         sutProvider.Sut.GetLatestOrganizationReportAsync(orgId));
+    //
+    //     await sutProvider.GetDependency<IGetOrganizationReportQuery>()
+    //         .DidNotReceive()
+    //         .GetLatestOrganizationReportAsync(Arg.Any<Guid>());
+    // }
 
     // CreateOrganizationReportAsync - V1 (flag off)
 
@@ -1411,9 +1411,10 @@ public class OrganizationReportControllerTests
             .AccessReports(orgId)
             .Returns(true);
 
-        sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilityAsync(orgId)
-            .Returns(new OrganizationAbility { UseRiskInsights = true });
+        // TODO: Re-enable in PM-37469 when UseRiskInsights access control is restored
+        // sutProvider.GetDependency<IApplicationCacheService>()
+        //     .GetOrganizationAbilityAsync(orgId)
+        //     .Returns(new OrganizationAbility { UseRiskInsights = true });
     }
 
     private static void SetupV2Authorization(
@@ -1428,8 +1429,9 @@ public class OrganizationReportControllerTests
             .AccessReports(orgId)
             .Returns(true);
 
-        sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilityAsync(orgId)
-            .Returns(new OrganizationAbility { UseRiskInsights = true });
+        // TODO: Re-enable in PM-37469 when UseRiskInsights access control is restored
+        // sutProvider.GetDependency<IApplicationCacheService>()
+        //     .GetOrganizationAbilityAsync(orgId)
+        //     .Returns(new OrganizationAbility { UseRiskInsights = true });
     }
 }

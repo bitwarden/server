@@ -132,7 +132,7 @@ public class DeviceValidatorTests
         request.Raw["DeviceName"] = deviceName;
 
         // Act
-        var result = DeviceValidator.GetDeviceFromRequest(request);
+        var result = DeviceValidator.GetDeviceFromRequest(request, clientVersion: null);
 
         // Assert
         Assert.Null(result);
@@ -146,7 +146,7 @@ public class DeviceValidatorTests
         AddValidDeviceToRequest(request);
 
         // Act
-        var result = DeviceValidator.GetDeviceFromRequest(request);
+        var result = DeviceValidator.GetDeviceFromRequest(request, clientVersion: null);
 
         // Assert
         Assert.NotNull(result);
@@ -154,6 +154,36 @@ public class DeviceValidatorTests
         Assert.Equal("DeviceName", result.Name);
         Assert.Equal(DeviceType.Android, result.Type);
         Assert.Equal("DevicePushToken", result.PushToken);
+    }
+
+    [Theory, BitAutoData]
+    public void GetDeviceFromRequest_PopulatesClientVersionFromParameter(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
+    {
+        // Arrange
+        AddValidDeviceToRequest(request);
+
+        // Act
+        var result = DeviceValidator.GetDeviceFromRequest(request, clientVersion: "2026.5.1");
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("2026.5.1", result.ClientVersion);
+    }
+
+    [Theory, BitAutoData]
+    public void GetDeviceFromRequest_NullClientVersion_LeavesClientVersionNull(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
+    {
+        // Arrange
+        AddValidDeviceToRequest(request);
+
+        // Act
+        var result = DeviceValidator.GetDeviceFromRequest(request, clientVersion: null);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Null(result.ClientVersion);
     }
 
     [Theory, BitAutoData]
