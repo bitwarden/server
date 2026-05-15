@@ -715,6 +715,28 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         return rowCount > 0;
     }
 
+    public async Task<ICollection<Guid>> ConfirmManyOrganizationUsersAsync(
+        IEnumerable<AcceptedOrganizationUserToConfirm> usersToConfirm)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var confirmedIds = await connection.QueryAsync<Guid>(
+            $"[{Schema}].[OrganizationUser_UpdateManySetStatusKey]",
+            new
+            {
+                UsersJson = JsonSerializer.Serialize(usersToConfirm.Select(u => new
+                {
+                    Id = u.OrganizationUserId,
+                    u.UserId,
+                    u.Key,
+                })),
+                RevisionDate = DateTime.UtcNow
+            },
+            commandType: CommandType.StoredProcedure);
+
+        return confirmedIds.ToList();
+    }
+
     public async Task<OrganizationUserUserDetails?> GetDetailsByOrganizationIdUserIdAsync(Guid organizationId, Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -742,5 +764,20 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                 commandType: CommandType.StoredProcedure,
                 transaction: transaction);
         };
+    }
+
+    public async Task<ICollection<OrganizationUser>> GetManyPendingAutoConfirmAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationUser>(
+                "[dbo].[OrganizationUser_ReadByOrganizationIdStatus]",
+                new { OrganizationId = organizationId, Status = (short)OrganizationUserStatusType.Accepted },
+                commandType: CommandType.StoredProcedure);
+
+            return results
+                .Where(u => u.Type == OrganizationUserType.User)
+                .ToList();
+        }
     }
 }

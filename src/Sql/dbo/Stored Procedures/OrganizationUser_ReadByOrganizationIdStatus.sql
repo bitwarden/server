@@ -1,6 +1,6 @@
-﻿CREATE PROCEDURE [dbo].[OrganizationUser_ReadByOrganizationId]
+CREATE PROCEDURE [dbo].[OrganizationUser_ReadByOrganizationIdStatus]
     @OrganizationId UNIQUEIDENTIFIER,
-    @Type TINYINT
+    @Status         TINYINT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -11,5 +11,5 @@ BEGIN
         [dbo].[OrganizationUserView]
     WHERE
         [OrganizationId] = @OrganizationId
-        AND (@Type IS NULL OR [Type] = @Type)
+        AND [Status] = @Status
 END
