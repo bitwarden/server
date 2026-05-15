@@ -108,6 +108,10 @@ public class SendControlsSyncPolicyEvent(
             {
                 await sendRepository.UpdateManyDisabledAsync(disabled, true);
             }
+            if (sendControlsPolicyData.DeletionDays != null)
+            {
+                await sendRepository.UpdateManyDeletionDatesByIdsAsync(sendIdsChunk, sendControlsPolicyData.DeletionDays.GetValueOrDefault(0));
+            }
         }
     }
 
