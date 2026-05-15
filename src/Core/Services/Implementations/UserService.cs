@@ -1089,6 +1089,8 @@ public class UserService : UserManager<User>, IUserService
         await Task.WhenAll(revokeOrgUserTasks);
     }
 
+    // TODO: Remove this method when the PM37165_RotateUserApiKeyCommand feature flag is cleaned up.
+    [Obsolete("Use IRotateUserApiKeyCommand instead. This method will be removed once the PM37165_RotateUserApiKeyCommand feature flag is removed.")]
     public async Task RotateApiKeyAsync(User user)
     {
         user.ApiKey = CoreHelpers.SecureRandomString(30);

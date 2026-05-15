@@ -564,6 +564,49 @@ public class UserRepositoryTests
         Assert.Equal(passwordSalt, createdUser.MasterPasswordSalt);
     }
 
+    [Theory, DatabaseData]
+    public async Task CreateAsync_DefaultsLastApiKeyRotationDateToNull(
+        IUserRepository userRepository)
+    {
+        var user = new User
+        {
+            Name = "Test User",
+            Email = $"create+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        };
+
+        await userRepository.CreateAsync(user);
+
+        var created = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(created);
+        Assert.Null(created.LastApiKeyRotationDate);
+    }
+
+    [Theory, DatabaseData]
+    public async Task ReplaceAsync_SetsLastApiKeyRotationDate(
+        IUserRepository userRepository)
+    {
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Rotate User",
+            Email = $"rotate+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        Assert.Null(user.LastApiKeyRotationDate);
+
+        var rotatedAt = DateTime.UtcNow;
+        user.LastApiKeyRotationDate = rotatedAt;
+        await userRepository.ReplaceAsync(user);
+
+        var updated = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updated);
+        Assert.NotNull(updated.LastApiKeyRotationDate);
+        Assert.Equal(rotatedAt, updated.LastApiKeyRotationDate.Value, TimeSpan.FromMinutes(1));
+    }
+
     /// <summary>
     /// Happy path
     /// </summary>

@@ -7,6 +7,8 @@ using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Implementations;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Auth.UserFeatures.UserApiKey;
+using Bit.Core.Auth.UserFeatures.UserApiKey.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
@@ -33,6 +35,12 @@ public static class UserServiceCollectionExtensions
         services.AddTdeOffboardingPasswordCommands();
         services.AddTwoFactorCommandsQueries();
         services.AddSsoQueries();
+        services.AddUserApiKeyCommands();
+    }
+
+    private static void AddUserApiKeyCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IRotateUserApiKeyCommand, RotateUserApiKeyCommand>();
     }
 
     private static void AddEmergencyAccessCommands(this IServiceCollection services)
