@@ -146,6 +146,8 @@ public class Startup
         // Services
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
+        services.AddPush(globalSettings);
+        services.AddPushRegistration();
         services.AddOptionality();
         services.AddCoreLocalizationServices();
         services.AddBillingOperations();
