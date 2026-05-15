@@ -1,4 +1,4 @@
-﻿using Aspire.Hosting.Azure;
+using Aspire.Hosting.Azure;
 using Azure.Provisioning;
 using Azure.Provisioning.Storage;
 
