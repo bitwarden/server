@@ -53,6 +53,23 @@ public class ChangeEmailCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task ChangeEmailAsync_NewEmailDomainMatchesClaimedDomain_Succeeds(
+        SutProvider<ChangeEmailCommand> sutProvider, User user)
+    {
+        user.Gateway = null;
+        const string newEmail = "user@example.com";
+        StubClaimingOrganization(sutProvider, user, verifiedDomain: "example.com");
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(newEmail)
+            .Returns((User)null);
+
+        await sutProvider.Sut.ChangeEmailAsync(user, newEmail);
+
+        Assert.Equal(newEmail, user.Email);
+        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
+    }
+
+    [Theory, BitAutoData]
     public async Task ChangeEmailAsync_ClaimingOrgIsDisabled_IsIgnoredAndChangeProceeds(
         SutProvider<ChangeEmailCommand> sutProvider, User user, string newEmail)
     {
@@ -166,6 +183,25 @@ public class ChangeEmailCommandTests
 
         await sutProvider.GetDependency<IStripeSyncService>().Received(1)
             .UpdateCustomerEmailAddressAsync("cus_123", user.BillingEmailAddress()!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ChangeEmailAsync_StripeUserWithoutGatewayCustomerId_SkipsSyncAndCompletes(
+        SutProvider<ChangeEmailCommand> sutProvider, User user, string newEmail)
+    {
+        user.Gateway = GatewayType.Stripe;
+        user.GatewayCustomerId = null;
+        StubNoClaimingOrganizations(sutProvider, user);
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(newEmail)
+            .Returns((User)null);
+
+        await sutProvider.Sut.ChangeEmailAsync(user, newEmail);
+
+        Assert.Equal(newEmail, user.Email);
+        await sutProvider.GetDependency<IStripeSyncService>().DidNotReceive()
+            .UpdateCustomerEmailAddressAsync(Arg.Any<string>(), Arg.Any<string>());
+        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
     }
 
     [Theory, BitAutoData]
