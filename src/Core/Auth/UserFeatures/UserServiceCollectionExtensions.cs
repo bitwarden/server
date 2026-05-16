@@ -9,6 +9,7 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Implementations;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserApiKey;
 using Bit.Core.Auth.UserFeatures.UserApiKey.Interfaces;
+using Bit.Core.Auth.UserFeatures.UserEmail;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
@@ -36,6 +37,12 @@ public static class UserServiceCollectionExtensions
         services.AddTwoFactorCommandsQueries();
         services.AddSsoQueries();
         services.AddUserApiKeyCommands();
+        services.AddUserEmailCommands();
+    }
+
+    private static void AddUserEmailCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IChangeEmailCommand, ChangeEmailCommand>();
     }
 
     private static void AddUserApiKeyCommands(this IServiceCollection services)
