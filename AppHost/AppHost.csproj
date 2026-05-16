@@ -1,0 +1,40 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.2.2">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>e0dba0c6-d131-43bd-9143-2260f11a14ad</UserSecretsId>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Aspire AppHost Community Plugin settings">
+    <!-- Disable community plugins by default -->
+    <EnableNgrokCommunityPlugin>false</EnableNgrokCommunityPlugin>
+    <DefineConstants Condition="'$(EnableNgrokCommunityPlugin)' == 'true'">$(DefineConstants);ENABLE_NGROK_COMMUNITY_PLUGIN</DefineConstants>
+    <EnableNodeJsCommunityPlugin>false</EnableNodeJsCommunityPlugin>
+    <DefineConstants Condition="'$(EnableNodeJsCommunityPlugin)' == 'true'">$(DefineConstants);ENABLE_NODEJS_COMMUNITY_PLUGIN</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.3.2" />
+    <PackageReference Include="Aspire.Hosting.Azure.Storage" Version="13.3.2" />
+    <PackageReference Include="Aspire.Hosting.JavaScript" Version="13.3.2" />
+    <PackageReference Include="Aspire.Hosting.SqlServer" Version="13.3.2" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(EnableNgrokCommunityPlugin)' == 'true'">
+    <PackageReference Include="CommunityToolkit.Aspire.Hosting.Ngrok" Version="13.3.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(EnableNodeJsCommunityPlugin)' == 'true'">
+    <PackageReference Include="CommunityToolkit.Aspire.Hosting.NodeJS.Extensions" Version="9.9.0"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\src\Admin\Admin.csproj"/>
+    <ProjectReference Include="..\src\Api\Api.csproj"/>
+    <ProjectReference Include="..\src\Billing\Billing.csproj"/>
+    <ProjectReference Include="..\src\Identity\Identity.csproj"/>
+    <ProjectReference Include="..\src\Notifications\Notifications.csproj"/>
+  </ItemGroup>
+</Project>
