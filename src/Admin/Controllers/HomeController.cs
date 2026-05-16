@@ -77,20 +77,36 @@ public class HomeController : Controller
         try
         {
             var response = await _httpClientFactory.CreateClient().GetAsync(requestUri, cancellationToken);
-            if (response.IsSuccessStatusCode)
+            if (!response.IsSuccessStatusCode)
             {
-                using var jsonDocument = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
-                var root = jsonDocument.RootElement;
-                return new JsonResult(root.GetProperty("version").GetString());
+                _logger.LogWarning("Non-success status code {StatusCode} from {RequestUri}", (int)response.StatusCode, requestUri);
+                return new JsonResult("Unable to fetch installed version") { StatusCode = StatusCodes.Status500InternalServerError };
             }
+
+            using var jsonDocument = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
+            var root = jsonDocument.RootElement;
+            return new JsonResult(root.GetProperty("version").GetString());
         }
         catch (HttpRequestException e)
         {
             _logger.LogError(e, "Error encountered while sending GET request to {RequestUri}", requestUri);
             return new JsonResult("Unable to fetch installed version") { StatusCode = StatusCodes.Status500InternalServerError };
         }
-
-        return new JsonResult("-");
+        catch (TaskCanceledException e) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogError(e, "Request to {RequestUri} timed out", requestUri);
+            return new JsonResult("Unable to fetch installed version") { StatusCode = StatusCodes.Status500InternalServerError };
+        }
+        catch (System.Text.Json.JsonException e)
+        {
+            _logger.LogError(e, "Failed to parse JSON response from {RequestUri}", requestUri);
+            return new JsonResult("Unable to fetch installed version") { StatusCode = StatusCodes.Status500InternalServerError };
+        }
+        catch (KeyNotFoundException e)
+        {
+            _logger.LogError(e, "Response from {RequestUri} missing 'version' property", requestUri);
+            return new JsonResult("Unable to fetch installed version") { StatusCode = StatusCodes.Status500InternalServerError };
+        }
     }
 
     private class LatestVersions
