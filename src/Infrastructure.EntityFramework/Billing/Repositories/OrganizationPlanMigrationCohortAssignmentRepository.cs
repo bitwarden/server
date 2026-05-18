@@ -33,12 +33,12 @@ public class OrganizationPlanMigrationCohortAssignmentRepository(
         dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
 
         // Mirror the OrganizationPlanMigrationCohortAssignment_Update SP -- OrganizationId,
-        // CohortId, and CreatedAt are accepted but not assigned; the assignment-to-org and
-        // assignment-to-cohort relationships cannot change after creation, and CreatedAt is
+        // CohortId, and CreationDate are accepted but not assigned; the assignment-to-org and
+        // assignment-to-cohort relationships cannot change after creation, and CreationDate is
         // immutable once the row is inserted.
         dbContext.Entry(entity).Property(a => a.OrganizationId).IsModified = false;
         dbContext.Entry(entity).Property(a => a.CohortId).IsModified = false;
-        dbContext.Entry(entity).Property(a => a.CreatedAt).IsModified = false;
+        dbContext.Entry(entity).Property(a => a.CreationDate).IsModified = false;
 
         await dbContext.SaveChangesAsync();
     }

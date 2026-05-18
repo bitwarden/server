@@ -244,4 +244,3 @@ bitwarden_license/src/Sso/Sso.zip
 # Claude Code
 CLAUDE.local.md
 .worktrees/
-*.lscache

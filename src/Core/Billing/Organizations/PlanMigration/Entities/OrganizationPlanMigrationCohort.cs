@@ -47,7 +47,7 @@ public class OrganizationPlanMigrationCohort : ITableObject<Guid>
     /// </summary>
     public bool IsActive { get; set; }
 
-    public DateTime CreatedAt { get; internal set; } = DateTime.UtcNow;
+    public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
 
     public void SetNewId()

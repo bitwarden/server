@@ -995,7 +995,7 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("IsActive")
@@ -1031,16 +1031,16 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime?>("ChurnDiscountAppliedAt")
+                    b.Property<DateTime?>("ChurnDiscountAppliedDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("CohortId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("MigratedAt")
+                    b.Property<DateTime?>("MigratedDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("OrganizationId")
@@ -1049,7 +1049,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("ScheduledAt")
+                    b.Property<DateTime?>("ScheduledDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id")
@@ -1059,7 +1059,7 @@ namespace Bit.PostgresMigrations.Migrations
                         .IsUnique()
                         .HasAnnotation("SqlServer:Clustered", false);
 
-                    b.HasIndex("CohortId", "ScheduledAt", "MigratedAt")
+                    b.HasIndex("CohortId", "ScheduledDate", "MigratedDate")
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("OrganizationPlanMigrationCohortAssignment", (string)null);

@@ -7,13 +7,13 @@ BEGIN
     CREATE TABLE [dbo].[OrganizationPlanMigrationCohort]
     (
         [Id]                          UNIQUEIDENTIFIER NOT NULL,
-        [Name]                        NVARCHAR (255)   NOT NULL,
+        [Name]                        NVARCHAR(255)   NOT NULL,
         [MigrationPathId]             TINYINT          NULL,
-        [ProactiveDiscountCouponCode] NVARCHAR (64)    NULL,
-        [ChurnDiscountCouponCode]     NVARCHAR (64)    NULL,
+        [ProactiveDiscountCouponCode] NVARCHAR(64)    NULL,
+        [ChurnDiscountCouponCode]     NVARCHAR(64)    NULL,
         [IsActive]                    BIT              NOT NULL CONSTRAINT [DF_OrganizationPlanMigrationCohort_IsActive] DEFAULT (0),
-        [CreatedAt]                   DATETIME2 (7)    NOT NULL,
-        [RevisionDate]                DATETIME2 (7)    NOT NULL,
+        [CreationDate]                DATETIME2(7)    NOT NULL,
+        [RevisionDate]                DATETIME2(7)    NOT NULL,
         CONSTRAINT [PK_OrganizationPlanMigrationCohort] PRIMARY KEY CLUSTERED ([Id] ASC),
         CONSTRAINT [IX_OrganizationPlanMigrationCohort_Name] UNIQUE ([Name])
     );
@@ -24,14 +24,14 @@ IF OBJECT_ID('[dbo].[OrganizationPlanMigrationCohortAssignment]') IS NULL
 BEGIN
     CREATE TABLE [dbo].[OrganizationPlanMigrationCohortAssignment]
     (
-        [Id]                     UNIQUEIDENTIFIER NOT NULL,
-        [OrganizationId]         UNIQUEIDENTIFIER NOT NULL,
-        [CohortId]               UNIQUEIDENTIFIER NOT NULL,
-        [ScheduledAt]            DATETIME2 (7)    NULL,
-        [MigratedAt]             DATETIME2 (7)    NULL,
-        [ChurnDiscountAppliedAt] DATETIME2 (7)    NULL,
-        [CreatedAt]              DATETIME2 (7)    NOT NULL,
-        [RevisionDate]           DATETIME2 (7)    NOT NULL,
+        [Id]                       UNIQUEIDENTIFIER NOT NULL,
+        [OrganizationId]           UNIQUEIDENTIFIER NOT NULL,
+        [CohortId]                 UNIQUEIDENTIFIER NOT NULL,
+        [ScheduledDate]            DATETIME2(7)    NULL,
+        [MigratedDate]             DATETIME2(7)    NULL,
+        [ChurnDiscountAppliedDate] DATETIME2(7)    NULL,
+        [CreationDate]             DATETIME2(7)    NOT NULL,
+        [RevisionDate]             DATETIME2(7)    NOT NULL,
         CONSTRAINT [PK_OrganizationPlanMigrationCohortAssignment] PRIMARY KEY CLUSTERED ([Id] ASC),
         CONSTRAINT [FK_OrganizationPlanMigrationCohortAssignment_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE,
         CONSTRAINT [FK_OrganizationPlanMigrationCohortAssignment_Cohort] FOREIGN KEY ([CohortId]) REFERENCES [dbo].[OrganizationPlanMigrationCohort] ([Id]) ON DELETE CASCADE,
@@ -45,12 +45,12 @@ GO
 -- need a follow-up ALTER migration.
 IF NOT EXISTS (
     SELECT 1 FROM sys.indexes
-    WHERE name = 'IX_OrganizationPlanMigrationCohortAssignment_CohortId_ScheduledAt_MigratedAt'
+    WHERE name = 'IX_OrganizationPlanMigrationCohortAssignment_CohortId_ScheduledDate_MigratedDate'
       AND object_id = OBJECT_ID('[dbo].[OrganizationPlanMigrationCohortAssignment]')
 )
 BEGIN
-    CREATE NONCLUSTERED INDEX [IX_OrganizationPlanMigrationCohortAssignment_CohortId_ScheduledAt_MigratedAt]
-        ON [dbo].[OrganizationPlanMigrationCohortAssignment] ([CohortId] ASC, [ScheduledAt] ASC, [MigratedAt] ASC);
+    CREATE NONCLUSTERED INDEX [IX_OrganizationPlanMigrationCohortAssignment_CohortId_ScheduledDate_MigratedDate]
+        ON [dbo].[OrganizationPlanMigrationCohortAssignment] ([CohortId] ASC, [ScheduledDate] ASC, [MigratedDate] ASC);
 END
 GO
 
@@ -79,8 +79,8 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationPlanMigrationCohort_Create]
     @ProactiveDiscountCouponCode NVARCHAR(64),
     @ChurnDiscountCouponCode NVARCHAR(64),
     @IsActive BIT,
-    @CreatedAt DATETIME2 (7),
-    @RevisionDate DATETIME2 (7)
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -93,7 +93,7 @@ BEGIN
         [ProactiveDiscountCouponCode],
         [ChurnDiscountCouponCode],
         [IsActive],
-        [CreatedAt],
+        [CreationDate],
         [RevisionDate]
     )
     VALUES
@@ -104,7 +104,7 @@ BEGIN
         @ProactiveDiscountCouponCode,
         @ChurnDiscountCouponCode,
         @IsActive,
-        @CreatedAt,
+        @CreationDate,
         @RevisionDate
     )
 END
@@ -132,13 +132,13 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationPlanMigrationCohort_Update]
     @ProactiveDiscountCouponCode NVARCHAR(64),
     @ChurnDiscountCouponCode NVARCHAR(64),
     @IsActive BIT,
-    @CreatedAt DATETIME2 (7),
-    @RevisionDate DATETIME2 (7)
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
 
-    -- @CreatedAt is accepted but not assigned; it is immutable once the row is inserted.
+    -- @CreationDate is accepted but not assigned; it is immutable once the row is inserted.
     UPDATE
         [dbo].[OrganizationPlanMigrationCohort]
     SET
@@ -172,11 +172,11 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationPlanMigrationCohortAssignment_Creat
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @CohortId UNIQUEIDENTIFIER,
-    @ScheduledAt DATETIME2 (7),
-    @MigratedAt DATETIME2 (7),
-    @ChurnDiscountAppliedAt DATETIME2 (7),
-    @CreatedAt DATETIME2 (7),
-    @RevisionDate DATETIME2 (7)
+    @ScheduledDate DATETIME2(7),
+    @MigratedDate DATETIME2(7),
+    @ChurnDiscountAppliedDate DATETIME2(7),
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -186,10 +186,10 @@ BEGIN
         [Id],
         [OrganizationId],
         [CohortId],
-        [ScheduledAt],
-        [MigratedAt],
-        [ChurnDiscountAppliedAt],
-        [CreatedAt],
+        [ScheduledDate],
+        [MigratedDate],
+        [ChurnDiscountAppliedDate],
+        [CreationDate],
         [RevisionDate]
     )
     VALUES
@@ -197,10 +197,10 @@ BEGIN
         @Id,
         @OrganizationId,
         @CohortId,
-        @ScheduledAt,
-        @MigratedAt,
-        @ChurnDiscountAppliedAt,
-        @CreatedAt,
+        @ScheduledDate,
+        @MigratedDate,
+        @ChurnDiscountAppliedDate,
+        @CreationDate,
         @RevisionDate
     )
 END
@@ -225,24 +225,24 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationPlanMigrationCohortAssignment_Updat
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @CohortId UNIQUEIDENTIFIER,
-    @ScheduledAt DATETIME2 (7),
-    @MigratedAt DATETIME2 (7),
-    @ChurnDiscountAppliedAt DATETIME2 (7),
-    @CreatedAt DATETIME2 (7),
-    @RevisionDate DATETIME2 (7)
+    @ScheduledDate DATETIME2(7),
+    @MigratedDate DATETIME2(7),
+    @ChurnDiscountAppliedDate DATETIME2(7),
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
 
-    -- @OrganizationId, @CohortId, and @CreatedAt are accepted but not assigned; they are
+    -- @OrganizationId, @CohortId, and @CreationDate are accepted but not assigned; they are
     -- immutable once the row is inserted. The assignment-to-cohort and assignment-to-org
     -- relationships cannot be changed after creation -- create a new row instead.
     UPDATE
         [dbo].[OrganizationPlanMigrationCohortAssignment]
     SET
-        [ScheduledAt] = @ScheduledAt,
-        [MigratedAt] = @MigratedAt,
-        [ChurnDiscountAppliedAt] = @ChurnDiscountAppliedAt,
+        [ScheduledDate] = @ScheduledDate,
+        [MigratedDate] = @MigratedDate,
+        [ChurnDiscountAppliedDate] = @ChurnDiscountAppliedDate,
         [RevisionDate] = @RevisionDate
     WHERE
         [Id] = @Id

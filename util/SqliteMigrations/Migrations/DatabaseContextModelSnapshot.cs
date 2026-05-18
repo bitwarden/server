@@ -979,7 +979,7 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("IsActive")
@@ -1015,16 +1015,16 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("ChurnDiscountAppliedAt")
+                    b.Property<DateTime?>("ChurnDiscountAppliedDate")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("CohortId")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("MigratedAt")
+                    b.Property<DateTime?>("MigratedDate")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("OrganizationId")
@@ -1033,7 +1033,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("ScheduledAt")
+                    b.Property<DateTime?>("ScheduledDate")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id")
@@ -1043,7 +1043,7 @@ namespace Bit.SqliteMigrations.Migrations
                         .IsUnique()
                         .HasAnnotation("SqlServer:Clustered", false);
 
-                    b.HasIndex("CohortId", "ScheduledAt", "MigratedAt")
+                    b.HasIndex("CohortId", "ScheduledDate", "MigratedDate")
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("OrganizationPlanMigrationCohortAssignment", (string)null);

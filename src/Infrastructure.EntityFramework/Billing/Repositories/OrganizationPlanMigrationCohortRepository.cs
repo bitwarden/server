@@ -30,9 +30,9 @@ public class OrganizationPlanMigrationCohortRepository(
         var mappedEntity = Mapper.Map<EFOrganizationPlanMigrationCohort>(obj);
         dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
 
-        // Mirror the OrganizationPlanMigrationCohort_Update SP -- CreatedAt is accepted but
+        // Mirror the OrganizationPlanMigrationCohort_Update SP -- CreationDate is accepted but
         // not assigned; it is immutable once the row is inserted.
-        dbContext.Entry(entity).Property(c => c.CreatedAt).IsModified = false;
+        dbContext.Entry(entity).Property(c => c.CreationDate).IsModified = false;
 
         await dbContext.SaveChangesAsync();
     }
