@@ -1049,13 +1049,11 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         IEnumerable<AcceptedOrganizationUserToConfirm> usersToConfirm)
     {
         using var scope = ServiceScopeFactory.CreateScope();
-        await using var dbContext = GetDatabaseContext(scope);
+        using var dbContext = GetDatabaseContext(scope);
 
         var usersToConfirmList = usersToConfirm.ToList();
         var orgUserIds = usersToConfirmList.Select(u => u.OrganizationUserId).ToList();
         var keyByOrgUserId = usersToConfirmList.ToDictionary(u => u.OrganizationUserId, u => u.Key);
-
-        await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
         var rowsToUpdate = await dbContext.OrganizationUsers
             .Where(ou => orgUserIds.Contains(ou.Id) && ou.Status == OrganizationUserStatusType.Accepted)
@@ -1063,7 +1061,6 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
         if (rowsToUpdate.Count == 0)
         {
-            await transaction.RollbackAsync();
             return [];
         }
 
@@ -1080,8 +1077,6 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         var confirmedIds = rowsToUpdate.Select(o => o.Id).ToList();
         await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(confirmedIds);
         await dbContext.SaveChangesAsync();
-
-        await transaction.CommitAsync();
 
         return confirmedIds;
     }
@@ -1131,7 +1126,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var query = from ou in dbContext.OrganizationUsers
                         where ou.OrganizationId == organizationId &&
                             ou.Status == OrganizationUserStatusType.Accepted &&
-                            ou.Type == OrganizationUserType.User
+                            ou.Type == OrganizationUserType.User &&
+                            ou.UserId != null
                         select ou;
             return Mapper.Map<List<Core.Entities.OrganizationUser>>(await query.ToListAsync());
         }

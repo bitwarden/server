@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Utilities.v2.Validation;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Utilities.v2.Validation;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 
@@ -11,17 +12,10 @@ public interface IBulkAutomaticallyConfirmOrganizationUsersValidator
     /// <summary>
     /// Validates all <paramref name="requests"/> in a single bulk pass.
     /// </summary>
-    /// <remarks>
-    /// The caller must ensure <see cref="AutomaticallyConfirmOrganizationUserValidationRequest.OrganizationUser"/>
-    /// is non-null on every request (not-found users should be filtered out before calling here).
-    /// <see cref="AutomaticallyConfirmOrganizationUserValidationRequest.Organization"/> may be null;
-    /// structural validation will catch and report it per request.
-    /// All requests must belong to the same organization.
-    /// </remarks>
-    /// <param name="requests">The hydrated validation requests to validate.</param>
-    /// <param name="orgId">The organization ID shared by all requests.</param>
-    /// <returns>One <see cref="ValidationResult{T}"/> per input request, preserving order.</returns>
+    /// <param name="requests">The hydrated per-user validation requests to validate.</param>
+    /// <param name="organization">The organization shared by all requests.</param>
+    /// <returns>One <see cref="ValidationResult{T}"/> per input request.</returns>
     Task<IEnumerable<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>>> ValidateManyAsync(
         IEnumerable<AutomaticallyConfirmOrganizationUserValidationRequest> requests,
-        Guid orgId);
+        Organization organization);
 }

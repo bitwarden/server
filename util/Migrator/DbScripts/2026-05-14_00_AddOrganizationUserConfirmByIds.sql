@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_UpdateManySetStatusKey]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_ConfirmByIds]
     @UsersJson    NVARCHAR(MAX),
     @RevisionDate DATETIME2(7)
 AS
@@ -6,21 +6,18 @@ BEGIN
     SET NOCOUNT ON
 
     DECLARE @UsersToUpdate AS TABLE (
-        [Id]     UNIQUEIDENTIFIER NOT NULL,
-        [UserId] UNIQUEIDENTIFIER NOT NULL,
-        [Key]    NVARCHAR(MAX)    NULL
+        [Id]  UNIQUEIDENTIFIER NOT NULL,
+        [Key] NVARCHAR(MAX)    NULL
     )
 
     INSERT INTO @UsersToUpdate
     SELECT
         [Id],
-        [UserId],
         [Key]
     FROM OPENJSON(@UsersJson)
     WITH (
-        [Id]     UNIQUEIDENTIFIER '$.Id',
-        [UserId] UNIQUEIDENTIFIER '$.UserId',
-        [Key]    NVARCHAR(MAX)    '$.Key'
+        [Id]  UNIQUEIDENTIFIER '$.Id',
+        [Key] NVARCHAR(MAX)    '$.Key'
     )
 
     DECLARE @UpdatedIds [dbo].[GuidIdArray]

@@ -83,9 +83,32 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
     public async Task ValidateManyAsync_EmptyInput_ReturnsEmpty(
         SutProvider<BulkAutomaticallyConfirmOrganizationUsersValidator> sutProvider)
     {
-        var results = await sutProvider.Sut.ValidateManyAsync([], Guid.Empty);
+        var results = await sutProvider.Sut.ValidateManyAsync([], new Organization());
 
         Assert.Empty(results);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateManyAsync_NullOrganizationUser_ReturnsUserNotFoundError(
+        SutProvider<BulkAutomaticallyConfirmOrganizationUsersValidator> sutProvider,
+        Organization organization,
+        Guid orgUserId)
+    {
+        var request = new AutomaticallyConfirmOrganizationUserValidationRequest
+        {
+            DefaultUserCollectionName = string.Empty,
+            OrganizationUser = null,
+            Organization = organization,
+            OrganizationUserId = orgUserId,
+            OrganizationId = organization.Id,
+            Key = "test-key"
+        };
+
+        var results = (await sutProvider.Sut.ValidateManyAsync([request], organization)).ToList();
+
+        Assert.Single(results);
+        Assert.True(results[0].IsError);
+        Assert.IsType<UserNotFoundError>(results[0].AsError);
     }
 
     [Theory, BitAutoData]
@@ -97,7 +120,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
         orgUser.UserId = null;
         orgUser.OrganizationId = organization.Id;
 
-        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization.Id)).ToList();
+        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsError);
@@ -114,7 +137,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
         orgUser.UserId = userId;
         orgUser.OrganizationId = Guid.NewGuid(); // Different from organization.Id
 
-        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization.Id)).ToList();
+        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsError);
@@ -136,7 +159,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
         orgUser.OrganizationId = organization.Id;
         orgUser.Status = status;
 
-        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization.Id)).ToList();
+        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsError);
@@ -158,7 +181,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
         orgUser.OrganizationId = organization.Id;
         orgUser.Type = type;
 
-        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization.Id)).ToList();
+        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsError);
@@ -178,7 +201,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
 
         SetupPassingBulkDataStubs(sutProvider, organization, [orgUser], disabledPolicy);
 
-        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization.Id)).ToList();
+        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsError);
@@ -198,7 +221,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
 
         SetupPassingBulkDataStubs(sutProvider, organization, [orgUser], enabledPolicy);
 
-        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization.Id)).ToList();
+        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsError);
@@ -231,7 +254,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
             .GetAsync<RequireTwoFactorPolicyRequirement>(Arg.Any<IEnumerable<Guid>>())
             .Returns([(userId, new RequireTwoFactorPolicyRequirement([twoFactorPolicyDetails]))]);
 
-        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization.Id)).ToList();
+        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsError);
@@ -259,7 +282,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
             .GetAsync<RequireTwoFactorPolicyRequirement>(Arg.Any<IEnumerable<Guid>>())
             .Returns([(userId, new RequireTwoFactorPolicyRequirement([]))]);
 
-        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization.Id)).ToList();
+        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsValid);
@@ -288,7 +311,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
             .GetAutoConfirmPolicyViolation(Arg.Any<AutomaticUserConfirmationPolicyRequirement>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<int>())
             .Returns(new ProviderUsersCannotJoin());
 
-        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization.Id)).ToList();
+        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsError);
@@ -320,7 +343,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
             .GetAutoConfirmPolicyViolation(Arg.Any<AutomaticUserConfirmationPolicyRequirement>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<int>())
             .Returns(new UserCannotBelongToAnotherOrganization());
 
-        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization.Id)).ToList();
+        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsError);
@@ -350,7 +373,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
             .GetAutoConfirmPolicyViolation(Arg.Any<AutomaticUserConfirmationPolicyRequirement>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<int>())
             .Returns(new OtherOrganizationDoesNotAllowOtherMembership());
 
-        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization.Id)).ToList();
+        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsError);
@@ -370,7 +393,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
 
         SetupPassingBulkDataStubs(sutProvider, organization, [orgUser], enabledPolicy);
 
-        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization.Id)).ToList();
+        var results = (await sutProvider.Sut.ValidateManyAsync([BuildRequest(orgUser, organization)], organization)).ToList();
 
         Assert.Single(results);
         Assert.True(results[0].IsValid);
@@ -404,7 +427,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
         SetupPassingBulkDataStubs(sutProvider, organization, [validOrgUser], enabledPolicy);
 
         var results = (await sutProvider.Sut.ValidateManyAsync(
-            [BuildRequest(validOrgUser, organization), invalidRequest], organization.Id)).ToList();
+            [BuildRequest(validOrgUser, organization), invalidRequest], organization)).ToList();
 
         Assert.Equal(2, results.Count);
 

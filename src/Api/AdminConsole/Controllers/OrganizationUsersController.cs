@@ -838,8 +838,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
             Organization = organization,
             DefaultUserCollectionName = model.DefaultUserCollectionName,
             UsersToConfirm = model.Keys
-                .GroupBy(e => e.Id)
-                .Select(g => g.First())
                 .Select(entry => new BulkAutoConfirmUserEntry
                 {
                     OrganizationUserId = entry.Id,

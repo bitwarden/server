@@ -18,6 +18,7 @@ namespace Bit.Identity.Test.IdentityServer;
 [SutProviderCustomize]
 public class SsoRequestValidatorTests
 {
+
     [Theory]
     [BitAutoData(OidcConstants.GrantTypes.AuthorizationCode)]
     [BitAutoData(OidcConstants.GrantTypes.ClientCredentials)]

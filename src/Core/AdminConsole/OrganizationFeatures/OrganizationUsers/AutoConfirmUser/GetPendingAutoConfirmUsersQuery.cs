@@ -26,7 +26,6 @@ public class GetPendingAutoConfirmUsersQuery(
             return [];
         }
 
-        var pendingUsers = await organizationUserRepository.GetManyPendingAutoConfirmAsync(organizationId);
-        return pendingUsers.Where(u => u.UserId.HasValue).ToList();
+        return await organizationUserRepository.GetManyPendingAutoConfirmAsync(organizationId);
     }
 }

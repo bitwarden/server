@@ -721,13 +721,12 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         await using var connection = new SqlConnection(ConnectionString);
 
         var confirmedIds = await connection.QueryAsync<Guid>(
-            $"[{Schema}].[OrganizationUser_UpdateManySetStatusKey]",
+            $"[{Schema}].[OrganizationUser_ConfirmByIds]",
             new
             {
                 UsersJson = JsonSerializer.Serialize(usersToConfirm.Select(u => new
                 {
                     Id = u.OrganizationUserId,
-                    u.UserId,
                     u.Key,
                 })),
                 RevisionDate = DateTime.UtcNow
@@ -771,13 +770,11 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationUser>(
-                "[dbo].[OrganizationUser_ReadByOrganizationIdStatus]",
-                new { OrganizationId = organizationId, Status = (short)OrganizationUserStatusType.Accepted },
+                "[dbo].[OrganizationUser_ReadByPendingAutoConfirm]",
+                new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
-            return results
-                .Where(u => u.Type == OrganizationUserType.User)
-                .ToList();
+            return results.ToList();
         }
     }
 }

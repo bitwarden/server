@@ -1,7 +1,9 @@
 ﻿using System.Net;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
+using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
@@ -20,6 +22,9 @@ public class OrganizationUserControllerBulkAutoConfirmTests : IClassFixture<ApiA
 {
     private const string _mockEncryptedString =
         "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
+
+    private const string _mockEncryptedString2 =
+        "2.BPt52Ie9RRjDQmyKLCjBEB==|P7PHhu3V3iIHCTOHgu3Knh==|jE44t9C7AKdIZiJtb5WW2eEbRQs42DfRpAH1cSo6Kmq=";
 
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
@@ -80,13 +85,13 @@ public class OrganizationUserControllerBulkAutoConfirmTests : IClassFixture<ApiA
         // An Accepted User-role member — should appear in the results.
         var pendingEmail = $"pending-user-{Guid.NewGuid()}@example.com";
         await _factory.LoginWithNewAccount(pendingEmail);
-        await OrganizationTestHelpers.CreateUserAsync(_factory, organization.Id, pendingEmail,
+        var pendingOrgUser = await OrganizationTestHelpers.CreateUserAsync(_factory, organization.Id, pendingEmail,
             OrganizationUserType.User, userStatusType: OrganizationUserStatusType.Accepted);
 
         // A Confirmed User-role member — should NOT appear.
         var confirmedEmail = $"confirmed-user-{Guid.NewGuid()}@example.com";
         await _factory.LoginWithNewAccount(confirmedEmail);
-        await OrganizationTestHelpers.CreateUserAsync(_factory, organization.Id, confirmedEmail,
+        var confirmedOrgUser = await OrganizationTestHelpers.CreateUserAsync(_factory, organization.Id, confirmedEmail,
             OrganizationUserType.User, userStatusType: OrganizationUserStatusType.Confirmed);
 
         await _loginHelper.LoginAsync(_ownerEmail);
@@ -95,11 +100,12 @@ public class OrganizationUserControllerBulkAutoConfirmTests : IClassFixture<ApiA
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var body = await response.Content.ReadFromJsonAsync<ResponseListModel>();
+        var body = await response.Content.ReadFromJsonAsync<ListResponseModel<OrganizationUserPendingAutoConfirmResponseModel>>();
         Assert.NotNull(body);
-        Assert.Single(body.Data);
+        var result = Assert.Single(body.Data);
+        Assert.Equal(pendingOrgUser.Id, result.Id);
+        Assert.NotEqual(confirmedOrgUser.Id, result.Id);
 
-        await _factory.GetService<IOrganizationRepository>().DeleteAsync(organization);
     }
 
     [Fact]
@@ -123,7 +129,6 @@ public class OrganizationUserControllerBulkAutoConfirmTests : IClassFixture<ApiA
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 
-        await _factory.GetService<IOrganizationRepository>().DeleteAsync(organization);
     }
 
     [Fact]
@@ -162,7 +167,7 @@ public class OrganizationUserControllerBulkAutoConfirmTests : IClassFixture<ApiA
             Keys =
             [
                 new OrganizationUserBulkConfirmRequestModelEntry { Id = orgUser1.Id, Key = _mockEncryptedString },
-                new OrganizationUserBulkConfirmRequestModelEntry { Id = orgUser2.Id, Key = _mockEncryptedString }
+                new OrganizationUserBulkConfirmRequestModelEntry { Id = orgUser2.Id, Key = _mockEncryptedString2 }
             ],
             DefaultUserCollectionName = _mockEncryptedString
         };
@@ -172,11 +177,10 @@ public class OrganizationUserControllerBulkAutoConfirmTests : IClassFixture<ApiA
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var body = await response.Content.ReadFromJsonAsync<ResponseListModel>();
+        var body = await response.Content.ReadFromJsonAsync<ListResponseModel<OrganizationUserBulkResponseModel>>();
         Assert.NotNull(body);
-        Assert.Equal(2, body.Data.Count);
-        Assert.All(body.Data, item => Assert.True(
-            string.IsNullOrEmpty(item.GetProperty("error").GetString())));
+        Assert.Equal(2, body.Data.Count());
+        Assert.All(body.Data, item => Assert.True(string.IsNullOrEmpty(item.Error)));
 
         var orgUserRepository = _factory.GetService<IOrganizationUserRepository>();
         var confirmedUser1 = await orgUserRepository.GetByIdAsync(orgUser1.Id);
@@ -187,9 +191,8 @@ public class OrganizationUserControllerBulkAutoConfirmTests : IClassFixture<ApiA
         Assert.Equal(_mockEncryptedString, confirmedUser1.Key);
 
         Assert.Equal(OrganizationUserStatusType.Confirmed, confirmedUser2!.Status);
-        Assert.Equal(_mockEncryptedString, confirmedUser2.Key);
+        Assert.Equal(_mockEncryptedString2, confirmedUser2.Key);
 
-        await _factory.GetService<IOrganizationRepository>().DeleteAsync(organization);
     }
 
     [Fact]
@@ -220,7 +223,6 @@ public class OrganizationUserControllerBulkAutoConfirmTests : IClassFixture<ApiA
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 
-        await _factory.GetService<IOrganizationRepository>().DeleteAsync(organization);
     }
 
     [Fact]
@@ -266,26 +268,21 @@ public class OrganizationUserControllerBulkAutoConfirmTests : IClassFixture<ApiA
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var body = await response.Content.ReadFromJsonAsync<ResponseListModel>();
+        var body = await response.Content.ReadFromJsonAsync<ListResponseModel<OrganizationUserBulkResponseModel>>();
         Assert.NotNull(body);
-        Assert.Equal(2, body.Data.Count);
+        Assert.Equal(2, body.Data.Count());
 
         // The existing user should have been confirmed with no error.
-        var existingResult = body.Data.Single(d => d.GetProperty("id").GetGuid() == existingOrgUser.Id);
-        Assert.True(string.IsNullOrEmpty(existingResult.GetProperty("error").GetString()));
+        var existingResult = body.Data.Single(d => d.Id == existingOrgUser.Id);
+        Assert.True(string.IsNullOrEmpty(existingResult.Error));
 
         // The non-existent user should carry an error message.
-        var missingResult = body.Data.Single(d => d.GetProperty("id").GetGuid() == nonExistentId);
-        Assert.False(string.IsNullOrEmpty(missingResult.GetProperty("error").GetString()));
+        var missingResult = body.Data.Single(d => d.Id == nonExistentId);
+        Assert.False(string.IsNullOrEmpty(missingResult.Error));
 
         var confirmedUser = await _factory.GetService<IOrganizationUserRepository>().GetByIdAsync(existingOrgUser.Id);
         Assert.Equal(OrganizationUserStatusType.Confirmed, confirmedUser!.Status);
 
-        await _factory.GetService<IOrganizationRepository>().DeleteAsync(organization);
     }
 
-    private sealed class ResponseListModel
-    {
-        public List<System.Text.Json.JsonElement> Data { get; set; } = [];
-    }
 }

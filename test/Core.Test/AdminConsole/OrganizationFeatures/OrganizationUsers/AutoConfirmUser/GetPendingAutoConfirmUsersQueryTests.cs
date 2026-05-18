@@ -2,7 +2,6 @@
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -73,54 +72,4 @@ public class GetPendingAutoConfirmUsersQueryTests
             .GetManyPendingAutoConfirmAsync(Arg.Any<Guid>());
     }
 
-    [Theory, BitAutoData]
-    public async Task GetPendingAutoConfirmUsersAsync_ReturnsUsersWithUserId(
-        Guid organizationId,
-        [Policy(PolicyType.AutomaticUserConfirmation)] PolicyStatus enabledPolicy,
-        ICollection<OrganizationUser> pendingUsers,
-        SutProvider<GetPendingAutoConfirmUsersQuery> sutProvider)
-    {
-        pendingUsers.First().UserId = null;
-
-        sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilityAsync(organizationId)
-            .Returns(new OrganizationAbility { UseAutomaticUserConfirmation = true });
-
-        sutProvider.GetDependency<IPolicyQuery>()
-            .RunAsync(organizationId, PolicyType.AutomaticUserConfirmation)
-            .Returns(enabledPolicy);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyPendingAutoConfirmAsync(organizationId)
-            .Returns(pendingUsers);
-
-        var result = await sutProvider.Sut.GetPendingAutoConfirmUsersAsync(organizationId);
-
-        Assert.Equal(pendingUsers.Count - 1, result.Count);
-        Assert.All(result, u => Assert.NotNull(u.UserId));
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetPendingAutoConfirmUsersAsync_AllUsersHaveUserId_ReturnsAll(
-        Guid organizationId,
-        [Policy(PolicyType.AutomaticUserConfirmation)] PolicyStatus enabledPolicy,
-        ICollection<OrganizationUser> pendingUsers,
-        SutProvider<GetPendingAutoConfirmUsersQuery> sutProvider)
-    {
-        sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilityAsync(organizationId)
-            .Returns(new OrganizationAbility { UseAutomaticUserConfirmation = true });
-
-        sutProvider.GetDependency<IPolicyQuery>()
-            .RunAsync(organizationId, PolicyType.AutomaticUserConfirmation)
-            .Returns(enabledPolicy);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyPendingAutoConfirmAsync(organizationId)
-            .Returns(pendingUsers);
-
-        var result = await sutProvider.Sut.GetPendingAutoConfirmUsersAsync(organizationId);
-
-        Assert.Equal(pendingUsers.Count, result.Count);
-    }
 }
