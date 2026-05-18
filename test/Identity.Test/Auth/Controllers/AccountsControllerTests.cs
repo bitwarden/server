@@ -25,7 +25,7 @@ using NSubstitute.ReturnsExtensions;
 using Xunit;
 using SignatureKeyPairRequestModelCustomizeAttribute = Bit.Test.Common.AutoFixture.SignatureKeyPairRequestModelCustomizeAttribute;
 
-namespace Bit.Identity.Test.Controllers;
+namespace Bit.Identity.Test.Auth.Controllers;
 
 public class AccountsControllerTests : IDisposable
 {
