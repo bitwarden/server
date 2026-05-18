@@ -144,6 +144,7 @@ public class UpgradePremiumToOrganizationCommandTests
     private readonly IGetPaymentMethodQuery _getPaymentMethodQuery = Substitute.For<IGetPaymentMethodQuery>();
     private readonly IPushNotificationService _pushNotificationService = Substitute.For<IPushNotificationService>();
     private readonly ILogger<UpgradePremiumToOrganizationCommand> _logger = Substitute.For<ILogger<UpgradePremiumToOrganizationCommand>>();
+    private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly UpgradePremiumToOrganizationCommand _command;
 
     public UpgradePremiumToOrganizationCommandTests()
@@ -163,7 +164,6 @@ public class UpgradePremiumToOrganizationCommandTests
         }));
 
         _command = new UpgradePremiumToOrganizationCommand(
-            Substitute.For<IFeatureService>(),
             _logger,
             _pricingClient,
             _stripeAdapter,
@@ -176,7 +176,8 @@ public class UpgradePremiumToOrganizationCommandTests
             _braintreeService,
             _getPaymentMethodQuery,
             _applicationCacheService,
-            _pushNotificationService);
+            _pushNotificationService,
+            _featureService);
     }
 
     private static Core.Billing.Payment.Models.BillingAddress CreateTestBillingAddress() =>
