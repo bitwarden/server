@@ -466,7 +466,9 @@ public class OrganizationBillingService(
                     : "product-initiated"
             },
             OffSession = true,
-            TrialPeriodDays = subscriptionSetup.SkipTrial ? 0 : plan.TrialPeriodDays
+            TrialPeriodDays = subscriptionSetup.SkipTrial
+                ? 0
+                : subscriptionSetup.TrialLength ?? plan.TrialPeriodDays
         };
 
         var hasPaymentMethod = await hasPaymentMethodQuery.Run(organization);
