@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using Bit.Commercial.Core.Billing.Providers.Models;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -17,7 +18,6 @@ using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Providers.Services;
-using Bit.Core;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Enums;
