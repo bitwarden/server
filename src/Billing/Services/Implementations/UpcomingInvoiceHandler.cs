@@ -238,7 +238,7 @@ public class UpcomingInvoiceHandler(
         {
             if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
             {
-                var scheduled = await priceIncreaseScheduler.Schedule(subscription);
+                var scheduled = await priceIncreaseScheduler.SchedulePersonalPriceIncrease(subscription);
                 if (!scheduled)
                 {
                     return true;
@@ -405,7 +405,7 @@ public class UpcomingInvoiceHandler(
         {
             if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
             {
-                var scheduled = await priceIncreaseScheduler.Schedule(subscription);
+                var scheduled = await priceIncreaseScheduler.SchedulePersonalPriceIncrease(subscription);
                 if (!scheduled)
                 {
                     return true;
