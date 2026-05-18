@@ -261,7 +261,7 @@ public class GetOrganizationInviteLinkStatusQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetStatusAsync_SsoConfiguredAndRequireSsoEnabled_ReturnsSsoRequiredTrue(
+    public async Task GetStatusAsync_WithSsoConfiguredAndRequireSsoPolicyEnabled_ReturnsSsoRequiredTrue(
         Guid code,
         OrganizationInviteLink inviteLink,
         Organization organization,
@@ -271,6 +271,8 @@ public class GetOrganizationInviteLinkStatusQueryTests
     {
         organization.Seats = null;
         organization.Identifier = "my-org";
+        organization.UseSso = true;
+        organization.UsePolicies = true;
         ssoConfig.Enabled = true;
         requireSsoPolicy.Enabled = true;
         inviteLink.OrganizationId = organization.Id;
@@ -291,7 +293,7 @@ public class GetOrganizationInviteLinkStatusQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetStatusAsync_SsoConfiguredAndNoRequireSsoPolicy_ReturnsSsoRequiredFalse(
+    public async Task GetStatusAsync_WithSsoConfiguredAndNoRequireSsoPolicy_ReturnsSsoRequiredFalse(
         Guid code,
         OrganizationInviteLink inviteLink,
         Organization organization,
@@ -300,6 +302,7 @@ public class GetOrganizationInviteLinkStatusQueryTests
     {
         organization.Seats = null;
         organization.Identifier = "my-org";
+        organization.UseSso = true;
         ssoConfig.Enabled = true;
         inviteLink.OrganizationId = organization.Id;
 
@@ -316,6 +319,63 @@ public class GetOrganizationInviteLinkStatusQueryTests
         Assert.NotNull(result.AsSuccess.Sso);
         Assert.Equal("my-org", result.AsSuccess.Sso.OrgSsoId);
         Assert.False(result.AsSuccess.Sso.Required);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetStatusAsync_WithUseSsoFalse_ReturnsSsoNull(
+        Guid code,
+        OrganizationInviteLink inviteLink,
+        Organization organization,
+        SsoConfig ssoConfig,
+        SutProvider<GetOrganizationInviteLinkStatusQuery> sutProvider)
+    {
+        organization.Seats = null;
+        organization.UseSso = false;
+        ssoConfig.Enabled = true;
+        inviteLink.OrganizationId = organization.Id;
+
+        SetupMocks(sutProvider, code, inviteLink, organization);
+        SetupOccupiedSeats(sutProvider, organization.Id, 0);
+
+        var result = await sutProvider.Sut.GetStatusAsync(code);
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.AsSuccess.Sso);
+        await sutProvider.GetDependency<ISsoConfigRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetByOrganizationIdAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetStatusAsync_WithSsoEnabledAndUsePoliciesFalse_ReturnsSsoRequiredFalse(
+        Guid code,
+        OrganizationInviteLink inviteLink,
+        Organization organization,
+        SsoConfig ssoConfig,
+        Policy requireSsoPolicy,
+        SutProvider<GetOrganizationInviteLinkStatusQuery> sutProvider)
+    {
+        organization.Seats = null;
+        organization.Identifier = "my-org";
+        organization.UseSso = true;
+        organization.UsePolicies = false;
+        ssoConfig.Enabled = true;
+        requireSsoPolicy.Enabled = true;
+        inviteLink.OrganizationId = organization.Id;
+
+        SetupMocks(sutProvider, code, inviteLink, organization);
+        SetupOccupiedSeats(sutProvider, organization.Id, 0);
+        sutProvider.GetDependency<ISsoConfigRepository>()
+            .GetByOrganizationIdAsync(organization.Id).Returns(ssoConfig);
+
+        var result = await sutProvider.Sut.GetStatusAsync(code);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.AsSuccess.Sso);
+        Assert.False(result.AsSuccess.Sso.Required);
+        await sutProvider.GetDependency<IPolicyRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetByOrganizationIdTypeAsync(default, default);
     }
 
     private static void SetupMocks(

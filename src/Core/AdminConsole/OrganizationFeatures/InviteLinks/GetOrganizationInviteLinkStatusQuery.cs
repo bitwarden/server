@@ -51,16 +51,22 @@ public class GetOrganizationInviteLinkStatusQuery(
 
     private async Task<OrganizationInviteLinkSsoStatus?> GetSsoStatusAsync(Organization organization)
     {
+        if (!organization.UseSso)
+        {
+            return null;
+        }
+
         var ssoConfig = await ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
         if (ssoConfig is not { Enabled: true } || organization.Identifier is null)
         {
             return null;
         }
 
-        var requireSsoPolicy = await policyRepository
-            .GetByOrganizationIdTypeAsync(organization.Id, PolicyType.RequireSso);
+        var required = organization.UsePolicies
+            && (await policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.RequireSso))?.Enabled == true;
+
         return new OrganizationInviteLinkSsoStatus(
             OrgSsoId: organization.Identifier,
-            Required: requireSsoPolicy?.Enabled == true);
+            Required: required);
     }
 }
