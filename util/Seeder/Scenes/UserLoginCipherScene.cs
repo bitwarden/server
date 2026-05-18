@@ -27,6 +27,7 @@ public class UserLoginCipherScene(IUserRepository userRepository, ICipherReposit
         public bool Reprompt { get; set; }
         public bool Deleted { get; set; }
         public bool Favorite { get; set; }
+        public Guid? FolderId { get; set; }
         public IEnumerable<FieldRequest>? Fields { get; set; }
         public IEnumerable<PasskeyRequest>? Passkeys { get; set; }
     }
@@ -92,6 +93,13 @@ public class UserLoginCipherScene(IUserRepository userRepository, ICipherReposit
             cipher.Favorites = JsonSerializer.Serialize(new Dictionary<string, bool>
             {
                 { request.UserId.ToString().ToUpperInvariant(), true}
+            });
+        }
+        if (request.FolderId.HasValue)
+        {
+            cipher.Folders = CipherComposer.BuildFoldersJson(new Dictionary<Guid, Guid>
+            {
+                { request.UserId, request.FolderId.Value }
             });
         }
 
