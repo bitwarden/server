@@ -469,7 +469,7 @@ public sealed class RustSdkCipherTests
                 Password = "CurrentP@ss!",
                 Fido2Credentials =
                 [
-                    LoginCipherSeeder.CreateFido2Credential("example.com", "user@example.com")
+                    LoginCipherSeeder.CreateFido2Credential("example.com", "Example", "user@example.com")
                 ],
                 PasswordHistory =
                 [
@@ -507,6 +507,7 @@ public sealed class RustSdkCipherTests
 
         var fido2 = login.GetProperty("fido2Credentials")[0];
         Assert.Equal("example.com", RustSdkService.DecryptString(fido2.GetProperty("rpId").GetString()!, orgKeys.Key));
+        Assert.Equal("Example", RustSdkService.DecryptString(fido2.GetProperty("rpName").GetString()!, orgKeys.Key));
         Assert.Equal("user@example.com", RustSdkService.DecryptString(fido2.GetProperty("userName").GetString()!, orgKeys.Key));
         Assert.StartsWith("2.", fido2.GetProperty("keyValue").GetString());
     }
@@ -543,7 +544,7 @@ public sealed class RustSdkCipherTests
                 ],
                 Fido2Credentials =
                 [
-                    LoginCipherSeeder.CreateFido2Credential("example.com", "user@example.com")
+                    LoginCipherSeeder.CreateFido2Credential("example.com", "Example", "user@example.com")
                 ]
             }
         });

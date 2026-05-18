@@ -53,7 +53,7 @@ internal static class CipherComposer
 
         // ~20% of logins get a FIDO2 passkey; ~40% get a 1-3 entry password history. Deterministic by index.
         var fido2Credentials = index % 5 == 0
-            ? new List<Fido2CredentialViewDto> { LoginCipherSeeder.CreateFido2Credential(company.Name, username) }
+            ? new List<Fido2CredentialViewDto> { LoginCipherSeeder.CreateFido2Credential(company.Domain, company.Name, username) }
             : null;
 
         var passwordHistory = index % 5 < 2
@@ -79,7 +79,7 @@ internal static class CipherComposer
         });
     }
 
-    private static List<PasswordHistoryViewDto> BuildPasswordHistory(
+    internal static List<PasswordHistoryViewDto> BuildPasswordHistory(
         int index,
         int entryCount,
         int total,
@@ -88,8 +88,24 @@ internal static class CipherComposer
         var history = new List<PasswordHistoryViewDto>(entryCount);
         for (var k = 1; k <= entryCount; k++)
         {
-            // Offset back into the password pool so prior entries are deterministic and distinct from the current password.
-            var priorIndex = Math.Abs(index - (k * 7919));
+            // Walk to a deterministic prior position in the pool. The offset must stay in [0, total) so
+            // Distribution.Select lands in a real bucket (otherwise every historical password collapses into the
+            // strongest tier), and must be non-zero so priorIndex != index — i.e. the prior password is genuinely
+            // distinct from the current one. 7919 is prime; multiplying by k varies offsets across entries.
+            int priorIndex;
+            if (total <= 1)
+            {
+                priorIndex = 0;
+            }
+            else
+            {
+                var offset = (k * 7919) % total;
+                if (offset == 0)
+                {
+                    offset = 1;
+                }
+                priorIndex = (index + offset) % total;
+            }
             history.Add(new PasswordHistoryViewDto
             {
                 Password = Passwords.GetPassword(priorIndex, total, passwordDistribution),
