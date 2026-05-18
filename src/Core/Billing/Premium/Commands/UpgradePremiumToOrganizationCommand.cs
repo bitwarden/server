@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
@@ -65,7 +66,8 @@ public class UpgradePremiumToOrganizationCommand(
     IBraintreeService braintreeService,
     IGetPaymentMethodQuery getPaymentMethodQuery,
     IApplicationCacheService applicationCacheService,
-    IPushNotificationService pushNotificationService)
+    IPushNotificationService pushNotificationService,
+    IFeatureService featureService)
     : BaseBillingCommand<UpgradePremiumToOrganizationCommand>(logger), IUpgradePremiumToOrganizationCommand
 {
     private readonly ILogger<UpgradePremiumToOrganizationCommand> _logger = logger;

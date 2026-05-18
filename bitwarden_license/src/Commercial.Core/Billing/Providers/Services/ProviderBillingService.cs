@@ -17,6 +17,7 @@ using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Providers.Services;
+using Bit.Core;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Enums;
@@ -39,6 +40,7 @@ using static StripeConstants;
 public class ProviderBillingService(
     IBraintreeGateway braintreeGateway,
     IEventService eventService,
+    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,

@@ -1,8 +1,10 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
+using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stripe;
@@ -14,6 +16,7 @@ using static StripeConstants;
 
 public class UpdateOrganizationSubscriptionCommandTests
 {
+    private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly UpdateOrganizationSubscriptionCommand _command;
 
@@ -23,6 +26,7 @@ public class UpdateOrganizationSubscriptionCommandTests
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
         _command = new UpdateOrganizationSubscriptionCommand(
+            _featureService,
             Substitute.For<ILogger<UpdateOrganizationSubscriptionCommand>>(),
             _stripeAdapter);
     }

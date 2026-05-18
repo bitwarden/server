@@ -4,6 +4,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Utilities;
+using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using OneOf;
 using Stripe;
@@ -34,6 +35,7 @@ public interface IUpdateOrganizationSubscriptionCommand
 }
 
 public class UpdateOrganizationSubscriptionCommand(
+    IFeatureService featureService,
     ILogger<UpdateOrganizationSubscriptionCommand> logger,
     IStripeAdapter stripeAdapter) : BaseBillingCommand<UpdateOrganizationSubscriptionCommand>(logger), IUpdateOrganizationSubscriptionCommand
 {

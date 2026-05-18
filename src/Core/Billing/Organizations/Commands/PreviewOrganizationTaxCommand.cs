@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
@@ -11,6 +12,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using OneOf;
 using Stripe;
@@ -37,6 +39,7 @@ public interface IPreviewOrganizationTaxCommand
 }
 
 public class PreviewOrganizationTaxCommand(
+    IFeatureService featureService,
     ILogger<PreviewOrganizationTaxCommand> logger,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter,
@@ -373,7 +376,7 @@ public class PreviewOrganizationTaxCommand(
         Convert.ToDecimal(invoice.TotalTaxes.Sum(invoiceTotalTax => invoiceTotalTax.Amount)) / 100,
         Convert.ToDecimal(invoice.Total) / 100);
 
-    private static InvoiceCreatePreviewOptions GetBaseOptions(
+    private InvoiceCreatePreviewOptions GetBaseOptions(
         OneOf<Customer, BillingAddress> addressChoice,
         bool businessUse)
     {

@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
@@ -6,6 +7,7 @@ using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
+using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks.Plans;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -17,6 +19,7 @@ namespace Bit.Core.Test.Billing.Organizations.Commands;
 
 public class PreviewOrganizationTaxCommandTests
 {
+    private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly ILogger<PreviewOrganizationTaxCommand> _logger = Substitute.For<ILogger<PreviewOrganizationTaxCommand>>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
@@ -27,7 +30,7 @@ public class PreviewOrganizationTaxCommandTests
     public PreviewOrganizationTaxCommandTests()
     {
         _user = new User { Id = Guid.NewGuid(), Email = "test@example.com" };
-        _command = new PreviewOrganizationTaxCommand(_logger, _pricingClient, _stripeAdapter, _subscriptionDiscountService);
+        _command = new PreviewOrganizationTaxCommand(_featureService, _logger, _pricingClient, _stripeAdapter, _subscriptionDiscountService);
     }
 
     #region Subscription Purchase

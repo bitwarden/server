@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Commands;
+﻿using Bit.Core;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Payment.Models;

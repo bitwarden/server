@@ -9,6 +9,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
+using Bit.Core.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -26,6 +27,7 @@ namespace Bit.Core.Billing.Organizations.Services;
 
 public class OrganizationBillingService(
     IBraintreeGateway braintreeGateway,
+    IFeatureService featureService,
     IGlobalSettings globalSettings,
     IHasPaymentMethodQuery hasPaymentMethodQuery,
     ILogger<OrganizationBillingService> logger,

@@ -16,6 +16,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -34,6 +35,7 @@ public class StripePaymentService : IStripePaymentService
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IGlobalSettings _globalSettings;
     private readonly IPricingClient _pricingClient;
+    private readonly IFeatureService _featureService;
 
     public StripePaymentService(
         ITransactionRepository transactionRepository,
@@ -41,7 +43,8 @@ public class StripePaymentService : IStripePaymentService
         IStripeAdapter stripeAdapter,
         Braintree.IBraintreeGateway braintreeGateway,
         IGlobalSettings globalSettings,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        IFeatureService featureService)
     {
         _transactionRepository = transactionRepository;
         _logger = logger;
@@ -49,6 +52,7 @@ public class StripePaymentService : IStripePaymentService
         _btGateway = braintreeGateway;
         _globalSettings = globalSettings;
         _pricingClient = pricingClient;
+        _featureService = featureService;
     }
 
     // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated SetUpSponsorshipCommand

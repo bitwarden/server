@@ -163,6 +163,7 @@ public class UpgradePremiumToOrganizationCommandTests
         }));
 
         _command = new UpgradePremiumToOrganizationCommand(
+            Substitute.For<IFeatureService>(),
             _logger,
             _pricingClient,
             _stripeAdapter,
