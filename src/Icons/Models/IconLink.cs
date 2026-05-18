@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using System.Buffers.Binary;
 using System.Text;
 using AngleSharp.Dom;
 using Bit.Icons.Extensions;
@@ -13,8 +14,14 @@ public class IconLink
     private static readonly HashSet<string> _blocklistedRels = new(StringComparer.InvariantCultureIgnoreCase) { "preload", "image_src", "preconnect", "canonical", "alternate", "stylesheet" };
     private static readonly HashSet<string> _iconExtensions = new(StringComparer.InvariantCultureIgnoreCase) { ".ico", ".png", ".jpg", ".jpeg" };
     private const string _pngMediaType = "image/png";
-    private static readonly byte[] _pngHeader = new byte[] { 137, 80, 78, 71 };
+    private static readonly byte[] _pngHeader = [137, 80, 78, 71];
+    private static readonly byte[] _pngSignature = [137, 80, 78, 71, 13, 10, 26, 10];
     private static readonly byte[] _webpHeader = Encoding.UTF8.GetBytes("RIFF");
+
+    private static readonly HashSet<string> _allowedPngChunkTypes = new(StringComparer.Ordinal)
+    {
+        "IHDR", "PLTE", "IDAT", "IEND", "tRNS", "sRGB", "gAMA", "cHRM",
+    };
 
     private const string _icoMediaType = "image/x-icon";
     private const string _icoAltMediaType = "image/vnd.microsoft.icon";
@@ -31,7 +38,6 @@ public class IconLink
         _icoMediaType,
         _icoAltMediaType,
         _jpegMediaType,
-        _svgXmlMediaType,
     };
 
     private bool _useUriDirectly = false;
@@ -156,6 +162,15 @@ public class IconLink
             return null;
         }
 
+        if (HeaderMatch(bytes, _pngHeader))
+        {
+            bytes = StripPngMetadata(bytes);
+        }
+        else if (HeaderMatch(bytes, _icoHeader))
+        {
+            bytes = StripIcoEmbeddedPngMetadata(bytes);
+        }
+
         return new Icon { Image = bytes, Format = format };
     }
 
@@ -216,5 +231,109 @@ public class IconLink
         {
             return string.Empty;
         }
+    }
+
+    internal static byte[] StripPngMetadata(byte[] bytes)
+    {
+        if (bytes.Length < _pngSignature.Length || !HeaderMatch(bytes, _pngSignature))
+        {
+            return bytes;
+        }
+
+        using var output = new MemoryStream(bytes.Length);
+        output.Write(bytes, 0, _pngSignature.Length);
+
+        var offset = _pngSignature.Length;
+        while (offset + 12 <= bytes.Length)
+        {
+            var length = BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(offset, 4));
+            if (length < 0 || (long)offset + 12 + length > bytes.Length)
+            {
+                return bytes;
+            }
+
+            var type = Encoding.ASCII.GetString(bytes, offset + 4, 4);
+            var chunkSize = 12 + length;
+
+            if (_allowedPngChunkTypes.Contains(type))
+            {
+                output.Write(bytes, offset, chunkSize);
+            }
+
+            offset += chunkSize;
+
+            if (type == "IEND")
+            {
+                break;
+            }
+        }
+
+        return output.ToArray();
+    }
+
+    internal static byte[] StripIcoEmbeddedPngMetadata(byte[] bytes)
+    {
+        const int dirHeaderSize = 6;
+        const int entrySize = 16;
+
+        if (bytes.Length < dirHeaderSize || !HeaderMatch(bytes, _icoHeader))
+        {
+            return bytes;
+        }
+
+        var count = BinaryPrimitives.ReadUInt16LittleEndian(bytes.AsSpan(4, 2));
+        var directorySize = dirHeaderSize + count * entrySize;
+        if (count == 0 || bytes.Length < directorySize)
+        {
+            return bytes;
+        }
+
+        var entries = new byte[count][];
+        var images = new byte[count][];
+
+        for (var i = 0; i < count; i++)
+        {
+            var entryOffset = dirHeaderSize + i * entrySize;
+            var size = BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(entryOffset + 8, 4));
+            var dataOffset = BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(entryOffset + 12, 4));
+
+            if (size < 0 || dataOffset < directorySize || (long)dataOffset + size > bytes.Length)
+            {
+                return bytes;
+            }
+
+            var image = new byte[size];
+            Buffer.BlockCopy(bytes, dataOffset, image, 0, size);
+
+            if (HeaderMatch(image, _pngHeader))
+            {
+                image = StripPngMetadata(image);
+            }
+
+            var entry = new byte[entrySize];
+            Buffer.BlockCopy(bytes, entryOffset, entry, 0, entrySize);
+
+            entries[i] = entry;
+            images[i] = image;
+        }
+
+        using var output = new MemoryStream(bytes.Length);
+        output.Write(bytes, 0, dirHeaderSize);
+
+        var imageOffset = directorySize;
+        for (var i = 0; i < count; i++)
+        {
+            BinaryPrimitives.WriteInt32LittleEndian(entries[i].AsSpan(8, 4), images[i].Length);
+            BinaryPrimitives.WriteInt32LittleEndian(entries[i].AsSpan(12, 4), imageOffset);
+            output.Write(entries[i], 0, entrySize);
+            imageOffset += images[i].Length;
+        }
+
+        for (var i = 0; i < count; i++)
+        {
+            output.Write(images[i], 0, images[i].Length);
+        }
+
+        return output.ToArray();
     }
 }
