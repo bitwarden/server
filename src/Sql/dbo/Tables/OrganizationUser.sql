@@ -6,6 +6,7 @@
     [Key]                           VARCHAR (MAX)       NULL,
     [ResetPasswordKey]              VARCHAR (MAX)       NULL,
     [Status]                        SMALLINT            NOT NULL,
+    [StatusNew]                     SMALLINT            NULL,
     [Type]                          TINYINT             NOT NULL,
     [ExternalId]                    NVARCHAR (300)      NULL,
     [CreationDate]                  DATETIME2 (7)       NOT NULL,

@@ -1735,6 +1735,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<short>("Status")
                         .HasColumnType("INTEGER");
 
+                    b.Property<short?>("StatusNew")
+                        .HasColumnType("INTEGER");
+
                     b.Property<byte>("Type")
                         .HasColumnType("INTEGER");
 

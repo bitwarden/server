@@ -12,7 +12,8 @@
     @Permissions NVARCHAR(MAX),
     @ResetPasswordKey VARCHAR(MAX),
     @AccessSecretsManager BIT = 0,
-    @RevocationReason TINYINT = NULL
+    @RevocationReason TINYINT = NULL,
+    @StatusNew SMALLINT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -32,7 +33,8 @@ BEGIN
         [Permissions] = @Permissions,
         [ResetPasswordKey] = @ResetPasswordKey,
         [AccessSecretsManager] = @AccessSecretsManager,
-        [RevocationReason] = @RevocationReason
+        [RevocationReason] = @RevocationReason,
+        [StatusNew] = @StatusNew
     WHERE
         [Id] = @Id
 
