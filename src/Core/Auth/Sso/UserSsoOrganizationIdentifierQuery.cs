@@ -19,7 +19,7 @@ public class UserSsoOrganizationIdentifierQuery(
 
         // we can only confidently return the correct SsoOrganizationIdentifier if there is exactly one Organization.
         // The user must also be in the Confirmed status.
-        var confirmedOrgUsers = organizationUsers.Where(ou => ou.Status == OrganizationUserStatusType.Confirmed);
+        var confirmedOrgUsers = organizationUsers.Where(ou => ou.Status is OrganizationUserStatusType.Confirmed or OrganizationUserStatusType.Accepted);
         if (confirmedOrgUsers.Count() != 1)
         {
             return null;
