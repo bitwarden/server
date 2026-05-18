@@ -60,7 +60,7 @@ public class BaseRequestValidatorTests
     private readonly IMailService _mailService;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
     private readonly IClientVersionValidator _clientVersionValidator;
-    private readonly IBumpDeviceLastActivityDateCommand _bumpDeviceLastActivityDateCommand;
+    private readonly IUpdateDeviceLastActivityCommand _updateDeviceLastActivityCommand;
 
     private readonly BaseRequestValidatorTestWrapper _sut;
 
@@ -86,7 +86,7 @@ public class BaseRequestValidatorTests
         _mailService = Substitute.For<IMailService>();
         _userAccountKeysQuery = Substitute.For<IUserAccountKeysQuery>();
         _clientVersionValidator = Substitute.For<IClientVersionValidator>();
-        _bumpDeviceLastActivityDateCommand = Substitute.For<IBumpDeviceLastActivityDateCommand>();
+        _updateDeviceLastActivityCommand = Substitute.For<IUpdateDeviceLastActivityCommand>();
 
         _sut = new BaseRequestValidatorTestWrapper(
             _userManager,
@@ -109,7 +109,7 @@ public class BaseRequestValidatorTests
             _mailService,
             _userAccountKeysQuery,
             _clientVersionValidator,
-            _bumpDeviceLastActivityDateCommand);
+            _updateDeviceLastActivityCommand);
 
         // Default client version validator behavior: allow to pass unless a test overrides.
         _clientVersionValidator
@@ -1316,7 +1316,7 @@ public class BaseRequestValidatorTests
     // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Theory]
     [BitAutoData]
-    public async Task ValidateAsync_BumpLastActivityDateThrows_LoginStillSucceeds(
+    public async Task ValidateAsync_UpdateDeviceLastActivityThrows_LoginStillSucceeds(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         [AuthFixtures.CustomValidatorRequestContext]
         CustomValidatorRequestContext requestContext,
@@ -1344,12 +1344,12 @@ public class BaseRequestValidatorTests
             )
         });
 
-        // Feature flag enabled so the bump is attempted
+        // Feature flag enabled so the update is attempted
         _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
 
-        // The bump command throws a transient exception
-        _bumpDeviceLastActivityDateCommand
-            .BumpAsync(Arg.Any<Device>())
+        // The update command throws a transient exception
+        _updateDeviceLastActivityCommand
+            .UpdateAsync(Arg.Any<Device>(), Arg.Any<string>())
             .Returns<Task>(_ => throw new Exception("Transient failure"));
 
         // Act
@@ -1362,13 +1362,13 @@ public class BaseRequestValidatorTests
         var logs = _logger.Collector.GetSnapshot();
         Assert.Contains(logs, l =>
             l.Level == LogLevel.Warning &&
-            l.Message.Contains("Failed to bump LastActivityDate for device"));
+            l.Message.Contains("Failed to update device last activity for device"));
     }
 
     // TODO: PM-34091 - remove this test when cleaning up feature flag (disabled case will no longer exist)
     [Theory]
     [BitAutoData]
-    public async Task ValidateAsync_BumpLastActivityDate_FeatureFlagDisabled_BumpNotCalled(
+    public async Task ValidateAsync_UpdateDeviceLastActivity_FeatureFlagDisabled_UpdateNotCalled(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         [AuthFixtures.CustomValidatorRequestContext]
         CustomValidatorRequestContext requestContext,
@@ -1395,23 +1395,23 @@ public class BaseRequestValidatorTests
             )
         });
 
-        // Feature flag is disabled (NSubstitute default: false) — no bump expected
+        // Feature flag is disabled (NSubstitute default: false) — no update expected
         _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(false);
 
         // Act
         await _sut.ValidateAsync(context);
 
-        // Assert: login succeeds and bump is never attempted
+        // Assert: login succeeds and update is never attempted
         Assert.False(context.GrantResult.IsError);
-        await _bumpDeviceLastActivityDateCommand
+        await _updateDeviceLastActivityCommand
             .DidNotReceive()
-            .BumpAsync(Arg.Any<Device>());
+            .UpdateAsync(Arg.Any<Device>(), Arg.Any<string>());
     }
 
     // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Theory]
     [BitAutoData]
-    public async Task ValidateAsync_BumpLastActivityDate_NullDevice_BumpNotCalled(
+    public async Task ValidateAsync_UpdateDeviceLastActivity_NullDevice_UpdateNotCalled(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         [AuthFixtures.CustomValidatorRequestContext]
         CustomValidatorRequestContext requestContext,
@@ -1445,17 +1445,17 @@ public class BaseRequestValidatorTests
         // Act
         await _sut.ValidateAsync(context);
 
-        // Assert: login succeeds and bump is never attempted
+        // Assert: login succeeds and update is never attempted
         Assert.False(context.GrantResult.IsError);
-        await _bumpDeviceLastActivityDateCommand
+        await _updateDeviceLastActivityCommand
             .DidNotReceive()
-            .BumpAsync(Arg.Any<Device>());
+            .UpdateAsync(Arg.Any<Device>(), Arg.Any<string>());
     }
 
     // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Theory]
     [BitAutoData]
-    public async Task ValidateAsync_BumpLastActivityDate_Succeeds_BumpCalledAndLoginSucceeds(
+    public async Task ValidateAsync_UpdateDeviceLastActivity_Succeeds_UpdateCalledAndLoginSucceeds(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         [AuthFixtures.CustomValidatorRequestContext]
         CustomValidatorRequestContext requestContext,
@@ -1487,11 +1487,97 @@ public class BaseRequestValidatorTests
         // Act
         await _sut.ValidateAsync(context);
 
-        // Assert: login succeeds and bump was called with the correct device
+        // Assert: login succeeds and update was called with the correct device.
+        // ClientVersion is null because the test's substituted ICurrentContext has no version set.
         Assert.False(context.GrantResult.IsError);
-        await _bumpDeviceLastActivityDateCommand
+        await _updateDeviceLastActivityCommand
             .Received(1)
-            .BumpAsync(requestContext.Device);
+            .UpdateAsync(requestContext.Device, null);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_UpdateDeviceLastActivity_Succeeds_PassesClientVersionFromContext(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        [AuthFixtures.CustomValidatorRequestContext]
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        _sut.isValid = true;
+
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+        _deviceValidator
+            .ValidateRequestDeviceAsync(tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+        _userAccountKeysQuery.Run(Arg.Any<User>()).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
+                "test-private-key",
+                "test-public-key"
+            )
+        });
+
+        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
+        // Configure the CurrentContext to return a specific version
+        _currentContext.ClientVersion.Returns(new Version("2026.5.1"));
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert: update was called with the version string from CurrentContext (not null)
+        Assert.False(context.GrantResult.IsError);
+        await _updateDeviceLastActivityCommand
+            .Received(1)
+            .UpdateAsync(requestContext.Device, "2026.5.1");
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_UpdateDeviceLastActivity_NullClientVersion_PassesNull(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        [AuthFixtures.CustomValidatorRequestContext]
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        _sut.isValid = true;
+
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+        _deviceValidator
+            .ValidateRequestDeviceAsync(tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+        _userAccountKeysQuery.Run(Arg.Any<User>()).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
+                "test-private-key",
+                "test-public-key"
+            )
+        });
+
+        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
+        // CurrentContext.ClientVersion is null (substituted default)
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert: update was called with null clientVersion — not swapped or defaulted
+        Assert.False(context.GrantResult.IsError);
+        await _updateDeviceLastActivityCommand
+            .Received(1)
+            .UpdateAsync(requestContext.Device, null);
     }
 
     private BaseRequestValidationContextFake CreateContext(
