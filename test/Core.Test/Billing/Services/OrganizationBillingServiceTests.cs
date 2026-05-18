@@ -1437,4 +1437,104 @@ public class OrganizationBillingServiceTests
                 options.Email == null &&
                 options.Description == organization.Name));
     }
+
+    [Theory, BitAutoData]
+    public async Task Finalize_FlagOn_CustomerWithoutBillingLocation_StillEnablesAutomaticTax(
+        Organization organization,
+        SutProvider<OrganizationBillingService> sutProvider)
+    {
+        organization.PlanType = PlanType.TeamsAnnually;
+        organization.GatewayCustomerId = "cus_test123";
+        organization.GatewaySubscriptionId = null;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
+            .Returns(true);
+
+        var plan = MockPlans.Get(PlanType.TeamsAnnually);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.TeamsAnnually).Returns(plan);
+
+        var customer = new Customer
+        {
+            Id = "cus_test123",
+            Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported },
+            Address = null
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetCustomerOrThrow(organization, Arg.Any<CustomerGetOptions>())
+            .Returns(customer);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>())
+            .Returns(new Subscription { Id = "sub_test123", Status = StripeConstants.SubscriptionStatus.Active });
+
+        sutProvider.GetDependency<IOrganizationRepository>().ReplaceAsync(organization).Returns(Task.CompletedTask);
+
+        var sale = new OrganizationSale
+        {
+            Organization = organization,
+            SubscriptionSetup = new SubscriptionSetup
+            {
+                PlanType = PlanType.TeamsAnnually,
+                PasswordManagerOptions = new SubscriptionSetup.PasswordManager { Seats = 5 }
+            }
+        };
+
+        await sutProvider.Sut.Finalize(sale);
+
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).CreateSubscriptionAsync(
+            Arg.Is<SubscriptionCreateOptions>(options => options.AutomaticTax.Enabled == true));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Finalize_FlagOn_ExistingMismatchedTaxExempt_DoesNotReconcile(
+        Organization organization,
+        SutProvider<OrganizationBillingService> sutProvider)
+    {
+        organization.PlanType = PlanType.TeamsAnnually;
+        organization.GatewayCustomerId = "cus_test123";
+        organization.GatewaySubscriptionId = null;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
+            .Returns(true);
+
+        var plan = MockPlans.Get(PlanType.TeamsAnnually);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.TeamsAnnually).Returns(plan);
+
+        var customer = new Customer
+        {
+            Id = "cus_test123",
+            Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported },
+            Address = new Address { Country = "DE" },
+            TaxExempt = StripeConstants.TaxExempt.None
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetCustomerOrThrow(organization, Arg.Any<CustomerGetOptions>())
+            .Returns(customer);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>())
+            .Returns(new Subscription { Id = "sub_test123", Status = StripeConstants.SubscriptionStatus.Active });
+
+        sutProvider.GetDependency<IOrganizationRepository>().ReplaceAsync(organization).Returns(Task.CompletedTask);
+
+        var sale = new OrganizationSale
+        {
+            Organization = organization,
+            SubscriptionSetup = new SubscriptionSetup
+            {
+                PlanType = PlanType.TeamsAnnually,
+                PasswordManagerOptions = new SubscriptionSetup.PasswordManager { Seats = 5 }
+            }
+        };
+
+        await sutProvider.Sut.Finalize(sale);
+
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .DidNotReceive()
+            .UpdateCustomerAsync(Arg.Any<string>(), Arg.Is<CustomerUpdateOptions>(o => o.TaxExempt != null));
+    }
 }

@@ -918,6 +918,33 @@ public class UpdateOrganizationSubscriptionCommandTests
     }
 
     [Fact]
+    public async Task Run_FlagOn_MismatchedTaxExempt_DoesNotReconcile()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax).Returns(true);
+
+        var customer = new Customer
+        {
+            Id = "cus_123",
+            Address = new Address { Country = "DE" },
+            TaxExempt = TaxExempt.None
+        };
+
+        var organization = CreateOrganization();
+        var subscription = CreateSubscription(customer: customer, items: [("price_seats", "si_1", 5)]);
+
+        SetupGetSubscription(organization, subscription);
+        SetupUpdateSubscription(subscription);
+
+        await _command.Run(organization, new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity("price_seats", 10)]
+        });
+
+        await _stripeAdapter.DidNotReceive().UpdateCustomerAsync(
+            customer.Id, Arg.Is<CustomerUpdateOptions>(o => o.TaxExempt != null));
+    }
+
+    [Fact]
     public async Task Run_MultipleChanges_AllValid_CreatesAllItems()
     {
         var organization = CreateOrganization();

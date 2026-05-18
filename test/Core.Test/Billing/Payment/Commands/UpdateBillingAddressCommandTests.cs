@@ -851,4 +851,48 @@ public class UpdateBillingAddressCommandTests
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options => options.AutomaticTax.Enabled == true));
     }
+
+    [Fact]
+    public async Task Run_FlagOn_BusinessOrganization_DoesNotSetTaxExempt()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax).Returns(true);
+
+        var organization = new Organization
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        };
+
+        var input = new BillingAddress { Country = "DE", PostalCode = "10115" };
+
+        var customer = new Customer
+        {
+            Address = new Address { Country = "DE", PostalCode = "10115" },
+            Id = organization.GatewayCustomerId,
+            Subscriptions = new StripeList<Subscription>
+            {
+                Data =
+                [
+                    new Subscription
+                    {
+                        Id = organization.GatewaySubscriptionId,
+                        AutomaticTax = new SubscriptionAutomaticTax { Enabled = true }
+                    }
+                ]
+            }
+        };
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Any<CustomerUpdateOptions>())
+            .Returns(customer);
+
+        await _command.Run(organization, input);
+
+        await _stripeAdapter.Received(1).UpdateCustomerAsync(organization.GatewayCustomerId,
+            Arg.Is<CustomerUpdateOptions>(options =>
+                options.Address.Country == "DE" &&
+                options.TaxExempt == null));
+
+        await _stripeAdapter.DidNotReceive().GetCustomerAsync(organization.GatewayCustomerId);
+    }
 }
