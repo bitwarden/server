@@ -47,7 +47,7 @@ public class Device : ITableObject<Guid>
     /// The last time this device was logged in on or had a token refresh. Null if the device has not
     /// authenticated since activity tracking was introduced.
     /// </summary>
-    public DateTime? LastActivityDate { get; internal set; } = DateTime.UtcNow;
+    public DateTime? LastActivityDate { get; set; }
 
     /// <summary>
     /// The version of the client software the device was last seen running. Populated from the

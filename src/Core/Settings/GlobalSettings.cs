@@ -661,6 +661,8 @@ public class GlobalSettings : IGlobalSettings
         public int CiphersLimit { get; set; }
         public int CollectionRelationshipsLimit { get; set; }
         public int CollectionsLimit { get; set; }
+        public int FoldersLimit { get; set; }
+        public int FolderRelationshipsLimit { get; set; }
     }
 
     public class BitPaySettings

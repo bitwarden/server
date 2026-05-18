@@ -279,7 +279,6 @@ public static class FeatureFlagKeys
     public const string PhishingDetection = "phishing-detection";
     public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
     public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
-    public const string PM23904_RiskInsightsForPremium = "pm-23904-risk-insights-for-premium";
     public const string VaultLoadingSkeletons = "pm-25081-vault-skeleton-loaders";
     public const string BrowserPremiumSpotlight = "pm-23384-browser-premium-spotlight";
     public const string MigrateMyVaultToMyItems = "pm-20558-migrate-myvault-to-myitems";
