@@ -127,14 +127,17 @@ public class StripePaymentService : IStripePaymentService
 
         if (subscriptionUpdate is CompleteSubscriptionUpdate)
         {
-            var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(sub.Customer.Address?.Country, sub.Customer.TaxExempt);
-            switch (sub.Customer)
+            if (!_featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
             {
-                case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
-                    when determinedTaxExemptStatus != customerTaxExemptStatus:
-                    await _stripeAdapter.UpdateCustomerAsync(sub.Customer.Id,
-                        new CustomerUpdateOptions { TaxExempt = determinedTaxExemptStatus });
-                    break;
+                var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(sub.Customer.Address?.Country, sub.Customer.TaxExempt);
+                switch (sub.Customer)
+                {
+                    case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
+                        when determinedTaxExemptStatus != customerTaxExemptStatus:
+                        await _stripeAdapter.UpdateCustomerAsync(sub.Customer.Id,
+                            new CustomerUpdateOptions { TaxExempt = determinedTaxExemptStatus });
+                        break;
+                }
             }
 
             subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };

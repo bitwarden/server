@@ -78,7 +78,10 @@ public class UpdateOrganizationSubscriptionCommand(
             return new Conflict("No changes were provided for the organization subscription update");
         }
 
-        await ReconcileTaxExemptionAsync(subscription.Customer);
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
+        {
+            await ReconcileTaxExemptionAsync(subscription.Customer);
+        }
 
         var hasStructuralChanges = changeSet.ChargeImmediately;
         var isChargedAutomatically = subscription.CollectionMethod == CollectionMethod.ChargeAutomatically;

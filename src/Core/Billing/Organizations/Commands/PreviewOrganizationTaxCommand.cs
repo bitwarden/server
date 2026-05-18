@@ -399,19 +399,22 @@ public class PreviewOrganizationTaxCommand(
             }
         };
 
-        switch (businessUse)
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
         {
-            case true:
-                var existingTaxExemptStatus = addressChoice.Match(
-                    customer => customer.TaxExempt,
-                    _ => null!);
+            switch (businessUse)
+            {
+                case true:
+                    var existingTaxExemptStatus = addressChoice.Match(
+                        customer => customer.TaxExempt,
+                        _ => null!);
 
-                var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(country, existingTaxExemptStatus);
-                options.CustomerDetails.TaxExempt = determinedTaxExemptStatus;
-                break;
-            default:
-                options.CustomerDetails.TaxExempt = TaxExempt.None;
-                break;
+                    var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(country, existingTaxExemptStatus);
+                    options.CustomerDetails.TaxExempt = determinedTaxExemptStatus;
+                    break;
+                default:
+                    options.CustomerDetails.TaxExempt = TaxExempt.None;
+                    break;
+            }
         }
 
         var taxId = addressChoice.Match(

@@ -73,23 +73,26 @@ public class UpdateBillingAddressCommand(
         ISubscriber subscriber,
         BillingAddress billingAddress)
     {
-        var determinedTaxExemptStatus = await GetDeterminedTaxExemptStatusAsync(subscriber.GatewayCustomerId!, billingAddress.Country);
-
-        var customer = await stripeAdapter.UpdateCustomerAsync(subscriber.GatewayCustomerId,
-            new CustomerUpdateOptions
+        var updateOptions = new CustomerUpdateOptions
+        {
+            Address = new AddressOptions
             {
-                Address = new AddressOptions
-                {
-                    Country = billingAddress.Country,
-                    PostalCode = billingAddress.PostalCode,
-                    Line1 = billingAddress.Line1,
-                    Line2 = billingAddress.Line2,
-                    City = billingAddress.City,
-                    State = billingAddress.State
-                },
-                Expand = ["subscriptions", "subscriptions.data.test_clock", "tax_ids"],
-                TaxExempt = determinedTaxExemptStatus
-            });
+                Country = billingAddress.Country,
+                PostalCode = billingAddress.PostalCode,
+                Line1 = billingAddress.Line1,
+                Line2 = billingAddress.Line2,
+                City = billingAddress.City,
+                State = billingAddress.State
+            },
+            Expand = ["subscriptions", "subscriptions.data.test_clock", "tax_ids"]
+        };
+
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
+        {
+            updateOptions.TaxExempt = await GetDeterminedTaxExemptStatusAsync(subscriber.GatewayCustomerId!, billingAddress.Country);
+        }
+
+        var customer = await stripeAdapter.UpdateCustomerAsync(subscriber.GatewayCustomerId, updateOptions);
 
         await EnableAutomaticTaxAsync(subscriber, customer);
 

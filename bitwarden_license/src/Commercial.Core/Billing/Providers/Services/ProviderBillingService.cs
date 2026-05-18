@@ -268,13 +268,16 @@ public class ProviderBillingService(
                 ]
         };
 
-        var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(providerCustomer.Address?.Country, providerCustomer.TaxExempt);
-        customerCreateOptions.TaxExempt = providerCustomer switch
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
         {
-            { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus } when
-                determinedTaxExemptStatus != customerTaxExemptStatus => determinedTaxExemptStatus,
-            _ => providerCustomer.TaxExempt
-        };
+            var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(providerCustomer.Address?.Country, providerCustomer.TaxExempt);
+            customerCreateOptions.TaxExempt = providerCustomer switch
+            {
+                { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus } when
+                    determinedTaxExemptStatus != customerTaxExemptStatus => determinedTaxExemptStatus,
+                _ => providerCustomer.TaxExempt
+            };
+        }
 
         var customer = await stripeAdapter.CreateCustomerAsync(customerCreateOptions);
 
@@ -471,7 +474,6 @@ public class ProviderBillingService(
         TokenizedPaymentMethod paymentMethod,
         BillingAddress billingAddress)
     {
-        var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(billingAddress.Country);
         var options = new CustomerCreateOptions
         {
             Address = new AddressOptions
@@ -498,9 +500,13 @@ public class ProviderBillingService(
                     }
                 ]
             },
-            Metadata = new Dictionary<string, string> { { "region", globalSettings.BaseServiceUri.CloudRegion } },
-            TaxExempt = determinedTaxExemptStatus
+            Metadata = new Dictionary<string, string> { { "region", globalSettings.BaseServiceUri.CloudRegion } }
         };
+
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
+        {
+            options.TaxExempt = TaxHelpers.DetermineTaxExemptStatus(billingAddress.Country);
+        }
 
         if (billingAddress.TaxId != null)
         {

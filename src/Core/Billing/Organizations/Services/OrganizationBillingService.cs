@@ -261,10 +261,13 @@ public class OrganizationBillingService(
                 ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
             };
 
-            if (planType.GetProductTier() is not ProductTierType.Free and not ProductTierType.Families &&
-                !TaxHelpers.IsDirectTaxCountry(customerSetup.TaxInformation.Country))
+            if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
             {
-                customerCreateOptions.TaxExempt = StripeConstants.TaxExempt.Reverse;
+                if (planType.GetProductTier() is not ProductTierType.Free and not ProductTierType.Families &&
+                    !TaxHelpers.IsDirectTaxCountry(customerSetup.TaxInformation.Country))
+                {
+                    customerCreateOptions.TaxExempt = StripeConstants.TaxExempt.Reverse;
+                }
             }
 
             if (!string.IsNullOrEmpty(customerSetup.TaxInformation.TaxId))
@@ -507,6 +510,11 @@ public class OrganizationBillingService(
     {
         var customer = await subscriberService.GetCustomerOrThrow(organization,
             new CustomerGetOptions { Expand = ["tax", "tax_ids"] });
+
+        if (featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
+        {
+            return customer;
+        }
 
         if (subscriptionSetup.PlanType.GetProductTier() is
             not (ProductTierType.Teams or
