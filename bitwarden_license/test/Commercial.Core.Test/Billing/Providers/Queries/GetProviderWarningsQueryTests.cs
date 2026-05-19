@@ -694,4 +694,189 @@ public class GetProviderWarningsQueryTests
 
         Assert.Null(response!.TaxId);
     }
+
+    [Theory, BitAutoData]
+    public async Task Run_FlagEnabled_NoRegistrationInCountry_NoTaxIdWarning(
+        Provider provider,
+        SutProvider<GetProviderWarningsQuery> sutProvider)
+    {
+        provider.Enabled = true;
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(provider, Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.SequenceEqual(_requiredExpansions)
+            ))
+            .Returns(new Subscription
+            {
+                Status = SubscriptionStatus.Active,
+                Customer = new Customer
+                {
+                    TaxIds = new StripeList<TaxId> { Data = [] },
+                    Address = new Address { Country = "CA" },
+                    TaxExempt = TaxExempt.None
+                }
+            });
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
+            .Returns(new StripeList<Registration>
+            {
+                Data = [new Registration { Country = "GB" }]
+            });
+
+        var response = await sutProvider.Sut.Run(provider);
+
+        Assert.Null(response!.TaxId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_FlagEnabled_TaxableCustomer_Has_TaxIdPendingVerificationWarning(
+        Provider provider,
+        SutProvider<GetProviderWarningsQuery> sutProvider)
+    {
+        provider.Enabled = true;
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(provider, Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.SequenceEqual(_requiredExpansions)
+            ))
+            .Returns(new Subscription
+            {
+                Status = SubscriptionStatus.Active,
+                Customer = new Customer
+                {
+                    TaxIds = new StripeList<TaxId>
+                    {
+                        Data = [new TaxId
+                        {
+                            Verification = new TaxIdVerification
+                            {
+                                Status = TaxIdVerificationStatus.Pending
+                            }
+                        }]
+                    },
+                    Address = new Address { Country = "CA" },
+                    TaxExempt = TaxExempt.None
+                }
+            });
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
+            .Returns(new StripeList<Registration>
+            {
+                Data = [new Registration { Country = "CA" }]
+            });
+
+        var response = await sutProvider.Sut.Run(provider);
+
+        Assert.True(response is
+        {
+            TaxId.Type: "tax_id_pending_verification"
+        });
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_FlagEnabled_TaxableCustomer_Has_TaxIdFailedVerificationWarning(
+        Provider provider,
+        SutProvider<GetProviderWarningsQuery> sutProvider)
+    {
+        provider.Enabled = true;
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(provider, Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.SequenceEqual(_requiredExpansions)
+            ))
+            .Returns(new Subscription
+            {
+                Status = SubscriptionStatus.Active,
+                Customer = new Customer
+                {
+                    TaxIds = new StripeList<TaxId>
+                    {
+                        Data = [new TaxId
+                        {
+                            Verification = new TaxIdVerification
+                            {
+                                Status = TaxIdVerificationStatus.Unverified
+                            }
+                        }]
+                    },
+                    Address = new Address { Country = "CA" },
+                    TaxExempt = TaxExempt.None
+                }
+            });
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
+            .Returns(new StripeList<Registration>
+            {
+                Data = [new Registration { Country = "CA" }]
+            });
+
+        var response = await sutProvider.Sut.Run(provider);
+
+        Assert.True(response is
+        {
+            TaxId.Type: "tax_id_failed_verification"
+        });
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_FlagEnabled_TaxableCustomer_VerifiedTaxId_NoTaxIdWarning(
+        Provider provider,
+        SutProvider<GetProviderWarningsQuery> sutProvider)
+    {
+        provider.Enabled = true;
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(provider, Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.SequenceEqual(_requiredExpansions)
+            ))
+            .Returns(new Subscription
+            {
+                Status = SubscriptionStatus.Active,
+                Customer = new Customer
+                {
+                    TaxIds = new StripeList<TaxId>
+                    {
+                        Data = [new TaxId
+                        {
+                            Verification = new TaxIdVerification
+                            {
+                                Status = TaxIdVerificationStatus.Verified
+                            }
+                        }]
+                    },
+                    Address = new Address { Country = "CA" },
+                    TaxExempt = TaxExempt.None
+                }
+            });
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
+            .Returns(new StripeList<Registration>
+            {
+                Data = [new Registration { Country = "CA" }]
+            });
+
+        var response = await sutProvider.Sut.Run(provider);
+
+        Assert.Null(response!.TaxId);
+    }
 }
