@@ -511,15 +511,10 @@ public class OrganizationBillingService(
         var customer = await subscriberService.GetCustomerOrThrow(organization,
             new CustomerGetOptions { Expand = ["tax", "tax_ids"] });
 
-        if (featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
-        {
-            return customer;
-        }
-
-        if (subscriptionSetup.PlanType.GetProductTier() is
-            not (ProductTierType.Teams or
-            ProductTierType.TeamsStarter or
-            ProductTierType.Enterprise))
+        if (featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax) || subscriptionSetup.PlanType.GetProductTier() is
+                not (ProductTierType.Teams or
+                ProductTierType.TeamsStarter or
+                ProductTierType.Enterprise))
         {
             return customer;
         }
