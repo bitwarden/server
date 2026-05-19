@@ -1518,8 +1518,31 @@ public class NonAnonymousSendCommandTests
         await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
     }
 
+    [Theory]
+    [InlineData(SendType.Text, EventType.Send_Edited_Text)]
+    [InlineData(SendType.File, EventType.Send_Edited_File)]
+    public async Task SaveSendAsync_ExistingSend_FlagOn_LogsExpectedEventType(
+        SendType sendType, EventType expectedEventType)
+    {
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = sendType,
+            UserId = userId,
+        };
+
+        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
+        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
+
+        await _nonAnonymousSendCommand.SaveSendAsync(send);
+
+        await _sendRepository.Received(1).UpsertAsync(send);
+        await _eventService.Received(1).LogUserEventAsync(userId, expectedEventType);
+    }
+
     [Fact]
-    public async Task SaveSendAsync_ExistingSend_FlagOn_DoesNotLogEvent()
+    public async Task SaveSendAsync_ExistingSend_FlagOff_DoesNotLogEvent()
     {
         var userId = Guid.NewGuid();
         var send = new Send
@@ -1529,7 +1552,7 @@ public class NonAnonymousSendCommandTests
             UserId = userId,
         };
 
-        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
+        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(false);
         _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
 
         await _nonAnonymousSendCommand.SaveSendAsync(send);

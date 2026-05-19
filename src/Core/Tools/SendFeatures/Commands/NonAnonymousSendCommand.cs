@@ -65,6 +65,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
             send.RevisionDate = DateTime.UtcNow;
             await _sendRepository.UpsertAsync(send);
             await _pushNotificationService.PushSyncSendUpdateAsync(send);
+            await LogSendUpdatedEventAsync(send);
         }
     }
 
@@ -76,6 +77,23 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         }
 
         await _eventService.LogUserEventAsync(send.UserId.Value, ResolveSendCreatedEventType(send));
+    }
+
+    private async Task LogSendUpdatedEventAsync(Send send)
+    {
+        if (!send.UserId.HasValue || !_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging))
+        {
+            return;
+        }
+
+        if (send.Type == SendType.Text)
+        {
+            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Edited_Text);
+        }
+        else
+        {
+            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Edited_File);
+        }
     }
 
     private async Task LogSendDeletedEventAsync(Send send)

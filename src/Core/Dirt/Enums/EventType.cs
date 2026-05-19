@@ -149,4 +149,6 @@ public enum EventType : int
     Send_Created_File_WithPasswordProtection = 2505,
     Send_Deleted_Text = 2508,
     Send_Deleted_File = 2509,
+    Send_Edited_Text = 2506,
+    Send_Edited_File = 2507,
 }
