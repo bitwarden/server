@@ -1046,14 +1046,13 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
     }
 
     public async Task<ICollection<Guid>> ConfirmManyOrganizationUsersAsync(
-        IEnumerable<AcceptedOrganizationUserToConfirm> usersToConfirm)
+        IReadOnlyCollection<AcceptedOrganizationUserToConfirm> usersToConfirm)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         using var dbContext = GetDatabaseContext(scope);
 
-        var usersToConfirmList = usersToConfirm.ToList();
-        var orgUserIds = usersToConfirmList.Select(u => u.OrganizationUserId).ToList();
-        var keyByOrgUserId = usersToConfirmList.ToDictionary(u => u.OrganizationUserId, u => u.Key);
+        var orgUserIds = usersToConfirm.Select(u => u.OrganizationUserId).ToList();
+        var keyByOrgUserId = usersToConfirm.ToDictionary(u => u.OrganizationUserId, u => u.Key);
 
         var rowsToUpdate = await dbContext.OrganizationUsers
             .Where(ou => orgUserIds.Contains(ou.Id) && ou.Status == OrganizationUserStatusType.Accepted)
