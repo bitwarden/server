@@ -1,6 +1,5 @@
 ﻿using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -597,8 +596,7 @@ public class BaseRequestValidatorTests
         await _sut.ValidateAsync(context);
 
         // Assert
-        await _policyService.DidNotReceive().AnyPoliciesApplicableToUserAsync(
-            Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
+        await _policyRequirementQuery.DidNotReceive().GetAsyncVNext<RequireSsoPolicyRequirement>(Arg.Any<Guid>());
         await _eventService.Received(1).LogUserEventAsync(
             context.CustomValidatorRequestContext.User.Id, EventType.User_LoggedIn);
         await _userRepository.Received(1).ReplaceAsync(Arg.Any<User>());
@@ -965,9 +963,8 @@ public class BaseRequestValidatorTests
         _sut.isValid = true;
 
         // 2. SSO is required (this user is in an org that requires SSO)
-        _policyService.AnyPoliciesApplicableToUserAsync(
-                Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed)
-            .Returns(Task.FromResult(true));
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(false));
 
         // 3. 2FA is required
         _twoFactorAuthenticationValidator
@@ -1030,9 +1027,8 @@ public class BaseRequestValidatorTests
         _sut.isValid = true;
 
         // 2. SSO is required
-        _policyService.AnyPoliciesApplicableToUserAsync(
-                Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed)
-            .Returns(Task.FromResult(true));
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(false));
 
         // 3. 2FA is required
         _twoFactorAuthenticationValidator
@@ -1110,9 +1106,8 @@ public class BaseRequestValidatorTests
         _sut.isValid = true;
 
         // 2. SSO is NOT required (this is a regular user, not in SSO org)
-        _policyService.AnyPoliciesApplicableToUserAsync(
-                Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed)
-            .Returns(Task.FromResult(false));
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
 
         // 3. 2FA is required
         _twoFactorAuthenticationValidator
@@ -1136,11 +1131,7 @@ public class BaseRequestValidatorTests
         _userService.IsLegacyUser(Arg.Any<string>())
             .Returns(false);
 
-        // 8. SSO is not required
-        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
-            .Returns(Task.FromResult(true));
-
-        // 9. Setup user account keys for successful login response
+        // 8. Setup user account keys for successful login response
         _userAccountKeysQuery.Run(Arg.Any<User>()).Returns(new UserAccountKeysData
         {
             PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
@@ -1188,9 +1179,8 @@ public class BaseRequestValidatorTests
             .Returns(true);
 
         // Ensure SSO requirement triggers an early stop after version validation to avoid success path setup
-        _policyService.AnyPoliciesApplicableToUserAsync(
-                Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed)
-            .Returns(Task.FromResult(true));
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(false));
 
         // Act
         await _sut.ValidateAsync(context);
