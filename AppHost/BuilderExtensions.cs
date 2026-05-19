@@ -130,8 +130,8 @@ public static class BuilderExtensions
     }
 
     /// <summary>
-    /// Configures and initializes the essential services required for the distributed application,
-    /// including project-specific services such as admin, API, billing, identity, and notifications.
+    /// Configures and initializes the Bitwarden project services required for the distributed
+    /// application, keyed by service name.
     /// </summary>
     /// <param name="builder">The distributed application builder used to configure resources and services.</param>
     /// <param name="db">The SQL Server database resource builder.</param>
