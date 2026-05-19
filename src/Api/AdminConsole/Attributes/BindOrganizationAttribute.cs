@@ -1,4 +1,4 @@
-﻿using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.AdminConsole.Authorization;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -18,19 +18,19 @@ namespace Bit.Api.AdminConsole.Attributes;
 /// <code><![CDATA[
 /// [HttpPost("bulk-auto-confirm")]
 /// public async Task<IResult> BulkAutomaticallyConfirmOrganizationUsersAsync(
-///     [InjectOrganization] Organization organization,
+///     [BindOrganization] Organization organization,
 ///     [FromBody] OrganizationUserBulkConfirmRequestModel model)
 /// ]]></code>
 /// </example>
 [AttributeUsage(AttributeTargets.Parameter)]
-public sealed class InjectOrganizationAttribute() : ModelBinderAttribute(typeof(OrganizationModelBinder));
+public sealed class BindOrganizationAttribute() : ModelBinderAttribute(typeof(OrganizationModelBinder));
 
 /// <summary>
 /// Custom model binder that loads an <see cref="Organization"/> from the database
 /// using the <c>orgId</c> or <c>organizationId</c> route parameter and binds it to the parameter.
 /// </summary>
 /// <remarks>
-/// This binder is used via the <see cref="InjectOrganizationAttribute"/>.
+/// This binder is used via the <see cref="BindOrganizationAttribute"/>.
 /// </remarks>
 public class OrganizationModelBinder : IModelBinder
 {

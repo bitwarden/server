@@ -237,7 +237,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpGet("{id}/reset-password-details")]
     [Authorize<ManageAccountRecoveryRequirement>]
-    public async Task<OrganizationUserResetPasswordDetailsResponseModel> GetResetPasswordDetails(Guid orgId, Guid id)
+    public async Task<OrganizationUserResetPasswordDetailsResponseModel> GetResetPasswordDetails(Guid orgId, Guid id,
+        [BindOrganization] Organization organization)
     {
         var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
         if (organizationUser is null || organizationUser.OrganizationId != orgId || organizationUser.UserId is null)
@@ -253,14 +254,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
             throw new NotFoundException();
         }
 
-        // Retrieve Encrypted Private Key from organization
-        var org = await _organizationRepository.GetByIdAsync(orgId);
-        if (org == null)
-        {
-            throw new NotFoundException();
-        }
-
-        return new OrganizationUserResetPasswordDetailsResponseModel(new OrganizationUserResetPasswordDetails(organizationUser, user, org));
+        return new OrganizationUserResetPasswordDetailsResponseModel(new OrganizationUserResetPasswordDetails(organizationUser, user, organization));
     }
 
     [HttpPost("account-recovery-details")]
@@ -830,7 +824,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     [Authorize<ManageUsersRequirement>]
     [RequireFeature(FeatureFlagKeys.BulkAutoConfirmOnLogin)]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkAutomaticallyConfirmOrganizationUsersAsync(
-        [InjectOrganization] Organization organization,
+        [BindOrganization] Organization organization,
         [FromBody] OrganizationUserBulkConfirmRequestModel model)
     {
         var request = new BulkAutomaticallyConfirmOrganizationUsersRequest
