@@ -52,17 +52,20 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         // Make sure user can save Sends
         await _sendValidationService.ValidateUserCanSaveAsync(send.UserId, send);
 
+        // New Send
         if (send.Id == default(Guid))
         {
             await _sendRepository.CreateAsync(send);
             await _pushNotificationService.PushSyncSendCreateAsync(send);
             await LogSendCreatedEventAsync(send);
         }
+        // Edit existing Send
         else
         {
             send.RevisionDate = DateTime.UtcNow;
             await _sendRepository.UpsertAsync(send);
             await _pushNotificationService.PushSyncSendUpdateAsync(send);
+            await LogSendUpdatedEventAsync(send);
         }
     }
 
@@ -74,6 +77,23 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         }
 
         await _eventService.LogUserEventAsync(send.UserId.Value, ResolveSendCreatedEventType(send));
+    }
+
+    private async Task LogSendUpdatedEventAsync(Send send)
+    {
+        if (!send.UserId.HasValue || !_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging))
+        {
+            return;
+        }
+
+        if (send.Type == SendType.Text)
+        {
+            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Edited_Text);
+        }
+        else
+        {
+            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Edited_File);
+        }
     }
 
     private static EventType ResolveSendCreatedEventType(Send send)
