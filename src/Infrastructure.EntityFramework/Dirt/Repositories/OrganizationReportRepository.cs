@@ -27,7 +27,27 @@ public class OrganizationReportRepository :
         {
             var dbContext = GetDatabaseContext(scope);
             var result = await dbContext.OrganizationReports
-                .Where(p => p.OrganizationId == organizationId)
+                .Where(p => p.OrganizationId == organizationId
+                    && p.ReportData != string.Empty)
+                .OrderByDescending(p => p.RevisionDate)
+                .Take(1)
+                .FirstOrDefaultAsync();
+
+            if (result == null) return default;
+
+            return Mapper.Map<OrganizationReport>(result);
+        }
+    }
+
+    public async Task<OrganizationReport> ReadLatestByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var result = await dbContext.OrganizationReports
+                .Where(p => p.OrganizationId == organizationId
+                    && p.ReportFile != null
+                    && p.ReportFile.Contains("\"Validated\":true"))
                 .OrderByDescending(p => p.RevisionDate)
                 .Take(1)
                 .FirstOrDefaultAsync();

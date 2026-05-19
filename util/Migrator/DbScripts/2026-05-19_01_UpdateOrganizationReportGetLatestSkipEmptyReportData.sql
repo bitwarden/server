@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationReport_GetLatestByOrganizationId]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_GetLatestByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -11,3 +11,4 @@ BEGIN
         AND [ReportData] <> ''
     ORDER BY [RevisionDate] DESC
 END
+GO
