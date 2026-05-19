@@ -220,13 +220,12 @@ public class OrganizationInviteLinksControllerTests
 
     [Theory, BitAutoData]
     public async Task GetStatus_WithValidQuery_Success(
-        Guid code,
+        GetOrganizationInviteLinkStatusRequestModel model,
         OrganizationInviteLinkStatus status,
         SutProvider<OrganizationInviteLinksController> sutProvider)
     {
-        var model = new GetOrganizationInviteLinkStatusRequestModel { Code = code };
         sutProvider.GetDependency<IGetOrganizationInviteLinkStatusQuery>()
-            .GetStatusAsync(code)
+            .GetStatusAsync(model.Code)
             .Returns(new CommandResult<OrganizationInviteLinkStatus>(status));
 
         var result = await sutProvider.Sut.GetStatus(model);
@@ -238,9 +237,9 @@ public class OrganizationInviteLinksControllerTests
 
     [Theory, BitAutoData]
     public async Task GetStatus_WithNotFoundError_ReturnsNotFound(
+        GetOrganizationInviteLinkStatusRequestModel model,
         SutProvider<OrganizationInviteLinksController> sutProvider)
     {
-        var model = new GetOrganizationInviteLinkStatusRequestModel { Code = Guid.NewGuid() };
         sutProvider.GetDependency<IGetOrganizationInviteLinkStatusQuery>()
             .GetStatusAsync(model.Code)
             .Returns(new CommandResult<OrganizationInviteLinkStatus>(new InviteLinkNotFound()));
@@ -248,5 +247,19 @@ public class OrganizationInviteLinksControllerTests
         var result = await sutProvider.Sut.GetStatus(model);
 
         Assert.IsType<NotFound<ErrorResponseModel>>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetStatus_WithNotAvailableError_ReturnsBadRequest(
+        GetOrganizationInviteLinkStatusRequestModel model,
+        SutProvider<OrganizationInviteLinksController> sutProvider)
+    {
+        sutProvider.GetDependency<IGetOrganizationInviteLinkStatusQuery>()
+            .GetStatusAsync(model.Code)
+            .Returns(new CommandResult<OrganizationInviteLinkStatus>(new InviteLinkNotAvailable()));
+
+        var result = await sutProvider.Sut.GetStatus(model);
+
+        Assert.IsType<BadRequest<ErrorResponseModel>>(result);
     }
 }
