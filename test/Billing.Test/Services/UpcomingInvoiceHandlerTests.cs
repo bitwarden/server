@@ -2859,7 +2859,7 @@ public class UpcomingInvoiceHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        await _priceIncreaseScheduler.Received(1).Schedule(subscription);
+        await _priceIncreaseScheduler.Received(1).SchedulePersonalPriceIncrease(subscription);
         await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
             Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
@@ -2923,7 +2923,7 @@ public class UpcomingInvoiceHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        await _priceIncreaseScheduler.Received(1).Schedule(subscription);
+        await _priceIncreaseScheduler.Received(1).SchedulePersonalPriceIncrease(subscription);
         await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
             Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
