@@ -317,6 +317,10 @@ public static class FeatureFlagKeys
     /* UIF Team */
     public const string RouterFocusManagement = "router-focus-management";
 
+
+    /* PAM */
+    public const string Pam = "pm-37044-pam-v-0";
+
     public static List<string> GetAllKeys()
     {
         return typeof(FeatureFlagKeys).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
