@@ -467,9 +467,7 @@ public class PriceIncreaseScheduler(
 
         if (cohort.MigrationPathId is null)
         {
-            logger.LogWarning(
-                "Cohort ({CohortId}) has no MigrationPathId; cannot schedule business price increase for subscription ({SubscriptionId})",
-                cohort.Id, subscription.Id);
+            // Churn-only cohort — no migration to schedule.
             return null;
         }
 

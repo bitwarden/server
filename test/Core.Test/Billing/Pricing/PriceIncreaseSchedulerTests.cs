@@ -1220,7 +1220,7 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
-    public async Task ScheduleBusinessPriceIncrease_CohortMissingMigrationPathId_ReturnsFalse()
+    public async Task ScheduleBusinessPriceIncrease_ChurnOnlyCohort_ReturnsFalseSilently()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
 
@@ -1230,7 +1230,7 @@ public class PriceIncreaseSchedulerTests
         var cohort = new OrganizationPlanMigrationCohort
         {
             Id = Guid.NewGuid(),
-            Name = "no-path-cohort",
+            Name = "churn-only-cohort",
             MigrationPathId = null
         };
 
@@ -1244,6 +1244,12 @@ public class PriceIncreaseSchedulerTests
         Assert.False(result);
         await _stripeAdapter.DidNotReceiveWithAnyArgs()
             .CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
+        _logger.DidNotReceive().Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(o => o.ToString()!.Contains("MigrationPathId")),
+            Arg.Any<Exception?>(),
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]

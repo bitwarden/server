@@ -350,6 +350,11 @@ public class UpcomingInvoiceHandler(
     {
         try
         {
+            if (!featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
+            {
+                return false;
+            }
+
             var assignment = await assignmentRepository.GetByOrganizationIdAsync(organization.Id);
 
             if (assignment is null || assignment.ScheduledDate is not null)
@@ -364,15 +369,26 @@ public class UpcomingInvoiceHandler(
                 return false;
             }
 
-            var migrationPath = cohort.MigrationPathId is { } pathId
-                ? MigrationPaths.FromId(pathId)
-                : null;
+            if (cohort.MigrationPathId is null)
+            {
+                // Churn-only cohort — no migration to schedule.
+                return false;
+            }
 
-            if (migrationPath is null || organization.PlanType != migrationPath.FromPlan)
+            var migrationPath = MigrationPaths.FromId(cohort.MigrationPathId.Value);
+            if (migrationPath is null)
+            {
+                logger.LogError(
+                    "Unknown MigrationPathId ({MigrationPathId}) on cohort ({CohortId}) for Organization ({OrganizationId})",
+                    cohort.MigrationPathId, cohort.Id, organization.Id);
+                return false;
+            }
+
+            if (organization.PlanType != migrationPath.FromPlan)
             {
                 logger.LogWarning(
                     "Skipping business price migration for Organization ({OrganizationId}); PlanType {ActualPlan} does not match cohort {CohortName} source {ExpectedPlan}",
-                    organization.Id, organization.PlanType, cohort.Name, migrationPath?.FromPlan);
+                    organization.Id, organization.PlanType, cohort.Name, migrationPath.FromPlan);
                 return false;
             }
 
