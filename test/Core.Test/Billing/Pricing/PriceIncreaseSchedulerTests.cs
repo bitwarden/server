@@ -785,6 +785,49 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
+    public async Task ScheduleBusinessPriceIncrease_OnSuccess_UpdatesSubscriptionMetadataWithCohort()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+
+        var source = MockPlans.Get(PlanType.EnterpriseAnnually2020);
+        var target = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(source);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(target);
+
+        var orgId = Guid.NewGuid();
+        var subscription = CreateBusinessSubscription("sub_1", "cus_1", orgId,
+            CreateSubscriptionItem(source.PasswordManager.StripeSeatPlanId, 10));
+        var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CohortId = cohort.Id
+        };
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(assignment);
+
+        var sut = CreateSut();
+
+        var result = await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
+
+        Assert.True(result);
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            "sub_1",
+            Arg.Is<SubscriptionUpdateOptions>(o =>
+                o.Metadata != null &&
+                o.Metadata.Count == 2 &&
+                o.Metadata["migration_cohort_id"] == cohort.Id.ToString() &&
+                o.Metadata["migration_cohort_name"] == cohort.Name));
+    }
+
+    [Fact]
     public async Task ScheduleBusinessPriceIncrease_EnterpriseMonthly2020ToCurrent_CreatesScheduleAndStampsAssignment()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);

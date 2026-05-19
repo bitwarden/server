@@ -142,6 +142,25 @@ public class PriceIncreaseScheduler(
 
         await CreateAndConfigureScheduleAsync(subscription, phase2);
 
+        try
+        {
+            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id,
+                new SubscriptionUpdateOptions
+                {
+                    Metadata = new Dictionary<string, string>
+                    {
+                        [MetadataKeys.MigrationCohortId] = cohort.Id.ToString(),
+                        [MetadataKeys.MigrationCohortName] = cohort.Name
+                    }
+                });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Failed to attach cohort metadata to subscription ({SubscriptionId}) for cohort ({CohortId}); migration is scheduled but Stripe dashboard attribution will be missing.",
+                subscription.Id, cohort.Id);
+        }
+
         var assignment = await assignmentRepository.GetByOrganizationIdAsync(organizationId);
         if (assignment is null)
         {
