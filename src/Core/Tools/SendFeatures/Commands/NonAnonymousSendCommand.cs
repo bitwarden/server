@@ -52,12 +52,14 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         // Make sure user can save Sends
         await _sendValidationService.ValidateUserCanSaveAsync(send.UserId, send);
 
+        // New Send
         if (send.Id == default(Guid))
         {
             await _sendRepository.CreateAsync(send);
             await _pushNotificationService.PushSyncSendCreateAsync(send);
             await LogSendCreatedEventAsync(send);
         }
+        // Edit existing Send
         else
         {
             send.RevisionDate = DateTime.UtcNow;
@@ -74,6 +76,23 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         }
 
         await _eventService.LogUserEventAsync(send.UserId.Value, ResolveSendCreatedEventType(send));
+    }
+
+    private async Task LogSendDeletedEventAsync(Send send)
+    {
+        if (!send.UserId.HasValue || !_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging))
+        {
+            return;
+        }
+
+        if (send.Type == SendType.Text)
+        {
+            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Deleted_Text);
+        }
+        else
+        {
+            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Deleted_File);
+        }
     }
 
     private static EventType ResolveSendCreatedEventType(Send send)
@@ -189,6 +208,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         }
         await _sendRepository.DeleteAsync(send);
         await _pushNotificationService.PushSyncSendDeleteAsync(send);
+        await LogSendDeletedEventAsync(send);
     }
 
     public async Task<bool> ConfirmFileSize(Send send)
