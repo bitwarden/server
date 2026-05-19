@@ -5,7 +5,7 @@
 using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.Services;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
@@ -45,7 +45,6 @@ public abstract class BaseRequestValidator<T> where T : class
     protected readonly IUpdateDeviceLastActivityCommand _updateDeviceLastActivityCommand;
 
     protected ICurrentContext CurrentContext { get; }
-    protected IPolicyService PolicyService { get; }
     protected IFeatureService _featureService { get; }
     protected ISsoConfigRepository SsoConfigRepository { get; }
     protected IUserService _userService { get; }
@@ -65,7 +64,6 @@ public abstract class BaseRequestValidator<T> where T : class
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
         IUserRepository userRepository,
-        IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
@@ -87,7 +85,6 @@ public abstract class BaseRequestValidator<T> where T : class
         _logger = logger;
         CurrentContext = currentContext;
         _globalSettings = globalSettings;
-        PolicyService = policyService;
         _userRepository = userRepository;
         _featureService = featureService;
         SsoConfigRepository = ssoConfigRepository;
@@ -589,7 +586,8 @@ public abstract class BaseRequestValidator<T> where T : class
             return null;
         }
 
-        return new MasterPasswordPolicyResponseModel(await PolicyService.GetMasterPasswordPolicyForUserAsync(user));
+        return new MasterPasswordPolicyResponseModel(
+            (await PolicyRequirementQuery.GetAsyncVNext<MasterPasswordPolicyRequirement>(user.Id)).EnforcedOptions);
     }
 
     /// <summary>

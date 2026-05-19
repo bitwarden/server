@@ -3,8 +3,8 @@ using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Services;
@@ -37,7 +37,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IUserService _userService;
     private readonly IProviderUserRepository _providerUserRepository;
-    private readonly IPolicyService _policyService;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IFinishSsoJitProvisionMasterPasswordCommand _finishSsoJitProvisionMasterPasswordCommand;
     private readonly ISetInitialMasterPasswordCommandV1 _setInitialMasterPasswordCommandV1;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
@@ -56,7 +56,7 @@ public class AccountsControllerTests : IDisposable
         _organizationService = Substitute.For<IOrganizationService>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _providerUserRepository = Substitute.For<IProviderUserRepository>();
-        _policyService = Substitute.For<IPolicyService>();
+        _policyRequirementQuery = Substitute.For<IPolicyRequirementQuery>();
         _finishSsoJitProvisionMasterPasswordCommand = Substitute.For<IFinishSsoJitProvisionMasterPasswordCommand>();
         _setInitialMasterPasswordCommandV1 = Substitute.For<ISetInitialMasterPasswordCommandV1>();
         _twoFactorIsEnabledQuery = Substitute.For<ITwoFactorIsEnabledQuery>();
@@ -74,7 +74,7 @@ public class AccountsControllerTests : IDisposable
             _organizationUserRepository,
             _providerUserRepository,
             _userService,
-            _policyService,
+            _policyRequirementQuery,
             _finishSsoJitProvisionMasterPasswordCommand,
             _setInitialMasterPasswordCommandV1,
             _tdeSetPasswordCommand,

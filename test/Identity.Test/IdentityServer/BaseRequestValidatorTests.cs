@@ -2,7 +2,6 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Response;
@@ -51,7 +50,6 @@ public class BaseRequestValidatorTests
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
-    private readonly IPolicyService _policyService;
     private readonly IFeatureService _featureService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IUserDecryptionOptionsBuilder _userDecryptionOptionsBuilder;
@@ -77,7 +75,6 @@ public class BaseRequestValidatorTests
         _currentContext = Substitute.For<ICurrentContext>();
         _globalSettings = Substitute.For<GlobalSettings>();
         _userRepository = Substitute.For<IUserRepository>();
-        _policyService = Substitute.For<IPolicyService>();
         _featureService = Substitute.For<IFeatureService>();
         _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
         _userDecryptionOptionsBuilder = Substitute.For<IUserDecryptionOptionsBuilder>();
@@ -100,7 +97,6 @@ public class BaseRequestValidatorTests
             _currentContext,
             _globalSettings,
             _userRepository,
-            _policyService,
             _featureService,
             _ssoConfigRepository,
             _userDecryptionOptionsBuilder,
