@@ -64,9 +64,19 @@ public class GetProviderWarningsQuery(
         Provider provider,
         Customer customer)
     {
-        if (TaxHelpers.IsDirectTaxCountry(customer.Address?.Country))
+        if (featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
         {
-            return null;
+            if (customer.TaxExempt != TaxExempt.None)
+            {
+                return null;
+            }
+        }
+        else
+        {
+            if (TaxHelpers.IsDirectTaxCountry(customer.Address?.Country))
+            {
+                return null;
+            }
         }
 
         if (!currentContext.ProviderProviderAdmin(provider.Id))
