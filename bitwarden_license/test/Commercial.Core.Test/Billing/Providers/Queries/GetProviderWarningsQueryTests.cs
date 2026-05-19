@@ -1,4 +1,4 @@
-using Bit.Commercial.Core.Billing.Providers.Queries;
+﻿using Bit.Commercial.Core.Billing.Providers.Queries;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Constants;
