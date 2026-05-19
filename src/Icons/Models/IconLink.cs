@@ -299,7 +299,7 @@ public class IconLink
         }
 
         var directorySize = dirHeaderSize + count * entrySize;
-        if (count == 0 || bytes.Length < directorySize)
+        if (bytes.Length < directorySize)
         {
             return null;
         }
