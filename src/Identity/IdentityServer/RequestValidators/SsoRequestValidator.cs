@@ -72,7 +72,8 @@ public class SsoRequestValidator(
         }
 
         // Check if user belongs to any organization with an active SSO policy
-        return (await _policyRequirementQuery.GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)).SsoRequired;
+        var ssoPolicyRequirement = await _policyRequirementQuery.GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id);
+        return ssoPolicyRequirement.SsoRequired;
     }
 
     /// <summary>
