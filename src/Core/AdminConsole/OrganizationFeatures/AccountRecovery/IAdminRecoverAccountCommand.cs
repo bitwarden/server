@@ -20,8 +20,9 @@ public interface IAdminRecoverAccountCommand
     /// <returns>An IdentityResult indicating success or failure.</returns>
     /// <exception cref="BadRequestException">When organization settings, policy, or user state is invalid.</exception>
     /// <exception cref="NotFoundException">When the user does not exist.</exception>
+    [Obsolete("Use the overload that accepts MasterPasswordUnlockData and MasterPasswordAuthenticationData instead.")]
     Task<IdentityResult> RecoverAccountAsync(Guid orgId, OrganizationUser organizationUser,
-        string newMasterPassword, string key);
+           string newMasterPassword, string key);
 
     /// <summary>
     /// Recovers an organization user's account by resetting their master password. 

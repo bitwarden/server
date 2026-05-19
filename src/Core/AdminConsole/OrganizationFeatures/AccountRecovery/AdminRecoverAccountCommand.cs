@@ -23,6 +23,7 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
     IMasterPasswordService masterPasswordService,
     TimeProvider timeProvider) : IAdminRecoverAccountCommand
 {
+    [Obsolete("Use the overload that accepts MasterPasswordUnlockData and MasterPasswordAuthenticationData instead.")]
     public async Task<IdentityResult> RecoverAccountAsync(Guid orgId,
         OrganizationUser organizationUser, string newMasterPassword, string key)
     {
