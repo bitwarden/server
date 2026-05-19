@@ -393,7 +393,7 @@ public class OrganizationReportsController : Controller
         }
 
         var fileData = report.GetReportFile();
-        if (fileData == null || fileData.Id != reportFileId)
+        if (fileData == null || fileData.Id != reportFileId || fileData.Validated)
         {
             throw new NotFoundException();
         }
@@ -445,6 +445,11 @@ public class OrganizationReportsController : Controller
 
         var fileData = report.GetReportFile();
         if (fileData == null)
+        {
+            throw new NotFoundException();
+        }
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2) && !fileData.Validated)
         {
             throw new NotFoundException();
         }

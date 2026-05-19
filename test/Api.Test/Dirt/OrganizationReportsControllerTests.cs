@@ -15,6 +15,7 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -1399,6 +1400,125 @@ public class OrganizationReportControllerTests
         await sutProvider.GetDependency<ICreateOrganizationReportCommand>()
             .DidNotReceive()
             .CreateAsync(Arg.Any<AddOrganizationReportRequest>());
+    }
+
+    // DownloadReportFileAsync - validated file enforcement
+
+    [Theory, BitAutoData]
+    public async Task DownloadReportFileAsync_FlagOn_UnvalidatedFile_ThrowsNotFoundException(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        OrganizationReport report)
+    {
+        // Arrange
+        report.OrganizationId = orgId;
+        var fileData = new ReportFile { Id = "file-id", FileName = "report.json", Size = 1024, Validated = false };
+        report.SetReportFile(fileData);
+
+        SetupV2Authorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .GetOrganizationReportAsync(report.Id)
+            .Returns(report);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.DownloadReportFileAsync(orgId, report.Id));
+
+        await sutProvider.GetDependency<IOrganizationReportStorageService>()
+            .DidNotReceive()
+            .GetReportReadStreamAsync(Arg.Any<OrganizationReport>(), Arg.Any<ReportFile>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task DownloadReportFileAsync_FlagOn_ValidatedFile_ReturnsFile(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        OrganizationReport report)
+    {
+        // Arrange
+        report.OrganizationId = orgId;
+        var fileData = new ReportFile { Id = "file-id", FileName = "report.json", Size = 1024, Validated = true };
+        report.SetReportFile(fileData);
+
+        SetupV2Authorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .GetOrganizationReportAsync(report.Id)
+            .Returns(report);
+
+        var stream = new MemoryStream(new byte[] { 1, 2, 3 });
+        sutProvider.GetDependency<IOrganizationReportStorageService>()
+            .GetReportReadStreamAsync(report, Arg.Any<ReportFile>())
+            .Returns(stream);
+
+        // Act
+        var result = await sutProvider.Sut.DownloadReportFileAsync(orgId, report.Id);
+
+        // Assert
+        var fileResult = Assert.IsType<FileStreamResult>(result);
+        Assert.Equal("application/octet-stream", fileResult.ContentType);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DownloadReportFileAsync_FlagOff_UnvalidatedFile_ReturnsFile(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        OrganizationReport report)
+    {
+        // Arrange
+        report.OrganizationId = orgId;
+        var fileData = new ReportFile { Id = "file-id", FileName = "report.json", Size = 1024, Validated = false };
+        report.SetReportFile(fileData);
+
+        SetupAuthorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(false);
+
+        sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .GetOrganizationReportAsync(report.Id)
+            .Returns(report);
+
+        var stream = new MemoryStream(new byte[] { 1, 2, 3 });
+        sutProvider.GetDependency<IOrganizationReportStorageService>()
+            .GetReportReadStreamAsync(report, Arg.Any<ReportFile>())
+            .Returns(stream);
+
+        // Act
+        var result = await sutProvider.Sut.DownloadReportFileAsync(orgId, report.Id);
+
+        // Assert
+        Assert.IsType<FileStreamResult>(result);
+    }
+
+    // UploadReportFileAsync - re-upload guard
+
+    [Theory, BitAutoData]
+    public async Task UploadReportFileAsync_AlreadyValidated_ThrowsNotFoundException(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        OrganizationReport report)
+    {
+        // Arrange
+        report.OrganizationId = orgId;
+        var fileData = new ReportFile { Id = "file-id", FileName = "report.json", Size = 1024, Validated = true };
+        report.SetReportFile(fileData);
+
+        SetupV2Authorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .GetOrganizationReportAsync(report.Id)
+            .Returns(report);
+
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.ContentType = "multipart/form-data";
+        sutProvider.Sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.UploadReportFileAsync(orgId, report.Id, "file-id"));
     }
 
     // Helper methods for authorization mocks
