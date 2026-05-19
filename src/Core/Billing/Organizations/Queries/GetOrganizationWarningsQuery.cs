@@ -244,9 +244,19 @@ public class GetOrganizationWarningsQuery(
         Customer customer,
         Provider? provider)
     {
-        if (TaxHelpers.IsDirectTaxCountry(customer.Address?.Country))
+        if (featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
         {
-            return null;
+            if (customer.TaxExempt != TaxExempt.None)
+            {
+                return null;
+            }
+        }
+        else
+        {
+            if (TaxHelpers.IsDirectTaxCountry(customer.Address?.Country))
+            {
+                return null;
+            }
         }
 
         var productTier = organization.PlanType.GetProductTier();
