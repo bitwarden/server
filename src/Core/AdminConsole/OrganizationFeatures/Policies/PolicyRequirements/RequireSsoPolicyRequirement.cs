@@ -28,6 +28,8 @@ public class RequireSsoPolicyRequirement : IPolicyRequirement
     /// that has the Require SSO policy enabled.
     /// </remarks>
     public bool SsoRequired { get; init; }
+
+    public Guid? OrganizationId { get; init; }
 }
 
 
@@ -55,7 +57,9 @@ public class RequireSsoPolicyRequirementFactory(GlobalSettings globalSettings, I
 
             SsoRequired = policyDetails.Any(p => !acceptedFeatureFlagEnabled
                 ? p.OrganizationUserStatus is OrganizationUserStatusType.Confirmed
-                : p.OrganizationUserStatus is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed)
+                : p.OrganizationUserStatus is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed),
+
+            OrganizationId = policyDetails.FirstOrDefault()?.OrganizationId
         };
 
         return result;

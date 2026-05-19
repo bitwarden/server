@@ -48,7 +48,6 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
 
     public async Task<IEnumerable<OrganizationDomain>> GetVerifiedDomainsByOrganizationIdsAsync(IEnumerable<Guid> organizationIds)
     {
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationDomain>(
