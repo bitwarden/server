@@ -491,7 +491,7 @@ public class OrganizationBillingService(
             };
         }
 
-        if (featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax) || customer.HasBillingLocation())
+        if (customer.HasBillingLocation())
         {
             subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
         }
