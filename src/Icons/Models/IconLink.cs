@@ -291,7 +291,13 @@ public class IconLink
             return null;
         }
 
+        const int maxEntries = 64;
         var count = BinaryPrimitives.ReadUInt16LittleEndian(bytes.AsSpan(4, 2));
+        if (count == 0 || count > maxEntries)
+        {
+            return null;
+        }
+
         var directorySize = dirHeaderSize + count * entrySize;
         if (count == 0 || bytes.Length < directorySize)
         {
