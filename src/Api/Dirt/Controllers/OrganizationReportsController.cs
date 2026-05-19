@@ -141,19 +141,18 @@ public class OrganizationReportsController : Controller
 
         await AuthorizeAsync(organizationId);
 
-        var latestReport = await _getOrganizationReportQuery.GetLatestOrganizationReportAsync(organizationId);
+        var isAccessIntelligenceV2 = _featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2);
 
-        if (latestReport == null)
-        {
-            throw new NotFoundException();
-        }
+        var latestReport = isAccessIntelligenceV2
+            ? await _getOrganizationReportQuery.ReadLatestOrganizationReportAsync(organizationId)
+            : await _getOrganizationReportQuery.GetLatestOrganizationReportAsync(organizationId);
 
         var response = new OrganizationReportResponseModel(latestReport);
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2))
+        if (isAccessIntelligenceV2)
         {
             var fileData = latestReport.GetReportFile();
-            if (fileData is { Validated: true })
+            if (fileData != null)
             {
                 response.ReportFileDownloadUrl = await _storageService.GetReportDataDownloadUrlAsync(latestReport, fileData);
                 response.FileUploadType = _storageService.FileUploadType;

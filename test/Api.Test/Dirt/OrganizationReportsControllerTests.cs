@@ -49,7 +49,7 @@ public class OrganizationReportControllerTests
             .Returns(true);
 
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
-            .GetLatestOrganizationReportAsync(orgId)
+            .ReadLatestOrganizationReportAsync(orgId)
             .Returns(expectedReport);
 
         sutProvider.GetDependency<IOrganizationReportStorageService>()
@@ -68,6 +68,77 @@ public class OrganizationReportControllerTests
         var response = Assert.IsType<OrganizationReportResponseModel>(okResult.Value);
         Assert.Equal(downloadUrl, response.ReportFileDownloadUrl);
         Assert.Equal(FileUploadType.Azure, response.FileUploadType);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetLatestOrganizationReportAsync_FlagOn_CallsReadLatest(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        OrganizationReport expectedReport)
+    {
+        // Arrange
+        expectedReport.OrganizationId = orgId;
+        var reportFile = new ReportFile { Id = "file-id", FileName = "report.json", Size = 1024, Validated = true };
+        expectedReport.SetReportFile(reportFile);
+
+        SetupAuthorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(true);
+
+        sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .ReadLatestOrganizationReportAsync(orgId)
+            .Returns(expectedReport);
+
+        sutProvider.GetDependency<IOrganizationReportStorageService>()
+            .GetReportDataDownloadUrlAsync(expectedReport, Arg.Any<ReportFile>())
+            .Returns("https://download-url");
+
+        // Act
+        var result = await sutProvider.Sut.GetLatestOrganizationReportAsync(orgId);
+
+        // Assert
+        Assert.IsType<OkObjectResult>(result);
+        await sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .Received(1)
+            .ReadLatestOrganizationReportAsync(orgId);
+        await sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .DidNotReceive()
+            .GetLatestOrganizationReportAsync(Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetLatestOrganizationReportAsync_FlagOff_CallsGetLatest(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        OrganizationReport expectedReport)
+    {
+        // Arrange
+        expectedReport.OrganizationId = orgId;
+        expectedReport.ReportFile = null;
+
+        SetupAuthorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(false);
+
+        sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .GetLatestOrganizationReportAsync(orgId)
+            .Returns(expectedReport);
+
+        // Act
+        var result = await sutProvider.Sut.GetLatestOrganizationReportAsync(orgId);
+
+        // Assert
+        Assert.IsType<OkObjectResult>(result);
+        await sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .Received(1)
+            .GetLatestOrganizationReportAsync(orgId);
+        await sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .DidNotReceive()
+            .ReadLatestOrganizationReportAsync(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData]
