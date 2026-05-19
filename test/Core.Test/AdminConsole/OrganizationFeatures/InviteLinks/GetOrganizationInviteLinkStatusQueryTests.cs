@@ -4,10 +4,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Repositories;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -36,7 +34,6 @@ public class GetOrganizationInviteLinkStatusQueryTests
 
         Assert.True(result.IsSuccess);
         var status = result.AsSuccess;
-        Assert.Equal(organization.Id, status.OrganizationId);
         Assert.Equal(organization.Name, status.OrganizationName);
     }
 
@@ -72,7 +69,28 @@ public class GetOrganizationInviteLinkStatusQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetStatusAsync_WithoutUseInviteLinksAbility_ReturnsNotAvailableError(
+    public async Task GetStatusAsync_OrganizationDisabled_ReturnsNotFoundError(
+        Guid code,
+        OrganizationInviteLink inviteLink,
+        Organization organization,
+        SutProvider<GetOrganizationInviteLinkStatusQuery> sutProvider)
+    {
+        organization.Enabled = false;
+        inviteLink.OrganizationId = organization.Id;
+
+        sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
+            .GetByCodeAsync(code).Returns(inviteLink);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id).Returns(organization);
+
+        var result = await sutProvider.Sut.GetStatusAsync(code);
+
+        Assert.True(result.IsError);
+        Assert.IsType<InviteLinkNotFound>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetStatusAsync_UseInviteLinksFalse_ReturnsNotAvailableError(
         Guid code,
         OrganizationInviteLink inviteLink,
         Organization organization,
@@ -80,7 +98,8 @@ public class GetOrganizationInviteLinkStatusQueryTests
     {
         inviteLink.OrganizationId = organization.Id;
 
-        SetupMocks(sutProvider, code, inviteLink, organization, useInviteLinks: false);
+        SetupMocks(sutProvider, code, inviteLink, organization);
+        organization.UseInviteLinks = false;
 
         var result = await sutProvider.Sut.GetStatusAsync(code);
 
@@ -90,26 +109,6 @@ public class GetOrganizationInviteLinkStatusQueryTests
         await sutProvider.GetDependency<IOrganizationRepository>()
             .DidNotReceiveWithAnyArgs()
             .GetOccupiedSeatCountByOrganizationIdAsync(default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetStatusAsync_WithNullAbility_ReturnsNotAvailableError(
-        Guid code,
-        OrganizationInviteLink inviteLink,
-        Organization organization,
-        SutProvider<GetOrganizationInviteLinkStatusQuery> sutProvider)
-    {
-        inviteLink.OrganizationId = organization.Id;
-
-        SetupMocks(sutProvider, code, inviteLink, organization);
-        sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilityAsync(organization.Id)
-            .Returns((OrganizationAbility?)null);
-
-        var result = await sutProvider.Sut.GetStatusAsync(code);
-
-        Assert.True(result.IsError);
-        Assert.IsType<InviteLinkNotAvailable>(result.AsError);
     }
 
     [Theory, BitAutoData]
@@ -179,7 +178,7 @@ public class GetOrganizationInviteLinkStatusQueryTests
         SutProvider<GetOrganizationInviteLinkStatusQuery> sutProvider)
     {
         organization.Seats = 10;
-        organization.MaxAutoscaleSeats = null;
+        organization.MaxAutoscaleSeats = 10;
         inviteLink.OrganizationId = organization.Id;
 
         SetupMocks(sutProvider, code, inviteLink, organization);
@@ -190,6 +189,26 @@ public class GetOrganizationInviteLinkStatusQueryTests
         Assert.True(result.IsSuccess);
         Assert.False(result.AsSuccess.SeatsAvailable);
         Assert.Null(result.AsSuccess.Sso);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetStatusAsync_NoAutoscaleCap_ReturnsSeatsAvailableTrue(
+        Guid code,
+        OrganizationInviteLink inviteLink,
+        Organization organization,
+        SutProvider<GetOrganizationInviteLinkStatusQuery> sutProvider)
+    {
+        organization.Seats = 10;
+        organization.MaxAutoscaleSeats = null;
+        inviteLink.OrganizationId = organization.Id;
+
+        SetupMocks(sutProvider, code, inviteLink, organization);
+        SetupOccupiedSeats(sutProvider, organization.Id, 10);
+
+        var result = await sutProvider.Sut.GetStatusAsync(code);
+
+        Assert.True(result.IsSuccess);
+        Assert.True(result.AsSuccess.SeatsAvailable);
     }
 
     [Theory, BitAutoData]
@@ -382,18 +401,15 @@ public class GetOrganizationInviteLinkStatusQueryTests
         SutProvider<GetOrganizationInviteLinkStatusQuery> sutProvider,
         Guid code,
         OrganizationInviteLink inviteLink,
-        Organization organization,
-        bool useInviteLinks = true)
+        Organization organization)
     {
+        organization.UseInviteLinks = true;
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
             .GetByCodeAsync(code)
             .Returns(inviteLink);
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)
             .Returns(organization);
-        sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilityAsync(organization.Id)
-            .Returns(new OrganizationAbility { UseInviteLinks = useInviteLinks });
     }
 
     private static void SetupOccupiedSeats(

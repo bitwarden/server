@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using NSubstitute;
 using Xunit;
+using ErrorResponseModel = Bit.Core.Models.Api.ErrorResponseModel;
 
 namespace Bit.Api.Test.AdminConsole.Controllers;
 
@@ -213,7 +214,39 @@ public class OrganizationInviteLinksControllerTests
 
         var result = await sutProvider.Sut.Update(orgId, model);
 
-        var badRequestResult = Assert.IsType<BadRequest<Bit.Core.Models.Api.ErrorResponseModel>>(result);
+        var badRequestResult = Assert.IsType<BadRequest<ErrorResponseModel>>(result);
         Assert.NotNull(badRequestResult.Value);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetStatus_WithValidQuery_Success(
+        Guid code,
+        OrganizationInviteLinkStatus status,
+        SutProvider<OrganizationInviteLinksController> sutProvider)
+    {
+        var model = new GetOrganizationInviteLinkStatusRequestModel { Code = code };
+        sutProvider.GetDependency<IGetOrganizationInviteLinkStatusQuery>()
+            .GetStatusAsync(code)
+            .Returns(new CommandResult<OrganizationInviteLinkStatus>(status));
+
+        var result = await sutProvider.Sut.GetStatus(model);
+
+        var okResult = Assert.IsType<Ok<OrganizationInviteLinkStatusResponseModel>>(result);
+        Assert.Equal(status.OrganizationName, okResult.Value!.OrganizationName);
+        Assert.Equal(status.SeatsAvailable, okResult.Value.SeatsAvailable);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetStatus_WithNotFoundError_ReturnsNotFound(
+        SutProvider<OrganizationInviteLinksController> sutProvider)
+    {
+        var model = new GetOrganizationInviteLinkStatusRequestModel { Code = Guid.NewGuid() };
+        sutProvider.GetDependency<IGetOrganizationInviteLinkStatusQuery>()
+            .GetStatusAsync(model.Code)
+            .Returns(new CommandResult<OrganizationInviteLinkStatus>(new InviteLinkNotFound()));
+
+        var result = await sutProvider.Sut.GetStatus(model);
+
+        Assert.IsType<NotFound<ErrorResponseModel>>(result);
     }
 }
