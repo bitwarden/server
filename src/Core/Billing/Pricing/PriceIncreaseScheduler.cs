@@ -48,9 +48,9 @@ public interface IPriceIncreaseScheduler
     /// <summary>
     /// Releases any active subscription schedule for the given subscription, cancelling a pending
     /// deferred price increase. Use when the subscription operation makes the scheduled migration
-    /// irrelevant (e.g., plan upgrade, sponsorship, cancellation). Gated behind the
-    /// <c>PM32645_DeferPriceMigrationToRenewal</c> feature flag. Logs and re-throws on failure,
-    /// requiring manual release via the Stripe Dashboard.
+    /// irrelevant (e.g., plan upgrade, sponsorship, cancellation). Runs when either
+    /// <c>PM32645_DeferPriceMigrationToRenewal</c> or <c>PM35215_BusinessPlanPriceMigration</c> is
+    /// enabled. Logs and re-throws on failure, requiring manual release via the Stripe Dashboard.
     /// </summary>
     /// <param name="customerId">The Stripe customer ID that owns the subscription.</param>
     /// <param name="subscriptionId">The Stripe subscription ID to release the schedule for.</param>
@@ -100,6 +100,40 @@ public class PriceIncreaseScheduler(
             return false;
         }
 
+        Guid organizationId;
+        try
+        {
+            SubscriberId subscriberId = subscription;
+            var resolved = subscriberId.Match<Guid?>(
+                _ =>
+                {
+                    logger.LogWarning(
+                        "User subscriptions do not support business price increase scheduling ({SubscriptionId})",
+                        subscription.Id);
+                    return null;
+                },
+                orgId => orgId.Value,
+                _ =>
+                {
+                    logger.LogWarning(
+                        "Provider subscriptions do not support business price increase scheduling ({SubscriptionId})",
+                        subscription.Id);
+                    return null;
+                });
+            if (resolved is null)
+            {
+                return false;
+            }
+            organizationId = resolved.Value;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Failed to resolve subscriber type for subscription ({SubscriptionId}), cannot schedule business price increase",
+                subscription.Id);
+            return false;
+        }
+
         var phase2 = await ResolvePhase2ForBusinessAsync(subscription, cohort);
         if (phase2 is null)
         {
@@ -107,14 +141,6 @@ public class PriceIncreaseScheduler(
         }
 
         await CreateAndConfigureScheduleAsync(subscription, phase2);
-
-        SubscriberId subscriberId = subscription;
-        var organizationId = subscriberId.Match(
-            _ => throw new InvalidOperationException(
-                $"Business subscription ({subscription.Id}) is owned by a user, not an organization."),
-            orgId => orgId.Value,
-            _ => throw new InvalidOperationException(
-                $"Business subscription ({subscription.Id}) is owned by a provider, not an organization."));
 
         var assignment = await assignmentRepository.GetByOrganizationIdAsync(organizationId);
         if (assignment is null)
@@ -139,7 +165,8 @@ public class PriceIncreaseScheduler(
 
     public async Task Release(string customerId, string subscriptionId)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal) &&
+            !featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
         {
             return;
         }
