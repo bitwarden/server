@@ -171,6 +171,11 @@ public class IconLink
             bytes = StripIcoEmbeddedPngMetadata(bytes);
         }
 
+        if (bytes == null)
+        {
+            return null;
+        }
+
         return new Icon { Image = bytes, Format = format };
     }
 
@@ -233,23 +238,24 @@ public class IconLink
         }
     }
 
-    internal static byte[] StripPngMetadata(byte[] bytes)
+    internal static byte[]? StripPngMetadata(byte[] bytes)
     {
         if (bytes.Length < _pngSignature.Length || !HeaderMatch(bytes, _pngSignature))
         {
-            return bytes;
+            return null;
         }
 
         using var output = new MemoryStream(bytes.Length);
         output.Write(bytes, 0, _pngSignature.Length);
 
         var offset = _pngSignature.Length;
+        var seenIend = false;
         while (offset + 12 <= bytes.Length)
         {
             var length = BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(offset, 4));
             if (length < 0 || (long)offset + 12 + length > bytes.Length)
             {
-                return bytes;
+                return null;
             }
 
             var type = Encoding.ASCII.GetString(bytes, offset + 4, 4);
@@ -264,28 +270,34 @@ public class IconLink
 
             if (type == "IEND")
             {
+                seenIend = true;
                 break;
             }
+        }
+
+        if (!seenIend)
+        {
+            return null;
         }
 
         return output.ToArray();
     }
 
-    internal static byte[] StripIcoEmbeddedPngMetadata(byte[] bytes)
+    internal static byte[]? StripIcoEmbeddedPngMetadata(byte[] bytes)
     {
         const int dirHeaderSize = 6;
         const int entrySize = 16;
 
         if (bytes.Length < dirHeaderSize || !HeaderMatch(bytes, _icoHeader))
         {
-            return bytes;
+            return null;
         }
 
         var count = BinaryPrimitives.ReadUInt16LittleEndian(bytes.AsSpan(4, 2));
         var directorySize = dirHeaderSize + count * entrySize;
         if (count == 0 || bytes.Length < directorySize)
         {
-            return bytes;
+            return null;
         }
 
         var entries = new byte[count][];
@@ -299,7 +311,7 @@ public class IconLink
 
             if (size < 0 || dataOffset < directorySize || (long)dataOffset + size > bytes.Length)
             {
-                return bytes;
+                return null;
             }
 
             var image = new byte[size];
@@ -307,7 +319,12 @@ public class IconLink
 
             if (HeaderMatch(image, _pngHeader))
             {
-                image = StripPngMetadata(image);
+                var stripped = StripPngMetadata(image);
+                if (stripped == null)
+                {
+                    return null;
+                }
+                image = stripped;
             }
 
             var entry = new byte[entrySize];

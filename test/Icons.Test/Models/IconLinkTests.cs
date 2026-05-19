@@ -119,17 +119,17 @@ public class IconLinkTests
     }
 
     [Fact]
-    public void StripPngMetadata_InvalidSignature_ReturnsInput()
+    public void StripPngMetadata_InvalidSignature_ReturnsNull()
     {
         var bytes = new byte[] { 1, 2, 3, 4, 5 };
 
         var stripped = IconLink.StripPngMetadata(bytes);
 
-        Assert.Same(bytes, stripped);
+        Assert.Null(stripped);
     }
 
     [Fact]
-    public void StripPngMetadata_ChunkLengthOverflowsBuffer_ReturnsInput()
+    public void StripPngMetadata_ChunkLengthOverflowsBuffer_ReturnsNull()
     {
         var prefix = _pngSignature.ToList();
         // Declare a chunk with absurdly large length but include the 12 bytes
@@ -141,7 +141,21 @@ public class IconLinkTests
 
         var stripped = IconLink.StripPngMetadata(bytes);
 
-        Assert.Same(bytes, stripped);
+        Assert.Null(stripped);
+    }
+
+    [Fact]
+    public void StripPngMetadata_MissingIend_ReturnsNull()
+    {
+        var png = BuildPng(new[]
+        {
+            ("IHDR", new byte[13]),
+            ("IDAT", new byte[] { 1, 2, 3 }),
+        });
+
+        var stripped = IconLink.StripPngMetadata(png);
+
+        Assert.Null(stripped);
     }
 
     [Fact]
@@ -189,7 +203,7 @@ public class IconLinkTests
     }
 
     [Fact]
-    public void StripIcoEmbeddedPngMetadata_CorruptOffset_ReturnsInput()
+    public void StripIcoEmbeddedPngMetadata_CorruptOffset_ReturnsNull()
     {
         var ico = BuildIco(new[] { new byte[] { 1, 2, 3, 4 } });
         // Point the entry data offset past end of buffer.
@@ -197,7 +211,20 @@ public class IconLinkTests
 
         var stripped = IconLink.StripIcoEmbeddedPngMetadata(ico);
 
-        Assert.Same(ico, stripped);
+        Assert.Null(stripped);
+    }
+
+    [Fact]
+    public void StripIcoEmbeddedPngMetadata_MalformedEmbeddedPng_ReturnsNull()
+    {
+        // Embed bytes that match the 4-byte PNG header but lack a valid signature.
+        var fakePng = new byte[] { 137, 80, 78, 71, 0, 0, 0, 0 };
+
+        var ico = BuildIco(new[] { fakePng });
+
+        var stripped = IconLink.StripIcoEmbeddedPngMetadata(ico);
+
+        Assert.Null(stripped);
     }
 
     private static byte[] BuildPng(IEnumerable<(string Type, byte[] Data)> chunks)
