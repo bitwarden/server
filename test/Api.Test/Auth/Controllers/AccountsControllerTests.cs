@@ -1,6 +1,8 @@
 ﻿using System.Security.Claims;
 using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
@@ -9,6 +11,7 @@ using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TempPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Auth.UserFeatures.UserApiKey.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -17,6 +20,7 @@ using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -47,6 +51,7 @@ public class AccountsControllerTests : IDisposable
     private readonly ITwoFactorEmailService _twoFactorEmailService;
     private readonly IChangeKdfCommand _changeKdfCommand;
     private readonly IUserRepository _userRepository;
+    private readonly IRotateUserApiKeyCommand _rotateUserApiKeyCommand;
 
     public AccountsControllerTests()
     {
@@ -67,6 +72,7 @@ public class AccountsControllerTests : IDisposable
         _twoFactorEmailService = Substitute.For<ITwoFactorEmailService>();
         _changeKdfCommand = Substitute.For<IChangeKdfCommand>();
         _userRepository = Substitute.For<IUserRepository>();
+        _rotateUserApiKeyCommand = Substitute.For<IRotateUserApiKeyCommand>();
 
         _sut = new AccountsController(
             _organizationService,
@@ -85,7 +91,8 @@ public class AccountsControllerTests : IDisposable
             _userAccountKeysQuery,
             _twoFactorEmailService,
             _changeKdfCommand,
-            _userRepository
+            _userRepository,
+            _rotateUserApiKeyCommand
         );
     }
 
@@ -347,33 +354,68 @@ public class AccountsControllerTests : IDisposable
         );
     }
 
+    // TODO: Delete this test when the PM37165_RotateUserApiKeyCommand flag is cleaned up.
     [Fact]
-    public async Task PostRotateApiKey_ShouldRotateApiKey()
+    public async Task PostRotateApiKey_FlagOff_CallsLegacyUserService()
     {
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
         ConfigureUserServiceToAcceptPasswordFor(user);
+        _featureService.IsEnabled(FeatureFlagKeys.PM37165_RotateUserApiKeyCommand).Returns(false);
+
         await _sut.RotateApiKey(new SecretVerificationRequestModel());
+
+#pragma warning disable CS0618 // asserting the legacy path while it still exists
+        await _userService.Received(1).RotateApiKeyAsync(user);
+#pragma warning restore CS0618
+        await _rotateUserApiKeyCommand.DidNotReceive().RotateApiKeyAsync(Arg.Any<User>());
     }
 
+    // TODO: When the PM37165_RotateUserApiKeyCommand flag is cleaned up, rename this to
+    // PostRotateApiKey_ShouldRotateApiKey (and drop the flag setup) — it becomes the canonical happy-path test.
     [Fact]
-    public async Task PostRotateApiKey_WhenUserDoesNotExist_ShouldThrowUnauthorizedAccessException()
-    {
-        ConfigureUserServiceToReturnNullPrincipal();
-
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(
-            () => _sut.ApiKey(new SecretVerificationRequestModel())
-        );
-    }
-
-    [Fact]
-    public async Task PostRotateApiKey_WhenPasswordCheckFails_ShouldThrowBadRequestException()
+    public async Task PostRotateApiKey_FlagOn_CallsRotateUserApiKeyCommand()
     {
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
+        ConfigureUserServiceToAcceptPasswordFor(user);
+        _featureService.IsEnabled(FeatureFlagKeys.PM37165_RotateUserApiKeyCommand).Returns(true);
+
+        await _sut.RotateApiKey(new SecretVerificationRequestModel());
+
+        await _rotateUserApiKeyCommand.Received(1).RotateApiKeyAsync(user);
+#pragma warning disable CS0618 // asserting the legacy path was NOT called
+        await _userService.DidNotReceive().RotateApiKeyAsync(Arg.Any<User>());
+#pragma warning restore CS0618
+    }
+
+    // Auth/secret guards run before the flag branch, but cover both flag states for parity. When the
+    // PM37165_RotateUserApiKeyCommand flag is cleaned up, drop the [InlineData] rows and convert back to [Fact].
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PostRotateApiKey_WhenUserDoesNotExist_ShouldThrowUnauthorizedAccessException(bool flagOn)
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM37165_RotateUserApiKeyCommand).Returns(flagOn);
+        ConfigureUserServiceToReturnNullPrincipal();
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => _sut.RotateApiKey(new SecretVerificationRequestModel())
+        );
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PostRotateApiKey_WhenPasswordCheckFails_ShouldThrowBadRequestException(bool flagOn)
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM37165_RotateUserApiKeyCommand).Returns(flagOn);
+        var user = GenerateExampleUser();
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
         ConfigureUserServiceToRejectPasswordFor(user);
+
         await Assert.ThrowsAsync<BadRequestException>(
-            () => _sut.ApiKey(new SecretVerificationRequestModel())
+            () => _sut.RotateApiKey(new SecretVerificationRequestModel())
         );
     }
 
@@ -743,6 +785,44 @@ public class AccountsControllerTests : IDisposable
 
         Assert.NotNull(exception.Message);
         Assert.Contains("User has existing keypair", exception.Message);
+    }
+
+    [Fact]
+    public async Task GetProfile_PoliciesInAcceptedState_FlagEnabled_PopulatesOrganizationsNew()
+    {
+        var user = GenerateExampleUser();
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        _userService.GetOrganizationsClaimingUserAsync(user.Id).Returns(new List<Organization>());
+        _featureService.IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState).Returns(true);
+
+        var acceptedOrganizationId = Guid.NewGuid();
+        var organizationsNew = new List<OrganizationUserOrganizationDetails>
+        {
+            new() { OrganizationId = acceptedOrganizationId }
+        };
+        _organizationUserRepository.GetManyConfirmedAcceptedDetailsByUserAsync(user.Id)
+            .Returns(organizationsNew);
+
+        var result = await _sut.GetProfile();
+
+        await _organizationUserRepository.Received(1).GetManyConfirmedAcceptedDetailsByUserAsync(user.Id);
+        Assert.NotNull(result.OrganizationsNew);
+        var returnedOrganization = Assert.Single(result.OrganizationsNew);
+        Assert.Equal(acceptedOrganizationId, returnedOrganization.Id);
+    }
+
+    [Fact]
+    public async Task GetProfile_PoliciesInAcceptedState_FlagDisabled_OrganizationsNewIsNull()
+    {
+        var user = GenerateExampleUser();
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        _userService.GetOrganizationsClaimingUserAsync(user.Id).Returns(new List<Organization>());
+        _featureService.IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState).Returns(false);
+
+        var result = await _sut.GetProfile();
+
+        await _organizationUserRepository.DidNotReceive().GetManyConfirmedAcceptedDetailsByUserAsync(Arg.Any<Guid>());
+        Assert.Null(result.OrganizationsNew);
     }
 
     // Below are helper functions that currently belong to this
