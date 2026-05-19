@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
@@ -10,6 +11,7 @@ using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Context;
+using Bit.Core.Services;
 using Stripe;
 using Stripe.Tax;
 
@@ -29,6 +31,7 @@ public interface IGetOrganizationWarningsQuery
 
 public class GetOrganizationWarningsQuery(
     ICurrentContext currentContext,
+    IFeatureService featureService,
     IHasPaymentMethodQuery hasPaymentMethodQuery,
     IProviderRepository providerRepository,
     IStripeAdapter stripeAdapter,
