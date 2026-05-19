@@ -1078,8 +1078,8 @@ public class NonAnonymousSendCommandTests
             .Returns(Task.CompletedTask);
 
         // Configure validation to fail due to file size mismatch
-        _nonAnonymousSendCommand.ConfirmFileSize(send)
-            .Returns(false);
+        _sendFileStorageService.ValidateFileAsync(send, fileId, Arg.Any<long>(), Arg.Any<long>())
+            .Returns((false, 0L));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
