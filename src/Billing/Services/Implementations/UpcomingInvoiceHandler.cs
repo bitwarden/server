@@ -6,6 +6,9 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.PlanMigration.Entities;
+using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
+using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
@@ -31,6 +34,8 @@ public class UpcomingInvoiceHandler(
     IGetPaymentMethodQuery getPaymentMethodQuery,
     ILogger<StripeEventProcessor> logger,
     IMailService mailService,
+    IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
+    IOrganizationPlanMigrationCohortRepository cohortRepository,
     IOrganizationRepository organizationRepository,
     IPricingClient pricingClient,
     IProviderRepository providerRepository,
@@ -48,12 +53,20 @@ public class UpcomingInvoiceHandler(
     {
         var invoice = await stripeEventService.GetInvoice(parsedEvent);
 
-        // "subscriptions.data.discounts" is required by IPriceIncreaseScheduler.Schedule
-        // to preserve pre-existing subscription-level discounts when constructing Phase 2.
-        // See PM-35909.
         var customer =
             await stripeAdapter.GetCustomerAsync(invoice.CustomerId,
-                new CustomerGetOptions { Expand = ["subscriptions", "subscriptions.data.discounts", "subscriptions.data.test_clock", "tax", "tax_ids"] });
+                new CustomerGetOptions
+                {
+                    Expand =
+                    [
+                        "subscriptions",
+                        "subscriptions.data.customer",
+                        "subscriptions.data.discounts",
+                        "subscriptions.data.test_clock",
+                        "tax",
+                        "tax_ids"
+                    ]
+                });
 
         var subscription = customer.Subscriptions.FirstOrDefault();
 
@@ -206,14 +219,28 @@ public class UpcomingInvoiceHandler(
     }
 
     /// <summary>
-    /// Aligns the organization's subscription details with the specified plan and milestone requirements.
+    /// Dispatches subscription-alignment work based on the organization's product tier.
     /// </summary>
-    /// <param name="organization">The organization whose subscription is being updated.</param>
-    /// <param name="event">The Stripe event associated with this operation.</param>
-    /// <param name="subscription">The organization's subscription.</param>
-    /// <param name="plan">The organization's current plan.</param>
-    /// <returns>Whether the operation resulted in an updated subscription.</returns>
-    private async Task<bool> AlignOrganizationSubscriptionConcernsAsync(
+    /// <returns>
+    /// True if a tier-specific alignment ran and sent a cohort-specific renewal email
+    /// (the standard upcoming-invoice email is skipped). False if no alignment ran (the
+    /// caller falls through to the standard upcoming-invoice email path).
+    /// </returns>
+    private Task<bool> AlignOrganizationSubscriptionConcernsAsync(
+        Organization organization,
+        Event @event,
+        Subscription subscription,
+        Plan plan) =>
+        organization.PlanType.GetProductTier() switch
+        {
+            ProductTierType.Families =>
+                ScheduleFamiliesPriceMigrationAsync(organization, @event, subscription, plan),
+            ProductTierType.Teams or ProductTierType.Enterprise =>
+                ScheduleBusinessPlanPriceMigrationAsync(organization, @event, subscription),
+            _ => Task.FromResult(false)
+        };
+
+    private async Task<bool> ScheduleFamiliesPriceMigrationAsync(
         Organization organization,
         Event @event,
         Subscription subscription,
@@ -314,6 +341,75 @@ public class UpcomingInvoiceHandler(
                 @event.Id);
             return false;
         }
+    }
+
+    private async Task<bool> ScheduleBusinessPlanPriceMigrationAsync(
+        Organization organization,
+        Event @event,
+        Subscription subscription)
+    {
+        try
+        {
+            var assignment = await assignmentRepository.GetByOrganizationIdAsync(organization.Id);
+
+            if (assignment is null || assignment.ScheduledDate is not null)
+            {
+                return false;
+            }
+
+            var cohort = await cohortRepository.GetByIdAsync(assignment.CohortId);
+
+            if (cohort is null || !cohort.IsActive)
+            {
+                return false;
+            }
+
+            var migrationPath = cohort.MigrationPathId is { } pathId
+                ? MigrationPaths.FromId(pathId)
+                : null;
+
+            if (migrationPath is null || organization.PlanType != migrationPath.FromPlan)
+            {
+                logger.LogWarning(
+                    "Skipping business price migration for Organization ({OrganizationId}); PlanType {ActualPlan} does not match cohort {CohortName} source {ExpectedPlan}",
+                    organization.Id, organization.PlanType, cohort.Name, migrationPath?.FromPlan);
+                return false;
+            }
+
+            var scheduled = await priceIncreaseScheduler.ScheduleBusinessPriceIncrease(subscription, cohort);
+            if (!scheduled)
+            {
+                return true;
+            }
+
+            var sourcePlan = await pricingClient.GetPlanOrThrow(migrationPath.FromPlan);
+            var targetPlan = await pricingClient.GetPlanOrThrow(migrationPath.ToPlan);
+
+            await SendBusinessRenewalEmailAsync(organization, sourcePlan, targetPlan, cohort);
+            return true;
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(
+                exception,
+                "Failed to schedule business price migration for Organization ({OrganizationID}) while processing '{EventType}' event ({EventID})",
+                organization.Id,
+                @event.Type,
+                @event.Id);
+            return false;
+        }
+    }
+
+    private Task SendBusinessRenewalEmailAsync(
+        Organization organization,
+        Plan sourcePlan,
+        Plan targetPlan,
+        OrganizationPlanMigrationCohort cohort)
+    {
+        logger.LogInformation(
+            "Business renewal email is not yet wired up; skipping send for Organization ({OrganizationId}) cohort {CohortName} ({Source} → {Target}).",
+            organization.Id, cohort.Name, sourcePlan.Type, targetPlan.Type);
+        return Task.CompletedTask;
     }
 
     #endregion
