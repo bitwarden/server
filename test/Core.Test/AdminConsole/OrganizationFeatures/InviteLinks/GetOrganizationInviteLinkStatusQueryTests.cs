@@ -403,6 +403,7 @@ public class GetOrganizationInviteLinkStatusQueryTests
         OrganizationInviteLink inviteLink,
         Organization organization)
     {
+        organization.Enabled = true;
         organization.UseInviteLinks = true;
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
             .GetByCodeAsync(code)
