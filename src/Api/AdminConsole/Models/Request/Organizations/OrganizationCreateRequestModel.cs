@@ -4,6 +4,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -146,7 +147,8 @@ public class OrganizationCreateRequestModel : IValidatableObject
                 new string[] { nameof(BillingAddressCountry) });
         }
 
-        if (PlanType != PlanType.Free && string.IsNullOrWhiteSpace(BillingAddressPostalCode))
+        if (PlanType != PlanType.Free && TaxHelpers.IsDirectTaxCountry(BillingAddressCountry) &&
+            string.IsNullOrWhiteSpace(BillingAddressPostalCode))
         {
             yield return new ValidationResult("Zip / postal code is required.",
                 new string[] { nameof(BillingAddressPostalCode) });
