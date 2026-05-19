@@ -283,9 +283,9 @@ public class AccountsController : Controller
 
         if (await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
         {
-            var policyData = (await _policyRequirementQuery.GetAsyncVNext<MasterPasswordPolicyRequirement>(user.Id)).EnforcedOptions;
+            var masterPasswordPolicy = await _policyRequirementQuery.GetAsyncVNext<MasterPasswordPolicyRequirement>(user.Id);
 
-            return new MasterPasswordPolicyResponseModel(policyData);
+            return new MasterPasswordPolicyResponseModel(masterPasswordPolicy.EnforcedOptions);
         }
 
         ModelState.AddModelError(nameof(model.MasterPasswordHash), "Invalid password.");
