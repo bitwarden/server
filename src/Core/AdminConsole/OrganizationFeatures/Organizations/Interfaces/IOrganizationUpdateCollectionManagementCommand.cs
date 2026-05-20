@@ -3,7 +3,7 @@ using Bit.Core.AdminConsole.Models.Business;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 
-public interface IUpdateCollectionManagementSettingsCommand
+public interface IOrganizationUpdateCollectionManagementCommand
 {
     /// <summary>
     /// Updates an organization's collection management settings.
@@ -11,5 +11,5 @@ public interface IUpdateCollectionManagementSettingsCommand
     /// <param name="organizationId">The unique identifier of the organization to update.</param>
     /// <param name="settings">The collection management settings to apply.</param>
     /// <returns>The updated organization.</returns>
-    Task<Organization> UpdateCollectionManagementSettingsAsync(Guid organizationId, OrganizationCollectionManagementSettings settings);
+    Task<Organization> UpdateAsync(Guid organizationId, OrganizationCollectionManagementSettings settings);
 }

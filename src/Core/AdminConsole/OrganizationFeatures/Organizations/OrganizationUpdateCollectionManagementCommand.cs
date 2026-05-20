@@ -9,14 +9,14 @@ using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 
-public class UpdateCollectionManagementSettingsCommand : IUpdateCollectionManagementSettingsCommand
+public class OrganizationUpdateCollectionManagementCommand : IOrganizationUpdateCollectionManagementCommand
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IEventService _eventService;
     private readonly IPushNotificationService _pushNotificationService;
 
-    public UpdateCollectionManagementSettingsCommand(
+    public OrganizationUpdateCollectionManagementCommand(
         IOrganizationRepository organizationRepository,
         IApplicationCacheService applicationCacheService,
         IEventService eventService,
@@ -28,7 +28,7 @@ public class UpdateCollectionManagementSettingsCommand : IUpdateCollectionManage
         _pushNotificationService = pushNotificationService;
     }
 
-    public async Task<Organization> UpdateCollectionManagementSettingsAsync(Guid organizationId, OrganizationCollectionManagementSettings settings)
+    public async Task<Organization> UpdateAsync(Guid organizationId, OrganizationCollectionManagementSettings settings)
     {
         var existingOrganization = await _organizationRepository.GetByIdAsync(organizationId);
         if (existingOrganization == null)
