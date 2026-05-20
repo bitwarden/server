@@ -6,6 +6,7 @@ using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
@@ -19,6 +20,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
+using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
@@ -70,6 +72,7 @@ public class OrganizationsController : Controller
     private readonly ISubscriberService _subscriberService;
     private readonly IOrganizationPlanMigrationCohortRepository _organizationPlanMigrationCohortRepository;
     private readonly IOrganizationPlanMigrationCohortAssignmentRepository _organizationPlanMigrationCohortAssignmentRepository;
+    private readonly IFeatureService _featureService;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -101,7 +104,8 @@ public class OrganizationsController : Controller
         IOrganizationAutoConfirmEnabledNotificationCommand organizationAutoConfirmEnabledNotificationCommand,
         ISubscriberService subscriberService,
         IOrganizationPlanMigrationCohortRepository organizationPlanMigrationCohortRepository,
-        IOrganizationPlanMigrationCohortAssignmentRepository organizationPlanMigrationCohortAssignmentRepository)
+        IOrganizationPlanMigrationCohortAssignmentRepository organizationPlanMigrationCohortAssignmentRepository,
+        IFeatureService featureService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -133,7 +137,12 @@ public class OrganizationsController : Controller
         _subscriberService = subscriberService;
         _organizationPlanMigrationCohortRepository = organizationPlanMigrationCohortRepository;
         _organizationPlanMigrationCohortAssignmentRepository = organizationPlanMigrationCohortAssignmentRepository;
+        _featureService = featureService;
     }
+
+    private bool CanManagePlanMigrationCohortAssignment() =>
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+        && _accessControlService.UserHasPermission(Permission.Tools_ManagePlanMigrationCohorts);
 
     [RequirePermission(Permission.Org_List_View)]
     public async Task<IActionResult> Index(string name = null, string userEmail = null, bool? paid = null,
@@ -234,9 +243,19 @@ public class OrganizationsController : Controller
 
         var plans = await _pricingClient.ListPlans();
 
-        var migrationCohorts = await _organizationPlanMigrationCohortRepository.GetManyAsync();
-        var currentAssignment =
-            await _organizationPlanMigrationCohortAssignmentRepository.GetByOrganizationIdAsync(id);
+        var canManageMigrationCohortAssignment = CanManagePlanMigrationCohortAssignment();
+        List<OrganizationPlanMigrationCohort> visibleCohorts = null;
+        OrganizationPlanMigrationCohortAssignment currentAssignment = null;
+        if (canManageMigrationCohortAssignment)
+        {
+            var migrationCohorts = await _organizationPlanMigrationCohortRepository.GetManyAsync();
+            visibleCohorts = migrationCohorts
+                .Where(c => !c.MigrationPathId.HasValue
+                            || MigrationPaths.FromId(c.MigrationPathId.Value)?.FromPlan == organization.PlanType)
+                .ToList();
+            currentAssignment =
+                await _organizationPlanMigrationCohortAssignmentRepository.GetByOrganizationIdAsync(id);
+        }
 
         var model = new OrganizationEditModel(
             organization,
@@ -257,7 +276,7 @@ public class OrganizationsController : Controller
             smSeats)
         {
             MigrationCohortId = currentAssignment?.CohortId,
-            AvailableMigrationCohorts = migrationCohorts,
+            AvailableMigrationCohorts = visibleCohorts,
             MigrationCohortLocked = currentAssignment?.IsLocked() ?? false,
             MigrationCohortLockReason = currentAssignment switch
             {
@@ -346,7 +365,7 @@ public class OrganizationsController : Controller
         OrganizationPlanMigrationCohort cohortToAssign = null;
         var shouldWriteCohortAssignment = false;
 
-        if (_accessControlService.UserHasPermission(Permission.Org_Plan_Edit))
+        if (CanManagePlanMigrationCohortAssignment())
         {
             cohortAssignmentToReplace =
                 await _organizationPlanMigrationCohortAssignmentRepository.GetByOrganizationIdAsync(id);
@@ -368,6 +387,17 @@ public class OrganizationsController : Controller
                     {
                         TempData["Error"] = "The selected migration cohort no longer exists.";
                         return RedirectToAction("Edit", new { id });
+                    }
+
+                    if (cohortToAssign.MigrationPathId.HasValue)
+                    {
+                        var path = MigrationPaths.FromId(cohortToAssign.MigrationPathId.Value);
+                        if (path == null || path.FromPlan != organization.PlanType)
+                        {
+                            TempData["Error"] =
+                                "The selected migration cohort is not compatible with this organization's plan.";
+                            return RedirectToAction("Edit", new { id });
+                        }
                     }
                 }
 

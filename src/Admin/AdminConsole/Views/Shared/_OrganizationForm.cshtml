@@ -20,6 +20,9 @@
     var canEditLicensing = AccessControlService.UserHasPermission(Permission.Org_Licensing_Edit);
     var canEditBilling = AccessControlService.UserHasPermission(Permission.Org_Billing_Edit);
     var canLaunchGateway = AccessControlService.UserHasPermission(Permission.Org_Billing_LaunchGateway);
+    var canManagePlanMigrationCohorts = AccessControlService.UserHasPermission(Permission.Tools_ManagePlanMigrationCohorts);
+    var businessPlanPriceMigrationEnabled = FeatureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration);
+    var canViewMigrationCohortAssignment = businessPlanPriceMigrationEnabled && canManagePlanMigrationCohorts;
 }
 
 <form method="post" id="edit-form" asp-route-providerId="@Model.Provider?.Id">
@@ -63,7 +66,7 @@
             </div>
         }
 
-        @if (Model.Organization != null && Model.AvailableMigrationCohorts != null)
+        @if (canViewMigrationCohortAssignment && Model.Organization != null && Model.AvailableMigrationCohorts != null)
         {
             var migrationCohortDisabled = !canEditPlan || Model.MigrationCohortLocked;
             <div class="row">

@@ -9,6 +9,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfir
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
+using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Enums;
@@ -30,6 +31,16 @@ namespace Admin.Test.AdminConsole.Controllers;
 [SutProviderCustomize]
 public class OrganizationsControllerTests
 {
+    private static void StubCohortAccessAllowed(SutProvider<OrganizationsController> sutProvider)
+    {
+        sutProvider.GetDependency<IAccessControlService>()
+            .UserHasPermission(Permission.Tools_ManagePlanMigrationCohorts)
+            .Returns(true);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(Bit.Core.FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
+    }
+
     #region Edit (POST)
 
     [BitAutoData]
@@ -548,15 +559,14 @@ public class OrganizationsControllerTests
         OrganizationPlanMigrationCohort cohort,
         SutProvider<OrganizationsController> sutProvider)
     {
+        cohort.MigrationPathId = null;
         var update = new OrganizationEditModel
         {
             PlanType = PlanType.TeamsMonthly,
             MigrationCohortId = cohort.Id
         };
 
-        sutProvider.GetDependency<IAccessControlService>()
-            .UserHasPermission(Permission.Org_Plan_Edit)
-            .Returns(true);
+        StubCohortAccessAllowed(sutProvider);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
             .GetByOrganizationIdAsync(organization.Id)
@@ -581,23 +591,64 @@ public class OrganizationsControllerTests
     [BitAutoData]
     [SutProviderCustomize]
     [Theory]
-    public async Task Edit_MigrationCohortAssignment_WithoutPlanEditPermission_SkipsAssignmentWriteButStillSavesOrg(
+    public async Task Edit_MigrationCohortAssignment_WithoutCohortPermission_SkipsAssignmentWriteButStillSavesOrg(
         Organization organization,
         OrganizationPlanMigrationCohort cohort,
         SutProvider<OrganizationsController> sutProvider)
     {
-        // Operators without Org_Plan_Edit must not be able to mutate cohort assignment, even if
-        // they craft a POST that bypasses the disabled <select>. The rest of the Edit save still
-        // runs because other fields may be gated on different permissions.
+        // Operators without Tools_ManagePlanMigrationCohorts must not be able to mutate cohort
+        // assignment, even if they craft a POST that bypasses the hidden dropdown. The rest of
+        // the Edit save still runs because other fields are gated on different permissions.
         var update = new OrganizationEditModel
         {
             PlanType = PlanType.TeamsMonthly,
             MigrationCohortId = cohort.Id,
         };
 
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(Bit.Core.FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
         sutProvider.GetDependency<IAccessControlService>()
-            .UserHasPermission(Permission.Org_Plan_Edit)
+            .UserHasPermission(Permission.Tools_ManagePlanMigrationCohorts)
             .Returns(false);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+
+        _ = await sutProvider.Sut.Edit(organization.Id, update);
+
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetByOrganizationIdAsync(default);
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(default);
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAsync(default);
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(Arg.Any<Organization>());
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_MigrationCohortAssignment_WithFeatureFlagOff_SkipsAssignmentWriteButStillSavesOrg(
+        Organization organization,
+        OrganizationPlanMigrationCohort cohort,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // When PM35215_BusinessPlanPriceMigration is off the dropdown is hidden, and the server
+        // must refuse cohort writes even from a crafted POST that includes the field.
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.TeamsMonthly,
+            MigrationCohortId = cohort.Id,
+        };
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(Bit.Core.FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(false);
+        sutProvider.GetDependency<IAccessControlService>()
+            .UserHasPermission(Permission.Tools_ManagePlanMigrationCohorts)
+            .Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
         _ = await sutProvider.Sut.Edit(organization.Id, update);
@@ -635,9 +686,7 @@ public class OrganizationsControllerTests
             MigrationCohortId = cohortId
         };
 
-        sutProvider.GetDependency<IAccessControlService>()
-            .UserHasPermission(Permission.Org_Plan_Edit)
-            .Returns(true);
+        StubCohortAccessAllowed(sutProvider);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
             .GetByOrganizationIdAsync(organization.Id)
@@ -702,9 +751,7 @@ public class OrganizationsControllerTests
             MigrationCohortId = newCohortId,
         };
 
-        sutProvider.GetDependency<IAccessControlService>()
-            .UserHasPermission(Permission.Org_Plan_Edit)
-            .Returns(true);
+        StubCohortAccessAllowed(sutProvider);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
             .GetByOrganizationIdAsync(organization.Id)
@@ -752,9 +799,7 @@ public class OrganizationsControllerTests
             MigrationCohortId = cohortId,
         };
 
-        sutProvider.GetDependency<IAccessControlService>()
-            .UserHasPermission(Permission.Org_Plan_Edit)
-            .Returns(true);
+        StubCohortAccessAllowed(sutProvider);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
             .GetByOrganizationIdAsync(organization.Id)
@@ -789,9 +834,7 @@ public class OrganizationsControllerTests
             MigrationCohortId = newCohortId,
         };
 
-        sutProvider.GetDependency<IAccessControlService>()
-            .UserHasPermission(Permission.Org_Plan_Edit)
-            .Returns(true);
+        StubCohortAccessAllowed(sutProvider);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
             .GetByOrganizationIdAsync(organization.Id)
@@ -832,9 +875,7 @@ public class OrganizationsControllerTests
             MigrationCohortId = null,
         };
 
-        sutProvider.GetDependency<IAccessControlService>()
-            .UserHasPermission(Permission.Org_Plan_Edit)
-            .Returns(true);
+        StubCohortAccessAllowed(sutProvider);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
             .GetByOrganizationIdAsync(organization.Id)
@@ -859,6 +900,7 @@ public class OrganizationsControllerTests
         OrganizationPlanMigrationCohort targetCohort,
         SutProvider<OrganizationsController> sutProvider)
     {
+        targetCohort.MigrationPathId = null;
         var existing = new OrganizationPlanMigrationCohortAssignment
         {
             Id = Guid.NewGuid(),
@@ -871,9 +913,7 @@ public class OrganizationsControllerTests
             MigrationCohortId = targetCohort.Id,
         };
 
-        sutProvider.GetDependency<IAccessControlService>()
-            .UserHasPermission(Permission.Org_Plan_Edit)
-            .Returns(true);
+        StubCohortAccessAllowed(sutProvider);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
             .GetByOrganizationIdAsync(organization.Id)
@@ -917,15 +957,14 @@ public class OrganizationsControllerTests
         // The cohort write runs after ReplaceAsync. A failure here must not block the org-level
         // save; the operator sees a warning and is told to retry the cohort change. Any exception
         // surfaces the same way -- the catch must not be narrow enough to leak a 500.
+        cohort.MigrationPathId = null;
         var update = new OrganizationEditModel
         {
             PlanType = PlanType.TeamsMonthly,
             MigrationCohortId = cohort.Id,
         };
 
-        sutProvider.GetDependency<IAccessControlService>()
-            .UserHasPermission(Permission.Org_Plan_Edit)
-            .Returns(true);
+        StubCohortAccessAllowed(sutProvider);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
             .GetByOrganizationIdAsync(organization.Id)
@@ -962,6 +1001,7 @@ public class OrganizationsControllerTests
         OrganizationPlanMigrationCohort targetCohort,
         SutProvider<OrganizationsController> sutProvider)
     {
+        targetCohort.MigrationPathId = null;
         var existing = new OrganizationPlanMigrationCohortAssignment
         {
             Id = Guid.NewGuid(),
@@ -975,9 +1015,7 @@ public class OrganizationsControllerTests
         };
 
         var assignmentRepo = sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
-        sutProvider.GetDependency<IAccessControlService>()
-            .UserHasPermission(Permission.Org_Plan_Edit)
-            .Returns(true);
+        StubCohortAccessAllowed(sutProvider);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         assignmentRepo.GetByOrganizationIdAsync(organization.Id).Returns(existing);
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
@@ -1014,6 +1052,7 @@ public class OrganizationsControllerTests
     {
         // Symmetric to the CreateThrowsAfterDelete case -- the broad catch must also swallow a
         // delete-side failure, leaving the prior assignment intact and surfacing the same warning.
+        targetCohort.MigrationPathId = null;
         var existing = new OrganizationPlanMigrationCohortAssignment
         {
             Id = Guid.NewGuid(),
@@ -1027,9 +1066,7 @@ public class OrganizationsControllerTests
         };
 
         var assignmentRepo = sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
-        sutProvider.GetDependency<IAccessControlService>()
-            .UserHasPermission(Permission.Org_Plan_Edit)
-            .Returns(true);
+        StubCohortAccessAllowed(sutProvider);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         assignmentRepo.GetByOrganizationIdAsync(organization.Id).Returns(existing);
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
@@ -1071,9 +1108,7 @@ public class OrganizationsControllerTests
             MigrationCohortId = Guid.Empty,
         };
 
-        sutProvider.GetDependency<IAccessControlService>()
-            .UserHasPermission(Permission.Org_Plan_Edit)
-            .Returns(true);
+        StubCohortAccessAllowed(sutProvider);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
             .GetByOrganizationIdAsync(organization.Id)
@@ -1114,9 +1149,7 @@ public class OrganizationsControllerTests
             MigrationCohortId = Guid.Empty,
         };
 
-        sutProvider.GetDependency<IAccessControlService>()
-            .UserHasPermission(Permission.Org_Plan_Edit)
-            .Returns(true);
+        StubCohortAccessAllowed(sutProvider);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
             .GetByOrganizationIdAsync(organization.Id)
@@ -1153,9 +1186,7 @@ public class OrganizationsControllerTests
             MigrationCohortId = cohort.Id,
         };
 
-        sutProvider.GetDependency<IAccessControlService>()
-            .UserHasPermission(Permission.Org_Plan_Edit)
-            .Returns(true);
+        StubCohortAccessAllowed(sutProvider);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.Sut.ModelState.AddModelError("Name", "Name is required");
         sutProvider.Sut.TempData = new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
@@ -1210,6 +1241,50 @@ public class OrganizationsControllerTests
                 Arg.Any<EventSystemUser>());
     }
 
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_MigrationCohortAssignment_IncompatiblePlan_SurfacesErrorAndSkipsWrite(
+        Organization organization,
+        OrganizationPlanMigrationCohort cohort,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // Defense-in-depth: even if a stale dropdown or crafted POST submits a cohort whose
+        // MigrationPath.FromPlan differs from the org's PlanType, the controller must reject the
+        // write and surface an error instead of persisting a mismatched assignment.
+        organization.PlanType = PlanType.EnterpriseAnnually2020;
+        cohort.MigrationPathId = MigrationPathId.Enterprise2020MonthlyToCurrent;
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.EnterpriseAnnually2020,
+            MigrationCohortId = cohort.Id,
+        };
+
+        StubCohortAccessAllowed(sutProvider);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .GetByOrganizationIdAsync(organization.Id)
+            .Returns((OrganizationPlanMigrationCohortAssignment)null);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(cohort.Id)
+            .Returns(cohort);
+        sutProvider.Sut.TempData = new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.Edit(organization.Id, update);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal("Edit", redirect.ActionName);
+        Assert.Equal(
+            "The selected migration cohort is not compatible with this organization's plan.",
+            sutProvider.Sut.TempData["Error"]);
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(default);
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAsync(default);
+    }
+
     #endregion
 
     #region Edit (GET)
@@ -1220,6 +1295,7 @@ public class OrganizationsControllerTests
         OrganizationPlanMigrationCohortAssignment currentAssignment,
         IReadOnlyList<OrganizationPlanMigrationCohort> availableCohorts = null)
     {
+        StubCohortAccessAllowed(sutProvider);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
             .GetByOrganizationIdAsync(organization.Id)
@@ -1382,6 +1458,73 @@ public class OrganizationsControllerTests
         Assert.True(model.MigrationCohortLocked);
         Assert.Equal("Locked: this organization has already been migrated.",
             model.MigrationCohortLockReason);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_WithoutCohortPermissionOrFlag_LeavesDropdownHidden(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // With FF off or the cohort permission absent, the GET must not surface dropdown data --
+        // a null AvailableMigrationCohorts is the signal the view uses to hide the row entirely.
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+
+        var result = await sutProvider.Sut.Edit(organization.Id);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<OrganizationEditModel>(view.Model);
+        Assert.Null(model.AvailableMigrationCohorts);
+        Assert.Null(model.MigrationCohortId);
+        Assert.False(model.MigrationCohortLocked);
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetManyAsync();
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetByOrganizationIdAsync(default);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_FiltersCohortsByOrgPlan(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // Operators must not be offered cohorts whose MigrationPath.FromPlan differs from this
+        // org's PlanType; cohorts without a path are universally visible (e.g. pre-staged rows).
+        organization.PlanType = PlanType.EnterpriseAnnually2020;
+        var matching = new OrganizationPlanMigrationCohort
+        {
+            Id = Guid.NewGuid(),
+            Name = "Matches",
+            MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
+        };
+        var mismatched = new OrganizationPlanMigrationCohort
+        {
+            Id = Guid.NewGuid(),
+            Name = "Mismatches",
+            MigrationPathId = MigrationPathId.Enterprise2020MonthlyToCurrent,
+        };
+        var pathless = new OrganizationPlanMigrationCohort
+        {
+            Id = Guid.NewGuid(),
+            Name = "Pathless",
+            MigrationPathId = null,
+        };
+        StubEditGetDependencies(sutProvider, organization, currentAssignment: null,
+            availableCohorts: [matching, mismatched, pathless]);
+
+        var result = await sutProvider.Sut.Edit(organization.Id);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<OrganizationEditModel>(view.Model);
+        Assert.NotNull(model.AvailableMigrationCohorts);
+        Assert.Equal(
+            new[] { matching.Id, pathless.Id },
+            model.AvailableMigrationCohorts.Select(c => c.Id));
     }
 
     #endregion
