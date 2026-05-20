@@ -1,4 +1,4 @@
-﻿using Bit.Core;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Providers.Models;
