@@ -1442,6 +1442,233 @@ public class PriceIncreaseSchedulerTests
             .GetByOrganizationIdAsync(Arg.Any<Guid>());
     }
 
+    [Fact]
+    public async Task ScheduleForSubscription_UserSubscription_RoutesToPersonalPath_CreatesSchedule()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        var oldPremium = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            Seat = new Purchasable { StripePriceId = "premium-old-seat", Price = 10, Provided = 1 },
+            Storage = new Purchasable { StripePriceId = "premium-old-storage", Price = 4, Provided = 1 }
+        };
+
+        var newPremium = new PremiumPlan
+        {
+            Name = "Premium",
+            Available = true,
+            Seat = new Purchasable { StripePriceId = "premium-new-seat", Price = 15, Provided = 1 },
+            Storage = new Purchasable { StripePriceId = "premium-new-storage", Price = 4, Provided = 1 }
+        };
+
+        _pricingClient.ListPremiumPlans().Returns([oldPremium, newPremium]);
+
+        var subscription = CreateSubscription("sub_1", "cus_1",
+            CreateSubscriptionItem("premium-old-seat", 1));
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+
+        var sut = CreateSut();
+        var result = await sut.ScheduleForSubscription(subscription);
+
+        Assert.True(result);
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sched_1",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases.Count == 2 &&
+                o.Phases[1].Items.Any(i => i.Price == "premium-new-seat")));
+    }
+
+    [Fact]
+    public async Task ScheduleForSubscription_TrackAOrg_ActiveCohortMatchingPlan_RoutesToBusinessPath_CreatesSchedule()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+
+        var source = MockPlans.Get(PlanType.EnterpriseAnnually2020);
+        var target = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(source);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(target);
+
+        var orgId = Guid.NewGuid();
+        var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent);
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CohortId = cohort.Id
+        };
+
+        _organizationRepository.GetByIdAsync(orgId)
+            .Returns(CreateOrganization(orgId, PlanType.EnterpriseAnnually2020));
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohort.Id).Returns(cohort);
+
+        var subscription = CreateBusinessSubscription("sub_1", "cus_1", orgId,
+            CreateSubscriptionItem(source.PasswordManager.StripeSeatPlanId, 10));
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(assignment);
+
+        var sut = CreateSut();
+        var result = await sut.ScheduleForSubscription(subscription);
+
+        Assert.True(result);
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sched_1",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases.Count == 2 &&
+                o.Phases[1].Items.Any(i => i.Price == target.PasswordManager.StripeSeatPlanId)));
+    }
+
+    [Fact]
+    public async Task ScheduleForSubscription_TrackAOrg_NoAssignment_ReturnsFalse()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+
+        var orgId = Guid.NewGuid();
+
+        _organizationRepository.GetByIdAsync(orgId)
+            .Returns(CreateOrganization(orgId, PlanType.EnterpriseAnnually2020));
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns((OrganizationPlanMigrationCohortAssignment?)null);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        var subscription = CreateBusinessSubscription("sub_1", "cus_1", orgId);
+
+        var sut = CreateSut();
+        var result = await sut.ScheduleForSubscription(subscription);
+
+        Assert.False(result);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs()
+            .CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
+    }
+
+    [Fact]
+    public async Task ScheduleForSubscription_TrackAOrg_InactiveCohort_ReturnsFalse()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+
+        var orgId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var inactiveCohort = new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "inactive",
+            MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
+            IsActive = false
+        };
+
+        _organizationRepository.GetByIdAsync(orgId)
+            .Returns(CreateOrganization(orgId, PlanType.EnterpriseAnnually2020));
+        _assignmentRepository.GetByOrganizationIdAsync(orgId)
+            .Returns(new OrganizationPlanMigrationCohortAssignment { OrganizationId = orgId, CohortId = cohortId });
+        _cohortRepository.GetByIdAsync(cohortId).Returns(inactiveCohort);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        var subscription = CreateBusinessSubscription("sub_1", "cus_1", orgId);
+
+        var sut = CreateSut();
+        var result = await sut.ScheduleForSubscription(subscription);
+
+        Assert.False(result);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs()
+            .CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
+    }
+
+    [Fact]
+    public async Task ScheduleForSubscription_TrackAOrg_PlanTypeDrifted_ReturnsFalse()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+
+        var orgId = Guid.NewGuid();
+        var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent);
+
+        // Org PlanType is EnterpriseAnnually (already migrated), not EnterpriseAnnually2020
+        _organizationRepository.GetByIdAsync(orgId)
+            .Returns(CreateOrganization(orgId, PlanType.EnterpriseAnnually));
+        _assignmentRepository.GetByOrganizationIdAsync(orgId)
+            .Returns(new OrganizationPlanMigrationCohortAssignment { OrganizationId = orgId, CohortId = cohort.Id });
+        _cohortRepository.GetByIdAsync(cohort.Id).Returns(cohort);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        var subscription = CreateBusinessSubscription("sub_1", "cus_1", orgId);
+
+        var sut = CreateSut();
+        var result = await sut.ScheduleForSubscription(subscription);
+
+        Assert.False(result);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs()
+            .CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
+    }
+
+    [Fact]
+    public async Task ScheduleForSubscription_NonTrackAOrg_FamiliesOrg_RoutesToPersonalPath()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        var orgId = Guid.NewGuid();
+        var families2019 = MockPlans.Get(PlanType.FamiliesAnnually2019);
+        var familiesTarget = MockPlans.Get(PlanType.FamiliesAnnually);
+        var families2025 = MockPlans.Get(PlanType.FamiliesAnnually2025);
+
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesTarget);
+
+        _organizationRepository.GetByIdAsync(orgId)
+            .Returns(CreateOrganization(orgId, PlanType.FamiliesAnnually2019));
+
+        var subscription = CreateSubscription("sub_1", "cus_1",
+            new Dictionary<string, string> { { "organizationId", orgId.ToString() } },
+            CreateSubscriptionItem(families2019.PasswordManager.StripePlanId, 1));
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+
+        var sut = CreateSut();
+        var result = await sut.ScheduleForSubscription(subscription);
+
+        Assert.True(result);
+        await _stripeAdapter.Received(1).CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
+        await _cohortRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(Arg.Any<Guid>());
+        await _assignmentRepository.DidNotReceiveWithAnyArgs().GetByOrganizationIdAsync(Arg.Any<Guid>());
+    }
+
+    [Fact]
+    public async Task ScheduleForSubscription_ProviderSubscription_ReturnsFalse()
+    {
+        var providerId = Guid.NewGuid();
+        var subscription = CreateSubscription("sub_1", "cus_1",
+            new Dictionary<string, string> { { "providerId", providerId.ToString() } });
+
+        var sut = CreateSut();
+        var result = await sut.ScheduleForSubscription(subscription);
+
+        Assert.False(result);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs()
+            .CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
+    }
+
     private static Subscription CreateSubscription(string id, string customerId, params SubscriptionItem[] items) =>
         CreateSubscription(id, customerId, new Dictionary<string, string> { { "userId", Guid.NewGuid().ToString() } }, items);
 
