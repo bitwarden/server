@@ -41,7 +41,8 @@ public class ReinstateSubscriptionCommand(
             return new BadRequest("Subscription is not pending cancellation.");
         }
 
-        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal) ||
+            featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
         {
             if (subscription.Metadata?.ContainsKey(MetadataKeys.CancelledDuringDeferredPriceIncrease) == true)
             {
