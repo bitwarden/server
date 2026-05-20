@@ -973,6 +973,38 @@ public class GetOrganizationWarningsQueryTests
     }
 
     [Theory, BitAutoData]
+    public async Task Run_FlagEnabled_USCustomer_NoTaxIdWarning(
+        Organization organization,
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
+    {
+        organization.PlanType = PlanType.TeamsAnnually;
+
+        var subscription = new Subscription
+        {
+            Customer = new Customer
+            {
+                Address = new Address { Country = "US" },
+                TaxExempt = TaxExempt.None,
+                TaxIds = new StripeList<TaxId> { Data = new List<TaxId>() },
+                InvoiceSettings = new CustomerInvoiceSettings(),
+                Metadata = new Dictionary<string, string>()
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
+            .Returns(true);
+
+        var response = await sutProvider.Sut.Run(organization);
+
+        Assert.Null(response.TaxId);
+    }
+
+    [Theory, BitAutoData]
     public async Task Run_FlagEnabled_NoRegistrationInCountry_NoTaxIdWarning(
         Organization organization,
         SutProvider<GetOrganizationWarningsQuery> sutProvider)
