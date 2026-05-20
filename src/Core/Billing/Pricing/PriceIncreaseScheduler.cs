@@ -193,6 +193,31 @@ public class PriceIncreaseScheduler(
         return true;
     }
 
+    public async Task<bool> ScheduleForSubscription(Subscription subscription)
+    {
+        try
+        {
+            SubscriberId subscriberId = subscription;
+            return await subscriberId.Match(
+                _ => SchedulePersonalPriceIncrease(subscription),
+                orgId => DispatchOrganizationScheduleAsync(subscription, orgId.Value),
+                _ =>
+                {
+                    logger.LogWarning(
+                        "Provider subscriptions do not support schedule recovery ({SubscriptionId})",
+                        subscription.Id);
+                    return Task.FromResult(false);
+                });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Failed to resolve subscriber type for subscription ({SubscriptionId}), cannot recover schedule",
+                subscription.Id);
+            return false;
+        }
+    }
+
     public async Task Release(string customerId, string subscriptionId)
     {
         if (!featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal) &&
@@ -580,5 +605,77 @@ public class PriceIncreaseScheduler(
         _ when sourcePriceId == source.SecretsManager?.StripeServiceAccountPlanId => target.SecretsManager?.StripeServiceAccountPlanId,
         _ => null
     };
+
+    /// <summary>
+    /// Dispatches a price increase schedule for a subscription to an organization.
+    /// </summary>
+    /// <param name="subscription"> The subscription to schedule a price increase for. </param>
+    /// <param name="organizationId"> The ID of the organization associated with the subscription. </param>
+    /// <returns> True if the schedule was dispatched successfully, false otherwise. </returns>
+    private async Task<bool> DispatchOrganizationScheduleAsync(Subscription subscription, Guid organizationId)
+    {
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+        if (organization is null)
+        {
+            logger.LogError(
+                "Organization ({OrganizationId}) not found; cannot recover schedule for subscription ({SubscriptionId})",
+                organizationId, subscription.Id);
+            return false;
+        }
+
+        if (!IsTrackABusinessPlanType(organization.PlanType))
+        {
+            return await SchedulePersonalPriceIncrease(subscription);
+        }
+
+        var assignment = await assignmentRepository.GetByOrganizationIdAsync(organizationId);
+        if (assignment is null)
+        {
+            return false;
+        }
+
+        var cohort = await cohortRepository.GetByIdAsync(assignment.CohortId);
+        if (cohort is null || !cohort.IsActive)
+        {
+            return false;
+        }
+
+        if (cohort.MigrationPathId is null)
+        {
+            // Churn-only cohort — no migration to schedule.
+            return false;
+        }
+
+        var migrationPath = MigrationPaths.FromId(cohort.MigrationPathId.Value);
+        if (migrationPath is null)
+        {
+            logger.LogError(
+                "Unknown MigrationPathId ({MigrationPathId}) on cohort ({CohortId}); skipping schedule recovery for subscription ({SubscriptionId})",
+                cohort.MigrationPathId, cohort.Id, subscription.Id);
+            return false;
+        }
+
+        if (organization.PlanType != migrationPath.FromPlan)
+        {
+            logger.LogWarning(
+                "Skipping schedule recovery for Organization ({OrganizationId}); PlanType {ActualPlan} does not match cohort {CohortName} source {ExpectedPlan}",
+                organizationId, organization.PlanType, cohort.Name, migrationPath.FromPlan);
+            return false;
+        }
+
+        return await ScheduleBusinessPriceIncrease(subscription, cohort);
+    }
+
+    /// <summary>
+    /// Returns true if the plan type is a Track A business plan type.
+    /// </summary>
+    /// <param name="planType">The plan type to check.</param>
+    /// <returns>True if the plan type is a Track A business plan type, otherwise false.</returns>
+    /// <remarks> This method should be expanded to include other track business plan types as needed.</remarks>
+    private static bool IsTrackABusinessPlanType(PlanType planType) => planType is
+        PlanType.TeamsMonthly2020 or
+        PlanType.TeamsAnnually2020 or
+        PlanType.EnterpriseMonthly2020 or
+        PlanType.EnterpriseAnnually2020;
 
 }

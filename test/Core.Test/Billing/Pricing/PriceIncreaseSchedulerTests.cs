@@ -1522,4 +1522,9 @@ public class PriceIncreaseSchedulerTests
             ProactiveDiscountCouponCode = proactiveCoupon,
             IsActive = true
         };
+
+    private static Organization CreateOrganization(Guid id, PlanType planType) =>
+        new() { Id = id, PlanType = planType };
+
+
 }
