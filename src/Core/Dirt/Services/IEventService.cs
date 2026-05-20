@@ -21,7 +21,13 @@ public interface IEventService
     /// has Accepted (not yet Confirmed) status. Use for flows where the user may not be fully confirmed
     /// (e.g. device approval, TDE onboarding).
     /// </param>
-    Task LogUserEventAsync(Guid userId, EventType type, DateTime? date = null, bool includeAcceptedStatusOrgs = false);
+    /// <param name="perOrganizationTypeResolver">When set, called with each organization id during the
+    /// per-org fan-out to choose the <see cref="EventType"/> recorded for that organization's copy.
+    /// Returning <c>null</c> falls back to <paramref name="type"/>. The base user event and any
+    /// provider-scoped copies always use <paramref name="type"/>.
+    /// </param>
+    Task LogUserEventAsync(Guid userId, EventType type, DateTime? date = null, bool includeAcceptedStatusOrgs = false,
+        Func<Guid, EventType?> perOrganizationTypeResolver = null);
     Task LogCipherEventAsync(Cipher cipher, EventType type, DateTime? date = null);
     Task LogCipherEventsAsync(IEnumerable<Tuple<Cipher, EventType, DateTime?>> events);
     Task LogCollectionEventAsync(Collection collection, EventType type, DateTime? date = null);

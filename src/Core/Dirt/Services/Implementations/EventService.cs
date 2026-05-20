@@ -45,7 +45,7 @@ public class EventService : IEventService
     }
 
     public async Task LogUserEventAsync(Guid userId, EventType type, DateTime? date = null,
-        bool includeAcceptedStatusOrgs = false)
+        bool includeAcceptedStatusOrgs = false, Func<Guid, EventType?> perOrganizationTypeResolver = null)
     {
         var events = new List<IEvent>
         {
@@ -57,6 +57,8 @@ public class EventService : IEventService
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             }
         };
+
+        EventType ResolveOrgType(Guid orgId) => perOrganizationTypeResolver?.Invoke(orgId) ?? type;
 
         IEnumerable<EventMessage> orgEvents;
         if (includeAcceptedStatusOrgs)
@@ -72,7 +74,7 @@ public class EventService : IEventService
                     OrganizationId = ou.OrganizationId,
                     UserId = userId,
                     ActingUserId = userId,
-                    Type = type,
+                    Type = ResolveOrgType(ou.OrganizationId),
                     Date = DateTime.UtcNow
                 });
         }
@@ -86,7 +88,7 @@ public class EventService : IEventService
                     OrganizationId = o.Id,
                     UserId = userId,
                     ActingUserId = userId,
-                    Type = type,
+                    Type = ResolveOrgType(o.Id),
                     Date = DateTime.UtcNow
                 });
         }

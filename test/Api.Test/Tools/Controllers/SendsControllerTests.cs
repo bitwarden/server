@@ -20,6 +20,7 @@ using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
 using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
+using Bit.Core.Tools.SendFeatures.Services.Interfaces;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;
@@ -45,6 +46,7 @@ public class SendsControllerTests : IDisposable
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
     private readonly IEventService _eventService;
+    private readonly ISendEventClassifier _sendEventClassifier;
 
     public SendsControllerTests()
     {
@@ -60,6 +62,7 @@ public class SendsControllerTests : IDisposable
         _pushNotificationService = Substitute.For<IPushNotificationService>();
         _hasPremiumAccessQuery = Substitute.For<IHasPremiumAccessQuery>();
         _eventService = Substitute.For<IEventService>();
+        _sendEventClassifier = Substitute.For<ISendEventClassifier>();
 
         _sut = new SendsController(
             _sendRepository,
@@ -73,7 +76,8 @@ public class SendsControllerTests : IDisposable
             _featureService,
             _pushNotificationService,
             _hasPremiumAccessQuery,
-            _eventService
+            _eventService,
+            _sendEventClassifier
         );
     }
 
@@ -1705,7 +1709,12 @@ public class SendsControllerTests : IDisposable
 
         await _sut.AccessUsingAuth();
 
-        await _eventService.Received(1).LogUserEventAsync(userId, EventType.Send_Accessed_Text);
+        await _eventService.Received(1).LogUserEventAsync(
+            userId,
+            EventType.Send_Accessed_Text,
+            Arg.Any<DateTime?>(),
+            Arg.Any<bool>(),
+            Arg.Any<Func<Guid, EventType?>?>());
     }
 
     [Fact]
@@ -1807,7 +1816,12 @@ public class SendsControllerTests : IDisposable
 
         await _sut.GetSendFileDownloadDataUsingAuth(fileId);
 
-        await _eventService.Received(1).LogUserEventAsync(userId, EventType.Send_Accessed_File);
+        await _eventService.Received(1).LogUserEventAsync(
+            userId,
+            EventType.Send_Accessed_File,
+            Arg.Any<DateTime?>(),
+            Arg.Any<bool>(),
+            Arg.Any<Func<Guid, EventType?>?>());
     }
 
     [Fact]
@@ -1864,6 +1878,70 @@ public class SendsControllerTests : IDisposable
         await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
     }
 
+    [Fact]
+    public async Task AccessUsingAuth_TextSend_PassesAccessorEmailAndClaimedDomainVariants_ToClassifier()
+    {
+        var sendId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("a", "b", "c", false)),
+            AuthType = AuthType.Email,
+            Emails = "alice@example.com",
+            HideEmail = true,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+        };
+
+        _sut.ControllerContext = CreateControllerContextWithUser(
+            CreateUserWithSendIdAndEmailClaims(sendId, "alice@example.com"));
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
+
+        await _sut.AccessUsingAuth();
+
+        await _sendEventClassifier.Received(1).BuildAccessResolverAsync(
+            userId,
+            "alice@example.com",
+            EventType.Send_Accessed_Text_FromClaimedDomain,
+            EventType.Send_Accessed_Text_FromExternalDomain);
+    }
+
+    [Fact]
+    public async Task GetSendFileDownloadDataUsingAuth_PassesAccessorEmailAndFileVariants_ToClassifier()
+    {
+        var sendId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var fileId = "fileid";
+        var fileData = new SendFileData("name", "notes", "file.pdf") { Id = fileId, Size = 1024 };
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(fileData),
+            AuthType = AuthType.Email,
+            Emails = "alice@example.com",
+        };
+
+        _sut.ControllerContext = CreateControllerContextWithUser(
+            CreateUserWithSendIdAndEmailClaims(sendId, "alice@example.com"));
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId)
+            .Returns(("https://example.test/url", SendAccessResult.Granted));
+        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
+
+        await _sut.GetSendFileDownloadDataUsingAuth(fileId);
+
+        await _sendEventClassifier.Received(1).BuildAccessResolverAsync(
+            userId,
+            "alice@example.com",
+            EventType.Send_Accessed_File_FromClaimedDomain,
+            EventType.Send_Accessed_File_FromExternalDomain);
+    }
+
     #endregion
 
     #region Test Helpers
@@ -1871,6 +1949,17 @@ public class SendsControllerTests : IDisposable
     private static ClaimsPrincipal CreateUserWithSendIdClaim(Guid sendId)
     {
         var claims = new List<Claim> { new Claim("send_id", sendId.ToString()) };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        return new ClaimsPrincipal(identity);
+    }
+
+    private static ClaimsPrincipal CreateUserWithSendIdAndEmailClaims(Guid sendId, string email)
+    {
+        var claims = new List<Claim>
+        {
+            new Claim("send_id", sendId.ToString()),
+            new Claim("send_email", email),
+        };
         var identity = new ClaimsIdentity(claims, "TestAuth");
         return new ClaimsPrincipal(identity);
     }

@@ -406,6 +406,97 @@ public class EventServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task LogUserEvent_WithPerOrgTypeResolver_ChoosesTypePerOrg_BaseUserEventKeepsType(
+        Guid userId, OrganizationUser orgA, OrganizationUser orgB, SutProvider<EventService> sutProvider)
+    {
+        orgA.UserId = userId;
+        orgA.Status = OrganizationUserStatusType.Confirmed;
+        orgB.UserId = userId;
+        orgB.Status = OrganizationUserStatusType.Confirmed;
+
+        var baseType = EventType.Send_Accessed_Text;
+        var claimedType = EventType.Send_Accessed_Text_FromClaimedDomain;
+        var externalType = EventType.Send_Accessed_Text_FromExternalDomain;
+
+        var orgAbilities = new Dictionary<Guid, OrganizationAbility>
+        {
+            { orgA.OrganizationId, new OrganizationAbility { UseEvents = true, Enabled = true } },
+            { orgB.OrganizationId, new OrganizationAbility { UseEvents = true, Enabled = true } },
+        };
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(orgAbilities);
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, ProviderAbility>());
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(userId)
+            .Returns(new List<OrganizationUser> { orgA, orgB });
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), userId)
+            .Returns(new List<CurrentContextOrganization>
+            {
+                new() { Id = orgA.OrganizationId },
+                new() { Id = orgB.OrganizationId },
+            });
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderMembershipAsync(Arg.Any<IProviderUserRepository>(), userId)
+            .Returns(new List<CurrentContextProvider>());
+
+        await sutProvider.Sut.LogUserEventAsync(userId, baseType,
+            perOrganizationTypeResolver: orgId => orgId == orgA.OrganizationId ? claimedType : externalType);
+
+        await sutProvider.GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
+                events.Count() == 3
+                && events.Any(e => e.OrganizationId == null && e.Type == baseType)
+                && events.Any(e => e.OrganizationId == orgA.OrganizationId && e.Type == claimedType)
+                && events.Any(e => e.OrganizationId == orgB.OrganizationId && e.Type == externalType)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogUserEvent_WithPerOrgResolverReturningNull_FallsBackToBaseType(
+        Guid userId, OrganizationUser orgUser, SutProvider<EventService> sutProvider)
+    {
+        orgUser.UserId = userId;
+        orgUser.Status = OrganizationUserStatusType.Confirmed;
+        var baseType = EventType.Send_Accessed_Text;
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, OrganizationAbility>
+            {
+                { orgUser.OrganizationId, new OrganizationAbility { UseEvents = true, Enabled = true } }
+            });
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, ProviderAbility>());
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(userId)
+            .Returns(new List<OrganizationUser> { orgUser });
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), userId)
+            .Returns(new List<CurrentContextOrganization>
+            {
+                new() { Id = orgUser.OrganizationId },
+            });
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderMembershipAsync(Arg.Any<IProviderUserRepository>(), userId)
+            .Returns(new List<CurrentContextProvider>());
+
+        await sutProvider.Sut.LogUserEventAsync(userId, baseType,
+            perOrganizationTypeResolver: _ => null);
+
+        await sutProvider.GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
+                events.Count() == 2
+                && events.All(e => e.Type == baseType)));
+    }
+
+    [Theory, BitAutoData]
     public async Task LogUserEvent_IncludeAcceptedStatusOrgs_InvitedOrgUser_DoesNotCreateOrgScopedEvent(
         Guid userId, EventType eventType, OrganizationUser orgUser, SutProvider<EventService> sutProvider)
     {

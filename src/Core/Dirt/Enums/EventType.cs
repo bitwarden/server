@@ -159,4 +159,12 @@ public enum EventType : int
     Send_Deleted_File = 2509,
     Send_Accessed_Text = 2510,
     Send_Accessed_File = 2511,
+    Send_Accessed_Text_FromClaimedDomain = 2512,
+    Send_Accessed_File_FromClaimedDomain = 2513,
+    Send_Accessed_Text_FromExternalDomain = 2514,
+    Send_Accessed_File_FromExternalDomain = 2515,
+    Send_Created_Text_WithEmailVerification_FromClaimedDomain = 2516,
+    Send_Created_File_WithEmailVerification_FromClaimedDomain = 2517,
+    Send_Created_Text_WithEmailVerification_FromExternalDomain = 2518,
+    Send_Created_File_WithEmailVerification_FromExternalDomain = 2519,
 }
