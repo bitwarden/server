@@ -25,7 +25,7 @@ public class OrganizationPlanMigrationCohortAssignmentEntityTypeConfiguration
         // Composite index supports the Pending/Scheduled/Migrated counts query consumed by
         // the Cohort Management aggregate (PM-36951).
         builder
-            .HasIndex(a => new { a.CohortId, a.ScheduledAt, a.MigratedAt })
+            .HasIndex(a => new { a.CohortId, a.ScheduledDate, a.MigratedDate })
             .IsClustered(false);
 
         builder

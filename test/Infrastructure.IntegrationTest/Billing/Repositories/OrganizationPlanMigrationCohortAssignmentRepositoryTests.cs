@@ -17,7 +17,7 @@ public class OrganizationPlanMigrationCohortAssignmentRepositoryTests
             Name = $"cohort-{Guid.NewGuid()}",
             MigrationPathId = MigrationPaths.Enterprise2020AnnualToCurrent.Id,
             IsActive = true,
-            CreatedAt = DateTime.UtcNow,
+            CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow,
         };
 
@@ -31,10 +31,10 @@ public class OrganizationPlanMigrationCohortAssignmentRepositoryTests
         {
             OrganizationId = organization.Id,
             CohortId = cohort.Id,
-            ScheduledAt = scheduledAt,
-            MigratedAt = migratedAt,
-            ChurnDiscountAppliedAt = churnDiscountAppliedAt,
-            CreatedAt = DateTime.UtcNow,
+            ScheduledDate = scheduledAt,
+            MigratedDate = migratedAt,
+            ChurnDiscountAppliedDate = churnDiscountAppliedAt,
+            CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow,
         };
 
@@ -57,9 +57,9 @@ public class OrganizationPlanMigrationCohortAssignmentRepositoryTests
         Assert.Equal(assignment.Id, result.Id);
         Assert.Equal(organization.Id, result.OrganizationId);
         Assert.Equal(cohort.Id, result.CohortId);
-        Assert.NotNull(result.ScheduledAt);
-        Assert.Null(result.MigratedAt);
-        Assert.Null(result.ChurnDiscountAppliedAt);
+        Assert.NotNull(result.ScheduledDate);
+        Assert.Null(result.MigratedDate);
+        Assert.Null(result.ChurnDiscountAppliedDate);
 
         // Cleanup (cascade from organization will also remove the assignment, but be explicit)
         await assignmentRepository.DeleteAsync(result);
@@ -131,36 +131,36 @@ public class OrganizationPlanMigrationCohortAssignmentRepositoryTests
         var assignment = await assignmentRepository.CreateAsync(CreateTestAssignment(organization, cohort));
         var baseline = await assignmentRepository.GetByIdAsync(assignment.Id);
         Assert.NotNull(baseline);
-        var baselineCreatedAt = baseline.CreatedAt;
+        var baselineCreationDate = baseline.CreationDate;
 
         // Mutate the legitimately mutable columns and ALSO attempt to mutate the immutable
         // columns. The Update SP accepts those parameters but does not assign them.
         var migratedAt = DateTime.UtcNow;
         var churnAt = DateTime.UtcNow.AddHours(-1);
-        baseline.ScheduledAt = DateTime.UtcNow.AddDays(-1);
-        baseline.MigratedAt = migratedAt;
-        baseline.ChurnDiscountAppliedAt = churnAt;
+        baseline.ScheduledDate = DateTime.UtcNow.AddDays(-1);
+        baseline.MigratedDate = migratedAt;
+        baseline.ChurnDiscountAppliedDate = churnAt;
         baseline.RevisionDate = DateTime.UtcNow;
         baseline.OrganizationId = otherOrganization.Id; // Should be ignored
         baseline.CohortId = otherCohort.Id;             // Should be ignored
-        baseline.CreatedAt = DateTime.UtcNow.AddYears(-10); // Should be ignored
+        baseline.CreationDate = DateTime.UtcNow.AddYears(-10); // Should be ignored
 
         await assignmentRepository.ReplaceAsync(baseline);
 
         var result = await assignmentRepository.GetByIdAsync(assignment.Id);
         Assert.NotNull(result);
-        Assert.NotNull(result.ScheduledAt);
-        Assert.NotNull(result.MigratedAt);
-        Assert.NotNull(result.ChurnDiscountAppliedAt);
+        Assert.NotNull(result.ScheduledDate);
+        Assert.NotNull(result.MigratedDate);
+        Assert.NotNull(result.ChurnDiscountAppliedDate);
         // Postgres timestamp and MySQL datetime(6) both store microsecond precision; .NET
         // DateTime has 100ns ticks. Round-tripping truncates the last digit, so compare with
         // LaxDateTimeComparer rather than exact equality.
-        Assert.Equal(migratedAt, result.MigratedAt.Value, LaxDateTimeComparer.Default);
-        Assert.Equal(churnAt, result.ChurnDiscountAppliedAt.Value, LaxDateTimeComparer.Default);
+        Assert.Equal(migratedAt, result.MigratedDate.Value, LaxDateTimeComparer.Default);
+        Assert.Equal(churnAt, result.ChurnDiscountAppliedDate.Value, LaxDateTimeComparer.Default);
         // Immutable columns must not have moved.
         Assert.Equal(organization.Id, result.OrganizationId);
         Assert.Equal(cohort.Id, result.CohortId);
-        Assert.Equal(baselineCreatedAt, result.CreatedAt, LaxDateTimeComparer.Default);
+        Assert.Equal(baselineCreationDate, result.CreationDate, LaxDateTimeComparer.Default);
 
         // Cleanup
         await assignmentRepository.DeleteAsync(result);

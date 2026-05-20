@@ -1,7 +1,6 @@
 ﻿using AutoMapper;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using CoreEntities = Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using EFOrganizationPlanMigrationCohort =
@@ -31,23 +30,10 @@ public class OrganizationPlanMigrationCohortRepository(
         var mappedEntity = Mapper.Map<EFOrganizationPlanMigrationCohort>(obj);
         dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
 
-        // Mirror the OrganizationPlanMigrationCohort_Update SP -- CreatedAt is accepted but
+        // Mirror the OrganizationPlanMigrationCohort_Update SP -- CreationDate is accepted but
         // not assigned; it is immutable once the row is inserted.
-        dbContext.Entry(entity).Property(c => c.CreatedAt).IsModified = false;
+        dbContext.Entry(entity).Property(c => c.CreationDate).IsModified = false;
 
         await dbContext.SaveChangesAsync();
-    }
-
-    public async Task<IReadOnlyList<CoreEntities.OrganizationPlanMigrationCohort>> GetManyAsync()
-    {
-        using var scope = ServiceScopeFactory.CreateScope();
-        var dbContext = GetDatabaseContext(scope);
-
-        var results = await dbContext.OrganizationPlanMigrationCohorts
-            .AsNoTracking()
-            .OrderBy(c => c.Name)
-            .ToListAsync();
-
-        return Mapper.Map<List<CoreEntities.OrganizationPlanMigrationCohort>>(results);
     }
 }

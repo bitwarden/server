@@ -245,6 +245,8 @@ public class DeviceValidator(
             Type = parsedDeviceType,
             PushToken = string.IsNullOrWhiteSpace(devicePushToken) ? null : devicePushToken,
             ClientVersion = clientVersion,
+            // Device creation counts as first activity.
+            LastActivityDate = DateTime.UtcNow,
         };
     }
 

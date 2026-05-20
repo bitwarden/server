@@ -23,7 +23,7 @@ public class OrganizationPlanMigrationCohortRepositoryTests
             ProactiveDiscountCouponCode = proactiveCoupon,
             ChurnDiscountCouponCode = churnCoupon,
             IsActive = isActive,
-            CreatedAt = now,
+            CreationDate = now,
             RevisionDate = now,
         };
     }
@@ -67,24 +67,24 @@ public class OrganizationPlanMigrationCohortRepositoryTests
     }
 
     [Theory, DatabaseData]
-    public async Task ReplaceAsync_UpdatesMutableColumns_AndIgnoresCreatedAt(
+    public async Task ReplaceAsync_UpdatesMutableColumns_AndIgnoresCreationDate(
         IOrganizationPlanMigrationCohortRepository repository)
     {
-        // The Update SP / EF override both ignore CreatedAt, so the baseline is whatever
-        // CreatedAt the row was inserted with.
+        // The Update SP / EF override both ignore CreationDate, so the baseline is whatever
+        // CreationDate the row was inserted with.
         var cohort = await repository.CreateAsync(CreateTestCohort());
         var baseline = await repository.GetByIdAsync(cohort.Id);
         Assert.NotNull(baseline);
-        var baselineCreatedAt = baseline.CreatedAt;
+        var baselineCreationDate = baseline.CreationDate;
 
-        // Mutate every column except Id and CreatedAt, then attempt to mutate CreatedAt too.
+        // Mutate every column except Id and CreationDate, then attempt to mutate CreationDate too.
         baseline.Name = $"renamed-{Guid.NewGuid()}";
         baseline.MigrationPathId = MigrationPaths.Enterprise2020MonthlyToCurrent.Id;
         baseline.ProactiveDiscountCouponCode = "NEW-PROACTIVE";
         baseline.ChurnDiscountCouponCode = "NEW-CHURN";
         baseline.IsActive = true;
         baseline.RevisionDate = DateTime.UtcNow;
-        baseline.CreatedAt = DateTime.UtcNow.AddYears(-10); // Should be ignored on every provider
+        baseline.CreationDate = DateTime.UtcNow.AddYears(-10); // Should be ignored on every provider
 
         await repository.ReplaceAsync(baseline);
 
@@ -95,8 +95,8 @@ public class OrganizationPlanMigrationCohortRepositoryTests
         Assert.Equal("NEW-PROACTIVE", result.ProactiveDiscountCouponCode);
         Assert.Equal("NEW-CHURN", result.ChurnDiscountCouponCode);
         Assert.True(result.IsActive);
-        // CreatedAt should not have moved -- the Update SP and EF override both drop the write.
-        Assert.Equal(baselineCreatedAt, result.CreatedAt);
+        // CreationDate should not have moved -- the Update SP and EF override both drop the write.
+        Assert.Equal(baselineCreationDate, result.CreationDate);
 
         // Cleanup
         await repository.DeleteAsync(result);
@@ -112,28 +112,5 @@ public class OrganizationPlanMigrationCohortRepositoryTests
 
         var result = await repository.GetByIdAsync(cohort.Id);
         Assert.Null(result);
-    }
-
-    [Theory, DatabaseData]
-    public async Task GetManyAsync_ReturnsActiveAndInactive_OrderedByName(
-        IOrganizationPlanMigrationCohortRepository repository)
-    {
-        // Unique prefix isolates this test from any sibling data in the table; the assertion
-        // filters by prefix so concurrent or leftover rows from other tests don't break us.
-        var prefix = $"getmany-{Guid.NewGuid()}-";
-
-        var zActive = await repository.CreateAsync(CreateTestCohort(name: $"{prefix}z", isActive: true));
-        var aInactive = await repository.CreateAsync(CreateTestCohort(name: $"{prefix}a", isActive: false));
-        var mActive = await repository.CreateAsync(CreateTestCohort(name: $"{prefix}m", isActive: true));
-
-        var results = await repository.GetManyAsync();
-        var ours = results.Where(c => c.Name.StartsWith(prefix)).Select(c => c.Name).ToList();
-
-        // Both active and inactive cohorts must be returned, ordered by name ASC.
-        Assert.Equal([$"{prefix}a", $"{prefix}m", $"{prefix}z"], ours);
-
-        await repository.DeleteAsync(aInactive);
-        await repository.DeleteAsync(mActive);
-        await repository.DeleteAsync(zActive);
     }
 }

@@ -5,13 +5,13 @@ CREATE PROCEDURE [dbo].[OrganizationPlanMigrationCohort_Update]
     @ProactiveDiscountCouponCode NVARCHAR(64),
     @ChurnDiscountCouponCode NVARCHAR(64),
     @IsActive BIT,
-    @CreatedAt DATETIME2 (7),
-    @RevisionDate DATETIME2 (7)
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
 
-    -- @CreatedAt is accepted but not assigned; it is immutable once the row is inserted.
+    -- @CreationDate is accepted but not assigned; it is immutable once the row is inserted.
     UPDATE
         [dbo].[OrganizationPlanMigrationCohort]
     SET

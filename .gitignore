@@ -212,6 +212,9 @@ bitwarden_license/src/Sso/wwwroot/assets
 .github/test/build.secrets
 **/CoverageOutput/
 .idea/*
+*.lscache
+*.dmp
+*.dump
 **/**.swp
 .mono
 src/Core/MailTemplates/Mjml/out

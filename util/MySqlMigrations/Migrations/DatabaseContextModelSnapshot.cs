@@ -990,7 +990,7 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("varchar(64)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
                     b.Property<bool>("IsActive")
@@ -1026,16 +1026,16 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
-                    b.Property<DateTime?>("ChurnDiscountAppliedAt")
+                    b.Property<DateTime?>("ChurnDiscountAppliedDate")
                         .HasColumnType("datetime(6)");
 
                     b.Property<Guid>("CohortId")
                         .HasColumnType("char(36)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<DateTime?>("MigratedAt")
+                    b.Property<DateTime?>("MigratedDate")
                         .HasColumnType("datetime(6)");
 
                     b.Property<Guid>("OrganizationId")
@@ -1044,7 +1044,7 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<DateTime?>("ScheduledAt")
+                    b.Property<DateTime?>("ScheduledDate")
                         .HasColumnType("datetime(6)");
 
                     b.HasKey("Id")
@@ -1054,7 +1054,7 @@ namespace Bit.MySqlMigrations.Migrations
                         .IsUnique()
                         .HasAnnotation("SqlServer:Clustered", false);
 
-                    b.HasIndex("CohortId", "ScheduledAt", "MigratedAt")
+                    b.HasIndex("CohortId", "ScheduledDate", "MigratedDate")
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("OrganizationPlanMigrationCohortAssignment", (string)null);

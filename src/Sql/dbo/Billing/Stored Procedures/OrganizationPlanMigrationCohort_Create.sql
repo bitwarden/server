@@ -5,8 +5,8 @@ CREATE PROCEDURE [dbo].[OrganizationPlanMigrationCohort_Create]
     @ProactiveDiscountCouponCode NVARCHAR(64),
     @ChurnDiscountCouponCode NVARCHAR(64),
     @IsActive BIT,
-    @CreatedAt DATETIME2 (7),
-    @RevisionDate DATETIME2 (7)
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -19,7 +19,7 @@ BEGIN
         [ProactiveDiscountCouponCode],
         [ChurnDiscountCouponCode],
         [IsActive],
-        [CreatedAt],
+        [CreationDate],
         [RevisionDate]
     )
     VALUES
@@ -30,7 +30,7 @@ BEGIN
         @ProactiveDiscountCouponCode,
         @ChurnDiscountCouponCode,
         @IsActive,
-        @CreatedAt,
+        @CreationDate,
         @RevisionDate
     )
 END

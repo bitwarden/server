@@ -25,24 +25,21 @@ public class OrganizationPlanMigrationCohortAssignment : ITableObject<Guid>
     /// The date the scheduler picked up this assignment for migration. Null until the
     /// scheduler claims the row.
     /// </summary>
-    public DateTime? ScheduledAt { get; set; }
+    public DateTime? ScheduledDate { get; set; }
 
     /// <summary>
     /// The date the migration completed. Null until the migration runs successfully.
     /// </summary>
-    public DateTime? MigratedAt { get; set; }
+    public DateTime? MigratedDate { get; set; }
 
     /// <summary>
     /// The date a churn-mitigation discount was applied. Null when no mitigation has
     /// occurred.
     /// </summary>
-    public DateTime? ChurnDiscountAppliedAt { get; set; }
+    public DateTime? ChurnDiscountAppliedDate { get; set; }
 
-    public DateTime CreatedAt { get; internal set; } = DateTime.UtcNow;
+    public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
-
-    public bool IsLocked() =>
-        MigratedAt.HasValue || ScheduledAt.HasValue || ChurnDiscountAppliedAt.HasValue;
 
     public void SetNewId()
     {
