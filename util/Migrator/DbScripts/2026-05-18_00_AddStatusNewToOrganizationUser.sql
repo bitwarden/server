@@ -8,6 +8,10 @@ GO
 
 -- Refresh the core OrganizationUser view (SELECT * over the table)
 EXEC sp_refreshview N'[dbo].[OrganizationUserView]';
+EXEC sp_refreshview N'[dbo].[OrganizationUserOrganizationDetailsView]';
+EXEC sp_refreshview N'[dbo].[OrganizationUserUserDetailsView]';
+EXEC sp_refreshview N'[dbo].[ProviderOrganizationOrganizationDetailsView]';
+EXEC sp_refreshview N'[dbo].[UserPremiumAccessView]';
 GO
 
 -- Update OrganizationUser_Create
