@@ -71,7 +71,7 @@ namespace Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 /// the server is the source of truth for fields that must not change — it validates the client's
 /// values match what's stored before applying the update.</para>
 /// </summary>
-internal interface IMasterPasswordService
+public interface IMasterPasswordService
 {
     /// <summary>
     /// Inspects the user's current state and dispatches to either
