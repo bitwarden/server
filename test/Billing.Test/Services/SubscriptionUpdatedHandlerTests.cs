@@ -1401,7 +1401,7 @@ public class SubscriptionUpdatedHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_ActiveSubscription_SchedulesBeforeRemovingCancellation()
+    public async Task HandleAsync_ActiveSubscription_RemovesCancellationAndAddsSchedules()
     {
         // Arrange
         var organizationId = Guid.NewGuid();
