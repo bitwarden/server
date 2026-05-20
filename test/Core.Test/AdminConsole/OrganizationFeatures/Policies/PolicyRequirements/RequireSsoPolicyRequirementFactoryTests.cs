@@ -156,7 +156,7 @@ public class RequireSsoPolicyRequirementFactoryTests
     {
         var actual = sutProvider.Sut.Create([]);
 
-        Assert.Empty(actual.SsoOrganizationIds);
+        Assert.Empty(actual.OrganizationIds);
     }
 
     [Theory]
@@ -177,7 +177,7 @@ public class RequireSsoPolicyRequirementFactoryTests
             }
         ]);
 
-        Assert.Equal(new[] { organizationId }, actual.SsoOrganizationIds);
+        Assert.Equal(new[] { organizationId }, actual.OrganizationIds);
     }
 
     [Theory, BitAutoData]
@@ -202,9 +202,9 @@ public class RequireSsoPolicyRequirementFactoryTests
             }
         ]);
 
-        Assert.Equal(2, actual.SsoOrganizationIds.Count);
-        Assert.Contains(organizationIdA, actual.SsoOrganizationIds);
-        Assert.Contains(organizationIdB, actual.SsoOrganizationIds);
+        Assert.Equal(2, actual.OrganizationIds.Count);
+        Assert.Contains(organizationIdA, actual.OrganizationIds);
+        Assert.Contains(organizationIdB, actual.OrganizationIds);
     }
 
     [Theory, BitAutoData]
@@ -212,7 +212,7 @@ public class RequireSsoPolicyRequirementFactoryTests
         Guid organizationId,
         SutProvider<RequireSsoPolicyRequirementFactory> sutProvider)
     {
-        // SsoOrganizationIds reflects "policy applies to this membership" — independent of whether
+        // OrganizationIds reflects "policy applies to this membership" — independent of whether
         // SsoRequired is currently true for this user. Callers gate on SsoRequired before reading
         // the org ids.
         sutProvider.GetDependency<IFeatureService>()
@@ -230,6 +230,6 @@ public class RequireSsoPolicyRequirementFactoryTests
         ]);
 
         Assert.False(actual.SsoRequired);
-        Assert.Equal(new[] { organizationId }, actual.SsoOrganizationIds);
+        Assert.Equal(new[] { organizationId }, actual.OrganizationIds);
     }
 }

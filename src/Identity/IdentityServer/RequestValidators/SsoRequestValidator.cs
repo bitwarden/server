@@ -69,12 +69,12 @@ public class SsoRequestValidator(
     /// Sets the customResponse in the context with the error result for the SSO validation failure.
     /// </summary>
     /// <param name="context">The validator context to update with error details.</param>
-    /// <param name="requireSsoPolicyRequirement">Organization id to get the sso identifier</param>
+    /// <param name="requireSsoPolicyRequirement">Require Sso policy requirement for user.</param>
     /// <param name="errorMessage">The error message to return to the client.</param>
     private async Task SetContextCustomResponseSsoErrorAsync(CustomValidatorRequestContext context, RequireSsoPolicyRequirement requireSsoPolicyRequirement, string errorMessage)
     {
-        var organization = requireSsoPolicyRequirement.SsoOrganizationIds.Count == 1
-            ? await _organizationRepository.GetByIdAsync(requireSsoPolicyRequirement.SsoOrganizationIds.First())
+        var organization = requireSsoPolicyRequirement.OrganizationIds.Count == 1
+            ? await _organizationRepository.GetByIdAsync(requireSsoPolicyRequirement.OrganizationIds.First())
             : null;
 
         var ssoOrganizationIdentifier = organization?.Identifier;

@@ -89,7 +89,7 @@ public class SsoRequestValidatorTests
         var requirement = new RequireSsoPolicyRequirement
         {
             SsoRequired = true,
-            SsoOrganizationIds = Array.Empty<Guid>()
+            OrganizationIds = Array.Empty<Guid>()
         };
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .Returns(requirement);
@@ -129,7 +129,7 @@ public class SsoRequestValidatorTests
         var requirement = new RequireSsoPolicyRequirement
         {
             SsoRequired = true,
-            SsoOrganizationIds = new[] { organizationId }
+            OrganizationIds = new[] { organizationId }
         };
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .Returns(requirement);
@@ -168,7 +168,7 @@ public class SsoRequestValidatorTests
         var requirement = new RequireSsoPolicyRequirement
         {
             SsoRequired = true,
-            SsoOrganizationIds = new[] { organizationId }
+            OrganizationIds = new[] { organizationId }
         };
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .Returns(requirement);
@@ -210,7 +210,7 @@ public class SsoRequestValidatorTests
         var requirement = new RequireSsoPolicyRequirement
         {
             SsoRequired = true,
-            SsoOrganizationIds = new[] { organizationId }
+            OrganizationIds = new[] { organizationId }
         };
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .Returns(requirement);
@@ -272,7 +272,7 @@ public class SsoRequestValidatorTests
         var requirement = new RequireSsoPolicyRequirement
         {
             SsoRequired = true,
-            SsoOrganizationIds = new[] { organizationId }
+            OrganizationIds = new[] { organizationId }
         };
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .Returns(requirement);
@@ -308,7 +308,7 @@ public class SsoRequestValidatorTests
         var requirement = new RequireSsoPolicyRequirement
         {
             SsoRequired = true,
-            SsoOrganizationIds = new[] { organizationId }
+            OrganizationIds = new[] { organizationId }
         };
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .Returns(requirement);
@@ -343,7 +343,7 @@ public class SsoRequestValidatorTests
         var requirement = new RequireSsoPolicyRequirement
         {
             SsoRequired = true,
-            SsoOrganizationIds = new[] { organizationId }
+            OrganizationIds = new[] { organizationId }
         };
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .Returns(requirement);
@@ -379,7 +379,7 @@ public class SsoRequestValidatorTests
         var requirement = new RequireSsoPolicyRequirement
         {
             SsoRequired = true,
-            SsoOrganizationIds = new[] { orgIdA, orgIdB }
+            OrganizationIds = new[] { orgIdA, orgIdB }
         };
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .Returns(requirement);
@@ -413,7 +413,7 @@ public class SsoRequestValidatorTests
         var requirement = new RequireSsoPolicyRequirement
         {
             SsoRequired = true,
-            SsoOrganizationIds = new[] { organizationId }
+            OrganizationIds = new[] { organizationId }
         };
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .Returns(requirement);

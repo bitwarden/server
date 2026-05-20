@@ -32,7 +32,7 @@ public class RequireSsoPolicyRequirement : IPolicyRequirement
     /// <summary>
     /// Organizations that require SSO login
     /// </summary>
-    public ICollection<Guid> SsoOrganizationIds { get; init; } = Array.Empty<Guid>();
+    public ICollection<Guid> OrganizationIds { get; init; } = Array.Empty<Guid>();
 }
 
 public class RequireSsoPolicyRequirementFactory(GlobalSettings globalSettings, IFeatureService featureService)
@@ -60,7 +60,7 @@ public class RequireSsoPolicyRequirementFactory(GlobalSettings globalSettings, I
                 ? p.OrganizationUserStatus is OrganizationUserStatusType.Confirmed
                 : p.OrganizationUserStatus is OrganizationUserStatusType.Accepted
                     or OrganizationUserStatusType.Confirmed),
-            SsoOrganizationIds = [.. policyDetails.Select(x => x.OrganizationId)]
+            OrganizationIds = [.. policyDetails.Select(x => x.OrganizationId)]
         };
 
         return result;
