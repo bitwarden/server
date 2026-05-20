@@ -58,7 +58,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    WITH [Pending] AS (
+    ;WITH [Pending] AS (
         SELECT TOP 1
             *
         FROM
