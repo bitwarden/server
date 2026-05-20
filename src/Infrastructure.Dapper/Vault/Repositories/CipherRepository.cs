@@ -527,7 +527,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
     }
 
     public async Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
-        IEnumerable<CollectionCipher> collectionCiphers, IEnumerable<CollectionUser> collectionUsers)
+        IEnumerable<CollectionCipher> collectionCiphers, IEnumerable<CollectionUser> collectionUsers, IEnumerable<Folder> folders)
     {
         if (!ciphers.Any())
         {
@@ -557,6 +557,11 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                     if (collectionUsers.Any())
                     {
                         await BulkResourceCreationService.CreateCollectionsUsersAsync(connection, transaction, collectionUsers);
+                    }
+
+                    if (folders.Any())
+                    {
+                        await BulkResourceCreationService.CreateFoldersAsync(connection, transaction, folders);
                     }
 
                     await connection.ExecuteAsync(
