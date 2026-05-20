@@ -360,49 +360,11 @@ public class OrganizationsController : Controller
             return RedirectToAction("Edit", new { id });
         }
 
-        var submittedCohortId = NormalizeCohortId(model.MigrationCohortId);
-        OrganizationPlanMigrationCohortAssignment cohortAssignmentToReplace = null;
-        OrganizationPlanMigrationCohort cohortToAssign = null;
-        var shouldWriteCohortAssignment = false;
-
-        if (CanManagePlanMigrationCohortAssignment())
+        var cohortResolution = await ResolveMigrationCohortAssignmentChangeAsync(organization, model);
+        if (cohortResolution.ErrorMessage != null)
         {
-            cohortAssignmentToReplace =
-                await _organizationPlanMigrationCohortAssignmentRepository.GetByOrganizationIdAsync(id);
-
-            if (cohortAssignmentToReplace?.CohortId != submittedCohortId)
-            {
-                if (cohortAssignmentToReplace?.IsLocked() == true)
-                {
-                    TempData["Error"] =
-                        "This organization's migration cohort is locked because its assignment has already entered the migration pipeline.";
-                    return RedirectToAction("Edit", new { id });
-                }
-
-                if (submittedCohortId.HasValue)
-                {
-                    cohortToAssign =
-                        await _organizationPlanMigrationCohortRepository.GetByIdAsync(submittedCohortId.Value);
-                    if (cohortToAssign == null)
-                    {
-                        TempData["Error"] = "The selected migration cohort no longer exists.";
-                        return RedirectToAction("Edit", new { id });
-                    }
-
-                    if (cohortToAssign.MigrationPathId.HasValue)
-                    {
-                        var path = MigrationPaths.FromId(cohortToAssign.MigrationPathId.Value);
-                        if (path == null || path.FromPlan != organization.PlanType)
-                        {
-                            TempData["Error"] =
-                                "The selected migration cohort is not compatible with this organization's plan.";
-                            return RedirectToAction("Edit", new { id });
-                        }
-                    }
-                }
-
-                shouldWriteCohortAssignment = true;
-            }
+            TempData["Error"] = cohortResolution.ErrorMessage;
+            return RedirectToAction("Edit", new { id });
         }
 
         await HandlePotentialProviderSeatScalingAsync(
@@ -411,21 +373,21 @@ public class OrganizationsController : Controller
 
         await _organizationRepository.ReplaceAsync(organization);
 
-        if (shouldWriteCohortAssignment)
+        if (cohortResolution.ShouldWrite)
         {
             try
             {
-                if (cohortAssignmentToReplace != null)
+                if (cohortResolution.AssignmentToReplace != null)
                 {
-                    await _organizationPlanMigrationCohortAssignmentRepository.DeleteAsync(cohortAssignmentToReplace);
+                    await _organizationPlanMigrationCohortAssignmentRepository.DeleteAsync(cohortResolution.AssignmentToReplace);
                 }
-                if (cohortToAssign != null)
+                if (cohortResolution.CohortToAssign != null)
                 {
                     await _organizationPlanMigrationCohortAssignmentRepository.CreateAsync(
                         new OrganizationPlanMigrationCohortAssignment
                         {
                             OrganizationId = id,
-                            CohortId = cohortToAssign.Id,
+                            CohortId = cohortResolution.CohortToAssign.Id,
                         });
                 }
             }
@@ -687,6 +649,65 @@ public class OrganizationsController : Controller
     // Guid.Empty as if it were a real cohort id.
     private static Guid? NormalizeCohortId(Guid? value) =>
         value is { } id && id != Guid.Empty ? id : null;
+
+    private sealed record MigrationCohortAssignmentChange(
+        OrganizationPlanMigrationCohortAssignment AssignmentToReplace,
+        OrganizationPlanMigrationCohort CohortToAssign,
+        bool ShouldWrite,
+        string ErrorMessage)
+    {
+        public static MigrationCohortAssignmentChange NoChange { get; } = new(null, null, false, null);
+
+        public static MigrationCohortAssignmentChange Error(string message) => new(null, null, false, message);
+    }
+
+    private async Task<MigrationCohortAssignmentChange> ResolveMigrationCohortAssignmentChangeAsync(
+        Organization organization,
+        OrganizationEditModel model)
+    {
+        if (!CanManagePlanMigrationCohortAssignment())
+        {
+            return MigrationCohortAssignmentChange.NoChange;
+        }
+
+        var submittedCohortId = NormalizeCohortId(model.MigrationCohortId);
+        var assignmentToReplace =
+            await _organizationPlanMigrationCohortAssignmentRepository.GetByOrganizationIdAsync(organization.Id);
+
+        if (assignmentToReplace?.CohortId == submittedCohortId)
+        {
+            return MigrationCohortAssignmentChange.NoChange;
+        }
+
+        if (assignmentToReplace?.IsLocked() == true)
+        {
+            return MigrationCohortAssignmentChange.Error(
+                "This organization's migration cohort is locked because its assignment has already entered the migration pipeline.");
+        }
+
+        OrganizationPlanMigrationCohort cohortToAssign = null;
+        if (submittedCohortId.HasValue)
+        {
+            cohortToAssign =
+                await _organizationPlanMigrationCohortRepository.GetByIdAsync(submittedCohortId.Value);
+            if (cohortToAssign == null)
+            {
+                return MigrationCohortAssignmentChange.Error("The selected migration cohort no longer exists.");
+            }
+
+            if (cohortToAssign.MigrationPathId.HasValue)
+            {
+                var path = MigrationPaths.FromId(cohortToAssign.MigrationPathId.Value);
+                if (path == null || path.FromPlan != organization.PlanType)
+                {
+                    return MigrationCohortAssignmentChange.Error(
+                        "The selected migration cohort is not compatible with this organization's plan.");
+                }
+            }
+        }
+
+        return new MigrationCohortAssignmentChange(assignmentToReplace, cohortToAssign, true, null);
+    }
 
     private void UpdateOrganization(Organization organization, OrganizationEditModel model)
     {
