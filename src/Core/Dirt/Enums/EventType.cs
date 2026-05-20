@@ -151,4 +151,6 @@ public enum EventType : int
     Send_Edited_File = 2507,
     Send_Deleted_Text = 2508,
     Send_Deleted_File = 2509,
+    Send_Accessed_Text = 2510,
+    Send_Accessed_File = 2511,
 }
