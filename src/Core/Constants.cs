@@ -265,7 +265,6 @@ public static class FeatureFlagKeys
     /// on the desktop client.
     /// </summary>
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
-    public const string SendUIRefresh = "pm-28175-send-ui-refresh";
     public const string SendEmailOTP = "pm-19051-send-email-verification";
     public const string SendControls = "pm-31885-send-controls";
     public const string SdkSendsApi = "pm-30110-sdk-sends-api";
