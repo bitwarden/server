@@ -2,7 +2,7 @@
 #nullable disable
 
 using System.ComponentModel.DataAnnotations;
-using Bit.Api.Models.Request.Organizations;
+using Bit.Api.AdminConsole.Models.Request.Organizations;
 
 namespace Bit.Api.Auth.Models.Request.Accounts;
 
