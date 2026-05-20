@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Organizations.PlanMigration.Entities;
+﻿using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Xunit;
 
 namespace Bit.Core.Test.Billing.Organizations.PlanMigration.Entities;
