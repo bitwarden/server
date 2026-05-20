@@ -44,6 +44,10 @@ public class OrganizationReportRepository :
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
+            // Substring match is coupled to SetReportFile (OrganizationReport.cs) writing via
+            // JsonHelpers.IgnoreWritingNull (PascalCase, no whitespace). The Dapper/MSSQL path
+            // uses JSON_VALUE which is format-agnostic; changing the serializer options would
+            // silently return zero rows here without affecting the MSSQL path.
             var result = await dbContext.OrganizationReports
                 .Where(p => p.OrganizationId == organizationId
                     && p.ReportFile != null
