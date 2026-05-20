@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿using System.Net.Mail;
+using System.Text.Json;
+using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
@@ -60,6 +62,22 @@ public class OrganizationInviteLink : ITableObject<Guid>
     /// </summary>
     public IEnumerable<string> GetAllowedDomains() =>
         JsonSerializer.Deserialize<IEnumerable<string>>(AllowedDomains) ?? [];
+
+    /// <summary>
+    /// Returns whether the given email's domain is permitted by this invite link's allowed domains.
+    /// </summary>
+    public bool IsEmailDomainAllowed(string? email)
+    {
+        if (!MailAddress.TryCreate(email, out var mailAddress))
+        {
+            return false;
+        }
+
+        var emailDomain = mailAddress.Host.ToLowerInvariant();
+        var sanitizedDomains = InviteLinkDomainSanitizer.SanitizeDomains(GetAllowedDomains());
+
+        return sanitizedDomains.Count > 0 && sanitizedDomains.Contains(emailDomain);
+    }
 
     /// <summary>
     /// Serializes the given domains and stores them in <see cref="AllowedDomains"/>.
