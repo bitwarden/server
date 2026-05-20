@@ -1,9 +1,11 @@
-﻿using Bit.Core.Billing.Enums;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using Microsoft.Extensions.Logging;
@@ -22,12 +24,15 @@ public class PriceIncreaseSchedulerTests
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
+    private readonly IOrganizationRepository _organizationRepository = Substitute.For<IOrganizationRepository>();
     private readonly IOrganizationPlanMigrationCohortAssignmentRepository _assignmentRepository =
         Substitute.For<IOrganizationPlanMigrationCohortAssignmentRepository>();
+    private readonly IOrganizationPlanMigrationCohortRepository _cohortRepository =
+        Substitute.For<IOrganizationPlanMigrationCohortRepository>();
     private readonly ILogger<PriceIncreaseScheduler> _logger = Substitute.For<ILogger<PriceIncreaseScheduler>>();
 
     private PriceIncreaseScheduler CreateSut() =>
-        new(_stripeAdapter, _featureService, _pricingClient, _assignmentRepository, _logger);
+        new(_stripeAdapter, _featureService, _pricingClient, _organizationRepository, _assignmentRepository, _cohortRepository, _logger);
 
     [Fact]
     public async Task SchedulePersonalPriceIncrease_FeatureFlagOff_DoesNothing()

@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Pricing;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Entities;

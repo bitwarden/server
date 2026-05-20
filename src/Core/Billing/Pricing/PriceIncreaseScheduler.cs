@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Repositories;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
@@ -46,6 +47,14 @@ public interface IPriceIncreaseScheduler
     Task<bool> ScheduleBusinessPriceIncrease(Subscription subscription, OrganizationPlanMigrationCohort cohort);
 
     /// <summary>
+    /// Creates a deferred price-increase schedule for the given subscription,
+    /// dispatching to the correct path based on the subscription owner.
+    /// </summary>
+    /// <param name="subscription">The Stripe subscription to recover a schedule for.</param>
+    /// <returns>True if a new schedule was created; false if skipped.</returns>
+    Task<bool> ScheduleForSubscription(Subscription subscription);
+
+    /// <summary>
     /// Releases any active subscription schedule for the given subscription, cancelling a pending
     /// deferred price increase. Use when the subscription operation makes the scheduled migration
     /// irrelevant (e.g., plan upgrade, sponsorship, cancellation). Runs when either
@@ -61,7 +70,9 @@ public class PriceIncreaseScheduler(
     IStripeAdapter stripeAdapter,
     IFeatureService featureService,
     IPricingClient pricingClient,
+    IOrganizationRepository organizationRepository,
     IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
+    IOrganizationPlanMigrationCohortRepository cohortRepository,
     ILogger<PriceIncreaseScheduler> logger) : IPriceIncreaseScheduler
 {
     public async Task<bool> SchedulePersonalPriceIncrease(Subscription subscription)
