@@ -29,14 +29,15 @@ public class RequireSsoPolicyRequirement : IPolicyRequirement
     /// </remarks>
     public bool SsoRequired { get; init; }
 
-    public Guid? OrganizationId { get; init; }
+    /// <summary>
+    /// Organizations that require SSO login
+    /// </summary>
+    public ICollection<Guid> SsoOrganizationIds { get; init; } = Array.Empty<Guid>();
 }
-
 
 public class RequireSsoPolicyRequirementFactory(GlobalSettings globalSettings, IFeatureService featureService)
     : BasePolicyRequirementFactory<RequireSsoPolicyRequirement>
 {
-
     public override PolicyType PolicyType => PolicyType.RequireSso;
 
     protected override IEnumerable<OrganizationUserType> ExemptRoles =>
@@ -53,13 +54,13 @@ public class RequireSsoPolicyRequirementFactory(GlobalSettings globalSettings, I
         var result = new RequireSsoPolicyRequirement
         {
             CanUsePasskeyLogin = !policyDetails.Any(p =>
-                p.OrganizationUserStatus is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed),
-
+                p.OrganizationUserStatus is OrganizationUserStatusType.Accepted
+                    or OrganizationUserStatusType.Confirmed),
             SsoRequired = policyDetails.Any(p => !acceptedFeatureFlagEnabled
                 ? p.OrganizationUserStatus is OrganizationUserStatusType.Confirmed
-                : p.OrganizationUserStatus is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed),
-
-            OrganizationId = policyDetails.FirstOrDefault()?.OrganizationId
+                : p.OrganizationUserStatus is OrganizationUserStatusType.Accepted
+                    or OrganizationUserStatusType.Confirmed),
+            SsoOrganizationIds = [.. policyDetails.Select(x => x.OrganizationId)]
         };
 
         return result;

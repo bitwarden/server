@@ -36,7 +36,7 @@ public class SsoRequestValidator(
             // or logging-in via API key which is the client_credentials grant type.
             // Allow user to continue request validation
             context.SsoRequired = false;
-            return false;
+            return true;
         }
 
         var requiredSsoRequirement = await _policyRequirementQuery.GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id);
@@ -45,11 +45,6 @@ public class SsoRequestValidator(
         if (!context.SsoRequired)
         {
             return true;
-        }
-
-        if (requiredSsoRequirement.OrganizationId is null)
-        {
-            return false;
         }
 
         // Users without SSO requirement requesting 2FA recovery will be fast-forwarded through login and are
@@ -62,11 +57,11 @@ public class SsoRequestValidator(
         // to /login.
         if (context is { TwoFactorRequired: true, TwoFactorRecoveryRequested: true })
         {
-            await SetContextCustomResponseSsoErrorAsync(context, requiredSsoRequirement.OrganizationId.Value, SsoConstants.RequestErrors.SsoTwoFactorRecoveryDescription);
+            await SetContextCustomResponseSsoErrorAsync(context, requiredSsoRequirement, SsoConstants.RequestErrors.SsoTwoFactorRecoveryDescription);
             return false;
         }
 
-        await SetContextCustomResponseSsoErrorAsync(context, requiredSsoRequirement.OrganizationId.Value, SsoConstants.RequestErrors.SsoRequiredDescription);
+        await SetContextCustomResponseSsoErrorAsync(context, requiredSsoRequirement, SsoConstants.RequestErrors.SsoRequiredDescription);
         return false;
     }
 
@@ -74,11 +69,13 @@ public class SsoRequestValidator(
     /// Sets the customResponse in the context with the error result for the SSO validation failure.
     /// </summary>
     /// <param name="context">The validator context to update with error details.</param>
-    /// <param name="organizationId">Organization id to get the sso identifier</param>
+    /// <param name="requireSsoPolicyRequirement">Organization id to get the sso identifier</param>
     /// <param name="errorMessage">The error message to return to the client.</param>
-    private async Task SetContextCustomResponseSsoErrorAsync(CustomValidatorRequestContext context, Guid organizationId, string errorMessage)
+    private async Task SetContextCustomResponseSsoErrorAsync(CustomValidatorRequestContext context, RequireSsoPolicyRequirement requireSsoPolicyRequirement, string errorMessage)
     {
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        var organization = requireSsoPolicyRequirement.SsoOrganizationIds.Count == 1
+            ? await _organizationRepository.GetByIdAsync(requireSsoPolicyRequirement.SsoOrganizationIds.First())
+            : null;
 
         var ssoOrganizationIdentifier = organization?.Identifier;
 

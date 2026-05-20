@@ -1,5 +1,4 @@
-﻿using Bit.Core.Auth.Sso;
-using Bit.Core.Auth.UserFeatures.EmergencyAccess.Commands;
+﻿using Bit.Core.Auth.UserFeatures.EmergencyAccess.Commands;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.Registration.Implementations;
@@ -34,7 +33,6 @@ public static class UserServiceCollectionExtensions
         services.AddWebAuthnLoginCommands();
         services.AddTdeOffboardingPasswordCommands();
         services.AddTwoFactorCommandsQueries();
-        services.AddSsoQueries();
         services.AddUserApiKeyCommands();
     }
 
@@ -92,8 +90,4 @@ public static class UserServiceCollectionExtensions
         services.AddScoped<IResetUserTwoFactorCommand, ResetUserTwoFactorCommand>();
     }
 
-    private static void AddSsoQueries(this IServiceCollection services)
-    {
-        services.AddScoped<IUserSsoOrganizationIdentifierQuery, UserSsoOrganizationIdentifierQuery>();
-    }
 }
