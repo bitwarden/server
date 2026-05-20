@@ -8,6 +8,7 @@ using Bit.Core;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.UserFeatures.SendAccess;
 using Bit.Core.Billing.Premium.Queries;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
@@ -38,6 +39,7 @@ public class SendsController : Controller
     private readonly IFeatureService _featureService;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
+    private readonly IEventService _eventService;
 
     public SendsController(
         ISendRepository sendRepository,
@@ -50,7 +52,8 @@ public class SendsController : Controller
         ILogger<SendsController> logger,
         IFeatureService featureService,
         IPushNotificationService pushNotificationService,
-        IHasPremiumAccessQuery hasPremiumAccessQuery
+        IHasPremiumAccessQuery hasPremiumAccessQuery,
+        IEventService eventService
     )
     {
         _sendRepository = sendRepository;
@@ -64,6 +67,7 @@ public class SendsController : Controller
         _featureService = featureService;
         _pushNotificationService = pushNotificationService;
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
+        _eventService = eventService;
     }
 
     #region Anonymous endpoints
@@ -117,6 +121,13 @@ public class SendsController : Controller
             sendResponse.CreatorIdentifier = creator.Email;
         }
 
+        if (send.UserId.HasValue
+            && send.Type == SendType.Text
+            && _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging))
+        {
+            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Accessed_Text);
+        }
+
         return new ObjectResult(sendResponse);
     }
 
@@ -162,6 +173,11 @@ public class SendsController : Controller
         if (result.Equals(SendAccessResult.Denied))
         {
             throw new NotFoundException();
+        }
+
+        if (send.UserId.HasValue && _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging))
+        {
+            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Accessed_File);
         }
 
         return new ObjectResult(new SendFileDownloadDataResponseModel() { Id = fileId, Url = url, });
@@ -266,6 +282,13 @@ public class SendsController : Controller
             await _pushNotificationService.PushSyncSendUpdateAsync(send);
         }
 
+        if (send.UserId.HasValue
+            && send.Type == SendType.Text
+            && _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging))
+        {
+            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Accessed_Text);
+        }
+
         return new ObjectResult(sendResponse);
     }
 
@@ -286,6 +309,11 @@ public class SendsController : Controller
         if (result.Equals(SendAccessResult.Denied))
         {
             throw new NotFoundException();
+        }
+
+        if (send.UserId.HasValue && _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging))
+        {
+            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Accessed_File);
         }
 
         return new ObjectResult(new SendFileDownloadDataResponseModel() { Id = fileId, Url = url });
