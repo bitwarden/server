@@ -870,7 +870,7 @@ public class GetOrganizationWarningsQueryTests
         {
             Customer = new Customer
             {
-                Address = new Address { Country = "US" },
+                Address = new Address { Country = "CA" },
                 TaxExempt = TaxExempt.None,
                 TaxIds = new StripeList<TaxId> { Data = new List<TaxId>() },
                 InvoiceSettings = new CustomerInvoiceSettings(),
@@ -896,7 +896,7 @@ public class GetOrganizationWarningsQueryTests
             {
                 Data = new List<Registration>
                 {
-                    new() { Country = "US" }
+                    new() { Country = "CA" }
                 }
             });
 
