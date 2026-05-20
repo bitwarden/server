@@ -6,7 +6,6 @@
     [Key]                           VARCHAR (MAX)       NULL,
     [ResetPasswordKey]              VARCHAR (MAX)       NULL,
     [Status]                        SMALLINT            NOT NULL,
-    [StatusNew]                     SMALLINT            NULL,
     [Type]                          TINYINT             NOT NULL,
     [ExternalId]                    NVARCHAR (300)      NULL,
     [CreationDate]                  DATETIME2 (7)       NOT NULL,
@@ -14,6 +13,7 @@
     [Permissions]                   NVARCHAR (MAX)      NULL,
     [AccessSecretsManager]          BIT                 NOT NULL CONSTRAINT [DF_OrganizationUser_SecretsManager] DEFAULT (0),
     [RevocationReason]              TINYINT             NULL,
+    [StatusNew]                     SMALLINT            NULL,
     CONSTRAINT [PK_OrganizationUser] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_OrganizationUser_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE,
     CONSTRAINT [FK_OrganizationUser_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
