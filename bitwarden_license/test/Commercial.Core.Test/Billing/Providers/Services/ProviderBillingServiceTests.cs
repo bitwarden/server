@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using Bit.Commercial.Core.Billing.Providers.Models;
 using Bit.Commercial.Core.Billing.Providers.Services;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -19,6 +20,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
@@ -436,6 +438,45 @@ public class ProviderBillingServiceTests
 
         await sutProvider.GetDependency<IStripeAdapter>().Received(1).CreateCustomerAsync(
             Arg.Is<CustomerCreateOptions>(options => options.TaxExempt == StripeConstants.TaxExempt.None));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateCustomerForClientOrganization_FlagOn_DoesNotSetTaxExempt(
+        Provider provider,
+        Organization organization,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        organization.GatewayCustomerId = null;
+        organization.Name = "Name";
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
+            .Returns(true);
+
+        var providerCustomer = new Customer
+        {
+            Address = new Address { Country = "DE", PostalCode = "10115" },
+            TaxIds = new StripeList<TaxId> { Data = [] },
+            TaxExempt = StripeConstants.TaxExempt.Reverse
+        };
+
+        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider, Arg.Any<CustomerGetOptions>())
+            .Returns(providerCustomer);
+
+        sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri
+            .Returns(new Bit.Core.Settings.GlobalSettings.BaseServiceUriSettings(new Bit.Core.Settings.GlobalSettings())
+            {
+                CloudRegion = "US"
+            });
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CreateCustomerAsync(Arg.Any<CustomerCreateOptions>())
+            .Returns(new Customer { Id = "customer_id" });
+
+        await sutProvider.Sut.CreateCustomerForClientOrganization(provider, organization);
+
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).CreateCustomerAsync(
+            Arg.Is<CustomerCreateOptions>(options => options.TaxExempt == null));
     }
 
     #endregion
@@ -1227,6 +1268,37 @@ public class ProviderBillingServiceTests
             await sutProvider.Sut.SetupCustomer(provider, tokenizedPaymentMethod, billingAddress));
 
         Assert.Equal("Your tax ID wasn't recognized for your selected country. Please ensure your country and tax ID are valid.", actual.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SetupCustomer_FlagOn_DoesNotSetTaxExempt(
+        SutProvider<ProviderBillingService> sutProvider,
+        Provider provider,
+        BillingAddress billingAddress)
+    {
+        provider.Name = "MSP";
+        billingAddress.Country = "FR";
+        billingAddress.TaxId = null;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
+            .Returns(true);
+
+        var tokenizedPaymentMethod = new TokenizedPaymentMethod { Type = TokenizablePaymentMethodType.Card, Token = "token" };
+        var expected = new Customer { Id = "customer_id" };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CreateCustomerAsync(Arg.Any<CustomerCreateOptions>())
+            .Returns(expected);
+
+        var actual = await sutProvider.Sut.SetupCustomer(provider, tokenizedPaymentMethod, billingAddress);
+
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).CreateCustomerAsync(
+            Arg.Is<CustomerCreateOptions>(options =>
+                options.Address.Country == billingAddress.Country &&
+                options.TaxExempt == null));
+
+        Assert.Equivalent(expected, actual);
     }
 
     #endregion
