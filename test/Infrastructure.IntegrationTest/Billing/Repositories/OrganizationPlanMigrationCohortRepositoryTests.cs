@@ -113,4 +113,27 @@ public class OrganizationPlanMigrationCohortRepositoryTests
         var result = await repository.GetByIdAsync(cohort.Id);
         Assert.Null(result);
     }
+
+    [Theory, DatabaseData]
+    public async Task GetManyAsync_ReturnsActiveAndInactive_OrderedByName(
+        IOrganizationPlanMigrationCohortRepository repository)
+    {
+        // Unique prefix isolates this test from any sibling data in the table; the assertion
+        // filters by prefix so concurrent or leftover rows from other tests don't break us.
+        var prefix = $"getmany-{Guid.NewGuid()}-";
+
+        var zActive = await repository.CreateAsync(CreateTestCohort(name: $"{prefix}z", isActive: true));
+        var aInactive = await repository.CreateAsync(CreateTestCohort(name: $"{prefix}a", isActive: false));
+        var mActive = await repository.CreateAsync(CreateTestCohort(name: $"{prefix}m", isActive: true));
+
+        var results = await repository.GetManyAsync();
+        var ours = results.Where(c => c.Name.StartsWith(prefix)).Select(c => c.Name).ToList();
+
+        // Both active and inactive cohorts must be returned, ordered by name ASC.
+        Assert.Equal([$"{prefix}a", $"{prefix}m", $"{prefix}z"], ours);
+
+        await repository.DeleteAsync(aInactive);
+        await repository.DeleteAsync(mActive);
+        await repository.DeleteAsync(zActive);
+    }
 }

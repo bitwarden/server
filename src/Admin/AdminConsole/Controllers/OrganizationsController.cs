@@ -17,6 +17,8 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.PlanMigration.Entities;
+using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
@@ -66,6 +68,8 @@ public class OrganizationsController : Controller
     private readonly IAutomaticUserConfirmationOrganizationPolicyComplianceValidator _automaticUserConfirmationOrganizationPolicyComplianceValidator;
     private readonly IOrganizationAutoConfirmEnabledNotificationCommand _organizationAutoConfirmEnabledNotificationCommand;
     private readonly ISubscriberService _subscriberService;
+    private readonly IOrganizationPlanMigrationCohortRepository _organizationPlanMigrationCohortRepository;
+    private readonly IOrganizationPlanMigrationCohortAssignmentRepository _organizationPlanMigrationCohortAssignmentRepository;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -95,7 +99,9 @@ public class OrganizationsController : Controller
         IEventService eventService,
         IAutomaticUserConfirmationOrganizationPolicyComplianceValidator automaticUserConfirmationOrganizationPolicyComplianceValidator,
         IOrganizationAutoConfirmEnabledNotificationCommand organizationAutoConfirmEnabledNotificationCommand,
-        ISubscriberService subscriberService)
+        ISubscriberService subscriberService,
+        IOrganizationPlanMigrationCohortRepository organizationPlanMigrationCohortRepository,
+        IOrganizationPlanMigrationCohortAssignmentRepository organizationPlanMigrationCohortAssignmentRepository)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -125,6 +131,8 @@ public class OrganizationsController : Controller
         _automaticUserConfirmationOrganizationPolicyComplianceValidator = automaticUserConfirmationOrganizationPolicyComplianceValidator;
         _organizationAutoConfirmEnabledNotificationCommand = organizationAutoConfirmEnabledNotificationCommand;
         _subscriberService = subscriberService;
+        _organizationPlanMigrationCohortRepository = organizationPlanMigrationCohortRepository;
+        _organizationPlanMigrationCohortAssignmentRepository = organizationPlanMigrationCohortAssignmentRepository;
     }
 
     [RequirePermission(Permission.Org_List_View)]
@@ -226,7 +234,11 @@ public class OrganizationsController : Controller
 
         var plans = await _pricingClient.ListPlans();
 
-        return View(new OrganizationEditModel(
+        var migrationCohorts = await _organizationPlanMigrationCohortRepository.GetManyAsync();
+        var currentAssignment =
+            await _organizationPlanMigrationCohortAssignmentRepository.GetByOrganizationIdAsync(id);
+
+        var model = new OrganizationEditModel(
             organization,
             provider,
             users,
@@ -242,7 +254,21 @@ public class OrganizationsController : Controller
             secrets,
             projects,
             serviceAccounts,
-            smSeats));
+            smSeats)
+        {
+            MigrationCohortId = currentAssignment?.CohortId,
+            AvailableMigrationCohorts = migrationCohorts,
+            MigrationCohortLocked = currentAssignment?.IsLocked() ?? false,
+            MigrationCohortLockReason = currentAssignment switch
+            {
+                { MigratedAt: not null } => "Locked: this organization has already been migrated.",
+                { ScheduledAt: not null } => "Locked: a migration has already been scheduled for this organization.",
+                { ChurnDiscountAppliedAt: not null } => "Locked: a churn-mitigation discount has already been applied to this organization.",
+                _ => null,
+            },
+        };
+
+        return View(model);
     }
 
     [HttpPost]
@@ -315,11 +341,73 @@ public class OrganizationsController : Controller
             return RedirectToAction("Edit", new { id });
         }
 
+        var submittedCohortId = NormalizeCohortId(model.MigrationCohortId);
+        OrganizationPlanMigrationCohortAssignment cohortAssignmentToReplace = null;
+        OrganizationPlanMigrationCohort cohortToAssign = null;
+        var shouldWriteCohortAssignment = false;
+
+        if (_accessControlService.UserHasPermission(Permission.Org_Plan_Edit))
+        {
+            cohortAssignmentToReplace =
+                await _organizationPlanMigrationCohortAssignmentRepository.GetByOrganizationIdAsync(id);
+
+            if (cohortAssignmentToReplace?.CohortId != submittedCohortId)
+            {
+                if (cohortAssignmentToReplace?.IsLocked() == true)
+                {
+                    TempData["Error"] =
+                        "This organization's migration cohort is locked because its assignment has already entered the migration pipeline.";
+                    return RedirectToAction("Edit", new { id });
+                }
+
+                if (submittedCohortId.HasValue)
+                {
+                    cohortToAssign =
+                        await _organizationPlanMigrationCohortRepository.GetByIdAsync(submittedCohortId.Value);
+                    if (cohortToAssign == null)
+                    {
+                        TempData["Error"] = "The selected migration cohort no longer exists.";
+                        return RedirectToAction("Edit", new { id });
+                    }
+                }
+
+                shouldWriteCohortAssignment = true;
+            }
+        }
+
         await HandlePotentialProviderSeatScalingAsync(
             existingOrganizationData,
             model);
 
         await _organizationRepository.ReplaceAsync(organization);
+
+        if (shouldWriteCohortAssignment)
+        {
+            try
+            {
+                if (cohortAssignmentToReplace != null)
+                {
+                    await _organizationPlanMigrationCohortAssignmentRepository.DeleteAsync(cohortAssignmentToReplace);
+                }
+                if (cohortToAssign != null)
+                {
+                    await _organizationPlanMigrationCohortAssignmentRepository.CreateAsync(
+                        new OrganizationPlanMigrationCohortAssignment
+                        {
+                            OrganizationId = id,
+                            CohortId = cohortToAssign.Id,
+                        });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to update migration cohort assignment for organization {OrganizationId}.",
+                    id);
+                TempData["Warning"] =
+                    "Organization updated successfully, but the migration cohort assignment could not be saved. Reload this page and retry.";
+            }
+        }
 
         await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
 
@@ -563,6 +651,12 @@ public class OrganizationsController : Controller
 
         return Json(null);
     }
+
+    // Form binding can surface "(Not assigned)" as either null or Guid.Empty; collapse them so
+    // the diff against the current assignment and the GetByIdAsync lookup are not driven by
+    // Guid.Empty as if it were a real cohort id.
+    private static Guid? NormalizeCohortId(Guid? value) =>
+        value is { } id && id != Guid.Empty ? id : null;
 
     private void UpdateOrganization(Organization organization, OrganizationEditModel model)
     {
