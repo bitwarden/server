@@ -10,6 +10,7 @@ using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Context;
+using Bit.Core.Services;
 using Stripe;
 using Stripe.Tax;
 
@@ -29,6 +30,7 @@ public interface IGetOrganizationWarningsQuery
 
 public class GetOrganizationWarningsQuery(
     ICurrentContext currentContext,
+    IFeatureService featureService,
     IHasPaymentMethodQuery hasPaymentMethodQuery,
     IProviderRepository providerRepository,
     IStripeAdapter stripeAdapter,
@@ -241,9 +243,19 @@ public class GetOrganizationWarningsQuery(
         Customer customer,
         Provider? provider)
     {
-        if (TaxHelpers.IsDirectTaxCountry(customer.Address?.Country))
+        if (featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
         {
-            return null;
+            if (customer.TaxExempt != TaxExempt.None)
+            {
+                return null;
+            }
+        }
+        else
+        {
+            if (TaxHelpers.IsDirectTaxCountry(customer.Address?.Country))
+            {
+                return null;
+            }
         }
 
         var productTier = organization.PlanType.GetProductTier();
