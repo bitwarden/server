@@ -261,9 +261,9 @@ public class OrganizationsController : Controller
             MigrationCohortLocked = currentAssignment?.IsLocked() ?? false,
             MigrationCohortLockReason = currentAssignment switch
             {
-                { MigratedAt: not null } => "Locked: this organization has already been migrated.",
-                { ScheduledAt: not null } => "Locked: a migration has already been scheduled for this organization.",
-                { ChurnDiscountAppliedAt: not null } => "Locked: a churn-mitigation discount has already been applied to this organization.",
+                { MigratedDate: not null } => "Locked: this organization has already been migrated.",
+                { ScheduledDate: not null } => "Locked: a migration has already been scheduled for this organization.",
+                { ChurnDiscountAppliedDate: not null } => "Locked: a churn-mitigation discount has already been applied to this organization.",
                 _ => null,
             },
         };

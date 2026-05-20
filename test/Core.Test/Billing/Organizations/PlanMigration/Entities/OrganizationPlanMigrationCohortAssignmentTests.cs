@@ -27,9 +27,9 @@ public class OrganizationPlanMigrationCohortAssignmentTests
         {
             OrganizationId = Guid.NewGuid(),
             CohortId = Guid.NewGuid(),
-            ScheduledAt = scheduledAt,
-            MigratedAt = migratedAt,
-            ChurnDiscountAppliedAt = churnDiscountAppliedAt,
+            ScheduledDate = scheduledAt,
+            MigratedDate = migratedAt,
+            ChurnDiscountAppliedDate = churnDiscountAppliedAt,
         };
 
         Assert.Equal(expected, assignment.IsLocked());

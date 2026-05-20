@@ -687,13 +687,13 @@ public class OrganizationsControllerTests
         switch (lockedColumn)
         {
             case LifecycleColumn.Scheduled:
-                locked.ScheduledAt = DateTime.UtcNow;
+                locked.ScheduledDate = DateTime.UtcNow;
                 break;
             case LifecycleColumn.Migrated:
-                locked.MigratedAt = DateTime.UtcNow;
+                locked.MigratedDate = DateTime.UtcNow;
                 break;
             case LifecycleColumn.ChurnDiscountApplied:
-                locked.ChurnDiscountAppliedAt = DateTime.UtcNow;
+                locked.ChurnDiscountAppliedDate = DateTime.UtcNow;
                 break;
         }
         var update = new OrganizationEditModel
@@ -744,7 +744,7 @@ public class OrganizationsControllerTests
             Id = Guid.NewGuid(),
             OrganizationId = organization.Id,
             CohortId = cohortId,
-            MigratedAt = DateTime.UtcNow,
+            MigratedDate = DateTime.UtcNow,
         };
         var update = new OrganizationEditModel
         {
@@ -1292,7 +1292,7 @@ public class OrganizationsControllerTests
             Id = Guid.NewGuid(),
             OrganizationId = organization.Id,
             CohortId = Guid.NewGuid(),
-            ScheduledAt = DateTime.UtcNow,
+            ScheduledDate = DateTime.UtcNow,
         };
         StubEditGetDependencies(sutProvider, organization, assignment);
 
@@ -1317,7 +1317,7 @@ public class OrganizationsControllerTests
             Id = Guid.NewGuid(),
             OrganizationId = organization.Id,
             CohortId = Guid.NewGuid(),
-            MigratedAt = DateTime.UtcNow,
+            MigratedDate = DateTime.UtcNow,
         };
         StubEditGetDependencies(sutProvider, organization, assignment);
 
@@ -1342,7 +1342,7 @@ public class OrganizationsControllerTests
             Id = Guid.NewGuid(),
             OrganizationId = organization.Id,
             CohortId = Guid.NewGuid(),
-            ChurnDiscountAppliedAt = DateTime.UtcNow,
+            ChurnDiscountAppliedDate = DateTime.UtcNow,
         };
         StubEditGetDependencies(sutProvider, organization, assignment);
 
@@ -1369,9 +1369,9 @@ public class OrganizationsControllerTests
             Id = Guid.NewGuid(),
             OrganizationId = organization.Id,
             CohortId = Guid.NewGuid(),
-            ScheduledAt = DateTime.UtcNow,
-            MigratedAt = DateTime.UtcNow,
-            ChurnDiscountAppliedAt = DateTime.UtcNow,
+            ScheduledDate = DateTime.UtcNow,
+            MigratedDate = DateTime.UtcNow,
+            ChurnDiscountAppliedDate = DateTime.UtcNow,
         };
         StubEditGetDependencies(sutProvider, organization, assignment);
 
