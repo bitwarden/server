@@ -605,7 +605,7 @@ public class GetProviderWarningsQueryTests
                 Customer = new Customer
                 {
                     TaxIds = new StripeList<TaxId> { Data = [] },
-                    Address = new Address { Country = "US" },
+                    Address = new Address { Country = "CA" },
                     TaxExempt = TaxExempt.None
                 }
             });
@@ -618,7 +618,7 @@ public class GetProviderWarningsQueryTests
         sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
-                Data = [new Registration { Country = "US" }]
+                Data = [new Registration { Country = "CA" }]
             });
 
         var response = await sutProvider.Sut.Run(provider);
