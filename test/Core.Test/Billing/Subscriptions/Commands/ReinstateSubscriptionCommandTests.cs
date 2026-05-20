@@ -168,6 +168,10 @@ public class ReinstateSubscriptionCommandTests
 
         await _stripeAdapter.Received(1).GetSubscriptionAsync(
             "sub_1",
-            Arg.Is<SubscriptionGetOptions>(o => o.Expand != null && o.Expand.Contains("discounts")));
+            Arg.Is<SubscriptionGetOptions>(o =>
+                o.Expand != null &&
+                o.Expand.Contains("discounts") &&
+                o.Expand.Contains("customer") &&
+                o.Expand.Contains("customer.discount")));
     }
 }

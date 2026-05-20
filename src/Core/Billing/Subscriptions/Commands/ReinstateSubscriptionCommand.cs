@@ -30,7 +30,7 @@ public class ReinstateSubscriptionCommand(
     {
         var subscription = await stripeAdapter.GetSubscriptionAsync(
             subscriber.GatewaySubscriptionId,
-            new SubscriptionGetOptions { Expand = ["discounts"] });
+            new SubscriptionGetOptions { Expand = ["discounts", "customer", "customer.discount"] });
 
         if (subscription is not
             {
