@@ -43,6 +43,12 @@ public enum EventType : int
     Cipher_ClientToggledLicenseNumberVisible = 1124,
     Cipher_ClientCopiedPassportNumber = 1125,
     Cipher_ClientToggledPassportNumberVisible = 1126,
+    Cipher_ClientCopiedSwiftCode = 1127,
+    Cipher_ClientToggledSwiftCodeVisible = 1128,
+    Cipher_ClientCopiedIban = 1129,
+    Cipher_ClientToggledIbanVisible = 1130,
+    Cipher_ClientCopiedNationalIdentificationNumber = 1131,
+    Cipher_ClientToggledNationalIdentificationNumberVisible = 1132,
 
     Collection_Created = 1300,
     Collection_Updated = 1301,
@@ -141,5 +147,10 @@ public enum EventType : int
     PhishingBlocker_SiteExited = 2401,
     PhishingBlocker_Bypassed = 2402,
 
-
+    Send_Created_Text = 2500,
+    Send_Created_Text_WithEmailVerification = 2501,
+    Send_Created_Text_WithPasswordProtection = 2502,
+    Send_Created_File = 2503,
+    Send_Created_File_WithEmailVerification = 2504,
+    Send_Created_File_WithPasswordProtection = 2505,
 }
