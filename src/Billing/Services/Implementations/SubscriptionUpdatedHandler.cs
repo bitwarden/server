@@ -338,8 +338,6 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
     private async Task RemovePendingCancellationAsync(Subscription subscription)
     {
-        await _priceIncreaseScheduler.SchedulePersonalPriceIncrease(subscription);
-
         await _stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
         {
             CancelAtPeriodEnd = false,
@@ -352,6 +350,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 [MetadataKeys.CancellationOrigin] = string.Empty
             }
         });
+        await _priceIncreaseScheduler.ScheduleForSubscription(subscription);
     }
 
     /// <summary>

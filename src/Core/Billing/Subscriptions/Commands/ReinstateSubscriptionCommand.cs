@@ -56,11 +56,11 @@ public class ReinstateSubscriptionCommand(
                     CancelAtPeriodEnd = false,
                     Metadata = new Dictionary<string, string>
                     {
-                        [MetadataKeys.CancelledDuringDeferredPriceIncrease] = ""
+                        [MetadataKeys.CancelledDuringDeferredPriceIncrease] = string.Empty
                     }
                 });
 
-                await priceIncreaseScheduler.SchedulePersonalPriceIncrease(subscription);
+                await priceIncreaseScheduler.ScheduleForSubscription(subscription);
 
                 return new None();
             }
