@@ -60,7 +60,15 @@ BEGIN
 
     ;WITH [Pending] AS (
         SELECT TOP 1
-            *
+            [Id],
+            [OrganizationId],
+            [CreationDate],
+            [RevisionDate],
+            [StartDate],
+            [CompletedDate],
+            [EventsDeletedCount],
+            [Attempts],
+            [LastError]
         FROM
             [dbo].[OrganizationEventCleanup] WITH (UPDLOCK, READPAST)
         WHERE
