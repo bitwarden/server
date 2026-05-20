@@ -16,54 +16,47 @@ public class OrganizationEventCleanupRepository : BaseRepository, IOrganizationE
 
     public async Task CreateAsync(OrganizationEventCleanup cleanup)
     {
+        cleanup.SetNewId();
         using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
             "[dbo].[OrganizationEventCleanup_Create]",
-            new { cleanup.Id, cleanup.OrganizationId, cleanup.QueuedAt },
+            new { cleanup.Id, cleanup.OrganizationId, cleanup.CreationDate },
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task<OrganizationEventCleanup?> ReadNextPendingAsync()
+    public async Task<OrganizationEventCleanup?> ClaimNextPendingAsync()
     {
         using var connection = new SqlConnection(ConnectionString);
         return await connection.QuerySingleOrDefaultAsync<OrganizationEventCleanup>(
-            "[dbo].[OrganizationEventCleanup_ReadNextPending]",
+            "[dbo].[OrganizationEventCleanup_ClaimNextPending]",
+            new { Now = DateTime.UtcNow },
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task MarkStartedAsync(Guid id)
+    public async Task UpdateProgressAsync(Guid id, long delta)
     {
         using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
-            "[dbo].[OrganizationEventCleanup_MarkStarted]",
-            new { Id = id },
+            "[dbo].[OrganizationEventCleanup_UpdateProgress]",
+            new { Id = id, Delta = delta, Now = DateTime.UtcNow },
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task IncrementProgressAsync(Guid id, long delta)
+    public async Task UpdateErrorAsync(Guid id, string message)
     {
         using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
-            "[dbo].[OrganizationEventCleanup_IncrementProgress]",
-            new { Id = id, Delta = delta },
+            "[dbo].[OrganizationEventCleanup_UpdateError]",
+            new { Id = id, Message = message, Now = DateTime.UtcNow },
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task RecordErrorAsync(Guid id, string message)
+    public async Task UpdateCompletedAsync(Guid id)
     {
         using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
-            "[dbo].[OrganizationEventCleanup_RecordError]",
-            new { Id = id, Message = message },
-            commandType: CommandType.StoredProcedure);
-    }
-
-    public async Task MarkCompletedAsync(Guid id)
-    {
-        using var connection = new SqlConnection(ConnectionString);
-        await connection.ExecuteAsync(
-            "[dbo].[OrganizationEventCleanup_MarkCompleted]",
-            new { Id = id },
+            "[dbo].[OrganizationEventCleanup_UpdateCompleted]",
+            new { Id = id, Now = DateTime.UtcNow },
             commandType: CommandType.StoredProcedure);
     }
 }

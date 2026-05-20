@@ -1,6 +1,7 @@
-CREATE PROCEDURE [dbo].[OrganizationEventCleanup_RecordError]
+CREATE PROCEDURE [dbo].[OrganizationEventCleanup_UpdateError]
     @Id UNIQUEIDENTIFIER,
-    @Message NVARCHAR(MAX)
+    @Message NVARCHAR(MAX),
+    @Now DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -10,7 +11,7 @@ BEGIN
     SET
         [Attempts] = [Attempts] + 1,
         [LastError] = @Message,
-        [LastProgressAt] = SYSUTCDATETIME()
+        [RevisionDate] = @Now
     WHERE
         [Id] = @Id
 END

@@ -1,7 +1,7 @@
 CREATE PROCEDURE [dbo].[OrganizationEventCleanup_Create]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
-    @QueuedAt DATETIME2(7)
+    @CreationDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -10,12 +10,12 @@ BEGIN
     (
         [Id],
         [OrganizationId],
-        [QueuedAt]
+        [CreationDate]
     )
     VALUES
     (
         @Id,
         @OrganizationId,
-        @QueuedAt
+        @CreationDate
     )
 END

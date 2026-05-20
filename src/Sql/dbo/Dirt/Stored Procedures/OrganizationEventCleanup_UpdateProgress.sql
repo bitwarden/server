@@ -1,6 +1,7 @@
-CREATE PROCEDURE [dbo].[OrganizationEventCleanup_IncrementProgress]
+CREATE PROCEDURE [dbo].[OrganizationEventCleanup_UpdateProgress]
     @Id UNIQUEIDENTIFIER,
-    @Delta BIGINT
+    @Delta BIGINT,
+    @Now DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -9,7 +10,7 @@ BEGIN
         [dbo].[OrganizationEventCleanup]
     SET
         [EventsDeletedCount] = [EventsDeletedCount] + @Delta,
-        [LastProgressAt] = SYSUTCDATETIME()
+        [RevisionDate] = @Now
     WHERE
         [Id] = @Id
 END
