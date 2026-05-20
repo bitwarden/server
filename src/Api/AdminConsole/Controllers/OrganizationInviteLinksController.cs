@@ -4,6 +4,8 @@ using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,9 +20,26 @@ public class OrganizationInviteLinksController(
     IGetOrganizationInviteLinkQuery getOrganizationInviteLinkQuery,
     IUpdateOrganizationInviteLinkCommand updateOrganizationInviteLinkCommand,
     IDeleteOrganizationInviteLinkCommand deleteOrganizationInviteLinkCommand,
-    IRefreshOrganizationInviteLinkCommand refreshOrganizationInviteLinkCommand)
+    IRefreshOrganizationInviteLinkCommand refreshOrganizationInviteLinkCommand,
+    IOrganizationInviteLinkRepository organizationInviteLinkRepository)
     : BaseAdminConsoleController
 {
+    [AllowAnonymous]
+    [HttpPost("/organizations/invite-link/validate-email-domain")]
+    public async Task<IResult> ValidateEmailDomain(
+        [FromBody] OrganizationInviteLinkValidateEmailDomainRequestModel model)
+    {
+        var link = await organizationInviteLinkRepository.GetByCodeAsync(model.Code);
+        if (link is null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var isAllowed = InviteLinkDomainValidator.IsEmailDomainAllowed(model.Email, link.GetAllowedDomains());
+        var response = new OrganizationInviteLinkValidateEmailDomainResponseModel(isAllowed);
+        return TypedResults.Ok(response);
+    }
+
     [HttpGet("")]
     [Authorize<ManageUsersRequirement>]
     public async Task<IResult> Get(Guid orgId)
