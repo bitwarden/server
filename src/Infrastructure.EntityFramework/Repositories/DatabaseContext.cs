@@ -88,6 +88,8 @@ public class DatabaseContext : DbContext
     public DbSet<OrganizationMemberBaseDetail> OrganizationMemberBaseDetails { get; set; }
     public DbSet<SecurityTask> SecurityTasks { get; set; }
     public DbSet<OrganizationInstallation> OrganizationInstallations { get; set; }
+    public DbSet<OrganizationPlanMigrationCohort> OrganizationPlanMigrationCohorts { get; set; }
+    public DbSet<OrganizationPlanMigrationCohortAssignment> OrganizationPlanMigrationCohortAssignments { get; set; }
     public DbSet<OrganizationReport> OrganizationReports { get; set; }
     public DbSet<OrganizationApplication> OrganizationApplications { get; set; }
 

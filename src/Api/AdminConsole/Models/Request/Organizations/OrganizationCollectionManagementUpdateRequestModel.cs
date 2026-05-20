@@ -1,6 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Models.Business;
 
-namespace Bit.Api.Models.Request.Organizations;
+namespace Bit.Api.AdminConsole.Models.Request.Organizations;
 
 public class OrganizationCollectionManagementUpdateRequestModel
 {

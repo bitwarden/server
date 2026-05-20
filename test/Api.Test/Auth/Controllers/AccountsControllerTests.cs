@@ -2,12 +2,14 @@
 using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
+using Bit.Core.Auth.UserFeatures.TempPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserApiKey.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
@@ -18,6 +20,7 @@ using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -35,12 +38,14 @@ public class AccountsControllerTests : IDisposable
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IUserService _userService;
     private readonly IProviderUserRepository _providerUserRepository;
+    private readonly ISelfServicePasswordChangeCommand _selfServicePasswordChangeCommand;
     private readonly IPolicyService _policyService;
     private readonly IFinishSsoJitProvisionMasterPasswordCommand _finishSsoJitProvisionMasterPasswordCommand;
     private readonly ISetInitialMasterPasswordCommandV1 _setInitialMasterPasswordCommandV1;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly ITdeSetPasswordCommand _tdeSetPasswordCommand;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
+    private readonly IReplaceAdminSetTemporaryPasswordCommand _replaceAdminSetTemporaryPasswordCommand;
     private readonly IFeatureService _featureService;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
     private readonly ITwoFactorEmailService _twoFactorEmailService;
@@ -54,12 +59,14 @@ public class AccountsControllerTests : IDisposable
         _organizationService = Substitute.For<IOrganizationService>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _providerUserRepository = Substitute.For<IProviderUserRepository>();
+        _selfServicePasswordChangeCommand = Substitute.For<ISelfServicePasswordChangeCommand>();
         _policyService = Substitute.For<IPolicyService>();
         _finishSsoJitProvisionMasterPasswordCommand = Substitute.For<IFinishSsoJitProvisionMasterPasswordCommand>();
         _setInitialMasterPasswordCommandV1 = Substitute.For<ISetInitialMasterPasswordCommandV1>();
         _twoFactorIsEnabledQuery = Substitute.For<ITwoFactorIsEnabledQuery>();
         _tdeSetPasswordCommand = Substitute.For<ITdeSetPasswordCommand>();
         _tdeOffboardingPasswordCommand = Substitute.For<ITdeOffboardingPasswordCommand>();
+        _replaceAdminSetTemporaryPasswordCommand = Substitute.For<IReplaceAdminSetTemporaryPasswordCommand>();
         _featureService = Substitute.For<IFeatureService>();
         _userAccountKeysQuery = Substitute.For<IUserAccountKeysQuery>();
         _twoFactorEmailService = Substitute.For<ITwoFactorEmailService>();
@@ -72,11 +79,13 @@ public class AccountsControllerTests : IDisposable
             _organizationUserRepository,
             _providerUserRepository,
             _userService,
+            _selfServicePasswordChangeCommand,
             _policyService,
             _finishSsoJitProvisionMasterPasswordCommand,
             _setInitialMasterPasswordCommandV1,
             _tdeSetPasswordCommand,
             _tdeOffboardingPasswordCommand,
+            _replaceAdminSetTemporaryPasswordCommand,
             _twoFactorIsEnabledQuery,
             _featureService,
             _userAccountKeysQuery,
@@ -679,7 +688,7 @@ public class AccountsControllerTests : IDisposable
 
     [Theory]
     [BitAutoData]
-    public async Task PostKdf_UserNotFound_ShouldFail(PasswordRequestModel model)
+    public async Task PostKdf_UserNotFound_ShouldFail(ChangeKdfRequestModel model)
     {
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult<User>(null));
 
@@ -690,7 +699,7 @@ public class AccountsControllerTests : IDisposable
     [Theory]
     [BitAutoData]
     public async Task PostKdf_WithNullAuthenticationData_ShouldFail(
-        User user, PasswordRequestModel model)
+        User user, ChangeKdfRequestModel model)
     {
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
         model.AuthenticationData = null;
@@ -704,7 +713,7 @@ public class AccountsControllerTests : IDisposable
     [Theory]
     [BitAutoData]
     public async Task PostKdf_WithNullUnlockData_ShouldFail(
-        User user, PasswordRequestModel model)
+        User user, ChangeKdfRequestModel model)
     {
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
         model.UnlockData = null;
@@ -718,7 +727,7 @@ public class AccountsControllerTests : IDisposable
     [Theory]
     [BitAutoData]
     public async Task PostKdf_ChangeKdfFailed_ShouldFail(
-        User user, PasswordRequestModel model)
+        User user, ChangeKdfRequestModel model)
     {
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
         _changeKdfCommand.ChangeKdfAsync(Arg.Any<User>(), Arg.Any<string>(),
@@ -736,7 +745,7 @@ public class AccountsControllerTests : IDisposable
     [Theory]
     [BitAutoData]
     public async Task PostKdf_ChangeKdfSuccess_NoError(
-        User user, PasswordRequestModel model)
+        User user, ChangeKdfRequestModel model)
     {
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
         _changeKdfCommand.ChangeKdfAsync(Arg.Any<User>(), Arg.Any<string>(),
@@ -776,6 +785,44 @@ public class AccountsControllerTests : IDisposable
 
         Assert.NotNull(exception.Message);
         Assert.Contains("User has existing keypair", exception.Message);
+    }
+
+    [Fact]
+    public async Task GetProfile_PoliciesInAcceptedState_FlagEnabled_PopulatesOrganizationsNew()
+    {
+        var user = GenerateExampleUser();
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        _userService.GetOrganizationsClaimingUserAsync(user.Id).Returns(new List<Organization>());
+        _featureService.IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState).Returns(true);
+
+        var acceptedOrganizationId = Guid.NewGuid();
+        var organizationsNew = new List<OrganizationUserOrganizationDetails>
+        {
+            new() { OrganizationId = acceptedOrganizationId }
+        };
+        _organizationUserRepository.GetManyConfirmedAcceptedDetailsByUserAsync(user.Id)
+            .Returns(organizationsNew);
+
+        var result = await _sut.GetProfile();
+
+        await _organizationUserRepository.Received(1).GetManyConfirmedAcceptedDetailsByUserAsync(user.Id);
+        Assert.NotNull(result.OrganizationsNew);
+        var returnedOrganization = Assert.Single(result.OrganizationsNew);
+        Assert.Equal(acceptedOrganizationId, returnedOrganization.Id);
+    }
+
+    [Fact]
+    public async Task GetProfile_PoliciesInAcceptedState_FlagDisabled_OrganizationsNewIsNull()
+    {
+        var user = GenerateExampleUser();
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        _userService.GetOrganizationsClaimingUserAsync(user.Id).Returns(new List<Organization>());
+        _featureService.IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState).Returns(false);
+
+        var result = await _sut.GetProfile();
+
+        await _organizationUserRepository.DidNotReceive().GetManyConfirmedAcceptedDetailsByUserAsync(Arg.Any<Guid>());
+        Assert.Null(result.OrganizationsNew);
     }
 
     // Below are helper functions that currently belong to this
