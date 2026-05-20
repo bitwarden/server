@@ -245,6 +245,11 @@ public class GetOrganizationWarningsQuery(
     {
         if (featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
         {
+            if (customer.Address?.Country == Core.Constants.CountryAbbreviations.UnitedStates)
+            {
+                return null;
+            }
+
             if (customer.TaxExempt != TaxExempt.None)
             {
                 return null;
