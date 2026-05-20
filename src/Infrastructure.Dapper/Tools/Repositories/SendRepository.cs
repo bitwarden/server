@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using System.Data;
+using System.Security.Cryptography;
 using Bit.Core;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Settings;
@@ -11,6 +12,7 @@ using Bit.Infrastructure.Dapper.Tools.Helpers;
 using Dapper;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Infrastructure.Dapper.Tools.Repositories;
 
@@ -18,22 +20,27 @@ namespace Bit.Infrastructure.Dapper.Tools.Repositories;
 public class SendRepository : Repository<Send, Guid>, ISendRepository
 {
     private readonly IDataProtector _dataProtector;
+    private readonly ILogger<SendRepository> _logger;
 
-    public SendRepository(GlobalSettings globalSettings, IDataProtectionProvider dataProtectionProvider)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString, dataProtectionProvider)
+    public SendRepository(GlobalSettings globalSettings, IDataProtectionProvider dataProtectionProvider, ILogger<SendRepository> logger)
+        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString, dataProtectionProvider, logger)
     { }
 
-    public SendRepository(string connectionString, string readOnlyConnectionString, IDataProtectionProvider dataProtectionProvider)
+    public SendRepository(string connectionString, string readOnlyConnectionString, IDataProtectionProvider dataProtectionProvider, ILogger<SendRepository> logger)
         : base(connectionString, readOnlyConnectionString)
     {
         _dataProtector = dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose);
+        _logger = logger;
     }
 
     public override async Task<Send?> GetByIdAsync(Guid id)
     {
         var send = await base.GetByIdAsync(id);
-        UnprotectData(send);
-        return send;
+        if (send == null)
+        {
+            return null;
+        }
+        return UnprotectData(send) ? send : null;
     }
 
     /// <inheritdoc />
@@ -46,9 +53,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
                 new { UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
-            var sends = results.ToList();
-            UnprotectData(sends);
-            return sends;
+            return results.Where(UnprotectData).ToList();
         }
     }
 
@@ -62,9 +67,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
-            var sends = results.ToList();
-            UnprotectData(sends);
-            return sends;
+            return results.Where(UnprotectData).ToList();
         }
     }
 
@@ -78,9 +81,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
                 new { UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
-            var sends = results.ToList();
-            UnprotectData(sends);
-            return sends;
+            return results.Where(UnprotectData).ToList();
         }
     }
 
@@ -94,9 +95,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
-            var sends = results.ToList();
-            UnprotectData(sends);
-            return sends;
+            return results.Where(UnprotectData).ToList();
         }
     }
 
@@ -110,9 +109,9 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
                 new { DeletionDate = deletionDateBefore },
                 commandType: CommandType.StoredProcedure);
 
-            var sends = results.ToList();
-            UnprotectData(sends);
-            return sends;
+            // Don't filter or decrypt here — the cleanup job needs to see every row
+            // (including unrecoverable ones) so it can delete them.
+            return results.ToList();
         }
     }
 
@@ -185,10 +184,11 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
                 cmd.ExecuteNonQuery();
             }
 
-            // Unprotect after save
+            // Restore in-memory Emails. The DB write only touched Key/RevisionDate, so
+            // a per-row decryption failure here is benign — discard the bool return.
             foreach (var send in sendsList)
             {
-                UnprotectData(send);
+                _ = UnprotectData(send);
             }
         };
     }
@@ -216,37 +216,32 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
 
     private void ProtectData(Send send)
     {
-        if (!send.Emails?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
-        {
-            send.Emails = string.Concat(Constants.DatabaseFieldProtectedPrefix,
-                _dataProtector.Protect(send.Emails!));
-        }
-    }
-
-    private void UnprotectData(Send? send)
-    {
-        if (send == null)
+        if (send.Emails == null || send.Emails.StartsWith(Constants.DatabaseFieldProtectedPrefix))
         {
             return;
         }
 
-        if (send.Emails?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
+        send.Emails = string.Concat(Constants.DatabaseFieldProtectedPrefix,
+            _dataProtector.Protect(send.Emails));
+    }
+
+    private bool UnprotectData(Send send)
+    {
+        if (send.Emails == null || !send.Emails.StartsWith(Constants.DatabaseFieldProtectedPrefix))
+        {
+            return true;
+        }
+
+        try
         {
             send.Emails = _dataProtector.Unprotect(
                 send.Emails.Substring(Constants.DatabaseFieldProtectedPrefix.Length));
+            return true;
         }
-    }
-
-    private void UnprotectData(IEnumerable<Send> sends)
-    {
-        if (sends == null)
+        catch (CryptographicException ex)
         {
-            return;
-        }
-
-        foreach (var send in sends)
-        {
-            UnprotectData(send);
+            _logger.LogWarning(ex, "Failed to unprotect Emails for Send {SendId}.", send.Id);
+            return false;
         }
     }
 }
