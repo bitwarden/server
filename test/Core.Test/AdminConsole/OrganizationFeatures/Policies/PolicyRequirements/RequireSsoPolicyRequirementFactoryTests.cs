@@ -151,7 +151,7 @@ public class RequireSsoPolicyRequirementFactoryTests
     }
 
     [Theory, BitAutoData]
-    public void SsoOrganizationIds_WithNoPolicies_ReturnsEmpty(
+    public void OrganizationIds_WithNoPolicies_ReturnsEmpty(
         SutProvider<RequireSsoPolicyRequirementFactory> sutProvider)
     {
         var actual = sutProvider.Sut.Create([]);
@@ -162,11 +162,15 @@ public class RequireSsoPolicyRequirementFactoryTests
     [Theory]
     [BitAutoData(OrganizationUserStatusType.Accepted)]
     [BitAutoData(OrganizationUserStatusType.Confirmed)]
-    public void SsoOrganizationIds_SinglePolicy_ReturnsThatOrgId(
+    public void OrganizationIds_PoliciesInAcceptedStateEnabled_SinglePolicy_ReturnsThatOrgId(
         OrganizationUserStatusType userStatus,
         Guid organizationId,
         SutProvider<RequireSsoPolicyRequirementFactory> sutProvider)
     {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState)
+            .Returns(true);
+
         var actual = sutProvider.Sut.Create(
         [
             new PolicyDetails
@@ -181,11 +185,15 @@ public class RequireSsoPolicyRequirementFactoryTests
     }
 
     [Theory, BitAutoData]
-    public void SsoOrganizationIds_MultiplePolicies_ReturnsAllOrgIds(
+    public void OrganizationIds_PoliciesInAcceptedStateEnabled_MultiplePolicies_ReturnsAllOrgIds(
         Guid organizationIdA,
         Guid organizationIdB,
         SutProvider<RequireSsoPolicyRequirementFactory> sutProvider)
     {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState)
+            .Returns(true);
+
         var actual = sutProvider.Sut.Create(
         [
             new PolicyDetails
@@ -208,13 +216,10 @@ public class RequireSsoPolicyRequirementFactoryTests
     }
 
     [Theory, BitAutoData]
-    public void SsoOrganizationIds_AcceptedStatusWithFeatureFlagOff_IncludesOrgIdEvenWhenSsoNotYetRequired(
+    public void OrganizationIds_PoliciesInAcceptedStateDisabled_Accepted_ReturnsEmpty(
         Guid organizationId,
         SutProvider<RequireSsoPolicyRequirementFactory> sutProvider)
     {
-        // OrganizationIds reflects "policy applies to this membership" — independent of whether
-        // SsoRequired is currently true for this user. Callers gate on SsoRequired before reading
-        // the org ids.
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState)
             .Returns(false);
@@ -229,7 +234,53 @@ public class RequireSsoPolicyRequirementFactoryTests
             }
         ]);
 
-        Assert.False(actual.SsoRequired);
+        Assert.Empty(actual.OrganizationIds);
+    }
+
+    [Theory, BitAutoData]
+    public void OrganizationIds_PoliciesInAcceptedStateDisabled_Confirmed_ReturnsThatOrgId(
+        Guid organizationId,
+        SutProvider<RequireSsoPolicyRequirementFactory> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState)
+            .Returns(false);
+
+        var actual = sutProvider.Sut.Create(
+        [
+            new PolicyDetails
+            {
+                OrganizationId = organizationId,
+                PolicyType = PolicyType.RequireSso,
+                OrganizationUserStatus = OrganizationUserStatusType.Confirmed
+            }
+        ]);
+
         Assert.Equal(new[] { organizationId }, actual.OrganizationIds);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserStatusType.Revoked)]
+    [BitAutoData(OrganizationUserStatusType.Invited)]
+    public void OrganizationIds_WithExemptStatus_ReturnsEmpty(
+        OrganizationUserStatusType userStatus,
+        Guid organizationId,
+        SutProvider<RequireSsoPolicyRequirementFactory> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState)
+            .Returns(true);
+
+        var actual = sutProvider.Sut.Create(
+        [
+            new PolicyDetails
+            {
+                OrganizationId = organizationId,
+                PolicyType = PolicyType.RequireSso,
+                OrganizationUserStatus = userStatus
+            }
+        ]);
+
+        Assert.Empty(actual.OrganizationIds);
     }
 }

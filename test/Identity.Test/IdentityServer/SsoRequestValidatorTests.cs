@@ -77,7 +77,7 @@ public class SsoRequestValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void ValidateAsync_SsoRequired_NoSsoOrganizationIds_ReturnsFalse_OmitsIdentifier(
+    public async void ValidateAsync_SsoRequired_NoOrganizationIds_ReturnsFalse_OmitsIdentifier(
         User user,
         [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
@@ -364,7 +364,7 @@ public class SsoRequestValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void ValidateAsync_SsoRequired_MultipleSsoOrganizationIds_OmitsIdentifier(
+    public async void ValidateAsync_SsoRequired_MultipleOrganizationIds_OmitsIdentifier(
         User user,
         Guid orgIdA,
         Guid orgIdB,

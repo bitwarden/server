@@ -51,16 +51,18 @@ public class RequireSsoPolicyRequirementFactory(GlobalSettings globalSettings, I
 
         var acceptedFeatureFlagEnabled = featureService.IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState);
 
+        var ssoRequiredDetails = policyDetails.Where(p => !acceptedFeatureFlagEnabled
+            ? p.OrganizationUserStatus is OrganizationUserStatusType.Confirmed
+            : p.OrganizationUserStatus is OrganizationUserStatusType.Accepted
+                or OrganizationUserStatusType.Confirmed).ToArray();
+
         var result = new RequireSsoPolicyRequirement
         {
             CanUsePasskeyLogin = !policyDetails.Any(p =>
                 p.OrganizationUserStatus is OrganizationUserStatusType.Accepted
                     or OrganizationUserStatusType.Confirmed),
-            SsoRequired = policyDetails.Any(p => !acceptedFeatureFlagEnabled
-                ? p.OrganizationUserStatus is OrganizationUserStatusType.Confirmed
-                : p.OrganizationUserStatus is OrganizationUserStatusType.Accepted
-                    or OrganizationUserStatusType.Confirmed),
-            OrganizationIds = [.. policyDetails.Select(x => x.OrganizationId)]
+            SsoRequired = ssoRequiredDetails.Length > 0,
+            OrganizationIds = [.. ssoRequiredDetails.Select(x => x.OrganizationId)]
         };
 
         return result;
