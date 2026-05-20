@@ -66,6 +66,10 @@ public class GetProviderWarningsQuery(
     {
         if (featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
         {
+            if (customer.Address?.Country == Constants.CountryAbbreviations.UnitedStates)
+            {
+                return null;
+            }
             if (customer.TaxExempt != TaxExempt.None)
             {
                 return null;
