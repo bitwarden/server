@@ -157,7 +157,7 @@ public class ReinstateSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task Run_FetchesSubscriptionWithDiscountsExpanded()
+    public async Task Run_FetchesSubscriptionWithRequiredExpansions()
     {
         var user = new User { GatewaySubscriptionId = "sub_1" };
 
