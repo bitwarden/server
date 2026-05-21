@@ -77,21 +77,25 @@ public class SubscriberService(
             }
             : null;
 
-        var cancellingUserMetadata = offboardingSurveyResponse != null
+        var cancellingUserMetadata = offboardingSurveyResponse is not null
             ? new Dictionary<string, string>
             {
                 { MetadataKeys.CancellingUserId, offboardingSurveyResponse.UserId.ToString() }
             }
             : null;
 
-        if (cancelImmediately)
+        if (featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
         {
-            await CancelSubscriptionImmediatelyAsync(subscription, cancellationDetails, cancellingUserMetadata);
+            cancellingUserMetadata = new Dictionary<string, string>(cancellingUserMetadata ?? [])
+            {
+                [MetadataKeys.MigrationCohortId] = string.Empty,
+                [MetadataKeys.MigrationCohortName] = string.Empty,
+            };
         }
-        else
-        {
-            await CancelSubscriptionAtPeriodEndAsync(subscription, cancellationDetails, cancellingUserMetadata);
-        }
+
+        await (cancelImmediately
+            ? CancelSubscriptionImmediatelyAsync(subscription, cancellationDetails, cancellingUserMetadata)
+            : CancelSubscriptionAtPeriodEndAsync(subscription, cancellationDetails, cancellingUserMetadata));
     }
 
     public async Task<string> CreateBraintreeCustomer(
