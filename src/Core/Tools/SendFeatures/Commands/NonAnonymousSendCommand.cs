@@ -71,7 +71,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
 
     private async Task LogSendCreatedEventAsync(Send send)
     {
-        if (!send.UserId.HasValue || !_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging))
+        if (!_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) || !send.UserId.HasValue)
         {
             return;
         }
@@ -81,7 +81,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
 
     private async Task LogSendUpdatedEventAsync(Send send)
     {
-        if (!send.UserId.HasValue || !_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging))
+        if (!_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) || !send.UserId.HasValue)
         {
             return;
         }
@@ -98,7 +98,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
 
     private async Task LogSendDeletedEventAsync(Send send)
     {
-        if (!send.UserId.HasValue || !_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging))
+        if (!_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) || !send.UserId.HasValue)
         {
             return;
         }

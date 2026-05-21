@@ -125,9 +125,9 @@ public class SendsController : Controller
             sendResponse.CreatorIdentifier = creator.Email;
         }
 
-        if (send.UserId.HasValue
-            && send.Type == SendType.Text
-            && _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging))
+        if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging)
+            && send.UserId.HasValue
+            && send.Type == SendType.Text)
         {
             await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Accessed_Text);
         }
@@ -183,7 +183,7 @@ public class SendsController : Controller
             throw new NotFoundException();
         }
 
-        if (send.UserId.HasValue && _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging))
+        if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) && send.UserId.HasValue)
         {
             await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Accessed_File);
         }
@@ -293,9 +293,9 @@ public class SendsController : Controller
             await _pushNotificationService.PushSyncSendUpdateAsync(send);
         }
 
-        if (send.UserId.HasValue
-            && send.Type == SendType.Text
-            && _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging))
+        if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging)
+            && send.UserId.HasValue
+            && send.Type == SendType.Text)
         {
             await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Accessed_Text);
         }
@@ -325,7 +325,7 @@ public class SendsController : Controller
             throw new NotFoundException();
         }
 
-        if (send.UserId.HasValue && _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging))
+        if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) && send.UserId.HasValue)
         {
             await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Accessed_File);
         }
