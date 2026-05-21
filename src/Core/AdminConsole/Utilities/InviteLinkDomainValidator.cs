@@ -1,4 +1,4 @@
-﻿using System.Net.Mail;
+﻿using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.Utilities;
 
@@ -9,12 +9,12 @@ public static class InviteLinkDomainValidator
     /// </summary>
     public static bool IsEmailDomainAllowed(string? email, IEnumerable<string> allowedDomains)
     {
-        if (!MailAddress.TryCreate(email, out var mailAddress))
+        if (string.IsNullOrWhiteSpace(email) || !email.IsValidEmail())
         {
             return false;
         }
 
-        var emailDomain = mailAddress.Host.ToLowerInvariant();
+        var emailDomain = EmailValidation.GetDomain(email);
         var sanitizedDomains = InviteLinkDomainSanitizer.SanitizeDomains(allowedDomains);
 
         return sanitizedDomains.Count > 0 && sanitizedDomains.Contains(emailDomain);
