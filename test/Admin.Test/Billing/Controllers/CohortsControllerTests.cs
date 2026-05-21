@@ -320,4 +320,55 @@ public class CohortsControllerTests
         var cohortType = sutProvider.Sut.ViewData["CohortType"];
         Assert.IsType<CohortType.UnresolvedMigration>(cohortType);
     }
+
+    [Theory, BitAutoData]
+    public async Task Delete_NonPendingAboveZero_RefusesAndRedirectsToEdit(
+        Guid id,
+        OrganizationPlanMigrationCohort cohort,
+        SutProvider<CohortsController> sutProvider)
+    {
+        cohort.Id = id;
+
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(id).Returns(cohort);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .GetCohortNonPendingAssignmentsCountAsync(id).Returns(3);
+
+        sutProvider.Sut.TempData = new TempDataDictionary(
+            new DefaultHttpContext(),
+            Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.Delete(id);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(CohortsController.Edit), redirect.ActionName);
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .DidNotReceive()
+            .DeleteAsync(Arg.Any<OrganizationPlanMigrationCohort>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Delete_NoNonPending_DeletesAndRedirectsToIndex(
+        Guid id,
+        OrganizationPlanMigrationCohort cohort,
+        SutProvider<CohortsController> sutProvider)
+    {
+        cohort.Id = id;
+
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(id).Returns(cohort);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .GetCohortNonPendingAssignmentsCountAsync(id).Returns(0);
+
+        sutProvider.Sut.TempData = new TempDataDictionary(
+            new DefaultHttpContext(),
+            Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.Delete(id);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(CohortsController.Index), redirect.ActionName);
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .Received(1).DeleteAsync(cohort);
+    }
 }

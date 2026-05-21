@@ -16,7 +16,8 @@ namespace Bit.Admin.Billing.Controllers;
 public class CohortsController(
     IOrganizationPlanMigrationCohortRepository cohortRepository,
     IStripeAdapter stripeAdapter,
-    ILogger<CohortsController> logger) : Controller
+    ILogger<CohortsController> logger,
+    IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository) : Controller
 {
     private const int DefaultPageSize = 25;
 
@@ -142,6 +143,39 @@ public class CohortsController(
             logger.LogError(ex, "Error updating cohort. Id: {Id}", id);
             ModelState.AddModelError(string.Empty, "An error occurred while saving the cohort.");
             return View(model);
+        }
+    }
+
+    [HttpPost("{id:guid}/delete")]
+    [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var cohort = await cohortRepository.GetByIdAsync(id);
+        if (cohort == null) return NotFound();
+
+        try
+        {
+            var nonPendingCount = await assignmentRepository.GetCohortNonPendingAssignmentsCountAsync(id);
+            if (nonPendingCount > 0)
+            {
+                TempData["Error"] =
+                    $"Cannot delete cohort '{cohort.Name}' because {nonPendingCount:N0} " +
+                    "assignment(s) have left the Pending state. Historical migration and " +
+                    "save-offer records are preserved.";
+                return RedirectToAction(nameof(Edit), new { id });
+            }
+
+            await cohortRepository.DeleteAsync(cohort);
+
+            TempData["Success"] = $"Cohort '{cohort.Name}' deleted.";
+            return RedirectToAction(nameof(Index));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error deleting cohort. Id: {Id}", id);
+            TempData["Error"] = "An error occurred while attempting to delete the cohort.";
+            return RedirectToAction(nameof(Edit), new { id });
         }
     }
 

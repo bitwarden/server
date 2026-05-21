@@ -26,4 +26,14 @@ public class OrganizationPlanMigrationCohortAssignmentRepository(
 
         return results.SingleOrDefault();
     }
+
+    public async Task<int> GetCohortNonPendingAssignmentsCountAsync(Guid cohortId)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        return await connection.ExecuteScalarAsync<int>(
+            $"[{Schema}].[{Table}_CountNonPendingByCohortId]",
+            new { CohortId = cohortId },
+            commandType: CommandType.StoredProcedure);
+    }
 }
