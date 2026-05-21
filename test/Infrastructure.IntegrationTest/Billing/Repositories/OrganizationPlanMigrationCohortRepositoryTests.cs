@@ -113,4 +113,20 @@ public class OrganizationPlanMigrationCohortRepositoryTests
         var result = await repository.GetByIdAsync(cohort.Id);
         Assert.Null(result);
     }
+
+    [Theory, DatabaseData]
+    public async Task SearchWithCountsAsync_OneCohort_ReturnsThatCohort(
+        IOrganizationPlanMigrationCohortRepository repository)
+    {
+        var uniqueName = $"slice1-{Guid.NewGuid()}";
+        var cohort = await repository.CreateAsync(CreateTestCohort(name: uniqueName));
+
+        var results = (await repository.SearchWithCountsAsync(uniqueName, 0, 25)).ToList();
+
+        var row = Assert.Single(results);
+        Assert.Equal(cohort.Id, row.Cohort.Id);
+        Assert.Equal(uniqueName, row.Cohort.Name);
+
+        await repository.DeleteAsync(cohort);
+    }
 }

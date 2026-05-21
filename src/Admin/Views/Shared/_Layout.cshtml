@@ -17,9 +17,12 @@
     var canGenerateLicense = AccessControlService.UserHasPermission(Permission.Tools_GenerateLicenseFile);
     var canProcessStripeEvents = AccessControlService.UserHasPermission(Permission.Tools_ProcessStripeEvents);
     var enablePersonalDiscounts = FeatureService.IsEnabled(FeatureFlagKeys.PM29108_EnablePersonalDiscounts);
+    var canManageCohorts =
+        AccessControlService.UserHasPermission(Permission.Tools_ManagePlanMigrationCohorts)
+        && FeatureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration);
 
     var canViewTools = canChargeBraintree || canCreateTransaction || canPromoteAdmin || canPromoteProviderServiceUser ||
-                        canGenerateLicense;
+                        canGenerateLicense || canManageCohorts;
 }
 
 <!DOCTYPE html>
@@ -116,6 +119,12 @@
                                         {
                                             <a class="dropdown-item" asp-controller="ProcessStripeEvents" asp-action="Index">
                                                 Process Stripe Events
+                                            </a>
+                                        }
+                                        @if (canManageCohorts)
+                                        {
+                                            <a class="dropdown-item" asp-controller="Cohorts" asp-action="Index">
+                                                Manage Migration Cohorts
                                             </a>
                                         }
                                     </ul>

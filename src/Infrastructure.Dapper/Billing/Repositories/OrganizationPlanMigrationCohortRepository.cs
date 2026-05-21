@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
+using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
@@ -24,5 +25,25 @@ public class OrganizationPlanMigrationCohortRepository(
             commandType: CommandType.StoredProcedure);
 
         return [.. results];
+    }
+
+    public async Task<IEnumerable<CohortListItem>> SearchWithCountsAsync(
+        string? name,
+        int skip,
+        int take)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var cohorts = await connection.QueryAsync<OrganizationPlanMigrationCohort>(
+            $"[{Schema}].[{Table}_SearchWithCounts]",
+            new
+            {
+                Name = string.IsNullOrWhiteSpace(name) ? null : name,
+                Skip = skip,
+                Take = take,
+            },
+            commandType: CommandType.StoredProcedure);
+
+        return cohorts.Select(c => new CohortListItem { Cohort = c });
     }
 }

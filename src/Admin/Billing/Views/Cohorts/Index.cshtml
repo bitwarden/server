@@ -1,0 +1,25 @@
+@model Bit.Admin.Billing.Models.Cohorts.CohortsPagedModel
+@{
+    ViewData["Title"] = "Cohorts";
+}
+
+<div class="container-fluid">
+    <h1>Cohorts</h1>
+
+    @if (Model.Items.Any())
+    {
+        <table class="table table-striped">
+            <thead><tr><th>Name</th></tr></thead>
+            <tbody>
+            @foreach (var row in Model.Items)
+            {
+                <tr><td>@row.Name</td></tr>
+            }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="alert alert-info">No cohorts found.</div>
+    }
+</div>

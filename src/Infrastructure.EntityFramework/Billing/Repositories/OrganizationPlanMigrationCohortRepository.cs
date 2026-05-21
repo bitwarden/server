@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -49,5 +50,29 @@ public class OrganizationPlanMigrationCohortRepository(
             .ToListAsync();
 
         return Mapper.Map<List<CoreEntities.OrganizationPlanMigrationCohort>>(results);
+    }
+
+    public async Task<IEnumerable<CohortListItem>> SearchWithCountsAsync(
+        string? name,
+        int skip,
+        int take)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var trimmedName = string.IsNullOrWhiteSpace(name) ? null : name.ToLower();
+
+        var rows = await dbContext.OrganizationPlanMigrationCohorts
+            .Where(c => trimmedName == null || c.Name.ToLower().Contains(trimmedName))
+            .OrderByDescending(c => c.CreationDate)
+            .ThenBy(c => c.Id)
+            .Skip(skip)
+            .Take(take)
+            .ToListAsync();
+
+        return rows.Select(cohort => new CohortListItem
+        {
+            Cohort = Mapper.Map<CoreEntities.OrganizationPlanMigrationCohort>(cohort),
+        });
     }
 }

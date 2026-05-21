@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Billing.Organizations.PlanMigration.Entities;
+using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.Billing.Organizations.PlanMigration.Repositories;
@@ -12,4 +13,6 @@ public interface IOrganizationPlanMigrationCohortRepository
     /// not filter on <see cref="OrganizationPlanMigrationCohort.IsActive"/>.
     /// </summary>
     Task<IReadOnlyList<OrganizationPlanMigrationCohort>> GetManyAsync();
+
+    Task<IEnumerable<CohortListItem>> SearchWithCountsAsync(string? name, int skip, int take);
 }
