@@ -4,11 +4,14 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT TOP 1
-        *
-    FROM [dbo].[OrganizationReportView]
-    WHERE [OrganizationId] = @OrganizationId
+    SELECT
+        TOP 1 *
+    FROM
+        [dbo].[OrganizationReportView]
+    WHERE
+        [OrganizationId] = @OrganizationId
         AND [ReportData] <> ''
-    ORDER BY [RevisionDate] DESC
+    ORDER BY
+        [RevisionDate] DESC
 END
 GO
