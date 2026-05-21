@@ -7,7 +7,7 @@ public class OrganizationEventCleanup : ITableObject<Guid>
 {
     public Guid Id { get; set; }
     public Guid OrganizationId { get; set; }
-    public DateTime CreationDate { get; set; }
+    public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     public DateTime? RevisionDate { get; set; }
     public DateTime? StartDate { get; set; }
     public DateTime? CompletedDate { get; set; }
