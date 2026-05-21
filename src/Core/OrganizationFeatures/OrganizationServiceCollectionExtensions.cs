@@ -210,6 +210,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IGetOrganizationDomainByOrganizationIdQuery, GetOrganizationDomainByOrganizationIdQuery>();
         services.AddScoped<IDeleteOrganizationDomainCommand, DeleteOrganizationDomainCommand>();
         services.AddScoped<IOrganizationHasVerifiedDomainsQuery, OrganizationHasVerifiedDomainsQuery>();
+        services.AddScoped<IOrganizationDomainAllowEmailChangeQuery, OrganizationDomainAllowEmailChangeQuery>();
     }
 
     private static void AddOrganizationAuthCommands(this IServiceCollection services)
