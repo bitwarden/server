@@ -31,7 +31,10 @@
             <thead>
                 <tr>
                     <th>Name</th>
+                    <th>Type</th>
                     <th>Migration Path</th>
+                    <th>Proactive discount</th>
+                    <th>Churn discount</th>
                     <th>Active</th>
                     <th class="text-end">Pending</th>
                     <th class="text-end">Scheduled</th>
@@ -44,6 +47,16 @@
                 <tr>
                     <td><a asp-action="Edit" asp-route-id="@row.Id">@row.Name</a></td>
                     <td>
+                        @if (row.IsChurnOnly)
+                        {
+                            <span class="badge bg-info">Churn-only</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-primary">Migration</span>
+                        }
+                    </td>
+                    <td>
                         @switch (row.CohortType)
                         {
                             case CohortType.ChurnOnly:
@@ -55,6 +68,26 @@
                             case CohortType.UnresolvedMigration unresolved:
                                 <span class="text-warning">Unresolved migration #@unresolved.Id</span>
                                 break;
+                        }
+                    </td>
+                    <td>
+                        @if (string.IsNullOrEmpty(row.ProactiveDiscountCouponCode))
+                        {
+                            <span>—</span>
+                        }
+                        else
+                        {
+                            <code>@row.ProactiveDiscountCouponCode</code>
+                        }
+                    </td>
+                    <td>
+                        @if (string.IsNullOrEmpty(row.ChurnDiscountCouponCode))
+                        {
+                            <span>—</span>
+                        }
+                        else
+                        {
+                            <code>@row.ChurnDiscountCouponCode</code>
                         }
                     </td>
                     <td>

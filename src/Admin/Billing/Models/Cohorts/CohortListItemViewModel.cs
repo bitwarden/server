@@ -10,6 +10,8 @@ public class CohortListItemViewModel
     public CohortType CohortType { get; set; } = new CohortType.ChurnOnly();
     public bool IsChurnOnly => CohortType is CohortType.ChurnOnly;
     public bool IsActive { get; set; }
+    public string? ProactiveDiscountCouponCode { get; set; }
+    public string? ChurnDiscountCouponCode { get; set; }
     public int Pending { get; set; }
     public int Scheduled { get; set; }
     public int Migrated { get; set; }
@@ -20,6 +22,8 @@ public class CohortListItemViewModel
         Name = item.Cohort.Name,
         CohortType = CohortType.From(item.Cohort.MigrationPathId),
         IsActive = item.Cohort.IsActive,
+        ProactiveDiscountCouponCode = item.Cohort.ProactiveDiscountCouponCode,
+        ChurnDiscountCouponCode = item.Cohort.ChurnDiscountCouponCode,
         Pending = item.Pending,
         Scheduled = item.Scheduled,
         Migrated = item.Migrated,
