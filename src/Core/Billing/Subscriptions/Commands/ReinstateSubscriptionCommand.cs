@@ -50,14 +50,15 @@ public class ReinstateSubscriptionCommand(
                     "{Command}: Subscription ({SubscriptionId}) has pending price increase, clearing flag and recreating schedule",
                     CommandName, subscription.Id);
 
-                // Clear pending cancellation and flag BEFORE attaching a schedule.
+                // Clear pending cancellation, cancelling user, and flag BEFORE attaching a schedule.
                 // Stripe discourages direct subscription updates once a schedule is attached as it can create inconsistencies in phases.
                 await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
                 {
                     CancelAtPeriodEnd = false,
                     Metadata = new Dictionary<string, string>
                     {
-                        [MetadataKeys.CancelledDuringDeferredPriceIncrease] = string.Empty
+                        [MetadataKeys.CancelledDuringDeferredPriceIncrease] = string.Empty,
+                        [MetadataKeys.CancellingUserId] = string.Empty
                     }
                 });
 
@@ -71,7 +72,11 @@ public class ReinstateSubscriptionCommand(
         // active schedules is to simply not cancel at the end of the period.
         await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
         {
-            CancelAtPeriodEnd = false
+            CancelAtPeriodEnd = false,
+            Metadata = new Dictionary<string, string>
+            {
+                [MetadataKeys.CancellingUserId] = string.Empty
+            }
         });
 
         return new None();
