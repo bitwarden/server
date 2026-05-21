@@ -12,7 +12,7 @@ public class ChangeKdfRequestModelTests
     [Theory]
     [BitAutoData(KdfType.PBKDF2_SHA256, 600000, null, null)]
     [BitAutoData(KdfType.Argon2id, 3, 64, 4)]
-    public void Validate_NewPayloadsOnly_NoErrors(
+    public void Validate_SubmitWithAuthnAndUnlockData_NoErrors(
         KdfType kdfType, int iterations, int? memory, int? parallelism)
     {
         var kdf = new KdfRequestModel
@@ -84,7 +84,7 @@ public class ChangeKdfRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void Validate_NewPayloadsOnly_WithMismatchedKdfSettings_ReturnsKdfValidationError(
+    public void Validate_WithMismatchedKdfSettings_ReturnsKdfValidationError(
         string masterPasswordHash)
     {
         var authKdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600000 };
