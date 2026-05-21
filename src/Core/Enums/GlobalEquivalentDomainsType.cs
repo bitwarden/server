@@ -93,5 +93,4 @@ public enum GlobalEquivalentDomainsType : byte
     TakeawayEU = 88,
     Atlassian = 89,
     Pinterest = 90,
-    Twitter = 91
 }
