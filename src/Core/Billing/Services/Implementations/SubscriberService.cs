@@ -67,7 +67,7 @@ public class SubscriberService(
         ];
 
         // Build once from survey — null when survey is absent (system-initiated cancellation)
-        var cancellationDetails = offboardingSurveyResponse != null
+        var cancellationDetails = offboardingSurveyResponse is not null
             ? new SubscriptionCancellationDetailsOptions
             {
                 Comment = offboardingSurveyResponse.Feedback,
