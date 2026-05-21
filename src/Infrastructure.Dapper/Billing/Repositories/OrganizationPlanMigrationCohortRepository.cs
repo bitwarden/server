@@ -50,4 +50,16 @@ public class OrganizationPlanMigrationCohortRepository(
             commandType: CommandType.StoredProcedure,
             splitOn: "Id");
     }
+
+    public async Task<OrganizationPlanMigrationCohort?> GetByNameAsync(string name)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var results = await connection.QueryAsync<OrganizationPlanMigrationCohort>(
+            $"[{Schema}].[{Table}_ReadByName]",
+            new { Name = name },
+            commandType: CommandType.StoredProcedure);
+
+        return results.SingleOrDefault();
+    }
 }

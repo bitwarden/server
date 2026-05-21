@@ -238,4 +238,28 @@ public class OrganizationPlanMigrationCohortRepositoryTests
 
         await repository.DeleteAsync(cohort);
     }
+
+    [Theory, DatabaseData]
+    public async Task GetByNameAsync_Hit_ReturnsCohort(
+        IOrganizationPlanMigrationCohortRepository repository)
+    {
+        var name = $"lookup-{Guid.NewGuid()}";
+        var cohort = await repository.CreateAsync(CreateTestCohort(name: name));
+
+        var result = await repository.GetByNameAsync(name);
+
+        Assert.NotNull(result);
+        Assert.Equal(cohort.Id, result.Id);
+
+        await repository.DeleteAsync(cohort);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetByNameAsync_Miss_ReturnsNull(
+        IOrganizationPlanMigrationCohortRepository repository)
+    {
+        var result = await repository.GetByNameAsync($"absent-{Guid.NewGuid()}");
+
+        Assert.Null(result);
+    }
 }

@@ -94,4 +94,17 @@ public class OrganizationPlanMigrationCohortRepository(
             Migrated = r.Migrated,
         });
     }
+
+    public async Task<CoreEntities.OrganizationPlanMigrationCohort?> GetByNameAsync(string name)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var normalized = name.ToLower();
+
+        var result = await dbContext.OrganizationPlanMigrationCohorts
+            .FirstOrDefaultAsync(c => c.Name.ToLower() == normalized);
+
+        return Mapper.Map<CoreEntities.OrganizationPlanMigrationCohort>(result);
+    }
 }

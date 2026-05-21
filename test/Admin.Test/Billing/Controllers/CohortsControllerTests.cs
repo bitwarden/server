@@ -116,4 +116,27 @@ public class CohortsControllerTests
                 && c.MigrationPathId == MigrationPathId.Enterprise2020AnnualToCurrent
                 && c.IsActive == false));
     }
+
+    [Theory, BitAutoData]
+    public async Task Create_Post_DuplicateName_AddsModelErrorOnName(
+        CohortFormModel model,
+        OrganizationPlanMigrationCohort existing,
+        SutProvider<CohortsController> sutProvider)
+    {
+        model.MigrationPathSelection = "1";
+        model.ProactiveDiscountCouponCode = null;
+        model.ChurnDiscountCouponCode = null;
+
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByNameAsync(model.Name)
+            .Returns(existing);
+
+        var result = await sutProvider.Sut.Create(model);
+
+        Assert.IsType<ViewResult>(result);
+        Assert.True(sutProvider.Sut.ModelState.ContainsKey(nameof(model.Name)));
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .DidNotReceive()
+            .CreateAsync(Arg.Any<OrganizationPlanMigrationCohort>());
+    }
 }

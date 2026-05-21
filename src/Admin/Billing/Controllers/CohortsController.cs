@@ -50,6 +50,14 @@ public class CohortsController(
 
         try
         {
+            var duplicate = await cohortRepository.GetByNameAsync(model.Name);
+            if (duplicate != null)
+            {
+                ModelState.AddModelError(nameof(model.Name),
+                    "A cohort with this name already exists.");
+                return View(model);
+            }
+
             var cohort = new OrganizationPlanMigrationCohort
             {
                 Name = model.Name,
