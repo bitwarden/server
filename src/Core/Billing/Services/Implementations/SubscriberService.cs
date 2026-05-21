@@ -80,7 +80,7 @@ public class SubscriberService(
         var cancellingUserMetadata = offboardingSurveyResponse != null
             ? new Dictionary<string, string>
             {
-                { "cancellingUserId", offboardingSurveyResponse.UserId.ToString() }
+                { MetadataKeys.CancellingUserId, offboardingSurveyResponse.UserId.ToString() }
             }
             : null;
 
