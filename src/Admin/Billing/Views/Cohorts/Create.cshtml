@@ -1,0 +1,54 @@
+@using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects
+@using Bit.Core.Enums
+@model Bit.Admin.Billing.Models.Cohorts.CohortFormModel
+@{
+    ViewData["Title"] = "New cohort";
+}
+
+<h1>New cohort</h1>
+
+<div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+<form method="post" asp-action="Create" id="cohort-form">
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" />
+        <div class="form-text">Unique, max 255 characters. Used as the join key in CSV uploads.</div>
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="MigrationPathSelection" class="form-label">Migration path</label>
+        <select asp-for="MigrationPathSelection" class="form-select">
+            <option value="" disabled selected hidden>-- Select --</option>
+            @foreach (var path in MigrationPaths.All)
+            {
+                <option value="@((byte)path.Id)">
+                    @($"{path.FromPlan.GetDisplayName()} → {path.ToPlan.GetDisplayName()}")
+                </option>
+            }
+        </select>
+        <span asp-validation-for="MigrationPathSelection" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="ProactiveDiscountCouponCode" class="form-label">
+            Proactive discount coupon <span class="text-muted">(optional)</span>
+        </label>
+        <input asp-for="ProactiveDiscountCouponCode" class="form-control" />
+        <span asp-validation-for="ProactiveDiscountCouponCode" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="ChurnDiscountCouponCode" class="form-label">
+            Churn discount coupon <span class="text-muted">(optional)</span>
+        </label>
+        <input asp-for="ChurnDiscountCouponCode" class="form-control" />
+        <span asp-validation-for="ChurnDiscountCouponCode" class="text-danger"></span>
+    </div>
+
+    <div class="d-flex mt-4">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a asp-action="Index" class="btn btn-secondary ms-2">Cancel</a>
+    </div>
+</form>

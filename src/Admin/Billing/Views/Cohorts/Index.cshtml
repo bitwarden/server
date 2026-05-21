@@ -7,7 +7,14 @@
 }
 
 <div class="container-fluid">
-    <h1>Cohorts</h1>
+    <div class="row mb-3">
+        <div class="col"><h1>Cohorts</h1></div>
+        <div class="col-auto">
+            <a asp-action="Create" class="btn btn-primary">
+                <i class="fa fa-plus"></i> Create cohort
+            </a>
+        </div>
+    </div>
 
     <form method="get" asp-action="Index" class="row g-2 mb-3">
         <div class="col-auto">

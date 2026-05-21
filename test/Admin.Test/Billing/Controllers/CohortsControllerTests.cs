@@ -1,10 +1,14 @@
 using Bit.Admin.Billing.Controllers;
 using Bit.Admin.Billing.Models.Cohorts;
+using Bit.Core.Billing.Organizations.PlanMigration.Entities;
+using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using NSubstitute;
 
 namespace Admin.Test.Billing.Controllers;
@@ -87,5 +91,29 @@ public class CohortsControllerTests
         await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
             .Received(1)
             .SearchWithCountsAsync(null, 25, 25);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Create_Post_ValidMigrationCohort_CreatesInactiveCohortAndRedirects(
+        CohortFormModel model,
+        SutProvider<CohortsController> sutProvider)
+    {
+        model.MigrationPathSelection = "1";
+        model.ProactiveDiscountCouponCode = null;
+        model.ChurnDiscountCouponCode = null;
+
+        sutProvider.Sut.TempData = new TempDataDictionary(
+            new DefaultHttpContext(),
+            Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.Create(model);
+
+        Assert.IsType<RedirectToActionResult>(result);
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .Received(1)
+            .CreateAsync(Arg.Is<OrganizationPlanMigrationCohort>(c =>
+                c.Name == model.Name
+                && c.MigrationPathId == MigrationPathId.Enterprise2020AnnualToCurrent
+                && c.IsActive == false));
     }
 }
