@@ -7,7 +7,8 @@
     [RevisionDate]                  DATETIME2 (7)       NOT NULL,
     [DefaultUserCollectionEmail]    NVARCHAR(256)       NULL,
     [Type]                          TINYINT             NOT NULL DEFAULT(0),
-    [AccessRuleId]                  UNIQUEIDENTIFIER    NULL,
+    [LeasingEnabled]                BIT                 NOT NULL DEFAULT(0),
+    [LeasingPolicy]                 NVARCHAR(MAX)       NULL,
     CONSTRAINT [PK_Collection] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_Collection_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE,
     CONSTRAINT [FK_Collection_AccessRule] FOREIGN KEY ([AccessRuleId]) REFERENCES [dbo].[AccessRule] ([Id]) ON DELETE NO ACTION

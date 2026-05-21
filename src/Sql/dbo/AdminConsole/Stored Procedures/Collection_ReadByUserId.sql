@@ -16,7 +16,8 @@ BEGIN
         MAX([Manage]) AS [Manage],
         [DefaultUserCollectionEmail],
         [Type],
-        [AccessRuleId]
+        [LeasingEnabled],
+        [LeasingPolicy]
     FROM
         [dbo].[UserCollectionDetails](@UserId)
     GROUP BY
@@ -28,5 +29,6 @@ BEGIN
         ExternalId,
         [DefaultUserCollectionEmail],
         [Type],
-        [AccessRuleId]
+        [LeasingEnabled],
+        [LeasingPolicy]
 END

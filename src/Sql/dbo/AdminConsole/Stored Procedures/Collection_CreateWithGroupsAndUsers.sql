@@ -9,12 +9,13 @@ CREATE PROCEDURE [dbo].[Collection_CreateWithGroupsAndUsers]
     @Users AS [dbo].[CollectionAccessSelectionType] READONLY,
     @DefaultUserCollectionEmail NVARCHAR(256) = NULL,
     @Type TINYINT = 0,
-    @AccessRuleId UNIQUEIDENTIFIER = NULL
+    @LeasingEnabled BIT = 0,
+    @LeasingPolicy NVARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[Collection_Create] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate, @DefaultUserCollectionEmail, @Type, @AccessRuleId
+    EXEC [dbo].[Collection_Create] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate, @DefaultUserCollectionEmail, @Type, @LeasingEnabled, @LeasingPolicy
 
     -- Groups
     ;WITH [AvailableGroupsCTE] AS(

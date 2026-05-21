@@ -76,7 +76,8 @@ BEGIN
     	C.[ExternalId],
         C.[DefaultUserCollectionEmail],
         C.[Type],
-        C.[AccessRuleId]
+        C.[LeasingEnabled],
+        C.[LeasingPolicy]
 
    IF (@IncludeAccessRelationships = 1)
     BEGIN

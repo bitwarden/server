@@ -88,6 +88,12 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
 
+                    b.Property<bool>("LeasingEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LeasingPolicy")
+                        .HasColumnType("text");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
