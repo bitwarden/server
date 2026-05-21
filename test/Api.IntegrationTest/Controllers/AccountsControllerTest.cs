@@ -240,6 +240,31 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     }
 
     [Theory]
+    [InlineData("authenticationData")]
+    [InlineData("unlockData")]
+    [InlineData("masterPasswordHash")]
+    public async Task PostKdf_MissingRequiredJsonKey_BadRequest(string fieldToOmit)
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var payload = new Dictionary<string, object?>
+        {
+            ["masterPasswordHash"] = _masterPasswordHash,
+            ["authenticationData"] = BuildAuthData(_defaultKdfRequest, _ownerEmail),
+            ["unlockData"] = BuildUnlockData(_defaultKdfRequest, _ownerEmail)
+        };
+        payload.Remove(fieldToOmit);
+
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/kdf");
+        message.Content = JsonContent.Create(payload);
+        var response = await _client.SendAsync(message);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains($"missing required properties including: '{fieldToOmit}'", content);
+    }
+
+    [Theory]
     [InlineData(false, true)]
     [InlineData(true, false)]
     [InlineData(true, true)]
@@ -260,7 +285,14 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("AuthenticationData and UnlockData must be provided.", content);
+        if (authenticationDataNull)
+        {
+            Assert.Contains("The AuthenticationData field is required.", content);
+        }
+        if (unlockDataNull)
+        {
+            Assert.Contains("The UnlockData field is required.", content);
+        }
     }
 
     [Fact]
