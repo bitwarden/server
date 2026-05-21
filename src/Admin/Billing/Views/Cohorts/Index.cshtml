@@ -1,3 +1,6 @@
+@using Bit.Core.Billing.Enums
+@using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects
+@using Bit.Core.Enums
 @model Bit.Admin.Billing.Models.Cohorts.CohortsPagedModel
 @{
     ViewData["Title"] = "Cohorts";
@@ -12,6 +15,7 @@
             <thead>
                 <tr>
                     <th>Name</th>
+                    <th>Migration Path</th>
                     <th class="text-end">Pending</th>
                     <th class="text-end">Scheduled</th>
                     <th class="text-end">Migrated</th>
@@ -22,8 +26,31 @@
             {
                 <tr>
                     <td>@row.Name</td>
+                    <td>
+                        @switch (row.CohortType)
+                        {
+                            case CohortType.ChurnOnly:
+                                <span>—</span>
+                                break;
+                            case CohortType.Migration migration:
+                                @($"{migration.Path.FromPlan.GetDisplayName()} → {migration.Path.ToPlan.GetDisplayName()}")
+                                break;
+                            case CohortType.UnresolvedMigration unresolved:
+                                <span class="text-warning">Unresolved migration #@unresolved.Id</span>
+                                break;
+                        }
+                    </td>
                     <td class="text-end">@row.Pending.ToString("N0")</td>
-                    <td class="text-end">@row.Scheduled.ToString("N0")</td>
+                    <td class="text-end">
+                        @if (row.IsChurnOnly)
+                        {
+                            <span>—</span>
+                        }
+                        else
+                        {
+                            @row.Scheduled.ToString("N0")
+                        }
+                    </td>
                     <td class="text-end">@row.Migrated.ToString("N0")</td>
                 </tr>
             }
