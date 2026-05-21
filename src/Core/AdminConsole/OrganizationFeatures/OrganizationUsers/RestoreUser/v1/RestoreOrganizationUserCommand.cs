@@ -46,6 +46,12 @@ public class RestoreOrganizationUserCommand(
             throw new BadRequestException("Only owners can restore other owners.");
         }
 
+        if (organizationUser.Type == OrganizationUserType.Admin && restoringUserId.HasValue &&
+            !await currentContext.OrganizationAdmin(organizationUser.OrganizationId))
+        {
+            throw new BadRequestException("Custom users can not restore admins.");
+        }
+
         await RepositoryRestoreUserAsync(organizationUser, defaultCollectionName);
         await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
 
@@ -183,10 +189,12 @@ public class RestoreOrganizationUserCommand(
         var newSeatsRequired = organizationUserIds.Count() - availableSeats;
         await organizationService.AutoAddSeatsAsync(organization, newSeatsRequired);
 
-        var deletingUserIsOwner = false;
+        var restoringUserIsOwner = false;
+        var restoringUserIsAdminOrHigher = false;
         if (restoringUserId.HasValue)
         {
-            deletingUserIsOwner = await currentContext.OrganizationOwner(organizationId);
+            restoringUserIsOwner = await currentContext.OrganizationOwner(organizationId);
+            restoringUserIsAdminOrHigher = await currentContext.OrganizationAdmin(organizationId);
         }
 
         // Query Two Factor Authentication status for all users in the organization
@@ -213,9 +221,15 @@ public class RestoreOrganizationUserCommand(
                 }
 
                 if (organizationUser.Type == OrganizationUserType.Owner && restoringUserId.HasValue &&
-                    !deletingUserIsOwner)
+                    !restoringUserIsOwner)
                 {
                     throw new BadRequestException("Only owners can restore other owners.");
+                }
+
+                if (organizationUser.Type == OrganizationUserType.Admin && restoringUserId.HasValue &&
+                    !restoringUserIsAdminOrHigher)
+                {
+                    throw new BadRequestException("Custom users can not restore admins.");
                 }
 
                 var twoFactorIsEnabled = organizationUser.UserId.HasValue
