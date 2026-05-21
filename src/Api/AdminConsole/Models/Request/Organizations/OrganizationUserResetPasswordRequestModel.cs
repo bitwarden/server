@@ -2,7 +2,7 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
 using Bit.Core.Entities;
 
-namespace Bit.Api.Models.Request.Organizations;
+namespace Bit.Api.AdminConsole.Models.Request.Organizations;
 
 public class OrganizationUserResetPasswordRequestModel
 {
