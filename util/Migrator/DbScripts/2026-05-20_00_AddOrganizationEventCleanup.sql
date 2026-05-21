@@ -11,7 +11,7 @@ BEGIN
         [StartDate]          DATETIME2 (7)    NULL,
         [CompletedDate]      DATETIME2 (7)    NULL,
         [EventsDeletedCount] BIGINT           NOT NULL CONSTRAINT [DF_OrganizationEventCleanup_EventsDeletedCount] DEFAULT (0),
-        [Attempts]           INT              NOT NULL CONSTRAINT [DF_OrganizationEventCleanup_Attempts] DEFAULT (0),
+        [FailureCount]       INT              NOT NULL CONSTRAINT [DF_OrganizationEventCleanup_FailureCount] DEFAULT (0),
         [LastError]          NVARCHAR(MAX)    NULL,
         CONSTRAINT [PK_OrganizationEventCleanup] PRIMARY KEY CLUSTERED ([Id] ASC)
     );
@@ -54,7 +54,8 @@ GO
 -- Stored Procedures: ClaimNextPending
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationEventCleanup_ClaimNextPending]
     @Now DATETIME2(7),
-    @LeaseExpiry DATETIME2(7)
+    @StaleLeaseThreshold DATETIME2(7),
+    @MaxFailureCount INT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -68,13 +69,14 @@ BEGIN
             [StartDate],
             [CompletedDate],
             [EventsDeletedCount],
-            [Attempts],
+            [FailureCount],
             [LastError]
         FROM
             [dbo].[OrganizationEventCleanup] WITH (UPDLOCK, READPAST)
         WHERE
             [CompletedDate] IS NULL
-            AND ([StartDate] IS NULL OR [RevisionDate] < @LeaseExpiry)
+            AND ([StartDate] IS NULL OR [RevisionDate] < @StaleLeaseThreshold)
+            AND [FailureCount] < @MaxFailureCount
         ORDER BY
             [CreationDate] ASC
     )
@@ -90,7 +92,7 @@ BEGIN
         inserted.[StartDate],
         inserted.[CompletedDate],
         inserted.[EventsDeletedCount],
-        inserted.[Attempts],
+        inserted.[FailureCount],
         inserted.[LastError]
 END
 GO
@@ -126,7 +128,7 @@ BEGIN
     UPDATE
         [dbo].[OrganizationEventCleanup]
     SET
-        [Attempts] = [Attempts] + 1,
+        [FailureCount] = [FailureCount] + 1,
         [LastError] = @Message,
         [RevisionDate] = @Now
     WHERE

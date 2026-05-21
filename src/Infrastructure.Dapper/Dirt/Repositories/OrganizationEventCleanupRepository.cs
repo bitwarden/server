@@ -10,6 +10,9 @@ namespace Bit.Infrastructure.Dapper.Dirt.Repositories;
 
 public class OrganizationEventCleanupRepository : BaseRepository, IOrganizationEventCleanupRepository
 {
+    private const int LeaseDurationMinutes = 10;
+    private const int MaxFailureCount = 5;
+
     public OrganizationEventCleanupRepository(GlobalSettings globalSettings)
         : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     { }
@@ -30,7 +33,7 @@ public class OrganizationEventCleanupRepository : BaseRepository, IOrganizationE
         using var connection = new SqlConnection(ConnectionString);
         return await connection.QuerySingleOrDefaultAsync<OrganizationEventCleanup>(
             "[dbo].[OrganizationEventCleanup_ClaimNextPending]",
-            new { Now = now, LeaseExpiry = now.AddMinutes(-10) },
+            new { Now = now, StaleLeaseThreshold = now.AddMinutes(-LeaseDurationMinutes), MaxFailureCount },
             commandType: CommandType.StoredProcedure);
     }
 

@@ -9,7 +9,7 @@ BEGIN
     UPDATE
         [dbo].[OrganizationEventCleanup]
     SET
-        [Attempts] = [Attempts] + 1,
+        [FailureCount] = [FailureCount] + 1,
         [LastError] = @Message,
         [RevisionDate] = @Now
     WHERE

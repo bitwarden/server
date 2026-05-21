@@ -12,7 +12,7 @@ public class OrganizationEventCleanup : ITableObject<Guid>
     public DateTime? StartDate { get; set; }
     public DateTime? CompletedDate { get; set; }
     public long EventsDeletedCount { get; set; }
-    public int Attempts { get; set; }
+    public int FailureCount { get; set; }
     public string? LastError { get; set; }
     public void SetNewId() => Id = CoreHelpers.GenerateComb();
 }

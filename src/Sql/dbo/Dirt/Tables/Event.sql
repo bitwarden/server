@@ -30,4 +30,3 @@ GO
 CREATE NONCLUSTERED INDEX [IX_Event_DateOrganizationIdUserId]
     ON [dbo].[Event]([Date] DESC, [OrganizationId] ASC, [ActingUserId] ASC, [CipherId] ASC) INCLUDE ([ServiceAccountId], [GrantedServiceAccountId]);
 
-

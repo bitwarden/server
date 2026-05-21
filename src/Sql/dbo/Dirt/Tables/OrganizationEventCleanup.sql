@@ -6,7 +6,7 @@ CREATE TABLE [dbo].[OrganizationEventCleanup] (
     [StartDate]          DATETIME2 (7)    NULL,
     [CompletedDate]      DATETIME2 (7)    NULL,
     [EventsDeletedCount] BIGINT           NOT NULL CONSTRAINT [DF_OrganizationEventCleanup_EventsDeletedCount] DEFAULT (0),
-    [Attempts]           INT              NOT NULL CONSTRAINT [DF_OrganizationEventCleanup_Attempts] DEFAULT (0),
+    [FailureCount]       INT              NOT NULL CONSTRAINT [DF_OrganizationEventCleanup_FailureCount] DEFAULT (0),
     [LastError]          NVARCHAR(MAX)    NULL,
     CONSTRAINT [PK_OrganizationEventCleanup] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
