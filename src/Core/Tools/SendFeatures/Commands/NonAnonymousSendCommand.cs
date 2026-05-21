@@ -89,26 +89,6 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
             perOrganizationTypeResolver: perOrgTypeResolver);
     }
 
-    private async Task<Func<Guid, EventType?>> BuildCreatedEventPerOrgResolverAsync(Send send)
-    {
-        if (send.AuthType != AuthType.Email || string.IsNullOrWhiteSpace(send.Emails))
-        {
-            return null;
-        }
-
-        var (claimedVariant, externalVariant) = send.Type == SendType.Text
-            ? (EventType.Send_Created_Text_WithEmailVerification_FromClaimedDomain,
-               EventType.Send_Created_Text_WithEmailVerification_FromExternalDomain)
-            : (EventType.Send_Created_File_WithEmailVerification_FromClaimedDomain,
-               EventType.Send_Created_File_WithEmailVerification_FromExternalDomain);
-
-        return await _sendEventClassifier.BuildCreationResolverAsync(
-            send.UserId.Value,
-            send.Emails,
-            claimedVariant,
-            externalVariant);
-    }
-
     private async Task LogSendUpdatedEventAsync(Send send)
     {
         if (!send.UserId.HasValue || !_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging))
@@ -157,6 +137,26 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
             (SendType.File, AuthType.Email) => EventType.Send_Created_File_WithEmailVerification,
             _ => EventType.Send_Created_File,
         };
+    }
+
+    private async Task<Func<Guid, EventType?>> BuildCreatedEventPerOrgResolverAsync(Send send)
+    {
+        if (send.AuthType != AuthType.Email || string.IsNullOrWhiteSpace(send.Emails))
+        {
+            return null;
+        }
+
+        var (claimedVariant, externalVariant) = send.Type == SendType.Text
+            ? (EventType.Send_Created_Text_WithEmailVerification_FromClaimedDomain,
+                EventType.Send_Created_Text_WithEmailVerification_FromExternalDomain)
+            : (EventType.Send_Created_File_WithEmailVerification_FromClaimedDomain,
+                EventType.Send_Created_File_WithEmailVerification_FromExternalDomain);
+
+        return await _sendEventClassifier.BuildCreationResolverAsync(
+            send.UserId.Value,
+            send.Emails,
+            claimedVariant,
+            externalVariant);
     }
 
     public async Task<string> SaveFileSendAsync(Send send, SendFileData data, long fileLength)

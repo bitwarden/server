@@ -44,6 +44,19 @@ public class EventService : IEventService
         _globalSettings = globalSettings;
     }
 
+    // LogUserEventAsync writes the same audit-log entry to multiple places at once:
+    //   1. A "user-only" row, so the user sees it in their own activity.
+    //   2. One row per organization the user belongs to, so each org admin
+    //      sees it in that organization's event log.
+    //   3. One row per managed-service provider the user belongs to.
+    //
+    // All rows used to share the same EventType. The optional
+    // perOrganizationTypeResolver lets the caller pick a *different* EventType
+    // for each organization's copy. We need this because some Send events
+    // (e.g. "accessed by someone inside vs. outside the organization's
+    // claimed email domains") have a different meaning per organization —
+    // the same access can be "internal" to one org and "external" to another.
+    // The user-only row and the provider rows always keep the original type.
     public async Task LogUserEventAsync(Guid userId, EventType type, DateTime? date = null,
         bool includeAcceptedStatusOrgs = false, Func<Guid, EventType?> perOrganizationTypeResolver = null)
     {
@@ -58,6 +71,8 @@ public class EventService : IEventService
             }
         };
 
+        // Pick the EventType for this organization's row, falling back to `type`
+        // when no resolver was passed or the resolver returns null
         EventType ResolveOrgType(Guid orgId) => perOrganizationTypeResolver?.Invoke(orgId) ?? type;
 
         IEnumerable<EventMessage> orgEvents;
