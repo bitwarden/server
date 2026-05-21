@@ -9,11 +9,23 @@
     @if (Model.Items.Any())
     {
         <table class="table table-striped">
-            <thead><tr><th>Name</th></tr></thead>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th class="text-end">Pending</th>
+                    <th class="text-end">Scheduled</th>
+                    <th class="text-end">Migrated</th>
+                </tr>
+            </thead>
             <tbody>
             @foreach (var row in Model.Items)
             {
-                <tr><td>@row.Name</td></tr>
+                <tr>
+                    <td>@row.Name</td>
+                    <td class="text-end">@row.Pending.ToString("N0")</td>
+                    <td class="text-end">@row.Scheduled.ToString("N0")</td>
+                    <td class="text-end">@row.Migrated.ToString("N0")</td>
+                </tr>
             }
             </tbody>
         </table>

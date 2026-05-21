@@ -62,17 +62,36 @@ public class OrganizationPlanMigrationCohortRepository(
 
         var trimmedName = string.IsNullOrWhiteSpace(name) ? null : name.ToLower();
 
-        var rows = await dbContext.OrganizationPlanMigrationCohorts
-            .Where(c => trimmedName == null || c.Name.ToLower().Contains(trimmedName))
-            .OrderByDescending(c => c.CreationDate)
-            .ThenBy(c => c.Id)
-            .Skip(skip)
-            .Take(take)
-            .ToListAsync();
+        var query =
+            from cohort in dbContext.OrganizationPlanMigrationCohorts
+            where trimmedName == null || cohort.Name.ToLower().Contains(trimmedName)
+            orderby cohort.CreationDate descending, cohort.Id ascending
+            select new
+            {
+                Cohort = cohort,
+                Pending = dbContext.OrganizationPlanMigrationCohortAssignments
+                    .Count(a => a.CohortId == cohort.Id
+                                && ((cohort.MigrationPathId != null && a.ScheduledDate == null)
+                                    || (cohort.MigrationPathId == null && a.ChurnDiscountAppliedDate == null))),
+                Scheduled = dbContext.OrganizationPlanMigrationCohortAssignments
+                    .Count(a => a.CohortId == cohort.Id
+                                && cohort.MigrationPathId != null
+                                && a.ScheduledDate != null
+                                && a.MigratedDate == null),
+                Migrated = dbContext.OrganizationPlanMigrationCohortAssignments
+                    .Count(a => a.CohortId == cohort.Id
+                                && ((cohort.MigrationPathId != null && a.MigratedDate != null)
+                                    || (cohort.MigrationPathId == null && a.ChurnDiscountAppliedDate != null))),
+            };
 
-        return rows.Select(cohort => new CohortListItem
+        var rows = await query.Skip(skip).Take(take).ToListAsync();
+
+        return rows.Select(r => new CohortListItem
         {
-            Cohort = Mapper.Map<CoreEntities.OrganizationPlanMigrationCohort>(cohort),
+            Cohort = Mapper.Map<CoreEntities.OrganizationPlanMigrationCohort>(r.Cohort),
+            Pending = r.Pending,
+            Scheduled = r.Scheduled,
+            Migrated = r.Migrated,
         });
     }
 }

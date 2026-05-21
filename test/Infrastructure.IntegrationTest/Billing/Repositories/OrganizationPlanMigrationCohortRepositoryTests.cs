@@ -2,6 +2,8 @@
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
+using Bit.Core.Repositories;
+using Bit.Infrastructure.IntegrationTest.AdminConsole;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Billing.Repositories;
@@ -126,6 +128,95 @@ public class OrganizationPlanMigrationCohortRepositoryTests
         var row = Assert.Single(results);
         Assert.Equal(cohort.Id, row.Cohort.Id);
         Assert.Equal(uniqueName, row.Cohort.Name);
+
+        await repository.DeleteAsync(cohort);
+    }
+
+    [Theory, DatabaseData]
+    public async Task SearchWithCountsAsync_MigrationCohort_CountsPendingScheduledMigrated(
+        IOrganizationPlanMigrationCohortRepository repository,
+        IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        var uniqueName = $"mig-{Guid.NewGuid()}";
+        var cohort = await repository.CreateAsync(CreateTestCohort(
+            name: uniqueName,
+            migrationPathId: MigrationPaths.Enterprise2020AnnualToCurrent.Id));
+
+        var pendingOrg = await organizationRepository.CreateTestOrganizationAsync();
+        var scheduledOrg = await organizationRepository.CreateTestOrganizationAsync();
+        var migratedOrg = await organizationRepository.CreateTestOrganizationAsync();
+
+        await assignmentRepository.CreateAsync(new OrganizationPlanMigrationCohortAssignment
+        {
+            OrganizationId = pendingOrg.Id,
+            CohortId = cohort.Id,
+            CreationDate = DateTime.UtcNow,
+            RevisionDate = DateTime.UtcNow,
+        });
+        await assignmentRepository.CreateAsync(new OrganizationPlanMigrationCohortAssignment
+        {
+            OrganizationId = scheduledOrg.Id,
+            CohortId = cohort.Id,
+            ScheduledDate = DateTime.UtcNow,
+            CreationDate = DateTime.UtcNow,
+            RevisionDate = DateTime.UtcNow,
+        });
+        await assignmentRepository.CreateAsync(new OrganizationPlanMigrationCohortAssignment
+        {
+            OrganizationId = migratedOrg.Id,
+            CohortId = cohort.Id,
+            ScheduledDate = DateTime.UtcNow,
+            MigratedDate = DateTime.UtcNow,
+            CreationDate = DateTime.UtcNow,
+            RevisionDate = DateTime.UtcNow,
+        });
+
+        var row = (await repository.SearchWithCountsAsync(uniqueName, 0, 25)).Single();
+
+        Assert.Equal(1, row.Pending);
+        Assert.Equal(1, row.Scheduled);
+        Assert.Equal(1, row.Migrated);
+
+        await repository.DeleteAsync(cohort);
+    }
+
+    [Theory, DatabaseData]
+    public async Task SearchWithCountsAsync_ChurnOnlyCohort_CountsRedemptionsAsMigrated(
+        IOrganizationPlanMigrationCohortRepository repository,
+        IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        var uniqueName = $"churn-{Guid.NewGuid()}";
+        var cohort = await repository.CreateAsync(CreateTestCohort(
+            name: uniqueName,
+            migrationPathId: null,
+            churnCoupon: "SAVE15"));
+
+        var pendingOrg = await organizationRepository.CreateTestOrganizationAsync();
+        var redeemedOrg = await organizationRepository.CreateTestOrganizationAsync();
+
+        await assignmentRepository.CreateAsync(new OrganizationPlanMigrationCohortAssignment
+        {
+            OrganizationId = pendingOrg.Id,
+            CohortId = cohort.Id,
+            CreationDate = DateTime.UtcNow,
+            RevisionDate = DateTime.UtcNow,
+        });
+        await assignmentRepository.CreateAsync(new OrganizationPlanMigrationCohortAssignment
+        {
+            OrganizationId = redeemedOrg.Id,
+            CohortId = cohort.Id,
+            ChurnDiscountAppliedDate = DateTime.UtcNow,
+            CreationDate = DateTime.UtcNow,
+            RevisionDate = DateTime.UtcNow,
+        });
+
+        var row = (await repository.SearchWithCountsAsync(uniqueName, 0, 25)).Single();
+
+        Assert.Equal(1, row.Pending);
+        Assert.Equal(0, row.Scheduled);
+        Assert.Equal(1, row.Migrated);
 
         await repository.DeleteAsync(cohort);
     }

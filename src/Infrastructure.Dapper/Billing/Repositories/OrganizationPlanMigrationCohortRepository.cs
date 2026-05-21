@@ -34,16 +34,20 @@ public class OrganizationPlanMigrationCohortRepository(
     {
         await using var connection = new SqlConnection(ConnectionString);
 
-        var cohorts = await connection.QueryAsync<OrganizationPlanMigrationCohort>(
+        return await connection.QueryAsync<CohortListItem, OrganizationPlanMigrationCohort, CohortListItem>(
             $"[{Schema}].[{Table}_SearchWithCounts]",
+            (item, cohort) =>
+            {
+                item.Cohort = cohort;
+                return item;
+            },
             new
             {
                 Name = string.IsNullOrWhiteSpace(name) ? null : name,
                 Skip = skip,
                 Take = take,
             },
-            commandType: CommandType.StoredProcedure);
-
-        return cohorts.Select(c => new CohortListItem { Cohort = c });
+            commandType: CommandType.StoredProcedure,
+            splitOn: "Id");
     }
 }
