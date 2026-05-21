@@ -98,8 +98,9 @@ public class OrganizationPlanMigrationCohortsController(
             TempData["Success"] = $"Cohort '{cohort.Name}' created.";
             return RedirectToAction(nameof(Index));
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Error creating cohort. Name: {Name}", model.Name);
             ModelState.AddModelError(string.Empty, "An error occurred while saving the cohort.");
             return View(model);
         }
