@@ -3,6 +3,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
+using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stripe;
@@ -14,6 +15,7 @@ using static StripeConstants;
 
 public class UpdateOrganizationSubscriptionCommandTests
 {
+    private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly UpdateOrganizationSubscriptionCommand _command;
 
@@ -23,6 +25,7 @@ public class UpdateOrganizationSubscriptionCommandTests
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
         _command = new UpdateOrganizationSubscriptionCommand(
+            _featureService,
             Substitute.For<ILogger<UpdateOrganizationSubscriptionCommand>>(),
             _stripeAdapter);
     }
@@ -911,6 +914,33 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         await _stripeAdapter.DidNotReceive().UpdateCustomerAsync(
             Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task Run_FlagOn_MismatchedTaxExempt_DoesNotReconcile()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax).Returns(true);
+
+        var customer = new Customer
+        {
+            Id = "cus_123",
+            Address = new Address { Country = "DE" },
+            TaxExempt = TaxExempt.None
+        };
+
+        var organization = CreateOrganization();
+        var subscription = CreateSubscription(customer: customer, items: [("price_seats", "si_1", 5)]);
+
+        SetupGetSubscription(organization, subscription);
+        SetupUpdateSubscription(subscription);
+
+        await _command.Run(organization, new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity("price_seats", 10)]
+        });
+
+        await _stripeAdapter.DidNotReceive().UpdateCustomerAsync(
+            customer.Id, Arg.Is<CustomerUpdateOptions>(o => o.TaxExempt != null));
     }
 
     [Fact]

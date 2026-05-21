@@ -12,6 +12,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Braintree;
 using Microsoft.Extensions.Logging;
@@ -26,6 +27,7 @@ namespace Bit.Core.Billing.Organizations.Services;
 
 public class OrganizationBillingService(
     IBraintreeGateway braintreeGateway,
+    IFeatureService featureService,
     IGlobalSettings globalSettings,
     IHasPaymentMethodQuery hasPaymentMethodQuery,
     ILogger<OrganizationBillingService> logger,
@@ -259,10 +261,13 @@ public class OrganizationBillingService(
                 ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
             };
 
-            if (planType.GetProductTier() is not ProductTierType.Free and not ProductTierType.Families &&
-                !TaxHelpers.IsDirectTaxCountry(customerSetup.TaxInformation.Country))
+            if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
             {
-                customerCreateOptions.TaxExempt = StripeConstants.TaxExempt.Reverse;
+                if (planType.GetProductTier() is not ProductTierType.Free and not ProductTierType.Families &&
+                    !TaxHelpers.IsDirectTaxCountry(customerSetup.TaxInformation.Country))
+                {
+                    customerCreateOptions.TaxExempt = StripeConstants.TaxExempt.Reverse;
+                }
             }
 
             if (!string.IsNullOrEmpty(customerSetup.TaxInformation.TaxId))
@@ -506,10 +511,10 @@ public class OrganizationBillingService(
         var customer = await subscriberService.GetCustomerOrThrow(organization,
             new CustomerGetOptions { Expand = ["tax", "tax_ids"] });
 
-        if (subscriptionSetup.PlanType.GetProductTier() is
-            not (ProductTierType.Teams or
-            ProductTierType.TeamsStarter or
-            ProductTierType.Enterprise))
+        if (featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax) || subscriptionSetup.PlanType.GetProductTier() is
+                not (ProductTierType.Teams or
+                ProductTierType.TeamsStarter or
+                ProductTierType.Enterprise))
         {
             return customer;
         }

@@ -34,7 +34,12 @@
     <ProjectReference Include="..\src\Admin\Admin.csproj"/>
     <ProjectReference Include="..\src\Api\Api.csproj"/>
     <ProjectReference Include="..\src\Billing\Billing.csproj"/>
+    <ProjectReference Include="..\src\Events\Events.csproj"/>
+    <ProjectReference Include="..\src\EventsProcessor\EventsProcessor.csproj"/>
+    <ProjectReference Include="..\src\Icons\Icons.csproj"/>
     <ProjectReference Include="..\src\Identity\Identity.csproj"/>
     <ProjectReference Include="..\src\Notifications\Notifications.csproj"/>
+    <ProjectReference Include="..\bitwarden_license\src\Scim\Scim.csproj"/>
+    <ProjectReference Include="..\bitwarden_license\src\Sso\Sso.csproj"/>
   </ItemGroup>
 </Project>

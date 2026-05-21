@@ -212,6 +212,8 @@ public static class FeatureFlagKeys
     public const string PM32581_UseUpdateOrganizationSubscriptionCommand = "pm-32581-use-update-organization-subscription-command";
     public const string PM32645_DeferPriceMigrationToRenewal = "pm-32645-defer-price-migration-to-renewal";
     public const string PM34515_BrowserDesktopCheckout = "pm-34515-browser-desktop-checkout";
+    public const string PM35215_BusinessPlanPriceMigration = "pm-35215-business-plan-price-migration";
+    public const string PM37597_AlwaysEnableStripeAutomaticTax = "pm-37597-always-enable-stripe-automatic-tax";
 
     /* Key Management Team */
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
@@ -263,8 +265,6 @@ public static class FeatureFlagKeys
     /// on the desktop client.
     /// </summary>
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
-    public const string UseChromiumImporter = "pm-23982-chromium-importer";
-    public const string ChromiumImporterWithABE = "pm-25855-chromium-importer-abe";
     public const string SendUIRefresh = "pm-28175-send-ui-refresh";
     public const string SendEmailOTP = "pm-19051-send-email-verification";
     public const string SendControls = "pm-31885-send-controls";
@@ -309,9 +309,11 @@ public static class FeatureFlagKeys
     public const string EventManagementForDataDogAndCrowdStrike = "event-management-for-datadog-and-crowdstrike";
     public const string EventDiagnosticLogging = "pm-27666-siem-event-log-debugging";
     public const string EventManagementForHuntress = "event-management-for-huntress";
+    public const string EventManagementForSplunk = "event-management-for-splunk";
     public const string Milestone11AppPageImprovements = "pm-30538-dirt-milestone-11-app-page-improvements";
     public const string AccessIntelligenceTrendChart = "pm-26961-access-intelligence-trend-chart";
     public const string AccessIntelligenceNewArchitecture = "pm-31936-access-intelligence-new-architecture";
+    public const string AccessIntelligenceAdoptionUxImprovements = "pm-34723-access-intelligence-adoption-ux-improvements";
 
     /* UIF Team */
     public const string RouterFocusManagement = "router-focus-management";
