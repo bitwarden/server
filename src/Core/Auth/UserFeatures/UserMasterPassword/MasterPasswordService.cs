@@ -226,6 +226,19 @@ internal class MasterPasswordService(
         return result.AsT0;
     }
 
+    public User PrepareClearMasterPassword(User user)
+    {
+        EnsureUserIsHydrated(user);
+
+        user.MasterPassword = null;
+        user.MasterPasswordSalt = null;
+
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        user.RevisionDate = user.AccountRevisionDate = now;
+
+        return user;
+    }
+
     /// <summary>
     /// Server-side hashes the client-supplied master password authentication hash
     /// (<paramref name="newAuthenticationHash"/>) and writes the result to

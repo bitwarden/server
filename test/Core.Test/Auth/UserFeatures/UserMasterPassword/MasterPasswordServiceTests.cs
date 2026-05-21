@@ -1179,4 +1179,35 @@ public class MasterPasswordServiceTests
         }
     }
 
+    // --- PrepareClearMasterPassword ---
+
+    [Theory, BitAutoData]
+    public void PrepareClearMasterPassword_HydratedUser_ClearsCredentialAndUpdatesRevisionDates(User user)
+    {
+        var sutProvider = CreateSutProvider();
+        user.MasterPassword = "existing-hash";
+        user.MasterPasswordSalt = "existing-salt";
+        var originalLastPasswordChangeDate = user.LastPasswordChangeDate;
+
+        var result = sutProvider.Sut.PrepareClearMasterPassword(user);
+
+        var expectedTime = sutProvider.GetDependency<TimeProvider>().GetUtcNow().UtcDateTime;
+
+        Assert.Same(user, result);
+        Assert.Null(user.MasterPassword);
+        Assert.Null(user.MasterPasswordSalt);
+        Assert.Equal(expectedTime, user.RevisionDate);
+        Assert.Equal(expectedTime, user.AccountRevisionDate);
+        Assert.Equal(originalLastPasswordChangeDate, user.LastPasswordChangeDate);
+    }
+
+    [Theory, BitAutoData]
+    public void PrepareClearMasterPassword_ThrowsWhenUserNotHydrated(User user)
+    {
+        var sutProvider = CreateSutProvider();
+        user.Id = default;
+
+        Assert.Throws<ArgumentException>(
+            () => sutProvider.Sut.PrepareClearMasterPassword(user));
+    }
 }
