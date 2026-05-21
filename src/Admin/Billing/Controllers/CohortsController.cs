@@ -107,12 +107,12 @@ public class CohortsController(
     {
         model.Id = id;
 
-        if (!ModelState.IsValid) return View(model);
-
         var cohort = await cohortRepository.GetByIdAsync(id);
         if (cohort == null) return NotFound();
 
         ViewData["CohortType"] = CohortType.From(cohort.MigrationPathId);
+
+        if (!ModelState.IsValid) return View(model);
 
         try
         {

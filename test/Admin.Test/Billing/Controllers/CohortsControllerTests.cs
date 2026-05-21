@@ -4,6 +4,7 @@ using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
+using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -295,5 +296,28 @@ public class CohortsControllerTests
         Assert.IsType<RedirectToActionResult>(result);
         await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
             .Received(1).ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohort>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Edit_Post_InvalidModelState_SetsCohortTypeViewData(
+        Guid id,
+        CohortFormModel model,
+        OrganizationPlanMigrationCohort existing,
+        SutProvider<CohortsController> sutProvider)
+    {
+        existing.Id = id;
+        existing.MigrationPathId = (MigrationPathId)99;
+        model.Id = id;
+
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(id).Returns(existing);
+
+        sutProvider.Sut.ModelState.AddModelError("force", "trigger invalid state");
+
+        var result = await sutProvider.Sut.Edit(id, model);
+
+        Assert.IsType<ViewResult>(result);
+        var cohortType = sutProvider.Sut.ViewData["CohortType"];
+        Assert.IsType<CohortType.UnresolvedMigration>(cohortType);
     }
 }
