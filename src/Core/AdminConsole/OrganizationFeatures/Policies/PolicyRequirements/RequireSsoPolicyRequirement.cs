@@ -28,13 +28,16 @@ public class RequireSsoPolicyRequirement : IPolicyRequirement
     /// that has the Require SSO policy enabled.
     /// </remarks>
     public bool SsoRequired { get; init; }
-}
 
+    /// <summary>
+    /// Organizations that require SSO login
+    /// </summary>
+    public ICollection<Guid> OrganizationIds { get; init; } = Array.Empty<Guid>();
+}
 
 public class RequireSsoPolicyRequirementFactory(GlobalSettings globalSettings, IFeatureService featureService)
     : BasePolicyRequirementFactory<RequireSsoPolicyRequirement>
 {
-
     public override PolicyType PolicyType => PolicyType.RequireSso;
 
     protected override IEnumerable<OrganizationUserType> ExemptRoles =>
@@ -48,14 +51,18 @@ public class RequireSsoPolicyRequirementFactory(GlobalSettings globalSettings, I
 
         var acceptedFeatureFlagEnabled = featureService.IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState);
 
+        var ssoRequiredDetails = policyDetails.Where(p => !acceptedFeatureFlagEnabled
+            ? p.OrganizationUserStatus is OrganizationUserStatusType.Confirmed
+            : p.OrganizationUserStatus is OrganizationUserStatusType.Accepted
+                or OrganizationUserStatusType.Confirmed).ToArray();
+
         var result = new RequireSsoPolicyRequirement
         {
             CanUsePasskeyLogin = !policyDetails.Any(p =>
-                p.OrganizationUserStatus is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed),
-
-            SsoRequired = policyDetails.Any(p => !acceptedFeatureFlagEnabled
-                ? p.OrganizationUserStatus is OrganizationUserStatusType.Confirmed
-                : p.OrganizationUserStatus is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed)
+                p.OrganizationUserStatus is OrganizationUserStatusType.Accepted
+                    or OrganizationUserStatusType.Confirmed),
+            SsoRequired = ssoRequiredDetails.Length > 0,
+            OrganizationIds = [.. ssoRequiredDetails.Select(x => x.OrganizationId)]
         };
 
         return result;
