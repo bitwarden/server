@@ -1,0 +1,79 @@
+@using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects
+@using Bit.Core.Enums
+@model Bit.Admin.Billing.Models.Cohorts.CohortFormModel
+@{
+    ViewData["Title"] = $"Cohort: {Model.Name}";
+    var cohortType = (CohortType)(ViewData["CohortType"] ?? new CohortType.ChurnOnly());
+    var unresolved = cohortType as CohortType.UnresolvedMigration;
+}
+
+<h1>Cohort: @Model.Name</h1>
+
+<div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+<form method="post" asp-action="Edit" asp-route-id="@Model.Id" id="cohort-form">
+    <input type="hidden" asp-for="Id" />
+
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" />
+        <div class="form-text">Unique, max 255 characters. Used as the join key in CSV uploads.</div>
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="MigrationPathSelection" class="form-label">Migration path</label>
+        <select asp-for="MigrationPathSelection" class="form-select">
+            @if (unresolved != null)
+            {
+                <option value="@unresolved.Id" disabled selected>
+                    Unresolved migration #@unresolved.Id
+                </option>
+            }
+            <option value="none">None (Churn-only cohort)</option>
+            @foreach (var path in MigrationPaths.All)
+            {
+                <option value="@((byte)path.Id)">
+                    @($"{path.FromPlan.GetDisplayName()} → {path.ToPlan.GetDisplayName()}")
+                </option>
+            }
+        </select>
+        <span asp-validation-for="MigrationPathSelection" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="ProactiveDiscountCouponCode" class="form-label">
+            Proactive discount coupon <span class="text-muted">(optional)</span>
+        </label>
+        <input asp-for="ProactiveDiscountCouponCode" class="form-control" />
+        <span asp-validation-for="ProactiveDiscountCouponCode" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="ChurnDiscountCouponCode" class="form-label">
+            Churn discount coupon
+            <span id="churn-optional-label" class="text-muted">(optional)</span>
+        </label>
+        <input asp-for="ChurnDiscountCouponCode" class="form-control" />
+        <span asp-validation-for="ChurnDiscountCouponCode" class="text-danger"></span>
+    </div>
+</form>
+
+<div class="d-flex mt-4">
+    <button type="submit" class="btn btn-primary" form="cohort-form">Save</button>
+    <a asp-action="Index" class="btn btn-secondary ms-2">Cancel</a>
+</div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const migrationPathSelect = document.getElementById('@(nameof(Model.MigrationPathSelection))');
+            const churnOptionalLabel = document.getElementById('churn-optional-label');
+            const updateChurnOptionalLabel = () => {
+                churnOptionalLabel.style.display = migrationPathSelect.value === 'none' ? 'none' : '';
+            };
+            migrationPathSelect.addEventListener('change', updateChurnOptionalLabel);
+            updateChurnOptionalLabel();
+        })();
+    </script>
+}

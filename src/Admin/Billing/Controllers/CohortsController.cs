@@ -3,6 +3,7 @@ using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
+using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -87,6 +88,75 @@ public class CohortsController(
             return View(model);
         }
     }
+
+    [HttpGet("{id:guid}")]
+    [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
+    public async Task<IActionResult> Edit(Guid id)
+    {
+        var cohort = await cohortRepository.GetByIdAsync(id);
+        if (cohort == null) return NotFound();
+
+        ViewData["CohortType"] = CohortType.From(cohort.MigrationPathId);
+        return View(ToFormModel(cohort));
+    }
+
+    [HttpPost("{id:guid}")]
+    [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
+    public async Task<IActionResult> Edit(Guid id, CohortFormModel model)
+    {
+        model.Id = id;
+
+        if (!ModelState.IsValid) return View(model);
+
+        var cohort = await cohortRepository.GetByIdAsync(id);
+        if (cohort == null) return NotFound();
+
+        ViewData["CohortType"] = CohortType.From(cohort.MigrationPathId);
+
+        try
+        {
+            var nameMatch = await cohortRepository.GetByNameAsync(model.Name);
+            if (nameMatch != null && nameMatch.Id != id)
+            {
+                ModelState.AddModelError(nameof(model.Name),
+                    "A cohort with this name already exists.");
+                return View(model);
+            }
+
+            if (!await ValidateCouponsAsync(model)) return View(model);
+
+            cohort.Name = model.Name;
+            cohort.MigrationPathId = model.GetMigrationPathId();
+            cohort.ProactiveDiscountCouponCode = NormalizeCouponCode(model.ProactiveDiscountCouponCode);
+            cohort.ChurnDiscountCouponCode = NormalizeCouponCode(model.ChurnDiscountCouponCode);
+            cohort.RevisionDate = DateTime.UtcNow;
+
+            await cohortRepository.ReplaceAsync(cohort);
+
+            TempData["Success"] = $"Cohort '{cohort.Name}' updated.";
+            return RedirectToAction(nameof(Index));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error updating cohort. Id: {Id}", id);
+            ModelState.AddModelError(string.Empty, "An error occurred while saving the cohort.");
+            return View(model);
+        }
+    }
+
+    private static CohortFormModel ToFormModel(OrganizationPlanMigrationCohort cohort) => new()
+    {
+        Id = cohort.Id,
+        Name = cohort.Name,
+        MigrationPathSelection = cohort.MigrationPathId switch
+        {
+            null => "none",
+            var id => ((byte)id).ToString(),
+        },
+        ProactiveDiscountCouponCode = cohort.ProactiveDiscountCouponCode,
+        ChurnDiscountCouponCode = cohort.ChurnDiscountCouponCode,
+    };
 
     private static string? NormalizeCouponCode(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();

@@ -212,4 +212,88 @@ public class CohortsControllerTests
         Assert.True(sutProvider.Sut.ModelState.ContainsKey(nameof(model.ProactiveDiscountCouponCode)));
         Assert.True(sutProvider.Sut.ModelState.ContainsKey(nameof(model.ChurnDiscountCouponCode)));
     }
+
+    [Theory, BitAutoData]
+    public async Task Edit_Get_ExistingId_PrefillsForm(
+        OrganizationPlanMigrationCohort cohort,
+        SutProvider<CohortsController> sutProvider)
+    {
+        cohort.MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent;
+
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(cohort.Id).Returns(cohort);
+
+        var result = await sutProvider.Sut.Edit(cohort.Id);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<CohortFormModel>(view.Model);
+        Assert.Equal(cohort.Id, model.Id);
+        Assert.Equal(cohort.Name, model.Name);
+        Assert.Equal("1", model.MigrationPathSelection);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Edit_Post_HappyPath_UpdatesCohortAndBumpsRevisionDate(
+        Guid id,
+        CohortFormModel model,
+        OrganizationPlanMigrationCohort existing,
+        SutProvider<CohortsController> sutProvider)
+    {
+        existing.Id = id;
+        existing.RevisionDate = DateTime.UtcNow.AddDays(-1);
+        model.Id = id;
+        model.MigrationPathSelection = "1";
+        model.ProactiveDiscountCouponCode = null;
+        model.ChurnDiscountCouponCode = null;
+        var before = existing.RevisionDate;
+
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(id).Returns(existing);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByNameAsync(model.Name).Returns((OrganizationPlanMigrationCohort?)null);
+
+        sutProvider.Sut.TempData = new TempDataDictionary(
+            new DefaultHttpContext(),
+            Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.Edit(id, model);
+
+        Assert.IsType<RedirectToActionResult>(result);
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationPlanMigrationCohort>(c =>
+                c.Id == id
+                && c.Name == model.Name
+                && c.MigrationPathId == MigrationPathId.Enterprise2020AnnualToCurrent
+                && c.RevisionDate > before));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Edit_Post_SameNameSameCohort_AllowsUpdate(
+        Guid id,
+        CohortFormModel model,
+        OrganizationPlanMigrationCohort existing,
+        SutProvider<CohortsController> sutProvider)
+    {
+        existing.Id = id;
+        model.Id = id;
+        model.MigrationPathSelection = "1";
+        model.ProactiveDiscountCouponCode = null;
+        model.ChurnDiscountCouponCode = null;
+
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(id).Returns(existing);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByNameAsync(model.Name).Returns(existing);
+
+        sutProvider.Sut.TempData = new TempDataDictionary(
+            new DefaultHttpContext(),
+            Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.Edit(id, model);
+
+        Assert.IsType<RedirectToActionResult>(result);
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .Received(1).ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohort>());
+    }
 }

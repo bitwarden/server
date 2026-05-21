@@ -41,7 +41,7 @@
             @foreach (var row in Model.Items)
             {
                 <tr>
-                    <td>@row.Name</td>
+                    <td><a asp-action="Edit" asp-route-id="@row.Id">@row.Name</a></td>
                     <td>
                         @switch (row.CohortType)
                         {
