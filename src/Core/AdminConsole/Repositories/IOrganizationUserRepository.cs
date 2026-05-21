@@ -145,7 +145,7 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// any other state are excluded from the result.
     /// </returns>
     Task<ICollection<Guid>> ConfirmManyOrganizationUsersAsync(
-        IEnumerable<AcceptedOrganizationUserToConfirm> usersToConfirm);
+        IReadOnlyCollection<AcceptedOrganizationUserToConfirm> usersToConfirm);
 
     /// <summary>
     /// Returns all Accepted, User-role organization users pending automatic confirmation for the given organization.

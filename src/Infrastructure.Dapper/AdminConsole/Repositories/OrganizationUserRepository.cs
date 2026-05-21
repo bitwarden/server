@@ -716,7 +716,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
     }
 
     public async Task<ICollection<Guid>> ConfirmManyOrganizationUsersAsync(
-        IEnumerable<AcceptedOrganizationUserToConfirm> usersToConfirm)
+        IReadOnlyCollection<AcceptedOrganizationUserToConfirm> usersToConfirm)
     {
         await using var connection = new SqlConnection(ConnectionString);
 
