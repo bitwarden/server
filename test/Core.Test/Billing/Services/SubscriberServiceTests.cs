@@ -93,7 +93,7 @@ public class SubscriberServiceTests
         await stripeAdapter
             .Received(1)
             .UpdateSubscriptionAsync(subscriptionId, Arg.Is<SubscriptionUpdateOptions>(
-                options => options.Metadata["cancellingUserId"] == userId.ToString()));
+                options => options.Metadata[StripeConstants.MetadataKeys.CancellingUserId] == userId.ToString()));
 
         await stripeAdapter
             .Received(1)
@@ -188,7 +188,7 @@ public class SubscriberServiceTests
                 options.CancelAtPeriodEnd == true &&
                 options.CancellationDetails.Comment == offboardingSurveyResponse.Feedback &&
                 options.CancellationDetails.Feedback == offboardingSurveyResponse.Reason &&
-                options.Metadata["cancellingUserId"] == userId.ToString()));
+                options.Metadata[StripeConstants.MetadataKeys.CancellingUserId] == userId.ToString()));
 
         await stripeAdapter
             .DidNotReceiveWithAnyArgs()
@@ -491,7 +491,7 @@ public class SubscriberServiceTests
                 o.CancelAtPeriodEnd == true &&
                 o.CancellationDetails.Comment == "Too pricey" &&
                 o.CancellationDetails.Feedback == "too_expensive" &&
-                o.Metadata["cancellingUserId"] == userId.ToString() &&
+                o.Metadata[StripeConstants.MetadataKeys.CancellingUserId] == userId.ToString() &&
                 o.Metadata.ContainsKey(StripeConstants.MetadataKeys.CancelledDuringDeferredPriceIncrease)));
 
         await stripeAdapter.DidNotReceiveWithAnyArgs()
