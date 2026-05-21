@@ -1,7 +1,6 @@
 ﻿#nullable enable
 
 using Bit.Core;
-using Bit.Core.Dirt.Repositories;
 using Bit.Core.Jobs;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -36,7 +35,7 @@ public class CleanUpOrganizationEventsJob : BaseJob
             return;
         }
 
-        var pending = await _cleanupRepository.GetNextPendingAsync();
+        var pending = await _cleanupRepository.ClaimNextPendingAsync();
         if (pending is null)
         {
             return;
@@ -45,8 +44,6 @@ public class CleanUpOrganizationEventsJob : BaseJob
         _logger.LogInformation(Constants.BypassFiltersEventId,
             "Starting event cleanup for organization {OrganizationId} (cleanup {CleanupId})",
             pending.OrganizationId, pending.Id);
-
-        await _cleanupRepository.MarkStartedAsync(pending.Id);
 
         var deadline = DateTime.UtcNow.Add(_runBudget);
         var deleted = 0;
@@ -63,13 +60,13 @@ public class CleanUpOrganizationEventsJob : BaseJob
                     break;
                 }
 
-                await _cleanupRepository.IncrementProgressAsync(pending.Id, deleted);
+                await _cleanupRepository.UpdateProgressAsync(pending.Id, deleted);
                 totalDeleted += deleted;
             }
 
             if (deleted == 0)
             {
-                await _cleanupRepository.MarkCompletedAsync(pending.Id);
+                await _cleanupRepository.UpdateCompletedAsync(pending.Id);
                 _logger.LogInformation(Constants.BypassFiltersEventId,
                     "Completed event cleanup for organization {OrganizationId}; deleted {Deleted} events this run",
                     pending.OrganizationId, totalDeleted);
@@ -84,7 +81,7 @@ public class CleanUpOrganizationEventsJob : BaseJob
         catch (Exception ex)
         {
             var message = ex.Message.Length > 4000 ? ex.Message[..4000] : ex.Message;
-            await _cleanupRepository.RecordErrorAsync(pending.Id, message);
+            await _cleanupRepository.UpdateErrorAsync(pending.Id, message);
             throw;
         }
     }

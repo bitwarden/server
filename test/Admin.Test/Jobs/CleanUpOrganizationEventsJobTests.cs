@@ -1,7 +1,5 @@
 ﻿using Bit.Admin.Jobs;
 using Bit.Core;
-using Bit.Core.Dirt.Entities;
-using Bit.Core.Dirt.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -42,19 +40,18 @@ public class CleanUpOrganizationEventsJobTests
 
         await _sut.Execute(context);
 
-        await _cleanupRepository.DidNotReceiveWithAnyArgs().GetNextPendingAsync();
+        await _cleanupRepository.DidNotReceiveWithAnyArgs().ClaimNextPendingAsync();
         await _eventRepository.DidNotReceiveWithAnyArgs().DeleteManyByOrganizationIdAsync(default);
     }
 
     [Fact]
     public async Task Execute_NoPendingCleanup_ReturnsEarly()
     {
-        _cleanupRepository.GetNextPendingAsync().Returns((OrganizationEventCleanup?)null);
+        _cleanupRepository.ClaimNextPendingAsync().Returns((OrganizationEventCleanup?)null);
         var context = CreateContext();
 
         await _sut.Execute(context);
 
-        await _cleanupRepository.DidNotReceiveWithAnyArgs().MarkStartedAsync(default);
         await _eventRepository.DidNotReceiveWithAnyArgs().DeleteManyByOrganizationIdAsync(default);
     }
 
@@ -62,7 +59,7 @@ public class CleanUpOrganizationEventsJobTests
     public async Task Execute_DeletesRepeatedlyThenCompletes_WhenBatchReturnsZero()
     {
         var pending = CreatePending();
-        _cleanupRepository.GetNextPendingAsync().Returns(pending);
+        _cleanupRepository.ClaimNextPendingAsync().Returns(pending);
         _eventRepository
             .DeleteManyByOrganizationIdAsync(pending.OrganizationId)
             .Returns(2000, 2000, 500, 0);
@@ -70,20 +67,19 @@ public class CleanUpOrganizationEventsJobTests
 
         await _sut.Execute(context);
 
-        await _cleanupRepository.Received(1).MarkStartedAsync(pending.Id);
         await _eventRepository.Received(4)
             .DeleteManyByOrganizationIdAsync(pending.OrganizationId);
-        await _cleanupRepository.Received(2).IncrementProgressAsync(pending.Id, 2000);
-        await _cleanupRepository.Received(1).IncrementProgressAsync(pending.Id, 500);
-        await _cleanupRepository.Received(1).MarkCompletedAsync(pending.Id);
-        await _cleanupRepository.DidNotReceiveWithAnyArgs().RecordErrorAsync(default, default!);
+        await _cleanupRepository.Received(2).UpdateProgressAsync(pending.Id, 2000);
+        await _cleanupRepository.Received(1).UpdateProgressAsync(pending.Id, 500);
+        await _cleanupRepository.Received(1).UpdateCompletedAsync(pending.Id);
+        await _cleanupRepository.DidNotReceiveWithAnyArgs().UpdateErrorAsync(default, default!);
     }
 
     [Fact]
     public async Task Execute_CancellationRequested_LeavesPending()
     {
         var pending = CreatePending();
-        _cleanupRepository.GetNextPendingAsync().Returns(pending);
+        _cleanupRepository.ClaimNextPendingAsync().Returns(pending);
 
         using var cts = new CancellationTokenSource();
         _eventRepository
@@ -97,16 +93,15 @@ public class CleanUpOrganizationEventsJobTests
 
         await _sut.Execute(context);
 
-        await _cleanupRepository.Received(1).MarkStartedAsync(pending.Id);
-        await _cleanupRepository.Received(1).IncrementProgressAsync(pending.Id, 2000);
-        await _cleanupRepository.DidNotReceive().MarkCompletedAsync(pending.Id);
+        await _cleanupRepository.Received(1).UpdateProgressAsync(pending.Id, 2000);
+        await _cleanupRepository.DidNotReceive().UpdateCompletedAsync(pending.Id);
     }
 
     [Fact]
     public async Task Execute_DeleteThrows_RecordsErrorAndDoesNotComplete()
     {
         var pending = CreatePending();
-        _cleanupRepository.GetNextPendingAsync().Returns(pending);
+        _cleanupRepository.ClaimNextPendingAsync().Returns(pending);
         _eventRepository
             .DeleteManyByOrganizationIdAsync(pending.OrganizationId)
             .Throws(new InvalidOperationException("boom"));
@@ -115,16 +110,15 @@ public class CleanUpOrganizationEventsJobTests
         // BaseJob.Execute swallows exceptions after logging; we verify via substitute calls.
         await _sut.Execute(context);
 
-        await _cleanupRepository.Received(1).MarkStartedAsync(pending.Id);
-        await _cleanupRepository.Received(1).RecordErrorAsync(pending.Id, "boom");
-        await _cleanupRepository.DidNotReceive().MarkCompletedAsync(pending.Id);
+        await _cleanupRepository.Received(1).UpdateErrorAsync(pending.Id, "boom");
+        await _cleanupRepository.DidNotReceive().UpdateCompletedAsync(pending.Id);
     }
 
     [Fact]
     public async Task Execute_DeleteThrowsWithLongMessage_TruncatesErrorTo4000Chars()
     {
         var pending = CreatePending();
-        _cleanupRepository.GetNextPendingAsync().Returns(pending);
+        _cleanupRepository.ClaimNextPendingAsync().Returns(pending);
         var longMessage = new string('x', 5000);
         var expectedTruncated = longMessage[..4000];
         _eventRepository
@@ -134,7 +128,7 @@ public class CleanUpOrganizationEventsJobTests
 
         await _sut.Execute(context);
 
-        await _cleanupRepository.Received(1).RecordErrorAsync(pending.Id, expectedTruncated);
+        await _cleanupRepository.Received(1).UpdateErrorAsync(pending.Id, expectedTruncated);
     }
 
     private static OrganizationEventCleanup CreatePending() => new()
