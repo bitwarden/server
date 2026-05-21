@@ -9,6 +9,15 @@
 <div class="container-fluid">
     <h1>Cohorts</h1>
 
+    <form method="get" asp-action="Index" class="row g-2 mb-3">
+        <div class="col-auto">
+            <input type="text" name="name" value="@Model.Name" class="form-control" placeholder="Name" />
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary">Search</button>
+        </div>
+    </form>
+
     @if (Model.Items.Any())
     {
         <table class="table table-striped">
@@ -56,6 +65,40 @@
             }
             </tbody>
         </table>
+
+        <nav>
+            <ul class="pagination">
+                @if (Model.PreviousPage.HasValue)
+                {
+                    <li class="page-item">
+                        <a class="page-link" asp-action="Index"
+                           asp-route-name="@Model.Name"
+                           asp-route-page="@Model.PreviousPage.Value"
+                           asp-route-count="@Model.Count">Previous</a>
+                    </li>
+                }
+                else
+                {
+                    <li class="page-item disabled"><a class="page-link" href="#" tabindex="-1">Previous</a></li>
+                }
+
+                <li class="page-item active"><span class="page-link">Page @Model.Page</span></li>
+
+                @if (Model.NextPage.HasValue)
+                {
+                    <li class="page-item">
+                        <a class="page-link" asp-action="Index"
+                           asp-route-name="@Model.Name"
+                           asp-route-page="@Model.NextPage.Value"
+                           asp-route-count="@Model.Count">Next</a>
+                    </li>
+                }
+                else
+                {
+                    <li class="page-item disabled"><a class="page-link" href="#" tabindex="-1">Next</a></li>
+                }
+            </ul>
+        </nav>
     }
     else
     {

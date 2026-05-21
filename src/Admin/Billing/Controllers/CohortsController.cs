@@ -16,13 +16,20 @@ public class CohortsController(
 
     [HttpGet("")]
     [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? name = null, int page = 1, int count = DefaultPageSize)
     {
-        var items = await cohortRepository.SearchWithCountsAsync(null, 0, DefaultPageSize);
+        if (page < 1) page = 1;
+        if (count < 1) count = 1;
+        var skip = (page - 1) * count;
+
+        var items = await cohortRepository.SearchWithCountsAsync(name, skip, count);
 
         return View(new CohortsPagedModel
         {
+            Name = name,
             Items = items.Select(CohortListItemViewModel.From).ToList(),
+            Page = page,
+            Count = count,
         });
     }
 }

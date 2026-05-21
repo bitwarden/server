@@ -58,4 +58,34 @@ public class CohortsControllerTests
         var row = Assert.Single(model.Items);
         Assert.Equal(repoItem.Cohort.Name, row.Name);
     }
+
+    [Theory, BitAutoData]
+    public async Task Index_WithNameFilter_PassesNameToRepository(
+        SutProvider<CohortsController> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .SearchWithCountsAsync("alpha", 0, 25)
+            .Returns(Array.Empty<CohortListItem>());
+
+        await sutProvider.Sut.Index(name: "alpha");
+
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .Received(1)
+            .SearchWithCountsAsync("alpha", 0, 25);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Index_WithPage2_CalculatesSkipCorrectly(
+        SutProvider<CohortsController> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .SearchWithCountsAsync(null, 25, 25)
+            .Returns(Array.Empty<CohortListItem>());
+
+        await sutProvider.Sut.Index(page: 2);
+
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .Received(1)
+            .SearchWithCountsAsync(null, 25, 25);
+    }
 }
