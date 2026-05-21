@@ -26,10 +26,11 @@ public class OrganizationEventCleanupRepository : BaseRepository, IOrganizationE
 
     public async Task<OrganizationEventCleanup?> ClaimNextPendingAsync()
     {
+        var now = DateTime.UtcNow;
         using var connection = new SqlConnection(ConnectionString);
         return await connection.QuerySingleOrDefaultAsync<OrganizationEventCleanup>(
             "[dbo].[OrganizationEventCleanup_ClaimNextPending]",
-            new { Now = DateTime.UtcNow },
+            new { Now = now, LeaseExpiry = now.AddMinutes(-10) },
             commandType: CommandType.StoredProcedure);
     }
 

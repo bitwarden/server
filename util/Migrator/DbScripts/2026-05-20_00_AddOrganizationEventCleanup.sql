@@ -53,7 +53,8 @@ GO
 
 -- Stored Procedures: ClaimNextPending
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationEventCleanup_ClaimNextPending]
-    @Now DATETIME2(7)
+    @Now DATETIME2(7),
+    @LeaseExpiry DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -73,6 +74,7 @@ BEGIN
             [dbo].[OrganizationEventCleanup] WITH (UPDLOCK, READPAST)
         WHERE
             [CompletedDate] IS NULL
+            AND ([StartDate] IS NULL OR [RevisionDate] < @LeaseExpiry)
         ORDER BY
             [CreationDate] ASC
     )
