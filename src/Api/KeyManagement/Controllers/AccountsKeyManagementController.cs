@@ -165,7 +165,13 @@ public class AccountsKeyManagementController : Controller
                     new TdeRotateUserAccountKeysData { BaseData = await ToBaseDataModelAsync(request, user) });
                 break;
             case UnlockMethod.KeyConnector:
-                throw new BadRequestException("Key connector not implemented");
+                await _rotateUserAccountKeysCommand.KeyConnectorRotateUserAccountKeysAsync(user,
+                    new KeyConnectorRotateUserAccountKeysData
+                    {
+                        KeyConnectorKeyWrappedUserKey = request.UnlockMethodData.KeyConnectorKeyWrappedUserKey!,
+                        BaseData = await ToBaseDataModelAsync(request, user),
+                    });
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(request.UnlockMethodData.UnlockMethod), "Unrecognized unlock method");
         }

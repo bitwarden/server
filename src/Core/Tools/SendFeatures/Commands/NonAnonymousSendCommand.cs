@@ -2,8 +2,10 @@
 #nullable disable
 
 using System.Text.Json;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
+using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
@@ -22,6 +24,8 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
     private readonly IPushNotificationService _pushNotificationService;
     private readonly ISendValidationService _sendValidationService;
     private readonly ISendCoreHelperService _sendCoreHelperService;
+    private readonly IEventService _eventService;
+    private readonly IFeatureService _featureService;
     private readonly ILogger<NonAnonymousSendCommand> _logger;
 
     public NonAnonymousSendCommand(ISendRepository sendRepository,
@@ -29,6 +33,8 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         IPushNotificationService pushNotificationService,
         ISendValidationService sendValidationService,
         ISendCoreHelperService sendCoreHelperService,
+        IEventService eventService,
+        IFeatureService featureService,
         ILogger<NonAnonymousSendCommand> logger)
     {
         _sendRepository = sendRepository;
@@ -36,6 +42,8 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         _pushNotificationService = pushNotificationService;
         _sendValidationService = sendValidationService;
         _sendCoreHelperService = sendCoreHelperService;
+        _eventService = eventService;
+        _featureService = featureService;
         _logger = logger;
     }
 
@@ -48,6 +56,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         {
             await _sendRepository.CreateAsync(send);
             await _pushNotificationService.PushSyncSendCreateAsync(send);
+            await LogSendCreatedEventAsync(send);
         }
         else
         {
@@ -55,6 +64,32 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
             await _sendRepository.UpsertAsync(send);
             await _pushNotificationService.PushSyncSendUpdateAsync(send);
         }
+    }
+
+    private async Task LogSendCreatedEventAsync(Send send)
+    {
+        if (!send.UserId.HasValue || !_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging))
+        {
+            return;
+        }
+
+        await _eventService.LogUserEventAsync(send.UserId.Value, ResolveSendCreatedEventType(send));
+    }
+
+    private static EventType ResolveSendCreatedEventType(Send send)
+    {
+        // send.AuthType is populated by SendRequestModel.ToSendBase before SaveSendAsync runs
+        var authType = send.AuthType ?? AuthType.None;
+
+        return (send.Type, authType) switch
+        {
+            (SendType.Text, AuthType.Password) => EventType.Send_Created_Text_WithPasswordProtection,
+            (SendType.Text, AuthType.Email) => EventType.Send_Created_Text_WithEmailVerification,
+            (SendType.Text, _) => EventType.Send_Created_Text,
+            (SendType.File, AuthType.Password) => EventType.Send_Created_File_WithPasswordProtection,
+            (SendType.File, AuthType.Email) => EventType.Send_Created_File_WithEmailVerification,
+            _ => EventType.Send_Created_File,
+        };
     }
 
     public async Task<string> SaveFileSendAsync(Send send, SendFileData data, long fileLength)

@@ -1,8 +1,10 @@
 ﻿using System.Text.Json;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
+using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.CurrentContextFixtures;
 using Bit.Core.Test.Tools.AutoFixture.SendFixtures;
 using Bit.Core.Tools.Entities;
@@ -31,6 +33,8 @@ public class NonAnonymousSendCommandTests
     private readonly ISendValidationService _sendValidationService;
     private readonly ICurrentContext _currentContext;
     private readonly ISendCoreHelperService _sendCoreHelperService;
+    private readonly IEventService _eventService;
+    private readonly IFeatureService _featureService;
     private readonly NonAnonymousSendCommand _nonAnonymousSendCommand;
 
     private readonly ILogger<NonAnonymousSendCommand> _logger;
@@ -43,6 +47,8 @@ public class NonAnonymousSendCommandTests
         _sendValidationService = Substitute.For<ISendValidationService>();
         _currentContext = Substitute.For<ICurrentContext>();
         _sendCoreHelperService = Substitute.For<ISendCoreHelperService>();
+        _eventService = Substitute.For<IEventService>();
+        _featureService = Substitute.For<IFeatureService>();
         _logger = Substitute.For<ILogger<NonAnonymousSendCommand>>();
 
         _nonAnonymousSendCommand = new NonAnonymousSendCommand(
@@ -51,6 +57,8 @@ public class NonAnonymousSendCommandTests
             _pushNotificationService,
             _sendValidationService,
             _sendCoreHelperService,
+            _eventService,
+            _featureService,
             _logger
         );
     }
@@ -1435,5 +1443,98 @@ public class NonAnonymousSendCommandTests
         await _sendRepository.Received(1).DeleteAsync(send);
         await _pushNotificationService.Received(1).PushSyncSendDeleteAsync(send);
         Assert.Equal(new[] { "file", "db" }, callOrder);
+    }
+
+    public static IEnumerable<object[]> SendCreatedEventTypeData()
+    {
+        yield return new object[] { SendType.Text, AuthType.None, EventType.Send_Created_Text };
+        yield return new object[] { SendType.Text, AuthType.Email, EventType.Send_Created_Text_WithEmailVerification };
+        yield return new object[] { SendType.Text, AuthType.Password, EventType.Send_Created_Text_WithPasswordProtection };
+        yield return new object[] { SendType.File, AuthType.None, EventType.Send_Created_File };
+        yield return new object[] { SendType.File, AuthType.Email, EventType.Send_Created_File_WithEmailVerification };
+        yield return new object[] { SendType.File, AuthType.Password, EventType.Send_Created_File_WithPasswordProtection };
+    }
+
+    [Theory]
+    [MemberData(nameof(SendCreatedEventTypeData))]
+    public async Task SaveSendAsync_NewSend_FlagOn_LogsExpectedEventType(
+        SendType sendType, AuthType authType, EventType expectedEventType)
+    {
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = default,
+            Type = sendType,
+            UserId = userId,
+            AuthType = authType,
+        };
+
+        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
+        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
+
+        await _nonAnonymousSendCommand.SaveSendAsync(send);
+
+        await _sendRepository.Received(1).CreateAsync(send);
+        await _eventService.Received(1).LogUserEventAsync(userId, expectedEventType);
+    }
+
+    [Fact]
+    public async Task SaveSendAsync_NewSend_NullAuthType_LogsBaseSendCreatedEvent()
+    {
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = default,
+            Type = SendType.Text,
+            UserId = userId,
+            AuthType = null,
+        };
+
+        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
+        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
+
+        await _nonAnonymousSendCommand.SaveSendAsync(send);
+
+        await _eventService.Received(1).LogUserEventAsync(userId, EventType.Send_Created_Text);
+    }
+
+    [Fact]
+    public async Task SaveSendAsync_NewSend_FlagOff_DoesNotLogEvent()
+    {
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = default,
+            Type = SendType.Text,
+            UserId = userId,
+        };
+
+        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(false);
+        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
+
+        await _nonAnonymousSendCommand.SaveSendAsync(send);
+
+        await _sendRepository.Received(1).CreateAsync(send);
+        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+    }
+
+    [Fact]
+    public async Task SaveSendAsync_ExistingSend_FlagOn_DoesNotLogEvent()
+    {
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.Text,
+            UserId = userId,
+        };
+
+        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
+        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
+
+        await _nonAnonymousSendCommand.SaveSendAsync(send);
+
+        await _sendRepository.Received(1).UpsertAsync(send);
+        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
     }
 }
