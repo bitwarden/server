@@ -4,12 +4,15 @@ using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
+using Bit.Core.Billing.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
+using Stripe;
 
 namespace Admin.Test.Billing.Controllers;
 
@@ -138,5 +141,75 @@ public class CohortsControllerTests
         await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
             .DidNotReceive()
             .CreateAsync(Arg.Any<OrganizationPlanMigrationCohort>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Create_Post_StripeProactiveResourceMissing_AddsErrorOnProactiveField(
+        CohortFormModel model,
+        SutProvider<CohortsController> sutProvider)
+    {
+        model.MigrationPathSelection = "1";
+        model.ProactiveDiscountCouponCode = "BAD-CODE";
+        model.ChurnDiscountCouponCode = null;
+
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByNameAsync(model.Name).Returns((OrganizationPlanMigrationCohort?)null);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetCouponAsync("BAD-CODE", Arg.Any<CouponGetOptions?>())
+            .ThrowsAsync(new StripeException { StripeError = new StripeError { Code = "resource_missing" } });
+
+        var result = await sutProvider.Sut.Create(model);
+
+        Assert.IsType<ViewResult>(result);
+        Assert.True(sutProvider.Sut.ModelState.ContainsKey(nameof(model.ProactiveDiscountCouponCode)));
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .DidNotReceive()
+            .CreateAsync(Arg.Any<OrganizationPlanMigrationCohort>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Create_Post_StripeGenericFailure_AddsGenericErrorAndRejects(
+        CohortFormModel model,
+        SutProvider<CohortsController> sutProvider)
+    {
+        model.MigrationPathSelection = "1";
+        model.ProactiveDiscountCouponCode = "FOO";
+        model.ChurnDiscountCouponCode = null;
+
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByNameAsync(model.Name).Returns((OrganizationPlanMigrationCohort?)null);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetCouponAsync("FOO", Arg.Any<CouponGetOptions?>())
+            .ThrowsAsync(new StripeException { StripeError = new StripeError { Code = "rate_limit" } });
+
+        var result = await sutProvider.Sut.Create(model);
+
+        Assert.IsType<ViewResult>(result);
+        var fieldErrors = sutProvider.Sut.ModelState[nameof(model.ProactiveDiscountCouponCode)]!.Errors;
+        Assert.Contains(fieldErrors,
+            e => e.ErrorMessage.Contains("An error occurred while fetching the coupon from Stripe."));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Create_Post_BothCouponsInvalid_FlagsBothFields(
+        CohortFormModel model,
+        SutProvider<CohortsController> sutProvider)
+    {
+        model.MigrationPathSelection = "1";
+        model.ProactiveDiscountCouponCode = "BAD-P";
+        model.ChurnDiscountCouponCode = "BAD-C";
+
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByNameAsync(model.Name).Returns((OrganizationPlanMigrationCohort?)null);
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetCouponAsync(Arg.Any<string>(), Arg.Any<CouponGetOptions?>())
+            .ThrowsAsync(new StripeException { StripeError = new StripeError { Code = "resource_missing" } });
+
+        var result = await sutProvider.Sut.Create(model);
+
+        Assert.True(sutProvider.Sut.ModelState.ContainsKey(nameof(model.ProactiveDiscountCouponCode)));
+        Assert.True(sutProvider.Sut.ModelState.ContainsKey(nameof(model.ChurnDiscountCouponCode)));
     }
 }

@@ -3,15 +3,19 @@ using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
+using Bit.Core.Billing.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Stripe;
 
 namespace Bit.Admin.Billing.Controllers;
 
 [Authorize]
 [Route("cohorts")]
 public class CohortsController(
-    IOrganizationPlanMigrationCohortRepository cohortRepository) : Controller
+    IOrganizationPlanMigrationCohortRepository cohortRepository,
+    IStripeAdapter stripeAdapter,
+    ILogger<CohortsController> logger) : Controller
 {
     private const int DefaultPageSize = 25;
 
@@ -58,6 +62,11 @@ public class CohortsController(
                 return View(model);
             }
 
+            if (!await ValidateCouponsAsync(model))
+            {
+                return View(model);
+            }
+
             var cohort = new OrganizationPlanMigrationCohort
             {
                 Name = model.Name,
@@ -81,4 +90,40 @@ public class CohortsController(
 
     private static string? NormalizeCouponCode(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private async Task<bool> ValidateCouponsAsync(CohortFormModel model)
+    {
+        var proactive = NormalizeCouponCode(model.ProactiveDiscountCouponCode);
+        var churn = NormalizeCouponCode(model.ChurnDiscountCouponCode);
+
+        var ok = true;
+        if (proactive != null && !await TryValidateCouponAsync(proactive, nameof(model.ProactiveDiscountCouponCode)))
+        {
+            ok = false;
+        }
+        if (churn != null && !await TryValidateCouponAsync(churn, nameof(model.ChurnDiscountCouponCode)))
+        {
+            ok = false;
+        }
+        return ok;
+    }
+
+    private async Task<bool> TryValidateCouponAsync(string couponId, string fieldName)
+    {
+        try
+        {
+            await stripeAdapter.GetCouponAsync(couponId);
+            return true;
+        }
+        catch (StripeException ex)
+        {
+            var message = ex.StripeError?.Code == "resource_missing"
+                ? "Coupon not found in Stripe. Please verify the coupon ID."
+                : "An error occurred while fetching the coupon from Stripe.";
+
+            logger.LogError(ex, "Stripe coupon error: {CouponId}", couponId);
+            ModelState.AddModelError(fieldName, message);
+            return false;
+        }
+    }
 }
