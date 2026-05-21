@@ -65,7 +65,14 @@
             }
             </tbody>
         </table>
+    }
+    else
+    {
+        <div class="alert alert-info">No cohorts found.</div>
+    }
 
+    @if (Model.Page > 1 || Model.Items.Any())
+    {
         <nav>
             <ul class="pagination">
                 @if (Model.PreviousPage.HasValue)
@@ -99,9 +106,5 @@
                 }
             </ul>
         </nav>
-    }
-    else
-    {
-        <div class="alert alert-info">No cohorts found.</div>
     }
 </div>
