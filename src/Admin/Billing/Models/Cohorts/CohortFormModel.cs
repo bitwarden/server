@@ -8,7 +8,7 @@ public class CohortFormModel : IValidatableObject
     public Guid? Id { get; set; }
 
     [Required]
-    [MaxLength(64)]
+    [MaxLength(255)]
     [Display(Name = "Name")]
     public string Name { get; set; } = string.Empty;
 

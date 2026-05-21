@@ -14,7 +14,7 @@
         <label asp-for="Name" class="form-label"></label>
         <input asp-for="Name" class="form-control" placeholder="e.g., A1 (a) — Enterprise 2020 Annual" />
         <span asp-validation-for="Name" class="text-danger"></span>
-        <div class="form-text">Unique, max 64 characters. Used as the join key in CSV uploads.</div>
+        <div class="form-text">Unique, max 255 characters. Used as the join key in CSV uploads.</div>
     </div>
 
     <div class="mb-3">
