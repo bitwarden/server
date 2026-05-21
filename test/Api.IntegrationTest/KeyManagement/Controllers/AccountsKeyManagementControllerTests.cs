@@ -351,6 +351,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
         Assert.NotNull(user);
         Assert.Null(user.MasterPassword);
+        Assert.Null(user.MasterPasswordSalt);
         Assert.True(user.UsesKeyConnector);
         Assert.Equal(DateTime.UtcNow, user.RevisionDate, TimeSpan.FromMinutes(1));
         Assert.Equal(DateTime.UtcNow, user.AccountRevisionDate, TimeSpan.FromMinutes(1));
@@ -404,6 +405,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
         Assert.NotNull(user);
         Assert.Null(user.MasterPassword);
+        Assert.Null(user.MasterPasswordSalt);
         Assert.True(user.UsesKeyConnector);
         Assert.Equal(request.KeyConnectorKeyWrappedUserKey, user.Key);
         Assert.Equal(DateTime.UtcNow, user.RevisionDate, TimeSpan.FromMinutes(1));
