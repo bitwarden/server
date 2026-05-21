@@ -11,6 +11,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using OneOf;
 using Stripe;
@@ -37,6 +38,7 @@ public interface IPreviewOrganizationTaxCommand
 }
 
 public class PreviewOrganizationTaxCommand(
+    IFeatureService featureService,
     ILogger<PreviewOrganizationTaxCommand> logger,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter,
@@ -373,7 +375,7 @@ public class PreviewOrganizationTaxCommand(
         Convert.ToDecimal(invoice.TotalTaxes.Sum(invoiceTotalTax => invoiceTotalTax.Amount)) / 100,
         Convert.ToDecimal(invoice.Total) / 100);
 
-    private static InvoiceCreatePreviewOptions GetBaseOptions(
+    private InvoiceCreatePreviewOptions GetBaseOptions(
         OneOf<Customer, BillingAddress> addressChoice,
         bool businessUse)
     {
@@ -396,19 +398,22 @@ public class PreviewOrganizationTaxCommand(
             }
         };
 
-        switch (businessUse)
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
         {
-            case true:
-                var existingTaxExemptStatus = addressChoice.Match(
-                    customer => customer.TaxExempt,
-                    _ => null!);
+            switch (businessUse)
+            {
+                case true:
+                    var existingTaxExemptStatus = addressChoice.Match(
+                        customer => customer.TaxExempt,
+                        _ => null!);
 
-                var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(country, existingTaxExemptStatus);
-                options.CustomerDetails.TaxExempt = determinedTaxExemptStatus;
-                break;
-            default:
-                options.CustomerDetails.TaxExempt = TaxExempt.None;
-                break;
+                    var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(country, existingTaxExemptStatus);
+                    options.CustomerDetails.TaxExempt = determinedTaxExemptStatus;
+                    break;
+                default:
+                    options.CustomerDetails.TaxExempt = TaxExempt.None;
+                    break;
+            }
         }
 
         var taxId = addressChoice.Match(

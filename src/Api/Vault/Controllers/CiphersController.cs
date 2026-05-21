@@ -759,33 +759,6 @@ public class CiphersController : Controller
         return await PutShare(id, model);
     }
 
-    [HttpPut("{id}/collections")]
-    public async Task<CipherDetailsResponseModel> PutCollections(Guid id, [FromBody] CipherCollectionsRequestModel model)
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        var cipher = await GetByIdAsync(id, user.Id);
-        if (cipher == null || !cipher.OrganizationId.HasValue ||
-            !await _currentContext.OrganizationUser(cipher.OrganizationId.Value))
-        {
-            throw new NotFoundException();
-        }
-
-        await _cipherService.SaveCollectionsAsync(cipher,
-            model.CollectionIds.Select(c => new Guid(c)), user.Id, false);
-
-        var updatedCipher = await GetByIdAsync(id, user.Id);
-        var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(user.Id, id);
-
-        return new CipherDetailsResponseModel(updatedCipher, user, await GetOrganizationAbilityAsync(updatedCipher), _globalSettings, collectionCiphers);
-    }
-
-    [HttpPost("{id}/collections")]
-    [Obsolete("This endpoint is deprecated. Use PUT method instead.")]
-    public async Task<CipherDetailsResponseModel> PostCollections(Guid id, [FromBody] CipherCollectionsRequestModel model)
-    {
-        return await PutCollections(id, model);
-    }
-
     [HttpPut("{id}/collections_v2")]
     public async Task<OptionalCipherDetailsResponseModel> PutCollections_vNext(Guid id, [FromBody] CipherCollectionsRequestModel model)
     {

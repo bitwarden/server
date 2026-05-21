@@ -16,11 +16,27 @@ namespace Bit.Api.AdminConsole.Controllers;
 public class OrganizationInviteLinksController(
     ICreateOrganizationInviteLinkCommand createOrganizationInviteLinkCommand,
     IGetOrganizationInviteLinkQuery getOrganizationInviteLinkQuery,
+    IGetOrganizationInviteLinkStatusQuery getOrganizationInviteLinkStatusQuery,
     IUpdateOrganizationInviteLinkCommand updateOrganizationInviteLinkCommand,
     IDeleteOrganizationInviteLinkCommand deleteOrganizationInviteLinkCommand,
     IRefreshOrganizationInviteLinkCommand refreshOrganizationInviteLinkCommand)
     : BaseAdminConsoleController
 {
+    [AllowAnonymous]
+    [HttpPost("/organizations/invite-link/status")]
+    public async Task<IResult> GetStatus([FromBody] GetOrganizationInviteLinkStatusRequestModel model)
+    {
+        var result = await getOrganizationInviteLinkStatusQuery.GetStatusAsync(model.Code);
+
+        return Handle(result, status =>
+            TypedResults.Ok(new OrganizationInviteLinkStatusResponseModel(
+                status.OrganizationName,
+                status.SeatsAvailable,
+                status.Sso is null
+                    ? null
+                    : new OrganizationInviteLinkSsoResponseModel(status.Sso.OrgSsoId, status.Sso.Required))));
+    }
+
     [HttpGet("")]
     [Authorize<ManageUsersRequirement>]
     public async Task<IResult> Get(Guid orgId)

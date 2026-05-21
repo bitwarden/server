@@ -60,7 +60,7 @@ public class ReinstateSubscriptionCommand(
                     }
                 });
 
-                await priceIncreaseScheduler.Schedule(subscription);
+                await priceIncreaseScheduler.SchedulePersonalPriceIncrease(subscription);
 
                 return new None();
             }
