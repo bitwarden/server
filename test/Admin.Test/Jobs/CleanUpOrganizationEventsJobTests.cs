@@ -135,7 +135,7 @@ public class CleanUpOrganizationEventsJobTests
     {
         Id = Guid.NewGuid(),
         OrganizationId = Guid.NewGuid(),
-        QueuedAt = DateTime.UtcNow,
+        CreationDate = DateTime.UtcNow,
     };
 
     private static IJobExecutionContext CreateContext(CancellationToken cancellationToken = default)

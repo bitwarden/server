@@ -4,8 +4,6 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Services;
-using Bit.Core.Dirt.Entities;
-using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -87,7 +85,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
         {
             Id = CoreHelpers.GenerateComb(),
             OrganizationId = organization.Id,
-            QueuedAt = DateTime.UtcNow,
+            CreationDate = DateTime.UtcNow,
         });
         await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
     }
