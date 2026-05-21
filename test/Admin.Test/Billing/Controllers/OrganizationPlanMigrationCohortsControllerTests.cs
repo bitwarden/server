@@ -19,13 +19,13 @@ using Stripe;
 
 namespace Admin.Test.Billing.Controllers;
 
-[ControllerCustomize(typeof(CohortsController))]
+[ControllerCustomize(typeof(OrganizationPlanMigrationCohortsController))]
 [SutProviderCustomize]
-public class CohortsControllerTests
+public class OrganizationPlanMigrationCohortsControllerTests
 {
     [Theory, BitAutoData]
     public async Task Index_ReturnsViewWithEmptyCohortsPagedModel(
-        SutProvider<CohortsController> sutProvider)
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
@@ -44,7 +44,7 @@ public class CohortsControllerTests
     [Theory, BitAutoData]
     public async Task Index_PassesRepoItemsThroughToModel(
         List<CohortListItem> repoItems,
-        SutProvider<CohortsController> sutProvider)
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
@@ -62,7 +62,7 @@ public class CohortsControllerTests
     [Theory, BitAutoData]
     public async Task Index_RowCarriesCohortName(
         CohortListItem repoItem,
-        SutProvider<CohortsController> sutProvider)
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
@@ -80,7 +80,7 @@ public class CohortsControllerTests
 
     [Theory, BitAutoData]
     public async Task Index_WithNameFilter_PassesNameToRepository(
-        SutProvider<CohortsController> sutProvider)
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
@@ -98,7 +98,7 @@ public class CohortsControllerTests
 
     [Theory, BitAutoData]
     public async Task Index_WithPage2_CalculatesSkipCorrectly(
-        SutProvider<CohortsController> sutProvider)
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
@@ -117,7 +117,7 @@ public class CohortsControllerTests
     [Theory, BitAutoData]
     public async Task Create_Post_ValidMigrationCohort_CreatesInactiveCohortAndRedirects(
         CohortFormModel model,
-        SutProvider<CohortsController> sutProvider)
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
@@ -145,7 +145,7 @@ public class CohortsControllerTests
     public async Task Create_Post_DuplicateName_AddsModelErrorOnName(
         CohortFormModel model,
         OrganizationPlanMigrationCohort existing,
-        SutProvider<CohortsController> sutProvider)
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
@@ -170,7 +170,7 @@ public class CohortsControllerTests
     [Theory, BitAutoData]
     public async Task Create_Post_StripeProactiveResourceMissing_AddsErrorOnProactiveField(
         CohortFormModel model,
-        SutProvider<CohortsController> sutProvider)
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
@@ -198,7 +198,7 @@ public class CohortsControllerTests
     [Theory, BitAutoData]
     public async Task Create_Post_StripeGenericFailure_AddsGenericErrorAndRejects(
         CohortFormModel model,
-        SutProvider<CohortsController> sutProvider)
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
@@ -225,7 +225,7 @@ public class CohortsControllerTests
     [Theory, BitAutoData]
     public async Task Create_Post_BothCouponsInvalid_FlagsBothFields(
         CohortFormModel model,
-        SutProvider<CohortsController> sutProvider)
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
@@ -249,7 +249,7 @@ public class CohortsControllerTests
     [Theory, BitAutoData]
     public async Task Edit_Get_ExistingId_PrefillsForm(
         OrganizationPlanMigrationCohort cohort,
-        SutProvider<CohortsController> sutProvider)
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
@@ -273,7 +273,7 @@ public class CohortsControllerTests
         Guid id,
         CohortFormModel model,
         OrganizationPlanMigrationCohort existing,
-        SutProvider<CohortsController> sutProvider)
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
@@ -312,7 +312,7 @@ public class CohortsControllerTests
         Guid id,
         CohortFormModel model,
         OrganizationPlanMigrationCohort existing,
-        SutProvider<CohortsController> sutProvider)
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
@@ -344,7 +344,7 @@ public class CohortsControllerTests
         Guid id,
         CohortFormModel model,
         OrganizationPlanMigrationCohort existing,
-        SutProvider<CohortsController> sutProvider)
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
@@ -369,7 +369,7 @@ public class CohortsControllerTests
     public async Task Delete_NonPendingAboveZero_RefusesAndRedirectsToEdit(
         Guid id,
         OrganizationPlanMigrationCohort cohort,
-        SutProvider<CohortsController> sutProvider)
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
@@ -388,7 +388,7 @@ public class CohortsControllerTests
         var result = await sutProvider.Sut.Delete(id);
 
         var redirect = Assert.IsType<RedirectToActionResult>(result);
-        Assert.Equal(nameof(CohortsController.Edit), redirect.ActionName);
+        Assert.Equal(nameof(OrganizationPlanMigrationCohortsController.Edit), redirect.ActionName);
         await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
             .DidNotReceive()
             .DeleteAsync(Arg.Any<OrganizationPlanMigrationCohort>());
@@ -398,7 +398,7 @@ public class CohortsControllerTests
     public async Task Delete_NoNonPending_DeletesAndRedirectsToIndex(
         Guid id,
         OrganizationPlanMigrationCohort cohort,
-        SutProvider<CohortsController> sutProvider)
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
@@ -417,7 +417,7 @@ public class CohortsControllerTests
         var result = await sutProvider.Sut.Delete(id);
 
         var redirect = Assert.IsType<RedirectToActionResult>(result);
-        Assert.Equal(nameof(CohortsController.Index), redirect.ActionName);
+        Assert.Equal(nameof(OrganizationPlanMigrationCohortsController.Index), redirect.ActionName);
         await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
             .Received(1).DeleteAsync(cohort);
     }
@@ -426,7 +426,7 @@ public class CohortsControllerTests
     public async Task Disable_FlipsIsActiveFalseAndNeverCallsStripe(
         Guid id,
         OrganizationPlanMigrationCohort cohort,
-        SutProvider<CohortsController> sutProvider)
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
@@ -453,7 +453,7 @@ public class CohortsControllerTests
     public async Task Enable_HappyPath_FlipsIsActiveTrueAndDoesNotCallStripeWhenCouponsNull(
         Guid id,
         OrganizationPlanMigrationCohort cohort,
-        SutProvider<CohortsController> sutProvider)
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
@@ -483,7 +483,7 @@ public class CohortsControllerTests
     public async Task Enable_StripeCouponMissing_DoesNotFlipIsActive(
         Guid id,
         OrganizationPlanMigrationCohort cohort,
-        SutProvider<CohortsController> sutProvider)
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
@@ -512,7 +512,7 @@ public class CohortsControllerTests
 
     [Theory, BitAutoData]
     public async Task Index_FeatureFlagDisabled_ReturnsNotFound(
-        SutProvider<CohortsController> sutProvider)
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)

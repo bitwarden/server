@@ -14,24 +14,24 @@ using Stripe;
 namespace Bit.Admin.Billing.Controllers;
 
 [Authorize]
-[Route("cohorts")]
-public class CohortsController(
+[Route("migration-cohorts")]
+public class OrganizationPlanMigrationCohortsController(
     IOrganizationPlanMigrationCohortRepository cohortRepository,
     IStripeAdapter stripeAdapter,
-    ILogger<CohortsController> logger,
+    ILogger<OrganizationPlanMigrationCohortsController> logger,
     IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
     IFeatureService featureService) : Controller
 {
-    private const int DefaultPageSize = 25;
+    private const int _defaultPageSize = 25;
 
-    private bool IsFeatureEnabled() =>
+    private bool PlanMigrationCohortsFeatureEnabled() =>
         featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration);
 
     [HttpGet("")]
     [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
-    public async Task<IActionResult> Index(string? name = null, int page = 1, int count = DefaultPageSize)
+    public async Task<IActionResult> Index(string? name = null, int page = 1, int count = _defaultPageSize)
     {
-        if (!IsFeatureEnabled()) return NotFound();
+        if (!PlanMigrationCohortsFeatureEnabled()) return NotFound();
 
         if (page < 1) page = 1;
         if (count < 1) count = 1;
@@ -52,7 +52,7 @@ public class CohortsController(
     [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
     public IActionResult Create()
     {
-        if (!IsFeatureEnabled()) return NotFound();
+        if (!PlanMigrationCohortsFeatureEnabled()) return NotFound();
 
         return View(new CohortFormModel());
     }
@@ -62,7 +62,7 @@ public class CohortsController(
     [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
     public async Task<IActionResult> Create(CohortFormModel model)
     {
-        if (!IsFeatureEnabled()) return NotFound();
+        if (!PlanMigrationCohortsFeatureEnabled()) return NotFound();
 
         if (!ModelState.IsValid)
         {
@@ -109,7 +109,7 @@ public class CohortsController(
     [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
     public async Task<IActionResult> Edit(Guid id)
     {
-        if (!IsFeatureEnabled()) return NotFound();
+        if (!PlanMigrationCohortsFeatureEnabled()) return NotFound();
 
         var cohort = await cohortRepository.GetByIdAsync(id);
         if (cohort == null) return NotFound();
@@ -124,7 +124,7 @@ public class CohortsController(
     [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
     public async Task<IActionResult> Edit(Guid id, CohortFormModel model)
     {
-        if (!IsFeatureEnabled()) return NotFound();
+        if (!PlanMigrationCohortsFeatureEnabled()) return NotFound();
 
         model.Id = id;
 
@@ -172,7 +172,7 @@ public class CohortsController(
     [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
     public async Task<IActionResult> Enable(Guid id)
     {
-        if (!IsFeatureEnabled()) return NotFound();
+        if (!PlanMigrationCohortsFeatureEnabled()) return NotFound();
 
         var cohort = await cohortRepository.GetByIdAsync(id);
         if (cohort == null) return NotFound();
@@ -205,7 +205,7 @@ public class CohortsController(
     [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
     public async Task<IActionResult> Disable(Guid id)
     {
-        if (!IsFeatureEnabled()) return NotFound();
+        if (!PlanMigrationCohortsFeatureEnabled()) return NotFound();
 
         var cohort = await cohortRepository.GetByIdAsync(id);
         if (cohort == null) return NotFound();
@@ -230,7 +230,7 @@ public class CohortsController(
     [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
     public async Task<IActionResult> Delete(Guid id)
     {
-        if (!IsFeatureEnabled()) return NotFound();
+        if (!PlanMigrationCohortsFeatureEnabled()) return NotFound();
 
         var cohort = await cohortRepository.GetByIdAsync(id);
         if (cohort == null) return NotFound();
