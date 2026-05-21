@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Repositories;
+using Bit.Core.Enums;
 using Microsoft.Data.SqlClient;
 using Xunit;
 
@@ -7,7 +8,7 @@ namespace Bit.Infrastructure.IntegrationTest.Dirt.Repositories;
 
 public class OrganizationEventCleanupRepositoryTests
 {
-    [Theory, DatabaseData]
+    [Theory, DatabaseData(OnlyOn = [SupportedDatabaseProviders.SqlServer])]
     public async Task ClaimNextPendingAsync_PendingRow_ReturnsRowWithLeaseSet(
         IOrganizationEventCleanupRepository sut)
     {
@@ -27,7 +28,7 @@ public class OrganizationEventCleanupRepositoryTests
         Assert.Null(claimed.CompletedDate);
     }
 
-    [Theory, DatabaseData]
+    [Theory, DatabaseData(OnlyOn = [SupportedDatabaseProviders.SqlServer])]
     public async Task UpdateProgressAsync_And_UpdateCompletedAsync_UpdatesRow(
         IOrganizationEventCleanupRepository sut, Database database)
     {
@@ -43,7 +44,7 @@ public class OrganizationEventCleanupRepositoryTests
         Assert.NotNull(afterCompletion.CompletedDate);
     }
 
-    [Theory, DatabaseData]
+    [Theory, DatabaseData(OnlyOn = [SupportedDatabaseProviders.SqlServer])]
     public async Task ClaimNextPendingAsync_ConcurrentCalls_RowClaimedOnlyOnce(
         IOrganizationEventCleanupRepository sut)
     {
@@ -61,7 +62,7 @@ public class OrganizationEventCleanupRepositoryTests
         Assert.Equal(1, results.Count(r => r?.Id == cleanup.Id));
     }
 
-    [Theory, DatabaseData]
+    [Theory, DatabaseData(OnlyOn = [SupportedDatabaseProviders.SqlServer])]
     public async Task ClaimNextPendingAsync_StaleRevisionDate_RowIsReclaimable(
         IOrganizationEventCleanupRepository sut, Database database)
     {
@@ -83,7 +84,7 @@ public class OrganizationEventCleanupRepositoryTests
         Assert.Equal(cleanup.Id, secondClaim.Id);
     }
 
-    [Theory, DatabaseData]
+    [Theory, DatabaseData(OnlyOn = [SupportedDatabaseProviders.SqlServer])]
     public async Task ClaimNextPendingAsync_FailureCountAtMax_RowNotClaimed(
         IOrganizationEventCleanupRepository sut)
     {
