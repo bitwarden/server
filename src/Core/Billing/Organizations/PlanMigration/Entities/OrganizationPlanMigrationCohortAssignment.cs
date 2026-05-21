@@ -41,6 +41,9 @@ public class OrganizationPlanMigrationCohortAssignment : ITableObject<Guid>
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
 
+    public bool IsLocked() =>
+        MigratedDate.HasValue || ScheduledDate.HasValue || ChurnDiscountAppliedDate.HasValue;
+
     public void SetNewId()
     {
         if (Id == default)
