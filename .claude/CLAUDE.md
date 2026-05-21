@@ -11,17 +11,11 @@
 ## Critical Rules
 
 - **NEVER** use code regions: If complexity suggests regions, refactor for better readability
-
 - **NEVER** compromise zero-knowledge principles: User vault data must remain encrypted and inaccessible to Bitwarden
-
 - **NEVER** log or expose sensitive data: No PII, passwords, keys, or vault data in logs or error messages
-
 - **ALWAYS** use secure communication channels: Enforce confidentiality, integrity, and authenticity
-
 - **ALWAYS** encrypt sensitive data: All vault data must be encrypted at rest, in transit, and in use
-
 - **ALWAYS** prioritize cryptographic integrity and data protection
-
 - **ALWAYS** add unit tests (with mocking) for any new feature development
 
 ## Project Structure
@@ -65,6 +59,41 @@
 - Authorization patterns (ADR 0022)
 - OpenTelemetry for observability (ADR 0020)
 - Log to standard output (ADR 0021)
+
+## Migrations
+
+We use two different database providers, Dapper for SQL Server and Entity Framework for SQLite, MySQL and Postgres. When
+a schema change lands it must be reflected in BOTH tracks (Dapper/MSSQL and EF). Skipping either silently breaks one of
+the four supported databases.
+
+### Dapper
+
+We maintain an SSDT project at `src/Sql/dbo/` (current state of the database) and hand-written dated migrations
+under `util/Migrator/DbScripts/`. Every schema change updates both. Apply locally with `pwsh dev/migrate.ps1`.
+
+See:
+
+- https://contributing.bitwarden.com/contributing/database-migrations/mssql — how to write migrations.
+- https://contributing.bitwarden.com/contributing/code-style/sql — SQL code style (file naming, `IF COL_LENGTH`
+  guards, `CREATE OR ALTER`, etc.).
+
+### EF
+
+EF migrations under `util/{Postgres,MySql,Sqlite}Migrations/` are auto-generated from the EF entity classes in
+`src/Infrastructure.EntityFramework/`. Update the entity first, then generate.
+
+You MAY NEVER hand-write a migration `.cs` file or its `.Designer.cs` snapshot. Always:
+
+1. Start MySQL — the design-time factory probes the live server for its version:
+   ```
+   docker compose --profile mysql up -d
+   ```
+2. Generate migrations for all three providers and refresh each `DatabaseContextModelSnapshot.cs`:
+   ```
+   pwsh dev/ef_migrate.ps1 <MigrationName>
+   ```
+
+To regenerate just one provider: `dotnet ef migrations add <Name> -s util/MySqlMigrations`.
 
 ## References
 
