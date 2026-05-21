@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Text.Json;
 using Bit.Api.Models.Response;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -25,6 +26,24 @@ public class CollectionResponseModel : ResponseModel
         ExternalId = collection.ExternalId;
         Type = collection.Type;
         DefaultUserCollectionEmail = collection.DefaultUserCollectionEmail;
+        LeasingEnabled = collection.LeasingEnabled;
+        LeasingPolicy = TryParsePolicy(collection.LeasingPolicy);
+    }
+
+    private static JsonElement? TryParsePolicy(string policyJson)
+    {
+        if (string.IsNullOrEmpty(policyJson))
+        {
+            return null;
+        }
+        try
+        {
+            return JsonDocument.Parse(policyJson).RootElement;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     public Guid Id { get; set; }
@@ -33,6 +52,8 @@ public class CollectionResponseModel : ResponseModel
     public string ExternalId { get; set; }
     public CollectionType Type { get; set; }
     public string DefaultUserCollectionEmail { get; set; }
+    public bool LeasingEnabled { get; set; }
+    public JsonElement? LeasingPolicy { get; set; }
 }
 
 /// <summary>

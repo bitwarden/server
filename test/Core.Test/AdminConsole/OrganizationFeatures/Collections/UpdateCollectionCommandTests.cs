@@ -4,6 +4,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
+using Bit.Core.PrivilegedAccessManagement.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture;
@@ -321,6 +322,79 @@ public class UpdateCollectionCommandTests
         await sutProvider.GetDependency<ICollectionRepository>()
             .Received(1)
             .ReplaceAsync(collection, null, null);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_PamFlagOff_ClearsLeasingFields(
+        Organization organization, Collection collection)
+    {
+        var sutProvider = SetupSutProvider();
+        organization.AllowAdminAccessToAllCollectionItems = true;
+        collection.LeasingEnabled = true;
+        collection.LeasingPolicy = """{"kind":"human_approval"}""";
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.Pam)
+            .Returns(false);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        await sutProvider.Sut.UpdateAsync(collection, null, null);
+
+        Assert.False(collection.LeasingEnabled);
+        Assert.Null(collection.LeasingPolicy);
+        sutProvider.GetDependency<ILeasingPolicyValidator>()
+            .DidNotReceiveWithAnyArgs()
+            .Validate(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_PamFlagOn_InvalidPolicy_ThrowsBadRequest(
+        Organization organization, Collection collection)
+    {
+        var sutProvider = SetupSutProvider();
+        organization.AllowAdminAccessToAllCollectionItems = true;
+        collection.LeasingEnabled = true;
+        collection.LeasingPolicy = """{"kind":"bogus"}""";
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.Pam)
+            .Returns(true);
+        sutProvider.GetDependency<ILeasingPolicyValidator>()
+            .Validate(collection.LeasingPolicy)
+            .Returns(LeasingPolicyValidationResult.Invalid("Unsupported policy kind"));
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateAsync(collection, null, null));
+        Assert.Equal("Unsupported policy kind", ex.Message);
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_PamFlagOn_ValidPolicy_RetainsLeasingFields(
+        Organization organization, Collection collection)
+    {
+        var sutProvider = SetupSutProvider();
+        organization.AllowAdminAccessToAllCollectionItems = true;
+        collection.LeasingEnabled = true;
+        collection.LeasingPolicy = """{"kind":"human_approval"}""";
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.Pam)
+            .Returns(true);
+        sutProvider.GetDependency<ILeasingPolicyValidator>()
+            .Validate(collection.LeasingPolicy)
+            .Returns(LeasingPolicyValidationResult.Valid);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        await sutProvider.Sut.UpdateAsync(collection, null, null);
+
+        Assert.True(collection.LeasingEnabled);
+        Assert.Equal("""{"kind":"human_approval"}""", collection.LeasingPolicy);
     }
 
     private static SutProvider<UpdateCollectionCommand> SetupSutProvider()

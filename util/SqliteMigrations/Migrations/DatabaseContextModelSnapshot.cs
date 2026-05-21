@@ -79,6 +79,12 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("LeasingEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LeasingPolicy")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");

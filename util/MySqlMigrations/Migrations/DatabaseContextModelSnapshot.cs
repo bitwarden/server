@@ -84,6 +84,12 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("varchar(300)");
 
+                    b.Property<bool>("LeasingEnabled")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("LeasingPolicy")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("longtext");

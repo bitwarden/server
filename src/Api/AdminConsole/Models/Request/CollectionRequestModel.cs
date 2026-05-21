@@ -2,6 +2,7 @@
 #nullable disable
 
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Bit.Api.Models.Request;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
@@ -18,6 +19,8 @@ public class CreateCollectionRequestModel
     public string ExternalId { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Groups { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Users { get; set; }
+    public bool LeasingEnabled { get; set; }
+    public object LeasingPolicy { get; set; }
 
     public Collection ToCollection(Guid orgId)
     {
@@ -31,8 +34,18 @@ public class CreateCollectionRequestModel
     {
         existingCollection.Name = Name;
         existingCollection.ExternalId = ExternalId;
+        existingCollection.LeasingEnabled = LeasingEnabled;
+        existingCollection.LeasingPolicy = SerializeLeasingPolicy(LeasingPolicy);
         return existingCollection;
     }
+
+    protected static string SerializeLeasingPolicy(object policy) => policy switch
+    {
+        null => null,
+        JsonElement je when je.ValueKind == JsonValueKind.Null => null,
+        JsonElement je => je.GetRawText(),
+        _ => JsonSerializer.Serialize(policy),
+    };
 }
 
 public class CollectionBulkDeleteRequestModel
@@ -65,6 +78,8 @@ public class UpdateCollectionRequestModel : CreateCollectionRequestModel
             existingCollection.Name = Name;
         }
         existingCollection.ExternalId = ExternalId;
+        existingCollection.LeasingEnabled = LeasingEnabled;
+        existingCollection.LeasingPolicy = SerializeLeasingPolicy(LeasingPolicy);
         return existingCollection;
     }
 

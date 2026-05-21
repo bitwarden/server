@@ -6,7 +6,9 @@
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @DefaultUserCollectionEmail NVARCHAR(256) = NULL,
-    @Type TINYINT = 0
+    @Type TINYINT = 0,
+    @LeasingEnabled BIT = 0,
+    @LeasingPolicy NVARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -20,7 +22,9 @@ BEGIN
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
         [DefaultUserCollectionEmail] = @DefaultUserCollectionEmail,
-        [Type] = @Type
+        [Type] = @Type,
+        [LeasingEnabled] = @LeasingEnabled,
+        [LeasingPolicy] = @LeasingPolicy
     WHERE
         [Id] = @Id
 
