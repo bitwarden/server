@@ -65,7 +65,8 @@ public class UpgradePremiumToOrganizationCommand(
     IBraintreeService braintreeService,
     IGetPaymentMethodQuery getPaymentMethodQuery,
     IApplicationCacheService applicationCacheService,
-    IPushNotificationService pushNotificationService)
+    IPushNotificationService pushNotificationService,
+    IFeatureService featureService)
     : BaseBillingCommand<UpgradePremiumToOrganizationCommand>(logger), IUpgradePremiumToOrganizationCommand
 {
     private readonly ILogger<UpgradePremiumToOrganizationCommand> _logger = logger;
@@ -128,16 +129,21 @@ public class UpgradePremiumToOrganizationCommand(
             organizationId, user, organizationName, publicKey, encryptedPrivateKey, targetPlan, currentSubscription.Id);
 
         // Update customer billing address for tax calculation
-        var customer = await stripeAdapter.UpdateCustomerAsync(user.GatewayCustomerId,
-            new CustomerUpdateOptions
+        var addressUpdateOptions = new CustomerUpdateOptions
+        {
+            Address = new AddressOptions
             {
-                Address = new AddressOptions
-                {
-                    Country = billingAddress.Country,
-                    PostalCode = billingAddress.PostalCode
-                },
-                TaxExempt = TaxHelpers.DetermineTaxExemptStatus(billingAddress.Country),
-            });
+                Country = billingAddress.Country,
+                PostalCode = billingAddress.PostalCode
+            }
+        };
+
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
+        {
+            addressUpdateOptions.TaxExempt = TaxHelpers.DetermineTaxExemptStatus(billingAddress.Country);
+        }
+
+        var customer = await stripeAdapter.UpdateCustomerAsync(user.GatewayCustomerId, addressUpdateOptions);
 
         // Add tax ID to the customer for accurate tax calculation if provided
         if (billingAddress.TaxId != null)

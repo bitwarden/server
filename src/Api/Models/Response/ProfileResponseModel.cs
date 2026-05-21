@@ -21,7 +21,8 @@ public class ProfileResponseModel : ResponseModel
         IEnumerable<ProviderUserOrganizationDetails> providerUserOrganizationDetails,
         bool twoFactorEnabled,
         bool premiumFromOrganization,
-        IEnumerable<Guid> organizationIdsClaimingUser) : base("profile")
+        IEnumerable<Guid> organizationIdsClaimingUser,
+        IEnumerable<OrganizationUserOrganizationDetails> organizationsUserDetailsNew = null) : base("profile")
     {
         if (user == null)
         {
@@ -46,6 +47,7 @@ public class ProfileResponseModel : ResponseModel
         CreationDate = user.CreationDate;
         VerifyDevices = user.VerifyDevices;
         Organizations = organizationsUserDetails?.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsClaimingUser));
+        OrganizationsNew = organizationsUserDetailsNew?.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsClaimingUser));
         Providers = providerUserDetails?.Select(p => new ProfileProviderResponseModel(p));
         ProviderOrganizations =
             providerUserOrganizationDetails?.Select(po => new ProfileProviderOrganizationResponseModel(po));
@@ -74,6 +76,12 @@ public class ProfileResponseModel : ResponseModel
     public DateTime CreationDate { get; set; }
     public bool VerifyDevices { get; set; }
     public IEnumerable<ProfileOrganizationResponseModel> Organizations { get; set; }
+    /// <summary>
+    /// Organizations where the user is in the Confirmed or Accepted status.
+    /// Null when the <c>pm-34145-policies-in-accepted-state</c> feature flag is disabled.
+    /// New clients should prefer this property and fall back to <see cref="Organizations"/> if absent.
+    /// </summary>
+    public IEnumerable<ProfileOrganizationResponseModel> OrganizationsNew { get; set; }
     public IEnumerable<ProfileProviderResponseModel> Providers { get; set; }
     public IEnumerable<ProfileProviderOrganizationResponseModel> ProviderOrganizations { get; set; }
 }
