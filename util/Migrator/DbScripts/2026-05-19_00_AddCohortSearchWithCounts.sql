@@ -8,7 +8,7 @@ BEGIN
 
     SELECT
         COALESCE(SUM(CASE
-            WHEN C.[MigrationPathId] IS NOT NULL AND A.[ScheduledDate] IS NULL THEN 1
+            WHEN C.[MigrationPathId] IS NOT NULL AND A.[Id] IS NOT NULL AND A.[ScheduledDate] IS NULL THEN 1
             WHEN C.[MigrationPathId] IS NULL AND A.[Id] IS NOT NULL AND A.[ChurnDiscountAppliedDate] IS NULL THEN 1
             ELSE 0
         END), 0) AS [Pending],

@@ -220,4 +220,22 @@ public class OrganizationPlanMigrationCohortRepositoryTests
 
         await repository.DeleteAsync(cohort);
     }
+
+    [Theory, DatabaseData]
+    public async Task SearchWithCountsAsync_MigrationCohortWithNoAssignments_ReturnsZeroCounts(
+        IOrganizationPlanMigrationCohortRepository repository)
+    {
+        var uniqueName = $"empty-mig-{Guid.NewGuid()}";
+        var cohort = await repository.CreateAsync(CreateTestCohort(
+            name: uniqueName,
+            migrationPathId: MigrationPaths.Enterprise2020AnnualToCurrent.Id));
+
+        var row = (await repository.SearchWithCountsAsync(uniqueName, 0, 25)).Single();
+
+        Assert.Equal(0, row.Pending);
+        Assert.Equal(0, row.Scheduled);
+        Assert.Equal(0, row.Migrated);
+
+        await repository.DeleteAsync(cohort);
+    }
 }
