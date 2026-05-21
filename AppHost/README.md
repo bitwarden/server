@@ -1,15 +1,15 @@
 # Aspire AppHost
 
-.NET Aspire orchestrates the entire Bitwarden server local development environment — SQL Server,
-Azure Storage (Azurite), MailCatcher, and all five application services — from a single command,
-replacing the manual docker-compose workflow.
+.NET Aspire orchestrates the entire Bitwarden server local development environment — supporting
+infrastructure and the Bitwarden application services — from a single command, replacing the
+manual docker-compose workflow.
 
 ## Prerequisites
 
 | Requirement            | Notes                                                                                                                            |
 |------------------------|----------------------------------------------------------------------------------------------------------------------------------|
 | .NET SDK 10            | Required by Aspire                                                                                                               |
-| Docker Desktop         | Runs SQL Server, Azurite, and MailCatcher containers                                                                             |
+| Docker Desktop         | Runs the supporting infrastructure containers                                                                                    |
 | PowerShell (`pwsh`)    | Used by migration and secrets scripts                                                                                            |
 | Completed server setup | `dev/secrets.json` must exist — follow the [setup guide](https://contributing.bitwarden.com/getting-started/server/guide/) first |
 
@@ -33,11 +33,18 @@ the services wait for the database and secrets setup to finish before launching.
 | `azurite`           | Azure Storage emulator    | Blob :10000 · Queue :10001 · Table :10002                                 |
 | `azurite-setup`     | Executable                | Runs `dev/setup_azurite.ps1` after Azurite is ready                       |
 | `mailcatcher`       | Container                 | SMTP :10250 · Web UI :1080                                                |
+| `redis`             | Container                 | Redis with AOF persistence, port 6379                                     |
+| `idp`               | SimpleSAMLphp container   | SAML IdP for SSO testing (**explicit start** from the dashboard)          |
 | `admin`             | .NET project              | Admin portal                                                              |
 | `api`               | .NET project              | Main API (waits for Azurite)                                              |
 | `billing`           | .NET project              | Billing service                                                           |
+| `events`            | .NET project              | Events service (waits for Azurite)                                        |
+| `eventsProcessor`   | .NET project              | Events processor (waits for Azurite)                                      |
+| `icons`             | .NET project              | Icons service                                                             |
 | `identity`          | .NET project              | Identity / auth service                                                   |
 | `notifications`     | .NET project              | Notifications service (waits for Azurite)                                 |
+| `scim`              | .NET project              | SCIM provisioning service                                                 |
+| `sso`               | .NET project              | SSO service                                                               |
 
 ## Configuration
 
