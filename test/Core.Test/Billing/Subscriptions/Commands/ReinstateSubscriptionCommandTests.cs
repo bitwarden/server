@@ -118,7 +118,7 @@ public class ReinstateSubscriptionCommandTests
             Arg.Is<SubscriptionUpdateOptions>(o =>
                 o.CancelAtPeriodEnd == false &&
                 o.Metadata[MetadataKeys.CancelledDuringDeferredPriceIncrease] == ""));
-        await _priceIncreaseScheduler.Received(1).Schedule(Arg.Any<Subscription>());
+        await _priceIncreaseScheduler.Received(1).SchedulePersonalPriceIncrease(Arg.Any<Subscription>());
     }
 
     [Fact]

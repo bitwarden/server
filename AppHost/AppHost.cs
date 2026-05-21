@@ -9,14 +9,16 @@ builder.ConfigureMigrations()
     .WaitForCompletion(secretsSetup);
 var azurite = builder.ConfigureAzurite();
 var mail = builder.ConfigureMailCatcher();
-var (_, api, billing, _, _) = builder.ConfigureServices(db, secretsSetup, mail, azurite);
+builder.ConfigureRedis();
+builder.ConfigureIdp();
+var services = builder.ConfigureServices(db, secretsSetup, mail, azurite);
 
 #if ENABLE_NODEJS_COMMUNITY_PLUGIN
-builder.ConfigureWebFrontend(api);
+builder.ConfigureWebFrontend(services["api"]);
 #endif
 
 #if ENABLE_NGROK_COMMUNITY_PLUGIN
-builder.ConfigureNgrok((billing, "http"));
+builder.ConfigureNgrok((services["billing"], "http"));
 #endif
 
 builder.Build().Run();
