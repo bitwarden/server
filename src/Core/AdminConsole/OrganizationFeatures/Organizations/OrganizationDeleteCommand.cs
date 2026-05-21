@@ -8,7 +8,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Services;
-using Bit.Core.Utilities;
 using Bit.Core.Vault.Services;
 using Microsoft.Extensions.Logging;
 
@@ -83,9 +82,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
         await _organizationRepository.DeleteAsync(organization);
         await _organizationEventCleanupRepository.CreateAsync(new OrganizationEventCleanup
         {
-            Id = CoreHelpers.GenerateComb(),
             OrganizationId = organization.Id,
-            CreationDate = DateTime.UtcNow,
         });
         await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
     }
