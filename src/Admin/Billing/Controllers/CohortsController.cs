@@ -98,6 +98,7 @@ public class CohortsController(
         if (cohort == null) return NotFound();
 
         ViewData["CohortType"] = CohortType.From(cohort.MigrationPathId);
+        ViewData["IsActive"] = cohort.IsActive;
         return View(ToFormModel(cohort));
     }
 
@@ -112,6 +113,7 @@ public class CohortsController(
         if (cohort == null) return NotFound();
 
         ViewData["CohortType"] = CohortType.From(cohort.MigrationPathId);
+        ViewData["IsActive"] = cohort.IsActive;
 
         if (!ModelState.IsValid) return View(model);
 
@@ -143,6 +145,60 @@ public class CohortsController(
             logger.LogError(ex, "Error updating cohort. Id: {Id}", id);
             ModelState.AddModelError(string.Empty, "An error occurred while saving the cohort.");
             return View(model);
+        }
+    }
+
+    [HttpPost("{id:guid}/enable")]
+    [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
+    public async Task<IActionResult> Enable(Guid id)
+    {
+        var cohort = await cohortRepository.GetByIdAsync(id);
+        if (cohort == null) return NotFound();
+
+        try
+        {
+            var formModel = ToFormModel(cohort);
+            if (!await ValidateCouponsAsync(formModel))
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                TempData["Error"] = "Cannot enable cohort: " + string.Join(" ", errors);
+                return RedirectToAction(nameof(Edit), new { id });
+            }
+
+            await cohortRepository.UpdateIsActiveAsync(id, true);
+
+            TempData["Success"] = $"Cohort '{cohort.Name}' enabled.";
+            return RedirectToAction(nameof(Edit), new { id });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error enabling cohort. Id: {Id}", id);
+            TempData["Error"] = "An error occurred while enabling the cohort.";
+            return RedirectToAction(nameof(Edit), new { id });
+        }
+    }
+
+    [HttpPost("{id:guid}/disable")]
+    [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
+    public async Task<IActionResult> Disable(Guid id)
+    {
+        var cohort = await cohortRepository.GetByIdAsync(id);
+        if (cohort == null) return NotFound();
+
+        try
+        {
+            await cohortRepository.UpdateIsActiveAsync(id, false);
+
+            TempData["Success"] = $"Cohort '{cohort.Name}' disabled.";
+            return RedirectToAction(nameof(Edit), new { id });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error disabling cohort. Id: {Id}", id);
+            TempData["Error"] = "An error occurred while disabling the cohort.";
+            return RedirectToAction(nameof(Edit), new { id });
         }
     }
 

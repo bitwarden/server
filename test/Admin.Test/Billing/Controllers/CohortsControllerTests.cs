@@ -371,4 +371,83 @@ public class CohortsControllerTests
         await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
             .Received(1).DeleteAsync(cohort);
     }
+
+    [Theory, BitAutoData]
+    public async Task Disable_FlipsIsActiveFalseAndNeverCallsStripe(
+        Guid id,
+        OrganizationPlanMigrationCohort cohort,
+        SutProvider<CohortsController> sutProvider)
+    {
+        cohort.Id = id;
+        cohort.IsActive = true;
+
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(id).Returns(cohort);
+
+        sutProvider.Sut.TempData = new TempDataDictionary(
+            new DefaultHttpContext(),
+            Substitute.For<ITempDataProvider>());
+
+        await sutProvider.Sut.Disable(id);
+
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .Received(1).UpdateIsActiveAsync(id, false);
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .DidNotReceive().GetCouponAsync(Arg.Any<string>(), Arg.Any<CouponGetOptions?>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Enable_HappyPath_FlipsIsActiveTrueAndDoesNotCallStripeWhenCouponsNull(
+        Guid id,
+        OrganizationPlanMigrationCohort cohort,
+        SutProvider<CohortsController> sutProvider)
+    {
+        cohort.Id = id;
+        cohort.IsActive = false;
+        cohort.MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent;
+        cohort.ProactiveDiscountCouponCode = null;
+        cohort.ChurnDiscountCouponCode = null;
+
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(id).Returns(cohort);
+
+        sutProvider.Sut.TempData = new TempDataDictionary(
+            new DefaultHttpContext(),
+            Substitute.For<ITempDataProvider>());
+
+        await sutProvider.Sut.Enable(id);
+
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .Received(1).UpdateIsActiveAsync(id, true);
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .DidNotReceive().GetCouponAsync(Arg.Any<string>(), Arg.Any<CouponGetOptions?>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Enable_StripeCouponMissing_DoesNotFlipIsActive(
+        Guid id,
+        OrganizationPlanMigrationCohort cohort,
+        SutProvider<CohortsController> sutProvider)
+    {
+        cohort.Id = id;
+        cohort.IsActive = false;
+        cohort.MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent;
+        cohort.ProactiveDiscountCouponCode = "STALE";
+        cohort.ChurnDiscountCouponCode = null;
+
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(id).Returns(cohort);
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetCouponAsync("STALE", Arg.Any<CouponGetOptions?>())
+            .ThrowsAsync(new StripeException { StripeError = new StripeError { Code = "resource_missing" } });
+
+        sutProvider.Sut.TempData = new TempDataDictionary(
+            new DefaultHttpContext(),
+            Substitute.For<ITempDataProvider>());
+
+        await sutProvider.Sut.Enable(id);
+
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .DidNotReceive().UpdateIsActiveAsync(Arg.Any<Guid>(), Arg.Any<bool>());
+    }
 }

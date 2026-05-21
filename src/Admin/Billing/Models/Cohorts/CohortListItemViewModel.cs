@@ -9,6 +9,7 @@ public class CohortListItemViewModel
     public string Name { get; set; } = string.Empty;
     public CohortType CohortType { get; set; } = new CohortType.ChurnOnly();
     public bool IsChurnOnly => CohortType is CohortType.ChurnOnly;
+    public bool IsActive { get; set; }
     public int Pending { get; set; }
     public int Scheduled { get; set; }
     public int Migrated { get; set; }
@@ -18,6 +19,7 @@ public class CohortListItemViewModel
         Id = item.Cohort.Id,
         Name = item.Cohort.Name,
         CohortType = CohortType.From(item.Cohort.MigrationPathId),
+        IsActive = item.Cohort.IsActive,
         Pending = item.Pending,
         Scheduled = item.Scheduled,
         Migrated = item.Migrated,

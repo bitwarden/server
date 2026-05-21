@@ -262,4 +262,35 @@ public class OrganizationPlanMigrationCohortRepositoryTests
 
         Assert.Null(result);
     }
+
+    [Theory, DatabaseData]
+    public async Task UpdateIsActiveAsync_FalseToTrue_FlipsAndBumpsRevisionDate(
+        IOrganizationPlanMigrationCohortRepository repository)
+    {
+        var cohort = await repository.CreateAsync(CreateTestCohort(isActive: false));
+        var baseline = (await repository.GetByIdAsync(cohort.Id))!.RevisionDate;
+
+        await Task.Delay(10, TestContext.Current.CancellationToken);
+        await repository.UpdateIsActiveAsync(cohort.Id, true);
+
+        var result = await repository.GetByIdAsync(cohort.Id);
+        Assert.True(result!.IsActive);
+        Assert.True(result.RevisionDate > baseline);
+
+        await repository.DeleteAsync(result);
+    }
+
+    [Theory, DatabaseData]
+    public async Task UpdateIsActiveAsync_TrueToFalse_Flips(
+        IOrganizationPlanMigrationCohortRepository repository)
+    {
+        var cohort = await repository.CreateAsync(CreateTestCohort(isActive: true));
+
+        await repository.UpdateIsActiveAsync(cohort.Id, false);
+
+        var result = await repository.GetByIdAsync(cohort.Id);
+        Assert.False(result!.IsActive);
+
+        await repository.DeleteAsync(result);
+    }
 }

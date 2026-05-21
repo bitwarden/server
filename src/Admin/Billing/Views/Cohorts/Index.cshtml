@@ -32,6 +32,7 @@
                 <tr>
                     <th>Name</th>
                     <th>Migration Path</th>
+                    <th>Active</th>
                     <th class="text-end">Pending</th>
                     <th class="text-end">Scheduled</th>
                     <th class="text-end">Migrated</th>
@@ -54,6 +55,16 @@
                             case CohortType.UnresolvedMigration unresolved:
                                 <span class="text-warning">Unresolved migration #@unresolved.Id</span>
                                 break;
+                        }
+                    </td>
+                    <td>
+                        @if (row.IsActive)
+                        {
+                            <span class="badge bg-success"><i class="fa fa-check"></i> Active</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Inactive</span>
                         }
                     </td>
                     <td class="text-end">@row.Pending.ToString("N0")</td>
