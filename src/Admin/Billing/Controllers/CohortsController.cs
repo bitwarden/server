@@ -1,10 +1,12 @@
 using Bit.Admin.Billing.Models.Cohorts;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
+using Bit.Core;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Services;
+using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Stripe;
@@ -17,14 +19,20 @@ public class CohortsController(
     IOrganizationPlanMigrationCohortRepository cohortRepository,
     IStripeAdapter stripeAdapter,
     ILogger<CohortsController> logger,
-    IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository) : Controller
+    IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
+    IFeatureService featureService) : Controller
 {
     private const int DefaultPageSize = 25;
+
+    private bool IsFeatureEnabled() =>
+        featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration);
 
     [HttpGet("")]
     [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
     public async Task<IActionResult> Index(string? name = null, int page = 1, int count = DefaultPageSize)
     {
+        if (!IsFeatureEnabled()) return NotFound();
+
         if (page < 1) page = 1;
         if (count < 1) count = 1;
         var skip = (page - 1) * count;
@@ -42,13 +50,20 @@ public class CohortsController(
 
     [HttpGet("create")]
     [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
-    public IActionResult Create() => View(new CohortFormModel());
+    public IActionResult Create()
+    {
+        if (!IsFeatureEnabled()) return NotFound();
+
+        return View(new CohortFormModel());
+    }
 
     [HttpPost("create")]
     [ValidateAntiForgeryToken]
     [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
     public async Task<IActionResult> Create(CohortFormModel model)
     {
+        if (!IsFeatureEnabled()) return NotFound();
+
         if (!ModelState.IsValid)
         {
             return View(model);
@@ -94,6 +109,8 @@ public class CohortsController(
     [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
     public async Task<IActionResult> Edit(Guid id)
     {
+        if (!IsFeatureEnabled()) return NotFound();
+
         var cohort = await cohortRepository.GetByIdAsync(id);
         if (cohort == null) return NotFound();
 
@@ -107,6 +124,8 @@ public class CohortsController(
     [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
     public async Task<IActionResult> Edit(Guid id, CohortFormModel model)
     {
+        if (!IsFeatureEnabled()) return NotFound();
+
         model.Id = id;
 
         var cohort = await cohortRepository.GetByIdAsync(id);
@@ -153,6 +172,8 @@ public class CohortsController(
     [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
     public async Task<IActionResult> Enable(Guid id)
     {
+        if (!IsFeatureEnabled()) return NotFound();
+
         var cohort = await cohortRepository.GetByIdAsync(id);
         if (cohort == null) return NotFound();
 
@@ -184,6 +205,8 @@ public class CohortsController(
     [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
     public async Task<IActionResult> Disable(Guid id)
     {
+        if (!IsFeatureEnabled()) return NotFound();
+
         var cohort = await cohortRepository.GetByIdAsync(id);
         if (cohort == null) return NotFound();
 
@@ -207,6 +230,8 @@ public class CohortsController(
     [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
     public async Task<IActionResult> Delete(Guid id)
     {
+        if (!IsFeatureEnabled()) return NotFound();
+
         var cohort = await cohortRepository.GetByIdAsync(id);
         if (cohort == null) return NotFound();
 

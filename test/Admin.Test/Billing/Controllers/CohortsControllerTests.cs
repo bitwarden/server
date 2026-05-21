@@ -1,11 +1,13 @@
 using Bit.Admin.Billing.Controllers;
 using Bit.Admin.Billing.Models.Cohorts;
+using Bit.Core;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Services;
+using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http;
@@ -25,6 +27,9 @@ public class CohortsControllerTests
     public async Task Index_ReturnsViewWithEmptyCohortsPagedModel(
         SutProvider<CohortsController> sutProvider)
     {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
             .SearchWithCountsAsync(null, 0, 25)
             .Returns(Array.Empty<CohortListItem>());
@@ -41,6 +46,9 @@ public class CohortsControllerTests
         List<CohortListItem> repoItems,
         SutProvider<CohortsController> sutProvider)
     {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
             .SearchWithCountsAsync(null, 0, 25)
             .Returns(repoItems);
@@ -56,6 +64,9 @@ public class CohortsControllerTests
         CohortListItem repoItem,
         SutProvider<CohortsController> sutProvider)
     {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
             .SearchWithCountsAsync(null, 0, 25)
             .Returns(new[] { repoItem });
@@ -71,6 +82,9 @@ public class CohortsControllerTests
     public async Task Index_WithNameFilter_PassesNameToRepository(
         SutProvider<CohortsController> sutProvider)
     {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
             .SearchWithCountsAsync("alpha", 0, 25)
             .Returns(Array.Empty<CohortListItem>());
@@ -86,6 +100,9 @@ public class CohortsControllerTests
     public async Task Index_WithPage2_CalculatesSkipCorrectly(
         SutProvider<CohortsController> sutProvider)
     {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
             .SearchWithCountsAsync(null, 25, 25)
             .Returns(Array.Empty<CohortListItem>());
@@ -102,6 +119,9 @@ public class CohortsControllerTests
         CohortFormModel model,
         SutProvider<CohortsController> sutProvider)
     {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
         model.MigrationPathSelection = "1";
         model.ProactiveDiscountCouponCode = null;
         model.ChurnDiscountCouponCode = null;
@@ -127,6 +147,9 @@ public class CohortsControllerTests
         OrganizationPlanMigrationCohort existing,
         SutProvider<CohortsController> sutProvider)
     {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
         model.MigrationPathSelection = "1";
         model.ProactiveDiscountCouponCode = null;
         model.ChurnDiscountCouponCode = null;
@@ -149,6 +172,9 @@ public class CohortsControllerTests
         CohortFormModel model,
         SutProvider<CohortsController> sutProvider)
     {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
         model.MigrationPathSelection = "1";
         model.ProactiveDiscountCouponCode = "BAD-CODE";
         model.ChurnDiscountCouponCode = null;
@@ -174,6 +200,9 @@ public class CohortsControllerTests
         CohortFormModel model,
         SutProvider<CohortsController> sutProvider)
     {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
         model.MigrationPathSelection = "1";
         model.ProactiveDiscountCouponCode = "FOO";
         model.ChurnDiscountCouponCode = null;
@@ -198,6 +227,9 @@ public class CohortsControllerTests
         CohortFormModel model,
         SutProvider<CohortsController> sutProvider)
     {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
         model.MigrationPathSelection = "1";
         model.ProactiveDiscountCouponCode = "BAD-P";
         model.ChurnDiscountCouponCode = "BAD-C";
@@ -219,6 +251,9 @@ public class CohortsControllerTests
         OrganizationPlanMigrationCohort cohort,
         SutProvider<CohortsController> sutProvider)
     {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
         cohort.MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent;
 
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
@@ -240,6 +275,9 @@ public class CohortsControllerTests
         OrganizationPlanMigrationCohort existing,
         SutProvider<CohortsController> sutProvider)
     {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
         existing.Id = id;
         existing.RevisionDate = DateTime.UtcNow.AddDays(-1);
         model.Id = id;
@@ -276,6 +314,9 @@ public class CohortsControllerTests
         OrganizationPlanMigrationCohort existing,
         SutProvider<CohortsController> sutProvider)
     {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
         existing.Id = id;
         model.Id = id;
         model.MigrationPathSelection = "1";
@@ -305,6 +346,9 @@ public class CohortsControllerTests
         OrganizationPlanMigrationCohort existing,
         SutProvider<CohortsController> sutProvider)
     {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
         existing.Id = id;
         existing.MigrationPathId = (MigrationPathId)99;
         model.Id = id;
@@ -327,6 +371,9 @@ public class CohortsControllerTests
         OrganizationPlanMigrationCohort cohort,
         SutProvider<CohortsController> sutProvider)
     {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
         cohort.Id = id;
 
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
@@ -353,6 +400,9 @@ public class CohortsControllerTests
         OrganizationPlanMigrationCohort cohort,
         SutProvider<CohortsController> sutProvider)
     {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
         cohort.Id = id;
 
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
@@ -378,6 +428,9 @@ public class CohortsControllerTests
         OrganizationPlanMigrationCohort cohort,
         SutProvider<CohortsController> sutProvider)
     {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
         cohort.Id = id;
         cohort.IsActive = true;
 
@@ -402,6 +455,9 @@ public class CohortsControllerTests
         OrganizationPlanMigrationCohort cohort,
         SutProvider<CohortsController> sutProvider)
     {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
         cohort.Id = id;
         cohort.IsActive = false;
         cohort.MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent;
@@ -429,6 +485,9 @@ public class CohortsControllerTests
         OrganizationPlanMigrationCohort cohort,
         SutProvider<CohortsController> sutProvider)
     {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
         cohort.Id = id;
         cohort.IsActive = false;
         cohort.MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent;
@@ -449,5 +508,18 @@ public class CohortsControllerTests
 
         await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
             .DidNotReceive().UpdateIsActiveAsync(Arg.Any<Guid>(), Arg.Any<bool>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Index_FeatureFlagDisabled_ReturnsNotFound(
+        SutProvider<CohortsController> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(false);
+
+        var result = await sutProvider.Sut.Index();
+
+        Assert.IsType<NotFoundResult>(result);
     }
 }
