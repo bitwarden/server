@@ -22,6 +22,7 @@ using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Stripe;
+using Stripe.TestHelpers;
 using Event = Stripe.Event;
 using Plan = Bit.Core.Models.StaticStore.Plan;
 using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
@@ -392,6 +393,11 @@ public class UpcomingInvoiceHandler(
                 return false;
             }
 
+            if (subscription.TestClock != null)
+            {
+                await WaitForTestClockToAdvanceAsync(subscription.TestClock);
+            }
+
             var scheduled = await priceIncreaseScheduler.ScheduleBusinessPriceIncrease(subscription, cohort);
             if (!scheduled)
             {
@@ -426,6 +432,19 @@ public class UpcomingInvoiceHandler(
             "Business renewal email is not yet wired up; skipping send for Organization ({OrganizationId}) cohort {CohortName} ({Source} → {Target}).",
             organization.Id, cohort.Name, sourcePlan.Type, targetPlan.Type);
         return Task.CompletedTask;
+    }
+
+    private async Task WaitForTestClockToAdvanceAsync(TestClock testClock)
+    {
+        while (testClock.Status != "ready")
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2));
+            testClock = await stripeAdapter.GetTestClockAsync(testClock.Id);
+            if (testClock.Status == "internal_failure")
+            {
+                throw new Exception("Stripe Test Clock encountered an internal failure");
+            }
+        }
     }
 
     #endregion
