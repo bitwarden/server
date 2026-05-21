@@ -97,6 +97,8 @@ public static class StripeConstants
         public const string OriginatingAppVersion = "originatingAppVersion";
         public const string TrialInitiationPath = "trialInitiationPath";
         public const string CancelledDuringDeferredPriceIncrease = "cancelled_during_deferred_price_increase";
+        public const string MigrationCohortId = "migration_cohort_id";
+        public const string MigrationCohortName = "migration_cohort_name";
     }
 
     public static class CancellationOrigins
