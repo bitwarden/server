@@ -78,7 +78,11 @@ public class SendsController : Controller
 
     [AllowAnonymous]
     [HttpPost("access/{id}")]
-    public async Task<IActionResult> Access(string id, [FromBody] SendAccessRequestModel model)
+    [ProducesResponseType<SendAccessResponseModel>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<SendAccessResponseModel> Access(string id, [FromBody] SendAccessRequestModel model)
     {
         // Uncomment whenever we want to require the `send-id` header
         //if (!_currentContext.HttpContext.Request.Headers.ContainsKey("Send-Id") ||
@@ -104,7 +108,7 @@ public class SendsController : Controller
             await _sendAuthorizationService.AccessAsync(send, model.Password);
         if (sendAuthResult.Equals(SendAccessResult.PasswordRequired))
         {
-            return new UnauthorizedResult();
+            throw new UnauthorizedAccessException();
         }
 
         if (sendAuthResult.Equals(SendAccessResult.PasswordInvalid))
@@ -125,19 +129,23 @@ public class SendsController : Controller
             sendResponse.CreatorIdentifier = creator.Email;
         }
 
-        if (send.UserId.HasValue
-            && send.Type == SendType.Text
-            && _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging))
+        if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging)
+            && send.UserId.HasValue
+            && send.Type == SendType.Text)
         {
             await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Accessed_Text);
         }
 
-        return new ObjectResult(sendResponse);
+        return sendResponse;
     }
 
     [AllowAnonymous]
     [HttpPost("{encodedSendId}/access/file/{fileId}")]
-    public async Task<IActionResult> GetSendFileDownloadData(string encodedSendId,
+    [ProducesResponseType<SendFileDownloadDataResponseModel>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<SendFileDownloadDataResponseModel> GetSendFileDownloadData(string encodedSendId,
         string fileId, [FromBody] SendAccessRequestModel model)
     {
         // Uncomment whenever we want to require the `send-id` header
@@ -165,7 +173,7 @@ public class SendsController : Controller
 
         if (result.Equals(SendAccessResult.PasswordRequired))
         {
-            return new UnauthorizedResult();
+            throw new UnauthorizedAccessException();
         }
 
         if (result.Equals(SendAccessResult.PasswordInvalid))
@@ -179,12 +187,12 @@ public class SendsController : Controller
             throw new NotFoundException();
         }
 
-        if (send.UserId.HasValue && _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging))
+        if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) && send.UserId.HasValue)
         {
             await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Accessed_File);
         }
 
-        return new ObjectResult(new SendFileDownloadDataResponseModel() { Id = fileId, Url = url, });
+        return new SendFileDownloadDataResponseModel { Id = fileId, Url = url };
     }
 
     [AllowAnonymous]
@@ -251,6 +259,9 @@ public class SendsController : Controller
 
     [Authorize(Policy = Policies.Send)]
     [HttpPost("access/")]
+    [ProducesResponseType<SendAccessResponseModel>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AccessUsingAuth()
     {
         var guid = User.GetSendId();
@@ -286,9 +297,9 @@ public class SendsController : Controller
             await _pushNotificationService.PushSyncSendUpdateAsync(send);
         }
 
-        if (send.UserId.HasValue
-            && send.Type == SendType.Text
-            && _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging))
+        if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging)
+            && send.UserId.HasValue
+            && send.Type == SendType.Text)
         {
             var perOrgTypeResolver = await _sendEventClassifier.BuildAccessResolverAsync(
                 send.UserId.Value,
@@ -307,6 +318,9 @@ public class SendsController : Controller
 
     [Authorize(Policy = Policies.Send)]
     [HttpPost("access/file/{fileId}")]
+    [ProducesResponseType<SendFileDownloadDataResponseModel>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetSendFileDownloadDataUsingAuth(string fileId)
     {
         var sendId = User.GetSendId();
@@ -324,7 +338,7 @@ public class SendsController : Controller
             throw new NotFoundException();
         }
 
-        if (send.UserId.HasValue && _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging))
+        if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) && send.UserId.HasValue)
         {
             var perOrgTypeResolver = await _sendEventClassifier.BuildAccessResolverAsync(
                 send.UserId.Value,
