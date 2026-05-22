@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 
-namespace Bit.Admin.Billing.Models.Cohorts;
+namespace Bit.Admin.Billing.Models.OrganizationPlanMigrationCohorts;
 
 public class CohortFormModel : IValidatableObject
 {

@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using Bit.Admin.Billing.Models.Cohorts;
+using Bit.Admin.Billing.Models.OrganizationPlanMigrationCohorts;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Xunit;
 

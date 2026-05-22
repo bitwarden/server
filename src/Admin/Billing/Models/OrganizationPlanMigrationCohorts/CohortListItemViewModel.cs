@@ -1,7 +1,7 @@
 using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 
-namespace Bit.Admin.Billing.Models.Cohorts;
+namespace Bit.Admin.Billing.Models.OrganizationPlanMigrationCohorts;
 
 public class CohortListItemViewModel
 {

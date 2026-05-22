@@ -1,6 +1,6 @@
 using Bit.Admin.Models;
 
-namespace Bit.Admin.Billing.Models.Cohorts;
+namespace Bit.Admin.Billing.Models.OrganizationPlanMigrationCohorts;
 
 public class CohortsPagedModel : PagedModel<CohortListItemViewModel>
 {

@@ -1,6 +1,6 @@
 @using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects
 @using Bit.Core.Enums
-@model Bit.Admin.Billing.Models.Cohorts.CohortFormModel
+@model Bit.Admin.Billing.Models.OrganizationPlanMigrationCohorts.CohortFormModel
 @{
     ViewData["Title"] = $"Cohort: {Model.Name}";
     var cohortType = (CohortType)(ViewData["CohortType"] ?? new CohortType.ChurnOnly());

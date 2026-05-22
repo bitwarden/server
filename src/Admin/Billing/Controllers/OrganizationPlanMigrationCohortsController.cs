@@ -1,4 +1,4 @@
-using Bit.Admin.Billing.Models.Cohorts;
+using Bit.Admin.Billing.Models.OrganizationPlanMigrationCohorts;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
 using Bit.Core;
@@ -71,15 +71,7 @@ public class OrganizationPlanMigrationCohortsController(
 
         try
         {
-            var duplicate = await cohortRepository.GetByNameAsync(model.Name);
-            if (duplicate != null)
-            {
-                ModelState.AddModelError(nameof(model.Name),
-                    "A cohort with this name already exists.");
-                return View(model);
-            }
-
-            if (!await ValidateCouponsAsync(model))
+            if (!await ValidateNameAsync(model.Name) || !await ValidateCouponsAsync(model))
             {
                 return View(model);
             }
@@ -139,15 +131,10 @@ public class OrganizationPlanMigrationCohortsController(
 
         try
         {
-            var nameMatch = await cohortRepository.GetByNameAsync(model.Name);
-            if (nameMatch != null && nameMatch.Id != id)
+            if (!await ValidateNameAsync(model.Name, id) || !await ValidateCouponsAsync(model))
             {
-                ModelState.AddModelError(nameof(model.Name),
-                    "A cohort with this name already exists.");
                 return View(model);
             }
-
-            if (!await ValidateCouponsAsync(model)) return View(model);
 
             cohort.Name = model.Name;
             cohort.MigrationPathId = model.GetMigrationPathId();
@@ -276,6 +263,19 @@ public class OrganizationPlanMigrationCohortsController(
 
     private static string? NormalizeCouponCode(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private async Task<bool> ValidateNameAsync(string name, Guid? excludeId = null)
+    {
+        var existing = await cohortRepository.GetByNameAsync(name);
+        if (existing == null || existing.Id == excludeId)
+        {
+            return true;
+        }
+
+        ModelState.AddModelError(nameof(CohortFormModel.Name),
+            "A cohort with this name already exists.");
+        return false;
+    }
 
     private async Task<bool> ValidateCouponsAsync(CohortFormModel model)
     {
