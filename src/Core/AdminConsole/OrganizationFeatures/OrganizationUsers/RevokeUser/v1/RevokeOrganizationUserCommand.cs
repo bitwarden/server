@@ -30,6 +30,12 @@ public class RevokeOrganizationUserCommand(
             throw new BadRequestException("Only owners can revoke other owners.");
         }
 
+        if (organizationUser.Type == OrganizationUserType.Admin && revokingUserId.HasValue &&
+            !await currentContext.OrganizationAdmin(organizationUser.OrganizationId))
+        {
+            throw new BadRequestException("Custom users can not revoke admins.");
+        }
+
         await RepositoryRevokeUserAsync(organizationUser, reason);
         await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
 

@@ -218,6 +218,9 @@ public static class FeatureFlagKeys
     /* Key Management Team */
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
     public const string Argon2Default = "argon2-default";
+    public const string BiometricsSdkIpc = "biometrics-sdk-ipc";
+    public const string SharedUnlockPart1 = "innovation-sprint-shared-unlock-part-1";
+    public const string SharedUnlockPart2 = "innovation-sprint-shared-unlock-part-2";
     public const string EnrollAeadOnKeyRotation = "enroll-aead-on-key-rotation";
     public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
     public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
@@ -265,8 +268,6 @@ public static class FeatureFlagKeys
     /// on the desktop client.
     /// </summary>
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
-    public const string UseChromiumImporter = "pm-23982-chromium-importer";
-    public const string ChromiumImporterWithABE = "pm-25855-chromium-importer-abe";
     public const string SendUIRefresh = "pm-28175-send-ui-refresh";
     public const string SendEmailOTP = "pm-19051-send-email-verification";
     public const string SendControls = "pm-31885-send-controls";

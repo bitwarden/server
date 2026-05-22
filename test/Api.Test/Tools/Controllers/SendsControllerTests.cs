@@ -95,8 +95,7 @@ public class SendsControllerTests : IDisposable
         _userService.GetUserByIdAsync(Arg.Any<Guid>()).Returns(user);
 
         var request = new SendAccessRequestModel();
-        var actionResult = await _sut.Access(accessId, request);
-        var response = (actionResult as ObjectResult)?.Value as SendAccessResponseModel;
+        var response = await _sut.Access(accessId, request);
 
         Assert.NotNull(response);
         Assert.Null(response.CreatorIdentifier);
@@ -320,6 +319,26 @@ public class SendsControllerTests : IDisposable
         await _nonAnonymousSendCommand.DidNotReceive().SaveSendAsync(Arg.Any<Send>());
     }
 
+    [Fact]
+    public async Task Access_WhenPasswordRequired_ThrowsUnauthorizedAccessException()
+    {
+        var sendId = Guid.NewGuid();
+        var accessId = CoreHelpers.Base64UrlEncode(sendId.ToByteArray());
+        var send = new Send
+        {
+            Id = sendId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new Dictionary<string, string>()),
+            AuthType = AuthType.Password
+        };
+
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _sendAuthorizationService.AccessAsync(send, null).Returns(SendAccessResult.PasswordRequired);
+
+        var request = new SendAccessRequestModel();
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.Access(accessId, request));
+    }
+
     [Theory]
     [InlineData(AuthType.Password)]
     [InlineData(AuthType.Email)]
@@ -340,8 +359,7 @@ public class SendsControllerTests : IDisposable
         _sendAuthorizationService.AccessAsync(send, "pwd123").Returns(SendAccessResult.Granted);
 
         var request = new SendAccessRequestModel();
-        var actionResult = await _sut.Access(accessId, request);
-        var response = (actionResult as ObjectResult)?.Value as SendAccessResponseModel;
+        var response = await _sut.Access(accessId, request);
 
         Assert.NotNull(response);
         Assert.Equal(authType, response.AuthType);
