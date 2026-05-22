@@ -45,15 +45,6 @@ public class CreatePremiumCheckoutSessionCommand(
         Run(User user, string originatingAppVersion, string originatingPlatform) => HandleAsync<PremiumCheckoutSessionResponseModel>(async () =>
     {
 
-        logger.LogInformation(
-            "Premium checkout GlobalSettings.Stripe values - PremiumCheckoutSuccessUrl: {PremiumCheckoutSuccessUrl}, PremiumCheckoutCancelUrl: {PremiumCheckoutCancelUrl}, BrowserPremiumCheckoutSuccessUrl: {BrowserPremiumCheckoutSuccessUrl}, BrowserPremiumCheckoutCancelUrl: {BrowserPremiumCheckoutCancelUrl}, DesktopPremiumCheckoutSuccessUrl: {DesktopPremiumCheckoutSuccessUrl}, DesktopPremiumCheckoutCancelUrl: {DesktopPremiumCheckoutCancelUrl}",
-            globalSettings.Stripe.PremiumCheckoutSuccessUrl,
-            globalSettings.Stripe.PremiumCheckoutCancelUrl,
-            globalSettings.Stripe.BrowserPremiumCheckoutSuccessUrl,
-            globalSettings.Stripe.BrowserPremiumCheckoutCancelUrl,
-            globalSettings.Stripe.DesktopPremiumCheckoutSuccessUrl,
-            globalSettings.Stripe.DesktopPremiumCheckoutCancelUrl);
-
         if (user.Premium)
         {
             return new BadRequest("User is already a premium user.");
@@ -93,6 +84,14 @@ public class CreatePremiumCheckoutSessionCommand(
         string originatingAppVersion,
         string originatingPlatform)
     {
+         logger.LogInformation(
+            "Premium checkout GlobalSettings.Stripe values - PremiumCheckoutSuccessUrl: {PremiumCheckoutSuccessUrl}, PremiumCheckoutCancelUrl: {PremiumCheckoutCancelUrl}, BrowserPremiumCheckoutSuccessUrl: {BrowserPremiumCheckoutSuccessUrl}, BrowserPremiumCheckoutCancelUrl: {BrowserPremiumCheckoutCancelUrl}, DesktopPremiumCheckoutSuccessUrl: {DesktopPremiumCheckoutSuccessUrl}, DesktopPremiumCheckoutCancelUrl: {DesktopPremiumCheckoutCancelUrl}",
+            globalSettings.Stripe.PremiumCheckoutSuccessUrl,
+            globalSettings.Stripe.PremiumCheckoutCancelUrl,
+            globalSettings.Stripe.BrowserPremiumCheckoutSuccessUrl,
+            globalSettings.Stripe.BrowserPremiumCheckoutCancelUrl,
+            globalSettings.Stripe.DesktopPremiumCheckoutSuccessUrl,
+            globalSettings.Stripe.DesktopPremiumCheckoutCancelUrl);
         var (successUrl, cancelUrl) = GetCheckoutUrls(originatingPlatform);
 
         return new SessionCreateOptions
