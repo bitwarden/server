@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Enums;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
@@ -50,9 +51,14 @@ public interface IPriceIncreaseScheduler
     /// Creates a deferred price-increase schedule for the given subscription,
     /// dispatching to the correct path based on the subscription owner.
     /// </summary>
-    /// <param name="subscription">The Stripe subscription to recover a schedule for.</param>
+    /// <param name="subscription">The Stripe subscription to schedule a price increase for.</param>
+    /// <param name="options">
+    /// Optional guards applied before scheduling.
+    /// </param>
     /// <returns>True if a new schedule was created; false if skipped.</returns>
-    Task<bool> ScheduleForSubscription(Subscription subscription);
+    Task<bool> ScheduleForSubscription(
+        Subscription subscription,
+        OrganizationPriceIncreaseOptions? options = null);
 
     /// <summary>
     /// Releases any active subscription schedule for the given subscription, cancelling a pending
@@ -193,14 +199,16 @@ public class PriceIncreaseScheduler(
         return true;
     }
 
-    public async Task<bool> ScheduleForSubscription(Subscription subscription)
+    public async Task<bool> ScheduleForSubscription(
+        Subscription subscription,
+        OrganizationPriceIncreaseOptions? options = null)
     {
         try
         {
             SubscriberId subscriberId = subscription;
             return await subscriberId.Match(
                 _ => SchedulePersonalPriceIncrease(subscription),
-                orgId => DispatchOrganizationScheduleAsync(subscription, orgId.Value),
+                orgId => ScheduleForOrganizationAsync(subscription, orgId.Value, options),
                 _ =>
                 {
                     logger.LogWarning(
@@ -607,12 +615,14 @@ public class PriceIncreaseScheduler(
     };
 
     /// <summary>
-    /// Dispatches a price increase schedule for a subscription to an organization.
+    /// Coordinates the full organization scheduling flow. Resolves the organization, routes
+    /// non-business plan types (personal, family, and 2019-era plans) to the personal scheduling
+    /// path, then validates cohort eligibility before scheduling.
     /// </summary>
-    /// <param name="subscription"> The subscription to schedule a price increase for. </param>
-    /// <param name="organizationId"> The ID of the organization associated with the subscription. </param>
-    /// <returns> True if the schedule was dispatched successfully, false otherwise. </returns>
-    private async Task<bool> DispatchOrganizationScheduleAsync(Subscription subscription, Guid organizationId)
+    private async Task<bool> ScheduleForOrganizationAsync(
+        Subscription subscription,
+        Guid organizationId,
+        OrganizationPriceIncreaseOptions? options)
     {
         var organization = await organizationRepository.GetByIdAsync(organizationId);
         if (organization is null)
@@ -628,38 +638,20 @@ public class PriceIncreaseScheduler(
             return await SchedulePersonalPriceIncrease(subscription);
         }
 
-        var assignment = await assignmentRepository.GetByOrganizationIdAsync(organizationId);
+        var assignment = await assignmentRepository.GetByOrganizationIdAsync(organization.Id);
         if (assignment is null)
         {
             return false;
         }
 
         var cohort = await cohortRepository.GetByIdAsync(assignment.CohortId);
-        if (cohort is null || !cohort.IsActive)
+        if (cohort is null)
         {
             return false;
         }
 
-        if (cohort.MigrationPathId is null)
+        if (!IsEligibleForScheduling(organization, assignment, cohort, options))
         {
-            // Churn-only cohort — no migration to schedule.
-            return false;
-        }
-
-        var migrationPath = MigrationPaths.FromId(cohort.MigrationPathId.Value);
-        if (migrationPath is null)
-        {
-            logger.LogError(
-                "Unknown MigrationPathId ({MigrationPathId}) on cohort ({CohortId}); skipping schedule recovery for subscription ({SubscriptionId})",
-                cohort.MigrationPathId, cohort.Id, subscription.Id);
-            return false;
-        }
-
-        if (organization.PlanType != migrationPath.FromPlan)
-        {
-            logger.LogWarning(
-                "Skipping schedule recovery for Organization ({OrganizationId}); PlanType {ActualPlan} does not match cohort {CohortName} source {ExpectedPlan}",
-                organizationId, organization.PlanType, cohort.Name, migrationPath.FromPlan);
             return false;
         }
 
@@ -667,11 +659,52 @@ public class PriceIncreaseScheduler(
     }
 
     /// <summary>
+    /// Returns true if the organization is eligible for a business plan price increase.
+    /// Guards from <paramref name="options"/> are evaluated first against all resolved data;
+    /// structural eligibility checks follow. Add new option guards here —
+    /// <see cref="ScheduleForOrganizationAsync"/> never needs to change.
+    /// Does not make any database or Stripe calls.
+    /// </summary>
+    private bool IsEligibleForScheduling(
+        Organization organization,
+        OrganizationPlanMigrationCohortAssignment assignment,
+        OrganizationPlanMigrationCohort cohort,
+        OrganizationPriceIncreaseOptions? options)
+    {
+        if (options?.SkipIfAlreadyScheduled == true && assignment.ScheduledDate is not null)
+        {
+            return false;
+        }
+
+        if (!cohort.IsActive || cohort.MigrationPathId is null)
+        {
+            return false;
+        }
+
+        var migrationPath = MigrationPaths.FromId(cohort.MigrationPathId.Value);
+        if (migrationPath is null)
+        {
+            logger.LogError(
+                "Unknown MigrationPathId ({MigrationPathId}) on cohort ({CohortId}); skipping schedule for organization ({OrganizationId})",
+                cohort.MigrationPathId, cohort.Id, organization.Id);
+            return false;
+        }
+
+        if (organization.PlanType != migrationPath.FromPlan)
+        {
+            logger.LogWarning(
+                "Skipping schedule for Organization ({OrganizationId}); PlanType {ActualPlan} does not match cohort {CohortName} source {ExpectedPlan}",
+                organization.Id, organization.PlanType, cohort.Name, migrationPath.FromPlan);
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Returns true if the plan type is a Track A business plan type.
     /// </summary>
-    /// <param name="planType">The plan type to check.</param>
-    /// <returns>True if the plan type is a Track A business plan type, otherwise false.</returns>
-    /// <remarks> This method should be expanded to include other track business plan types as needed.</remarks>
+    /// <remarks>Expand to include additional business plan types as new tracks are added.</remarks>
     private static bool IsTrackABusinessPlanType(PlanType planType) => planType is
         PlanType.TeamsMonthly2020 or
         PlanType.TeamsAnnually2020 or
