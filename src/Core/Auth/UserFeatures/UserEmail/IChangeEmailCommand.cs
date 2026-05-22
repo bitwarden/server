@@ -5,12 +5,19 @@ public interface IChangeEmailCommand
 {
     /// <summary>
     /// Updates the user's email after all upstream authentication and authorization checks have
-    /// passed. On success, logs the user out of all sessions (if they
-    /// have a master password) or signals a settings sync (if they do not).
+    /// passed. On success, signals a settings sync to the user's active sessions; sessions are
+    /// not invalidated.
     /// </summary>
     /// <remarks>
+    /// This command is intended to be consumed only once the master password salt is no longer
+    /// coupled to <see cref="User.Email"/>. While that coupling exists, changing the email
+    /// invalidates derived key material for sessions that still hold the old salt; callers must
+    /// either keep using the legacy flow (which logs the user out) or ensure the decoupling has
+    /// shipped before invoking this command.
+    /// <para>
     /// This command performs no identity or ownership verification of the new email. Callers MUST
     /// perform robust verification before invoking it, including (at minimum):
+    /// </para>
     /// <list type="bullet">
     /// <item><description>Authenticating the requesting user and confirming they own
     /// <paramref name="user"/>.</description></item>

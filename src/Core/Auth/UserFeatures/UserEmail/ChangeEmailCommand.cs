@@ -67,14 +67,7 @@ public class ChangeEmailCommand(
             }
         }
 
-        if (user.HasMasterPassword())
-        {
-            await _pushService.PushLogOutAsync(user.Id);
-        }
-        else
-        {
-            await _pushService.PushSyncSettingsAsync(user.Id);
-        }
+        await _pushService.PushSyncSettingsAsync(user.Id);
     }
 
     /// <summary>

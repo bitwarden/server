@@ -56,9 +56,11 @@ public class ChangeEmailCommandTests
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
     }
 
-    [Theory, BitAutoData]
-    public async Task ChangeEmailAsync_NonStripeUserWithMasterPassword_UpdatesFieldsAndPushesLogout(
-        User user)
+    [Theory]
+    [BitAutoData("hash")]
+    [BitAutoData((string)null)]
+    public async Task ChangeEmailAsync_NonStripeUser_UpdatesFieldsAndPushesSyncSettings(
+        string masterPassword, User user)
     {
         var sutProvider = new SutProvider<ChangeEmailCommand>()
             .WithFakeTimeProvider()
@@ -68,7 +70,7 @@ public class ChangeEmailCommandTests
 
         user.Email = _currentEmail;
         user.Gateway = null;
-        user.MasterPassword = "hash";
+        user.MasterPassword = masterPassword;
         sutProvider.GetDependency<IUserRepository>()
             .GetByEmailAsync(_newEmail)
             .Returns((User)null);
@@ -81,29 +83,14 @@ public class ChangeEmailCommandTests
         Assert.Equal(now, user.RevisionDate);
         Assert.Equal(now, user.AccountRevisionDate);
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushLogOutAsync(user.Id);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushSyncSettingsAsync(Arg.Any<Guid>());
-        await sutProvider.GetDependency<IStripeSyncService>().DidNotReceive()
-            .UpdateCustomerEmailAddressAsync(Arg.Any<string>(), Arg.Any<string>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task ChangeEmailAsync_NonStripeUserWithoutMasterPassword_PushesSyncSettings(
-        SutProvider<ChangeEmailCommand> sutProvider, User user)
-    {
-        user.Email = _currentEmail;
-        user.Gateway = null;
-        user.MasterPassword = null;
-        sutProvider.GetDependency<IUserRepository>()
-            .GetByEmailAsync(_newEmail)
-            .Returns((User)null);
-
-        await sutProvider.Sut.ChangeEmailAsync(user, _newEmail);
-
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncSettingsAsync(user.Id);
+        // Sessions are not invalidated regardless of master-password presence: this command
+        // assumes the master-password salt has been decoupled from User.Email.
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushSyncSettingsAsync(user.Id);
         await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
             .PushLogOutAsync(Arg.Any<Guid>());
+        await sutProvider.GetDependency<IStripeSyncService>().DidNotReceive()
+            .UpdateCustomerEmailAddressAsync(Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Theory, BitAutoData]
@@ -174,11 +161,11 @@ public class ChangeEmailCommandTests
         Assert.Equal(originalLastEmailChangeDate, user.LastEmailChangeDate);
         // Two persists: initial write, then the rollback write.
         await sutProvider.GetDependency<IUserRepository>().Received(2).ReplaceAsync(user);
-        // Session push must not fire if Stripe sync failed.
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushLogOutAsync(Arg.Any<Guid>());
+        // No push notification fires if Stripe sync failed.
         await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
             .PushSyncSettingsAsync(Arg.Any<Guid>());
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
+            .PushLogOutAsync(Arg.Any<Guid>());
     }
 
     [Theory]
@@ -193,7 +180,7 @@ public class ChangeEmailCommandTests
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ChangeEmailAsync(user, invalidEmail));
-        Assert.Equal("Invalid email address.", ex.Message);
+        Assert.Equal("Invalid email address format.", ex.Message);
 
         await sutProvider.GetDependency<IOrganizationDomainAllowEmailChangeQuery>().DidNotReceive()
             .IsAllowedAsync(Arg.Any<User>(), Arg.Any<string>());
