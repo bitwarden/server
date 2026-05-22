@@ -261,7 +261,12 @@ public class SubscriberService(
         SubscriptionCancellationDetailsOptions? cancellationDetails,
         Dictionary<string, string>? cancellingUserMetadata)
     {
-        var updateOptions = new SubscriptionUpdateOptions();
+        var updateOptions = new SubscriptionUpdateOptions
+        {
+            CancelAtPeriodEnd = true,
+            CancellationDetails = cancellationDetails,
+            Metadata = cancellingUserMetadata
+        };
 
         if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
         {
@@ -269,59 +274,20 @@ public class SubscriberService(
 
             if (activeSchedule is { Phases.Count: > 0 })
             {
-                if (activeSchedule.Phases.Count > 2)
-                {
-                    logger.LogWarning(
-                        "{Service}: Subscription schedule ({ScheduleId}) has {PhaseCount} phases (expected 1-2), updating to only one phase for cancellation",
-                        GetType().Name, activeSchedule.Id, activeSchedule.Phases.Count);
-                }
-
                 logger.LogInformation(
-                    "{Service}: Active subscription schedule ({ScheduleId}) found for subscription ({SubscriptionId}), updating schedule phases",
+                    "{Service}: Active subscription schedule ({ScheduleId}) found for subscription ({SubscriptionId}), releasing schedule before cancellation",
                     GetType().Name, activeSchedule.Id, subscription.Id);
 
-                var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
-                var currentPhase = activeSchedule.Phases.FirstOrDefault(p => p.EndDate > now)
-                    ?? activeSchedule.Phases[^1];
+                await stripeAdapter.ReleaseSubscriptionScheduleAsync(activeSchedule.Id);
 
-                await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
-                    new SubscriptionScheduleUpdateOptions
-                    {
-                        EndBehavior = SubscriptionScheduleEndBehavior.Cancel,
-                        Phases =
-                        [
-                            new SubscriptionSchedulePhaseOptions
-                            {
-                                StartDate = currentPhase.StartDate,
-                                EndDate = currentPhase.EndDate,
-                                Items = currentPhase.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
-                                {
-                                    Price = i.PriceId,
-                                    Quantity = i.Quantity
-                                }).ToList(),
-                                Discounts = currentPhase.StartDate <= now
-                                    ? []
-                                    : currentPhase.Discounts?.Select(d =>
-                                        new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),
-                                ProrationBehavior = ProrationBehavior.None,
-                                Metadata = cancellingUserMetadata
-                            }
-                        ]
-                    });
-                return;
+                updateOptions.Metadata = new Dictionary<string, string>(cancellingUserMetadata ?? [])
+                {
+                    [MetadataKeys.CancelledDuringDeferredPriceIncrease] = "true"
+                };
             }
         }
 
-        updateOptions.CancelAtPeriodEnd = true;
-
-        if (cancellationDetails != null)
-        {
-            updateOptions.CancellationDetails = cancellationDetails;
-            updateOptions.Metadata = cancellingUserMetadata;
-        }
-
         await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, updateOptions);
-
     }
 
     private async Task<SubscriptionSchedule?> GetActiveScheduleAsync(Subscription subscription)
@@ -587,6 +553,72 @@ public class SubscriberService(
                 await stripeAdapter.DetachPaymentMethodAsync(paymentMethod.Id);
             }
         }
+    }
+
+    public async Task ResumeFromUnpaidCancellationAsync(ISubscriber subscriber)
+    {
+        var subscription = await GetSubscription(subscriber);
+
+        if (subscription is null ||
+            subscription.Status != SubscriptionStatus.Unpaid ||
+            subscription.Metadata is null ||
+            !subscription.Metadata.TryGetValue(MetadataKeys.CancellationOrigin, out var origin) ||
+            origin != CancellationOrigins.UnpaidSubscription)
+        {
+            return;
+        }
+
+        await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
+        {
+            CancelAtPeriodEnd = false,
+            ProrationBehavior = ProrationBehavior.None,
+            Metadata = new Dictionary<string, string>
+            {
+                [MetadataKeys.CancellationOrigin] = string.Empty
+            }
+        });
+
+        logger.LogInformation(
+            "Cleared pending unpaid-lifecycle cancellation for subscription ({SubscriptionId}) after subscriber re-enable",
+            subscription.Id);
+    }
+
+    public async Task ScheduleUnpaidCancellationAsync(ISubscriber subscriber)
+    {
+        var subscription = await GetSubscription(subscriber, new SubscriptionGetOptions
+        {
+            Expand = ["test_clock"]
+        });
+
+        if (subscription is null ||
+            subscription.Status != SubscriptionStatus.Unpaid ||
+            subscription.CancelAt.HasValue ||
+            (subscription.Metadata is not null &&
+             subscription.Metadata.TryGetValue(MetadataKeys.CancellationOrigin, out var origin) &&
+             origin == CancellationOrigins.UnpaidSubscription))
+        {
+            return;
+        }
+
+        var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+
+        await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
+        {
+            CancelAt = now.AddDays(7),
+            ProrationBehavior = ProrationBehavior.None,
+            CancellationDetails = new SubscriptionCancellationDetailsOptions
+            {
+                Comment = $"Admin Portal: scheduling unpaid subscription to cancel 7 days from {now:yyyy-MM-dd}."
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                [MetadataKeys.CancellationOrigin] = CancellationOrigins.UnpaidSubscription
+            }
+        });
+
+        logger.LogInformation(
+            "Scheduled unpaid-lifecycle cancellation for subscription ({SubscriptionId}) after subscriber disable",
+            subscription.Id);
     }
 
     public async Task<bool> IsValidGatewayCustomerIdAsync(ISubscriber subscriber)

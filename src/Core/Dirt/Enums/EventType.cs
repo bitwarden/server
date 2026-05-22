@@ -39,6 +39,16 @@ public enum EventType : int
     Cipher_ClientCopiedBankAccountPin = 1120,
     Cipher_ClientToggledBankAccountNumberVisible = 1121,
     Cipher_ClientToggledBankAccountPinVisible = 1122,
+    Cipher_ClientCopiedLicenseNumber = 1123,
+    Cipher_ClientToggledLicenseNumberVisible = 1124,
+    Cipher_ClientCopiedPassportNumber = 1125,
+    Cipher_ClientToggledPassportNumberVisible = 1126,
+    Cipher_ClientCopiedSwiftCode = 1127,
+    Cipher_ClientToggledSwiftCodeVisible = 1128,
+    Cipher_ClientCopiedIban = 1129,
+    Cipher_ClientToggledIbanVisible = 1130,
+    Cipher_ClientCopiedNationalIdentificationNumber = 1131,
+    Cipher_ClientToggledNationalIdentificationNumberVisible = 1132,
 
     Collection_Created = 1300,
     Collection_Updated = 1301,
@@ -68,6 +78,8 @@ public enum EventType : int
     OrganizationUser_AutomaticallyConfirmed = 1517,
     OrganizationUser_SelfRevoked = 1518, // User self-revoked due to declining organization data ownership policy
     OrganizationUser_AdminResetTwoFactor = 1519,
+    OrganizationUser_Revoked_TwoFactorNonCompliance = 1520,
+    OrganizationUser_Revoked_SingleOrganizationNonCompliance = 1521,
 
     Organization_Updated = 1600,
     Organization_PurgedVault = 1601,
@@ -135,5 +147,10 @@ public enum EventType : int
     PhishingBlocker_SiteExited = 2401,
     PhishingBlocker_Bypassed = 2402,
 
-
+    Send_Created_Text = 2500,
+    Send_Created_Text_WithEmailVerification = 2501,
+    Send_Created_Text_WithPasswordProtection = 2502,
+    Send_Created_File = 2503,
+    Send_Created_File_WithEmailVerification = 2504,
+    Send_Created_File_WithPasswordProtection = 2505,
 }

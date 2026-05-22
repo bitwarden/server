@@ -51,9 +51,13 @@ internal sealed class CreateCiphersStep : IStep
 
         var seedFile = context.GetSeedReader().Read<SeedFile>($"ciphers.{_fixtureName}");
         var collectionIds = context.Registry.CollectionIds;
+        var progress = context.GetProgress();
 
         var ciphers = new List<Cipher>(seedFile.Items.Count);
         var collectionCiphers = new List<CollectionCipher>();
+
+        progress?.Report(new PhaseStarted(SeederPhases.CreatingCiphers, seedFile.Items.Count));
+        var ticker = new ProgressTicker(progress, SeederPhases.CreatingCiphers, seedFile.Items.Count);
 
         for (var i = 0; i < seedFile.Items.Count; i++)
         {
@@ -93,6 +97,8 @@ internal sealed class CreateCiphersStep : IStep
 
             context.Registry.FixtureCipherNameToId[item.Name] = cipher.Id;
 
+            ticker.Tick();
+
             // Collection assignment (round-robin, skipped for personal vaults or when collectionAssignments handles it)
             if (_skipCollectionAssignment || collectionIds.Count <= 0)
             {
@@ -116,7 +122,11 @@ internal sealed class CreateCiphersStep : IStep
             }
         }
 
+        ticker.Flush();
+
         context.Ciphers.AddRange(ciphers);
         context.CollectionCiphers.AddRange(collectionCiphers);
+
+        progress?.Report(new PhaseCompleted(SeederPhases.CreatingCiphers));
     }
 }
