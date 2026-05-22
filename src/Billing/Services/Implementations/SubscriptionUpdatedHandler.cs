@@ -146,6 +146,11 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                         await HandleScheduleTriggeredFamiliesMigrationAsync(parsedEvent, subscription, organization.Id);
                     }
 
+                    if (_featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
+                    {
+                        await HandleScheduleTriggeredBusinessMigrationAsync(parsedEvent, subscription, organization.Id);
+                    }
+
                     await _organizationService.UpdateExpirationDateAsync(organization.Id, currentPeriodEnd);
 
                     if (_stripeEventUtilityService.IsSponsoredSubscription(subscription) && currentPeriodEnd.HasValue)
@@ -529,6 +534,35 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             _logger.LogError(
                 exception,
                 "Failed to handle schedule-triggered Families migration for organization ({OrganizationId})",
+                organizationId);
+        }
+    }
+
+    private async Task HandleScheduleTriggeredBusinessMigrationAsync(
+        Event parsedEvent,
+        Subscription subscription,
+        Guid organizationId)
+    {
+        try
+        {
+            if (subscription.ScheduleId == null)
+            {
+                return;
+            }
+
+            // Subsequent steps land in Task 6+
+        }
+        catch (BillingException)
+        {
+            // GetPlanOrThrow throws BillingException on pricing-service outage. Rethrow so
+            // the webhook returns 500 and Stripe retries the event once the service recovers.
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(
+                exception,
+                "Failed to handle schedule-triggered business migration for organization ({OrganizationId})",
                 organizationId);
         }
     }
