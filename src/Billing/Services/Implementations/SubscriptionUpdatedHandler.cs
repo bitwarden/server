@@ -8,6 +8,7 @@ using Bit.Core.Billing;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
+using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
@@ -550,7 +551,32 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 return;
             }
 
-            // Subsequent steps land in Task 6+
+            var previousSubscription = parsedEvent.Data.PreviousAttributes?.ToObject<Subscription>() as Subscription;
+            if (previousSubscription?.Items?.Data == null)
+            {
+                return;
+            }
+
+            var sourcePriceIds = new HashSet<string>();
+            foreach (var path in MigrationPaths.All)
+            {
+                var sourcePlan = await _pricingClient.GetPlanOrThrow(path.FromPlan);
+                var priceId = sourcePlan.HasNonSeatBasedPasswordManagerPlan()
+                    ? sourcePlan.PasswordManager.StripePlanId
+                    : sourcePlan.PasswordManager.StripeSeatPlanId;
+                if (!string.IsNullOrEmpty(priceId))
+                {
+                    sourcePriceIds.Add(priceId);
+                }
+            }
+
+            if (!previousSubscription.Items.Data.Any(item =>
+                    item.Price?.Id != null && sourcePriceIds.Contains(item.Price.Id)))
+            {
+                return;
+            }
+
+            // Subsequent steps land in Task 7+
         }
         catch (BillingException)
         {
