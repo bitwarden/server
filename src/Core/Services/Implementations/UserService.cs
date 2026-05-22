@@ -497,6 +497,7 @@ public class UserService : UserManager<User>, IUserService
         });
     }
 
+    [Obsolete("Use ISelfServicePasswordChangeCommand instead. To be removed in PM-33141.")]
     public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint,
         string key)
     {
@@ -673,6 +674,7 @@ public class UserService : UserManager<User>, IUserService
         return IdentityResult.Success;
     }
 
+    [Obsolete("Use IReplaceAdminSetTemporaryPasswordCommand instead. To be removed in PM-33141.")]
     public async Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint)
     {
         if (!user.ForcePasswordReset)
@@ -1010,6 +1012,7 @@ public class UserService : UserManager<User>, IUserService
         return user.Key == null && user.MasterPassword != null && user.PrivateKey != null;
     }
 
+    [Obsolete("Use MasterPasswordService.PrepareSetInitialMasterPasswordAsync or PrepareUpdateExistingMasterPasswordAsync instead. To be removed in PM-33141.")]
     private async Task<IdentityResult> ValidatePasswordInternal(User user, string password)
     {
         var errors = new List<IdentityError>();
@@ -1089,6 +1092,8 @@ public class UserService : UserManager<User>, IUserService
         await Task.WhenAll(revokeOrgUserTasks);
     }
 
+    // TODO: Remove this method when the PM37165_RotateUserApiKeyCommand feature flag is cleaned up.
+    [Obsolete("Use IRotateUserApiKeyCommand instead. This method will be removed once the PM37165_RotateUserApiKeyCommand feature flag is removed.")]
     public async Task RotateApiKeyAsync(User user)
     {
         user.ApiKey = CoreHelpers.SecureRandomString(30);

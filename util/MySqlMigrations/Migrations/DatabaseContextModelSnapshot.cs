@@ -69,6 +69,89 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("OrganizationMemberBaseDetails");
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Collection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("DefaultUserCollectionEmail")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("ExternalId")
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("Collection", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.CollectionGroup", b =>
+                {
+                    b.Property<Guid>("CollectionId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<bool>("HidePasswords")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("Manage")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("ReadOnly")
+                        .HasColumnType("tinyint(1)");
+
+                    b.HasKey("CollectionId", "GroupId");
+
+                    b.HasIndex("GroupId");
+
+                    b.ToTable("CollectionGroups");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.CollectionUser", b =>
+                {
+                    b.Property<Guid>("CollectionId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("OrganizationUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<bool>("HidePasswords")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("Manage")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("ReadOnly")
+                        .HasColumnType("tinyint(1)");
+
+                    b.HasKey("CollectionId", "OrganizationUserId");
+
+                    b.HasIndex("OrganizationUserId");
+
+                    b.ToTable("CollectionUsers");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", b =>
                 {
                     b.Property<Guid>("Id")
@@ -898,6 +981,85 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("OrganizationInstallation", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.OrganizationPlanMigrationCohort", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ChurnDiscountCouponCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<byte?>("MigrationPathId")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("ProactiveDiscountCouponCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id")
+                        .HasAnnotation("SqlServer:Clustered", true);
+
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.ToTable("OrganizationPlanMigrationCohort", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.OrganizationPlanMigrationCohortAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("ChurnDiscountAppliedDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("CohortId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("MigratedDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("ScheduledDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id")
+                        .HasAnnotation("SqlServer:Clustered", true);
+
+                    b.HasIndex("OrganizationId")
+                        .IsUnique()
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("CohortId", "ScheduledDate", "MigratedDate")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.ToTable("OrganizationPlanMigrationCohortAssignment", (string)null);
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.ProviderInvoiceItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1272,41 +1434,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("Cache", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Collection", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("DefaultUserCollectionEmail")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("ExternalId")
-                        .HasMaxLength(300)
-                        .HasColumnType("varchar(300)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrganizationId");
-
-                    b.ToTable("Collection", (string)null);
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionCipher", b =>
                 {
                     b.Property<Guid>("CollectionId")
@@ -1322,54 +1449,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("CollectionCipher", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionGroup", b =>
-                {
-                    b.Property<Guid>("CollectionId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid>("GroupId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<bool>("HidePasswords")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<bool>("Manage")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<bool>("ReadOnly")
-                        .HasColumnType("tinyint(1)");
-
-                    b.HasKey("CollectionId", "GroupId");
-
-                    b.HasIndex("GroupId");
-
-                    b.ToTable("CollectionGroups");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionUser", b =>
-                {
-                    b.Property<Guid>("CollectionId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid>("OrganizationUserId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<bool>("HidePasswords")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<bool>("Manage")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<bool>("ReadOnly")
-                        .HasColumnType("tinyint(1)");
-
-                    b.HasKey("CollectionId", "OrganizationUserId");
-
-                    b.HasIndex("OrganizationUserId");
-
-                    b.ToTable("CollectionUsers");
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Device", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1379,6 +1458,10 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("Active")
                         .HasColumnType("tinyint(1)")
                         .HasDefaultValue(true);
+
+                    b.Property<string>("ClientVersion")
+                        .HasMaxLength(43)
+                        .HasColumnType("varchar(43)");
 
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
@@ -1742,6 +1825,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<short>("Status")
                         .HasColumnType("smallint");
 
+                    b.Property<short?>("StatusNew")
+                        .HasColumnType("smallint");
+
                     b.Property<byte>("Type")
                         .HasColumnType("tinyint unsigned");
 
@@ -1813,6 +1899,7 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("Data")
+                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.Property<DateTime>("DeletionDate")
@@ -1832,6 +1919,7 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("tinyint(1)");
 
                     b.Property<string>("Key")
+                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.Property<int?>("MaxAccessCount")
@@ -2028,6 +2116,9 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<string>("Key")
                         .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("LastApiKeyRotationDate")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<DateTime?>("LastEmailChangeDate")
                         .HasColumnType("datetime(6)");
@@ -2786,6 +2877,55 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasDiscriminator().HasValue("user_service_account");
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Collection", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
+                        .WithMany("Collections")
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.CollectionGroup", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Collection", "Collection")
+                        .WithMany("CollectionGroups")
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Group", "Group")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Collection");
+
+                    b.Navigation("Group");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.CollectionUser", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Collection", "Collection")
+                        .WithMany("CollectionUsers")
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.OrganizationUser", "OrganizationUser")
+                        .WithMany("CollectionUsers")
+                        .HasForeignKey("OrganizationUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Collection");
+
+                    b.Navigation("OrganizationUser");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.OrganizationInviteLink", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
@@ -2942,6 +3082,25 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("Organization");
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.OrganizationPlanMigrationCohortAssignment", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Billing.Models.OrganizationPlanMigrationCohort", "Cohort")
+                        .WithMany()
+                        .HasForeignKey("CohortId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cohort");
+
+                    b.Navigation("Organization");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.ProviderInvoiceItem", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider.Provider", "Provider")
@@ -3019,17 +3178,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("Organization");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Collection", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
-                        .WithMany("Collections")
-                        .HasForeignKey("OrganizationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Organization");
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionCipher", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.Vault.Models.Cipher", "Cipher")
@@ -3038,7 +3186,7 @@ namespace Bit.MySqlMigrations.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Collection", "Collection")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Collection", "Collection")
                         .WithMany("CollectionCiphers")
                         .HasForeignKey("CollectionId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -3047,44 +3195,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("Cipher");
 
                     b.Navigation("Collection");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionGroup", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Collection", "Collection")
-                        .WithMany("CollectionGroups")
-                        .HasForeignKey("CollectionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Group", "Group")
-                        .WithMany()
-                        .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Collection");
-
-                    b.Navigation("Group");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionUser", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Collection", "Collection")
-                        .WithMany("CollectionUsers")
-                        .HasForeignKey("CollectionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.OrganizationUser", "OrganizationUser")
-                        .WithMany("CollectionUsers")
-                        .HasForeignKey("OrganizationUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Collection");
-
-                    b.Navigation("OrganizationUser");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Device", b =>
@@ -3553,6 +3663,15 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("OrganizationUser");
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Collection", b =>
+                {
+                    b.Navigation("CollectionCiphers");
+
+                    b.Navigation("CollectionGroups");
+
+                    b.Navigation("CollectionUsers");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", b =>
                 {
                     b.Navigation("ApiKeys");
@@ -3576,15 +3695,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("SsoUsers");
 
                     b.Navigation("Transactions");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Collection", b =>
-                {
-                    b.Navigation("CollectionCiphers");
-
-                    b.Navigation("CollectionGroups");
-
-                    b.Navigation("CollectionUsers");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Group", b =>

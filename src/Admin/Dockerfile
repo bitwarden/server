@@ -1,7 +1,7 @@
 ###############################################
 #           Node.js build stage               #
 ###############################################
-FROM --platform=$BUILDPLATFORM node:20-alpine3.21 AS node-build
+FROM --platform=$BUILDPLATFORM node:24-alpine3.21 AS node-build
 
 WORKDIR /app
 COPY src/Admin/package*.json ./
@@ -19,13 +19,13 @@ ARG TARGETPLATFORM
 
 # Determine proper runtime value for .NET
 RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
-    RID=linux-musl-x64 ; \
-    elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
-    RID=linux-musl-arm64 ; \
-    elif [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
-    RID=linux-musl-arm ; \
-    fi \
-    && echo "RID=$RID" > /tmp/rid.txt
+  RID=linux-musl-x64 ; \
+  elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
+  RID=linux-musl-arm64 ; \
+  elif [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
+  RID=linux-musl-arm ; \
+  fi \
+  && echo "RID=$RID" > /tmp/rid.txt
 
 # Copy required project files
 WORKDIR /source
@@ -37,12 +37,12 @@ RUN . /tmp/rid.txt && dotnet restore -r $RID
 
 # Build project
 RUN . /tmp/rid.txt && dotnet publish \
-    -c release \
-    --no-restore \
-    --self-contained \
-    /p:PublishSingleFile=true \
-    -r $RID \
-    -o out
+  -c release \
+  --no-restore \
+  --self-contained \
+  /p:PublishSingleFile=true \
+  -r $RID \
+  -o out
 
 ###############################################
 #                  App stage                  #
@@ -58,11 +58,11 @@ ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 EXPOSE 5000
 
 RUN apk add --no-cache curl \
-    icu-libs \
-    tzdata \
-    krb5 \
-    shadow \
-    && apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community gosu
+  icu-libs \
+  tzdata \
+  krb5 \
+  shadow \
+  && apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community gosu
 
 # Copy app from the build stage
 WORKDIR /app

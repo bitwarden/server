@@ -13,12 +13,13 @@
     @ResetPasswordKey VARCHAR(MAX),
     @Collections AS [dbo].[CollectionAccessSelectionType] READONLY,
     @AccessSecretsManager BIT = 0,
-    @RevocationReason TINYINT = NULL
+    @RevocationReason TINYINT = NULL,
+    @StatusNew SMALLINT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[OrganizationUser_Update] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @ExternalId, @CreationDate, @RevisionDate, @Permissions, @ResetPasswordKey, @AccessSecretsManager, @RevocationReason
+    EXEC [dbo].[OrganizationUser_Update] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @ExternalId, @CreationDate, @RevisionDate, @Permissions, @ResetPasswordKey, @AccessSecretsManager, @RevocationReason, @StatusNew
 
     -- Bump RevisionDate on all affected collections
     ;WITH [AffectedCollectionsCTE] AS (
