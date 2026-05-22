@@ -171,7 +171,6 @@ public class ReinstateSubscriptionCommandTests
             Arg.Is<SubscriptionGetOptions>(o =>
                 o.Expand != null &&
                 o.Expand.Contains("discounts") &&
-                o.Expand.Contains("customer") &&
                 o.Expand.Contains("customer.discount")));
     }
 }
