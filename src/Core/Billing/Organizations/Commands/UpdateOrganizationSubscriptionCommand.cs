@@ -2,12 +2,17 @@
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.PlanMigration;
+using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
+using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using OneOf;
 using Stripe;
+using Plan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Core.Billing.Organizations.Commands;
 
@@ -37,6 +42,9 @@ public interface IUpdateOrganizationSubscriptionCommand
 public class UpdateOrganizationSubscriptionCommand(
     IFeatureService featureService,
     ILogger<UpdateOrganizationSubscriptionCommand> logger,
+    IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
+    IOrganizationPlanMigrationCohortRepository cohortRepository,
+    IPricingClient pricingClient,
     IStripeAdapter stripeAdapter) : BaseBillingCommand<UpdateOrganizationSubscriptionCommand>(logger), IUpdateOrganizationSubscriptionCommand
 {
     private static readonly List<string> _validSubscriptionStatusesForUpdate =
@@ -114,76 +122,17 @@ public class UpdateOrganizationSubscriptionCommand(
         var activeSchedule = schedules.Data.FirstOrDefault(s =>
             s.Status == SubscriptionScheduleStatus.Active && s.SubscriptionId == subscription.Id);
 
-        /* An active schedule here means PriceIncreaseScheduler created a schedule to defer a
-         * Families price migration to renewal. A 2-phase schedule is the standard migration
-         * state; a 1-phase schedule means the subscription was cancelled (end-of-period) while
-         * a schedule was attached (PM-33897). Either way, we update via the schedule to avoid
-         * conflicting with Stripe's schedule ownership of the subscription. */
         if (activeSchedule is { Phases.Count: > 0 })
         {
-            if (activeSchedule.Phases.Count > 2)
-            {
-                _logger.LogWarning(
-                    "{Command}: Subscription schedule ({ScheduleId}) has {PhaseCount} phases (expected 1-2), only updating first two",
-                    CommandName, activeSchedule.Id, activeSchedule.Phases.Count);
-            }
-
-            _logger.LogInformation(
-                "{Command}: Active subscription schedule ({ScheduleId}) found for subscription ({SubscriptionId}), updating schedule phases",
-                CommandName, activeSchedule.Id, subscription.Id);
-
-            var phase1 = activeSchedule.Phases[0];
             var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
 
-            /* This applies the change set's price IDs (which are Phase 1 / current-plan prices)
-             * to all active phases. This works because storage prices are uniform across the
-             * Families migration. If storage prices ever differ between phases, both this command
-             * and UpdatePremiumStorageCommand would need plan-aware price resolution (e.g. matching
-             * Phase 2's seat price to determine the correct storage price). */
-            var phases = new List<SubscriptionSchedulePhaseOptions>();
+            // Stripe normalizes attached schedules into 3 phases when the subscription is mutated:
+            // an anchor phase covering current_period_start -> schedule.created becomes phases[0].
+            // Strict > on EndDate: a phase ending exactly at `now` has effectively ended, and Stripe
+            // rejects schedule updates that include past phases.
+            var migrationPhases = activeSchedule.Phases.Where(p => p.EndDate > now).ToList();
 
-            // Stripe rejects schedule updates that include phases whose end_date is in the past.
-            // A phase ending at exactly `now` has effectively ended (strict > is intentional).
-            if (phase1.EndDate > now)
-            {
-                phases.Add(new SubscriptionSchedulePhaseOptions
-                {
-                    StartDate = phase1.StartDate,
-                    EndDate = phase1.EndDate,
-                    Items = ApplyChangesToPhaseItems(phase1.Items, changeSet.Changes),
-                    Discounts = phase1.Discounts?.Select(d =>
-                        new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),
-                    ProrationBehavior = phase1.ProrationBehavior
-                });
-            }
-            else
-            {
-                _logger.LogWarning(
-                    "{Command}: Phase 1 has already ended (EndDate: {EndDate}), updating only active phase(s)",
-                    CommandName, phase1.EndDate);
-            }
-
-            var phase1Ended = phase1.EndDate <= now;
-
-            if (activeSchedule.Phases.Count >= 2)
-            {
-                var phase2 = activeSchedule.Phases[1];
-                phases.Add(new SubscriptionSchedulePhaseOptions
-                {
-                    StartDate = phase2.StartDate,
-                    EndDate = phase2.EndDate,
-                    Items = ApplyChangesToPhaseItems(phase2.Items, changeSet.Changes),
-                    // When Phase 2 is already active, its one-time migration discount has been
-                    // applied and consumed. Re-including it would cause Stripe to re-apply it.
-                    Discounts = phase1Ended
-                        ? []
-                        : phase2.Discounts?.Select(d =>
-                            new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),
-                    ProrationBehavior = phase2.ProrationBehavior
-                });
-            }
-
-            if (phases.Count == 0)
+            if (migrationPhases.Count == 0)
             {
                 _logger.LogWarning(
                     "{Command}: Schedule ({ScheduleId}) has no updatable phases remaining",
@@ -191,22 +140,21 @@ public class UpdateOrganizationSubscriptionCommand(
                 return DefaultConflict;
             }
 
-            /* Note: the schedule phase API does not support PendingInvoiceItemInterval. For annual
-             * subscribers, the non-schedule path invoices prorations monthly. When the top-level
-             * ProrationBehavior is AlwaysInvoice (structural changes), Stripe invoices immediately.
-             * When it is CreateProrations (non-structural changes), prorations remain pending until
-             * the next invoice (~15 days). Accepted trade-off for the migration window. */
+            _logger.LogInformation(
+                "{Command}: Active subscription schedule ({ScheduleId}) found for subscription ({SubscriptionId}), updating {PhaseCount} active phase(s)",
+                CommandName, activeSchedule.Id, subscription.Id, migrationPhases.Count);
+
+            var (sourcePlan, targetPlan) = await ResolvePhasePlansAsync(organization);
+            var phases = BuildUpdatedPhases(migrationPhases, changeSet.Changes, sourcePlan, targetPlan);
+
             await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
                 new SubscriptionScheduleUpdateOptions
                 {
-                    EndBehavior = activeSchedule.EndBehavior,
+                    EndBehavior = SubscriptionScheduleEndBehavior.Release,
                     Phases = phases,
                     ProrationBehavior = prorationBehavior
                 });
 
-            /* Note: this returns the pre-update subscription. The schedule update modified the
-             * subscription via Stripe, but we don't re-fetch it. Callers currently only check
-             * success/failure. If a caller ever needs the post-update state, re-fetch here. */
             return subscription;
         }
 
@@ -265,6 +213,37 @@ public class UpdateOrganizationSubscriptionCommand(
                 CommandName, organization.GatewaySubscriptionId, organization.Id);
             return null;
         }
+    }
+
+    private async Task<(Plan source, Plan target)> ResolvePhasePlansAsync(Organization organization)
+    {
+        var migrationPath = await TryResolveMigrationPathAsync(organization.Id);
+        if (migrationPath is null)
+        {
+            var current = await pricingClient.GetPlanOrThrow(organization.PlanType);
+            return (current, current);
+        }
+
+        var source = await pricingClient.GetPlanOrThrow(migrationPath.FromPlan);
+        var target = await pricingClient.GetPlanOrThrow(migrationPath.ToPlan);
+        return (source, target);
+    }
+
+    private async Task<MigrationPath?> TryResolveMigrationPathAsync(Guid organizationId)
+    {
+        var assignment = await assignmentRepository.GetByOrganizationIdAsync(organizationId);
+        if (assignment is null)
+        {
+            return null;
+        }
+
+        var cohort = await cohortRepository.GetByIdAsync(assignment.CohortId);
+        if (cohort?.MigrationPathId is null)
+        {
+            return null;
+        }
+
+        return MigrationPaths.FromId(cohort.MigrationPathId.Value);
     }
 
     private async Task ReconcileTaxExemptionAsync(Customer customer)
@@ -352,14 +331,63 @@ public class UpdateOrganizationSubscriptionCommand(
         };
     }
 
+    private static List<SubscriptionSchedulePhaseOptions> BuildUpdatedPhases(
+        List<SubscriptionSchedulePhase> migrationPhases,
+        IReadOnlyList<OrganizationSubscriptionChange> changes,
+        Plan sourcePlan,
+        Plan targetPlan)
+    {
+        var phase1Ended = migrationPhases.Count == 1;
+
+        var phases = new List<SubscriptionSchedulePhaseOptions>();
+
+        var phase1 = migrationPhases[0];
+        phases.Add(BuildPhaseOptions(
+            phase1, changes,
+            source: sourcePlan,
+            target: phase1Ended ? targetPlan : sourcePlan,
+            suppressDiscounts: phase1Ended));
+
+        if (migrationPhases.Count >= 2)
+        {
+            phases.Add(BuildPhaseOptions(
+                migrationPhases[1], changes,
+                source: sourcePlan,
+                target: targetPlan,
+                suppressDiscounts: false));
+        }
+
+        return phases;
+    }
+
+    private static SubscriptionSchedulePhaseOptions BuildPhaseOptions(
+        SubscriptionSchedulePhase sourcePhase,
+        IReadOnlyList<OrganizationSubscriptionChange> changes,
+        Plan source,
+        Plan target,
+        bool suppressDiscounts) =>
+        new()
+        {
+            StartDate = sourcePhase.StartDate,
+            EndDate = sourcePhase.EndDate,
+            Items = ApplyChangesToPhaseItems(sourcePhase.Items, changes, source, target),
+            Discounts = suppressDiscounts
+                ? []
+                : sourcePhase.Discounts?.Select(d =>
+                    new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),
+            Metadata = sourcePhase.Metadata,
+            ProrationBehavior = sourcePhase.ProrationBehavior
+        };
+
     private static List<SubscriptionSchedulePhaseItemOptions> ApplyChangesToPhaseItems(
         IList<SubscriptionSchedulePhaseItem> phaseItems,
-        IReadOnlyList<OrganizationSubscriptionChange> changes)
+        IReadOnlyList<OrganizationSubscriptionChange> changes,
+        Plan sourcePlan,
+        Plan targetPlan)
     {
-        /* Note: when a change targets a price ID not present in this phase (e.g. Phase 2 has
-         * migrated prices), the change is silently skipped. This is safe because subscription-
-         * level validation (ValidateItemAddition, ValidateItemPriceChange, etc.) already ran
-         * before this method is called. */
+        string Translate(string priceId) =>
+            OrganizationPlanMigrationPriceMapper.MapOrPassThrough(priceId, sourcePlan, targetPlan);
+
         var items = phaseItems
             .Select(i => new SubscriptionSchedulePhaseItemOptions { Price = i.PriceId, Quantity = i.Quantity })
             .ToList();
@@ -369,31 +397,38 @@ public class UpdateOrganizationSubscriptionCommand(
             change.Switch(
                 addItem => items.Add(new SubscriptionSchedulePhaseItemOptions
                 {
-                    Price = addItem.PriceId,
+                    Price = Translate(addItem.PriceId),
                     Quantity = addItem.Quantity
                 }),
                 changeItemPrice =>
                 {
-                    var existing = items.FirstOrDefault(i => i.Price == changeItemPrice.CurrentPriceId);
+                    var translatedCurrent = Translate(changeItemPrice.CurrentPriceId);
+                    var translatedUpdated = Translate(changeItemPrice.UpdatedPriceId);
+                    var existing = items.FirstOrDefault(i => i.Price == translatedCurrent);
                     if (existing != null)
                     {
-                        existing.Price = changeItemPrice.UpdatedPriceId;
+                        existing.Price = translatedUpdated;
                         if (changeItemPrice.Quantity.HasValue)
                         {
                             existing.Quantity = changeItemPrice.Quantity.Value;
                         }
                     }
                 },
-                removeItem => items.RemoveAll(i => i.Price == removeItem.PriceId),
+                removeItem =>
+                {
+                    var translated = Translate(removeItem.PriceId);
+                    items.RemoveAll(i => i.Price == translated);
+                },
                 updateItemQuantity =>
                 {
+                    var translated = Translate(updateItemQuantity.PriceId);
                     if (updateItemQuantity.Quantity == 0)
                     {
-                        items.RemoveAll(i => i.Price == updateItemQuantity.PriceId);
+                        items.RemoveAll(i => i.Price == translated);
                     }
                     else
                     {
-                        var existing = items.FirstOrDefault(i => i.Price == updateItemQuantity.PriceId);
+                        var existing = items.FirstOrDefault(i => i.Price == translated);
                         if (existing != null)
                         {
                             existing.Quantity = updateItemQuantity.Quantity;
@@ -402,7 +437,7 @@ public class UpdateOrganizationSubscriptionCommand(
                         {
                             items.Add(new SubscriptionSchedulePhaseItemOptions
                             {
-                                Price = updateItemQuantity.PriceId,
+                                Price = translated,
                                 Quantity = updateItemQuantity.Quantity
                             });
                         }
