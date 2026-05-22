@@ -100,7 +100,7 @@ public class RestoreOrganizationUserCommand(
 
         await CheckPoliciesBeforeRestoreAsync(organizationUser, userTwoFactorIsEnabled);
 
-        var status = OrganizationService.GetPriorActiveOrganizationUserStatusType(organizationUser);
+        var status = organizationUser.GetPriorActiveOrganizationUserStatusType();
 
         await organizationUserRepository.RestoreAsync(organizationUser.Id, status);
 
@@ -230,7 +230,7 @@ public class RestoreOrganizationUserCommand(
                     CheckForOtherFreeOrganizationOwnership(organizationUser, orgUsersAndOrgs);
                 }
 
-                var status = OrganizationService.GetPriorActiveOrganizationUserStatusType(organizationUser);
+                var status = organizationUser.GetPriorActiveOrganizationUserStatusType();
 
                 await organizationUserRepository.RestoreAsync(organizationUser.Id, status);
                 organizationUser.Status = status;
@@ -302,7 +302,7 @@ public class RestoreOrganizationUserCommand(
     {
         // An invited OrganizationUser isn't linked with a user account yet, so these checks are irrelevant
         // The user will be subject to the same checks when they try to accept the invite
-        if (OrganizationService.GetPriorActiveOrganizationUserStatusType(orgUser) == OrganizationUserStatusType.Invited)
+        if (orgUser.GetPriorActiveOrganizationUserStatusType() == OrganizationUserStatusType.Invited)
         {
             return;
         }
