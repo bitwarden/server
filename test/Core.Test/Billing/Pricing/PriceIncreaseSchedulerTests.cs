@@ -591,17 +591,22 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
-    public async Task Release_BothFeatureFlagsOff_DoesNothing()
+    public async Task Release_BothFeatureFlagsOff_StillReleasesWhenScheduleExists()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(false);
         _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data = [CreateSchedule("sched_1", "sub_1", SubscriptionScheduleStatus.Active)]
+            });
 
         var sut = CreateSut();
 
         await sut.Release("cus_1", "sub_1");
 
-        await _stripeAdapter.DidNotReceiveWithAnyArgs()
-            .ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>());
+        await _stripeAdapter.Received(1).ReleaseSubscriptionScheduleAsync("sched_1", null);
     }
 
     [Fact]
@@ -787,10 +792,13 @@ public class PriceIncreaseSchedulerTests
 
         await _assignmentRepository.Received(1).ReplaceAsync(Arg.Is<OrganizationPlanMigrationCohortAssignment>(a =>
             a.OrganizationId == orgId && a.ScheduledDate != null));
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Fact]
-    public async Task ScheduleBusinessPriceIncrease_OnSuccess_UpdatesSubscriptionMetadataWithCohort()
+    public async Task ScheduleBusinessPriceIncrease_OnSuccess_StampsCohortMetadataOnSchedulePhases()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
 
@@ -823,13 +831,138 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
 
         Assert.True(result);
-        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
-            "sub_1",
-            Arg.Is<SubscriptionUpdateOptions>(o =>
-                o.Metadata != null &&
-                o.Metadata.Count == 2 &&
-                o.Metadata["migration_cohort_id"] == cohort.Id.ToString() &&
-                o.Metadata["migration_cohort_name"] == cohort.Name));
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sched_1",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases.Count == 2 &&
+                o.Phases[0].Metadata != null &&
+                o.Phases[0].Metadata[MetadataKeys.MigrationCohortId] == cohort.Id.ToString() &&
+                o.Phases[0].Metadata[MetadataKeys.MigrationCohortName] == cohort.Name &&
+                o.Phases[1].Metadata != null &&
+                o.Phases[1].Metadata[MetadataKeys.MigrationCohortId] == cohort.Id.ToString() &&
+                o.Phases[1].Metadata[MetadataKeys.MigrationCohortName] == cohort.Name));
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            "sub_1", Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task ScheduleBusinessPriceIncrease_DoesNotInvokeUpdateSubscription()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+
+        var source = MockPlans.Get(PlanType.EnterpriseAnnually2020);
+        var target = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(source);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(target);
+
+        var orgId = Guid.NewGuid();
+        var subscription = CreateBusinessSubscription("sub_1", "cus_1", orgId,
+            CreateSubscriptionItem(source.PasswordManager.StripeSeatPlanId, 10));
+        var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CohortId = cohort.Id
+        });
+
+        var sut = CreateSut();
+
+        await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task SchedulePersonalPriceIncrease_DoesNotSetMetadataOnPhases()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        var oldPremium = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            Seat = new Purchasable { StripePriceId = "premium-old-seat", Price = 10, Provided = 1 },
+            Storage = new Purchasable { StripePriceId = "premium-old-storage", Price = 4, Provided = 1 }
+        };
+
+        var newPremium = new PremiumPlan
+        {
+            Name = "Premium",
+            Available = true,
+            Seat = new Purchasable { StripePriceId = "premium-new-seat", Price = 15, Provided = 1 },
+            Storage = new Purchasable { StripePriceId = "premium-new-storage", Price = 4, Provided = 1 }
+        };
+
+        _pricingClient.ListPremiumPlans().Returns([oldPremium, newPremium]);
+
+        var subscription = CreateSubscription("sub_1", "cus_1",
+            CreateSubscriptionItem("premium-old-seat", 1));
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+
+        var sut = CreateSut();
+
+        await sut.SchedulePersonalPriceIncrease(subscription);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sched_1",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases.Count == 2 &&
+                o.Phases[0].Metadata == null &&
+                o.Phases[1].Metadata == null));
+    }
+
+    [Fact]
+    public async Task ScheduleBusinessPriceIncrease_LineItemUsingMapper_PicksUpSecretsManagerSeat()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+
+        var source = MockPlans.Get(PlanType.EnterpriseAnnually2020);
+        var target = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(source);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(target);
+
+        var orgId = Guid.NewGuid();
+        var subscription = CreateBusinessSubscription("sub_1", "cus_1", orgId,
+            CreateSubscriptionItem(source.SecretsManager.StripeSeatPlanId, 4));
+        var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CohortId = cohort.Id
+        });
+
+        var sut = CreateSut();
+
+        await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sched_1",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases[1].Items.Any(i => i.Price == target.SecretsManager.StripeSeatPlanId && i.Quantity == 4)));
     }
 
     [Fact]
@@ -886,6 +1019,9 @@ public class PriceIncreaseSchedulerTests
 
         await _assignmentRepository.Received(1).ReplaceAsync(Arg.Is<OrganizationPlanMigrationCohortAssignment>(a =>
             a.OrganizationId == orgId && a.ScheduledDate != null));
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Fact]
@@ -931,6 +1067,9 @@ public class PriceIncreaseSchedulerTests
                 o.Phases[1].Discounts != null &&
                 o.Phases[1].Discounts.Count == 1 &&
                 o.Phases[1].Discounts[0].Coupon == "grandfather"));
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Fact]
@@ -982,6 +1121,9 @@ public class PriceIncreaseSchedulerTests
                 o.Phases[1].Discounts.Count == 2 &&
                 o.Phases[1].Discounts[0].Coupon == "retention" &&
                 o.Phases[1].Discounts[1].Coupon == "grandfather"));
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Fact]
@@ -1028,6 +1170,9 @@ public class PriceIncreaseSchedulerTests
                 o.Phases[1].Discounts != null &&
                 o.Phases[1].Discounts.Count == 1 &&
                 o.Phases[1].Discounts[0].Coupon == "retention"));
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Fact]
@@ -1074,6 +1219,9 @@ public class PriceIncreaseSchedulerTests
                 o.Phases[1].Discounts.Count == 2 &&
                 o.Phases[1].Discounts[0].Coupon == "grandfather" &&
                 o.Phases[1].Discounts[1].Coupon == "PROACT-25"));
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Fact]
@@ -1119,6 +1267,9 @@ public class PriceIncreaseSchedulerTests
                 o.Phases[1].Discounts != null &&
                 o.Phases[1].Discounts.Count == 1 &&
                 o.Phases[1].Discounts[0].Coupon == "grandfather"));
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Fact]
@@ -1163,6 +1314,9 @@ public class PriceIncreaseSchedulerTests
                 o.Phases[1].Items.Any(i => i.Price == target.PasswordManager.StripeSeatPlanId && i.Quantity == 10) &&
                 o.Phases[1].Items.Any(i => i.Price == target.SecretsManager.StripeSeatPlanId && i.Quantity == 4) &&
                 o.Phases[1].Items.Any(i => i.Price == target.SecretsManager.StripeServiceAccountPlanId && i.Quantity == 50)));
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Fact]
@@ -1203,6 +1357,9 @@ public class PriceIncreaseSchedulerTests
             "sched_1",
             Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
                 o.Phases[1].Items.Any(i => i.Price == target.PasswordManager.StripeStoragePlanId && i.Quantity == 3)));
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Fact]
@@ -1334,6 +1491,9 @@ public class PriceIncreaseSchedulerTests
             "sched_1", Arg.Any<SubscriptionScheduleUpdateOptions>());
         await _assignmentRepository.DidNotReceiveWithAnyArgs()
             .ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Fact]

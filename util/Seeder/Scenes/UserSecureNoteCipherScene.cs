@@ -20,6 +20,7 @@ public class UserSecureNoteCipherScene(IUserRepository userRepository, ICipherRe
         public required string Name { get; set; }
         public string? Notes { get; set; }
         public bool Reprompt { get; set; }
+        public Guid? FolderId { get; set; }
     }
 
     public class Result
@@ -46,6 +47,13 @@ public class UserSecureNoteCipherScene(IUserRepository userRepository, ICipherRe
         if (request.Reprompt)
         {
             cipher.Reprompt = CipherRepromptType.Password;
+        }
+        if (request.FolderId.HasValue)
+        {
+            cipher.Folders = CipherComposer.BuildFoldersJson(new Dictionary<Guid, Guid>
+            {
+                { request.UserId, request.FolderId.Value }
+            });
         }
 
         await cipherRepository.CreateAsync(cipher);
