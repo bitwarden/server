@@ -1478,6 +1478,73 @@ public class UpdateOrganizationSubscriptionCommandTests
     }
 
     [Fact]
+    public async Task Run_BusinessMigration_SinglePhaseSourcePriced_PreservesPricingAndDiscount()
+    {
+        // Legacy scenario: a single source-priced phase remains (e.g. cancellation flow left the
+        // schedule unreleased). count == 1 alone would mis-classify this as post-migration and
+        // wrongly translate prices + clear the migration coupon. The IsPostMigrationPhase check
+        // requires items to actually use target-plan price IDs, so this stays source-priced.
+        var organization = CreateOrganization();
+        var source = MockPlans.Get(PlanType.EnterpriseAnnually2020);
+        var target = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        SetupMigration(organization,
+            MigrationPathId.Enterprise2020AnnualToCurrent,
+            PlanType.EnterpriseAnnually2020, source,
+            PlanType.EnterpriseAnnually, target);
+
+        var sourceSeat = source.PasswordManager.StripeSeatPlanId;
+        var subscription = CreateSubscription(items: [(sourceSeat, "si_1", 10)]);
+        SetupGetSubscription(organization, subscription);
+
+        var now = DateTime.UtcNow;
+        var schedule = new SubscriptionSchedule
+        {
+            Id = "sub_sched_123",
+            SubscriptionId = subscription.Id,
+            Status = SubscriptionScheduleStatus.Active,
+            EndBehavior = SubscriptionScheduleEndBehavior.Release,
+            Phases =
+            [
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = now.AddDays(-30),
+                    EndDate = now.AddMinutes(-5),
+                    Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_anchor", Quantity = 1 }],
+                    ProrationBehavior = ProrationBehavior.None
+                },
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = now.AddMinutes(-5),
+                    EndDate = now.AddDays(7),
+                    Items = [new SubscriptionSchedulePhaseItem { PriceId = sourceSeat, Quantity = 10 }],
+                    Discounts = [new SubscriptionSchedulePhaseDiscount { CouponId = "migration-coupon" }],
+                    ProrationBehavior = ProrationBehavior.None
+                }
+            ]
+        };
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity(sourceSeat, 20)]
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.Phases.Count == 1 &&
+                opts.Phases[0].Items.Any(i => i.Price == sourceSeat && i.Quantity == 20) &&
+                opts.Phases[0].Discounts != null &&
+                opts.Phases[0].Discounts.Any(d => d.Coupon == "migration-coupon")));
+    }
+
+    [Fact]
     public async Task Run_NoMigrationAssignment_DoesNotTranslate()
     {
         var organization = CreateOrganization();

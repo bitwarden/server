@@ -140,6 +140,13 @@ public class UpdateOrganizationSubscriptionCommand(
                 return DefaultConflict;
             }
 
+            if (migrationPhases.Count > 2)
+            {
+                _logger.LogWarning(
+                    "{Command}: Schedule ({ScheduleId}) has {PhaseCount} active phases — expected at most 2. Only the first two will be updated.",
+                    CommandName, activeSchedule.Id, migrationPhases.Count);
+            }
+
             _logger.LogInformation(
                 "{Command}: Active subscription schedule ({ScheduleId}) found for subscription ({SubscriptionId}), updating {PhaseCount} active phase(s)",
                 CommandName, activeSchedule.Id, subscription.Id, migrationPhases.Count);
@@ -337,7 +344,8 @@ public class UpdateOrganizationSubscriptionCommand(
         Plan sourcePlan,
         Plan targetPlan)
     {
-        var phase1Ended = migrationPhases.Count == 1;
+        var phase1IsPostMigration = migrationPhases.Count == 1
+            && IsPostMigrationPhase(migrationPhases[0], sourcePlan, targetPlan);
 
         var phases = new List<SubscriptionSchedulePhaseOptions>();
 
@@ -345,8 +353,8 @@ public class UpdateOrganizationSubscriptionCommand(
         phases.Add(BuildPhaseOptions(
             phase1, changes,
             source: sourcePlan,
-            target: phase1Ended ? targetPlan : sourcePlan,
-            suppressDiscounts: phase1Ended));
+            target: phase1IsPostMigration ? targetPlan : sourcePlan,
+            suppressDiscounts: phase1IsPostMigration));
 
         if (migrationPhases.Count >= 2)
         {
@@ -358,6 +366,34 @@ public class UpdateOrganizationSubscriptionCommand(
         }
 
         return phases;
+    }
+
+    // For non-migrations (source == target), a lone remaining phase always means Stripe has rolled
+    // past phase 1. For migrations, require the phase to actually use target-plan price IDs — a
+    // legacy source-priced single-phase schedule (cancelled without releasing) would otherwise have
+    // its still-valid migration discount wrongly suppressed.
+    private static bool IsPostMigrationPhase(SubscriptionSchedulePhase phase, Plan source, Plan target)
+    {
+        if (ReferenceEquals(source, target))
+        {
+            return true;
+        }
+
+        var targetIds = new HashSet<string>(StringComparer.Ordinal)
+        {
+            target.PasswordManager.StripeSeatPlanId,
+            target.PasswordManager.StripeStoragePlanId
+        };
+        if (target.SecretsManager?.StripeSeatPlanId is { } smSeat)
+        {
+            targetIds.Add(smSeat);
+        }
+        if (target.SecretsManager?.StripeServiceAccountPlanId is { } smServiceAccount)
+        {
+            targetIds.Add(smServiceAccount);
+        }
+
+        return phase.Items.Any(item => targetIds.Contains(item.PriceId));
     }
 
     private static SubscriptionSchedulePhaseOptions BuildPhaseOptions(
