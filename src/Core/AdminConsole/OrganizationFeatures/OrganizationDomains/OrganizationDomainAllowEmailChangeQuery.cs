@@ -9,30 +9,28 @@ public class OrganizationDomainAllowEmailChangeQuery(
     IOrganizationDomainRepository organizationDomainRepository)
     : IOrganizationDomainAllowEmailChangeQuery
 {
-    private readonly IOrganizationRepository _organizationRepository = organizationRepository;
-    private readonly IOrganizationDomainRepository _organizationDomainRepository = organizationDomainRepository;
-
     /// <inheritdoc />
     public async Task<bool> IsAllowedAsync(User user, string newEmailDomain)
     {
         // We want to see if the user is currently a claimed account
         var organizationsWithVerifiedUserEmailDomain =
-            await _organizationRepository.GetByVerifiedUserEmailDomainAsync(user.Id);
+            await organizationRepository.GetByVerifiedUserEmailDomainAsync(user.Id);
 
         var claimingOrganizations = organizationsWithVerifiedUserEmailDomain
-            .Where(organization => organization is { Enabled: true, UseOrganizationDomains: true });
+            .Where(organization => organization is { Enabled: true, UseOrganizationDomains: true })
+            .Select(organization => organization.Id);
 
         // If their account is claimed we need to apply those organization rules to the newEmailDomain.
         if (claimingOrganizations.Any())
         {
-            var verifiedDomains = await _organizationDomainRepository.GetVerifiedDomainsByOrganizationIdsAsync(
-                claimingOrganizations.Select(org => org.Id));
+            var verifiedDomains = await organizationDomainRepository.GetVerifiedDomainsByOrganizationIdsAsync(
+                claimingOrganizations);
 
             return verifiedDomains.Any(verifiedDomain => verifiedDomain.DomainName == newEmailDomain);
         }
 
         // User is not claimed — fall back to the global block-policy check.
-        var isDomainBlocked = await _organizationDomainRepository.HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(newEmailDomain);
+        var isDomainBlocked = await organizationDomainRepository.HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(newEmailDomain);
         return !isDomainBlocked;
     }
 }
