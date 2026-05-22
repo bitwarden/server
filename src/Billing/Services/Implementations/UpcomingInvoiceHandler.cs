@@ -357,39 +357,8 @@ public class UpcomingInvoiceHandler(
             }
 
             var assignment = await assignmentRepository.GetByOrganizationIdAsync(organization.Id);
-
             if (assignment is null || assignment.ScheduledDate is not null)
             {
-                return false;
-            }
-
-            var cohort = await cohortRepository.GetByIdAsync(assignment.CohortId);
-
-            if (cohort is null || !cohort.IsActive)
-            {
-                return false;
-            }
-
-            if (cohort.MigrationPathId is null)
-            {
-                // Churn-only cohort — no migration to schedule.
-                return false;
-            }
-
-            var migrationPath = MigrationPaths.FromId(cohort.MigrationPathId.Value);
-            if (migrationPath is null)
-            {
-                logger.LogError(
-                    "Unknown MigrationPathId ({MigrationPathId}) on cohort ({CohortId}) for Organization ({OrganizationId})",
-                    cohort.MigrationPathId, cohort.Id, organization.Id);
-                return false;
-            }
-
-            if (organization.PlanType != migrationPath.FromPlan)
-            {
-                logger.LogWarning(
-                    "Skipping business price migration for Organization ({OrganizationId}); PlanType {ActualPlan} does not match cohort {CohortName} source {ExpectedPlan}",
-                    organization.Id, organization.PlanType, cohort.Name, migrationPath.FromPlan);
                 return false;
             }
 
@@ -398,11 +367,18 @@ public class UpcomingInvoiceHandler(
                 await WaitForTestClockToAdvanceAsync(subscription.TestClock);
             }
 
-            var scheduled = await priceIncreaseScheduler.ScheduleBusinessPriceIncrease(subscription, cohort);
+            var scheduled = await priceIncreaseScheduler.ScheduleForSubscription(subscription);
+
             if (!scheduled)
             {
                 return true;
             }
+
+            var cohort = await cohortRepository.GetByIdAsync(assignment.CohortId);
+            if (cohort?.MigrationPathId is null) return true;
+
+            var migrationPath = MigrationPaths.FromId(cohort.MigrationPathId.Value);
+            if (migrationPath is null) return true;
 
             var sourcePlan = await pricingClient.GetPlanOrThrow(migrationPath.FromPlan);
             var targetPlan = await pricingClient.GetPlanOrThrow(migrationPath.ToPlan);
