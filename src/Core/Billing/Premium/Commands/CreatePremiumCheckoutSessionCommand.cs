@@ -39,10 +39,21 @@ public class CreatePremiumCheckoutSessionCommand(
     private readonly IPricingClient pricingClient = pricingClient;
     private readonly ISubscriberService subscriberService = subscriberService;
     private readonly IGlobalSettings globalSettings = globalSettings;
+    private readonly ILogger<CreatePremiumCheckoutSessionCommand> logger = logger;
 
     public Task<BillingCommandResult<PremiumCheckoutSessionResponseModel>>
         Run(User user, string originatingAppVersion, string originatingPlatform) => HandleAsync<PremiumCheckoutSessionResponseModel>(async () =>
     {
+
+        logger.LogInformation(
+            "Premium checkout GlobalSettings.Stripe values - PremiumCheckoutSuccessUrl: {PremiumCheckoutSuccessUrl}, PremiumCheckoutCancelUrl: {PremiumCheckoutCancelUrl}, BrowserPremiumCheckoutSuccessUrl: {BrowserPremiumCheckoutSuccessUrl}, BrowserPremiumCheckoutCancelUrl: {BrowserPremiumCheckoutCancelUrl}, DesktopPremiumCheckoutSuccessUrl: {DesktopPremiumCheckoutSuccessUrl}, DesktopPremiumCheckoutCancelUrl: {DesktopPremiumCheckoutCancelUrl}",
+            globalSettings.Stripe.PremiumCheckoutSuccessUrl,
+            globalSettings.Stripe.PremiumCheckoutCancelUrl,
+            globalSettings.Stripe.BrowserPremiumCheckoutSuccessUrl,
+            globalSettings.Stripe.BrowserPremiumCheckoutCancelUrl,
+            globalSettings.Stripe.DesktopPremiumCheckoutSuccessUrl,
+            globalSettings.Stripe.DesktopPremiumCheckoutCancelUrl);
+
         if (user.Premium)
         {
             return new BadRequest("User is already a premium user.");
