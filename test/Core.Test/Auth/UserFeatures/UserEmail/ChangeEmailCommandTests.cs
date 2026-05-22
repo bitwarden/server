@@ -8,6 +8,7 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
@@ -57,8 +58,14 @@ public class ChangeEmailCommandTests
 
     [Theory, BitAutoData]
     public async Task ChangeEmailAsync_NonStripeUserWithMasterPassword_UpdatesFieldsAndPushesLogout(
-        SutProvider<ChangeEmailCommand> sutProvider, User user)
+        User user)
     {
+        var sutProvider = new SutProvider<ChangeEmailCommand>()
+            .WithFakeTimeProvider()
+            .Create();
+        var now = new DateTime(2026, 5, 22, 12, 0, 0, DateTimeKind.Utc);
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(now);
+
         user.Email = _currentEmail;
         user.Gateway = null;
         user.MasterPassword = "hash";
@@ -66,16 +73,13 @@ public class ChangeEmailCommandTests
             .GetByEmailAsync(_newEmail)
             .Returns((User)null);
 
-        var before = DateTime.UtcNow;
         await sutProvider.Sut.ChangeEmailAsync(user, _newEmail);
-        var after = DateTime.UtcNow;
 
         Assert.Equal(_newEmail, user.Email);
         Assert.True(user.EmailVerified);
-        Assert.NotNull(user.LastEmailChangeDate);
-        Assert.InRange(user.LastEmailChangeDate!.Value, before, after);
-        Assert.InRange(user.RevisionDate, before, after);
-        Assert.InRange(user.AccountRevisionDate, before, after);
+        Assert.Equal(now, user.LastEmailChangeDate);
+        Assert.Equal(now, user.RevisionDate);
+        Assert.Equal(now, user.AccountRevisionDate);
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushLogOutAsync(user.Id);
         await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()

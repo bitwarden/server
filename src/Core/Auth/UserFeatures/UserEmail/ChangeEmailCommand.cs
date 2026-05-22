@@ -13,12 +13,14 @@ public class ChangeEmailCommand(
         IUserRepository userRepository,
         IPushNotificationService pushService,
         IStripeSyncService stripeSyncService,
-        IOrganizationDomainAllowEmailChangeQuery organizationDomainAllowEmailChangeQuery) : IChangeEmailCommand
+        IOrganizationDomainAllowEmailChangeQuery organizationDomainAllowEmailChangeQuery,
+        TimeProvider timeProvider) : IChangeEmailCommand
 {
     private readonly IUserRepository _userRepository = userRepository;
     private readonly IPushNotificationService _pushService = pushService;
     private readonly IStripeSyncService _stripeSyncService = stripeSyncService;
     private readonly IOrganizationDomainAllowEmailChangeQuery _organizationDomainAllowEmailChangeQuery = organizationDomainAllowEmailChangeQuery;
+    private readonly TimeProvider _timeProvider = timeProvider;
 
     /// <inheritdoc />
     public async Task ChangeEmailAsync(User user, string newEmail)
@@ -36,7 +38,7 @@ public class ChangeEmailCommand(
         var previousAccountRevisionDate = user.AccountRevisionDate;
         var previousLastEmailChangeDate = user.LastEmailChangeDate;
 
-        var now = DateTime.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         user.Email = newEmail;
         user.EmailVerified = true;
         user.LastEmailChangeDate = now;
@@ -85,8 +87,8 @@ public class ChangeEmailCommand(
         // If the new email domain is the same as the current email domain, we can skip
         // the checks since it would be a noop in terms of policy and claiming organizations.
         // Null check for nullable reference types, but the email should always be valid at this point in the code.
-        var newDomain = CoreHelpers.GetEmailDomain(newEmail) ?? throw new BadRequestException("Invalid email address.");
-        if (newDomain == CoreHelpers.GetEmailDomain(user.Email))
+        var newDomain = EmailValidation.GetDomain(newEmail);
+        if (newDomain == EmailValidation.GetDomain(user.Email))
         {
             return;
         }
