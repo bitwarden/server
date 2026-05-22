@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationUser_ReadByPendingAutoConfirm]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_ReadByPendingAutoConfirm]
     @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -14,3 +14,4 @@ BEGIN
         AND [Type] = 2    -- User
         AND [UserId] IS NOT NULL
 END
+GO

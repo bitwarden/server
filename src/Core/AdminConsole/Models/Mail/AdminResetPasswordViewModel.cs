@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Models.Mail;
+﻿using Bit.Core.Models.Mail;
+
+namespace Bit.Core.AdminConsole.Models.Mail;
 
 public class AdminResetPasswordViewModel : BaseMailModel
 {
