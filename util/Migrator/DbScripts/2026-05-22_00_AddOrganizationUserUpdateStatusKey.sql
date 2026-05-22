@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_UpdateStatusKey]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_UpdateManyStatusKey]
     @UsersJson    NVARCHAR(MAX),
     @RevisionDate DATETIME2(7)
 AS
