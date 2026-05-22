@@ -2937,4 +2937,436 @@ public class SubscriptionUpdatedHandlerTests
         await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
         await _cohortAssignmentRepository.DidNotReceive().ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
     }
+
+    [Fact]
+    public async Task HandleAsync_BusinessMigration_EnterpriseAnnual2020ToCurrent_AppliesAndMarksMigrated()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var assignmentId = Guid.NewGuid();
+        var enterprise2020Annual = new Enterprise2020Plan(true);
+        var enterpriseAnnual = new EnterprisePlan(true);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_happy_ea",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.EnterpriseAnnually2020,
+            Plan = enterprise2020Annual.Name,
+            UseScim = false,
+            Seats = 200,
+            MaxStorageGb = 50,
+        };
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = assignmentId,
+            OrganizationId = organizationId,
+            CohortId = cohortId
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(enterprise2020Annual);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseMonthly2020).Returns(new Enterprise2020Plan(false));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually2020).Returns(new Teams2020Plan(true));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(new Teams2020Plan(false));
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(enterpriseAnnual);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "Enterprise2020Annual",
+            MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
+            IsActive = true
+        });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — plan shape applied
+        Assert.Equal(PlanType.EnterpriseAnnually, organization.PlanType);
+        Assert.Equal(enterpriseAnnual.Name, organization.Plan);
+        Assert.Equal(enterpriseAnnual.HasScim, organization.UseScim);
+        Assert.True(organization.UsePasswordManager);
+        Assert.Equal(enterpriseAnnual.UsersGetPremium, organization.UsersGetPremium);
+        Assert.Equal(enterpriseAnnual.PasswordManager.MaxCollections, organization.MaxCollections);
+
+        // Allocation preserved
+        Assert.Equal((short)200, organization.Seats);
+        Assert.Equal((short)50, organization.MaxStorageGb);
+
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
+            o.Id == organizationId && o.PlanType == PlanType.EnterpriseAnnually));
+
+        Assert.NotNull(assignment.MigratedDate);
+        await _cohortAssignmentRepository.Received(1).ReplaceAsync(
+            Arg.Is<OrganizationPlanMigrationCohortAssignment>(a => a.Id == assignmentId && a.MigratedDate.HasValue));
+    }
+
+    [Fact]
+    public async Task HandleAsync_BusinessMigration_EnterpriseMonthly2020ToCurrent_AppliesAndMarksMigrated()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var assignmentId = Guid.NewGuid();
+        var enterprise2020Monthly = new Enterprise2020Plan(false);
+        var enterpriseMonthly = new EnterprisePlan(false);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterprise2020Monthly.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterprise2020Monthly.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_happy_em",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterpriseMonthly.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterpriseMonthly.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.EnterpriseMonthly2020,
+            Plan = enterprise2020Monthly.Name,
+            UseScim = false,
+            Seats = 200,
+            MaxStorageGb = 50,
+        };
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = assignmentId,
+            OrganizationId = organizationId,
+            CohortId = cohortId
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(new Enterprise2020Plan(true));
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseMonthly2020).Returns(enterprise2020Monthly);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually2020).Returns(new Teams2020Plan(true));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(new Teams2020Plan(false));
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseMonthly).Returns(enterpriseMonthly);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "Enterprise2020Monthly",
+            MigrationPathId = MigrationPathId.Enterprise2020MonthlyToCurrent,
+            IsActive = true
+        });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        Assert.Equal(PlanType.EnterpriseMonthly, organization.PlanType);
+        Assert.Equal(enterpriseMonthly.Name, organization.Plan);
+        Assert.Equal((short)200, organization.Seats);
+        Assert.Equal((short)50, organization.MaxStorageGb);
+
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
+            o.Id == organizationId && o.PlanType == PlanType.EnterpriseMonthly));
+        Assert.NotNull(assignment.MigratedDate);
+        await _cohortAssignmentRepository.Received(1).ReplaceAsync(
+            Arg.Is<OrganizationPlanMigrationCohortAssignment>(a => a.Id == assignmentId && a.MigratedDate.HasValue));
+    }
+
+    [Fact]
+    public async Task HandleAsync_BusinessMigration_TeamsAnnually2020ToCurrent_AppliesAndMarksMigrated()
+    {
+        // Arrange — Teams Track A: UseScim flips false -> true. Load-bearing capability gain.
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var assignmentId = Guid.NewGuid();
+        var teams2020Annual = new Teams2020Plan(true);
+        var teamsAnnual = new TeamsPlan(true);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teams2020Annual.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teams2020Annual.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_happy_ta",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsAnnual.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsAnnual.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.TeamsAnnually2020,
+            Plan = teams2020Annual.Name,
+            UseScim = false,  // Will flip to true
+            Seats = 50,
+            MaxStorageGb = 20,
+        };
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = assignmentId,
+            OrganizationId = organizationId,
+            CohortId = cohortId
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(new Enterprise2020Plan(true));
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseMonthly2020).Returns(new Enterprise2020Plan(false));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually2020).Returns(teams2020Annual);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(new Teams2020Plan(false));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(teamsAnnual);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "Teams2020Annual",
+            MigrationPathId = MigrationPathId.Teams2020AnnualToCurrent,
+            IsActive = true
+        });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — UseScim flip is the headline capability gain
+        Assert.Equal(PlanType.TeamsAnnually, organization.PlanType);
+        Assert.True(teamsAnnual.HasScim);
+        Assert.True(organization.UseScim);
+
+        // Allocation preserved
+        Assert.Equal((short)50, organization.Seats);
+        Assert.Equal((short)20, organization.MaxStorageGb);
+
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
+            o.Id == organizationId && o.PlanType == PlanType.TeamsAnnually));
+        Assert.NotNull(assignment.MigratedDate);
+        await _cohortAssignmentRepository.Received(1).ReplaceAsync(
+            Arg.Is<OrganizationPlanMigrationCohortAssignment>(a => a.Id == assignmentId && a.MigratedDate.HasValue));
+    }
+
+    [Fact]
+    public async Task HandleAsync_BusinessMigration_TeamsMonthly2020ToCurrent_AppliesAndMarksMigrated()
+    {
+        // Arrange — Teams Track A: UseScim flips false -> true.
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var assignmentId = Guid.NewGuid();
+        var teams2020Monthly = new Teams2020Plan(false);
+        var teamsMonthly = new TeamsPlan(false);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teams2020Monthly.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teams2020Monthly.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_happy_tm",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.TeamsMonthly2020,
+            Plan = teams2020Monthly.Name,
+            UseScim = false,  // Will flip to true
+            Seats = 25,
+            MaxStorageGb = 10,
+        };
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = assignmentId,
+            OrganizationId = organizationId,
+            CohortId = cohortId
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(new Enterprise2020Plan(true));
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseMonthly2020).Returns(new Enterprise2020Plan(false));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually2020).Returns(new Teams2020Plan(true));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(teams2020Monthly);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthly);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "Teams2020Monthly",
+            MigrationPathId = MigrationPathId.Teams2020MonthlyToCurrent,
+            IsActive = true
+        });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        Assert.Equal(PlanType.TeamsMonthly, organization.PlanType);
+        Assert.True(teamsMonthly.HasScim);
+        Assert.True(organization.UseScim);
+
+        Assert.Equal((short)25, organization.Seats);
+        Assert.Equal((short)10, organization.MaxStorageGb);
+
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
+            o.Id == organizationId && o.PlanType == PlanType.TeamsMonthly));
+        Assert.NotNull(assignment.MigratedDate);
+        await _cohortAssignmentRepository.Received(1).ReplaceAsync(
+            Arg.Is<OrganizationPlanMigrationCohortAssignment>(a => a.Id == assignmentId && a.MigratedDate.HasValue));
+    }
 }

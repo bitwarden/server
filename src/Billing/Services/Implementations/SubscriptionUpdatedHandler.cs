@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.Extensions;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Pricing;
@@ -631,7 +632,28 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 return;
             }
 
-            // Subsequent steps land in Task 9
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            if (organization == null)
+            {
+                _logger.LogWarning(
+                    "Organization ({OrganizationId}) not found for schedule-triggered business migration",
+                    organizationId);
+                return;
+            }
+
+            organization.ChangePlan(targetPlan);
+            await _organizationRepository.ReplaceAsync(organization);
+
+            assignment.MigratedDate = DateTime.UtcNow;
+            assignment.RevisionDate = DateTime.UtcNow;
+            await _cohortAssignmentRepository.ReplaceAsync(assignment);
+
+            _logger.LogInformation(
+                "Schedule-triggered business migration applied for organization ({OrganizationId}): PlanType {SourcePlanType} -> {TargetPlanType}, cohort ({CohortId})",
+                organizationId,
+                migrationPath.FromPlan,
+                migrationPath.ToPlan,
+                cohort.Id);
         }
         catch (BillingException)
         {
