@@ -773,7 +773,7 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage($"{orgName} has initiated account recovery", email);
         var model = new AdminResetPasswordViewModel()
         {
-            UserName = GetUserIdentifier(email, userName),
+            UserName = email,
             OrgName = CoreHelpers.SanitizeForEmail(orgName, false),
             ResetMasterPassword = resetMasterPassword,
             ResetTwoFactor = resetTwoFactor,

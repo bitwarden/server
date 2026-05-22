@@ -338,7 +338,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
     private async Task RemovePendingCancellationAsync(Subscription subscription)
     {
-        await _priceIncreaseScheduler.Schedule(subscription);
+        await _priceIncreaseScheduler.SchedulePersonalPriceIncrease(subscription);
 
         await _stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
         {

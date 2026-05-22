@@ -75,34 +75,7 @@ public class ImportCiphersCommand : IImportCiphersCommand
             }
         }
 
-        var userfoldersIds = (await _folderRepository.GetManyByUserIdAsync(importingUserId)).Select(f => f.Id).ToList();
-
-        //Assign id to the ones that don't exist in DB
-        //Need to keep the list order to create the relationships
-        var newFolders = new List<Folder>();
-        foreach (var folder in folders)
-        {
-            if (!userfoldersIds.Contains(folder.Id))
-            {
-                folder.SetNewId();
-                newFolders.Add(folder);
-            }
-        }
-
-        // Create the folder associations based on the newly created folder ids
-        foreach (var relationship in folderRelationships)
-        {
-            var cipher = ciphers.ElementAtOrDefault(relationship.Key);
-            var folder = folders.ElementAtOrDefault(relationship.Value);
-
-            if (cipher == null || folder == null)
-            {
-                continue;
-            }
-
-            cipher.Folders = $"{{\"{cipher.UserId.ToString()!.ToUpperInvariant()}\":" +
-                $"\"{folder.Id.ToString().ToUpperInvariant()}\"}}";
-        }
+        var newFolders = await ProcessFolders(importingUserId, folders, folderRelationships, ciphers);
 
         // Create it all
         await _cipherRepository.CreateAsync(importingUserId, ciphers, newFolders);
@@ -115,7 +88,9 @@ public class ImportCiphersCommand : IImportCiphersCommand
         List<Collection> collections,
         List<CipherDetails> ciphers,
         IEnumerable<KeyValuePair<int, int>> collectionRelationships,
-        Guid importingUserId)
+        Guid importingUserId,
+        List<Folder> folders,
+        IEnumerable<KeyValuePair<int, int>> folderRelationships)
     {
         var orgId = collections.Count > 0
             ? collections[0].OrganizationId
@@ -162,6 +137,8 @@ public class ImportCiphersCommand : IImportCiphersCommand
                                   $"{cipher.ArchivedDate.Value:yyyy-MM-ddTHH:mm:ss.fffffffZ}\"}}";
             }
         }
+
+        var newFolders = await ProcessFolders(importingUserId, folders, folderRelationships, ciphers);
 
         var organizationCollectionsIds = (await _collectionRepository.GetManyByOrganizationIdAsync(org.Id))
             .Select(c => c.Id)
@@ -224,9 +201,46 @@ public class ImportCiphersCommand : IImportCiphersCommand
         }
 
         // Create it all
-        await _cipherRepository.CreateAsync(ciphers, newCollections, collectionCiphers, newCollectionUsers);
+        await _cipherRepository.CreateAsync(ciphers, newCollections, collectionCiphers, newCollectionUsers, newFolders);
 
         // push
         await _pushService.PushSyncVaultAsync(importingUserId);
+    }
+
+    private async Task<List<Folder>> ProcessFolders(Guid importingUserId, List<Folder> folders, IEnumerable<KeyValuePair<int, int>> folderRelationships, List<CipherDetails> ciphers)
+    {
+        if (folders.Count == 0)
+        {
+            return folders;
+        }
+        var userFoldersIds = (await _folderRepository.GetManyByUserIdAsync(importingUserId)).Select(f => f.Id).ToList();
+        // Assign id to the ones that don't exist in DB
+        // Need to keep the list order to create the relationships
+        var newFolders = new List<Folder>();
+        foreach (var folder in folders)
+        {
+            if (!userFoldersIds.Contains(folder.Id))
+            {
+                folder.SetNewId();
+                newFolders.Add(folder);
+            }
+        }
+
+        // Create the folder associations based on the newly created folder ids
+        foreach (var relationship in folderRelationships)
+        {
+            var cipher = ciphers.ElementAtOrDefault(relationship.Key);
+            var folder = folders.ElementAtOrDefault(relationship.Value);
+
+            if (cipher == null || folder == null)
+            {
+                continue;
+            }
+
+            cipher.Folders = $"{{\"{importingUserId.ToString().ToUpperInvariant()}\":" +
+                $"\"{folder.Id.ToString().ToUpperInvariant()}\"}}";
+        }
+
+        return newFolders;
     }
 }

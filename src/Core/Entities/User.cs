@@ -113,6 +113,7 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public string? V2UpgradeToken { get; set; }
     [MaxLength(256)]
     public string? MasterPasswordSalt { get; set; }
+    public DateTime? LastApiKeyRotationDate { get; set; }
 
     public string GetMasterPasswordSalt()
     {

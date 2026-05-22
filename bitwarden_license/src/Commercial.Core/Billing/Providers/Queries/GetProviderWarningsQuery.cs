@@ -1,10 +1,12 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Providers.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Context;
+using Bit.Core.Services;
 using Stripe;
 using Stripe.Tax;
 
@@ -16,6 +18,7 @@ using TaxIdWarning = ProviderWarnings.TaxIdWarning;
 
 public class GetProviderWarningsQuery(
     ICurrentContext currentContext,
+    IFeatureService featureService,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService) : IGetProviderWarningsQuery
 {
@@ -61,9 +64,19 @@ public class GetProviderWarningsQuery(
         Provider provider,
         Customer customer)
     {
-        if (TaxHelpers.IsDirectTaxCountry(customer.Address?.Country))
+        if (featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
         {
-            return null;
+            if (customer.TaxExempt != TaxExempt.None)
+            {
+                return null;
+            }
+        }
+        else
+        {
+            if (TaxHelpers.IsDirectTaxCountry(customer.Address?.Country))
+            {
+                return null;
+            }
         }
 
         if (!currentContext.ProviderProviderAdmin(provider.Id))

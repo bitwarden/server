@@ -1,8 +1,8 @@
 ﻿using System.Net;
+using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
-using Bit.Api.Models.Request.Organizations;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
