@@ -299,6 +299,8 @@ public static class FeatureFlagKeys
     public const string PM28091_AddCopyAndQuickLaunchActions = "pm-28091-add-copy-and-quick-launch-actions";
     public const string PM28192_CipherAttachmentOps = "pm-28192-cipher-attachment-ops-to-sdk";
     public const string PM32016_RemoveAtRiskCallouts = "pm-32016-remove-at-risk-callouts";
+    public const string PM37785_VaultBatchBar = "pm-37785-vault-batch-bar";
+    public const string PM37785_DesktopVaultBatchBar = "pm-37785-desktop-vault-batch-bar";
 
     /* Secrets Manager Team */
     public const string SecretsVersioning = "sm-1587-secrets-versioning";
