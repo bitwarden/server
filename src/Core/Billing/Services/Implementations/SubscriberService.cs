@@ -584,6 +584,8 @@ public class SubscriberService(
             }
         });
 
+        await priceIncreaseScheduler.ScheduleForSubscription(subscription);
+
         logger.LogInformation(
             "Cleared pending unpaid-lifecycle cancellation for subscription ({SubscriptionId}) after subscriber re-enable",
             subscription.Id);
@@ -607,6 +609,8 @@ public class SubscriberService(
         }
 
         var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+
+        await priceIncreaseScheduler.Release(subscription.CustomerId, subscription.Id);
 
         await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
         {
