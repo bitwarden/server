@@ -112,6 +112,9 @@ public class OrganizationPlanMigrationCohortsController(
 
         ViewData["CohortType"] = CohortType.From(cohort.MigrationPathId);
         ViewData["IsActive"] = cohort.IsActive;
+        var nonPendingCount = await assignmentRepository.GetCohortNonPendingAssignmentsCountAsync(id);
+        ViewData["MigrationPathLocked"] = cohort.IsMigrationPathLocked(nonPendingCount);
+        ViewData["NonPendingAssignmentCount"] = nonPendingCount;
         return View(ToFormModel(cohort));
     }
 

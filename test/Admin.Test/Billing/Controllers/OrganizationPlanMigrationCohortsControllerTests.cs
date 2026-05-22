@@ -522,4 +522,24 @@ public class OrganizationPlanMigrationCohortsControllerTests
 
         Assert.IsType<NotFoundResult>(result);
     }
+
+    [Theory, BitAutoData]
+    public async Task Edit_Get_LockedCohort_SetsMigrationPathLockedViewData(
+        OrganizationPlanMigrationCohort cohort,
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(cohort.Id).Returns(cohort);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .GetCohortNonPendingAssignmentsCountAsync(cohort.Id).Returns(3);
+
+        var result = await sutProvider.Sut.Edit(cohort.Id);
+
+        Assert.IsType<ViewResult>(result);
+        Assert.True((bool)sutProvider.Sut.ViewData["MigrationPathLocked"]!);
+        Assert.Equal(3, sutProvider.Sut.ViewData["NonPendingAssignmentCount"]);
+    }
 }
