@@ -614,7 +614,24 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 return;
             }
 
-            // Subsequent steps land in Task 8+
+            var targetPlan = await _pricingClient.GetPlanOrThrow(migrationPath.ToPlan);
+            var targetPriceId = targetPlan.HasNonSeatBasedPasswordManagerPlan()
+                ? targetPlan.PasswordManager.StripePlanId
+                : targetPlan.PasswordManager.StripeSeatPlanId;
+
+            var currentHasTarget = subscription.Items?.Any(item =>
+                item.Price?.Id == targetPriceId) ?? false;
+            if (!currentHasTarget)
+            {
+                _logger.LogWarning(
+                    "Schedule-triggered business migration for organization ({OrganizationId}): expected target price ({ExpectedPriceId}) for PlanType ({TargetPlanType}) not found in current subscription items; skipping",
+                    organizationId,
+                    targetPriceId,
+                    targetPlan.Type);
+                return;
+            }
+
+            // Subsequent steps land in Task 9
         }
         catch (BillingException)
         {
