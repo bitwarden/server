@@ -3525,15 +3525,15 @@ public class UpcomingInvoiceHandlerTests
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert
-        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs()
-            .ScheduleBusinessPriceIncrease(default!, default!);
-        await _mailService.Received(1).SendInvoiceUpcoming(
-            Arg.Is<IEnumerable<string>>(emails => emails.Contains("org@example.com")),
+        // Assert — cohort validation now handled internally by scheduler; handler falls through silently
+        await _priceIncreaseScheduler.Received(1)
+            .ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>());
+        await _mailService.DidNotReceive().SendInvoiceUpcoming(
+            Arg.Any<IEnumerable<string>>(),
             Arg.Any<decimal>(),
             Arg.Any<DateTime>(),
             Arg.Any<List<string>>(),
-            Arg.Is<bool>(b => b));
+            Arg.Any<bool>());
     }
 
     [Fact]
@@ -3579,7 +3579,7 @@ public class UpcomingInvoiceHandlerTests
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert — silent fall-through: no migration logs at any severity.
+        // Assert — churn-only cohort validation handled internally by scheduler; no migration logs at handler level.
         _logger.DidNotReceive().Log(
             LogLevel.Warning,
             Arg.Any<EventId>(),
@@ -3592,14 +3592,14 @@ public class UpcomingInvoiceHandlerTests
             Arg.Is<object>(o => o.ToString()!.Contains("MigrationPathId")),
             Arg.Any<Exception?>(),
             Arg.Any<Func<object, Exception?, string>>());
-        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs()
-            .ScheduleBusinessPriceIncrease(default!, default!);
-        await _mailService.Received(1).SendInvoiceUpcoming(
-            Arg.Is<IEnumerable<string>>(emails => emails.Contains("org@example.com")),
+        await _priceIncreaseScheduler.Received(1)
+            .ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>());
+        await _mailService.DidNotReceive().SendInvoiceUpcoming(
+            Arg.Any<IEnumerable<string>>(),
             Arg.Any<decimal>(),
             Arg.Any<DateTime>(),
             Arg.Any<List<string>>(),
-            Arg.Is<bool>(b => b));
+            Arg.Any<bool>());
     }
 
     [Fact]
@@ -3645,23 +3645,15 @@ public class UpcomingInvoiceHandlerTests
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert
-        _logger.Received(1).Log(
-            LogLevel.Error,
-            Arg.Any<EventId>(),
-            Arg.Is<object>(o =>
-                o.ToString()!.Contains("Unknown MigrationPathId") &&
-                o.ToString()!.Contains(_organizationId.ToString())),
-            Arg.Any<Exception?>(),
-            Arg.Any<Func<object, Exception?, string>>());
-        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs()
-            .ScheduleBusinessPriceIncrease(default!, default!);
-        await _mailService.Received(1).SendInvoiceUpcoming(
-            Arg.Is<IEnumerable<string>>(emails => emails.Contains("org@example.com")),
+        // Assert — unknown migration path is logged and handled internally by scheduler; handler falls through silently
+        await _priceIncreaseScheduler.Received(1)
+            .ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>());
+        await _mailService.DidNotReceive().SendInvoiceUpcoming(
+            Arg.Any<IEnumerable<string>>(),
             Arg.Any<decimal>(),
             Arg.Any<DateTime>(),
             Arg.Any<List<string>>(),
-            Arg.Is<bool>(b => b));
+            Arg.Any<bool>());
     }
 
     [Fact]
@@ -3707,23 +3699,15 @@ public class UpcomingInvoiceHandlerTests
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert
-        _logger.Received(1).Log(
-            LogLevel.Warning,
-            Arg.Any<EventId>(),
-            Arg.Is<object>(o =>
-                o.ToString()!.Contains("Skipping business price migration") &&
-                o.ToString()!.Contains(_organizationId.ToString())),
-            Arg.Any<Exception?>(),
-            Arg.Any<Func<object, Exception?, string>>());
-        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs()
-            .ScheduleBusinessPriceIncrease(default!, default!);
-        await _mailService.Received(1).SendInvoiceUpcoming(
-            Arg.Is<IEnumerable<string>>(emails => emails.Contains("org@example.com")),
+        // Assert — plan drift logged and handled internally by scheduler; handler falls through silently
+        await _priceIncreaseScheduler.Received(1)
+            .ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>());
+        await _mailService.DidNotReceive().SendInvoiceUpcoming(
+            Arg.Any<IEnumerable<string>>(),
             Arg.Any<decimal>(),
             Arg.Any<DateTime>(),
             Arg.Any<List<string>>(),
-            Arg.Is<bool>(b => b));
+            Arg.Any<bool>());
     }
 
     [Fact]
@@ -3767,13 +3751,15 @@ public class UpcomingInvoiceHandlerTests
         _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
         _assignmentRepository.GetByOrganizationIdAsync(_organizationId).Returns(assignment);
         _cohortRepository.GetByIdAsync(cohortId).Returns(cohort);
-        _priceIncreaseScheduler.ScheduleBusinessPriceIncrease(subscription, cohort).Returns(true);
+        _priceIncreaseScheduler.ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>())
+            .Returns(true);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        await _priceIncreaseScheduler.Received(1).ScheduleBusinessPriceIncrease(subscription, cohort);
+        await _priceIncreaseScheduler.Received(1)
+            .ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>());
         _logger.Received(1).Log(
             LogLevel.Information,
             Arg.Any<EventId>(),
@@ -3893,7 +3879,7 @@ public class UpcomingInvoiceHandlerTests
         _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
         _assignmentRepository.GetByOrganizationIdAsync(_organizationId).Returns(assignment);
         _cohortRepository.GetByIdAsync(cohortId).Returns(cohort);
-        _priceIncreaseScheduler.ScheduleBusinessPriceIncrease(subscription, cohort)
+        _priceIncreaseScheduler.ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>())
             .ThrowsAsync(new Exception("boom"));
 
         // Act
