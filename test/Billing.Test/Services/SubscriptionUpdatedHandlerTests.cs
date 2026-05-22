@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -46,6 +47,8 @@ public class SubscriptionUpdatedHandlerTests
     private readonly IPushNotificationAdapter _pushNotificationAdapter;
     private readonly IPriceIncreaseScheduler _priceIncreaseScheduler;
     private readonly IFeatureService _featureService;
+    private readonly IOrganizationPlanMigrationCohortRepository _cohortRepository;
+    private readonly IOrganizationPlanMigrationCohortAssignmentRepository _cohortAssignmentRepository;
     private readonly SubscriptionUpdatedHandler _sut;
 
     public SubscriptionUpdatedHandlerTests()
@@ -67,6 +70,8 @@ public class SubscriptionUpdatedHandlerTests
         _pushNotificationAdapter = Substitute.For<IPushNotificationAdapter>();
         _priceIncreaseScheduler = Substitute.For<IPriceIncreaseScheduler>();
         _featureService = Substitute.For<IFeatureService>();
+        _cohortRepository = Substitute.For<IOrganizationPlanMigrationCohortRepository>();
+        _cohortAssignmentRepository = Substitute.For<IOrganizationPlanMigrationCohortAssignmentRepository>();
 
         _sut = new SubscriptionUpdatedHandler(
             _stripeEventService,
@@ -85,6 +90,8 @@ public class SubscriptionUpdatedHandlerTests
             _pushNotificationAdapter,
             _priceIncreaseScheduler,
             _featureService,
+            _cohortRepository,
+            _cohortAssignmentRepository,
             Substitute.For<ILogger<SubscriptionUpdatedHandler>>());
     }
 

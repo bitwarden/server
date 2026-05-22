@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
@@ -39,6 +40,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IPushNotificationAdapter _pushNotificationAdapter;
     private readonly IPriceIncreaseScheduler _priceIncreaseScheduler;
     private readonly IFeatureService _featureService;
+    private readonly IOrganizationPlanMigrationCohortRepository _cohortRepository;
+    private readonly IOrganizationPlanMigrationCohortAssignmentRepository _cohortAssignmentRepository;
     private readonly ILogger<SubscriptionUpdatedHandler> _logger;
 
     public SubscriptionUpdatedHandler(
@@ -58,6 +61,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IPushNotificationAdapter pushNotificationAdapter,
         IPriceIncreaseScheduler priceIncreaseScheduler,
         IFeatureService featureService,
+        IOrganizationPlanMigrationCohortRepository cohortRepository,
+        IOrganizationPlanMigrationCohortAssignmentRepository cohortAssignmentRepository,
         ILogger<SubscriptionUpdatedHandler> logger)
     {
         _stripeEventService = stripeEventService;
@@ -78,6 +83,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _pushNotificationAdapter = pushNotificationAdapter;
         _priceIncreaseScheduler = priceIncreaseScheduler;
         _featureService = featureService;
+        _cohortRepository = cohortRepository;
+        _cohortAssignmentRepository = cohortAssignmentRepository;
         _logger = logger;
     }
 
