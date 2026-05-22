@@ -108,25 +108,44 @@ public class ChangeEmailCommandTests
 
         await sutProvider.GetDependency<IStripeSyncService>().Received(1)
             .UpdateCustomerEmailAddressAsync("cus_123", user.BillingEmailAddress()!);
+        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushSyncSettingsAsync(user.Id);
     }
 
     [Theory, BitAutoData]
-    public async Task ChangeEmailAsync_StripeUserWithoutGatewayCustomerId_SkipsSyncAndCompletes(
+    public async Task ChangeEmailAsync_StripeUserWithoutGatewayCustomerId_ThrowsAndRollsBack(
         SutProvider<ChangeEmailCommand> sutProvider, User user)
     {
         user.Email = _currentEmail;
         user.Gateway = GatewayType.Stripe;
         user.GatewayCustomerId = null;
+
+        var originalEmail = user.Email;
+        var originalRevisionDate = user.RevisionDate;
+        var originalAccountRevisionDate = user.AccountRevisionDate;
+        var originalLastEmailChangeDate = user.LastEmailChangeDate;
+
         sutProvider.GetDependency<IUserRepository>()
             .GetByEmailAsync(_newEmail)
             .Returns((User)null);
 
-        await sutProvider.Sut.ChangeEmailAsync(user, _newEmail);
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => sutProvider.Sut.ChangeEmailAsync(user, _newEmail));
+        Assert.Equal("Missing gateway customer ID or billing email address for Stripe sync.", ex.Message);
 
-        Assert.Equal(_newEmail, user.Email);
+        Assert.Equal(originalEmail, user.Email);
+        Assert.Equal(originalRevisionDate, user.RevisionDate);
+        Assert.Equal(originalAccountRevisionDate, user.AccountRevisionDate);
+        Assert.Equal(originalLastEmailChangeDate, user.LastEmailChangeDate);
         await sutProvider.GetDependency<IStripeSyncService>().DidNotReceive()
             .UpdateCustomerEmailAddressAsync(Arg.Any<string>(), Arg.Any<string>());
-        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
+        // Two persists: initial write, then the rollback write.
+        await sutProvider.GetDependency<IUserRepository>().Received(2).ReplaceAsync(user);
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
+            .PushSyncSettingsAsync(Arg.Any<Guid>());
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
+            .PushLogOutAsync(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData]

@@ -6,6 +6,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Auth.UserFeatures.UserEmail;
 
@@ -14,13 +15,15 @@ public class ChangeEmailCommand(
         IPushNotificationService pushService,
         IStripeSyncService stripeSyncService,
         IOrganizationDomainAllowEmailChangeQuery organizationDomainAllowEmailChangeQuery,
-        TimeProvider timeProvider) : IChangeEmailCommand
+        TimeProvider timeProvider,
+        ILogger<ChangeEmailCommand> logger) : IChangeEmailCommand
 {
     private readonly IUserRepository _userRepository = userRepository;
     private readonly IPushNotificationService _pushService = pushService;
     private readonly IStripeSyncService _stripeSyncService = stripeSyncService;
     private readonly IOrganizationDomainAllowEmailChangeQuery _organizationDomainAllowEmailChangeQuery = organizationDomainAllowEmailChangeQuery;
     private readonly TimeProvider _timeProvider = timeProvider;
+    private readonly ILogger<ChangeEmailCommand> _logger = logger;
 
     /// <inheritdoc />
     public async Task ChangeEmailAsync(User user, string newEmail)
@@ -55,9 +58,15 @@ public class ChangeEmailCommand(
                 {
                     await _stripeSyncService.UpdateCustomerEmailAddressAsync(user.GatewayCustomerId, billingEmail);
                 }
+                else
+                {
+                    throw new InvalidOperationException("Missing gateway customer ID or billing email address for Stripe sync.");
+                }
             }
             catch
             {
+                _logger.LogWarning("Failed to sync email change to Stripe for user {UserId}. Reverting email change.", user.Id);
+
                 user.Email = previousEmail;
                 user.RevisionDate = previousRevisionDate;
                 user.AccountRevisionDate = previousAccountRevisionDate;
