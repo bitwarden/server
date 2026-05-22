@@ -721,7 +721,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         await using var connection = new SqlConnection(ConnectionString);
 
         var confirmedIds = await connection.QueryAsync<Guid>(
-            $"[{Schema}].[OrganizationUser_UpdateStatusKey]",
+            $"[{Schema}].[OrganizationUser_UpdateManyStatusKey]",
             new
             {
                 UsersJson = JsonSerializer.Serialize(usersToConfirm.Select(u => new
