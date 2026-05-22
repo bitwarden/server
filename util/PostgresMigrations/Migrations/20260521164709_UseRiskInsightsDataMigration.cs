@@ -11,8 +11,7 @@ public partial class UseRiskInsightsDataMigration : Migration
     protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.Sql(@"
-                UPDATE
-                    ""Organization""
+                UPDATE ""Organization""
                 SET
                     ""UseRiskInsights"" = true
                 WHERE
@@ -24,8 +23,7 @@ public partial class UseRiskInsightsDataMigration : Migration
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.Sql(@"
-                UPDATE
-                    ""Organization""
+                UPDATE ""Organization""
                 SET
                     ""UseRiskInsights"" = false
                 WHERE
