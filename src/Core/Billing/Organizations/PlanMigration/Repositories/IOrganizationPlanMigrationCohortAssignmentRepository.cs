@@ -18,8 +18,8 @@ public interface IOrganizationPlanMigrationCohortAssignmentRepository
     /// For Migration cohorts (MigrationPathId IS NOT NULL), this counts assignments with a
     /// ScheduledDate set (covers both Scheduled and Migrated). For Churn-only cohorts
     /// (MigrationPathId IS NULL), this counts assignments with a ChurnDiscountAppliedDate set
-    /// (redeemed save-offers). Used to gate cohort deletion -- a non-zero count means the cohort
-    /// has historical activity and must not be destroyed.
+    /// (redeemed save-offers). A non-zero count means the cohort has historical activity:
+    /// deletion is refused and the migration path is locked against further edits.
     /// </summary>
     Task<int> GetCohortNonPendingAssignmentsCountAsync(Guid cohortId);
 }
