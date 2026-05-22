@@ -6,6 +6,8 @@
     var cohortType = (CohortType)(ViewData["CohortType"] ?? new CohortType.ChurnOnly());
     var unresolved = cohortType as CohortType.UnresolvedMigration;
     var isActive = (bool)(ViewData["IsActive"] ?? false);
+    var migrationPathLocked = (bool)(ViewData["MigrationPathLocked"] ?? false);
+    var nonPendingCount = (int)(ViewData["NonPendingAssignmentCount"] ?? 0);
 }
 
 <div class="mx-auto" style="max-width: 768px;">
@@ -25,22 +27,46 @@
 
     <div class="mb-3">
         <label asp-for="MigrationPathSelection" class="form-label">Migration path</label>
-        <select asp-for="MigrationPathSelection" class="form-select">
-            @if (unresolved != null)
-            {
-                <option value="@unresolved.Id" disabled selected>
-                    Unresolved migration #@unresolved.Id
-                </option>
-            }
-            <option value="none">None (Churn-only cohort)</option>
-            @foreach (var path in MigrationPaths.All)
-            {
-                <option value="@((byte)path.Id)">
-                    @($"{path.FromPlan.GetDisplayName()} → {path.ToPlan.GetDisplayName()}")
-                </option>
-            }
-        </select>
-        <span asp-validation-for="MigrationPathSelection" class="text-danger"></span>
+        @if (migrationPathLocked)
+        {
+            <div>
+                <span class="me-1">🔒</span>
+                @switch (cohortType)
+                {
+                    case CohortType.ChurnOnly:
+                        <span>None (Churn-only cohort)</span>
+                        break;
+                    case CohortType.Migration migration:
+                        @($"{migration.Path.FromPlan.GetDisplayName()} → {migration.Path.ToPlan.GetDisplayName()}")
+                        break;
+                    case CohortType.UnresolvedMigration u:
+                        <span class="text-warning">Unresolved migration #@u.Id</span>
+                        break;
+                }
+            </div>
+            <div class="form-text">
+                Migration path cannot be changed because this cohort has @nonPendingCount.ToString("N0") assignment(s) that have left the Pending state.
+            </div>
+        }
+        else
+        {
+            <select asp-for="MigrationPathSelection" class="form-select">
+                @if (unresolved != null)
+                {
+                    <option value="@unresolved.Id" disabled selected>
+                        Unresolved migration #@unresolved.Id
+                    </option>
+                }
+                <option value="none">None (Churn-only cohort)</option>
+                @foreach (var path in MigrationPaths.All)
+                {
+                    <option value="@((byte)path.Id)">
+                        @($"{path.FromPlan.GetDisplayName()} → {path.ToPlan.GetDisplayName()}")
+                    </option>
+                }
+            </select>
+            <span asp-validation-for="MigrationPathSelection" class="text-danger"></span>
+        }
     </div>
 
     <div class="mb-3">
@@ -102,6 +128,7 @@
     <script>
         (() => {
             const migrationPathSelect = document.getElementById('@(nameof(Model.MigrationPathSelection))');
+            if (!migrationPathSelect) return;
             const churnOptionalLabel = document.getElementById('churn-optional-label');
             const updateChurnOptionalLabel = () => {
                 churnOptionalLabel.style.display = migrationPathSelect.value === 'none' ? 'none' : '';
