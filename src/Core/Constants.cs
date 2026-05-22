@@ -200,6 +200,7 @@ public static class FeatureFlagKeys
 
     /* Desktop Native Team */
     public const string SSHAgentV2 = "ssh-agent-v2";
+    public const string SSHecdsa = "ssh-ecdsa";
     public const string SSHVersionCheckQAOverride = "ssh-version-check-qa-override";
     public const string WindowsDesktopAutotype = "windows-desktop-autotype";
     public const string WindowsDesktopAutotypeGA = "windows-desktop-autotype-ga";
