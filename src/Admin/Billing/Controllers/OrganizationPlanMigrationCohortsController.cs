@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Bit.Admin.Billing.Models.OrganizationPlanMigrationCohorts;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
@@ -64,6 +65,8 @@ public class OrganizationPlanMigrationCohortsController(
     {
         if (!PlanMigrationCohortsFeatureEnabled()) return NotFound();
 
+        MergeCrossFieldValidationErrors(model);
+
         if (!ModelState.IsValid)
         {
             return View(model);
@@ -126,6 +129,8 @@ public class OrganizationPlanMigrationCohortsController(
 
         ViewData["CohortType"] = CohortType.From(cohort.MigrationPathId);
         ViewData["IsActive"] = cohort.IsActive;
+
+        MergeCrossFieldValidationErrors(model);
 
         if (!ModelState.IsValid) return View(model);
 
@@ -263,6 +268,20 @@ public class OrganizationPlanMigrationCohortsController(
 
     private static string? NormalizeCouponCode(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    // MVC skips IValidatableObject.Validate when any property-level attribute already failed, hiding cross-field
+    // rules until the operator resubmits. Run it explicitly so every error surfaces on a single submit.
+    // See https://github.com/dotnet/aspnetcore/issues/1899.
+    private void MergeCrossFieldValidationErrors(CohortFormModel model)
+    {
+        foreach (var result in model.Validate(new ValidationContext(model)))
+        {
+            foreach (var memberName in result.MemberNames.DefaultIfEmpty(string.Empty))
+            {
+                ModelState.AddModelError(memberName, result.ErrorMessage ?? string.Empty);
+            }
+        }
+    }
 
     private async Task<bool> ValidateNameAsync(string name, Guid? excludeId = null)
     {

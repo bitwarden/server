@@ -12,6 +12,7 @@ public class CohortFormModel : IValidatableObject
     [Display(Name = "Name")]
     public string Name { get; set; } = string.Empty;
 
+    [Required(ErrorMessage = "Please select a migration path or None.")]
     [Display(Name = "Migration path")]
     public string MigrationPathSelection { get; set; } = string.Empty;
 
@@ -41,14 +42,6 @@ public class CohortFormModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (string.IsNullOrEmpty(MigrationPathSelection))
-        {
-            yield return new ValidationResult(
-                "Please select a migration path or None.",
-                new[] { nameof(MigrationPathSelection) });
-            yield break;
-        }
-
         if (MigrationPathSelection == "none")
         {
             if (!string.IsNullOrEmpty(ProactiveDiscountCouponCode))

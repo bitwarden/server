@@ -5,9 +5,10 @@
     ViewData["Title"] = "New cohort";
 }
 
-<h1>New cohort</h1>
+<div class="mx-auto" style="max-width: 768px;">
+    <h1>New cohort</h1>
 
-<div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
 <form method="post" asp-action="Create" id="cohort-form">
     <div class="mb-3">
@@ -61,11 +62,16 @@
         </div>
     </div>
 
-    <div class="d-flex mt-4">
+    <div class="form-text mt-4">
+        Note: New cohorts are disabled by default. Enable from the cohort's edit page once assignments are loaded.
+    </div>
+
+    <div class="d-flex mt-3">
         <button type="submit" class="btn btn-primary">Save</button>
         <a asp-action="Index" class="btn btn-secondary ms-2">Cancel</a>
     </div>
 </form>
+</div>
 
 @section Scripts {
     <script>

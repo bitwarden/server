@@ -22,7 +22,8 @@ public class CohortFormModelTests
     {
         var model = new CohortFormModel { Name = "A", MigrationPathSelection = "" };
 
-        var results = model.Validate(Ctx(model)).ToList();
+        var results = new List<ValidationResult>();
+        Validator.TryValidateObject(model, Ctx(model), results, validateAllProperties: true);
 
         Assert.Contains(results, r =>
             r.MemberNames.Contains(nameof(CohortFormModel.MigrationPathSelection))

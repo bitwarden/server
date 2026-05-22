@@ -8,9 +8,10 @@
     var isActive = (bool)(ViewData["IsActive"] ?? false);
 }
 
-<h1>Cohort: @Model.Name</h1>
+<div class="mx-auto" style="max-width: 768px;">
+    <h1>Cohort: @Model.Name</h1>
 
-<div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
 <form method="post" asp-action="Edit" asp-route-id="@Model.Id" id="cohort-form">
     <input type="hidden" asp-for="Id" />
@@ -67,27 +68,34 @@
     </div>
 </form>
 
-<div class="d-flex mt-4">
-    <button type="submit" class="btn btn-primary" form="cohort-form">Save</button>
-    <a asp-action="Index" class="btn btn-secondary ms-2">Cancel</a>
+<div class="mt-4 d-flex align-items-center">
     @if (isActive)
     {
-        <form method="post" asp-action="Disable" asp-route-id="@Model.Id" class="ms-2">
+        <form method="post" asp-action="Disable" asp-route-id="@Model.Id">
             <button class="btn btn-secondary" type="submit">Disable</button>
         </form>
     }
     else
     {
-        <form method="post" asp-action="Enable" asp-route-id="@Model.Id" class="ms-2">
+        <form method="post" asp-action="Enable" asp-route-id="@Model.Id">
             <button class="btn btn-success" type="submit">Enable</button>
         </form>
     }
+    <div class="form-text ms-3 mb-0">
+        When off, no migrations or save-offers fire for this cohort. Defaults to off; flip on once assignments are loaded.
+    </div>
+</div>
+
+<div class="d-flex mt-4">
+    <button type="submit" class="btn btn-primary" form="cohort-form">Save</button>
+    <a asp-action="Index" class="btn btn-secondary ms-2">Cancel</a>
     <div class="ms-auto d-flex">
         <form method="post" asp-action="Delete" asp-route-id="@Model.Id"
               onsubmit="return confirm('Are you sure you want to delete this cohort?')">
             <button class="btn btn-danger" type="submit">Delete</button>
         </form>
     </div>
+</div>
 </div>
 
 @section Scripts {
