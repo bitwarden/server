@@ -542,4 +542,82 @@ public class OrganizationPlanMigrationCohortsControllerTests
         Assert.True((bool)sutProvider.Sut.ViewData["MigrationPathLocked"]!);
         Assert.Equal(3, sutProvider.Sut.ViewData["NonPendingAssignmentCount"]);
     }
+
+    [Theory, BitAutoData]
+    public async Task Edit_Post_LockedCohort_IgnoresSubmittedMigrationPathSelection(
+        Guid id,
+        CohortFormModel model,
+        OrganizationPlanMigrationCohort existing,
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
+        existing.Id = id;
+        existing.MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent;
+        existing.RevisionDate = DateTime.UtcNow.AddDays(-1);
+        model.Id = id;
+        model.MigrationPathSelection = "none"; // operator (or attacker) tries to change it
+        model.ProactiveDiscountCouponCode = null;
+        model.ChurnDiscountCouponCode = null;
+
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(id).Returns(existing);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .GetCohortNonPendingAssignmentsCountAsync(id).Returns(7);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByNameAsync(model.Name).Returns(existing);
+
+        sutProvider.Sut.TempData = new TempDataDictionary(
+            new DefaultHttpContext(),
+            Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.Edit(id, model);
+
+        Assert.IsType<RedirectToActionResult>(result);
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationPlanMigrationCohort>(c =>
+                c.Id == id
+                && c.MigrationPathId == MigrationPathId.Enterprise2020AnnualToCurrent
+                && c.Name == model.Name));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Edit_Post_UnlockedCohort_AcceptsMigrationPathSelectionChange(
+        Guid id,
+        CohortFormModel model,
+        OrganizationPlanMigrationCohort existing,
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
+        existing.Id = id;
+        existing.MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent;
+        existing.RevisionDate = DateTime.UtcNow.AddDays(-1);
+        model.Id = id;
+        model.MigrationPathSelection = "none"; // change attempt — should succeed because unlocked
+        model.ProactiveDiscountCouponCode = null;
+        model.ChurnDiscountCouponCode = "SAVE15";
+
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(id).Returns(existing);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
+            .GetCohortNonPendingAssignmentsCountAsync(id).Returns(0);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByNameAsync(model.Name).Returns(existing);
+
+        sutProvider.Sut.TempData = new TempDataDictionary(
+            new DefaultHttpContext(),
+            Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.Edit(id, model);
+
+        Assert.IsType<RedirectToActionResult>(result);
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationPlanMigrationCohort>(c =>
+                c.Id == id && c.MigrationPathId == null));
+    }
 }

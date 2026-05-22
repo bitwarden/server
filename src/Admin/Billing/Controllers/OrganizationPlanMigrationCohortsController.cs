@@ -133,6 +133,23 @@ public class OrganizationPlanMigrationCohortsController(
         ViewData["CohortType"] = CohortType.From(cohort.MigrationPathId);
         ViewData["IsActive"] = cohort.IsActive;
 
+        var nonPendingCount = await assignmentRepository.GetCohortNonPendingAssignmentsCountAsync(id);
+        var migrationPathLocked = cohort.IsMigrationPathLocked(nonPendingCount);
+        ViewData["MigrationPathLocked"] = migrationPathLocked;
+        ViewData["NonPendingAssignmentCount"] = nonPendingCount;
+
+        if (migrationPathLocked)
+        {
+            // The locked view doesn't post a value for MigrationPathSelection.
+            // Restore from the persisted cohort so [Required] passes and the eventual
+            // ReplaceAsync writes back the unchanged path.
+            model.MigrationPathSelection = cohort.MigrationPathId switch
+            {
+                null => "none",
+                var pathId => ((byte)pathId).ToString(),
+            };
+        }
+
         MergeCrossFieldValidationErrors(model);
 
         if (!ModelState.IsValid) return View(model);
