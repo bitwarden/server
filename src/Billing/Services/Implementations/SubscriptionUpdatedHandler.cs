@@ -576,7 +576,45 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 return;
             }
 
-            // Subsequent steps land in Task 7+
+            var assignment = await _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId);
+            if (assignment == null)
+            {
+                _logger.LogWarning(
+                    "Schedule-triggered business migration fired for organization ({OrganizationId}) but no cohort assignment row was found",
+                    organizationId);
+                return;
+            }
+
+            if (assignment.MigratedDate.HasValue)
+            {
+                _logger.LogInformation(
+                    "Schedule-triggered business migration already applied for organization ({OrganizationId}); skipping (likely Stripe webhook retry)",
+                    organizationId);
+                return;
+            }
+
+            var cohort = await _cohortRepository.GetByIdAsync(assignment.CohortId);
+            if (cohort == null || cohort.MigrationPathId == null)
+            {
+                _logger.LogWarning(
+                    "Schedule-triggered business migration fired for organization ({OrganizationId}) but cohort ({CohortId}) is missing or has no MigrationPathId",
+                    organizationId,
+                    assignment.CohortId);
+                return;
+            }
+
+            var migrationPath = MigrationPaths.FromId(cohort.MigrationPathId.Value);
+            if (migrationPath == null)
+            {
+                _logger.LogWarning(
+                    "Schedule-triggered business migration fired for organization ({OrganizationId}) but cohort ({CohortId}) references unregistered MigrationPathId ({MigrationPathId})",
+                    organizationId,
+                    cohort.Id,
+                    cohort.MigrationPathId.Value);
+                return;
+            }
+
+            // Subsequent steps land in Task 8+
         }
         catch (BillingException)
         {

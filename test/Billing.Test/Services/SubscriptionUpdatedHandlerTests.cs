@@ -7,6 +7,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.PlanMigration.Entities;
+using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
@@ -2637,5 +2639,215 @@ public class SubscriptionUpdatedHandlerTests
         await _cohortRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
         await _cohortAssignmentRepository.DidNotReceive().GetByOrganizationIdAsync(Arg.Any<Guid>());
         await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_BusinessMigration_NoAssignment_LogsWarningAndSkips()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var enterprise2020Annual = new Enterprise2020Plan(true);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_no_assignment",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { Price = new Price { Id = "price_target_current" }, Plan = new Plan { Id = "price_target_current" } }]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.EnterpriseAnnually2020 };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(enterprise2020Annual);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseMonthly2020).Returns(new Enterprise2020Plan(false));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually2020).Returns(new Teams2020Plan(true));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(new Teams2020Plan(false));
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).ReturnsNull();
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — no cohort lookup, no DB writes
+        await _cohortRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+        await _cohortAssignmentRepository.DidNotReceive().ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_BusinessMigration_AssignmentExistsCohortMissing_LogsWarningAndSkips()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var enterprise2020Annual = new Enterprise2020Plan(true);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_cohort_missing",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { Price = new Price { Id = "price_target_current" }, Plan = new Plan { Id = "price_target_current" } }]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.EnterpriseAnnually2020 };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(enterprise2020Annual);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseMonthly2020).Returns(new Enterprise2020Plan(false));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually2020).Returns(new Teams2020Plan(true));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(new Teams2020Plan(false));
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(
+            new OrganizationPlanMigrationCohortAssignment
+            {
+                Id = Guid.NewGuid(),
+                OrganizationId = organizationId,
+                CohortId = cohortId
+            });
+        _cohortRepository.GetByIdAsync(cohortId).ReturnsNull();
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — cohort missing, no DB writes
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+        await _cohortAssignmentRepository.DidNotReceive().ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_BusinessMigration_AssignmentAlreadyMigrated_LogsInfoAndSkips()
+    {
+        // Arrange — assignment is already migrated. Idempotency check fires before cohort lookup.
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var enterprise2020Annual = new Enterprise2020Plan(true);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_idempotent",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { Price = new Price { Id = "price_target_current" }, Plan = new Plan { Id = "price_target_current" } }]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.EnterpriseAnnually2020 };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(enterprise2020Annual);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseMonthly2020).Returns(new Enterprise2020Plan(false));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually2020).Returns(new Teams2020Plan(true));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(new Teams2020Plan(false));
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(
+            new OrganizationPlanMigrationCohortAssignment
+            {
+                Id = Guid.NewGuid(),
+                OrganizationId = organizationId,
+                CohortId = cohortId,
+                MigratedDate = DateTime.UtcNow.AddMinutes(-5)  // already migrated
+            });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — idempotency: cohort lookup NEVER happens, no writes
+        await _cohortRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+        await _cohortAssignmentRepository.DidNotReceive().ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
     }
 }
