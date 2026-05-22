@@ -563,7 +563,8 @@ public class SubscriberService(
 
     public async Task ResumeFromUnpaidCancellationAsync(ISubscriber subscriber)
     {
-        var subscription = await GetSubscription(subscriber);
+        var subscription = await GetSubscription(subscriber,
+            new SubscriptionGetOptions { Expand = ["customer.discount", "discounts"] });
 
         if (subscription is null ||
             subscription.Status != SubscriptionStatus.Unpaid ||
