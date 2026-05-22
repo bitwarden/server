@@ -1814,6 +1814,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<short>("Status")
                         .HasColumnType("INTEGER");
 
+                    b.Property<short?>("StatusNew")
+                        .HasColumnType("INTEGER");
+
                     b.Property<byte>("Type")
                         .HasColumnType("INTEGER");
 
@@ -1885,6 +1888,7 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Data")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("DeletionDate")
@@ -1904,6 +1908,7 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Key")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("MaxAccessCount")
