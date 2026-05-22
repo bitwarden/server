@@ -57,4 +57,16 @@ public class OrganizationPlanMigrationCohort : ITableObject<Guid>
             Id = CoreHelpers.GenerateComb();
         }
     }
+
+    /// <summary>
+    /// True once any assignment for this cohort has left the Pending state.
+    /// While locked, the cohort's <see cref="MigrationPathId"/> must not be mutated — operators
+    /// have already received Stripe SubscriptionSchedules (Migration cohorts) or churn save-offers
+    /// (Churn-only cohorts) keyed to the current path.
+    /// </summary>
+    /// <param name="nonPendingAssignmentCount">
+    /// Count from <c>IOrganizationPlanMigrationCohortAssignmentRepository.GetCohortNonPendingAssignmentsCountAsync</c>.
+    /// Passed in (instead of injected) so this entity stays free of repository dependencies.
+    /// </param>
+    public bool IsMigrationPathLocked(int nonPendingAssignmentCount) => nonPendingAssignmentCount > 0;
 }
