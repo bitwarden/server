@@ -1,4 +1,4 @@
-namespace Bit.Core.Billing.Pricing;
+﻿namespace Bit.Core.Billing.Pricing;
 
 /// <summary>
 /// Controls optional guard behavior when scheduling an organization price increase via
