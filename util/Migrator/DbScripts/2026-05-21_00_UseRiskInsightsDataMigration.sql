@@ -9,8 +9,7 @@ DECLARE @RowsAffected INT = 1;
 
 WHILE @RowsAffected > 0
     BEGIN
-        UPDATE
-            TOP (@BatchSize) [dbo].[Organization]
+        UPDATE TOP (@BatchSize) [dbo].[Organization]
         SET
             [UseRiskInsights] = 1
         WHERE
