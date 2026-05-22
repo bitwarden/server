@@ -894,10 +894,57 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
         var dbContext = GetDatabaseContext(scope);
 
-        await dbContext.OrganizationUsers.Where(x => organizationUserIds.Contains(x.Id))
-            .ExecuteUpdateAsync(s => s
-                .SetProperty(x => x.Status, OrganizationUserStatusType.Revoked)
-                .SetProperty(x => x.RevocationReason, reason));
+        // We snapshot Status into StatusNew via projection + change-tracker stub instead of
+        // a single ExecuteUpdateAsync because the same-UPDATE snapshot isn't portable across
+        // EF providers.
+        //
+        // EF Core's contract is that the SetProperty value-selector lambda reads pre-update
+        // column values (https://learn.microsoft.com/en-us/ef/core/saving/execute-insert-update-delete#referencing-the-existing-property-value).
+        // SQL Server / Postgres / SQLite honor that for free — standard SQL evaluates every
+        // UPDATE SET RHS against the pre-update row. MySQL evaluates SET clauses left-to-right
+        // and uses just-updated values for later reads, so the snapshot only stays correct if
+        // the `StatusNew = Status` assignment is emitted *before* `Status = -1`.
+        //
+        // Pomelo orders the emitted SET clauses alphabetically and does not introduce a
+        // subquery for trivial same-row scalar reads, so a chain like
+        //     .SetProperty(x => x.StatusNew, x => x.Status)
+        //     .SetProperty(x => x.Status, Revoked)
+        // compiles to roughly:
+        //     UPDATE ... SET RevocationReason = ?, Status = -1, StatusNew = Status
+        // and MySQL stores -1 into StatusNew. The "project into an anonymous type first"
+        // workaround from the EF doc above doesn't help: Pomelo flattens trivial projections
+        // back to the same column reference. We verified the bad SQL with EF command logging.
+        //
+        // The shape we use: project only Id + Status (so the SELECT is minimal for the bulk
+        // case), then for each row attach a stub entity with that Id, set Status / StatusNew /
+        // RevocationReason on the stub, and flip just those three properties to Modified so
+        // SaveChanges emits a column-scoped UPDATE per row. Evaluation order is the C# code's
+        // order — the StatusNew snapshot value comes from the SELECT projection, not the
+        // post-update Status column, so MySQL has no way to read the wrong value. Attach (not
+        // Add or Update) is load-bearing here: Add would emit INSERT and hit a PK violation;
+        // Update would mark every property Modified and clobber every other column on the row
+        // with the stub's default values.
+        var orgUserData = await dbContext.OrganizationUsers
+            .Where(w => organizationUserIds.Contains(w.Id) && w.Status != OrganizationUserStatusType.Revoked)
+            .Select(s => new { s.Id, s.Status })
+            .ToListAsync();
+
+        foreach (var orgUser in orgUserData)
+        {
+            var stub = new OrganizationUser
+            {
+                Id = orgUser.Id,
+                Status = OrganizationUserStatusType.Revoked,
+                StatusNew = (OrganizationUserStatusTypeNew?)(short)orgUser.Status,
+                RevocationReason = reason,
+            };
+            var entry = dbContext.OrganizationUsers.Attach(stub);
+            entry.Property(p => p.Status).IsModified = true;
+            entry.Property(p => p.StatusNew).IsModified = true;
+            entry.Property(p => p.RevocationReason).IsModified = true;
+        }
+
+        await dbContext.SaveChangesAsync();
 
         await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(organizationUserIds);
     }
@@ -912,6 +959,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             .Where(x => organizationUserIds.Contains(x.Id) && x.Status == OrganizationUserStatusType.Revoked)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(x => x.Status, status)
+                .SetProperty(x => x.StatusNew, (OrganizationUserStatusTypeNew?)null)
                 .SetProperty(x => x.RevocationReason, (RevocationReason?)null));
 
         await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(organizationUserIds);
