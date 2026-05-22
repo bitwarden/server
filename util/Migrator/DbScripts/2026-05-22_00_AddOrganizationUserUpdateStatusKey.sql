@@ -1,9 +1,11 @@
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_ConfirmByIds]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_UpdateStatusKey]
     @UsersJson    NVARCHAR(MAX),
     @RevisionDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
+
+    DECLARE @RowCount INT
 
     DECLARE @UsersToUpdate AS TABLE (
         [Id]  UNIQUEIDENTIFIER NOT NULL,
@@ -36,7 +38,11 @@ BEGIN
     WHERE
         OU.[Status] = 1 -- Accepted
 
-    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserIds] @UpdatedIds
+    SET @RowCount = @@ROWCOUNT;
+    IF @RowCount > 0
+    BEGIN
+        EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserIds] @UpdatedIds
+    END
 
     -- Return the IDs that were actually updated so the caller can track idempotency
     SELECT [Id] FROM @UpdatedIds

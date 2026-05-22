@@ -29,6 +29,7 @@ public class ConfirmManyOrganizationUsersTests
         };
 
         // Act
+        var before = DateTime.UtcNow;
         var confirmedIds = await organizationUserRepository.ConfirmManyOrganizationUsersAsync(usersToConfirm);
 
         // Assert — only the Accepted user's ID is returned
@@ -40,6 +41,7 @@ public class ConfirmManyOrganizationUsersTests
         Assert.NotNull(updated);
         Assert.Equal(OrganizationUserStatusType.Confirmed, updated.Status);
         Assert.Equal("key-accepted", updated.Key);
+        Assert.True(updated.RevisionDate >= before);
 
         // The already-confirmed user's status is unchanged
         var unchanged = await organizationUserRepository.GetByIdAsync(confirmedOrgUser.Id);

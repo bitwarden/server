@@ -11,7 +11,7 @@ BEGIN
     WHERE
         [OrganizationId] = @OrganizationId
         AND [Status] = 1  -- Accepted
-        AND [Type] = 0    -- User
+        AND [Type] = 2    -- User
         AND [UserId] IS NOT NULL
 END
 GO
