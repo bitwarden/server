@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.PlanMigration;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
@@ -9,7 +10,6 @@ using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using static Bit.Core.Billing.Constants.StripeConstants;
-using Plan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Core.Billing.Pricing;
 
@@ -140,26 +140,13 @@ public class PriceIncreaseScheduler(
             return false;
         }
 
-        await CreateAndConfigureScheduleAsync(subscription, phase2);
+        var phaseMetadata = new Dictionary<string, string>
+        {
+            [MetadataKeys.MigrationCohortId] = cohort.Id.ToString(),
+            [MetadataKeys.MigrationCohortName] = cohort.Name
+        };
 
-        try
-        {
-            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id,
-                new SubscriptionUpdateOptions
-                {
-                    Metadata = new Dictionary<string, string>
-                    {
-                        [MetadataKeys.MigrationCohortId] = cohort.Id.ToString(),
-                        [MetadataKeys.MigrationCohortName] = cohort.Name
-                    }
-                });
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex,
-                "Failed to attach cohort metadata to subscription ({SubscriptionId}) for cohort ({CohortId}); migration is scheduled but Stripe dashboard attribution will be missing.",
-                subscription.Id, cohort.Id);
-        }
+        await CreateAndConfigureScheduleAsync(subscription, phase2, phaseMetadata);
 
         var assignment = await assignmentRepository.GetByOrganizationIdAsync(organizationId);
         if (assignment is null)
@@ -184,12 +171,6 @@ public class PriceIncreaseScheduler(
 
     public async Task Release(string customerId, string subscriptionId)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal) &&
-            !featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
-        {
-            return;
-        }
-
         try
         {
             var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
@@ -232,7 +213,8 @@ public class PriceIncreaseScheduler(
 
     private async Task<SubscriptionSchedule> CreateAndConfigureScheduleAsync(
         Subscription subscription,
-        SubscriptionSchedulePhaseOptions phase2)
+        SubscriptionSchedulePhaseOptions phase2Options,
+        Dictionary<string, string>? phaseMetadata = null)
     {
         var schedule = await stripeAdapter.CreateSubscriptionScheduleAsync(
             new SubscriptionScheduleCreateOptions { FromSubscription = subscription.Id });
@@ -241,32 +223,36 @@ public class PriceIncreaseScheduler(
         {
             var phase1 = schedule.Phases[0];
 
+            var phase1Options = new SubscriptionSchedulePhaseOptions
+            {
+                StartDate = phase1.StartDate,
+                EndDate = phase1.EndDate,
+                Items = [.. phase1.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
+                {
+                    Price = i.PriceId,
+                    Quantity = i.Quantity
+                })],
+                Discounts = phase1.Discounts is null ? null :
+                [
+                    .. phase1.Discounts.Select(d => new SubscriptionSchedulePhaseDiscountOptions
+                    {
+                        Coupon = d.CouponId
+                    })
+                ],
+                ProrationBehavior = ProrationBehavior.None
+            };
+
+            if (phaseMetadata is not null)
+            {
+                phase1Options.Metadata = phaseMetadata;
+                phase2Options.Metadata = phaseMetadata;
+            }
+
             await stripeAdapter.UpdateSubscriptionScheduleAsync(schedule.Id,
                 new SubscriptionScheduleUpdateOptions
                 {
                     EndBehavior = SubscriptionScheduleEndBehavior.Release,
-                    Phases =
-                    [
-                        new SubscriptionSchedulePhaseOptions
-                        {
-                            StartDate = phase1.StartDate,
-                            EndDate = phase1.EndDate,
-                            Items = [.. phase1.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
-                            {
-                                Price = i.PriceId,
-                                Quantity = i.Quantity
-                            })],
-                            Discounts = phase1.Discounts is null ? null :
-                            [
-                                .. phase1.Discounts.Select(d => new SubscriptionSchedulePhaseDiscountOptions
-                                {
-                                    Coupon = d.CouponId
-                                })
-                            ],
-                            ProrationBehavior = ProrationBehavior.None
-                        },
-                        phase2
-                    ]
+                    Phases = [phase1Options, phase2Options]
                 });
 
             return schedule;
@@ -505,7 +491,7 @@ public class PriceIncreaseScheduler(
         var items = new List<SubscriptionSchedulePhaseItemOptions>();
         foreach (var item in subscription.Items.Data)
         {
-            var targetPriceId = MapToTargetPriceId(item.Price.Id, sourcePlan, targetPlan);
+            var targetPriceId = OrganizationPlanMigrationPriceMapper.MapOrNull(item.Price.Id, sourcePlan, targetPlan);
             if (targetPriceId is null)
             {
                 logger.LogWarning(
@@ -560,14 +546,5 @@ public class PriceIncreaseScheduler(
             ProrationBehavior = ProrationBehavior.None
         };
     }
-
-    private static string? MapToTargetPriceId(string sourcePriceId, Plan source, Plan target) => sourcePriceId switch
-    {
-        _ when sourcePriceId == source.PasswordManager.StripeSeatPlanId => target.PasswordManager.StripeSeatPlanId,
-        _ when sourcePriceId == source.PasswordManager.StripeStoragePlanId => target.PasswordManager.StripeStoragePlanId,
-        _ when sourcePriceId == source.SecretsManager?.StripeSeatPlanId => target.SecretsManager?.StripeSeatPlanId,
-        _ when sourcePriceId == source.SecretsManager?.StripeServiceAccountPlanId => target.SecretsManager?.StripeServiceAccountPlanId,
-        _ => null
-    };
 
 }
