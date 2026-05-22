@@ -1669,6 +1669,83 @@ public class PriceIncreaseSchedulerTests
             .CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
     }
 
+    [Fact]
+    public async Task ScheduleForSubscription_SkipIfAlreadyScheduled_ScheduledDateSet_ReturnsFalse()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+
+        var orgId = Guid.NewGuid();
+        var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent);
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CohortId = cohort.Id,
+            ScheduledDate = DateTime.UtcNow
+        };
+
+        _organizationRepository.GetByIdAsync(orgId)
+            .Returns(CreateOrganization(orgId, PlanType.EnterpriseAnnually2020));
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(assignment);
+
+        var subscription = CreateBusinessSubscription("sub_1", "cus_1", orgId);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        var sut = CreateSut();
+        var result = await sut.ScheduleForSubscription(
+            subscription,
+            new OrganizationPriceIncreaseOptions { SkipIfAlreadyScheduled = true });
+
+        Assert.False(result);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs()
+            .CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
+    }
+
+    [Fact]
+    public async Task ScheduleForSubscription_DefaultOptions_ScheduledDateSet_ProceedsToSchedule()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+
+        var source = MockPlans.Get(PlanType.EnterpriseAnnually2020);
+        var target = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(source);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(target);
+
+        var orgId = Guid.NewGuid();
+        var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent);
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CohortId = cohort.Id,
+            ScheduledDate = DateTime.UtcNow  // already scheduled, but no SkipIfAlreadyScheduled guard
+        };
+
+        _organizationRepository.GetByIdAsync(orgId)
+            .Returns(CreateOrganization(orgId, PlanType.EnterpriseAnnually2020));
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohort.Id).Returns(cohort);
+
+        var subscription = CreateBusinessSubscription("sub_1", "cus_1", orgId,
+            CreateSubscriptionItem(source.PasswordManager.StripeSeatPlanId, 10));
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+
+        var sut = CreateSut();
+        var result = await sut.ScheduleForSubscription(subscription);  // default options
+
+        Assert.True(result);
+        await _stripeAdapter.Received(1)
+            .CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
+    }
+
     private static Subscription CreateSubscription(string id, string customerId, params SubscriptionItem[] items) =>
         CreateSubscription(id, customerId, new Dictionary<string, string> { { "userId", Guid.NewGuid().ToString() } }, items);
 
