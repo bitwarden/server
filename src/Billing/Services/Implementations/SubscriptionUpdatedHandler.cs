@@ -657,8 +657,10 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         }
         catch (BillingException)
         {
-            // GetPlanOrThrow throws BillingException on pricing-service outage. Rethrow so
-            // the webhook returns 500 and Stripe retries the event once the service recovers.
+            // GetPlanOrThrow throws BillingException when the plan cannot be resolved
+            // (pricing-service errors, unknown plan types, malformed responses). Rethrow
+            // so the webhook returns 500 and Stripe retries once the underlying issue
+            // is resolved.
             throw;
         }
         catch (Exception exception)
