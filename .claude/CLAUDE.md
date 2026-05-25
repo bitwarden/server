@@ -62,7 +62,7 @@
 
 ## Migrations
 
-We use two different database providers, Dapper for SQL Server and Entity Framework for SQLite, MySQL and Postgres. When
+We use two different database providers, Dapper for SQL Server and Entity Framework (EF) for SQLite, MySQL and Postgres. When
 a schema change lands it must be reflected in BOTH tracks (Dapper/MSSQL and EF). Skipping either silently breaks one of
 the four supported databases.
 
@@ -77,12 +77,13 @@ See:
 - https://contributing.bitwarden.com/contributing/code-style/sql — SQL code style (file naming, `IF COL_LENGTH`
   guards, `CREATE OR ALTER`, etc.).
 
-### EF
+### Entity Framework (EF)
 
 EF migrations under `util/{Postgres,MySql,Sqlite}Migrations/` are auto-generated from the EF entity classes in
 `src/Infrastructure.EntityFramework/`. Update the entity first, then generate.
 
-You MAY NEVER hand-write a migration `.cs` file or its `.Designer.cs` snapshot. Always:
+**NEVER** hand-write a migration `.cs` file or its `.Designer.cs` snapshot. 
+**Always:**
 
 1. Start MySQL — the design-time factory probes the live server for its version:
    ```
