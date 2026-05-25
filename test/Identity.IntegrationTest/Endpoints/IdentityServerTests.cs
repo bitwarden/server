@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
@@ -84,7 +84,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var kdf = AssertHelper.AssertJsonProperty(root, "Kdf", JsonValueKind.Number).GetInt32();
         Assert.Equal(0, kdf);
         var kdfIterations = AssertHelper.AssertJsonProperty(root, "KdfIterations", JsonValueKind.Number).GetInt32();
-        Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, kdfIterations);
+        Assert.Equal(KdfConstants.PBKDF2_ITERATIONS.Default, kdfIterations);
         AssertUserDecryptionOptions(root, user);
     }
 

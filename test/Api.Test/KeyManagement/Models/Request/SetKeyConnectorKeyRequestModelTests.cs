@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Api.KeyManagement.Models.Requests;
-using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Api.Request;
@@ -76,7 +76,7 @@ public class SetKeyConnectorKeyRequestModelTests
                 EncryptedPrivateKey = _privateKey
             },
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
             OrgIdentifier = _orgIdentifier
         };
 
@@ -100,7 +100,7 @@ public class SetKeyConnectorKeyRequestModelTests
                 EncryptedPrivateKey = _privateKey
             },
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
             OrgIdentifier = _orgIdentifier
         };
 
@@ -121,7 +121,7 @@ public class SetKeyConnectorKeyRequestModelTests
             Key = _userKey,
             Keys = null,
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
             OrgIdentifier = _orgIdentifier
         };
 
@@ -146,7 +146,7 @@ public class SetKeyConnectorKeyRequestModelTests
                 EncryptedPrivateKey = _privateKey
             },
             Kdf = null,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
             OrgIdentifier = _orgIdentifier
         };
 
@@ -196,9 +196,9 @@ public class SetKeyConnectorKeyRequestModelTests
                 EncryptedPrivateKey = _privateKey
             },
             Kdf = KdfType.Argon2id,
-            KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.ARGON2_ITERATIONS.Default,
             KdfMemory = null,
-            KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default,
+            KdfParallelism = KdfConstants.ARGON2_PARALLELISM.Default,
             OrgIdentifier = _orgIdentifier
         };
 
@@ -223,8 +223,8 @@ public class SetKeyConnectorKeyRequestModelTests
                 EncryptedPrivateKey = _privateKey
             },
             Kdf = KdfType.Argon2id,
-            KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default,
-            KdfMemory = AuthConstants.ARGON2_MEMORY.Default,
+            KdfIterations = KdfConstants.ARGON2_ITERATIONS.Default,
+            KdfMemory = KdfConstants.ARGON2_MEMORY.Default,
             KdfParallelism = null,
             OrgIdentifier = _orgIdentifier
         };

@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
-using Bit.Core;
 using Bit.Core.Billing.Premium.Models;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.UserKey;
@@ -526,9 +526,9 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             userEntity.Key = keyConnectorWrappedUserKey;
             // Key Connector does not use KDF, so we set some defaults
             userEntity.Kdf = KdfType.Argon2id;
-            userEntity.KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default;
-            userEntity.KdfMemory = AuthConstants.ARGON2_MEMORY.Default;
-            userEntity.KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default;
+            userEntity.KdfIterations = KdfConstants.ARGON2_ITERATIONS.Default;
+            userEntity.KdfMemory = KdfConstants.ARGON2_MEMORY.Default;
+            userEntity.KdfParallelism = KdfConstants.ARGON2_PARALLELISM.Default;
             userEntity.UsesKeyConnector = true;
             userEntity.RevisionDate = timestamp;
             userEntity.AccountRevisionDate = timestamp;

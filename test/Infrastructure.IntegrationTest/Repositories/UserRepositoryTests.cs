@@ -1,5 +1,5 @@
-﻿using Bit.Core;
-using Bit.Core.AdminConsole.Repositories;
+﻿using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -523,9 +523,9 @@ public class UserRepositoryTests
         Assert.Equal(keyConnectorWrappedKey, updatedUser.Key);
         Assert.True(updatedUser.UsesKeyConnector);
         Assert.Equal(KdfType.Argon2id, updatedUser.Kdf);
-        Assert.Equal(AuthConstants.ARGON2_ITERATIONS.Default, updatedUser.KdfIterations);
-        Assert.Equal(AuthConstants.ARGON2_MEMORY.Default, updatedUser.KdfMemory);
-        Assert.Equal(AuthConstants.ARGON2_PARALLELISM.Default, updatedUser.KdfParallelism);
+        Assert.Equal(KdfConstants.ARGON2_ITERATIONS.Default, updatedUser.KdfIterations);
+        Assert.Equal(KdfConstants.ARGON2_MEMORY.Default, updatedUser.KdfMemory);
+        Assert.Equal(KdfConstants.ARGON2_PARALLELISM.Default, updatedUser.KdfParallelism);
         Assert.Equal(DateTime.UtcNow, updatedUser.RevisionDate, TimeSpan.FromMinutes(1));
         Assert.Equal(DateTime.UtcNow, updatedUser.AccountRevisionDate, TimeSpan.FromMinutes(1));
     }
@@ -683,9 +683,9 @@ public class UserRepositoryTests
             Kdf = new KdfSettings
             {
                 KdfType = KdfType.Argon2id,
-                Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
-                Memory = AuthConstants.ARGON2_MEMORY.Default,
-                Parallelism = AuthConstants.ARGON2_PARALLELISM.Default
+                Iterations = KdfConstants.ARGON2_ITERATIONS.Default,
+                Memory = KdfConstants.ARGON2_MEMORY.Default,
+                Parallelism = KdfConstants.ARGON2_PARALLELISM.Default
             },
             MasterKeyWrappedUserKey = "wrapped-user-key",
             // The salt is set to the email in the command handlers, so we can set
@@ -799,7 +799,7 @@ public class UserRepositoryTests
             MasterPassword = "password_hash",
             MasterPasswordSalt = salt,
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
         });
 
         // Act
@@ -808,7 +808,7 @@ public class UserRepositoryTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal(KdfType.PBKDF2_SHA256, result.Kdf);
-        Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, result.KdfIterations);
+        Assert.Equal(KdfConstants.PBKDF2_ITERATIONS.Default, result.KdfIterations);
         Assert.Null(result.KdfMemory);
         Assert.Null(result.KdfParallelism);
         Assert.Equal(salt, result.MasterPasswordSalt);
@@ -830,9 +830,9 @@ public class UserRepositoryTests
             MasterPassword = "password_hash",
             MasterPasswordSalt = salt,
             Kdf = KdfType.Argon2id,
-            KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default,
-            KdfMemory = AuthConstants.ARGON2_MEMORY.Default,
-            KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default,
+            KdfIterations = KdfConstants.ARGON2_ITERATIONS.Default,
+            KdfMemory = KdfConstants.ARGON2_MEMORY.Default,
+            KdfParallelism = KdfConstants.ARGON2_PARALLELISM.Default,
         });
 
         // Act
@@ -841,9 +841,9 @@ public class UserRepositoryTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal(KdfType.Argon2id, result.Kdf);
-        Assert.Equal(AuthConstants.ARGON2_ITERATIONS.Default, result.KdfIterations);
-        Assert.Equal(AuthConstants.ARGON2_MEMORY.Default, result.KdfMemory);
-        Assert.Equal(AuthConstants.ARGON2_PARALLELISM.Default, result.KdfParallelism);
+        Assert.Equal(KdfConstants.ARGON2_ITERATIONS.Default, result.KdfIterations);
+        Assert.Equal(KdfConstants.ARGON2_MEMORY.Default, result.KdfMemory);
+        Assert.Equal(KdfConstants.ARGON2_PARALLELISM.Default, result.KdfParallelism);
         Assert.Equal(salt, result.MasterPasswordSalt);
     }
 

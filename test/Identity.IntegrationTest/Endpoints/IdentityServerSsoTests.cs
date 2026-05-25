@@ -1,7 +1,7 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
@@ -654,7 +654,7 @@ public class IdentityServerSsoTests
                 Email = TestEmail,
                 MasterPasswordHash = "masterPasswordHash",
                 Kdf = KdfType.PBKDF2_SHA256,
-                KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+                KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
                 UserAsymmetricKeys = new KeysRequestModel()
                 {
                     PublicKey = TestEncryptionConstants.PublicKey,

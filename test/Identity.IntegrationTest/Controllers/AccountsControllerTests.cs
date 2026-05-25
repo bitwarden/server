@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text;
 using System.Text.Json;
-using Bit.Core;
 using Bit.Core.Auth.Entities;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Entities;
@@ -168,7 +168,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
             MasterPasswordHint = masterPasswordHint,
             EmailVerificationToken = localFactory.RegistrationTokens[email],
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
             UserSymmetricKey = userSymmetricKey,
             UserAsymmetricKeys = userAsymmetricKeys,
             KdfMemory = kdfMemory,
@@ -195,7 +195,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         Assert.Equal(userAsymmetricKeys.EncryptedPrivateKey, user.PrivateKey);
         Assert.Equal(userAsymmetricKeys.PublicKey, user.PublicKey);
         Assert.Equal(KdfType.PBKDF2_SHA256, user.Kdf);
-        Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, user.KdfIterations);
+        Assert.Equal(KdfConstants.PBKDF2_ITERATIONS.Default, user.KdfIterations);
         Assert.Equal(kdfMemory, user.KdfMemory);
         Assert.Equal(kdfParallelism, user.KdfParallelism);
     }
@@ -221,7 +221,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
             MasterPasswordHint = masterPasswordHint,
             EmailVerificationToken = emailVerificationToken,
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
             UserSymmetricKey = userSymmetricKey,
             UserAsymmetricKeys = userAsymmetricKeys,
             KdfMemory = kdfMemory,
@@ -279,7 +279,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
             OrgInviteToken = orgInviteToken,
             OrganizationUserId = orgUserId,
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
             UserSymmetricKey = userSymmetricKey,
             UserAsymmetricKeys = userAsymmetricKeys,
             KdfMemory = kdfMemory,
@@ -305,7 +305,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         Assert.Equal(userAsymmetricKeys.EncryptedPrivateKey, user.PrivateKey);
         Assert.Equal(userAsymmetricKeys.PublicKey, user.PublicKey);
         Assert.Equal(KdfType.PBKDF2_SHA256, user.Kdf);
-        Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, user.KdfIterations);
+        Assert.Equal(KdfConstants.PBKDF2_ITERATIONS.Default, user.KdfIterations);
         Assert.Equal(kdfMemory, user.KdfMemory);
         Assert.Equal(kdfParallelism, user.KdfParallelism);
     }
@@ -357,7 +357,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
             MasterPasswordHint = masterPasswordHint,
             OrgSponsoredFreeFamilyPlanToken = orgSponsoredFreeFamilyPlanToken,
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
             UserSymmetricKey = userSymmetricKey,
             UserAsymmetricKeys = userAsymmetricKeys,
             KdfMemory = kdfMemory,
@@ -383,7 +383,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         Assert.Equal(userAsymmetricKeys.EncryptedPrivateKey, user.PrivateKey);
         Assert.Equal(userAsymmetricKeys.PublicKey, user.PublicKey);
         Assert.Equal(KdfType.PBKDF2_SHA256, user.Kdf);
-        Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, user.KdfIterations);
+        Assert.Equal(KdfConstants.PBKDF2_ITERATIONS.Default, user.KdfIterations);
         Assert.Equal(kdfMemory, user.KdfMemory);
         Assert.Equal(kdfParallelism, user.KdfParallelism);
     }
@@ -427,7 +427,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
             AcceptEmergencyAccessInviteToken = acceptEmergencyAccessInviteToken,
             AcceptEmergencyAccessId = acceptEmergencyAccessId,
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
             UserSymmetricKey = userSymmetricKey,
             UserAsymmetricKeys = userAsymmetricKeys,
             KdfMemory = kdfMemory,
@@ -453,7 +453,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         Assert.Equal(userAsymmetricKeys.EncryptedPrivateKey, user.PrivateKey);
         Assert.Equal(userAsymmetricKeys.PublicKey, user.PublicKey);
         Assert.Equal(KdfType.PBKDF2_SHA256, user.Kdf);
-        Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, user.KdfIterations);
+        Assert.Equal(KdfConstants.PBKDF2_ITERATIONS.Default, user.KdfIterations);
         Assert.Equal(kdfMemory, user.KdfMemory);
         Assert.Equal(kdfParallelism, user.KdfParallelism);
     }
@@ -502,7 +502,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
             ProviderInviteToken = base64EncodedProviderInvToken,
             ProviderUserId = providerUserId,
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
             UserSymmetricKey = userSymmetricKey,
             UserAsymmetricKeys = userAsymmetricKeys,
             KdfMemory = kdfMemory,
@@ -528,7 +528,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         Assert.Equal(userAsymmetricKeys.EncryptedPrivateKey, user.PrivateKey);
         Assert.Equal(userAsymmetricKeys.PublicKey, user.PublicKey);
         Assert.Equal(KdfType.PBKDF2_SHA256, user.Kdf);
-        Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, user.KdfIterations);
+        Assert.Equal(KdfConstants.PBKDF2_ITERATIONS.Default, user.KdfIterations);
         Assert.Equal(kdfMemory, user.KdfMemory);
         Assert.Equal(kdfParallelism, user.KdfParallelism);
     }
