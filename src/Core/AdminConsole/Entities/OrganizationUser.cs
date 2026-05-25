@@ -118,10 +118,9 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     /// </summary>
     public OrganizationUserStatusType GetPriorActiveOrganizationUserStatusType()
     {
-        // OrganizationUserStatusTypeNew has no Revoked variant, so any populated value is valid.
         if (StatusNew.HasValue)
         {
-            return (OrganizationUserStatusType)(short)StatusNew.Value;
+            return StatusNew.Value.ToOrganizationUserStatusType();
         }
 
         var status = OrganizationUserStatusType.Invited;
