@@ -2,7 +2,6 @@
 using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Repositories;
@@ -40,7 +39,6 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
         IUserRepository userRepository,
-        IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
@@ -63,7 +61,6 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             currentContext,
             globalSettings,
             userRepository,
-            policyService,
             featureService,
             ssoConfigRepository,
             userDecryptionOptionsBuilder,

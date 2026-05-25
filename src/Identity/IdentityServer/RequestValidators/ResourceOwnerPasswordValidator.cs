@@ -4,7 +4,6 @@
 using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
 using Bit.Core.Context;
@@ -39,7 +38,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         GlobalSettings globalSettings,
         IAuthRequestRepository authRequestRepository,
         IUserRepository userRepository,
-        IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
@@ -60,7 +58,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             currentContext,
             globalSettings,
             userRepository,
-            policyService,
             featureService,
             ssoConfigRepository,
             userDecryptionOptionsBuilder,
