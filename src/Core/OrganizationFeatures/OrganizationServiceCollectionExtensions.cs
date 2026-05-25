@@ -40,6 +40,9 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.PrivilegedAccessManagement.OrganizationFeatures.Commands;
+using Bit.Core.PrivilegedAccessManagement.OrganizationFeatures.Commands.Interfaces;
+using Bit.Core.PrivilegedAccessManagement.Services;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
@@ -67,6 +70,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationSponsorshipCommands(globalSettings);
         services.AddOrganizationApiKeyCommandsQueries();
         services.AddOrganizationCollectionCommands();
+        services.AddLeasingPolicyCommands();
         services.AddOrganizationGroupCommands();
         services.AddOrganizationInviteLinkCommandsQueries();
         services.AddOrganizationDomainCommandsQueries();
@@ -184,6 +188,14 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IUpdateCollectionCommand, UpdateCollectionCommand>();
         services.AddScoped<IDeleteCollectionCommand, DeleteCollectionCommand>();
         services.AddScoped<IBulkAddCollectionAccessCommand, BulkAddCollectionAccessCommand>();
+    }
+
+    public static void AddLeasingPolicyCommands(this IServiceCollection services)
+    {
+        services.AddSingleton<ILeasingPolicyValidator, LeasingPolicyValidator>();
+        services.AddScoped<ICreateLeasingPolicyCommand, CreateLeasingPolicyCommand>();
+        services.AddScoped<IUpdateLeasingPolicyCommand, UpdateLeasingPolicyCommand>();
+        services.AddScoped<IDeleteLeasingPolicyCommand, DeleteLeasingPolicyCommand>();
     }
 
     private static void AddOrganizationGroupCommands(this IServiceCollection services)

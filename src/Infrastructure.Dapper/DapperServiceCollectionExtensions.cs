@@ -9,6 +9,7 @@ using Bit.Core.Dirt.Repositories;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.NotificationCenter.Repositories;
 using Bit.Core.Platform.Installations;
+using Bit.Core.PrivilegedAccessManagement.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Tools.Repositories;
@@ -54,6 +55,7 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IOrganizationSponsorshipRepository, OrganizationSponsorshipRepository>();
         services.AddSingleton<IOrganizationUserRepository, OrganizationUserRepository>();
         services.AddSingleton<IOrganizationInviteLinkRepository, OrganizationInviteLinkRepository>();
+        services.AddSingleton<ILeasingPolicyRepository, PrivilegedAccessManagement.Repositories.LeasingPolicyRepository>();
         services.AddSingleton<IPlayItemRepository, PlayItemRepository>();
         services.AddSingleton<IPolicyRepository, PolicyRepository>();
         services.AddSingleton<IProviderOrganizationRepository, ProviderOrganizationRepository>();
