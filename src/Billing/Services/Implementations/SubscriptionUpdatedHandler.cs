@@ -644,9 +644,29 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             organization.ChangePlan(targetPlan);
             await _organizationRepository.ReplaceAsync(organization);
 
-            assignment.MigratedDate = DateTime.UtcNow;
-            assignment.RevisionDate = DateTime.UtcNow;
-            await _cohortAssignmentRepository.ReplaceAsync(assignment);
+            try
+            {
+                assignment.MigratedDate = DateTime.UtcNow;
+                assignment.RevisionDate = DateTime.UtcNow;
+                await _cohortAssignmentRepository.ReplaceAsync(assignment);
+            }
+            catch (Exception assignmentException)
+            {
+                // The organization was migrated successfully but stamping MigratedDate on
+                // the cohort assignment failed — partial-write window. Log with full cohort
+                // context so the inconsistent state is observable, then surface as a
+                // BillingException so the outer catch rethrows and Stripe retries; ChangePlan
+                // is idempotent so the next retry safely re-applies and finishes the stamp.
+                _logger.LogError(
+                    assignmentException,
+                    "Business migration applied to organization ({OrganizationId}) but failed to stamp MigratedDate on cohort assignment ({CohortId}, MigrationPathId {MigrationPathId}); Stripe retry will re-apply",
+                    organizationId,
+                    cohort.Id,
+                    cohort.MigrationPathId.Value);
+                throw new BillingException(
+                    message: "Partial business migration write: organization updated but cohort assignment stamp failed.",
+                    innerException: assignmentException);
+            }
 
             _logger.LogInformation(
                 "Schedule-triggered business migration applied for organization ({OrganizationId}): PlanType {SourcePlanType} -> {TargetPlanType}, cohort ({CohortId})",

@@ -3833,4 +3833,98 @@ public class SubscriptionUpdatedHandlerTests
         await _cohortAssignmentRepository.DidNotReceive().ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
         Assert.Null(assignment.MigratedDate);
     }
+
+    [Fact]
+    public async Task HandleAsync_BusinessMigration_AssignmentReplaceFailsAfterOrgWrite_RethrowsAsBillingExceptionForStripeRetry()
+    {
+        // Arrange — verifies Fix 4: a failure stamping MigratedDate AFTER the org write
+        // succeeded must surface (as BillingException) so the webhook returns 500 and
+        // Stripe retries. ChangePlan is idempotent so the retry safely re-applies.
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var assignmentId = Guid.NewGuid();
+        var enterprise2020Annual = new Enterprise2020Plan(true);
+        var enterpriseAnnual = new EnterprisePlan(true);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_partial_write",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } }
+        };
+
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.EnterpriseAnnually2020 };
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = assignmentId,
+            OrganizationId = organizationId,
+            CohortId = cohortId
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(enterprise2020Annual);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseMonthly2020).Returns(new Enterprise2020Plan(false));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually2020).Returns(new Teams2020Plan(true));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(new Teams2020Plan(false));
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(enterpriseAnnual);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "Enterprise2020Annual",
+            MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
+            IsActive = true
+        });
+        _cohortAssignmentRepository.ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>())
+            .Throws(new InvalidOperationException("assignment DB failure"));
+
+        // Act + Assert — partial-write is surfaced as BillingException so Stripe retries.
+        await Assert.ThrowsAsync<BillingException>(() => _sut.HandleAsync(parsedEvent));
+
+        // Org was written before the failure
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
+            o.Id == organizationId && o.PlanType == PlanType.EnterpriseAnnually));
+
+        // Assignment MigratedDate was set in-memory but the write failed; retry will redo it.
+        Assert.NotNull(assignment.MigratedDate);
+    }
 }
