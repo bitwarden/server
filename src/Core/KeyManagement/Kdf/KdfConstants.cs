@@ -1,4 +1,4 @@
-namespace Bit.Core.KeyManagement.Kdf;
+﻿namespace Bit.Core.KeyManagement.Kdf;
 
 public static class KdfConstants
 {

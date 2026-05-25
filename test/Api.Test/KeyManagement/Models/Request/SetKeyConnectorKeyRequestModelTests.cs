@@ -1,9 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Api.KeyManagement.Models.Requests;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
-using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Xunit;
 

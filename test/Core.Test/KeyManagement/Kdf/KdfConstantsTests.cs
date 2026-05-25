@@ -1,4 +1,4 @@
-using Bit.Core.KeyManagement.Kdf;
+﻿using Bit.Core.KeyManagement.Kdf;
 using Xunit;
 
 namespace Bit.Core.Test.KeyManagement.Kdf;

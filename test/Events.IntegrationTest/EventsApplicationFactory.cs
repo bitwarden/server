@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
-using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.IntegrationTestCommon;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.Constants;
