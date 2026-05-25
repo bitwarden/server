@@ -47,16 +47,10 @@ public class Collection : ITableObject<Guid>
     /// </summary>
     public string? DefaultUserCollectionEmail { get; set; }
     /// <summary>
-    /// Master switch for PAM credential leasing on this collection. When false, leasing endpoints
-    /// behave as if leasing did not exist for this collection.
+    /// Reference to a <see cref="Bit.Core.PrivilegedAccessManagement.Entities.LeasingPolicy"/> that gates
+    /// PAM credential leasing for this collection. Null means leasing is disabled for the collection.
     /// </summary>
-    public bool LeasingEnabled { get; set; }
-    /// <summary>
-    /// Raw JSON policy document evaluated when leasing is enabled. Validated by
-    /// <c>LeasingPolicyValidator</c>. Null means no policy is configured; behavior defaults to
-    /// <c>human_approval</c> at evaluation time.
-    /// </summary>
-    public string? LeasingPolicy { get; set; }
+    public Guid? LeasingPolicyId { get; set; }
 
     /// <summary>
     /// Initializes <see cref="Id"/> to a new COMB GUID.

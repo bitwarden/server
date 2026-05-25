@@ -40,7 +40,6 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
-using Bit.Core.PrivilegedAccessManagement.Services;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
@@ -185,7 +184,6 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IUpdateCollectionCommand, UpdateCollectionCommand>();
         services.AddScoped<IDeleteCollectionCommand, DeleteCollectionCommand>();
         services.AddScoped<IBulkAddCollectionAccessCommand, BulkAddCollectionAccessCommand>();
-        services.AddSingleton<ILeasingPolicyValidator, LeasingPolicyValidator>();
     }
 
     private static void AddOrganizationGroupCommands(this IServiceCollection services)

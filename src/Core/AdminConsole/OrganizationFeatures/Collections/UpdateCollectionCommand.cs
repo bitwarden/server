@@ -6,7 +6,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
-using Bit.Core.PrivilegedAccessManagement.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
@@ -18,23 +17,17 @@ public class UpdateCollectionCommand : IUpdateCollectionCommand
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ICollectionRepository _collectionRepository;
     private readonly TimeProvider _timeProvider;
-    private readonly IFeatureService _featureService;
-    private readonly ILeasingPolicyValidator _leasingPolicyValidator;
 
     public UpdateCollectionCommand(
         IEventService eventService,
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
-        TimeProvider timeProvider,
-        IFeatureService featureService,
-        ILeasingPolicyValidator leasingPolicyValidator)
+        TimeProvider timeProvider)
     {
         _eventService = eventService;
         _organizationRepository = organizationRepository;
         _collectionRepository = collectionRepository;
         _timeProvider = timeProvider;
-        _featureService = featureService;
-        _leasingPolicyValidator = leasingPolicyValidator;
     }
 
     public async Task<Collection> UpdateAsync(Collection collection, IEnumerable<CollectionAccessSelection> groups = null,
@@ -44,8 +37,6 @@ public class UpdateCollectionCommand : IUpdateCollectionCommand
         {
             throw new BadRequestException("You cannot edit a collection with the type as DefaultUserCollection.");
         }
-
-        ApplyLeasingFeatureFlag(collection);
 
         var org = await _organizationRepository.GetByIdAsync(collection.OrganizationId);
         if (org == null)
@@ -92,19 +83,5 @@ public class UpdateCollectionCommand : IUpdateCollectionCommand
         await _eventService.LogCollectionEventAsync(collection, EventType.Collection_Updated);
 
         return collection;
-    }
-
-    private void ApplyLeasingFeatureFlag(Collection collection)
-    {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.Pam))
-        {
-            return;
-        }
-
-        var validation = _leasingPolicyValidator.Validate(collection.LeasingPolicy);
-        if (!validation.IsValid)
-        {
-            throw new BadRequestException(validation.Error);
-        }
     }
 }

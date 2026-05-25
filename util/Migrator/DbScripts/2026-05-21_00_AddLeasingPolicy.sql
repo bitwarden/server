@@ -1,16 +1,60 @@
--- Add LeasingEnabled column to Collection table
-IF COL_LENGTH('[dbo].[Collection]', 'LeasingEnabled') IS NULL
+-- Create the LeasingPolicy table
+IF OBJECT_ID('[dbo].[LeasingPolicy]') IS NULL
 BEGIN
-    ALTER TABLE [dbo].[Collection]
-    ADD [LeasingEnabled] BIT NOT NULL CONSTRAINT [DF_Collection_LeasingEnabled] DEFAULT (0);
+    CREATE TABLE [dbo].[LeasingPolicy] (
+        [Id]                UNIQUEIDENTIFIER    NOT NULL,
+        [OrganizationId]    UNIQUEIDENTIFIER    NOT NULL,
+        [Name]              NVARCHAR(256)       NOT NULL,
+        [Description]       NVARCHAR(MAX)       NULL,
+        [Policy]            NVARCHAR(MAX)       NOT NULL,
+        [CreationDate]      DATETIME2(7)        NOT NULL,
+        [RevisionDate]      DATETIME2(7)        NOT NULL,
+        CONSTRAINT [PK_LeasingPolicy] PRIMARY KEY CLUSTERED ([Id] ASC),
+        CONSTRAINT [FK_LeasingPolicy_Organization] FOREIGN KEY ([OrganizationId])
+            REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE
+    );
+
+    CREATE UNIQUE NONCLUSTERED INDEX [IX_LeasingPolicy_OrganizationId_Name]
+        ON [dbo].[LeasingPolicy] ([OrganizationId] ASC, [Name] ASC);
 END
 GO
 
--- Add LeasingPolicy column to Collection table
-IF COL_LENGTH('[dbo].[Collection]', 'LeasingPolicy') IS NULL
+-- Drop the previous iteration's inline leasing columns from Collection (if present)
+IF EXISTS (
+    SELECT 1 FROM sys.default_constraints WHERE name = 'DF_Collection_LeasingEnabled'
+)
+BEGIN
+    ALTER TABLE [dbo].[Collection] DROP CONSTRAINT [DF_Collection_LeasingEnabled];
+END
+GO
+
+IF COL_LENGTH('[dbo].[Collection]', 'LeasingEnabled') IS NOT NULL
+BEGIN
+    ALTER TABLE [dbo].[Collection] DROP COLUMN [LeasingEnabled];
+END
+GO
+
+IF COL_LENGTH('[dbo].[Collection]', 'LeasingPolicy') IS NOT NULL
+BEGIN
+    ALTER TABLE [dbo].[Collection] DROP COLUMN [LeasingPolicy];
+END
+GO
+
+-- Add LeasingPolicyId FK column to Collection
+IF COL_LENGTH('[dbo].[Collection]', 'LeasingPolicyId') IS NULL
 BEGIN
     ALTER TABLE [dbo].[Collection]
-    ADD [LeasingPolicy] NVARCHAR(MAX) NULL;
+    ADD [LeasingPolicyId] UNIQUEIDENTIFIER NULL
+        CONSTRAINT [FK_Collection_LeasingPolicy] REFERENCES [dbo].[LeasingPolicy] ([Id]) ON DELETE SET NULL;
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes WHERE name = 'IX_Collection_LeasingPolicyId' AND object_id = OBJECT_ID('[dbo].[Collection]')
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_Collection_LeasingPolicyId]
+        ON [dbo].[Collection] ([LeasingPolicyId] ASC);
 END
 GO
 
@@ -45,7 +89,103 @@ BEGIN
 END
 GO
 
--- Update Collection_Create stored procedure to include leasing columns
+-- LeasingPolicy CRUD stored procedures
+CREATE OR ALTER PROCEDURE [dbo].[LeasingPolicy_Create]
+    @Id UNIQUEIDENTIFIER OUTPUT,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @Name NVARCHAR(256),
+    @Description NVARCHAR(MAX) = NULL,
+    @Policy NVARCHAR(MAX),
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    INSERT INTO [dbo].[LeasingPolicy]
+    (
+        [Id],
+        [OrganizationId],
+        [Name],
+        [Description],
+        [Policy],
+        [CreationDate],
+        [RevisionDate]
+    )
+    VALUES
+    (
+        @Id,
+        @OrganizationId,
+        @Name,
+        @Description,
+        @Policy,
+        @CreationDate,
+        @RevisionDate
+    )
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[LeasingPolicy_Update]
+    @Id UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @Name NVARCHAR(256),
+    @Description NVARCHAR(MAX) = NULL,
+    @Policy NVARCHAR(MAX),
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    UPDATE
+        [dbo].[LeasingPolicy]
+    SET
+        [OrganizationId] = @OrganizationId,
+        [Name] = @Name,
+        [Description] = @Description,
+        [Policy] = @Policy,
+        [CreationDate] = @CreationDate,
+        [RevisionDate] = @RevisionDate
+    WHERE
+        [Id] = @Id
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[LeasingPolicy_DeleteById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    DELETE FROM [dbo].[LeasingPolicy] WHERE [Id] = @Id
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[LeasingPolicy_ReadById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT *
+    FROM [dbo].[LeasingPolicy]
+    WHERE [Id] = @Id
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[LeasingPolicy_ReadByOrganizationId]
+    @OrganizationId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT *
+    FROM [dbo].[LeasingPolicy]
+    WHERE [OrganizationId] = @OrganizationId
+END
+GO
+
+-- Update Collection_Create to accept LeasingPolicyId
 CREATE OR ALTER PROCEDURE [dbo].[Collection_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -55,8 +195,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Collection_Create]
     @RevisionDate DATETIME2(7),
     @DefaultUserCollectionEmail NVARCHAR(256) = NULL,
     @Type TINYINT = 0,
-    @LeasingEnabled BIT = 0,
-    @LeasingPolicy NVARCHAR(MAX) = NULL
+    @LeasingPolicyId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -71,8 +210,7 @@ BEGIN
         [RevisionDate],
         [DefaultUserCollectionEmail],
         [Type],
-        [LeasingEnabled],
-        [LeasingPolicy]
+        [LeasingPolicyId]
     )
     VALUES
     (
@@ -84,15 +222,14 @@ BEGIN
         @RevisionDate,
         @DefaultUserCollectionEmail,
         @Type,
-        @LeasingEnabled,
-        @LeasingPolicy
+        @LeasingPolicyId
     )
 
     EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @Id, @OrganizationId
 END
 GO
 
--- Update Collection_Update stored procedure to include leasing columns
+-- Update Collection_Update to accept LeasingPolicyId
 CREATE OR ALTER PROCEDURE [dbo].[Collection_Update]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -102,8 +239,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Collection_Update]
     @RevisionDate DATETIME2(7),
     @DefaultUserCollectionEmail NVARCHAR(256) = NULL,
     @Type TINYINT = 0,
-    @LeasingEnabled BIT = 0,
-    @LeasingPolicy NVARCHAR(MAX) = NULL
+    @LeasingPolicyId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -118,8 +254,7 @@ BEGIN
         [RevisionDate] = @RevisionDate,
         [DefaultUserCollectionEmail] = @DefaultUserCollectionEmail,
         [Type] = @Type,
-        [LeasingEnabled] = @LeasingEnabled,
-        [LeasingPolicy] = @LeasingPolicy
+        [LeasingPolicyId] = @LeasingPolicyId
     WHERE
         [Id] = @Id
 
@@ -127,7 +262,7 @@ BEGIN
 END
 GO
 
--- Update Collection_CreateWithGroupsAndUsers stored procedure to forward leasing columns
+-- Update Collection_CreateWithGroupsAndUsers to forward LeasingPolicyId
 CREATE OR ALTER PROCEDURE [dbo].[Collection_CreateWithGroupsAndUsers]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -139,13 +274,12 @@ CREATE OR ALTER PROCEDURE [dbo].[Collection_CreateWithGroupsAndUsers]
     @Users AS [dbo].[CollectionAccessSelectionType] READONLY,
     @DefaultUserCollectionEmail NVARCHAR(256) = NULL,
     @Type TINYINT = 0,
-    @LeasingEnabled BIT = 0,
-    @LeasingPolicy NVARCHAR(MAX) = NULL
+    @LeasingPolicyId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[Collection_Create] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate, @DefaultUserCollectionEmail, @Type, @LeasingEnabled, @LeasingPolicy
+    EXEC [dbo].[Collection_Create] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate, @DefaultUserCollectionEmail, @Type, @LeasingPolicyId
 
     -- Groups
     ;WITH [AvailableGroupsCTE] AS(
@@ -207,7 +341,7 @@ BEGIN
 END
 GO
 
--- Update Collection_UpdateWithGroupsAndUsers stored procedure to forward leasing columns
+-- Update Collection_UpdateWithGroupsAndUsers to forward LeasingPolicyId
 CREATE OR ALTER PROCEDURE [dbo].[Collection_UpdateWithGroupsAndUsers]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -219,13 +353,12 @@ CREATE OR ALTER PROCEDURE [dbo].[Collection_UpdateWithGroupsAndUsers]
     @Users AS [dbo].[CollectionAccessSelectionType] READONLY,
     @DefaultUserCollectionEmail NVARCHAR(256) = NULL,
     @Type TINYINT = 0,
-    @LeasingEnabled BIT = 0,
-    @LeasingPolicy NVARCHAR(MAX) = NULL
+    @LeasingPolicyId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[Collection_Update] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate, @DefaultUserCollectionEmail, @Type, @LeasingEnabled, @LeasingPolicy
+    EXEC [dbo].[Collection_Update] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate, @DefaultUserCollectionEmail, @Type, @LeasingPolicyId
 
     -- Bump RevisionDate on all affected groups (old + new) before modifying CollectionGroup
     ;WITH [AffectedGroupsCTE] AS (
@@ -341,7 +474,7 @@ BEGIN
 END
 GO
 
--- Update Collection_UpdateWithGroups stored procedure to forward leasing columns
+-- Update Collection_UpdateWithGroups to forward LeasingPolicyId
 CREATE OR ALTER PROCEDURE [dbo].[Collection_UpdateWithGroups]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -352,13 +485,12 @@ CREATE OR ALTER PROCEDURE [dbo].[Collection_UpdateWithGroups]
     @Groups AS [dbo].[CollectionAccessSelectionType] READONLY,
     @DefaultUserCollectionEmail NVARCHAR(256) = NULL,
     @Type TINYINT = 0,
-    @LeasingEnabled BIT = 0,
-    @LeasingPolicy NVARCHAR(MAX) = NULL
+    @LeasingPolicyId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[Collection_Update] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate, @DefaultUserCollectionEmail, @Type, @LeasingEnabled, @LeasingPolicy
+    EXEC [dbo].[Collection_Update] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate, @DefaultUserCollectionEmail, @Type, @LeasingPolicyId
 
     -- Bump RevisionDate on all affected groups (old + new) before modifying CollectionGroup
     ;WITH [AffectedGroupsCTE] AS (
@@ -446,7 +578,7 @@ BEGIN
 END
 GO
 
--- Update Collection_UpdateWithUsers stored procedure to forward leasing columns
+-- Update Collection_UpdateWithUsers to forward LeasingPolicyId
 CREATE OR ALTER PROCEDURE [dbo].[Collection_UpdateWithUsers]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -457,13 +589,12 @@ CREATE OR ALTER PROCEDURE [dbo].[Collection_UpdateWithUsers]
     @Users AS [dbo].[CollectionAccessSelectionType] READONLY,
     @DefaultUserCollectionEmail NVARCHAR(256) = NULL,
     @Type TINYINT = 0,
-    @LeasingEnabled BIT = 0,
-    @LeasingPolicy NVARCHAR(MAX) = NULL
+    @LeasingPolicyId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[Collection_Update] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate, @DefaultUserCollectionEmail, @Type, @LeasingEnabled, @LeasingPolicy
+    EXEC [dbo].[Collection_Update] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate, @DefaultUserCollectionEmail, @Type, @LeasingPolicyId
 
     -- Users
     -- Delete users that are no longer in source
@@ -525,7 +656,7 @@ BEGIN
 END
 GO
 
--- Update Collection_ReadByUserId stored procedure to project leasing columns
+-- Update Collection_ReadByUserId to project LeasingPolicyId
 CREATE OR ALTER PROCEDURE [dbo].[Collection_ReadByUserId]
     @UserId UNIQUEIDENTIFIER
 AS
@@ -544,8 +675,7 @@ BEGIN
         MAX([Manage]) AS [Manage],
         [DefaultUserCollectionEmail],
         [Type],
-        [LeasingEnabled],
-        [LeasingPolicy]
+        [LeasingPolicyId]
     FROM
         [dbo].[UserCollectionDetails](@UserId)
     GROUP BY
@@ -557,12 +687,11 @@ BEGIN
         ExternalId,
         [DefaultUserCollectionEmail],
         [Type],
-        [LeasingEnabled],
-        [LeasingPolicy]
+        [LeasingPolicyId]
 END
 GO
 
--- Update Collection_ReadByIdWithPermissions stored procedure to GROUP BY leasing columns
+-- Update Collection_ReadByIdWithPermissions to GROUP BY LeasingPolicyId
 CREATE OR ALTER PROCEDURE [dbo].[Collection_ReadByIdWithPermissions]
     @CollectionId UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
@@ -641,8 +770,7 @@ BEGIN
         C.[ExternalId],
         C.[DefaultUserCollectionEmail],
         C.[Type],
-        C.[LeasingEnabled],
-        C.[LeasingPolicy]
+        C.[LeasingPolicyId]
 
    IF (@IncludeAccessRelationships = 1)
     BEGIN
@@ -652,7 +780,7 @@ BEGIN
 END
 GO
 
--- Update Collection_ReadSharedCollectionsByOrganizationIdWithPermissions stored procedure to GROUP BY leasing columns
+-- Update Collection_ReadSharedCollectionsByOrganizationIdWithPermissions to GROUP BY LeasingPolicyId
 CREATE OR ALTER PROCEDURE [dbo].[Collection_ReadSharedCollectionsByOrganizationIdWithPermissions]
     @OrganizationId UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
@@ -732,8 +860,7 @@ BEGIN
         C.[ExternalId],
         C.[DefaultUserCollectionEmail],
         C.[Type],
-        C.[LeasingEnabled],
-        C.[LeasingPolicy]
+        C.[LeasingPolicyId]
 
     IF (@IncludeAccessRelationships = 1)
     BEGIN

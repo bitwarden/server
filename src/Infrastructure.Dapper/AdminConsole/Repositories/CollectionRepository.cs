@@ -486,8 +486,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             Type = collection.Type;
             ExternalId = collection.ExternalId;
             DefaultUserCollectionEmail = collection.DefaultUserCollectionEmail;
-            LeasingEnabled = collection.LeasingEnabled;
-            LeasingPolicy = collection.LeasingPolicy;
+            LeasingPolicyId = collection.LeasingPolicyId;
             Groups = groups.ToArrayTVP();
             Users = users.ToArrayTVP();
         }
@@ -512,8 +511,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             Type = collection.Type;
             ExternalId = collection.ExternalId;
             DefaultUserCollectionEmail = collection.DefaultUserCollectionEmail;
-            LeasingEnabled = collection.LeasingEnabled;
-            LeasingPolicy = collection.LeasingPolicy;
+            LeasingPolicyId = collection.LeasingPolicyId;
             Groups = groups.ToArrayTVP();
         }
 
@@ -536,8 +534,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             Type = collection.Type;
             ExternalId = collection.ExternalId;
             DefaultUserCollectionEmail = collection.DefaultUserCollectionEmail;
-            LeasingEnabled = collection.LeasingEnabled;
-            LeasingPolicy = collection.LeasingPolicy;
+            LeasingPolicyId = collection.LeasingPolicyId;
             Users = users.ToArrayTVP();
         }
 

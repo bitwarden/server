@@ -6,7 +6,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
-using Bit.Core.PrivilegedAccessManagement.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
@@ -17,21 +16,15 @@ public class CreateCollectionCommand : ICreateCollectionCommand
     private readonly IEventService _eventService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ICollectionRepository _collectionRepository;
-    private readonly IFeatureService _featureService;
-    private readonly ILeasingPolicyValidator _leasingPolicyValidator;
 
     public CreateCollectionCommand(
         IEventService eventService,
         IOrganizationRepository organizationRepository,
-        ICollectionRepository collectionRepository,
-        IFeatureService featureService,
-        ILeasingPolicyValidator leasingPolicyValidator)
+        ICollectionRepository collectionRepository)
     {
         _eventService = eventService;
         _organizationRepository = organizationRepository;
         _collectionRepository = collectionRepository;
-        _featureService = featureService;
-        _leasingPolicyValidator = leasingPolicyValidator;
     }
 
     public async Task<Collection> CreateAsync(Collection collection, IEnumerable<CollectionAccessSelection> groups = null,
@@ -41,8 +34,6 @@ public class CreateCollectionCommand : ICreateCollectionCommand
         {
             throw new BadRequestException("You cannot create a collection with the type as DefaultUserCollection.");
         }
-
-        ApplyLeasingFeatureFlag(collection);
 
         var org = await _organizationRepository.GetByIdAsync(collection.OrganizationId);
         if (org == null)
@@ -84,19 +75,5 @@ public class CreateCollectionCommand : ICreateCollectionCommand
         await _eventService.LogCollectionEventAsync(collection, EventType.Collection_Created);
 
         return collection;
-    }
-
-    private void ApplyLeasingFeatureFlag(Collection collection)
-    {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.Pam))
-        {
-            return;
-        }
-
-        var validation = _leasingPolicyValidator.Validate(collection.LeasingPolicy);
-        if (!validation.IsValid)
-        {
-            throw new BadRequestException(validation.Error);
-        }
     }
 }
