@@ -88,11 +88,8 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
 
-                    b.Property<bool>("LeasingEnabled")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("LeasingPolicy")
-                        .HasColumnType("text");
+                    b.Property<Guid?>("LeasingPolicyId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -109,7 +106,7 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AccessRuleId");
+                    b.HasIndex("LeasingPolicyId");
 
                     b.HasIndex("OrganizationId");
 
@@ -2615,6 +2612,40 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("Installation", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.PrivilegedAccessManagement.Models.LeasingPolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Policy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("LeasingPolicy", (string)null);
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.AccessPolicy", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3125,10 +3156,10 @@ namespace Bit.PostgresMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Collection", b =>
                 {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRule", null)
+                    b.HasOne("Bit.Infrastructure.EntityFramework.PrivilegedAccessManagement.Models.LeasingPolicy", null)
                         .WithMany()
-                        .HasForeignKey("AccessRuleId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .HasForeignKey("LeasingPolicyId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
                         .WithMany("Collections")
@@ -3666,54 +3697,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessDecision", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRequest", null)
-                        .WithMany()
-                        .HasForeignKey("AccessRequestId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessLease", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRequest", null)
-                        .WithMany()
-                        .HasForeignKey("AccessRequestId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
-                        .WithMany()
-                        .HasForeignKey("OrganizationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Organization");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRequest", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.AccessLease", null)
-                        .WithMany()
-                        .HasForeignKey("ExtensionOfLeaseId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
-                        .WithMany()
-                        .HasForeignKey("OrganizationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRule", null)
-                        .WithMany()
-                        .HasForeignKey("RuleId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Organization");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRule", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.PrivilegedAccessManagement.Models.LeasingPolicy", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
                         .WithMany()
