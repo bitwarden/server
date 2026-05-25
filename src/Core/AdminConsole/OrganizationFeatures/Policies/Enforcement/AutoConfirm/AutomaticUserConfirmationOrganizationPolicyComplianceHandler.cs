@@ -8,13 +8,13 @@ using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpe
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 
-public class AutomaticUserConfirmationOrganizationPolicyComplianceValidator(
+public class AutomaticUserConfirmationOrganizationPolicyComplianceHandler(
     IOrganizationUserRepository organizationUserRepository,
     IProviderUserRepository providerUserRepository)
-    : IAutomaticUserConfirmationOrganizationPolicyComplianceValidator
+    : IAutomaticUserConfirmationOrganizationPolicyComplianceHandler
 {
-    public async Task<ValidationResult<AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest>>
-        IsOrganizationCompliantAsync(AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest request)
+    public async Task<ValidationResult<AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest>>
+        IsOrganizationCompliantAsync(AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest request)
     {
         var organizationUsers = await organizationUserRepository.GetManyDetailsByOrganizationAsync(request.OrganizationId);
 
@@ -32,7 +32,7 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceValidator(
     }
 
     private async Task<Error?> ValidateUserComplianceWithSingleOrgAsync(
-        AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest request,
+        AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest request,
         ICollection<OrganizationUserUserDetails> organizationUsers)
     {
         var userIds = organizationUsers

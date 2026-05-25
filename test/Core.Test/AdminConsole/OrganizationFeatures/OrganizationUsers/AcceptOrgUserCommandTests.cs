@@ -680,7 +680,7 @@ public class AcceptOrgUserCommandTests
         // Assert
         AssertValidAcceptedOrgUser(resultOrgUser, orgUser, user);
 
-        await sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>().DidNotReceiveWithAnyArgs()
+        await sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementHandler>().DidNotReceiveWithAnyArgs()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>());
     }
 
@@ -694,7 +694,7 @@ public class AcceptOrgUserCommandTests
         SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
 
         // Mock auto-confirm enforcement query to return valid (no auto-confirm restrictions)
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementHandler>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
             .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser], user)));
 
@@ -718,7 +718,7 @@ public class AcceptOrgUserCommandTests
         // Arrange
         SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementHandler>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Invalid(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser, otherOrgUser], user),
@@ -762,7 +762,7 @@ public class AcceptOrgUserCommandTests
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([new PolicyDetails { OrganizationId = org.Id }]));
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementHandler>()
             .IsCompliantAsync(
                 Arg.Is<AutomaticUserConfirmationPolicyEnforcementRequest>(r =>
                     r.AllOrganizationUsers.Count == 1 &&
@@ -775,7 +775,7 @@ public class AcceptOrgUserCommandTests
 
         // Assert
         Assert.NotNull(result);
-        await sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+        await sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementHandler>()
             .Received(1)
             .IsCompliantAsync(
                 Arg.Is<AutomaticUserConfirmationPolicyEnforcementRequest>(r => r.AllOrganizationUsers.Count == 1),
@@ -795,7 +795,7 @@ public class AcceptOrgUserCommandTests
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([new PolicyDetails { OrganizationId = org.Id }]));
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementHandler>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser], user)));
 
@@ -821,7 +821,7 @@ public class AcceptOrgUserCommandTests
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementHandler>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser], user)));
 
@@ -861,7 +861,7 @@ public class AcceptOrgUserCommandTests
     {
         SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementHandler>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser], user)));
 
@@ -942,7 +942,7 @@ public class AcceptOrgUserCommandTests
             .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
         // Auto-confirm enforcement query returns valid by default (no restrictions)
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementHandler>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser], user)));
     }
