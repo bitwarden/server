@@ -1,4 +1,4 @@
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Models.StaticStore;
 
 namespace Bit.Core.Billing.Organizations.Extensions;
