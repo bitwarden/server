@@ -69,7 +69,7 @@ public partial class AddLeasingPolicy : Migration
             column: "LeasingPolicyId",
             principalTable: "LeasingPolicy",
             principalColumn: "Id",
-            onDelete: ReferentialAction.SetNull);
+            onDelete: ReferentialAction.Restrict);
     }
 
     /// <inheritdoc />
@@ -98,10 +98,10 @@ public partial class AddLeasingPolicy : Migration
             defaultValue: false);
 
         migrationBuilder.AddColumn<string>(
-            name: "LeasingPolicy",
-            table: "Collection",
-            type: "longtext",
-            nullable: true)
+                name: "LeasingPolicy",
+                table: "Collection",
+                type: "longtext",
+                nullable: true)
             .Annotation("MySql:CharSet", "utf8mb4");
     }
 }

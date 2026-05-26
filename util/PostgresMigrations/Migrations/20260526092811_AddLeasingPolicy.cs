@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace Bit.SqliteMigrations.Migrations;
+namespace Bit.PostgresMigrations.Migrations;
 
 /// <inheritdoc />
 public partial class AddLeasingPolicy : Migration
@@ -14,22 +14,27 @@ public partial class AddLeasingPolicy : Migration
             name: "LeasingEnabled",
             table: "Collection");
 
-        migrationBuilder.RenameColumn(
+        migrationBuilder.DropColumn(
             name: "LeasingPolicy",
+            table: "Collection");
+
+        migrationBuilder.AddColumn<Guid>(
+            name: "LeasingPolicyId",
             table: "Collection",
-            newName: "LeasingPolicyId");
+            type: "uuid",
+            nullable: true);
 
         migrationBuilder.CreateTable(
             name: "LeasingPolicy",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                Name = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
-                Description = table.Column<string>(type: "TEXT", nullable: true),
-                Policy = table.Column<string>(type: "TEXT", nullable: false),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
+                Name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                Description = table.Column<string>(type: "text", nullable: true),
+                Policy = table.Column<string>(type: "text", nullable: false),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
             constraints: table =>
             {
@@ -59,7 +64,7 @@ public partial class AddLeasingPolicy : Migration
             column: "LeasingPolicyId",
             principalTable: "LeasingPolicy",
             principalColumn: "Id",
-            onDelete: ReferentialAction.SetNull);
+            onDelete: ReferentialAction.Restrict);
     }
 
     /// <inheritdoc />
@@ -76,16 +81,21 @@ public partial class AddLeasingPolicy : Migration
             name: "IX_Collection_LeasingPolicyId",
             table: "Collection");
 
-        migrationBuilder.RenameColumn(
+        migrationBuilder.DropColumn(
             name: "LeasingPolicyId",
-            table: "Collection",
-            newName: "LeasingPolicy");
+            table: "Collection");
 
         migrationBuilder.AddColumn<bool>(
             name: "LeasingEnabled",
             table: "Collection",
-            type: "INTEGER",
+            type: "boolean",
             nullable: false,
             defaultValue: false);
+
+        migrationBuilder.AddColumn<string>(
+            name: "LeasingPolicy",
+            table: "Collection",
+            type: "text",
+            nullable: true);
     }
 }

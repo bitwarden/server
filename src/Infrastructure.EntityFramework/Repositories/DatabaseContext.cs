@@ -156,7 +156,7 @@ public class DatabaseContext : DbContext
             .HasOne<LeasingPolicy>()
             .WithMany()
             .HasForeignKey(c => c.LeasingPolicyId)
-            .OnDelete(DeleteBehavior.SetNull);
+            .OnDelete(DeleteBehavior.Restrict);
 
         eOrganizationMemberBaseDetail.HasNoKey();
 

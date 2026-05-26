@@ -45,7 +45,7 @@ IF COL_LENGTH('[dbo].[Collection]', 'LeasingPolicyId') IS NULL
 BEGIN
     ALTER TABLE [dbo].[Collection]
     ADD [LeasingPolicyId] UNIQUEIDENTIFIER NULL
-        CONSTRAINT [FK_Collection_LeasingPolicy] REFERENCES [dbo].[LeasingPolicy] ([Id]) ON DELETE SET NULL;
+        CONSTRAINT [FK_Collection_LeasingPolicy] REFERENCES [dbo].[LeasingPolicy] ([Id]) ON DELETE NO ACTION;
 END
 GO
 
