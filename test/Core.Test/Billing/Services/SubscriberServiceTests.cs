@@ -377,11 +377,13 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task CancelSubscription_PM35215FlagOn_ClearsMigrationCohortMetadataOnCancel(
+    public async Task CancelSubscription_PM35215FlagOn_PreservesMigrationCohortMetadataOnCancel(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
         const string subscriptionId = "sub_1";
+        const string cohortId = "some-cohort-id";
+        const string cohortName = "A1(a)";
 
         var subscription = new Subscription
         {
@@ -391,8 +393,8 @@ public class SubscriberServiceTests
             Metadata = new Dictionary<string, string>
             {
                 { "organizationId", organization.Id.ToString() },
-                { StripeConstants.MetadataKeys.MigrationCohortId, "some-cohort-id" },
-                { StripeConstants.MetadataKeys.MigrationCohortName, "A1(a)" }
+                { StripeConstants.MetadataKeys.MigrationCohortId, cohortId },
+                { StripeConstants.MetadataKeys.MigrationCohortName, cohortName }
             }
         };
 
@@ -415,8 +417,8 @@ public class SubscriberServiceTests
 
         await stripeAdapter.Received(1).UpdateSubscriptionAsync(subscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(o =>
-                o.Metadata[StripeConstants.MetadataKeys.MigrationCohortId] == string.Empty &&
-                o.Metadata[StripeConstants.MetadataKeys.MigrationCohortName] == string.Empty));
+                !o.Metadata.ContainsKey(StripeConstants.MetadataKeys.MigrationCohortId) &&
+                !o.Metadata.ContainsKey(StripeConstants.MetadataKeys.MigrationCohortName)));
     }
 
     [Theory, BitAutoData]

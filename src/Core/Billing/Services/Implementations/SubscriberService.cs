@@ -84,15 +84,6 @@ public class SubscriberService(
             }
             : null;
 
-        if (featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
-        {
-            cancellingUserMetadata = new Dictionary<string, string>(cancellingUserMetadata ?? [])
-            {
-                [MetadataKeys.MigrationCohortId] = string.Empty,
-                [MetadataKeys.MigrationCohortName] = string.Empty,
-            };
-        }
-
         await (cancelImmediately
             ? CancelSubscriptionImmediatelyAsync(subscription, cancellationDetails, cancellingUserMetadata)
             : CancelSubscriptionAtPeriodEndAsync(subscription, cancellationDetails, cancellingUserMetadata));
