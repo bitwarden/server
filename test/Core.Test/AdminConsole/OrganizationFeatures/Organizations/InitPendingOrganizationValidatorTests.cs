@@ -5,7 +5,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
@@ -193,9 +192,16 @@ public class InitPendingOrganizationValidatorTests
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
-        sutProvider.GetDependency<IPolicyService>()
-            .AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg)
-            .Returns(true);
+        var singleOrgPolicyDetails = new PolicyDetails
+        {
+            OrganizationId = Guid.NewGuid(),
+            PolicyType = PolicyType.SingleOrg,
+            OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
+            OrganizationUserType = OrganizationUserType.User,
+        };
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsyncVNext<SingleOrganizationPolicyRequirement>(user.Id)
+            .Returns(new SingleOrganizationPolicyRequirement(new[] { singleOrgPolicyDetails }));
 
         var validationRequest = CreateValidationRequest(user, org, orgUser, token);
         orgUser.OrganizationId = validationRequest.OrganizationId;
@@ -255,9 +261,9 @@ public class InitPendingOrganizationValidatorTests
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
-        sutProvider.GetDependency<IPolicyService>()
-            .AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg)
-            .Returns(false);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsyncVNext<SingleOrganizationPolicyRequirement>(user.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
 
         var validationRequest = CreateValidationRequest(user, org, orgUser, token);
         orgUser.OrganizationId = validationRequest.OrganizationId;
@@ -439,9 +445,9 @@ public class InitPendingOrganizationValidatorTests
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
-        sutProvider.GetDependency<IPolicyService>()
-            .AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg)
-            .Returns(false);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsyncVNext<SingleOrganizationPolicyRequirement>(user.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
 
         var twoFactorReq = new RequireTwoFactorPolicyRequirement(Enumerable.Empty<PolicyDetails>());
         sutProvider.GetDependency<IPolicyRequirementQuery>()
