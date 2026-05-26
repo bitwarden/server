@@ -171,7 +171,7 @@ jobs:
       - name: Merge coverage reports
         if: ${{ !cancelled() }}
         run: |
-          dotnet tool install --global dotnet-coverage
+          dotnet tool install --global dotnet-coverage --version 18.7.0
           dotnet-coverage merge -f cobertura -o coverage.cobertura.xml "**/coverage.cobertura.xml"
 
       - name: Upload coverage to GitHub
