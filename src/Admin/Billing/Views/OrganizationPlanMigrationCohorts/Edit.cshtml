@@ -64,27 +64,15 @@
 
     <partial name="_CohortFormFields" model="Model.FormModel" />
 
-</form>
-
-<div class="card my-4">
-    <div class="card-body d-flex align-items-center">
-        @if (Model.FormModel.IsActive)
-        {
-            <form method="post" asp-action="Disable" asp-route-id="@Model.FormModel.Id">
-                <button class="btn btn-secondary" type="submit">Disable</button>
-            </form>
-        }
-        else
-        {
-            <form method="post" asp-action="Enable" asp-route-id="@Model.FormModel.Id">
-                <button class="btn btn-success" type="submit">Enable</button>
-            </form>
-        }
-        <div class="form-text ms-3 mb-0">
-            When off, no migrations or save-offers fire for this cohort. Defaults to off; flip on once assignments are loaded.
+    <div class="mb-3 form-check">
+        <input asp-for="FormModel.IsActive" class="form-check-input" />
+        <label asp-for="FormModel.IsActive" class="form-check-label">Active</label>
+        <div class="form-text">
+            When off, no migrations or save-offers fire for this cohort.
         </div>
     </div>
-</div>
+
+</form>
 
 <div class="d-flex mt-4">
     <button type="submit" class="btn btn-primary" form="cohort-form">Save</button>
