@@ -1,5 +1,6 @@
-﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
@@ -13,7 +14,7 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationDomains;
 public class OrganizationDomainAllowEmailChangeQueryTests
 {
     [Theory, BitAutoData]
-    public async Task IsAllowedAsync_ClaimingOrganizationHasNewDomainVerified_ReturnsTrue(
+    public async Task IsAllowedAsync_ClaimingOrganizationHasNewDomainVerified_ReturnsAllowed(
         SutProvider<OrganizationDomainAllowEmailChangeQuery> sutProvider,
         User user,
         Organization claimingOrganization,
@@ -35,13 +36,13 @@ public class OrganizationDomainAllowEmailChangeQueryTests
 
         var result = await sutProvider.Sut.IsAllowedAsync(user, newEmailDomain);
 
-        Assert.True(result);
+        Assert.Equal(OrganizationDomainAllowEmailChangeDenialReason.Allowed, result);
         await sutProvider.GetDependency<IOrganizationDomainRepository>().DidNotReceive()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>());
     }
 
     [Theory, BitAutoData]
-    public async Task IsAllowedAsync_ClaimingOrganizationDoesNotHaveNewDomainVerified_ReturnsFalse(
+    public async Task IsAllowedAsync_ClaimingOrganizationDoesNotHaveNewDomainVerified_ReturnsUserIsClaimedAndDomainNotVerified(
         SutProvider<OrganizationDomainAllowEmailChangeQuery> sutProvider,
         User user,
         Organization claimingOrganization,
@@ -62,7 +63,7 @@ public class OrganizationDomainAllowEmailChangeQueryTests
 
         var result = await sutProvider.Sut.IsAllowedAsync(user, "other-domain.com");
 
-        Assert.False(result);
+        Assert.Equal(OrganizationDomainAllowEmailChangeDenialReason.UserIsClaimedAndDomainNotVerified, result);
         await sutProvider.GetDependency<IOrganizationDomainRepository>().DidNotReceive()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>());
     }
@@ -87,7 +88,7 @@ public class OrganizationDomainAllowEmailChangeQueryTests
 
         var result = await sutProvider.Sut.IsAllowedAsync(user, newEmailDomain);
 
-        Assert.True(result);
+        Assert.Equal(OrganizationDomainAllowEmailChangeDenialReason.Allowed, result);
         await sutProvider.GetDependency<IOrganizationDomainRepository>().DidNotReceive()
             .GetVerifiedDomainsByOrganizationIdsAsync(Arg.Any<IEnumerable<Guid>>());
         await sutProvider.GetDependency<IOrganizationDomainRepository>().Received(1)
@@ -114,7 +115,7 @@ public class OrganizationDomainAllowEmailChangeQueryTests
 
         var result = await sutProvider.Sut.IsAllowedAsync(user, newEmailDomain);
 
-        Assert.True(result);
+        Assert.Equal(OrganizationDomainAllowEmailChangeDenialReason.Allowed, result);
         await sutProvider.GetDependency<IOrganizationDomainRepository>().DidNotReceive()
             .GetVerifiedDomainsByOrganizationIdsAsync(Arg.Any<IEnumerable<Guid>>());
         await sutProvider.GetDependency<IOrganizationDomainRepository>().Received(1)
@@ -122,7 +123,7 @@ public class OrganizationDomainAllowEmailChangeQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task IsAllowedAsync_NoClaimingOrganization_DomainNotBlocked_ReturnsTrue(
+    public async Task IsAllowedAsync_NoClaimingOrganization_DomainNotBlocked_ReturnsAllowed(
         SutProvider<OrganizationDomainAllowEmailChangeQuery> sutProvider,
         User user)
     {
@@ -138,11 +139,11 @@ public class OrganizationDomainAllowEmailChangeQueryTests
 
         var result = await sutProvider.Sut.IsAllowedAsync(user, newEmailDomain);
 
-        Assert.True(result);
+        Assert.Equal(OrganizationDomainAllowEmailChangeDenialReason.Allowed, result);
     }
 
     [Theory, BitAutoData]
-    public async Task IsAllowedAsync_NoClaimingOrganization_DomainBlocked_ReturnsFalse(
+    public async Task IsAllowedAsync_NoClaimingOrganization_DomainBlocked_ReturnsDomainIsBlockedByPolicy(
         SutProvider<OrganizationDomainAllowEmailChangeQuery> sutProvider,
         User user)
     {
@@ -158,11 +159,11 @@ public class OrganizationDomainAllowEmailChangeQueryTests
 
         var result = await sutProvider.Sut.IsAllowedAsync(user, newEmailDomain);
 
-        Assert.False(result);
+        Assert.Equal(OrganizationDomainAllowEmailChangeDenialReason.DomainIsBlockedByPolicy, result);
     }
 
     [Theory, BitAutoData]
-    public async Task IsAllowedAsync_MultipleClaimingOrganizations_DomainVerifiedByAny_ReturnsTrue(
+    public async Task IsAllowedAsync_MultipleClaimingOrganizations_DomainVerifiedByAny_ReturnsAllowed(
         SutProvider<OrganizationDomainAllowEmailChangeQuery> sutProvider,
         User user,
         Organization firstClaimingOrg,
@@ -191,7 +192,7 @@ public class OrganizationDomainAllowEmailChangeQueryTests
 
         var result = await sutProvider.Sut.IsAllowedAsync(user, newEmailDomain);
 
-        Assert.True(result);
+        Assert.Equal(OrganizationDomainAllowEmailChangeDenialReason.Allowed, result);
     }
 
     [Theory, BitAutoData]
@@ -220,7 +221,7 @@ public class OrganizationDomainAllowEmailChangeQueryTests
 
         var result = await sutProvider.Sut.IsAllowedAsync(user, newEmailDomain);
 
-        Assert.True(result);
+        Assert.Equal(OrganizationDomainAllowEmailChangeDenialReason.Allowed, result);
         await sutProvider.GetDependency<IOrganizationDomainRepository>().Received(1)
             .GetVerifiedDomainsByOrganizationIdsAsync(Arg.Is<IEnumerable<Guid>>(ids =>
                 ids.Contains(claimingOrganization.Id) && !ids.Contains(disabledOrganization.Id)));

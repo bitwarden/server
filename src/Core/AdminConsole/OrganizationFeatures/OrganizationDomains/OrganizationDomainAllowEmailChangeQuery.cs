@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 
@@ -10,7 +11,7 @@ public class OrganizationDomainAllowEmailChangeQuery(
     : IOrganizationDomainAllowEmailChangeQuery
 {
     /// <inheritdoc />
-    public async Task<bool> IsAllowedAsync(User user, string newEmailDomain)
+    public async Task<OrganizationDomainAllowEmailChangeDenialReason> IsAllowedAsync(User user, string newEmailDomain)
     {
         // We want to see if the user is currently a claimed account
         var organizationsWithVerifiedUserEmailDomain =
@@ -26,11 +27,15 @@ public class OrganizationDomainAllowEmailChangeQuery(
             var verifiedDomains = await organizationDomainRepository.GetVerifiedDomainsByOrganizationIdsAsync(
                 claimingOrganizations);
 
-            return verifiedDomains.Any(verifiedDomain => verifiedDomain.DomainName == newEmailDomain);
+            return verifiedDomains.Any(verifiedDomain => verifiedDomain.DomainName == newEmailDomain)
+                ? OrganizationDomainAllowEmailChangeDenialReason.Allowed
+                : OrganizationDomainAllowEmailChangeDenialReason.UserIsClaimedAndDomainNotVerified;
         }
 
         // User is not claimed — fall back to the global block-policy check.
         var isDomainBlocked = await organizationDomainRepository.HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(newEmailDomain);
-        return !isDomainBlocked;
+        return isDomainBlocked
+            ? OrganizationDomainAllowEmailChangeDenialReason.DomainIsBlockedByPolicy
+            : OrganizationDomainAllowEmailChangeDenialReason.Allowed;
     }
 }

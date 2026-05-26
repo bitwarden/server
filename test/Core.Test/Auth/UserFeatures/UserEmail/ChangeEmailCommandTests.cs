@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserEmail;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -106,6 +107,7 @@ public class ChangeEmailCommandTests
 
         await sutProvider.Sut.ChangeEmailAsync(user, _newEmail);
 
+        Assert.True(user.EmailVerified);
         await sutProvider.GetDependency<IStripeSyncService>().Received(1)
             .UpdateCustomerEmailAddressAsync("cus_123", user.BillingEmailAddress()!);
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
@@ -218,7 +220,7 @@ public class ChangeEmailCommandTests
         const string blockedEmail = "user@blocked-domain.com";
         sutProvider.GetDependency<IOrganizationDomainAllowEmailChangeQuery>()
             .IsAllowedAsync(user, "blocked-domain.com")
-            .Returns(false);
+            .Returns(OrganizationDomainAllowEmailChangeDenialReason.DomainIsBlockedByPolicy);
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ChangeEmailAsync(user, blockedEmail));
@@ -240,7 +242,7 @@ public class ChangeEmailCommandTests
         const string unblockedEmail = "user@unblocked-domain.com";
         sutProvider.GetDependency<IOrganizationDomainAllowEmailChangeQuery>()
             .IsAllowedAsync(user, "unblocked-domain.com")
-            .Returns(true);
+            .Returns(OrganizationDomainAllowEmailChangeDenialReason.Allowed);
         sutProvider.GetDependency<IUserRepository>()
             .GetByEmailAsync(unblockedEmail)
             .Returns((User)null);
@@ -249,5 +251,64 @@ public class ChangeEmailCommandTests
 
         Assert.Equal(unblockedEmail, user.Email);
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ChangeEmailAsync_SameDomain_SkipsOrganizationDomainQuery(
+        SutProvider<ChangeEmailCommand> sutProvider, User user)
+    {
+        user.Email = _currentEmail;
+        user.Gateway = null;
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(_newEmail)
+            .Returns((User)null);
+
+        await sutProvider.Sut.ChangeEmailAsync(user, _newEmail);
+
+        await sutProvider.GetDependency<IOrganizationDomainAllowEmailChangeQuery>().DidNotReceive()
+            .IsAllowedAsync(Arg.Any<User>(), Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ChangeEmailAsync_StripeRollbackWriteThrows_StillSurfacesOriginalStripeException(
+        SutProvider<ChangeEmailCommand> sutProvider, User user)
+    {
+        user.Email = _currentEmail;
+        user.Gateway = GatewayType.Stripe;
+        user.GatewayCustomerId = "cus_123";
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(_newEmail)
+            .Returns((User)null);
+
+        var stripeFailure = new InvalidOperationException("stripe boom");
+        sutProvider.GetDependency<IStripeSyncService>()
+            .UpdateCustomerEmailAddressAsync(Arg.Any<string>(), Arg.Any<string>())
+            .ThrowsAsync(stripeFailure);
+
+        var rollbackFailure = new InvalidOperationException("db boom");
+        var replaceCallCount = 0;
+        sutProvider.GetDependency<IUserRepository>()
+            .When(x => x.ReplaceAsync(user))
+            .Do(_ =>
+            {
+                replaceCallCount++;
+                if (replaceCallCount == 2)
+                {
+                    throw rollbackFailure;
+                }
+            });
+
+        var thrown = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => sutProvider.Sut.ChangeEmailAsync(user, _newEmail));
+
+        // Original Stripe cause propagates even when the rollback write also fails.
+        Assert.Same(stripeFailure, thrown);
+        // Both ReplaceAsync calls were attempted (initial write + rollback write).
+        await sutProvider.GetDependency<IUserRepository>().Received(2).ReplaceAsync(user);
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
+            .PushSyncSettingsAsync(Arg.Any<Guid>());
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
+            .PushLogOutAsync(Arg.Any<Guid>());
     }
 }

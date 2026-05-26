@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -28,7 +29,7 @@ public class ChangeEmailCommand(
     /// <inheritdoc />
     public async Task ChangeEmailAsync(User user, string newEmail)
     {
-        await EnsureNewEmailDomainAllowedByPolicyAsync(user, newEmail);
+        await EnsureNewEmailDomainAllowedAsync(user, newEmail);
 
         var existingUser = await _userRepository.GetByEmailAsync(newEmail);
         if (existingUser != null && existingUser.Id != user.Id)
@@ -63,15 +64,28 @@ public class ChangeEmailCommand(
                     throw new InvalidOperationException("Missing gateway customer ID or billing email address for Stripe sync.");
                 }
             }
-            catch
+            catch (Exception stripeEx)
             {
-                _logger.LogWarning("Failed to sync email change to Stripe for user {UserId}. Reverting email change.", user.Id);
+                _logger.LogWarning(stripeEx, "Failed to sync email change to Stripe for user {UserId}. Reverting email change.", user.Id);
 
                 user.Email = previousEmail;
                 user.RevisionDate = previousRevisionDate;
                 user.AccountRevisionDate = previousAccountRevisionDate;
                 user.LastEmailChangeDate = previousLastEmailChangeDate;
-                await _userRepository.ReplaceAsync(user);
+
+                try
+                {
+                    await _userRepository.ReplaceAsync(user);
+                }
+                catch (Exception rollbackEx)
+                {
+                    // Log a higher level since user may be in an inconsistent state and may require manual intervention.
+                    _logger.LogError(
+                        rollbackEx,
+                        "Rollback of email change failed for user {UserId} after Stripe sync error; user record may be in an inconsistent state.",
+                        user.Id);
+                }
+
                 throw;
             }
         }
@@ -80,11 +94,10 @@ public class ChangeEmailCommand(
     }
 
     /// <summary>
-    /// Blocks an email change onto a domain claimed by an organization that has the
-    /// BlockClaimedDomainAccountCreation policy enabled. Mirrors the gate enforced by
-    /// RegisterUserCommand so the policy cannot be bypassed via email change.
+    /// Defers domain-allowance checks to <see cref="IOrganizationDomainAllowEmailChangeQuery"/>;
+    /// see query for the full set of rejection reasons.
     /// </summary>
-    private async Task EnsureNewEmailDomainAllowedByPolicyAsync(User user, string newEmail)
+    private async Task EnsureNewEmailDomainAllowedAsync(User user, string newEmail)
     {
         // If the new email domain is the same as the current email domain, we can skip
         // the checks since it would be a noop in terms of policy and claiming organizations.
@@ -95,10 +108,19 @@ public class ChangeEmailCommand(
             return;
         }
 
-        var isAllowed = await _organizationDomainAllowEmailChangeQuery.IsAllowedAsync(user, newDomain);
-        if (!isAllowed)
+        var denialReason = await _organizationDomainAllowEmailChangeQuery.IsAllowedAsync(user, newDomain);
+        if (denialReason == OrganizationDomainAllowEmailChangeDenialReason.Allowed)
         {
-            throw new BadRequestException("This email address is claimed by an organization using Bitwarden.");
+            return;
+        }
+        switch (denialReason)
+        {
+            case OrganizationDomainAllowEmailChangeDenialReason.UserIsClaimedAndDomainNotVerified:
+                throw new BadRequestException(
+                    "Your account is managed by an organization, and this email address isn't on one of the organization's verified domains.");
+            case OrganizationDomainAllowEmailChangeDenialReason.DomainIsBlockedByPolicy:
+                throw new BadRequestException(
+                    "This email address is claimed by an organization using Bitwarden.");
         }
     }
 }
