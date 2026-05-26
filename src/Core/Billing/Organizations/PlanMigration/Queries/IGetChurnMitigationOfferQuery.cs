@@ -1,4 +1,4 @@
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Models;
 
 namespace Bit.Core.Billing.Organizations.PlanMigration.Queries;
