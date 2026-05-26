@@ -93,6 +93,18 @@ public class EncryptedLoginDto
 
     [JsonPropertyName("fido2Credentials")]
     public List<EncryptedFido2CredentialDto>? Fido2Credentials { get; set; }
+
+    [JsonPropertyName("passwordHistory")]
+    public List<EncryptedPasswordHistoryDto>? PasswordHistory { get; set; }
+}
+
+public class EncryptedPasswordHistoryDto
+{
+    [JsonPropertyName("password")]
+    public required string Password { get; set; }
+
+    [JsonPropertyName("lastUsedDate")]
+    public DateTime LastUsedDate { get; set; }
 }
 
 public class EncryptedLoginUriDto

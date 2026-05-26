@@ -10,17 +10,11 @@
   "introspection_endpoint": "http://localhost:51822/connect/introspect",
   "device_authorization_endpoint": "http://localhost:51822/connect/deviceauthorization",
   "backchannel_authentication_endpoint": "http://localhost:51822/connect/ciba",
-  "pushed_authorization_request_endpoint": "http://localhost:51822/connect/par",
-  "require_pushed_authorization_requests": false,
   "frontchannel_logout_supported": true,
   "frontchannel_logout_session_supported": true,
   "backchannel_logout_supported": true,
   "backchannel_logout_session_supported": true,
-  "scopes_supported": [
-    "openid",
-    "profile",
-    "offline_access"
-  ],
+  "scopes_supported": ["openid", "profile", "offline_access"],
   "claims_supported": [
     "sub",
     "name",
@@ -55,11 +49,7 @@
     "code token",
     "code id_token token"
   ],
-  "response_modes_supported": [
-    "form_post",
-    "query",
-    "fragment"
-  ],
+  "response_modes_supported": ["form_post", "query", "fragment"],
   "token_endpoint_auth_methods_supported": [
     "client_secret_basic",
     "client_secret_post"
@@ -68,10 +58,7 @@
   "userinfo_signing_alg_values_supported": ["RS256"],
   "introspection_signing_alg_values_supported": ["RS256"],
   "subject_types_supported": ["public"],
-  "code_challenge_methods_supported": [
-    "plain",
-    "S256"
-  ],
+  "code_challenge_methods_supported": ["plain", "S256"],
   "request_parameter_supported": true,
   "request_object_signing_alg_values_supported": [
     "RS256",
@@ -84,12 +71,7 @@
     "ES384",
     "ES512"
   ],
-  "prompt_values_supported": [
-    "none",
-    "login",
-    "consent",
-    "select_account"
-  ],
+  "prompt_values_supported": ["none", "login", "consent", "select_account"],
   "authorization_response_iss_parameter_supported": true,
   "backchannel_token_delivery_modes_supported": ["poll"],
   "backchannel_user_code_parameter_supported": true,

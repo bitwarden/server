@@ -3,7 +3,6 @@
 
 using System.Data.Common;
 using AutoMapper;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Enums;
@@ -326,10 +325,9 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         {
             var dbContext = GetDatabaseContext(scope);
             return await dbContext.OrganizationUsers
-                .Where(ou => ou.Type == OrganizationUserType.Owner && ou.Status == OrganizationUserStatusType.Confirmed)
-                .GroupBy(ou => ou.UserId)
-                .Select(g => new { UserId = g.Key, ConfirmedOwnerCount = g.Count() })
-                .Where(oc => oc.UserId == userId && oc.ConfirmedOwnerCount == 1)
+                .Where(organizationUser => organizationUser.Type == OrganizationUserType.Owner && organizationUser.Status == OrganizationUserStatusType.Confirmed)
+                .GroupBy(organizationUser => organizationUser.OrganizationId)
+                .Where(grouping => grouping.Count() == 1 && grouping.Any(ou => ou.UserId == userId))
                 .CountAsync();
         }
     }
@@ -820,40 +818,6 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
     public async Task RestoreAsync(Guid id, OrganizationUserStatusType status)
     {
         await RestoreManyAsync([id], status);
-    }
-
-    public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId, PolicyType policyType)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-
-            var providerOrganizations = from pu in dbContext.ProviderUsers
-                                        where pu.UserId == userId
-                                        join po in dbContext.ProviderOrganizations
-                                            on pu.ProviderId equals po.ProviderId
-                                        select po;
-
-            var query = from p in dbContext.Policies
-                        join ou in dbContext.OrganizationUsers
-                            on p.OrganizationId equals ou.OrganizationId
-                        let email = dbContext.Users.Find(userId).Email  // Invited orgUsers do not have a UserId associated with them, so we have to match up their email
-                        where p.Type == policyType &&
-                            (ou.UserId == userId || ou.Email == email)
-                        select new OrganizationUserPolicyDetails
-                        {
-                            OrganizationUserId = ou.Id,
-                            OrganizationId = p.OrganizationId,
-                            PolicyType = p.Type,
-                            PolicyEnabled = p.Enabled,
-                            PolicyData = p.Data,
-                            OrganizationUserType = ou.Type,
-                            OrganizationUserStatus = ou.Status,
-                            OrganizationUserPermissionsData = ou.Permissions,
-                            IsProvider = providerOrganizations.Any(po => po.OrganizationId == p.OrganizationId)
-                        };
-            return await query.ToListAsync();
-        }
     }
 
     public async Task<int> GetOccupiedSmSeatCountByOrganizationIdAsync(Guid organizationId)

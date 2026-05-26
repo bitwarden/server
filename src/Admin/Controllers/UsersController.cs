@@ -27,6 +27,8 @@ public class UsersController : Controller
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IUserService _userService;
     private readonly IFeatureService _featureService;
+    private readonly ISubscriberService _subscriberService;
+    private readonly ILogger<UsersController> _logger;
 
     public UsersController(
         IUserRepository userRepository,
@@ -36,7 +38,9 @@ public class UsersController : Controller
         IAccessControlService accessControlService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IUserService userService,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        ISubscriberService subscriberService,
+        ILogger<UsersController> logger)
     {
         _userRepository = userRepository;
         _cipherRepository = cipherRepository;
@@ -46,6 +50,8 @@ public class UsersController : Controller
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _userService = userService;
         _featureService = featureService;
+        _subscriberService = subscriberService;
+        _logger = logger;
     }
 
     [RequirePermission(Permission.User_List_View)]
@@ -125,6 +131,8 @@ public class UsersController : Controller
 
         var canUpgradePremium = _accessControlService.UserHasPermission(Permission.User_UpgradePremium);
 
+        var originalPremium = user.Premium;
+
         if (_accessControlService.UserHasPermission(Permission.User_Premium_Edit) ||
             canUpgradePremium)
         {
@@ -147,6 +155,40 @@ public class UsersController : Controller
         }
 
         await _userRepository.ReplaceAsync(user);
+
+        // Clear any pending unpaid-lifecycle cancellation when re-enabling premium on a billing-disabled user
+        if (!originalPremium && user.Premium)
+        {
+            try
+            {
+                await _subscriberService.ResumeFromUnpaidCancellationAsync(user);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to clear pending unpaid cancellation for user {UserId} on premium re-enable.",
+                    user.Id);
+                TempData["Warning"] = "User updated successfully, but clearing the pending Stripe cancellation failed.";
+            }
+        }
+
+        // Schedule the unpaid-lifecycle cancellation when disabling premium on a user whose Stripe subscription
+        // is unpaid but was never scheduled by the webhook handler.
+        if (originalPremium && !user.Premium)
+        {
+            try
+            {
+                await _subscriberService.ScheduleUnpaidCancellationAsync(user);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to schedule unpaid cancellation for user {UserId} on premium disable.",
+                    user.Id);
+                TempData["Warning"] = "User updated successfully, but scheduling the Stripe cancellation failed.";
+            }
+        }
+
         return RedirectToAction("Edit", new { id });
     }
 

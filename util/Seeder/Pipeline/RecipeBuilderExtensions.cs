@@ -16,17 +16,23 @@ namespace Bit.Seeder.Pipeline;
 public static class RecipeBuilderExtensions
 {
     /// <summary>
-    /// Use an organization from embedded fixtures with optional plan/seats overrides from the preset.
+    /// Use an organization from embedded fixtures with optional plan/seats/overrides from the preset.
     /// </summary>
     /// <param name="builder">The recipe builder</param>
     /// <param name="fixture">Organization fixture name without extension</param>
     /// <param name="planType">Optional plan type override (from preset)</param>
     /// <param name="seats">Optional seats override (from preset)</param>
+    /// <param name="overrides">Optional org-level overrides applied on top of plan defaults. Null keeps all plan defaults.</param>
     /// <returns>The builder for fluent chaining</returns>
-    public static RecipeBuilder UseOrganization(this RecipeBuilder builder, string fixture, string? planType = null, int? seats = null)
+    public static RecipeBuilder UseOrganization(
+        this RecipeBuilder builder,
+        string fixture,
+        string? planType = null,
+        int? seats = null,
+        OrganizationOverrides? overrides = null)
     {
         builder.HasOrg = true;
-        builder.AddStep(_ => CreateOrganizationStep.FromFixture(fixture, planType, seats));
+        builder.AddStep(_ => CreateOrganizationStep.FromFixture(fixture, planType, seats, overrides));
         return builder;
     }
 
@@ -38,11 +44,18 @@ public static class RecipeBuilderExtensions
     /// <param name="domain">Organization domain (used for email generation)</param>
     /// <param name="seats">Number of user seats</param>
     /// <param name="planType">Billing plan type (defaults to EnterpriseAnnually)</param>
+    /// <param name="overrides">Optional org-level overrides applied on top of plan defaults. Null keeps all plan defaults.</param>
     /// <returns>The builder for fluent chaining</returns>
-    public static RecipeBuilder CreateOrganization(this RecipeBuilder builder, string name, string domain, int? seats = null, PlanType planType = PlanType.EnterpriseAnnually)
+    public static RecipeBuilder CreateOrganization(
+        this RecipeBuilder builder,
+        string name,
+        string domain,
+        int? seats = null,
+        PlanType planType = PlanType.EnterpriseAnnually,
+        OrganizationOverrides? overrides = null)
     {
         builder.HasOrg = true;
-        builder.AddStep(_ => CreateOrganizationStep.FromParams(name, domain, seats, planType));
+        builder.AddStep(_ => CreateOrganizationStep.FromParams(name, domain, seats, planType, overrides));
         return builder;
     }
 
@@ -303,6 +316,7 @@ public static class RecipeBuilderExtensions
     /// <param name="pwDist">Distribution of password strengths. Uses realistic defaults if null.</param>
     /// <param name="assignFolders">When true, assigns ciphers to user folders round-robin.</param>
     /// <param name="density">Optional density profile for cipher-to-collection assignment control</param>
+    /// <param name="repromptEveryNthCipher">When &gt; 0, sets Reprompt=Password on every Nth generated cipher. 0 disables.</param>
     /// <returns>The builder for fluent chaining</returns>
     /// <exception cref="InvalidOperationException">Thrown when UseCiphers() was already called</exception>
     public static RecipeBuilder AddCiphers(
@@ -311,7 +325,8 @@ public static class RecipeBuilderExtensions
         Distribution<CipherType>? typeDist = null,
         Distribution<PasswordStrength>? pwDist = null,
         bool assignFolders = false,
-        DensityProfile? density = null)
+        DensityProfile? density = null,
+        int repromptEveryNthCipher = 0)
     {
         if (builder.HasFixtureCiphers)
         {
@@ -324,7 +339,7 @@ public static class RecipeBuilderExtensions
         {
             builder.HasCipherFolderAssignment = true;
         }
-        builder.AddStep(_ => new GenerateCiphersStep(count, typeDist, pwDist, assignFolders, density));
+        builder.AddStep(_ => new GenerateCiphersStep(count, typeDist, pwDist, assignFolders, density, repromptEveryNthCipher));
         return builder;
     }
 
@@ -414,13 +429,15 @@ public static class RecipeBuilderExtensions
     /// <param name="typeDist">Distribution of cipher types. Uses realistic defaults if null.</param>
     /// <param name="pwDist">Distribution of password strengths. Uses realistic defaults if null.</param>
     /// <param name="density">Optional density profile for per-user personal cipher count distribution</param>
+    /// <param name="repromptEveryNthCipher">When &gt; 0, sets Reprompt=Password on every Nth generated personal cipher. 0 disables.</param>
     /// <returns>The builder for fluent chaining</returns>
     /// <exception cref="InvalidOperationException">Thrown when no users exist</exception>
     public static RecipeBuilder AddPersonalCiphers(
         this RecipeBuilder builder, int countPerUser,
         Distribution<CipherType>? typeDist = null,
         Distribution<PasswordStrength>? pwDist = null,
-        DensityProfile? density = null)
+        DensityProfile? density = null,
+        int repromptEveryNthCipher = 0)
     {
         if (!builder.HasRosterUsers && !builder.HasGeneratedUsers && !builder.HasIndividualUser)
         {
@@ -429,7 +446,7 @@ public static class RecipeBuilderExtensions
         }
 
         builder.HasPersonalCiphers = true;
-        builder.AddStep(_ => new GeneratePersonalCiphersStep(countPerUser, typeDist, pwDist, density));
+        builder.AddStep(_ => new GeneratePersonalCiphersStep(countPerUser, typeDist, pwDist, density, repromptEveryNthCipher));
         return builder;
     }
 

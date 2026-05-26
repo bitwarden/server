@@ -655,7 +655,7 @@ public class SyncControllerTests
         await policyRepository.Received(1).GetManyConfirmedAcceptedByUserIdAsync(user.Id);
         await organizationUserRepository.Received(1).GetManyConfirmedAcceptedDetailsByUserAsync(user.Id);
         Assert.NotNull(result.PoliciesNew);
-        Assert.NotNull(result.OrganizationsNew);
+        Assert.NotNull(result.Profile.OrganizationsNew);
     }
 
     [Theory]
@@ -692,7 +692,7 @@ public class SyncControllerTests
         await policyRepository.DidNotReceive().GetManyConfirmedAcceptedByUserIdAsync(Arg.Any<Guid>());
         await organizationUserRepository.DidNotReceive().GetManyConfirmedAcceptedDetailsByUserAsync(Arg.Any<Guid>());
         Assert.Null(result.PoliciesNew);
-        Assert.Null(result.OrganizationsNew);
+        Assert.Null(result.Profile.OrganizationsNew);
     }
 
     private async Task AssertMethodsCalledAsync(IUserService userService,

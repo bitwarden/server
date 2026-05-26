@@ -29,7 +29,7 @@ public class ReinstateSubscriptionCommandTests
     {
         var user = new User { GatewaySubscriptionId = "sub_1" };
 
-        _stripeAdapter.GetSubscriptionAsync("sub_1")
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>())
             .Returns(new Subscription { Status = SubscriptionStatus.Active, CancelAt = null });
 
         var result = await _command.Run(user);
@@ -43,7 +43,7 @@ public class ReinstateSubscriptionCommandTests
     {
         var user = new User { GatewaySubscriptionId = "sub_1" };
 
-        _stripeAdapter.GetSubscriptionAsync("sub_1")
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>())
             .Returns(new Subscription
             {
                 Id = "sub_1",
@@ -67,7 +67,7 @@ public class ReinstateSubscriptionCommandTests
     {
         var user = new User { GatewaySubscriptionId = "sub_1" };
 
-        _stripeAdapter.GetSubscriptionAsync("sub_1")
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>())
             .Returns(new Subscription
             {
                 Id = "sub_1",
@@ -94,7 +94,7 @@ public class ReinstateSubscriptionCommandTests
     {
         var user = new User { GatewaySubscriptionId = "sub_1" };
 
-        _stripeAdapter.GetSubscriptionAsync("sub_1")
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>())
             .Returns(new Subscription
             {
                 Id = "sub_1",
@@ -118,7 +118,21 @@ public class ReinstateSubscriptionCommandTests
             Arg.Is<SubscriptionUpdateOptions>(o =>
                 o.CancelAtPeriodEnd == false &&
                 o.Metadata[MetadataKeys.CancelledDuringDeferredPriceIncrease] == ""));
-        await _priceIncreaseScheduler.Received(1).Schedule(Arg.Any<Subscription>());
+        await _priceIncreaseScheduler.Received(1).SchedulePersonalPriceIncrease(Arg.Any<Subscription>());
     }
 
+    [Fact]
+    public async Task Run_FetchesSubscriptionWithDiscountsExpanded()
+    {
+        var user = new User { GatewaySubscriptionId = "sub_1" };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>())
+            .Returns(new Subscription { Status = SubscriptionStatus.Active, CancelAt = null });
+
+        await _command.Run(user);
+
+        await _stripeAdapter.Received(1).GetSubscriptionAsync(
+            "sub_1",
+            Arg.Is<SubscriptionGetOptions>(o => o.Expand != null && o.Expand.Contains("discounts")));
+    }
 }

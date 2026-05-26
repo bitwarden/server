@@ -315,6 +315,35 @@ public class FeatureRoutedCacheServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task GetProviderAbilitiesAsync_WhenFlagOn_ReturnsFromExtendedCacheService(
+        SutProvider<FeatureRoutedCacheService> sutProvider,
+        ProviderAbility ability)
+    {
+        // Arrange
+        var providerIds = new[] { ability.Id };
+        var expectedResult = new Dictionary<Guid, ProviderAbility> { [ability.Id] = ability };
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.ProviderAbilityExtendedCache)
+            .Returns(true);
+        sutProvider.GetDependency<IProviderAbilityCacheService>()
+            .GetProviderAbilitiesAsync(providerIds)
+            .Returns(expectedResult);
+
+        // Act
+        var result = await sutProvider.Sut.GetProviderAbilitiesAsync(providerIds);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(ability, result[ability.Id]);
+        await sutProvider.GetDependency<IProviderAbilityCacheService>()
+            .Received(1)
+            .GetProviderAbilitiesAsync(providerIds);
+        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
+            .DidNotReceiveWithAnyArgs()
+            .GetProviderAbilitiesAsync();
+    }
+
+    [Theory, BitAutoData]
     public async Task GetOrganizationAbilitiesAsync_WhenFlagOff_ReturnsFromInMemoryService(
         SutProvider<FeatureRoutedCacheService> sutProvider,
         OrganizationAbility matchedAbility,

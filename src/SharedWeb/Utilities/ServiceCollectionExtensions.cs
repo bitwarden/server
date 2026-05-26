@@ -30,6 +30,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Billing.TrialInitiation;
 using Bit.Core.Dirt.Reports.ReportFeatures;
+using Bit.Core.Dirt.Reports.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.HostedServices;
@@ -366,6 +367,19 @@ public static class ServiceCollectionExtensions
         {
             services.AddSingleton<ISendFileStorageService, NoopSendFileStorageService>();
         }
+
+        if (CoreHelpers.SettingHasValue(globalSettings.OrganizationReport.ConnectionString))
+        {
+            services.AddSingleton<IOrganizationReportStorageService, AzureOrganizationReportStorageService>();
+        }
+        else if (CoreHelpers.SettingHasValue(globalSettings.OrganizationReport.BaseDirectory))
+        {
+            services.AddSingleton<IOrganizationReportStorageService, LocalOrganizationReportStorageService>();
+        }
+        else
+        {
+            services.AddSingleton<IOrganizationReportStorageService, NoopOrganizationReportStorageService>();
+        }
     }
 
     public static void AddOosServices(this IServiceCollection services)
@@ -620,14 +634,14 @@ public static class ServiceCollectionExtensions
             var proxyNetworks = globalSettings.KnownNetworks.Split(',');
             foreach (var proxyNetwork in proxyNetworks)
             {
-                if (Microsoft.AspNetCore.HttpOverrides.IPNetwork.TryParse(proxyNetwork.Trim(), out var ipn))
+                if (System.Net.IPNetwork.TryParse(proxyNetwork.Trim(), out var ipn))
                 {
-                    options.KnownNetworks.Add(ipn);
+                    options.KnownIPNetworks.Add(ipn);
                 }
             }
         }
 
-        if (options.KnownProxies.Count > 1 || options.KnownNetworks.Count > 1)
+        if (options.KnownProxies.Count > 1 || options.KnownIPNetworks.Count > 1)
         {
             options.ForwardLimit = null;
         }
