@@ -1,6 +1,7 @@
--- Update OrganizationUser_RevokeMany to snapshot pre-revoke Status into StatusNew
+-- Create OrganizationUser_UpdateManyRevoke to snapshot pre-revoke Status into StatusNew
 -- and skip already-revoked rows so existing StatusNew / RevocationReason are preserved.
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_RevokeMany]
+-- Replaces OrganizationUser_RevokeMany (renamed to follow the {Entity}_{Action} convention).
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_UpdateManyRevoke]
     @OrganizationUserIds AS [dbo].[GuidIdArray] READONLY,
     @RevocationReason TINYINT = NULL
 AS
@@ -24,8 +25,9 @@ BEGIN
 END
 GO
 
--- Update OrganizationUser_RestoreMany to clear StatusNew alongside RevocationReason.
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_RestoreMany]
+-- Create OrganizationUser_UpdateManyRestore to clear StatusNew alongside RevocationReason.
+-- Replaces OrganizationUser_RestoreMany (renamed to follow the {Entity}_{Action} convention).
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_UpdateManyRestore]
     @OrganizationUserIds AS [dbo].[GuidIdArray] READONLY,
     @Status SMALLINT
 AS

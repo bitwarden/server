@@ -9,7 +9,6 @@ BEGIN
         OU
     SET
         OU.[Status] = @Status,
-        OU.[StatusNew] = NULL,
         OU.[RevocationReason] = NULL
     FROM
         [dbo].[OrganizationUser] OU
