@@ -498,8 +498,9 @@ public class AccountsKeyManagementControllerTests
 
         Assert.Equal(1, badRequestException.ModelState!.ErrorCount);
         Assert.Equal("convert to key connector error", badRequestException.ModelState.Root.Errors[0].ErrorMessage);
+        // The no-payload endpoint must omit the wrapped key so ConvertAsync uses its default null.
         await sutProvider.GetDependency<IConvertUserToKeyConnectorCommand>().Received(1)
-            .ConvertAsync(Arg.Is(expectedUser), Arg.Any<string?>());
+            .ConvertAsync(Arg.Is(expectedUser), Arg.Is<string?>(s => s == null));
     }
 
     [Theory]
@@ -516,8 +517,9 @@ public class AccountsKeyManagementControllerTests
 
         await sutProvider.Sut.PostConvertToKeyConnectorAsync();
 
+        // The no-payload endpoint must omit the wrapped key so ConvertAsync uses its default null.
         await sutProvider.GetDependency<IConvertUserToKeyConnectorCommand>().Received(1)
-            .ConvertAsync(Arg.Is(expectedUser), Arg.Any<string?>());
+            .ConvertAsync(Arg.Is(expectedUser), Arg.Is<string?>(s => s == null));
     }
 
     [Theory]

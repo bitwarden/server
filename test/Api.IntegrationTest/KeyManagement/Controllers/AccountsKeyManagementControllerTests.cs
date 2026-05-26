@@ -344,6 +344,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     public async Task PostConvertToKeyConnectorAsync_Success()
     {
         var (ssoUserEmail, organization) = await SetupKeyConnectorTestAsync(OrganizationUserStatusType.Accepted);
+        await SeedMasterPasswordSaltAsync(ssoUserEmail);
 
         var response = await _client.PostAsJsonAsync("/accounts/convert-to-key-connector", new { });
         response.EnsureSuccessStatusCode();
@@ -393,6 +394,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     public async Task PostEnrollToKeyConnectorAsync_Success()
     {
         var (ssoUserEmail, _) = await SetupKeyConnectorTestAsync(OrganizationUserStatusType.Accepted);
+        await SeedMasterPasswordSaltAsync(ssoUserEmail);
 
         var request = new KeyConnectorEnrollmentRequestModel
         {
@@ -892,6 +894,20 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
             OrganizationUserType.User, userStatusType: userStatusType);
 
         return (ssoUserEmail, organization);
+    }
+
+    // Registration did not populate MasterPasswordSalt for V1 users, so tests that need to prove
+    // the salt-clearing behavior of the Key Connector conversion must seed it explicitly.
+    private async Task SeedMasterPasswordSaltAsync(string email)
+    {
+        var user = await _userRepository.GetByEmailAsync(email);
+        Assert.NotNull(user);
+        user.MasterPasswordSalt = email;
+        await _userRepository.ReplaceAsync(user);
+
+        var reloaded = await _userRepository.GetByEmailAsync(email);
+        Assert.NotNull(reloaded);
+        Assert.NotNull(reloaded.MasterPasswordSalt);
     }
 
     private async Task<User> SetupUserForKeyRotationAsync(
