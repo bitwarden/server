@@ -70,12 +70,13 @@ public class OrganizationBillingVNextControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetChurnMitigationOfferAsync_IneligibleOrg_ReturnsOkWithExplicitNullBody(
+    public async Task GetChurnMitigationOfferAsync_IneligibleOrg_ReturnsOkWithNullValue(
         Organization organization)
     {
-        // Pin the wire format: ineligible orgs must serialize as JSON `null`, not `{}` or 204.
-        // The web vault (PM-37173) branches on `response === null`. An Ok<ChurnMitigationOfferResult?>
-        // with Value == null serializes to literal `null` via System.Text.Json.
+        // Ineligible orgs return Ok<T?> with Value == null and status 200. ASP.NET's
+        // System.Text.Json path writes an empty response body for a top-level null
+        // (not the literal `null` token); Angular's HttpClient surfaces that as null
+        // to the web vault (PM-37173), which branches on `response === null`.
         _getChurnMitigationOfferQuery.Run(organization).Returns((ChurnMitigationOfferResult?)null);
 
         var result = await _sut.GetChurnMitigationOfferAsync(organization);
@@ -83,19 +84,6 @@ public class OrganizationBillingVNextControllerTests
         var okResult = Assert.IsType<Ok<ChurnMitigationOfferResult?>>(result);
         Assert.Null(okResult.Value);
         Assert.Equal(StatusCodes.Status200OK, okResult.StatusCode);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetChurnMitigationOfferAsync_FeatureFlagDisabled_ReturnsOkWithExplicitNullBody(
-        Organization organization)
-    {
-        // Inherits FF gate via the query -- a disabled flag manifests as null from Run().
-        _getChurnMitigationOfferQuery.Run(organization).Returns((ChurnMitigationOfferResult?)null);
-
-        var result = await _sut.GetChurnMitigationOfferAsync(organization);
-
-        var okResult = Assert.IsType<Ok<ChurnMitigationOfferResult?>>(result);
-        Assert.Null(okResult.Value);
     }
 
     [Theory, BitAutoData]
