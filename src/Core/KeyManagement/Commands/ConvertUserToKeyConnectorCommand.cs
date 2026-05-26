@@ -40,10 +40,10 @@ public class ConvertUserToKeyConnectorCommand : IConvertUserToKeyConnectorComman
     {
         ArgumentNullException.ThrowIfNull(user);
 
-        var canUseResult = CheckCanUseKeyConnector(user);
-        if (canUseResult != null)
+        var validationFailure = ValidateCanUseKeyConnector(user);
+        if (validationFailure != null)
         {
-            return canUseResult;
+            return validationFailure;
         }
 
         _masterPasswordService.PrepareClearMasterPassword(user);
@@ -60,7 +60,7 @@ public class ConvertUserToKeyConnectorCommand : IConvertUserToKeyConnectorComman
         return IdentityResult.Success;
     }
 
-    private IdentityResult? CheckCanUseKeyConnector(User user)
+    private IdentityResult? ValidateCanUseKeyConnector(User user)
     {
         if (user.UsesKeyConnector)
         {
