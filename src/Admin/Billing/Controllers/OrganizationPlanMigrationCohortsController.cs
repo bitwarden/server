@@ -117,9 +117,7 @@ public class OrganizationPlanMigrationCohortsController(
     [HttpPost("{id:guid}")]
     [ValidateAntiForgeryToken]
     [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
-    public async Task<IActionResult> Edit(
-        Guid id,
-        [Bind(Prefix = nameof(EditCohortViewModel.FormModel))] CohortFormModel model)
+    public async Task<IActionResult> Edit(Guid id, CohortFormModel model)
     {
         if (!PlanMigrationCohortsFeatureEnabled()) return NotFound();
 
@@ -142,7 +140,7 @@ public class OrganizationPlanMigrationCohortsController(
             };
         }
 
-        MergeCrossFieldValidationErrors(model, prefix: nameof(EditCohortViewModel.FormModel));
+        MergeCrossFieldValidationErrors(model);
 
         if (!ModelState.IsValid)
         {
@@ -151,8 +149,8 @@ public class OrganizationPlanMigrationCohortsController(
 
         try
         {
-            if (!await ValidateNameAsync(model.Name, id, prefix: nameof(EditCohortViewModel.FormModel))
-                || !await ValidateCouponsAsync(model, prefix: nameof(EditCohortViewModel.FormModel)))
+            if (!await ValidateNameAsync(model.Name, id)
+                || !await ValidateCouponsAsync(model))
             {
                 return View(EditCohortViewModel.From(cohort, model, assignmentState));
             }
@@ -275,20 +273,18 @@ public class OrganizationPlanMigrationCohortsController(
     // MVC skips IValidatableObject.Validate when any property-level attribute already failed, hiding cross-field
     // rules until the operator resubmits. Run it explicitly so every error surfaces on a single submit.
     // See https://github.com/dotnet/aspnetcore/issues/1899.
-    private void MergeCrossFieldValidationErrors(CohortFormModel model, string? prefix = null)
+    private void MergeCrossFieldValidationErrors(CohortFormModel model)
     {
         foreach (var result in model.Validate(new ValidationContext(model)))
         {
             foreach (var memberName in result.MemberNames.DefaultIfEmpty(string.Empty))
             {
-                ModelState.AddModelError(
-                    EditCohortModelStateKey(memberName, prefix),
-                    result.ErrorMessage ?? string.Empty);
+                ModelState.AddModelError(memberName, result.ErrorMessage ?? string.Empty);
             }
         }
     }
 
-    private async Task<bool> ValidateNameAsync(string name, Guid? excludeId = null, string? prefix = null)
+    private async Task<bool> ValidateNameAsync(string name, Guid? excludeId = null)
     {
         var existing = await cohortRepository.GetByNameAsync(name);
         if (existing == null || existing.Id == excludeId)
@@ -296,30 +292,28 @@ public class OrganizationPlanMigrationCohortsController(
             return true;
         }
 
-        ModelState.AddModelError(
-            EditCohortModelStateKey(nameof(CohortFormModel.Name), prefix),
-            "A cohort with this name already exists.");
+        ModelState.AddModelError(nameof(CohortFormModel.Name), "A cohort with this name already exists.");
         return false;
     }
 
-    private async Task<bool> ValidateCouponsAsync(CohortFormModel model, string? prefix = null)
+    private async Task<bool> ValidateCouponsAsync(CohortFormModel model)
     {
         var proactive = NormalizeCouponCode(model.ProactiveDiscountCouponCode);
         var churn = NormalizeCouponCode(model.ChurnDiscountCouponCode);
 
         var ok = true;
-        if (proactive != null && !await TryValidateCouponAsync(proactive, nameof(model.ProactiveDiscountCouponCode), prefix))
+        if (proactive != null && !await TryValidateCouponAsync(proactive, nameof(model.ProactiveDiscountCouponCode)))
         {
             ok = false;
         }
-        if (churn != null && !await TryValidateCouponAsync(churn, nameof(model.ChurnDiscountCouponCode), prefix))
+        if (churn != null && !await TryValidateCouponAsync(churn, nameof(model.ChurnDiscountCouponCode)))
         {
             ok = false;
         }
         return ok;
     }
 
-    private async Task<bool> TryValidateCouponAsync(string couponId, string fieldName, string? prefix = null)
+    private async Task<bool> TryValidateCouponAsync(string couponId, string fieldName)
     {
         try
         {
@@ -333,17 +327,9 @@ public class OrganizationPlanMigrationCohortsController(
                 : "An error occurred while fetching the coupon from Stripe.";
 
             logger.LogError(ex, "Stripe coupon error: {CouponId}", couponId);
-            ModelState.AddModelError(EditCohortModelStateKey(fieldName, prefix), message);
+            ModelState.AddModelError(fieldName, message);
             return false;
         }
     }
 
-    private static string EditCohortModelStateKey(string fieldName, string? prefix = null)
-    {
-        if (prefix == null)
-        {
-            return fieldName;
-        }
-        return string.IsNullOrEmpty(fieldName) ? prefix : $"{prefix}.{fieldName}";
-    }
 }

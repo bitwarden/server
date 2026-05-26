@@ -12,14 +12,6 @@
     <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
 <form method="post" asp-action="Edit" asp-route-id="@Model.FormModel.Id" id="cohort-form">
-    <input type="hidden" asp-for="FormModel.Id" />
-
-    <div class="mb-3">
-        <label asp-for="FormModel.Name" class="form-label"></label>
-        <input asp-for="FormModel.Name" class="form-control" placeholder="e.g., A1 (a) — Enterprise 2020 Annual" />
-        <span asp-validation-for="FormModel.Name" class="text-danger"></span>
-        <div class="form-text">Unique, max 255 characters. Used as the join key in CSV uploads.</div>
-    </div>
 
     <div class="mb-3">
         <label asp-for="FormModel.MigrationPathSelection" class="form-label">Migration path</label>
@@ -46,7 +38,7 @@
         }
         else
         {
-            <select asp-for="FormModel.MigrationPathSelection" class="form-select">
+            <select asp-for="FormModel.MigrationPathSelection" name="MigrationPathSelection" class="form-select">
                 @if (unresolved != null)
                 {
                     <option value="@unresolved.Id" disabled selected>
@@ -61,7 +53,7 @@
                     </option>
                 }
             </select>
-            <span asp-validation-for="FormModel.MigrationPathSelection" class="text-danger"></span>
+            <span data-valmsg-for="MigrationPathSelection" data-valmsg-replace="true" class="text-danger"></span>
             <div class="form-text">
                 Pick a source → target plan pair to make this a <strong>Migration</strong> cohort,
                 or <strong>None</strong> to define a <strong>Churn-only</strong> population
@@ -70,29 +62,8 @@
         }
     </div>
 
-    <div class="mb-3">
-        <label asp-for="FormModel.ProactiveDiscountCouponCode" class="form-label">
-            Proactive discount coupon <span class="text-muted">(optional)</span>
-        </label>
-        <input asp-for="FormModel.ProactiveDiscountCouponCode" class="form-control" placeholder="e.g., track-a-15-yr1" />
-        <span asp-validation-for="FormModel.ProactiveDiscountCouponCode" class="text-danger"></span>
-        <div class="form-text">
-            Stripe coupon ID applied to Phase 2 of the SubscriptionSchedule at scheduling time. Validated against Stripe at save.
-        </div>
-    </div>
+    <partial name="_CohortFormFields" model="Model.FormModel" />
 
-    <div class="mb-3">
-        <label asp-for="FormModel.ChurnDiscountCouponCode" class="form-label">
-            Churn discount coupon
-            <span id="churn-optional-label" class="text-muted">(optional)</span>
-        </label>
-        <input asp-for="FormModel.ChurnDiscountCouponCode" class="form-control" placeholder="e.g., retain-q4-2026" />
-        <span asp-validation-for="FormModel.ChurnDiscountCouponCode" class="text-danger"></span>
-        <div class="form-text">
-            Stripe coupon ID offered as a save-offer when an assigned org initiates self-serve cancellation.
-            <strong>Required</strong> for churn-only cohorts. Validated against Stripe at save.
-        </div>
-    </div>
 </form>
 
 <div class="card my-4">
