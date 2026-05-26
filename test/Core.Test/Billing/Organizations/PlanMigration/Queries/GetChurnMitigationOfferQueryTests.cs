@@ -149,6 +149,61 @@ public class GetChurnMitigationOfferQueryTests
     }
 
     [Fact]
+    public async Task Run_MigrationCohort_ScheduleHasAnchorPhaseAndPhase1AndPhase2_ReturnsOffer()
+    {
+        // Stripe normalizes a 2-phase schedule into a 3-phase shape ([anchor, Phase 1, Phase 2])
+        // whenever the subscription is mutated after attach (seat add, automatic-tax adjust, etc.).
+        // The query must filter out the expired anchor phase via EndDate > now before indexing.
+        var organization = CreateOrganization();
+        SetupMigrationCohort(organization);
+
+        var subscription = CreateSubscription();
+        SetupGetSubscription(organization, subscription);
+
+        var phase1Start = DateTime.UtcNow.AddDays(-30);
+        var phase1End = DateTime.UtcNow.AddYears(1);
+        var anchor = new SubscriptionSchedulePhase
+        {
+            StartDate = DateTime.UtcNow.AddYears(-1),
+            EndDate = phase1Start,
+            Items = []
+        };
+        var phase1 = new SubscriptionSchedulePhase
+        {
+            StartDate = phase1Start,
+            EndDate = phase1End,
+            Items = []
+        };
+        var phase2 = new SubscriptionSchedulePhase
+        {
+            StartDate = phase1End,
+            EndDate = phase1End.AddYears(1),
+            Items = []
+        };
+        var schedule = new SubscriptionSchedule
+        {
+            Id = "sub_sched_123",
+            SubscriptionId = subscription.Id,
+            Status = SubscriptionScheduleStatus.Active,
+            Phases = [anchor, phase1, phase2],
+            CurrentPhase = new SubscriptionScheduleCurrentPhase
+            {
+                StartDate = phase1Start,
+                EndDate = phase1End
+            }
+        };
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        SetupGetCoupon(CreatePercentOffCoupon());
+
+        var result = await _query.Run(organization);
+
+        Assert.NotNull(result);
+        Assert.Equal(ChurnCouponCode, result.CouponId);
+    }
+
+    [Fact]
     public async Task Run_MigrationCohort_CouponAlreadyOnPhase2_ReturnsNull()
     {
         var organization = CreateOrganization();

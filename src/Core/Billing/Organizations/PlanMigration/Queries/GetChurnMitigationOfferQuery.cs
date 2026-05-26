@@ -60,11 +60,24 @@ public class GetChurnMitigationOfferQuery(
             return null;
         }
 
+        // Filter out the anchor phase Stripe prepends when a schedule is normalized after a
+        // post-attach subscription mutation (e.g. seat add, automatic-tax adjustment). The
+        // unexpired-phases view is the canonical [Phase 1, Phase 2] shape this query reasons
+        // about; mirrors RedeemChurnMitigationOfferCommand.RedeemForMigrationCohortAsync.
+        var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+        var migrationPhases = activeSchedule.Phases.Where(p => p.EndDate > now).ToList();
+        if (migrationPhases.Count != 2)
+        {
+            return null;
+        }
+
+        var phase1 = migrationPhases[0];
+        var phase2 = migrationPhases[1];
+
         // current_phase identifies the in-effect phase. Migration-cohort eligibility requires
         // the org to still be on Phase 1 -- once Stripe rolls into Phase 2 the offer window
         // has closed (the org has been migrated).
         var currentPhase = activeSchedule.CurrentPhase;
-        var phase1 = activeSchedule.Phases[0];
         if (currentPhase is null
             || currentPhase.StartDate != phase1.StartDate
             || currentPhase.EndDate != phase1.EndDate)
@@ -73,12 +86,6 @@ public class GetChurnMitigationOfferQuery(
         }
 
         // The coupon must not already be on Phase 2 (idempotency / re-render guard).
-        if (activeSchedule.Phases.Count < 2)
-        {
-            return null;
-        }
-
-        var phase2 = activeSchedule.Phases[1];
         if (phase2.Discounts is { Count: > 0 } &&
             phase2.Discounts.Any(d => string.Equals(d.CouponId, churnDiscountCouponCode, StringComparison.Ordinal)))
         {
