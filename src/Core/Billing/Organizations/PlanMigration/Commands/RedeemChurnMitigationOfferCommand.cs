@@ -1,4 +1,4 @@
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
@@ -20,18 +20,6 @@ public class RedeemChurnMitigationOfferCommand(
     IStripeAdapter stripeAdapter)
     : BaseBillingCommand<RedeemChurnMitigationOfferCommand>(logger), IRedeemChurnMitigationOfferCommand
 {
-    // Stripe error code/message hints used to map the webhook race (Phase 1 just advanced to
-    // Phase 2 between revalidation and our schedule update) into a clean BadRequest. Stripe
-    // returns this as an invalid_request_error with phrasing along the lines of
-    // "Cannot modify a phase of subscription schedule that is in the past" / "phase that has
-    // already started" -- match a few human-readable hint substrings inside the message.
-    private static readonly string[] _cannotModifyPastPhaseHints =
-    [
-        "in the past",
-        "already started",
-        "past phase"
-    ];
-
     private readonly ILogger<RedeemChurnMitigationOfferCommand> _logger = logger;
 
     protected override Conflict DefaultConflict =>
@@ -161,25 +149,14 @@ public class RedeemChurnMitigationOfferCommand(
             return new None();
         }
 
-        try
-        {
-            // Customer.Discount is intentionally not mirrored into the phase Discounts list:
-            // customer-level discounts are managed elsewhere and are preserved by Stripe
-            // across schedule updates automatically.
-            await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
-                new SubscriptionScheduleUpdateOptions
-                {
-                    EndBehavior = SubscriptionScheduleEndBehavior.Release,
-                    Phases = phases
-                });
-        }
-        catch (StripeException stripeException) when (IsCannotModifyPastPhase(stripeException))
-        {
-            _logger.LogWarning(stripeException,
-                "{Command}: Stripe rejected schedule ({ScheduleId}) update for Organization ({OrganizationId}); subscription advanced past Phase 1 during redemption",
-                CommandName, activeSchedule.Id, organization.Id);
-            return new BadRequest("Your subscription has just renewed. Please refresh and try again.");
-        }
+        // Customer-level discounts are not mirrored into the phase Discounts list -- Stripe
+        // preserves them across schedule updates automatically.
+        await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
+            new SubscriptionScheduleUpdateOptions
+            {
+                EndBehavior = SubscriptionScheduleEndBehavior.Release,
+                Phases = phases
+            });
 
         // ChurnDiscountAppliedDate is informational for migration cohorts (eligibility window
         // closes via Stripe's current_phase advance + MigratedDate from SubscriptionUpdatedHandler
@@ -201,27 +178,9 @@ public class RedeemChurnMitigationOfferCommand(
         Entities.OrganizationPlanMigrationCohortAssignment assignment,
         string churnDiscountCouponCode)
     {
-        // CAS-first, Stripe-second. For once-duration coupons the per-assignment guard is the
-        // ONLY post-consumption defense; Stripe-first opens a TOCTOU window where two parallel
-        // POSTs both pass revalidation and both mutate Stripe before either DB write lands.
-        // For repeating/forever the Stripe-side "coupon currently on subscription" check is
-        // sufficient on its own -- we apply CAS-first to all three for consistency.
-        var now = DateTime.UtcNow;
-        var claimed = await assignmentRepository.TryClaimChurnDiscountAsync(assignment.Id, now);
-        if (!claimed)
-        {
-            _logger.LogInformation(
-                "{Command}: CAS lost race for Organization ({OrganizationId}) Assignment ({AssignmentId}) Cohort ({CohortId}); assignment already claimed",
-                CommandName, organization.Id, assignment.Id, assignment.CohortId);
-            return new BadRequest("Offer is no longer available.");
-        }
-
         var subscription = await FetchSubscriptionAsync(organization);
         if (subscription is null)
         {
-            _logger.LogError(
-                "{Command}: CAS claimed Assignment ({AssignmentId}) but subscription ({SubscriptionId}) for Organization ({OrganizationId}) was not found; reconciliation required",
-                CommandName, assignment.Id, organization.GatewaySubscriptionId, organization.Id);
             return DefaultConflict;
         }
 
@@ -232,16 +191,25 @@ public class RedeemChurnMitigationOfferCommand(
         var alreadyApplied = existingDiscounts.Any(d =>
             string.Equals(d.Coupon, churnDiscountCouponCode, StringComparison.Ordinal));
 
-        if (!alreadyApplied)
+        // If the coupon is already on the subscription from a prior redeem, skip the Stripe
+        // call and preserve the existing ChurnDiscountAppliedDate -- overwriting it would lose
+        // the original redeem timestamp.
+        if (alreadyApplied)
         {
-            existingDiscounts.Add(new SubscriptionDiscountOptions { Coupon = churnDiscountCouponCode });
-
-            // Customer.Discount is intentionally NOT mutated here. It's managed elsewhere
-            // (manual ops adjustments, audience filters via SubscriptionDiscountService).
-            // The churn-only code path only writes to subscription.discounts.
-            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id,
-                new SubscriptionUpdateOptions { Discounts = existingDiscounts });
+            _logger.LogInformation(
+                "{Command}: Coupon already present on Subscription ({SubscriptionId}) for Organization ({OrganizationId}); no Stripe update needed",
+                CommandName, subscription.Id, organization.Id);
+            return new None();
         }
+
+        existingDiscounts.Add(new SubscriptionDiscountOptions { Coupon = churnDiscountCouponCode });
+
+        await stripeAdapter.UpdateSubscriptionAsync(subscription.Id,
+            new SubscriptionUpdateOptions { Discounts = existingDiscounts });
+
+        assignment.ChurnDiscountAppliedDate = DateTime.UtcNow;
+        assignment.RevisionDate = DateTime.UtcNow;
+        await assignmentRepository.ReplaceAsync(assignment);
 
         _logger.LogInformation(
             "{Command}: Applied churn coupon to Subscription ({SubscriptionId}) for Organization ({OrganizationId}) Assignment ({AssignmentId}) Cohort ({CohortId})",
@@ -284,8 +252,4 @@ public class RedeemChurnMitigationOfferCommand(
         }
     }
 
-    private static bool IsCannotModifyPastPhase(StripeException stripeException) =>
-        stripeException.StripeError?.Message is { Length: > 0 } message
-        && _cannotModifyPastPhaseHints.Any(hint =>
-            message.Contains(hint, StringComparison.OrdinalIgnoreCase));
 }

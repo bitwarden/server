@@ -1,11 +1,10 @@
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Services;
-using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stripe;
@@ -19,7 +18,6 @@ public class GetChurnMitigationOfferQueryTests
 {
     private const string ChurnCouponCode = "churn-15-percent-once";
 
-    private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly IOrganizationPlanMigrationCohortAssignmentRepository _assignmentRepository =
         Substitute.For<IOrganizationPlanMigrationCohortAssignmentRepository>();
     private readonly IOrganizationPlanMigrationCohortRepository _cohortRepository =
@@ -29,27 +27,11 @@ public class GetChurnMitigationOfferQueryTests
 
     public GetChurnMitigationOfferQueryTests()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM37170_ChurnMitigationOffer).Returns(true);
-
         _query = new GetChurnMitigationOfferQuery(
-            _featureService,
             _assignmentRepository,
             _cohortRepository,
             _stripeAdapter,
             Substitute.For<ILogger<GetChurnMitigationOfferQuery>>());
-    }
-
-    [Fact]
-    public async Task Run_FeatureFlagDisabled_ReturnsNull()
-    {
-        _featureService.IsEnabled(FeatureFlagKeys.PM37170_ChurnMitigationOffer).Returns(false);
-
-        var organization = CreateOrganization();
-
-        var result = await _query.Run(organization);
-
-        Assert.Null(result);
-        await _assignmentRepository.DidNotReceive().GetByOrganizationIdAsync(Arg.Any<Guid>());
     }
 
     [Fact]
@@ -191,7 +173,7 @@ public class GetChurnMitigationOfferQueryTests
     {
         var logger = Substitute.For<ILogger<GetChurnMitigationOfferQuery>>();
         var query = new GetChurnMitigationOfferQuery(
-            _featureService, _assignmentRepository, _cohortRepository, _stripeAdapter, logger);
+            _assignmentRepository, _cohortRepository, _stripeAdapter, logger);
 
         var organization = CreateOrganization();
         SetupMigrationCohort(organization);
@@ -214,7 +196,7 @@ public class GetChurnMitigationOfferQueryTests
     {
         var logger = Substitute.For<ILogger<GetChurnMitigationOfferQuery>>();
         var query = new GetChurnMitigationOfferQuery(
-            _featureService, _assignmentRepository, _cohortRepository, _stripeAdapter, logger);
+            _assignmentRepository, _cohortRepository, _stripeAdapter, logger);
 
         var organization = CreateOrganization();
         SetupMigrationCohort(organization);

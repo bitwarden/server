@@ -54,22 +54,4 @@ public class OrganizationPlanMigrationCohortAssignmentRepository(
 
         return Mapper.Map<CoreEntities.OrganizationPlanMigrationCohortAssignment>(result);
     }
-
-    public async Task<bool> TryClaimChurnDiscountAsync(Guid id, DateTime now)
-    {
-        using var scope = ServiceScopeFactory.CreateScope();
-        var dbContext = GetDatabaseContext(scope);
-
-        // Mirrors the OrganizationPlanMigrationCohortAssignment_TryClaimChurnDiscount SP:
-        // a single UPDATE with the IS NULL predicate -- the conditional WHERE is what makes
-        // this atomic. Do NOT replace this with a read-then-update sequence; that pattern
-        // reopens the TOCTOU window the SP exists to close.
-        var rowsAffected = await dbContext.OrganizationPlanMigrationCohortAssignments
-            .Where(a => a.Id == id && a.ChurnDiscountAppliedDate == null)
-            .ExecuteUpdateAsync(s => s
-                .SetProperty(a => a.ChurnDiscountAppliedDate, _ => now)
-                .SetProperty(a => a.RevisionDate, _ => now));
-
-        return rowsAffected == 1;
-    }
 }

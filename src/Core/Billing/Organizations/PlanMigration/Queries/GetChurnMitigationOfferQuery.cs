@@ -1,9 +1,8 @@
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Services;
-using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
@@ -12,7 +11,6 @@ namespace Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using static StripeConstants;
 
 public class GetChurnMitigationOfferQuery(
-    IFeatureService featureService,
     IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
     IOrganizationPlanMigrationCohortRepository cohortRepository,
     IStripeAdapter stripeAdapter,
@@ -20,15 +18,6 @@ public class GetChurnMitigationOfferQuery(
 {
     public async Task<ChurnMitigationOfferResult?> Run(Organization organization)
     {
-        // Feature-flag gate lives at the query layer (not the controller). The redeem command
-        // calls this query first to re-validate eligibility, so command-side callers inherit
-        // the gate for free. The controller intentionally returns null (not 404) when the flag
-        // is off so the web vault can branch on `response === null`.
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM37170_ChurnMitigationOffer))
-        {
-            return null;
-        }
-
         // DB pre-filter -- short-circuit non-cohort organizations before any Stripe call.
         var assignment = await assignmentRepository.GetByOrganizationIdAsync(organization.Id);
         if (assignment is null)
@@ -196,11 +185,4 @@ public class GetChurnMitigationOfferQuery(
             Duration: coupon.Duration,
             DurationInMonths: (int?)coupon.DurationInMonths,
             Name: coupon.Name);
-}
-
-internal static class CouponDurations
-{
-    public const string Once = "once";
-    public const string Repeating = "repeating";
-    public const string Forever = "forever";
 }

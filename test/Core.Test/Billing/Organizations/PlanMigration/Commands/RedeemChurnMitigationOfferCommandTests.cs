@@ -1,4 +1,4 @@
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Organizations.PlanMigration.Commands;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
@@ -9,7 +9,6 @@ using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Services;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using OneOf.Types;
 using Stripe;
 using Xunit;
 
@@ -51,27 +50,6 @@ public class RedeemChurnMitigationOfferCommandTests
         Assert.True(result.IsT1);
         Assert.Equal("Offer is no longer available.", result.AsT1.Response);
 
-        await _stripeAdapter.DidNotReceive().UpdateSubscriptionScheduleAsync(
-            Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
-        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
-            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
-        await _assignmentRepository.DidNotReceive().ReplaceAsync(
-            Arg.Any<OrganizationPlanMigrationCohortAssignment>());
-        await _assignmentRepository.DidNotReceive().TryClaimChurnDiscountAsync(
-            Arg.Any<Guid>(), Arg.Any<DateTime>());
-    }
-
-    [Fact]
-    public async Task Run_FeatureFlagDisabled_ReturnsFailure()
-    {
-        // The command relies on the query for the FF gate -- a disabled flag manifests as the
-        // query returning null. Assert all three downstream effects are negated.
-        var organization = CreateOrganization();
-        _getOfferQuery.Run(organization).Returns((ChurnMitigationOfferResult?)null);
-
-        var result = await _command.Run(organization);
-
-        Assert.True(result.IsT1);
         await _stripeAdapter.DidNotReceive().UpdateSubscriptionScheduleAsync(
             Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
         await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
@@ -324,13 +302,11 @@ public class RedeemChurnMitigationOfferCommandTests
     }
 
     [Fact]
-    public async Task Run_ChurnOnlyCohort_CASWinsAndAppliesCoupon_WritesAppliedDate_WithinTolerance()
+    public async Task Run_ChurnOnlyCohort_AppliesCoupon_WritesAppliedDate_WithinTolerance()
     {
         var organization = CreateOrganization();
         SetupOfferEligible();
-        var assignment = SetupChurnOnlyCohortAssignment(organization);
-        _assignmentRepository.TryClaimChurnDiscountAsync(assignment.Id, Arg.Any<DateTime>())
-            .Returns(true);
+        SetupChurnOnlyCohortAssignment(organization);
 
         var subscription = CreateSubscription();
         SetupGetSubscription(organization, subscription);
@@ -341,14 +317,16 @@ public class RedeemChurnMitigationOfferCommandTests
 
         Assert.True(result.Success);
 
-        await _assignmentRepository.Received(1).TryClaimChurnDiscountAsync(
-            assignment.Id,
-            Arg.Is<DateTime>(d => d >= before && d <= DateTime.UtcNow.AddSeconds(1)));
-
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             subscription.Id,
             Arg.Is<SubscriptionUpdateOptions>(opts =>
                 opts.Discounts.Any(d => d.Coupon == ChurnCouponCode)));
+
+        await _assignmentRepository.Received(1).ReplaceAsync(
+            Arg.Is<OrganizationPlanMigrationCohortAssignment>(a =>
+                a.ChurnDiscountAppliedDate != null
+                && a.ChurnDiscountAppliedDate >= before
+                && a.ChurnDiscountAppliedDate <= DateTime.UtcNow.AddSeconds(1)));
     }
 
     [Fact]
@@ -356,9 +334,7 @@ public class RedeemChurnMitigationOfferCommandTests
     {
         var organization = CreateOrganization();
         SetupOfferEligible();
-        var assignment = SetupChurnOnlyCohortAssignment(organization);
-        _assignmentRepository.TryClaimChurnDiscountAsync(assignment.Id, Arg.Any<DateTime>())
-            .Returns(true);
+        SetupChurnOnlyCohortAssignment(organization);
 
         var subscription = CreateSubscription(customerDiscount: new Discount
         {
@@ -372,26 +348,6 @@ public class RedeemChurnMitigationOfferCommandTests
             subscription.Id,
             Arg.Is<SubscriptionUpdateOptions>(opts =>
                 opts.Discounts.All(d => d.Coupon != "customer-level-coupon")));
-    }
-
-    [Fact]
-    public async Task Run_ChurnOnlyCohort_CASLosesRace_ReturnsFailure_StripeNotMutated()
-    {
-        var organization = CreateOrganization();
-        SetupOfferEligible();
-        var assignment = SetupChurnOnlyCohortAssignment(organization);
-        _assignmentRepository.TryClaimChurnDiscountAsync(assignment.Id, Arg.Any<DateTime>())
-            .Returns(false);
-
-        var result = await _command.Run(organization);
-
-        Assert.True(result.IsT1);
-        Assert.Equal("Offer is no longer available.", result.AsT1.Response);
-
-        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
-            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
-        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(
-            Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
     }
 
     [Fact]
@@ -420,13 +376,11 @@ public class RedeemChurnMitigationOfferCommandTests
     }
 
     [Fact]
-    public async Task Run_ChurnOnlyCohort_StripeUpdateSubscriptionThrows_AfterCASSucceeded_AppliedDateRemainsSet_ExceptionBubbles()
+    public async Task Run_ChurnOnlyCohort_StripeUpdateSubscriptionThrows_AppliedDateNotWritten_ExceptionBubbles()
     {
         var organization = CreateOrganization();
         SetupOfferEligible();
-        var assignment = SetupChurnOnlyCohortAssignment(organization);
-        _assignmentRepository.TryClaimChurnDiscountAsync(assignment.Id, Arg.Any<DateTime>())
-            .Returns(true);
+        SetupChurnOnlyCohortAssignment(organization);
 
         var subscription = CreateSubscription();
         SetupGetSubscription(organization, subscription);
@@ -440,36 +394,6 @@ public class RedeemChurnMitigationOfferCommandTests
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT3);
-        // CAS row remains claimed -- ops will manually reconcile (set ChurnDiscountAppliedDate = NULL).
-        await _assignmentRepository.Received(1).TryClaimChurnDiscountAsync(
-            assignment.Id, Arg.Any<DateTime>());
-    }
-
-    [Fact]
-    public async Task Run_MigrationCohort_StripeRejectsWithCannotModifyPastPhase_ReturnsBadRequest_WithRefreshMessage()
-    {
-        var organization = CreateOrganization();
-        SetupOfferEligible();
-        SetupMigrationCohortAssignment(organization);
-
-        var subscription = CreateSubscription();
-        SetupGetSubscription(organization, subscription);
-        SetupActiveScheduleWithTwoPhases(subscription);
-
-        _stripeAdapter.UpdateSubscriptionScheduleAsync(Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>())
-            .Returns<SubscriptionSchedule>(_ => throw new StripeException
-            {
-                StripeError = new StripeError
-                {
-                    Code = "invalid_request_error",
-                    Message = "Cannot modify a phase of subscription schedule that is in the past."
-                }
-            });
-
-        var result = await _command.Run(organization);
-
-        Assert.True(result.IsT1);
-        Assert.Equal("Your subscription has just renewed. Please refresh and try again.", result.AsT1.Response);
         await _assignmentRepository.DidNotReceive().ReplaceAsync(
             Arg.Any<OrganizationPlanMigrationCohortAssignment>());
     }
