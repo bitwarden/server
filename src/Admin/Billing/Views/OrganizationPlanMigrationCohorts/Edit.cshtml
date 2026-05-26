@@ -62,6 +62,11 @@
                 }
             </select>
             <span asp-validation-for="FormModel.MigrationPathSelection" class="text-danger"></span>
+            <div class="form-text">
+                Pick a source → target plan pair to make this a <strong>Migration</strong> cohort,
+                or <strong>None</strong> to define a <strong>Churn-only</strong> population
+                (no migration scheduled; only the churn save-offer applies).
+            </div>
         }
     </div>
 
@@ -90,21 +95,23 @@
     </div>
 </form>
 
-<div class="mt-4 d-flex align-items-center">
-    @if (Model.IsActive)
-    {
-        <form method="post" asp-action="Disable" asp-route-id="@Model.FormModel.Id">
-            <button class="btn btn-secondary" type="submit">Disable</button>
-        </form>
-    }
-    else
-    {
-        <form method="post" asp-action="Enable" asp-route-id="@Model.FormModel.Id">
-            <button class="btn btn-success" type="submit">Enable</button>
-        </form>
-    }
-    <div class="form-text ms-3 mb-0">
-        When off, no migrations or save-offers fire for this cohort. Defaults to off; flip on once assignments are loaded.
+<div class="card my-4">
+    <div class="card-body d-flex align-items-center">
+        @if (Model.IsActive)
+        {
+            <form method="post" asp-action="Disable" asp-route-id="@Model.FormModel.Id">
+                <button class="btn btn-secondary" type="submit">Disable</button>
+            </form>
+        }
+        else
+        {
+            <form method="post" asp-action="Enable" asp-route-id="@Model.FormModel.Id">
+                <button class="btn btn-success" type="submit">Enable</button>
+            </form>
+        }
+        <div class="form-text ms-3 mb-0">
+            When off, no migrations or save-offers fire for this cohort. Defaults to off; flip on once assignments are loaded.
+        </div>
     </div>
 </div>
 
@@ -114,7 +121,7 @@
     <div class="ms-auto d-flex">
         <form method="post" asp-action="Delete" asp-route-id="@Model.FormModel.Id"
               onsubmit="return confirm('Are you sure you want to delete this cohort?')">
-            <button class="btn btn-danger" type="submit">Delete</button>
+            <button class="btn btn-danger" type="submit"><i class="fa fa-trash"></i> Delete</button>
         </form>
     </div>
 </div>
