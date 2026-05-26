@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260525092256_AddLeasingPolicy")]
+    [Migration("20260526092819_AddLeasingPolicy")]
     partial class AddLeasingPolicy
     {
         /// <inheritdoc />
@@ -2908,7 +2908,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasOne("Bit.Infrastructure.EntityFramework.PrivilegedAccessManagement.Models.LeasingPolicy", null)
                         .WithMany()
                         .HasForeignKey("LeasingPolicyId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
                         .WithMany("Collections")
