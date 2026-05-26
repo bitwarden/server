@@ -174,64 +174,6 @@ public class OrganizationPlanMigrationCohortsController(
         }
     }
 
-    [HttpPost("{id:guid}/enable")]
-    [ValidateAntiForgeryToken]
-    [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
-    public async Task<IActionResult> Enable(Guid id)
-    {
-        if (!PlanMigrationCohortsFeatureEnabled()) return NotFound();
-
-        var cohort = await cohortRepository.GetByIdAsync(id);
-        if (cohort == null) return NotFound();
-
-        try
-        {
-            var formModel = CohortFormModel.From(cohort);
-            if (!await ValidateCouponsAsync(formModel))
-            {
-                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
-                TempData["Error"] = "Cannot enable cohort: " + string.Join(" ", errors);
-                return RedirectToAction(nameof(Edit), new { id });
-            }
-
-            await cohortRepository.UpdateIsActiveAsync(id, true);
-
-            TempData["Success"] = $"Cohort '{cohort.Name}' enabled.";
-            return RedirectToAction(nameof(Edit), new { id });
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error enabling cohort. Id: {Id}", id);
-            TempData["Error"] = "An error occurred while enabling the cohort.";
-            return RedirectToAction(nameof(Edit), new { id });
-        }
-    }
-
-    [HttpPost("{id:guid}/disable")]
-    [ValidateAntiForgeryToken]
-    [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
-    public async Task<IActionResult> Disable(Guid id)
-    {
-        if (!PlanMigrationCohortsFeatureEnabled()) return NotFound();
-
-        var cohort = await cohortRepository.GetByIdAsync(id);
-        if (cohort == null) return NotFound();
-
-        try
-        {
-            await cohortRepository.UpdateIsActiveAsync(id, false);
-
-            TempData["Success"] = $"Cohort '{cohort.Name}' disabled.";
-            return RedirectToAction(nameof(Edit), new { id });
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error disabling cohort. Id: {Id}", id);
-            TempData["Error"] = "An error occurred while disabling the cohort.";
-            return RedirectToAction(nameof(Edit), new { id });
-        }
-    }
-
     [HttpPost("{id:guid}/delete")]
     [ValidateAntiForgeryToken]
     [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
