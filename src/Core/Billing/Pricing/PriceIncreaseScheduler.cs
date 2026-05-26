@@ -195,7 +195,7 @@ public class PriceIncreaseScheduler(
             SubscriberId subscriberId = subscription;
             return await subscriberId.Match(
                 _ => SchedulePersonalPriceIncrease(subscription),
-                orgId => ScheduleForOrganizationAsync(subscription, orgId.Value, options),
+                orgId => DispatchOrganizationScheduleAsync(subscription, orgId.Value, options),
                 _ =>
                 {
                     logger.LogWarning(
@@ -596,7 +596,7 @@ public class PriceIncreaseScheduler(
     /// non-business plan types (personal, family, and 2019-era plans) to the personal scheduling
     /// path, then validates cohort eligibility before scheduling.
     /// </summary>
-    private async Task<bool> ScheduleForOrganizationAsync(
+    private async Task<bool> DispatchOrganizationScheduleAsync(
         Subscription subscription,
         Guid organizationId,
         OrganizationPriceIncreaseOptions? options)
@@ -638,9 +638,7 @@ public class PriceIncreaseScheduler(
     /// <summary>
     /// Returns true if the organization is eligible for a business plan price increase.
     /// Guards from <paramref name="options"/> are evaluated first against all resolved data;
-    /// structural eligibility checks follow. Add new option guards here —
-    /// <see cref="ScheduleForOrganizationAsync"/> never needs to change.
-    /// Does not make any database or Stripe calls.
+    /// structural eligibility checks follow.
     /// </summary>
     private bool IsEligibleForScheduling(
         Organization organization,
