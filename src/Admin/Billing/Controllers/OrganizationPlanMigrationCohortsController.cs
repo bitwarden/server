@@ -6,7 +6,6 @@ using Bit.Core;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
-using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Services;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -112,7 +111,7 @@ public class OrganizationPlanMigrationCohortsController(
         if (cohort == null) return NotFound();
 
         var assignmentState = await getCohortAssignmentStateQuery.Run(cohort);
-        return View(EditCohortViewModel.From(cohort, ToFormModel(cohort), assignmentState));
+        return View(EditCohortViewModel.From(cohort, CohortFormModel.From(cohort), assignmentState));
     }
 
     [HttpPost("{id:guid}")]
@@ -189,7 +188,7 @@ public class OrganizationPlanMigrationCohortsController(
 
         try
         {
-            var formModel = ToFormModel(cohort);
+            var formModel = CohortFormModel.From(cohort);
             if (!await ValidateCouponsAsync(formModel))
             {
                 var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
@@ -269,19 +268,6 @@ public class OrganizationPlanMigrationCohortsController(
             return RedirectToAction(nameof(Edit), new { id });
         }
     }
-
-    private static CohortFormModel ToFormModel(OrganizationPlanMigrationCohort cohort) => new()
-    {
-        Id = cohort.Id,
-        Name = cohort.Name,
-        MigrationPathSelection = cohort.MigrationPathId switch
-        {
-            null => "none",
-            var id => ((byte)id).ToString(),
-        },
-        ProactiveDiscountCouponCode = cohort.ProactiveDiscountCouponCode,
-        ChurnDiscountCouponCode = cohort.ChurnDiscountCouponCode,
-    };
 
     private static string? NormalizeCouponCode(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();

@@ -1,10 +1,24 @@
 using System.ComponentModel.DataAnnotations;
+using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 
 namespace Bit.Admin.Billing.Models.OrganizationPlanMigrationCohorts;
 
 public class CohortFormModel : IValidatableObject
 {
+    public static CohortFormModel From(OrganizationPlanMigrationCohort cohort) => new()
+    {
+        Id = cohort.Id,
+        Name = cohort.Name,
+        MigrationPathSelection = cohort.MigrationPathId switch
+        {
+            null => "none",
+            var id => ((byte)id).ToString(),
+        },
+        ProactiveDiscountCouponCode = cohort.ProactiveDiscountCouponCode,
+        ChurnDiscountCouponCode = cohort.ChurnDiscountCouponCode,
+    };
+
     public Guid? Id { get; set; }
 
     [Required]
