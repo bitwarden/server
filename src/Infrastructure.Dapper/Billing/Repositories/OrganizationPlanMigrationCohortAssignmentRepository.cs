@@ -26,4 +26,16 @@ public class OrganizationPlanMigrationCohortAssignmentRepository(
 
         return results.SingleOrDefault();
     }
+
+    public async Task<bool> TryClaimChurnDiscountAsync(Guid id, DateTime now)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var rowsAffected = await connection.ExecuteAsync(
+            $"[{Schema}].[{Table}_TryClaimChurnDiscount]",
+            new { Id = id, Now = now },
+            commandType: CommandType.StoredProcedure);
+
+        return rowsAffected == 1;
+    }
 }
