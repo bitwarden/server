@@ -74,7 +74,7 @@ public class SetInitialPasswordRequestModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (IsV2Request())
+        if (HasAuthAndUnlockData())
         {
             // V2 registration - validate KDF equality, salt equality, and KDF settings
             foreach (var validationResult in KdfSettingsValidator.ValidateAuthenticationAndUnlockData(
@@ -133,7 +133,13 @@ public class SetInitialPasswordRequestModel : IValidatableObject
         }
     }
 
-    public bool IsV2Request()
+    /// <summary>
+    /// True when the request uses the new data shape (MasterPasswordAuthentication + MasterPasswordUnlock).
+    /// This is a shape check, NOT a guarantee that V2 encryption will run. It is possible for V1 encryption
+    /// to run even when the request contains these new data types (see `set-password` endpoint).
+    /// Feature flags and AccountKeys presence determine the actual flow (V1 or V2).
+    /// </summary>
+    public bool HasAuthAndUnlockData()
     {
         // AccountKeys can be null for TDE users, so we don't check that here
         return MasterPasswordAuthentication != null && MasterPasswordUnlock != null;

@@ -11,12 +11,12 @@ namespace Bit.Api.Test.Auth.Models.Request.Accounts;
 
 public class SetInitialPasswordRequestModelTests
 {
-    #region V2 Validation Tests
+    #region Validation Tests (Auth + Unlock Data)
 
     [Theory]
     [InlineData(KdfType.PBKDF2_SHA256, 600000, null, null)]
     [InlineData(KdfType.Argon2id, 3, 64, 4)]
-    public void Validate_V2Request_WithMatchingKdfAndSalt_ReturnsNoErrors(KdfType kdfType, int iterations, int? memory, int? parallelism)
+    public void Validate_AuthAndUnlockData_WithMatchingKdfAndSalt_ReturnsNoErrors(KdfType kdfType, int iterations, int? memory, int? parallelism)
     {
         // Arrange — uses separate KDF object instances with identical values to verify value equality
         var model = new SetInitialPasswordRequestModel
@@ -62,7 +62,7 @@ public class SetInitialPasswordRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void Validate_V2Request_WithMismatchedKdfSettings_ReturnsValidationError(string orgIdentifier)
+    public void Validate_AuthAndUnlockData_WithMismatchedKdfSettings_ReturnsValidationError(string orgIdentifier)
     {
         // Arrange
         var model = new SetInitialPasswordRequestModel
@@ -103,7 +103,7 @@ public class SetInitialPasswordRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void Validate_V2Request_WithMismatchedSalt_ReturnsValidationError(string orgIdentifier)
+    public void Validate_AuthAndUnlockData_WithMismatchedSalt_ReturnsValidationError(string orgIdentifier)
     {
         // Arrange
         var kdf = new KdfRequestModel
@@ -138,7 +138,7 @@ public class SetInitialPasswordRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void Validate_V2Request_WithInvalidAuthenticationKdf_ReturnsValidationError(string orgIdentifier)
+    public void Validate_AuthAndUnlockData_WithInvalidAuthenticationKdf_ReturnsValidationError(string orgIdentifier)
     {
         // Arrange
         var kdf = new KdfRequestModel
@@ -174,11 +174,11 @@ public class SetInitialPasswordRequestModelTests
 
     #endregion
 
-    #region V1 Validation Tests (Obsolete)
+    #region Validation Tests (Legacy Data) (Obsolete)
 
     [Theory]
     [BitAutoData]
-    public void Validate_V1Request_WithMissingMasterPasswordHash_ReturnsValidationError(string orgIdentifier)
+    public void Validate_LegacyData_WithMissingMasterPasswordHash_ReturnsValidationError(string orgIdentifier)
     {
         // Arrange
         var model = new SetInitialPasswordRequestModel
@@ -198,7 +198,7 @@ public class SetInitialPasswordRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void Validate_V1Request_WithMissingKey_ReturnsValidationError(string orgIdentifier)
+    public void Validate_LegacyData_WithMissingKey_ReturnsValidationError(string orgIdentifier)
     {
         // Arrange
         var model = new SetInitialPasswordRequestModel
@@ -218,7 +218,7 @@ public class SetInitialPasswordRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void Validate_V1Request_WithMissingKdf_ReturnsValidationError(string orgIdentifier)
+    public void Validate_LegacyData_WithMissingKdf_ReturnsValidationError(string orgIdentifier)
     {
         // Arrange
         var model = new SetInitialPasswordRequestModel
@@ -238,7 +238,7 @@ public class SetInitialPasswordRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void Validate_V1Request_WithMissingKdfIterations_ReturnsValidationError(string orgIdentifier)
+    public void Validate_LegacyData_WithMissingKdfIterations_ReturnsValidationError(string orgIdentifier)
     {
         // Arrange
         var model = new SetInitialPasswordRequestModel
@@ -258,7 +258,7 @@ public class SetInitialPasswordRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void Validate_V1Request_WithArgon2idAndMissingMemory_ReturnsValidationError(string orgIdentifier)
+    public void Validate_LegacyData_WithArgon2idAndMissingMemory_ReturnsValidationError(string orgIdentifier)
     {
         // Arrange
         var model = new SetInitialPasswordRequestModel
@@ -280,7 +280,7 @@ public class SetInitialPasswordRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void Validate_V1Request_WithArgon2idAndMissingParallelism_ReturnsValidationError(string orgIdentifier)
+    public void Validate_LegacyData_WithArgon2idAndMissingParallelism_ReturnsValidationError(string orgIdentifier)
     {
         // Arrange
         var model = new SetInitialPasswordRequestModel
@@ -302,7 +302,7 @@ public class SetInitialPasswordRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void Validate_V1Request_WithInvalidKdfSettings_ReturnsValidationError(string orgIdentifier)
+    public void Validate_LegacyData_WithInvalidKdfSettings_ReturnsValidationError(string orgIdentifier)
     {
         // Arrange
         var model = new SetInitialPasswordRequestModel
@@ -325,7 +325,7 @@ public class SetInitialPasswordRequestModelTests
     [Theory]
     [InlineData(KdfType.PBKDF2_SHA256, 600000, null, null)]
     [InlineData(KdfType.Argon2id, 3, 64, 4)]
-    public void Validate_V1Request_WithValidSettings_ReturnsNoErrors(KdfType kdfType, int kdfIterations, int? kdfMemory, int? kdfParallelism)
+    public void Validate_LegacyData_WithValidSettings_ReturnsNoErrors(KdfType kdfType, int kdfIterations, int? kdfMemory, int? kdfParallelism)
     {
         // Arrange
         var model = new SetInitialPasswordRequestModel
@@ -348,11 +348,11 @@ public class SetInitialPasswordRequestModelTests
 
     #endregion
 
-    #region IsV2Request Tests
+    #region HasAuthAndUnlockData Tests
 
     [Theory]
     [BitAutoData]
-    public void IsV2Request_WithV2Properties_ReturnsTrue(string orgIdentifier)
+    public void HasAuthAndUnlockData_WithBothPresent_ReturnsTrue(string orgIdentifier)
     {
         // Arrange
         var model = new SetInitialPasswordRequestModel
@@ -381,7 +381,7 @@ public class SetInitialPasswordRequestModelTests
         };
 
         // Act
-        var result = model.IsV2Request();
+        var result = model.HasAuthAndUnlockData();
 
         // Assert
         Assert.True(result);
@@ -389,7 +389,7 @@ public class SetInitialPasswordRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void IsV2Request_WithoutMasterPasswordAuthentication_ReturnsFalse(string orgIdentifier)
+    public void HasAuthAndUnlockData_WithoutMasterPasswordAuthentication_ReturnsFalse(string orgIdentifier)
     {
         // Arrange
         var model = new SetInitialPasswordRequestModel
@@ -408,7 +408,7 @@ public class SetInitialPasswordRequestModelTests
         };
 
         // Act
-        var result = model.IsV2Request();
+        var result = model.HasAuthAndUnlockData();
 
         // Assert
         Assert.False(result);
@@ -416,7 +416,7 @@ public class SetInitialPasswordRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void IsV2Request_WithoutMasterPasswordUnlock_ReturnsFalse(string orgIdentifier)
+    public void HasAuthAndUnlockData_WithoutMasterPasswordUnlock_ReturnsFalse(string orgIdentifier)
     {
         // Arrange
         var model = new SetInitialPasswordRequestModel
@@ -435,7 +435,7 @@ public class SetInitialPasswordRequestModelTests
         };
 
         // Act
-        var result = model.IsV2Request();
+        var result = model.HasAuthAndUnlockData();
 
         // Assert
         Assert.False(result);
@@ -443,7 +443,7 @@ public class SetInitialPasswordRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void IsV2Request_WithV1Properties_ReturnsFalse(string orgIdentifier)
+    public void HasAuthAndUnlockData_WithLegacyPropertiesOnly_ReturnsFalse(string orgIdentifier)
     {
         // Arrange
         var model = new SetInitialPasswordRequestModel
@@ -456,7 +456,7 @@ public class SetInitialPasswordRequestModelTests
         };
 
         // Act
-        var result = model.IsV2Request();
+        var result = model.HasAuthAndUnlockData();
 
         // Assert
         Assert.False(result);

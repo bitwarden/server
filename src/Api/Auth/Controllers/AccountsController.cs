@@ -252,7 +252,7 @@ public class AccountsController : Controller
 
         // V2 encryption - TDE user with "manage account recovery" permission
         if (
-            model.IsV2Request() &&
+            model.HasAuthAndUnlockData() &&
             model.IsTdeSetPasswordRequest() &&
             _featureService.IsEnabled(FeatureFlagKeys.V2RegistrationTDEJIT))
         {
@@ -262,7 +262,7 @@ public class AccountsController : Controller
 
         // V2 encryption - MP JIT
         if (
-            model.IsV2Request() &&
+            model.HasAuthAndUnlockData() &&
             _featureService.IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration))
         {
             await _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, model.ToData());
@@ -272,8 +272,7 @@ public class AccountsController : Controller
         // V1 encryption - new data properties (MP JIT only - AccountKeys on the request means it's not a TDE user)
         // TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
         if (
-            model.MasterPasswordAuthentication != null &&
-            model.MasterPasswordUnlock != null &&
+            model.HasAuthAndUnlockData() &&
             model.AccountKeys != null)
         {
             try
