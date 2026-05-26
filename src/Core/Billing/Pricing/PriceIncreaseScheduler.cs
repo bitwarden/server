@@ -610,7 +610,7 @@ public class PriceIncreaseScheduler(
             return false;
         }
 
-        if (!IsTrackABusinessPlanType(organization.PlanType))
+        if (organization.PlanType.GetProductTier() is not (ProductTierType.Teams or ProductTierType.Enterprise))
         {
             return await SchedulePersonalPriceIncrease(subscription);
         }
@@ -676,14 +676,5 @@ public class PriceIncreaseScheduler(
         return true;
     }
 
-    /// <summary>
-    /// Returns true if the plan type is a Track A business plan type.
-    /// </summary>
-    /// <remarks>Expand to include additional business plan types as new tracks are added.</remarks>
-    private static bool IsTrackABusinessPlanType(PlanType planType) => planType is
-        PlanType.TeamsMonthly2020 or
-        PlanType.TeamsAnnually2020 or
-        PlanType.EnterpriseMonthly2020 or
-        PlanType.EnterpriseAnnually2020;
 
 }
