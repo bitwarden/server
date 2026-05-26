@@ -153,4 +153,10 @@ public enum EventType : int
     Send_Created_File = 2503,
     Send_Created_File_WithEmailVerification = 2504,
     Send_Created_File_WithPasswordProtection = 2505,
+    Send_Edited_Text = 2506,
+    Send_Edited_File = 2507,
+    Send_Deleted_Text = 2508,
+    Send_Deleted_File = 2509,
+    Send_Accessed_Text = 2510,
+    Send_Accessed_File = 2511,
 }
