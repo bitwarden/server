@@ -17,10 +17,6 @@ public static class OrganizationPlanExtensions
     /// Customer-purchase fields intentionally NOT touched (owned by callers):
     ///   Seats, MaxStorageGb, SmSeats, SmServiceAccounts, MaxAutoscale*,
     ///   UseSecretsManager, BusinessName, Enabled.
-    ///
-    /// Forward-application helper: capability flags are projected directly from
-    /// <paramref name="newPlan"/>, so calling with a lesser plan will silently
-    /// drop capabilities. Use only for known-forward plan transitions.
     /// </summary>
     public static void ChangePlan(this Organization organization, Plan newPlan)
     {

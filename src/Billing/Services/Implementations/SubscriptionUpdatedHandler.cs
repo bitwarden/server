@@ -557,22 +557,31 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             var previousSubscription = parsedEvent.Data.PreviousAttributes?.ToObject<Subscription>() as Subscription;
             if (previousSubscription?.Items?.Data == null)
             {
+                _logger.LogWarning(
+                    "Schedule-triggered business migration fired for organization ({OrganizationId}) but the event had no previous subscription items to inspect",
+                    organizationId);
                 return;
             }
 
             var assignment = await _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId);
             if (assignment == null)
             {
-                _logger.LogWarning(
-                    "Schedule-triggered business migration fired for organization ({OrganizationId}) but no cohort assignment row was found",
-                    organizationId);
                 return;
             }
 
             if (assignment.MigratedDate.HasValue)
             {
                 _logger.LogInformation(
-                    "Schedule-triggered business migration already applied for organization ({OrganizationId}); skipping (likely Stripe webhook retry)",
+                    "Schedule-triggered business migration already applied for organization ({OrganizationId}); skipping (assignment.MigratedDate is set)",
+                    organizationId);
+                return;
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            if (organization == null)
+            {
+                _logger.LogWarning(
+                    "Organization ({OrganizationId}) not found for schedule-triggered business migration",
                     organizationId);
                 return;
             }
@@ -600,7 +609,16 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
             var sourcePlan = await _pricingClient.GetPlanOrThrow(migrationPath.FromPlan);
             var sourcePriceId = GetPasswordManagerPriceId(sourcePlan);
-            if (string.IsNullOrEmpty(sourcePriceId) || !previousSubscription.Items.Data.Any(item =>
+            if (string.IsNullOrEmpty(sourcePriceId))
+            {
+                _logger.LogWarning(
+                    "Schedule-triggered business migration for organization ({OrganizationId}): source plan ({SourcePlanType}) has no resolvable PasswordManager price id; skipping",
+                    organizationId,
+                    sourcePlan.Type);
+                return;
+            }
+
+            if (!previousSubscription.Items.Data.Any(item =>
                     item.Price?.Id != null && item.Price.Id == sourcePriceId))
             {
                 return;
@@ -608,23 +626,22 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
             var targetPlan = await _pricingClient.GetPlanOrThrow(migrationPath.ToPlan);
             var targetPriceId = GetPasswordManagerPriceId(targetPlan);
+            if (string.IsNullOrEmpty(targetPriceId))
+            {
+                _logger.LogWarning(
+                    "Schedule-triggered business migration for organization ({OrganizationId}): target plan ({TargetPlanType}) has no resolvable PasswordManager price id; skipping",
+                    organizationId,
+                    targetPlan.Type);
+                return;
+            }
 
-            if (!subscription.Items.Any(item => item.Price.Id == targetPriceId))
+            if (!subscription.Items.Any(item => item.Price?.Id != null && item.Price.Id == targetPriceId))
             {
                 _logger.LogWarning(
                     "Schedule-triggered business migration for organization ({OrganizationId}): expected target price ({ExpectedPriceId}) for PlanType ({TargetPlanType}) not found in current subscription items; skipping",
                     organizationId,
                     targetPriceId,
                     targetPlan.Type);
-                return;
-            }
-
-            var organization = await _organizationRepository.GetByIdAsync(organizationId);
-            if (organization == null)
-            {
-                _logger.LogWarning(
-                    "Organization ({OrganizationId}) not found for schedule-triggered business migration",
-                    organizationId);
                 return;
             }
 

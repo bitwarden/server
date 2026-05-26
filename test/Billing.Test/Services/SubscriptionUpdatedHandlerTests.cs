@@ -2662,7 +2662,7 @@ public class SubscriptionUpdatedHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_BusinessMigration_NoAssignment_LogsWarningAndSkips()
+    public async Task HandleAsync_BusinessMigration_NoAssignment_SkipsSilently()
     {
         // Arrange
         var organizationId = Guid.NewGuid();
@@ -2720,14 +2720,15 @@ public class SubscriptionUpdatedHandlerTests
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert — no cohort lookup, no DB writes
+        // Assert — no cohort lookup, no DB writes, no warning (most orgs won't be in a cohort
+        // so logging per-event would be noisy)
         await _cohortRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
         await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
         await _cohortAssignmentRepository.DidNotReceive().ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
-        _logger.Received(1).Log(
+        _logger.DidNotReceive().Log(
             LogLevel.Warning,
             Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString().Contains(organizationId.ToString())),
+            Arg.Any<object>(),
             Arg.Any<Exception>(),
             Arg.Any<Func<object, Exception, string>>());
     }
@@ -3413,7 +3414,7 @@ public class SubscriptionUpdatedHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_BusinessMigration_PreviousAttributesHasNoItemsData_DoesNothing()
+    public async Task HandleAsync_BusinessMigration_PreviousAttributesHasNoItemsData_LogsWarningAndSkips()
     {
         // Arrange — Stripe ships customer.subscription.updated payloads where
         // PreviousAttributes exists but carries no `items.data` (e.g., metadata-only
@@ -3458,10 +3459,16 @@ public class SubscriptionUpdatedHandlerTests
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert — business handler bailed: no cohort lookup, no migration writes
+        // Assert — business handler bailed: no cohort lookup, no migration writes, warning logged
         await _cohortAssignmentRepository.DidNotReceive().GetByOrganizationIdAsync(Arg.Any<Guid>());
         await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
         await _cohortAssignmentRepository.DidNotReceive().ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
+        _logger.Received(1).Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(o => o.ToString().Contains(organizationId.ToString())),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception, string>>());
     }
 
     [Fact]
