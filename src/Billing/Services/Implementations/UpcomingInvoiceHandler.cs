@@ -375,10 +375,22 @@ public class UpcomingInvoiceHandler(
             }
 
             var cohort = await cohortRepository.GetByIdAsync(assignment.CohortId);
-            if (cohort?.MigrationPathId is null) return true;
+            if (cohort?.MigrationPathId is null)
+            {
+                logger.LogWarning(
+                    "Cohort ({CohortId}) missing or has no MigrationPathId; skipping renewal email for Organization ({OrganizationId})",
+                    assignment.CohortId, organization.Id);
+                return true;
+            }
 
             var migrationPath = MigrationPaths.FromId(cohort.MigrationPathId.Value);
-            if (migrationPath is null) return true;
+            if (migrationPath is null)
+            {
+                logger.LogWarning(
+                    "Unknown MigrationPathId ({MigrationPathId}) on cohort ({CohortId}); skipping renewal email for Organization ({OrganizationId})",
+                    cohort.MigrationPathId, cohort.Id, organization.Id);
+                return true;
+            }
 
             var sourcePlan = await pricingClient.GetPlanOrThrow(migrationPath.FromPlan);
             var targetPlan = await pricingClient.GetPlanOrThrow(migrationPath.ToPlan);
