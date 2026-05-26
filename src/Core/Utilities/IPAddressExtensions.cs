@@ -53,8 +53,8 @@ public static class IPAddressExtensions
     // gateway on the path would translate it back to the internal IPv4 host.
     private static readonly (IPNetwork Prefix, int IPv4ByteOffset)[] _ipv4EmbeddedIPv6Networks =
     [
-        (new IPNetwork(IPAddress.Parse("64:ff9b::"), 96), 12),    // RFC 6052 NAT64 well-known: IPv4 at bytes 12-15
-        (new IPNetwork(IPAddress.Parse("2002::"), 16), 2),        // RFC 3056 6to4: IPv4 at bytes 2-5
+        (new(IPAddress.Parse("64:ff9b::"), 96), 12),    // RFC 6052 NAT64 well-known: IPv4 at bytes 12-15
+        (new(IPAddress.Parse("2002::"), 16), 2),        // RFC 3056 6to4: IPv4 at bytes 2-5
     ];
 
     public static bool IsInternal(this IPAddress ip)
