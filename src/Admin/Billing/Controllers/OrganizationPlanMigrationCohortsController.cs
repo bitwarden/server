@@ -4,7 +4,6 @@ using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
 using Bit.Core;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
-using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
