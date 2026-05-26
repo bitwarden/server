@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Enums;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.PlanMigration;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
@@ -6,6 +7,7 @@ using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -46,6 +48,19 @@ public interface IPriceIncreaseScheduler
     Task<bool> ScheduleBusinessPriceIncrease(Subscription subscription, OrganizationPlanMigrationCohort cohort);
 
     /// <summary>
+    /// Creates a deferred price-increase schedule for the given subscription,
+    /// dispatching to the correct path based on the subscription owner.
+    /// </summary>
+    /// <param name="subscription">The Stripe subscription to schedule a price increase for.</param>
+    /// <param name="options">
+    /// Optional guards applied before scheduling.
+    /// </param>
+    /// <returns>True if a new schedule was created; false if skipped.</returns>
+    Task<bool> ScheduleForSubscription(
+        Subscription subscription,
+        OrganizationPriceIncreaseOptions? options = null);
+
+    /// <summary>
     /// Releases any active subscription schedule for the given subscription, cancelling a pending
     /// deferred price increase. Use when the subscription operation makes the scheduled migration
     /// irrelevant (e.g., plan upgrade, sponsorship, cancellation). Runs when either
@@ -61,7 +76,9 @@ public class PriceIncreaseScheduler(
     IStripeAdapter stripeAdapter,
     IFeatureService featureService,
     IPricingClient pricingClient,
+    IOrganizationRepository organizationRepository,
     IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
+    IOrganizationPlanMigrationCohortRepository cohortRepository,
     ILogger<PriceIncreaseScheduler> logger) : IPriceIncreaseScheduler
 {
     public async Task<bool> SchedulePersonalPriceIncrease(Subscription subscription)
@@ -167,6 +184,33 @@ public class PriceIncreaseScheduler(
             subscription.Id, assignment.Id);
 
         return true;
+    }
+
+    public async Task<bool> ScheduleForSubscription(
+        Subscription subscription,
+        OrganizationPriceIncreaseOptions? options = null)
+    {
+        try
+        {
+            SubscriberId subscriberId = subscription;
+            return await subscriberId.Match(
+                _ => SchedulePersonalPriceIncrease(subscription),
+                orgId => DispatchOrganizationScheduleAsync(subscription, orgId.Value, options),
+                _ =>
+                {
+                    logger.LogWarning(
+                        "Provider subscriptions do not support schedule recovery ({SubscriptionId})",
+                        subscription.Id);
+                    return Task.FromResult(false);
+                });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Failed to resolve subscriber type for subscription ({SubscriptionId}), cannot recover schedule",
+                subscription.Id);
+            return false;
+        }
     }
 
     public async Task Release(string customerId, string subscriptionId)
@@ -546,5 +590,91 @@ public class PriceIncreaseScheduler(
             ProrationBehavior = ProrationBehavior.None
         };
     }
+
+    /// <summary>
+    /// Coordinates the full organization scheduling flow. Resolves the organization, routes
+    /// non-business plan types (personal, family, and 2019-era plans) to the personal scheduling
+    /// path, then validates cohort eligibility before scheduling.
+    /// </summary>
+    private async Task<bool> DispatchOrganizationScheduleAsync(
+        Subscription subscription,
+        Guid organizationId,
+        OrganizationPriceIncreaseOptions? options)
+    {
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+        if (organization is null)
+        {
+            logger.LogError(
+                "Organization ({OrganizationId}) not found; cannot recover schedule for subscription ({SubscriptionId})",
+                organizationId, subscription.Id);
+            return false;
+        }
+
+        if (organization.PlanType.GetProductTier() is not (ProductTierType.Teams or ProductTierType.Enterprise))
+        {
+            return await SchedulePersonalPriceIncrease(subscription);
+        }
+
+        var assignment = await assignmentRepository.GetByOrganizationIdAsync(organization.Id);
+        if (assignment is null)
+        {
+            return false;
+        }
+
+        var cohort = await cohortRepository.GetByIdAsync(assignment.CohortId);
+        if (cohort is null)
+        {
+            return false;
+        }
+
+        if (!IsEligibleForScheduling(organization, assignment, cohort, options))
+        {
+            return false;
+        }
+
+        return await ScheduleBusinessPriceIncrease(subscription, cohort);
+    }
+
+    /// <summary>
+    /// Returns true if the organization is eligible for a business plan price increase.
+    /// Guards from <paramref name="options"/> are evaluated first against all resolved data;
+    /// structural eligibility checks follow.
+    /// </summary>
+    private bool IsEligibleForScheduling(
+        Organization organization,
+        OrganizationPlanMigrationCohortAssignment assignment,
+        OrganizationPlanMigrationCohort cohort,
+        OrganizationPriceIncreaseOptions? options)
+    {
+        if (options?.SkipIfAlreadyScheduled == true && assignment.ScheduledDate is not null)
+        {
+            return false;
+        }
+
+        if (!cohort.IsActive || cohort.MigrationPathId is null)
+        {
+            return false;
+        }
+
+        var migrationPath = MigrationPaths.FromId(cohort.MigrationPathId.Value);
+        if (migrationPath is null)
+        {
+            logger.LogError(
+                "Unknown MigrationPathId ({MigrationPathId}) on cohort ({CohortId}); skipping schedule for organization ({OrganizationId})",
+                cohort.MigrationPathId, cohort.Id, organization.Id);
+            return false;
+        }
+
+        if (organization.PlanType != migrationPath.FromPlan)
+        {
+            logger.LogWarning(
+                "Skipping schedule for Organization ({OrganizationId}); PlanType {ActualPlan} does not match cohort {CohortName} source {ExpectedPlan}",
+                organization.Id, organization.PlanType, cohort.Name, migrationPath.FromPlan);
+            return false;
+        }
+
+        return true;
+    }
+
 
 }
