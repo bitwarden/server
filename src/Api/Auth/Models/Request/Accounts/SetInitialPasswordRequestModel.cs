@@ -10,7 +10,9 @@ namespace Bit.Api.Auth.Models.Request.Accounts;
 
 public class SetInitialPasswordRequestModel : IValidatableObject
 {
-    // TODO will be removed with https://bitwarden.atlassian.net/browse/PM-27327
+    // TODO: removal requires that BOTH flags have been removed:
+    //  - https://bitwarden.atlassian.net/browse/PM-27327 (MP)
+    //  - https://bitwarden.atlassian.net/browse/PM-27329 (TDE)
     [Obsolete("Use MasterPasswordAuthentication instead")]
     [StringLength(300)]
     public string? MasterPasswordHash { get; set; }
@@ -43,7 +45,9 @@ public class SetInitialPasswordRequestModel : IValidatableObject
     [Required]
     public required string OrgIdentifier { get; set; }
 
-    // TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
+    // TODO: removal requires that BOTH flags have been removed:
+    //  - https://bitwarden.atlassian.net/browse/PM-27327 (MP)
+    //  - https://bitwarden.atlassian.net/browse/PM-27329 (TDE)
     public User ToUser(User existingUser)
     {
         existingUser.MasterPasswordHint = MasterPasswordHint;
@@ -53,6 +57,18 @@ public class SetInitialPasswordRequestModel : IValidatableObject
         existingUser.KdfParallelism = KdfParallelism;
         existingUser.Key = Key;
         Keys?.ToUser(existingUser);
+        return existingUser;
+    }
+
+    // TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
+    public User ToUserV1EncryptionFromNewDataTypes(User existingUser)
+    {
+        existingUser.MasterPasswordHint = MasterPasswordHint;
+        existingUser.Kdf = MasterPasswordAuthentication!.Kdf.KdfType;
+        existingUser.KdfIterations = MasterPasswordAuthentication.Kdf.Iterations;
+        existingUser.KdfMemory = MasterPasswordAuthentication.Kdf.Memory;
+        existingUser.KdfParallelism = MasterPasswordAuthentication.Kdf.Parallelism;
+        AccountKeys!.ToUserV1Encryption(existingUser);
         return existingUser;
     }
 
@@ -71,7 +87,9 @@ public class SetInitialPasswordRequestModel : IValidatableObject
         }
 
         // V1 registration
-        // TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
+        // TODO: removal requires that BOTH flags have been removed:
+        //  - https://bitwarden.atlassian.net/browse/PM-27327 (MP)
+        //  - https://bitwarden.atlassian.net/browse/PM-27329 (TDE)
         if (string.IsNullOrEmpty(MasterPasswordHash))
         {
             yield return new ValidationResult("MasterPasswordHash must be supplied.");

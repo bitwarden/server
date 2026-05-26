@@ -250,20 +250,67 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (model.IsV2Request())
+        // V2 encryption - TDE user with "manage account recovery" permission
+        if (
+            model.IsV2Request() &&
+            model.IsTdeSetPasswordRequest() &&
+            _featureService.IsEnabled(FeatureFlagKeys.V2RegistrationTDEJIT))
         {
-            if (model.IsTdeSetPasswordRequest())
+            await _tdeSetPasswordCommand.SetMasterPasswordAsync(user, model.ToData());
+            return;
+        }
+
+        // V2 encryption - MP JIT
+        if (
+            model.IsV2Request() &&
+            _featureService.IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration))
+        {
+            await _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, model.ToData());
+            return;
+        }
+
+        // V1 encryption - new data properties (MP JIT only - AccountKeys on the request means it's not a TDE user)
+        // TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
+        if (
+            model.MasterPasswordAuthentication != null &&
+            model.MasterPasswordUnlock != null &&
+            model.AccountKeys != null)
+        {
+            try
             {
-                await _tdeSetPasswordCommand.SetMasterPasswordAsync(user, model.ToData());
+                user = model.ToUserV1EncryptionFromNewDataTypes(user);
             }
-            else
+            catch (Exception e)
             {
-                await _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, model.ToData());
+                ModelState.AddModelError(string.Empty, e.Message);
+                throw new BadRequestException(ModelState);
             }
+
+            var result = await _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
+                user,
+                model.MasterPasswordAuthentication.MasterPasswordAuthenticationHash,
+                model.MasterPasswordUnlock.MasterKeyWrappedUserKey,
+                model.OrgIdentifier
+            );
+
+            if (result.Succeeded)
+            {
+                return;
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
+            throw new BadRequestException(ModelState);
         }
         else
         {
-            // TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
+            // V1 encryption - legacy data properties
+            // TODO: code removal requires that BOTH flags have been removed:
+            //  - https://bitwarden.atlassian.net/browse/PM-27327 (MP)
+            //  - https://bitwarden.atlassian.net/browse/PM-27329 (TDE)
             try
             {
                 user = model.ToUser(user);
