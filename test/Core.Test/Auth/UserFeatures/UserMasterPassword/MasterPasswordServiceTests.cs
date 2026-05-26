@@ -1210,4 +1210,72 @@ public class MasterPasswordServiceTests
         Assert.Throws<ArgumentException>(
             () => sutProvider.Sut.PrepareClearMasterPassword(user));
     }
+
+    /// <summary>
+    /// The Key Connector conversion flow depends on these surviving — the caller may re-wrap
+    /// <see cref="User.Key"/> and must not lose the other user state when the credential is cleared.
+    /// </summary>
+    [Theory, BitAutoData]
+    public void PrepareClearMasterPassword_PreservesUnrelatedUserState(User user)
+    {
+        var sutProvider = CreateSutProvider();
+        user.MasterPassword = "existing-hash";
+        user.MasterPasswordSalt = "existing-salt";
+        user.MasterPasswordHint = "existing-hint";
+        user.Key = "wrapped-user-key";
+        user.Kdf = KdfType.Argon2id;
+        user.KdfIterations = 3;
+        user.KdfMemory = 64;
+        user.KdfParallelism = 4;
+
+        sutProvider.Sut.PrepareClearMasterPassword(user);
+
+        Assert.Equal("wrapped-user-key", user.Key);
+        Assert.Equal("existing-hint", user.MasterPasswordHint);
+        Assert.Equal(KdfType.Argon2id, user.Kdf);
+        Assert.Equal(3, user.KdfIterations);
+        Assert.Equal(64, user.KdfMemory);
+        Assert.Equal(4, user.KdfParallelism);
+    }
+
+    /// <summary>
+    /// Unlike every other write path in this service, <c>PrepareClearMasterPassword</c> takes no
+    /// <c>RefreshStamp</c> flag — Key Connector conversion preserves the user-key capability so
+    /// sessions stay valid. Locking this in stops a future contributor from quietly adding
+    /// rotation without revisiting the contract.
+    /// </summary>
+    [Theory, BitAutoData]
+    public void PrepareClearMasterPassword_DoesNotRotateSecurityStamp(User user)
+    {
+        var sutProvider = CreateSutProvider();
+        user.MasterPassword = "existing-hash";
+        user.MasterPasswordSalt = "existing-salt";
+        var originalStamp = user.SecurityStamp;
+
+        sutProvider.Sut.PrepareClearMasterPassword(user);
+
+        Assert.Equal(originalStamp, user.SecurityStamp);
+    }
+
+    /// <summary>
+    /// The XML doc claims no constraints on the user's current master password state. Calling
+    /// on an already-cleared user must succeed and still bump revision dates.
+    /// </summary>
+    [Theory, BitAutoData]
+    public void PrepareClearMasterPassword_AlreadyCleared_SucceedsAndUpdatesRevisionDates(User user)
+    {
+        var sutProvider = CreateSutProvider();
+        user.MasterPassword = null;
+        user.MasterPasswordSalt = null;
+
+        var result = sutProvider.Sut.PrepareClearMasterPassword(user);
+
+        var expectedTime = sutProvider.GetDependency<TimeProvider>().GetUtcNow().UtcDateTime;
+
+        Assert.Same(user, result);
+        Assert.Null(user.MasterPassword);
+        Assert.Null(user.MasterPasswordSalt);
+        Assert.Equal(expectedTime, user.RevisionDate);
+        Assert.Equal(expectedTime, user.AccountRevisionDate);
+    }
 }
