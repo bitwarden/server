@@ -84,14 +84,6 @@ public class CreatePremiumCheckoutSessionCommand(
         string originatingAppVersion,
         string originatingPlatform)
     {
-        logger.LogInformation(
-            "Premium checkout GlobalSettings.Stripe values - PremiumCheckoutSuccessUrl: {PremiumCheckoutSuccessUrl}, PremiumCheckoutCancelUrl: {PremiumCheckoutCancelUrl}, BrowserPremiumCheckoutSuccessUrl: {BrowserPremiumCheckoutSuccessUrl}, BrowserPremiumCheckoutCancelUrl: {BrowserPremiumCheckoutCancelUrl}, DesktopPremiumCheckoutSuccessUrl: {DesktopPremiumCheckoutSuccessUrl}, DesktopPremiumCheckoutCancelUrl: {DesktopPremiumCheckoutCancelUrl}",
-            globalSettings.Stripe.PremiumCheckoutSuccessUrl,
-            globalSettings.Stripe.PremiumCheckoutCancelUrl,
-            globalSettings.Stripe.BrowserPremiumCheckoutSuccessUrl,
-            globalSettings.Stripe.BrowserPremiumCheckoutCancelUrl,
-            globalSettings.Stripe.DesktopPremiumCheckoutSuccessUrl,
-            globalSettings.Stripe.DesktopPremiumCheckoutCancelUrl);
         var (successUrl, cancelUrl) = GetCheckoutUrls(originatingPlatform);
 
         return new SessionCreateOptions
