@@ -367,11 +367,11 @@ public class UpcomingInvoiceHandler(
                 await WaitForTestClockToAdvanceAsync(subscription.TestClock);
             }
 
-            var scheduled = await priceIncreaseScheduler.ScheduleForSubscription(subscription);
+            var migrationScheduled = await priceIncreaseScheduler.ScheduleForSubscription(subscription);
 
-            if (!scheduled)
+            if (!migrationScheduled)
             {
-                return true;
+                return false;
             }
 
             var cohort = await cohortRepository.GetByIdAsync(assignment.CohortId);
