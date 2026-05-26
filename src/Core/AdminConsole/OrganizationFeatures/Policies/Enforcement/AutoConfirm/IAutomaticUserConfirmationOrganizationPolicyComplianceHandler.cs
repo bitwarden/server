@@ -12,7 +12,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoCo
 ///     <item>No organization users are provider members</item>
 /// </list>
 /// </remarks>
-public interface IAutomaticUserConfirmationOrganizationPolicyComplianceValidator
+public interface IAutomaticUserConfirmationOrganizationPolicyComplianceHandler
 {
     /// <summary>
     /// Checks whether the organization is compliant with the Automatic User Confirmation policy prerequisites.
@@ -23,6 +23,6 @@ public interface IAutomaticUserConfirmationOrganizationPolicyComplianceValidator
     /// or contains a <see cref="UserNotCompliantWithSingleOrganization"/> or <see cref="ProviderExistsInOrganization"/>
     /// error if validation fails.
     /// </returns>
-    Task<ValidationResult<AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest>>
-        IsOrganizationCompliantAsync(AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest request);
+    Task<ValidationResult<AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest>>
+        IsOrganizationCompliantAsync(AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest request);
 }
