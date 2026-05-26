@@ -6,11 +6,21 @@ namespace Bit.Core.Billing.Organizations.Extensions;
 public static class OrganizationPlanExtensions
 {
     /// <summary>
-    /// Applies the structural plan-shape fields of <paramref name="newPlan"/> to
+    /// Applies the structural plan-shape of <paramref name="newPlan"/> to
     /// <paramref name="organization"/>. Pure mutation — no IO, no persistence, no
-    /// validation. Customer-purchase columns (Seats, MaxStorageGb, SmSeats,
-    /// SmServiceAccounts, MaxAutoscale*, UseSecretsManager, BusinessName, Enabled)
-    /// are owned by callers and not touched here.
+    /// validation.
+    ///
+    /// Structural plan-shape fields written by this helper:
+    ///   PlanType, Plan, all Use* capability flags, UsersGetPremium,
+    ///   MaxCollections, UsePasswordManager.
+    ///
+    /// Customer-purchase fields intentionally NOT touched (owned by callers):
+    ///   Seats, MaxStorageGb, SmSeats, SmServiceAccounts, MaxAutoscale*,
+    ///   UseSecretsManager, BusinessName, Enabled.
+    ///
+    /// Forward-application helper: capability flags are projected directly from
+    /// <paramref name="newPlan"/>, so calling with a lesser plan will silently
+    /// drop capabilities. Use only for known-forward plan transitions.
     /// </summary>
     public static void ChangePlan(this Organization organization, Plan newPlan)
     {

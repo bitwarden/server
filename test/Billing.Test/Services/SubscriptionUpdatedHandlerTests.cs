@@ -52,6 +52,7 @@ public class SubscriptionUpdatedHandlerTests
     private readonly IFeatureService _featureService;
     private readonly IOrganizationPlanMigrationCohortRepository _cohortRepository;
     private readonly IOrganizationPlanMigrationCohortAssignmentRepository _cohortAssignmentRepository;
+    private readonly ILogger<SubscriptionUpdatedHandler> _logger;
     private readonly SubscriptionUpdatedHandler _sut;
 
     public SubscriptionUpdatedHandlerTests()
@@ -75,6 +76,7 @@ public class SubscriptionUpdatedHandlerTests
         _featureService = Substitute.For<IFeatureService>();
         _cohortRepository = Substitute.For<IOrganizationPlanMigrationCohortRepository>();
         _cohortAssignmentRepository = Substitute.For<IOrganizationPlanMigrationCohortAssignmentRepository>();
+        _logger = Substitute.For<ILogger<SubscriptionUpdatedHandler>>();
 
         _sut = new SubscriptionUpdatedHandler(
             _stripeEventService,
@@ -95,7 +97,7 @@ public class SubscriptionUpdatedHandlerTests
             _featureService,
             _cohortRepository,
             _cohortAssignmentRepository,
-            Substitute.For<ILogger<SubscriptionUpdatedHandler>>());
+            _logger);
     }
 
     [Fact]
@@ -2504,7 +2506,9 @@ public class SubscriptionUpdatedHandlerTests
     {
         // Arrange
         var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
         var subscriptionId = "sub_unrelated_item";
+        var enterprise2020Annual = new Enterprise2020Plan(true);
 
         var previousSubscription = new Subscription
         {
@@ -2557,19 +2561,34 @@ public class SubscriptionUpdatedHandlerTests
             .Returns(subscription);
         _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
         _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
-        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(new Enterprise2020Plan(true));
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(enterprise2020Annual);
         _pricingClient.GetPlanOrThrow(PlanType.EnterpriseMonthly2020).Returns(new Enterprise2020Plan(false));
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually2020).Returns(new Teams2020Plan(true));
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(new Teams2020Plan(false));
         _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(
+            new OrganizationPlanMigrationCohortAssignment
+            {
+                Id = Guid.NewGuid(),
+                OrganizationId = organizationId,
+                CohortId = cohortId
+            });
+        _cohortRepository.GetByIdAsync(cohortId).Returns(new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "Enterprise2020Annual",
+            MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
+            IsActive = true
+        });
 
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert — previous item carries no registered 2020 source price, so we skip
-        // before any cohort lookups.
-        await _cohortAssignmentRepository.DidNotReceive().GetByOrganizationIdAsync(Arg.Any<Guid>());
+        // Assert — handler resolved the path, then bailed at the source-price intersection.
+        // No target-plan lookup, no org write, no assignment stamp.
+        await _pricingClient.DidNotReceive().GetPlanOrThrow(PlanType.EnterpriseAnnually);
         await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+        await _cohortAssignmentRepository.DidNotReceive().ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
     }
 
     [Fact]
@@ -2705,6 +2724,12 @@ public class SubscriptionUpdatedHandlerTests
         await _cohortRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
         await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
         await _cohortAssignmentRepository.DidNotReceive().ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
+        _logger.Received(1).Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(o => o.ToString().Contains(organizationId.ToString())),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception, string>>());
     }
 
     [Fact]
@@ -2777,6 +2802,12 @@ public class SubscriptionUpdatedHandlerTests
         // Assert — cohort missing, no DB writes
         await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
         await _cohortAssignmentRepository.DidNotReceive().ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
+        _logger.Received(1).Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(o => o.ToString().Contains(organizationId.ToString()) && o.ToString().Contains(cohortId.ToString())),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception, string>>());
     }
 
     [Fact]
@@ -2937,6 +2968,12 @@ public class SubscriptionUpdatedHandlerTests
         // Assert — sanity check fired, no writes
         await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
         await _cohortAssignmentRepository.DidNotReceive().ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
+        _logger.Received(1).Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(o => o.ToString().Contains(organizationId.ToString())),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception, string>>());
     }
 
     [Fact]
@@ -3047,6 +3084,7 @@ public class SubscriptionUpdatedHandlerTests
             o.Id == organizationId && o.PlanType == PlanType.EnterpriseAnnually));
 
         Assert.NotNull(assignment.MigratedDate);
+        Assert.NotEqual(default, assignment.RevisionDate);
         await _cohortAssignmentRepository.Received(1).ReplaceAsync(
             Arg.Is<OrganizationPlanMigrationCohortAssignment>(a => a.Id == assignmentId && a.MigratedDate.HasValue));
     }
@@ -3152,6 +3190,7 @@ public class SubscriptionUpdatedHandlerTests
         await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
             o.Id == organizationId && o.PlanType == PlanType.EnterpriseMonthly));
         Assert.NotNull(assignment.MigratedDate);
+        Assert.NotEqual(default, assignment.RevisionDate);
         await _cohortAssignmentRepository.Received(1).ReplaceAsync(
             Arg.Is<OrganizationPlanMigrationCohortAssignment>(a => a.Id == assignmentId && a.MigratedDate.HasValue));
     }
@@ -3260,6 +3299,7 @@ public class SubscriptionUpdatedHandlerTests
         await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
             o.Id == organizationId && o.PlanType == PlanType.TeamsAnnually));
         Assert.NotNull(assignment.MigratedDate);
+        Assert.NotEqual(default, assignment.RevisionDate);
         await _cohortAssignmentRepository.Received(1).ReplaceAsync(
             Arg.Is<OrganizationPlanMigrationCohortAssignment>(a => a.Id == assignmentId && a.MigratedDate.HasValue));
     }
@@ -3367,6 +3407,7 @@ public class SubscriptionUpdatedHandlerTests
         await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
             o.Id == organizationId && o.PlanType == PlanType.TeamsMonthly));
         Assert.NotNull(assignment.MigratedDate);
+        Assert.NotEqual(default, assignment.RevisionDate);
         await _cohortAssignmentRepository.Received(1).ReplaceAsync(
             Arg.Is<OrganizationPlanMigrationCohortAssignment>(a => a.Id == assignmentId && a.MigratedDate.HasValue));
     }
@@ -3501,6 +3542,12 @@ public class SubscriptionUpdatedHandlerTests
         await _pricingClient.DidNotReceive().GetPlanOrThrow(PlanType.EnterpriseAnnually);
         await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
         await _cohortAssignmentRepository.DidNotReceive().ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
+        _logger.Received(1).Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(o => o.ToString().Contains(organizationId.ToString()) && o.ToString().Contains(cohortId.ToString())),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception, string>>());
     }
 
     [Fact]
@@ -3584,6 +3631,12 @@ public class SubscriptionUpdatedHandlerTests
         // Assert — unregistered path is a safe skip; no NRE, no target lookup, no writes
         await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
         await _cohortAssignmentRepository.DidNotReceive().ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
+        _logger.Received(1).Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(o => o.ToString().Contains(organizationId.ToString()) && o.ToString().Contains(cohortId.ToString())),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception, string>>());
     }
 
     [Fact]

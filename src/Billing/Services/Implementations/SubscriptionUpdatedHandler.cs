@@ -148,10 +148,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                         await HandleScheduleTriggeredFamiliesMigrationAsync(parsedEvent, subscription, organization.Id);
                     }
 
-                    if (_featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
-                    {
-                        await HandleScheduleTriggeredBusinessMigrationAsync(parsedEvent, subscription, organization.Id);
-                    }
+                    await HandleScheduleTriggeredBusinessMigrationAsync(parsedEvent, subscription, organization.Id);
 
                     await _organizationService.UpdateExpirationDateAsync(organization.Id, currentPeriodEnd);
 
@@ -547,6 +544,11 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     {
         try
         {
+            if (!_featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
+            {
+                return;
+            }
+
             if (subscription.ScheduleId == null)
             {
                 return;
@@ -554,25 +556,6 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
             var previousSubscription = parsedEvent.Data.PreviousAttributes?.ToObject<Subscription>() as Subscription;
             if (previousSubscription?.Items?.Data == null)
-            {
-                return;
-            }
-
-            var sourcePriceIds = new HashSet<string>();
-            foreach (var path in MigrationPaths.All)
-            {
-                var sourcePlan = await _pricingClient.GetPlanOrThrow(path.FromPlan);
-                var priceId = sourcePlan.HasNonSeatBasedPasswordManagerPlan()
-                    ? sourcePlan.PasswordManager.StripePlanId
-                    : sourcePlan.PasswordManager.StripeSeatPlanId;
-                if (!string.IsNullOrEmpty(priceId))
-                {
-                    sourcePriceIds.Add(priceId);
-                }
-            }
-
-            if (!previousSubscription.Items.Data.Any(item =>
-                    item.Price?.Id != null && sourcePriceIds.Contains(item.Price.Id)))
             {
                 return;
             }
@@ -615,14 +598,18 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 return;
             }
 
-            var targetPlan = await _pricingClient.GetPlanOrThrow(migrationPath.ToPlan);
-            var targetPriceId = targetPlan.HasNonSeatBasedPasswordManagerPlan()
-                ? targetPlan.PasswordManager.StripePlanId
-                : targetPlan.PasswordManager.StripeSeatPlanId;
+            var sourcePlan = await _pricingClient.GetPlanOrThrow(migrationPath.FromPlan);
+            var sourcePriceId = GetPasswordManagerPriceId(sourcePlan);
+            if (string.IsNullOrEmpty(sourcePriceId) || !previousSubscription.Items.Data.Any(item =>
+                    item.Price?.Id != null && item.Price.Id == sourcePriceId))
+            {
+                return;
+            }
 
-            var currentHasTarget = subscription.Items?.Any(item =>
-                item.Price?.Id == targetPriceId) ?? false;
-            if (!currentHasTarget)
+            var targetPlan = await _pricingClient.GetPlanOrThrow(migrationPath.ToPlan);
+            var targetPriceId = GetPasswordManagerPriceId(targetPlan);
+
+            if (!subscription.Items.Any(item => item.Price.Id == targetPriceId))
             {
                 _logger.LogWarning(
                     "Schedule-triggered business migration for organization ({OrganizationId}): expected target price ({ExpectedPriceId}) for PlanType ({TargetPlanType}) not found in current subscription items; skipping",
@@ -652,11 +639,11 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             }
             catch (Exception assignmentException)
             {
-                // The organization was migrated successfully but stamping MigratedDate on
-                // the cohort assignment failed — partial-write window. Log with full cohort
-                // context so the inconsistent state is observable, then surface as a
-                // BillingException so the outer catch rethrows and Stripe retries; ChangePlan
-                // is idempotent so the next retry safely re-applies and finishes the stamp.
+                // Partial-write window: the organization was migrated successfully but the
+                // assignment stamp failed. Log full cohort context so the inconsistent state
+                // is observable, then surface as a BillingException. Stripe replays the same
+                // event payload on retry and ChangePlan is structurally idempotent — re-applying
+                // the same target plan shape is a no-op, and the assignment stamp re-runs cleanly.
                 _logger.LogError(
                     assignmentException,
                     "Business migration applied to organization ({OrganizationId}) but failed to stamp MigratedDate on cohort assignment ({CohortId}, MigrationPathId {MigrationPathId}); Stripe retry will re-apply",
@@ -677,10 +664,10 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         }
         catch (BillingException)
         {
-            // GetPlanOrThrow throws BillingException when the plan cannot be resolved
-            // (pricing-service errors, unknown plan types, malformed responses). Rethrow
-            // so the webhook returns 500 and Stripe retries once the underlying issue
-            // is resolved.
+            // Rethrow distinguishes a partial-write or pricing-service failure from a regular
+            // catch-all; without this, the generic catch below would swallow it and Stripe
+            // would not retry. GetPlanOrThrow surfaces BillingException for pricing-service
+            // errors, unknown plan types, and malformed responses.
             throw;
         }
         catch (Exception exception)
@@ -691,4 +678,9 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 organizationId);
         }
     }
+
+    private static string GetPasswordManagerPriceId(Bit.Core.Models.StaticStore.Plan plan) =>
+        plan.HasNonSeatBasedPasswordManagerPlan()
+            ? plan.PasswordManager.StripePlanId
+            : plan.PasswordManager.StripeSeatPlanId;
 }
