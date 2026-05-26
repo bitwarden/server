@@ -150,6 +150,11 @@ public class SetInitialPasswordRequestModel : IValidatableObject
         return AccountKeys == null;
     }
 
+    public bool IsJitMpSetPasswordRequest()
+    {
+        return AccountKeys != null;
+    }
+
     public SetInitialMasterPasswordDataModel ToData()
     {
         return new SetInitialMasterPasswordDataModel

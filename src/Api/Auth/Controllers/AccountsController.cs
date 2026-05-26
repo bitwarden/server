@@ -263,6 +263,7 @@ public class AccountsController : Controller
         // V2 encryption - MP JIT
         if (
             model.HasAuthAndUnlockData() &&
+            model.IsJitMpSetPasswordRequest() &&
             _featureService.IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration))
         {
             await _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, model.ToData());
@@ -273,7 +274,7 @@ public class AccountsController : Controller
         // TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
         if (
             model.HasAuthAndUnlockData() &&
-            model.AccountKeys != null)
+            model.IsJitMpSetPasswordRequest())
         {
             try
             {
