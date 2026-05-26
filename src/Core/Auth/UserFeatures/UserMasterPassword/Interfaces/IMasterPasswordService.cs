@@ -335,6 +335,10 @@ public interface IMasterPasswordService
     /// </para>
     ///
     /// <para>
+    /// Constraints: None — applies regardless of the user's current master password state.
+    /// </para>
+    ///
+    /// <para>
     /// Side effects on <paramref name="user"/>:
     /// <list type="bullet">
     ///   <item><c>MasterPassword</c> → <c>null</c></item>
