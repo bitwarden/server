@@ -4,6 +4,8 @@ using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
 using Bit.Core;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
+using Bit.Core.Billing.Organizations.PlanMigration.Models;
+using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Services;
@@ -20,8 +22,8 @@ public class OrganizationPlanMigrationCohortsController(
     IOrganizationPlanMigrationCohortRepository cohortRepository,
     IStripeAdapter stripeAdapter,
     ILogger<OrganizationPlanMigrationCohortsController> logger,
-    IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
-    IFeatureService featureService) : Controller
+    IFeatureService featureService,
+    IGetCohortAssignmentStateQuery getCohortAssignmentStateQuery) : Controller
 {
     private const int _defaultPageSize = 25;
 
@@ -112,9 +114,9 @@ public class OrganizationPlanMigrationCohortsController(
 
         ViewData["CohortType"] = CohortType.From(cohort.MigrationPathId);
         ViewData["IsActive"] = cohort.IsActive;
-        var nonPendingCount = await assignmentRepository.GetCohortNonPendingAssignmentsCountAsync(id);
-        ViewData["MigrationPathLocked"] = cohort.IsMigrationPathLocked(nonPendingCount);
-        ViewData["NonPendingAssignmentCount"] = nonPendingCount;
+        var assignmentState = await getCohortAssignmentStateQuery.Run(cohort);
+        ViewData["MigrationPathLocked"] = assignmentState.HasNonPendingAssignments;
+        ViewData["NonPendingAssignmentCount"] = assignmentState.NonPendingAssignmentCount;
         return View(ToFormModel(cohort));
     }
 
@@ -133,12 +135,11 @@ public class OrganizationPlanMigrationCohortsController(
         ViewData["CohortType"] = CohortType.From(cohort.MigrationPathId);
         ViewData["IsActive"] = cohort.IsActive;
 
-        var nonPendingCount = await assignmentRepository.GetCohortNonPendingAssignmentsCountAsync(id);
-        var migrationPathLocked = cohort.IsMigrationPathLocked(nonPendingCount);
-        ViewData["MigrationPathLocked"] = migrationPathLocked;
-        ViewData["NonPendingAssignmentCount"] = nonPendingCount;
+        var assignmentState = await getCohortAssignmentStateQuery.Run(cohort);
+        ViewData["MigrationPathLocked"] = assignmentState.HasNonPendingAssignments;
+        ViewData["NonPendingAssignmentCount"] = assignmentState.NonPendingAssignmentCount;
 
-        if (migrationPathLocked)
+        if (assignmentState.HasNonPendingAssignments)
         {
             // The locked view doesn't post a value for MigrationPathSelection.
             // Restore from the persisted cohort so [Required] passes and the eventual
@@ -250,11 +251,11 @@ public class OrganizationPlanMigrationCohortsController(
 
         try
         {
-            var nonPendingCount = await assignmentRepository.GetCohortNonPendingAssignmentsCountAsync(id);
-            if (nonPendingCount > 0)
+            var assignmentState = await getCohortAssignmentStateQuery.Run(cohort);
+            if (assignmentState.HasNonPendingAssignments)
             {
                 TempData["Error"] =
-                    $"Cannot delete cohort '{cohort.Name}' because {nonPendingCount:N0} " +
+                    $"Cannot delete cohort '{cohort.Name}' because {assignmentState.NonPendingAssignmentCount:N0} " +
                     "assignment(s) have left the Pending state. Historical migration and " +
                     "save-offer records are preserved.";
                 return RedirectToAction(nameof(Edit), new { id });

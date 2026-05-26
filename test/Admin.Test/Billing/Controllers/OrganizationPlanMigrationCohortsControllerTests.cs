@@ -4,6 +4,7 @@ using Bit.Core;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Models;
+using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Services;
@@ -258,6 +259,8 @@ public class OrganizationPlanMigrationCohortsControllerTests
 
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
             .GetByIdAsync(cohort.Id).Returns(cohort);
+        sutProvider.GetDependency<IGetCohortAssignmentStateQuery>()
+            .Run(Arg.Any<OrganizationPlanMigrationCohort>()).Returns(new CohortAssignmentState(0));
 
         var result = await sutProvider.Sut.Edit(cohort.Id);
 
@@ -290,6 +293,8 @@ public class OrganizationPlanMigrationCohortsControllerTests
             .GetByIdAsync(id).Returns(existing);
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
             .GetByNameAsync(model.Name).Returns((OrganizationPlanMigrationCohort?)null);
+        sutProvider.GetDependency<IGetCohortAssignmentStateQuery>()
+            .Run(Arg.Any<OrganizationPlanMigrationCohort>()).Returns(new CohortAssignmentState(0));
 
         sutProvider.Sut.TempData = new TempDataDictionary(
             new DefaultHttpContext(),
@@ -327,6 +332,8 @@ public class OrganizationPlanMigrationCohortsControllerTests
             .GetByIdAsync(id).Returns(existing);
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
             .GetByNameAsync(model.Name).Returns(existing);
+        sutProvider.GetDependency<IGetCohortAssignmentStateQuery>()
+            .Run(Arg.Any<OrganizationPlanMigrationCohort>()).Returns(new CohortAssignmentState(0));
 
         sutProvider.Sut.TempData = new TempDataDictionary(
             new DefaultHttpContext(),
@@ -355,6 +362,8 @@ public class OrganizationPlanMigrationCohortsControllerTests
 
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
             .GetByIdAsync(id).Returns(existing);
+        sutProvider.GetDependency<IGetCohortAssignmentStateQuery>()
+            .Run(Arg.Any<OrganizationPlanMigrationCohort>()).Returns(new CohortAssignmentState(0));
 
         sutProvider.Sut.ModelState.AddModelError("force", "trigger invalid state");
 
@@ -378,8 +387,8 @@ public class OrganizationPlanMigrationCohortsControllerTests
 
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
             .GetByIdAsync(id).Returns(cohort);
-        sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
-            .GetCohortNonPendingAssignmentsCountAsync(id).Returns(3);
+        sutProvider.GetDependency<IGetCohortAssignmentStateQuery>()
+            .Run(Arg.Any<OrganizationPlanMigrationCohort>()).Returns(new CohortAssignmentState(3));
 
         sutProvider.Sut.TempData = new TempDataDictionary(
             new DefaultHttpContext(),
@@ -407,8 +416,8 @@ public class OrganizationPlanMigrationCohortsControllerTests
 
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
             .GetByIdAsync(id).Returns(cohort);
-        sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
-            .GetCohortNonPendingAssignmentsCountAsync(id).Returns(0);
+        sutProvider.GetDependency<IGetCohortAssignmentStateQuery>()
+            .Run(Arg.Any<OrganizationPlanMigrationCohort>()).Returns(new CohortAssignmentState(0));
 
         sutProvider.Sut.TempData = new TempDataDictionary(
             new DefaultHttpContext(),
@@ -533,8 +542,8 @@ public class OrganizationPlanMigrationCohortsControllerTests
             .Returns(true);
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
             .GetByIdAsync(cohort.Id).Returns(cohort);
-        sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
-            .GetCohortNonPendingAssignmentsCountAsync(cohort.Id).Returns(3);
+        sutProvider.GetDependency<IGetCohortAssignmentStateQuery>()
+            .Run(Arg.Any<OrganizationPlanMigrationCohort>()).Returns(new CohortAssignmentState(3));
 
         var result = await sutProvider.Sut.Edit(cohort.Id);
 
@@ -563,8 +572,8 @@ public class OrganizationPlanMigrationCohortsControllerTests
 
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
             .GetByIdAsync(id).Returns(existing);
-        sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
-            .GetCohortNonPendingAssignmentsCountAsync(id).Returns(7);
+        sutProvider.GetDependency<IGetCohortAssignmentStateQuery>()
+            .Run(Arg.Any<OrganizationPlanMigrationCohort>()).Returns(new CohortAssignmentState(7));
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
             .GetByNameAsync(model.Name).Returns(existing);
 
@@ -603,8 +612,8 @@ public class OrganizationPlanMigrationCohortsControllerTests
 
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
             .GetByIdAsync(id).Returns(existing);
-        sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
-            .GetCohortNonPendingAssignmentsCountAsync(id).Returns(0);
+        sutProvider.GetDependency<IGetCohortAssignmentStateQuery>()
+            .Run(Arg.Any<OrganizationPlanMigrationCohort>()).Returns(new CohortAssignmentState(0));
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
             .GetByNameAsync(model.Name).Returns(existing);
 
