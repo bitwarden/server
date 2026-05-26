@@ -244,6 +244,8 @@ public static class StripeConstants
         {
             public const string Ios = "ios";
             public const string Android = "android";
+            public const string Browser = "browser";
+            public const string Desktop = "desktop";
         }
     }
 
