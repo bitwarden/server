@@ -17,6 +17,7 @@ public class CohortFormModel : IValidatableObject
         },
         ProactiveDiscountCouponCode = cohort.ProactiveDiscountCouponCode,
         ChurnDiscountCouponCode = cohort.ChurnDiscountCouponCode,
+        IsActive = cohort.IsActive,
     };
 
     public Guid? Id { get; set; }
@@ -37,6 +38,9 @@ public class CohortFormModel : IValidatableObject
     [MaxLength(64)]
     [Display(Name = "Churn discount coupon")]
     public string? ChurnDiscountCouponCode { get; set; }
+
+    [Display(Name = "Active")]
+    public bool IsActive { get; set; }
 
     public MigrationPathId? GetMigrationPathId()
     {

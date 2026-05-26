@@ -8,7 +8,6 @@ public class EditCohortViewModel
 {
     public required CohortFormModel FormModel { get; init; }
     public required CohortType CohortType { get; init; }
-    public required bool IsActive { get; init; }
     public required CohortAssignmentState AssignmentState { get; init; }
 
     public static EditCohortViewModel From(
@@ -19,7 +18,6 @@ public class EditCohortViewModel
         {
             FormModel = formModel,
             CohortType = CohortType.From(cohort.MigrationPathId),
-            IsActive = cohort.IsActive,
             AssignmentState = assignmentState,
         };
 }

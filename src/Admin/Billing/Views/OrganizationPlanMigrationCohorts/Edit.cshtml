@@ -68,7 +68,7 @@
 
 <div class="card my-4">
     <div class="card-body d-flex align-items-center">
-        @if (Model.IsActive)
+        @if (Model.FormModel.IsActive)
         {
             <form method="post" asp-action="Disable" asp-route-id="@Model.FormModel.Id">
                 <button class="btn btn-secondary" type="submit">Disable</button>

@@ -272,7 +272,7 @@ public class OrganizationPlanMigrationCohortsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Edit_Post_HappyPath_UpdatesCohortAndBumpsRevisionDate(
+    public async Task Edit_Post_HappyPath_PersistsActiveCohortAndBumpsRevisionDate(
         Guid id,
         CohortFormModel model,
         OrganizationPlanMigrationCohort existing,
@@ -282,11 +282,13 @@ public class OrganizationPlanMigrationCohortsControllerTests
             .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
             .Returns(true);
         existing.Id = id;
+        existing.IsActive = false;
         existing.RevisionDate = DateTime.UtcNow.AddDays(-1);
         model.Id = id;
         model.MigrationPathSelection = "1";
         model.ProactiveDiscountCouponCode = null;
         model.ChurnDiscountCouponCode = null;
+        model.IsActive = true;
         var before = existing.RevisionDate;
 
         sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
@@ -309,7 +311,45 @@ public class OrganizationPlanMigrationCohortsControllerTests
                 c.Id == id
                 && c.Name == model.Name
                 && c.MigrationPathId == MigrationPathId.Enterprise2020AnnualToCurrent
+                && c.IsActive
                 && c.RevisionDate > before));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Edit_Post_HappyPath_PersistsInactiveWhenCheckboxUnchecked(
+        Guid id,
+        CohortFormModel model,
+        OrganizationPlanMigrationCohort existing,
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
+        existing.Id = id;
+        existing.IsActive = true;
+        model.Id = id;
+        model.MigrationPathSelection = "1";
+        model.ProactiveDiscountCouponCode = null;
+        model.ChurnDiscountCouponCode = null;
+        model.IsActive = false;
+
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(id).Returns(existing);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByNameAsync(model.Name).Returns((OrganizationPlanMigrationCohort?)null);
+        sutProvider.GetDependency<IGetCohortAssignmentStateQuery>()
+            .Run(Arg.Any<OrganizationPlanMigrationCohort>()).Returns(new CohortAssignmentState(0));
+
+        sutProvider.Sut.TempData = new TempDataDictionary(
+            new DefaultHttpContext(),
+            Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.Edit(id, model);
+
+        Assert.IsType<RedirectToActionResult>(result);
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationPlanMigrationCohort>(c => !c.IsActive));
     }
 
     [Theory, BitAutoData]

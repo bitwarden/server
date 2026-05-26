@@ -50,16 +50,13 @@ public class EditCohortViewModelTests
     }
 
     [Theory, BitAutoData]
-    public void From_RoundTripsIsActiveAssignmentStateAndFormModel(
+    public void From_RoundTripsAssignmentStateAndFormModel(
         OrganizationPlanMigrationCohort cohort,
         CohortFormModel formModel,
         CohortAssignmentState assignmentState)
     {
-        cohort.IsActive = true;
-
         var viewModel = EditCohortViewModel.From(cohort, formModel, assignmentState);
 
-        Assert.True(viewModel.IsActive);
         Assert.Same(assignmentState, viewModel.AssignmentState);
         Assert.Same(formModel, viewModel.FormModel);
     }

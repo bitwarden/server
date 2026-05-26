@@ -85,7 +85,6 @@ public class OrganizationPlanMigrationCohortsController(
                 MigrationPathId = model.GetMigrationPathId(),
                 ProactiveDiscountCouponCode = NormalizeCouponCode(model.ProactiveDiscountCouponCode),
                 ChurnDiscountCouponCode = NormalizeCouponCode(model.ChurnDiscountCouponCode),
-                IsActive = false,
             };
 
             await cohortRepository.CreateAsync(cohort);
@@ -159,6 +158,7 @@ public class OrganizationPlanMigrationCohortsController(
             cohort.MigrationPathId = model.GetMigrationPathId();
             cohort.ProactiveDiscountCouponCode = NormalizeCouponCode(model.ProactiveDiscountCouponCode);
             cohort.ChurnDiscountCouponCode = NormalizeCouponCode(model.ChurnDiscountCouponCode);
+            cohort.IsActive = model.IsActive;
             cohort.RevisionDate = DateTime.UtcNow;
 
             await cohortRepository.ReplaceAsync(cohort);
