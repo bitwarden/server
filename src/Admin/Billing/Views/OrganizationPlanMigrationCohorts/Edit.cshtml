@@ -53,7 +53,7 @@
                     </option>
                 }
             </select>
-            <span data-valmsg-for="MigrationPathSelection" data-valmsg-replace="true" class="text-danger"></span>
+            @Html.ValidationMessage("MigrationPathSelection", "", new { @class = "text-danger" })
             <div class="form-text">
                 Pick a source → target plan pair to make this a <strong>Migration</strong> cohort,
                 or <strong>None</strong> to define a <strong>Churn-only</strong> population
