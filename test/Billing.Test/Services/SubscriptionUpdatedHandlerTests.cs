@@ -3980,4 +3980,139 @@ public class SubscriptionUpdatedHandlerTests
         // Assignment MigratedDate was set in-memory but the write failed; retry will redo it.
         Assert.NotNull(assignment.MigratedDate);
     }
+
+    [Fact]
+    public async Task HandleAsync_BusinessMigration_Integration_TeamsAnnual2020_AppliesShapeAndStampsAssignmentAgainstInMemoryState()
+    {
+        // Integration-style test (per PM-37092 AC): drive a synthetic customer.subscription.updated
+        // event end-to-end through the handler against in-memory-backed repository substitutes, then
+        // assert on the resulting Organization shape and the assignment row state — not on
+        // substitute-interaction counts. The org and assignment instances captured here are the
+        // same references the handler mutates, so post-Act inspection reads the "stored" state.
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var assignmentId = Guid.NewGuid();
+        var teams2020Annual = new Teams2020Plan(true);
+        var teamsAnnual = new TeamsPlan(true);
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.TeamsAnnually2020,
+            Plan = teams2020Annual.Name,
+            UseScim = false,
+            UsePolicies = teams2020Annual.HasPolicies,
+            UseSso = teams2020Annual.HasSso,
+            UseGroups = teams2020Annual.HasGroups,
+            UseDirectory = teams2020Annual.HasDirectory,
+            Seats = 50,
+            MaxStorageGb = 20,
+            UseSecretsManager = true,
+            SmSeats = 10,
+            Name = "Acme Inc.",
+            Enabled = true,
+            MaxAutoscaleSeats = 100,
+            MaxAutoscaleSmSeats = 25
+        };
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = assignmentId,
+            OrganizationId = organizationId,
+            CohortId = cohortId,
+            ScheduledDate = DateTime.UtcNow.AddDays(-30),
+            MigratedDate = null,
+            RevisionDate = DateTime.UtcNow.AddDays(-30)
+        };
+        var cohort = new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "Teams2020Annual-Integration",
+            MigrationPathId = MigrationPathId.Teams2020AnnualToCurrent,
+            IsActive = true
+        };
+
+        // In-memory-backed repository behaviors: substitutes return the captured instances by id,
+        // and ReplaceAsync just persists by reference (the entity is mutated in place by the handler).
+        _organizationRepository.GetByIdAsync(organizationId).Returns(_ => organization);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(_ => assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(_ => cohort);
+
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually2020).Returns(teams2020Annual);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(teamsAnnual);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teams2020Annual.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teams2020Annual.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            }
+        };
+        var subscription = new Subscription
+        {
+            Id = "sub_integration_ta2020",
+            ScheduleId = "sub_sched_integration",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsAnnual.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsAnnual.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — resulting Organization shape reflects target plan structurally...
+        Assert.Equal(PlanType.TeamsAnnually, organization.PlanType);
+        Assert.Equal(teamsAnnual.Name, organization.Plan);
+        Assert.True(organization.UseScim);
+        Assert.Equal(teamsAnnual.HasPolicies, organization.UsePolicies);
+        Assert.Equal(teamsAnnual.HasSso, organization.UseSso);
+        Assert.Equal(teamsAnnual.HasGroups, organization.UseGroups);
+        Assert.Equal(teamsAnnual.HasDirectory, organization.UseDirectory);
+        Assert.Equal(teamsAnnual.UsersGetPremium, organization.UsersGetPremium);
+        Assert.Equal(teamsAnnual.PasswordManager.MaxCollections, organization.MaxCollections);
+        Assert.True(organization.UsePasswordManager);
+
+        // ...customer-purchase columns are preserved (allocation-preserve policy)...
+        Assert.Equal((short)50, organization.Seats);
+        Assert.Equal((short)20, organization.MaxStorageGb);
+        Assert.True(organization.UseSecretsManager);
+        Assert.Equal(10, organization.SmSeats);
+        Assert.Equal("Acme Inc.", organization.Name);
+        Assert.True(organization.Enabled);
+        Assert.Equal(100, organization.MaxAutoscaleSeats);
+        Assert.Equal(25, organization.MaxAutoscaleSmSeats);
+
+        // ...and the cohort assignment row is stamped as migrated.
+        Assert.NotNull(assignment.MigratedDate);
+        Assert.NotEqual(default, assignment.RevisionDate);
+        Assert.True(assignment.MigratedDate > DateTime.UtcNow.AddMinutes(-1));
+    }
 }

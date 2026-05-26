@@ -43,6 +43,167 @@ public class OrganizationPlanExtensionsTests
     }
 
     [Fact]
+    public void ChangePlan_EnterpriseMonthly2020ToEnterpriseMonthly_AppliesStructuralFields()
+    {
+        var organization = new Organization
+        {
+            PlanType = PlanType.EnterpriseMonthly2020,
+            Plan = "Enterprise (Monthly) 2020"
+        };
+        var targetPlan = new EnterprisePlan(isAnnual: false);
+
+        organization.ChangePlan(targetPlan);
+
+        Assert.Equal(PlanType.EnterpriseMonthly, organization.PlanType);
+        Assert.Equal(targetPlan.Name, organization.Plan);
+        Assert.Equal(targetPlan.HasGroups, organization.UseGroups);
+        Assert.Equal(targetPlan.HasDirectory, organization.UseDirectory);
+        Assert.Equal(targetPlan.HasEvents, organization.UseEvents);
+        Assert.Equal(targetPlan.HasTotp, organization.UseTotp);
+        Assert.Equal(targetPlan.Has2fa, organization.Use2fa);
+        Assert.Equal(targetPlan.HasApi, organization.UseApi);
+        Assert.Equal(targetPlan.HasSelfHost, organization.SelfHost);
+        Assert.Equal(targetPlan.HasPolicies, organization.UsePolicies);
+        Assert.Equal(targetPlan.HasMyItems, organization.UseMyItems);
+        Assert.Equal(targetPlan.HasInviteLinks, organization.UseInviteLinks);
+        Assert.Equal(targetPlan.HasSso, organization.UseSso);
+        Assert.Equal(targetPlan.HasOrganizationDomains, organization.UseOrganizationDomains);
+        Assert.Equal(targetPlan.HasScim, organization.UseScim);
+        Assert.Equal(targetPlan.HasResetPassword, organization.UseResetPassword);
+        Assert.Equal(targetPlan.HasCustomPermissions, organization.UseCustomPermissions);
+        Assert.Equal(targetPlan.UsersGetPremium, organization.UsersGetPremium);
+        Assert.Equal(targetPlan.PasswordManager.MaxCollections, organization.MaxCollections);
+        Assert.True(organization.UsePasswordManager);
+    }
+
+    [Fact]
+    public void ChangePlan_TeamsAnnually2020ToTeamsAnnually_AppliesStructuralFields()
+    {
+        // Headline capability gain for Teams Track A: UseScim flips false -> true.
+        var organization = new Organization
+        {
+            PlanType = PlanType.TeamsAnnually2020,
+            Plan = "Teams (Annually) 2020",
+            UseScim = false
+        };
+        var targetPlan = new TeamsPlan(isAnnual: true);
+
+        organization.ChangePlan(targetPlan);
+
+        Assert.Equal(PlanType.TeamsAnnually, organization.PlanType);
+        Assert.Equal(targetPlan.Name, organization.Plan);
+        Assert.Equal(targetPlan.HasGroups, organization.UseGroups);
+        Assert.Equal(targetPlan.HasDirectory, organization.UseDirectory);
+        Assert.Equal(targetPlan.HasEvents, organization.UseEvents);
+        Assert.Equal(targetPlan.HasTotp, organization.UseTotp);
+        Assert.Equal(targetPlan.Has2fa, organization.Use2fa);
+        Assert.Equal(targetPlan.HasApi, organization.UseApi);
+        Assert.Equal(targetPlan.HasSelfHost, organization.SelfHost);
+        Assert.Equal(targetPlan.HasPolicies, organization.UsePolicies);
+        Assert.Equal(targetPlan.HasMyItems, organization.UseMyItems);
+        Assert.Equal(targetPlan.HasInviteLinks, organization.UseInviteLinks);
+        Assert.Equal(targetPlan.HasSso, organization.UseSso);
+        Assert.Equal(targetPlan.HasOrganizationDomains, organization.UseOrganizationDomains);
+        Assert.Equal(targetPlan.HasScim, organization.UseScim);
+        Assert.Equal(targetPlan.HasResetPassword, organization.UseResetPassword);
+        Assert.Equal(targetPlan.HasCustomPermissions, organization.UseCustomPermissions);
+        Assert.Equal(targetPlan.UsersGetPremium, organization.UsersGetPremium);
+        Assert.Equal(targetPlan.PasswordManager.MaxCollections, organization.MaxCollections);
+        Assert.True(organization.UsePasswordManager);
+    }
+
+    [Fact]
+    public void ChangePlan_TeamsMonthly2020ToTeamsMonthly_AppliesStructuralFields()
+    {
+        var organization = new Organization
+        {
+            PlanType = PlanType.TeamsMonthly2020,
+            Plan = "Teams (Monthly) 2020",
+            UseScim = false
+        };
+        var targetPlan = new TeamsPlan(isAnnual: false);
+
+        organization.ChangePlan(targetPlan);
+
+        Assert.Equal(PlanType.TeamsMonthly, organization.PlanType);
+        Assert.Equal(targetPlan.Name, organization.Plan);
+        Assert.Equal(targetPlan.HasGroups, organization.UseGroups);
+        Assert.Equal(targetPlan.HasDirectory, organization.UseDirectory);
+        Assert.Equal(targetPlan.HasEvents, organization.UseEvents);
+        Assert.Equal(targetPlan.HasTotp, organization.UseTotp);
+        Assert.Equal(targetPlan.Has2fa, organization.Use2fa);
+        Assert.Equal(targetPlan.HasApi, organization.UseApi);
+        Assert.Equal(targetPlan.HasSelfHost, organization.SelfHost);
+        Assert.Equal(targetPlan.HasPolicies, organization.UsePolicies);
+        Assert.Equal(targetPlan.HasMyItems, organization.UseMyItems);
+        Assert.Equal(targetPlan.HasInviteLinks, organization.UseInviteLinks);
+        Assert.Equal(targetPlan.HasSso, organization.UseSso);
+        Assert.Equal(targetPlan.HasOrganizationDomains, organization.UseOrganizationDomains);
+        Assert.Equal(targetPlan.HasScim, organization.UseScim);
+        Assert.Equal(targetPlan.HasResetPassword, organization.UseResetPassword);
+        Assert.Equal(targetPlan.HasCustomPermissions, organization.UseCustomPermissions);
+        Assert.Equal(targetPlan.UsersGetPremium, organization.UsersGetPremium);
+        Assert.Equal(targetPlan.PasswordManager.MaxCollections, organization.MaxCollections);
+        Assert.True(organization.UsePasswordManager);
+    }
+
+    [Fact]
+    public void ChangePlan_FamiliesAnnually2019ToFamiliesAnnually_AppliesStructuralFields()
+    {
+        // Regression: confirms ChangePlan produces the same structural projection that
+        // UpgradePlanAsync's inline copy did before extraction, for a Families source/target.
+        var organization = new Organization
+        {
+            PlanType = PlanType.FamiliesAnnually2019,
+            Plan = "Families 2019"
+        };
+        var targetPlan = new FamiliesPlan();
+
+        organization.ChangePlan(targetPlan);
+
+        Assert.Equal(PlanType.FamiliesAnnually, organization.PlanType);
+        Assert.Equal(targetPlan.Name, organization.Plan);
+        Assert.Equal(targetPlan.HasGroups, organization.UseGroups);
+        Assert.Equal(targetPlan.HasDirectory, organization.UseDirectory);
+        Assert.Equal(targetPlan.HasEvents, organization.UseEvents);
+        Assert.Equal(targetPlan.HasTotp, organization.UseTotp);
+        Assert.Equal(targetPlan.Has2fa, organization.Use2fa);
+        Assert.Equal(targetPlan.HasApi, organization.UseApi);
+        Assert.Equal(targetPlan.HasSelfHost, organization.SelfHost);
+        Assert.Equal(targetPlan.HasPolicies, organization.UsePolicies);
+        Assert.Equal(targetPlan.HasMyItems, organization.UseMyItems);
+        Assert.Equal(targetPlan.HasInviteLinks, organization.UseInviteLinks);
+        Assert.Equal(targetPlan.HasSso, organization.UseSso);
+        Assert.Equal(targetPlan.HasOrganizationDomains, organization.UseOrganizationDomains);
+        Assert.Equal(targetPlan.HasScim, organization.UseScim);
+        Assert.Equal(targetPlan.HasResetPassword, organization.UseResetPassword);
+        Assert.Equal(targetPlan.HasCustomPermissions, organization.UseCustomPermissions);
+        Assert.Equal(targetPlan.UsersGetPremium, organization.UsersGetPremium);
+        Assert.Equal(targetPlan.PasswordManager.MaxCollections, organization.MaxCollections);
+        Assert.True(organization.UsePasswordManager);
+    }
+
+    [Fact]
+    public void ChangePlan_FamiliesAnnually2025ToFamiliesAnnually_AppliesStructuralFields()
+    {
+        // Regression: same as the 2019 case, for the 2025 Families source.
+        var organization = new Organization
+        {
+            PlanType = PlanType.FamiliesAnnually2025,
+            Plan = "Families 2025"
+        };
+        var targetPlan = new FamiliesPlan();
+
+        organization.ChangePlan(targetPlan);
+
+        Assert.Equal(PlanType.FamiliesAnnually, organization.PlanType);
+        Assert.Equal(targetPlan.Name, organization.Plan);
+        Assert.Equal(targetPlan.UsersGetPremium, organization.UsersGetPremium);
+        Assert.Equal(targetPlan.PasswordManager.MaxCollections, organization.MaxCollections);
+        Assert.True(organization.UsePasswordManager);
+    }
+
+    [Fact]
     public void ChangePlan_TargetHasKeyConnector_OrgHasKeyConnector_Preserves()
     {
         var organization = new Organization
