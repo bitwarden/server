@@ -153,4 +153,68 @@ public class IPAddressExtensionsTests
         var ip = IPAddress.Parse(ipString);
         Assert.Equal(expected, ip.IsInternal());
     }
+
+    [Theory]
+    [InlineData("0.255.255.255", true)]           // End of 0.0.0.0/8
+    [InlineData("1.0.0.0", false)]                // Just above 0.0.0.0/8
+    [InlineData("9.255.255.255", false)]          // Just below 10.0.0.0/8
+    [InlineData("11.0.0.0", false)]               // Just above 10.0.0.0/8
+    [InlineData("126.255.255.255", false)]        // Just below 127.0.0.0/8 loopback
+    [InlineData("127.255.255.255", true)]         // End of 127.0.0.0/8 loopback
+    [InlineData("128.0.0.0", false)]              // Just above 127.0.0.0/8 loopback
+    [InlineData("169.253.255.255", false)]        // Just below 169.254.0.0/16
+    [InlineData("169.254.255.255", true)]         // End of 169.254.0.0/16
+    [InlineData("169.255.0.0", false)]            // Just above 169.254.0.0/16
+    [InlineData("191.255.255.255", false)]        // Just below 192.0.0.0/24
+    [InlineData("192.169.0.0", false)]            // Just above 192.168.0.0/16
+    [InlineData("197.255.255.255", false)]        // Just below 198.18.0.0/15
+    public void IsInternal_IPv4Boundaries_ReturnsExpected(string ipString, bool expected)
+    {
+        var ip = IPAddress.Parse(ipString);
+        Assert.Equal(expected, ip.IsInternal());
+    }
+
+    [Theory]
+    [InlineData("fbff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", false)] // Just below fc00::/7 ULA
+    [InlineData("fc00::", true)]                                    // Start of fc00::/7 ULA
+    [InlineData("fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", true)]  // End of fc00::/7 ULA
+    [InlineData("feff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", false)] // Just below ff00::/8 multicast
+    [InlineData("ff00::", true)]                                    // Start of ff00::/8 multicast
+    [InlineData("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", true)]  // End of ff00::/8 multicast
+    [InlineData("2001:0:ffff:ffff:ffff:ffff:ffff:ffff", true)]     // End of Teredo 2001::/32
+    [InlineData("2001:1::1", false)]                                // Just above Teredo 2001::/32
+    [InlineData("2001:ffff::1", false)]                            // 2001:x but no reserved subrange matches
+    [InlineData("2001:30::1", false)]                              // Just above ORCHIDv2 2001:20::/28
+    public void IsInternal_IPv6Boundaries_ReturnsExpected(string ipString, bool expected)
+    {
+        var ip = IPAddress.Parse(ipString);
+        Assert.Equal(expected, ip.IsInternal());
+    }
+
+    [Theory]
+    // Verifies the NAT64 well-known prefix is matched strictly at /96 — addresses with nonzero
+    // bits in positions 64-95 must not have an embedded IPv4 decoded, even if those low-32 bits
+    // would alias an internal IPv4.
+    [InlineData("64:ff9b:0:0:0:1:a00:1", false)]    // Outside /96 (bits 80-95 = 0x0001); 10.0.0.1 not decoded
+    [InlineData("64:ff9b:0:0:0:1:808:808", false)]  // Outside /96; 8.8.8.8 not decoded
+    [InlineData("64:ff9b:0:0:1::", false)]          // Outside /96; embedded 0.0.0.0 not decoded
+    public void IsInternal_NAT64_StrictPrefix_ReturnsExpected(string ipString, bool expected)
+    {
+        var ip = IPAddress.Parse(ipString);
+        Assert.Equal(expected, ip.IsInternal());
+    }
+
+    [Theory]
+    // Verifies the 6to4 prefix is matched strictly at /16 and the embedded IPv4 is extracted from
+    // bytes 2-5. 2002:: itself embeds 0.0.0.0 (reserved), while neighbors 2001:ffff:: and 2003::
+    // must not trigger embedded decoding.
+    [InlineData("2002::", true)]                    // Start of 2002::/16; embedded 0.0.0.0 is reserved
+    [InlineData("2002:ffff:ffff::", true)]          // Embedded 255.255.255.255 is reserved
+    [InlineData("2001:ffff::1", false)]             // Just below 2002::/16; embedded decoding skipped
+    [InlineData("2003::", false)]                   // Just above 2002::/16; embedded decoding skipped
+    public void IsInternal_6to4_StrictPrefix_ReturnsExpected(string ipString, bool expected)
+    {
+        var ip = IPAddress.Parse(ipString);
+        Assert.Equal(expected, ip.IsInternal());
+    }
 }
