@@ -934,6 +934,7 @@ public class AccountsControllerTests : IDisposable
     {
         // Arrange
         UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
+        _featureService.IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration).Returns(true);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
         _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
             .Returns(Task.CompletedTask);
@@ -960,6 +961,7 @@ public class AccountsControllerTests : IDisposable
     {
         // Arrange
         UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel, includeTdeSetPassword: true);
+        _featureService.IsEnabled(FeatureFlagKeys.V2RegistrationTDEJIT).Returns(true);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
         _tdeSetPasswordCommand.SetMasterPasswordAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
             .Returns(Task.CompletedTask);
@@ -999,12 +1001,103 @@ public class AccountsControllerTests : IDisposable
     {
         // Arrange
         UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
+        _featureService.IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration).Returns(true);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
         _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
             .Returns(Task.FromException(new Exception("Setting password failed")));
 
         // Act & Assert
         await Assert.ThrowsAsync<Exception>(() => _sut.PostSetPasswordAsync(setInitialPasswordRequestModel));
+    }
+
+    // V1 encryption with new data types (transitional path — V2 flags off, request carries Auth + Unlock + AccountKeys)
+    // TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_V1WithNewDataTypes_WhenUserExistsAndSettingPasswordSucceeds_ShouldCallV1CommandAsync(
+        User user,
+        SetInitialPasswordRequestModel setInitialPasswordRequestModel)
+    {
+        // Arrange — V2-shape model, V2 flags left disabled → routes to V1-new-data branch.
+        // Existing user has no keys so AccountKeys.ToUserV1Encryption takes the "set new keys" branch.
+        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
+        user.PublicKey = null;
+        user.PrivateKey = null;
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
+                user,
+                setInitialPasswordRequestModel.MasterPasswordAuthentication.MasterPasswordAuthenticationHash,
+                setInitialPasswordRequestModel.MasterPasswordUnlock.MasterKeyWrappedUserKey,
+                setInitialPasswordRequestModel.OrgIdentifier)
+            .Returns(Task.FromResult(IdentityResult.Success));
+
+        // Act
+        await _sut.PostSetPasswordAsync(setInitialPasswordRequestModel);
+
+        // Assert — V1 command called with new-data-type values
+        await _setInitialMasterPasswordCommandV1.Received(1)
+            .SetInitialMasterPasswordAsync(
+                Arg.Is<User>(u => u == user),
+                Arg.Is<string>(s => s == setInitialPasswordRequestModel.MasterPasswordAuthentication.MasterPasswordAuthenticationHash),
+                Arg.Is<string>(s => s == setInitialPasswordRequestModel.MasterPasswordUnlock.MasterKeyWrappedUserKey),
+                Arg.Is<string>(s => s == setInitialPasswordRequestModel.OrgIdentifier));
+
+        // KDF + keys mapped onto user from the new data types
+        Assert.Equal(setInitialPasswordRequestModel.MasterPasswordHint, user.MasterPasswordHint);
+        Assert.Equal(setInitialPasswordRequestModel.MasterPasswordAuthentication.Kdf.KdfType, user.Kdf);
+        Assert.Equal(setInitialPasswordRequestModel.MasterPasswordAuthentication.Kdf.Iterations, user.KdfIterations);
+        Assert.Equal(setInitialPasswordRequestModel.AccountKeys.AccountPublicKey, user.PublicKey);
+        Assert.Equal(setInitialPasswordRequestModel.AccountKeys.UserKeyEncryptedAccountPrivateKey, user.PrivateKey);
+
+        // V2 commands not called
+        await _finishSsoJitProvisionMasterPasswordCommand.DidNotReceiveWithAnyArgs()
+            .FinishProvisionAsync(Arg.Any<User>(), Arg.Any<SetInitialMasterPasswordDataModel>());
+        await _tdeSetPasswordCommand.DidNotReceiveWithAnyArgs()
+            .SetMasterPasswordAsync(Arg.Any<User>(), Arg.Any<SetInitialMasterPasswordDataModel>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_V1WithNewDataTypes_WhenExistingKeysCannotBeReplaced_ShouldThrowBadRequestAsync(
+        User user,
+        SetInitialPasswordRequestModel setInitialPasswordRequestModel)
+    {
+        // Arrange — V2-shape model + existing user has DIFFERENT keys from the model.
+        // AccountKeys.ToUserV1Encryption should throw "Cannot replace existing key(s)", caught by the
+        // controller and rethrown as BadRequestException.
+        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
+        user.PublicKey = "differentExistingPublicKey";
+        user.PrivateKey = "differentExistingPrivateKey";
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostSetPasswordAsync(setInitialPasswordRequestModel));
+
+        // V1 command must not be invoked when mapping fails
+        await _setInitialMasterPasswordCommandV1.DidNotReceiveWithAnyArgs()
+            .SetInitialMasterPasswordAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_V1WithNewDataTypes_WhenSettingPasswordFails_ShouldThrowBadRequestAsync(
+        User user,
+        SetInitialPasswordRequestModel setInitialPasswordRequestModel)
+    {
+        // Arrange — V2-shape model, fresh user keys, V1 command returns a failed IdentityResult.
+        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
+        user.PublicKey = null;
+        user.PrivateKey = null;
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
+                Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+            .Returns(Task.FromResult(IdentityResult.Failed(new IdentityError { Description = "boom" })));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostSetPasswordAsync(setInitialPasswordRequestModel));
     }
 
     private void UpdateSetInitialPasswordRequestModelToV1(SetInitialPasswordRequestModel model)
