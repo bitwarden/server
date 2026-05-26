@@ -1,4 +1,4 @@
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 
