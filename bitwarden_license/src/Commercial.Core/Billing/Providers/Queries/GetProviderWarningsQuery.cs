@@ -13,6 +13,7 @@ using Stripe.Tax;
 namespace Bit.Commercial.Core.Billing.Providers.Queries;
 
 using static StripeConstants;
+using CountryAbbreviations = Bit.Core.Constants.CountryAbbreviations;
 using SuspensionWarning = ProviderWarnings.SuspensionWarning;
 using TaxIdWarning = ProviderWarnings.TaxIdWarning;
 
@@ -66,7 +67,7 @@ public class GetProviderWarningsQuery(
     {
         if (featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
         {
-            if (customer.TaxExempt != TaxExempt.None)
+            if (customer.TaxExempt != TaxExempt.None || customer.Address?.Country == CountryAbbreviations.UnitedStates)
             {
                 return null;
             }

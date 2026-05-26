@@ -17,6 +17,7 @@ using Stripe.Tax;
 namespace Bit.Core.Billing.Organizations.Queries;
 
 using static StripeConstants;
+using CountryAbbreviations = Bit.Core.Constants.CountryAbbreviations;
 using FreeTrialWarning = OrganizationWarnings.FreeTrialWarning;
 using InactiveSubscriptionWarning = OrganizationWarnings.InactiveSubscriptionWarning;
 using ResellerRenewalWarning = OrganizationWarnings.ResellerRenewalWarning;
@@ -245,7 +246,7 @@ public class GetOrganizationWarningsQuery(
     {
         if (featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
         {
-            if (customer.TaxExempt != TaxExempt.None)
+            if (customer.TaxExempt != TaxExempt.None || customer.Address?.Country == CountryAbbreviations.UnitedStates)
             {
                 return null;
             }
