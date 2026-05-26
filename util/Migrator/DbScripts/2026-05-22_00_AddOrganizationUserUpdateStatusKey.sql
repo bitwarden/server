@@ -9,7 +9,7 @@ BEGIN
 
     DECLARE @UsersToUpdate AS TABLE (
         [Id]  UNIQUEIDENTIFIER NOT NULL,
-        [Key] NVARCHAR(MAX)    NULL
+        [Key] VARCHAR(MAX)    NULL
     )
 
     INSERT INTO @UsersToUpdate
@@ -19,7 +19,7 @@ BEGIN
     FROM OPENJSON(@UsersJson)
     WITH (
         [Id]  UNIQUEIDENTIFIER '$.Id',
-        [Key] NVARCHAR(MAX)    '$.Key'
+        [Key] VARCHAR(MAX)    '$.Key'
     )
 
     DECLARE @UpdatedIds [dbo].[GuidIdArray]
