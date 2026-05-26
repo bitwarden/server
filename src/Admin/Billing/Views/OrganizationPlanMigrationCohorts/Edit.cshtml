@@ -1,37 +1,33 @@
 @using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects
 @using Bit.Core.Enums
-@model Bit.Admin.Billing.Models.OrganizationPlanMigrationCohorts.CohortFormModel
+@model Bit.Admin.Billing.Models.OrganizationPlanMigrationCohorts.EditCohortViewModel
 @{
-    ViewData["Title"] = $"Cohort: {Model.Name}";
-    var cohortType = (CohortType)(ViewData["CohortType"] ?? new CohortType.ChurnOnly());
-    var unresolved = cohortType as CohortType.UnresolvedMigration;
-    var isActive = (bool)(ViewData["IsActive"] ?? false);
-    var migrationPathLocked = (bool)(ViewData["MigrationPathLocked"] ?? false);
-    var nonPendingCount = (int)(ViewData["NonPendingAssignmentCount"] ?? 0);
+    ViewData["Title"] = $"Cohort: {Model.FormModel.Name}";
+    var unresolved = Model.CohortType as CohortType.UnresolvedMigration;
 }
 
 <div class="mx-auto" style="max-width: 768px;">
-    <h1>Cohort: @Model.Name</h1>
+    <h1>Cohort: @Model.FormModel.Name</h1>
 
     <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
-<form method="post" asp-action="Edit" asp-route-id="@Model.Id" id="cohort-form">
-    <input type="hidden" asp-for="Id" />
+<form method="post" asp-action="Edit" asp-route-id="@Model.FormModel.Id" id="cohort-form">
+    <input type="hidden" asp-for="FormModel.Id" />
 
     <div class="mb-3">
-        <label asp-for="Name" class="form-label"></label>
-        <input asp-for="Name" class="form-control" placeholder="e.g., A1 (a) — Enterprise 2020 Annual" />
-        <span asp-validation-for="Name" class="text-danger"></span>
+        <label asp-for="FormModel.Name" class="form-label"></label>
+        <input asp-for="FormModel.Name" class="form-control" placeholder="e.g., A1 (a) — Enterprise 2020 Annual" />
+        <span asp-validation-for="FormModel.Name" class="text-danger"></span>
         <div class="form-text">Unique, max 255 characters. Used as the join key in CSV uploads.</div>
     </div>
 
     <div class="mb-3">
-        <label asp-for="MigrationPathSelection" class="form-label">Migration path</label>
-        @if (migrationPathLocked)
+        <label asp-for="FormModel.MigrationPathSelection" class="form-label">Migration path</label>
+        @if (Model.AssignmentState.HasNonPendingAssignments)
         {
             <div>
                 <span class="me-1">🔒</span>
-                @switch (cohortType)
+                @switch (Model.CohortType)
                 {
                     case CohortType.ChurnOnly:
                         <span>None (Churn-only cohort)</span>
@@ -45,12 +41,12 @@
                 }
             </div>
             <div class="form-text">
-                Migration path cannot be changed because this cohort has @nonPendingCount.ToString("N0") assignment(s) that have left the Pending state.
+                Migration path cannot be changed because this cohort has @Model.AssignmentState.NonPendingAssignmentCount.ToString("N0") assignment(s) that have left the Pending state.
             </div>
         }
         else
         {
-            <select asp-for="MigrationPathSelection" class="form-select">
+            <select asp-for="FormModel.MigrationPathSelection" class="form-select">
                 @if (unresolved != null)
                 {
                     <option value="@unresolved.Id" disabled selected>
@@ -65,28 +61,28 @@
                     </option>
                 }
             </select>
-            <span asp-validation-for="MigrationPathSelection" class="text-danger"></span>
+            <span asp-validation-for="FormModel.MigrationPathSelection" class="text-danger"></span>
         }
     </div>
 
     <div class="mb-3">
-        <label asp-for="ProactiveDiscountCouponCode" class="form-label">
+        <label asp-for="FormModel.ProactiveDiscountCouponCode" class="form-label">
             Proactive discount coupon <span class="text-muted">(optional)</span>
         </label>
-        <input asp-for="ProactiveDiscountCouponCode" class="form-control" placeholder="e.g., track-a-15-yr1" />
-        <span asp-validation-for="ProactiveDiscountCouponCode" class="text-danger"></span>
+        <input asp-for="FormModel.ProactiveDiscountCouponCode" class="form-control" placeholder="e.g., track-a-15-yr1" />
+        <span asp-validation-for="FormModel.ProactiveDiscountCouponCode" class="text-danger"></span>
         <div class="form-text">
             Stripe coupon ID applied to Phase 2 of the SubscriptionSchedule at scheduling time. Validated against Stripe at save.
         </div>
     </div>
 
     <div class="mb-3">
-        <label asp-for="ChurnDiscountCouponCode" class="form-label">
+        <label asp-for="FormModel.ChurnDiscountCouponCode" class="form-label">
             Churn discount coupon
             <span id="churn-optional-label" class="text-muted">(optional)</span>
         </label>
-        <input asp-for="ChurnDiscountCouponCode" class="form-control" placeholder="e.g., retain-q4-2026" />
-        <span asp-validation-for="ChurnDiscountCouponCode" class="text-danger"></span>
+        <input asp-for="FormModel.ChurnDiscountCouponCode" class="form-control" placeholder="e.g., retain-q4-2026" />
+        <span asp-validation-for="FormModel.ChurnDiscountCouponCode" class="text-danger"></span>
         <div class="form-text">
             Stripe coupon ID offered as a save-offer when an assigned org initiates self-serve cancellation.
             <strong>Required</strong> for churn-only cohorts. Validated against Stripe at save.
@@ -95,15 +91,15 @@
 </form>
 
 <div class="mt-4 d-flex align-items-center">
-    @if (isActive)
+    @if (Model.IsActive)
     {
-        <form method="post" asp-action="Disable" asp-route-id="@Model.Id">
+        <form method="post" asp-action="Disable" asp-route-id="@Model.FormModel.Id">
             <button class="btn btn-secondary" type="submit">Disable</button>
         </form>
     }
     else
     {
-        <form method="post" asp-action="Enable" asp-route-id="@Model.Id">
+        <form method="post" asp-action="Enable" asp-route-id="@Model.FormModel.Id">
             <button class="btn btn-success" type="submit">Enable</button>
         </form>
     }
@@ -116,7 +112,7 @@
     <button type="submit" class="btn btn-primary" form="cohort-form">Save</button>
     <a asp-action="Index" class="btn btn-secondary ms-2">Cancel</a>
     <div class="ms-auto d-flex">
-        <form method="post" asp-action="Delete" asp-route-id="@Model.Id"
+        <form method="post" asp-action="Delete" asp-route-id="@Model.FormModel.Id"
               onsubmit="return confirm('Are you sure you want to delete this cohort?')">
             <button class="btn btn-danger" type="submit">Delete</button>
         </form>
@@ -127,7 +123,7 @@
 @section Scripts {
     <script>
         (() => {
-            const migrationPathSelect = document.getElementById('@(nameof(Model.MigrationPathSelection))');
+            const migrationPathSelect = document.getElementById('@Html.IdFor(m => m.FormModel.MigrationPathSelection)');
             if (!migrationPathSelect) return;
             const churnOptionalLabel = document.getElementById('churn-optional-label');
             const updateChurnOptionalLabel = () => {

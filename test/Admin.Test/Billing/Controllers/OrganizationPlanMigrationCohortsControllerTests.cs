@@ -265,10 +265,10 @@ public class OrganizationPlanMigrationCohortsControllerTests
         var result = await sutProvider.Sut.Edit(cohort.Id);
 
         var view = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsType<CohortFormModel>(view.Model);
-        Assert.Equal(cohort.Id, model.Id);
-        Assert.Equal(cohort.Name, model.Name);
-        Assert.Equal("1", model.MigrationPathSelection);
+        var viewModel = Assert.IsType<EditCohortViewModel>(view.Model);
+        Assert.Equal(cohort.Id, viewModel.FormModel.Id);
+        Assert.Equal(cohort.Name, viewModel.FormModel.Name);
+        Assert.Equal("1", viewModel.FormModel.MigrationPathSelection);
     }
 
     [Theory, BitAutoData]
@@ -347,7 +347,7 @@ public class OrganizationPlanMigrationCohortsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Edit_Post_InvalidModelState_SetsCohortTypeViewData(
+    public async Task Edit_Post_InvalidModelState_SetsCohortTypeOnViewModel(
         Guid id,
         CohortFormModel model,
         OrganizationPlanMigrationCohort existing,
@@ -369,9 +369,80 @@ public class OrganizationPlanMigrationCohortsControllerTests
 
         var result = await sutProvider.Sut.Edit(id, model);
 
-        Assert.IsType<ViewResult>(result);
-        var cohortType = sutProvider.Sut.ViewData["CohortType"];
-        Assert.IsType<CohortType.UnresolvedMigration>(cohortType);
+        var view = Assert.IsType<ViewResult>(result);
+        var viewModel = Assert.IsType<EditCohortViewModel>(view.Model);
+        Assert.IsType<CohortType.UnresolvedMigration>(viewModel.CohortType);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Edit_Post_DuplicateName_ReturnsViewWithEditViewModel(
+        Guid id,
+        CohortFormModel model,
+        OrganizationPlanMigrationCohort existing,
+        OrganizationPlanMigrationCohort otherWithSameName,
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
+        existing.Id = id;
+        otherWithSameName.Id = Guid.NewGuid(); // a different cohort owns the name
+        model.Id = id;
+        model.MigrationPathSelection = "1";
+        model.ProactiveDiscountCouponCode = null;
+        model.ChurnDiscountCouponCode = null;
+
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(id).Returns(existing);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByNameAsync(model.Name).Returns(otherWithSameName);
+        sutProvider.GetDependency<IGetCohortAssignmentStateQuery>()
+            .Run(Arg.Any<OrganizationPlanMigrationCohort>()).Returns(new CohortAssignmentState(0));
+
+        sutProvider.Sut.TempData = new TempDataDictionary(
+            new DefaultHttpContext(),
+            Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.Edit(id, model);
+
+        var view = Assert.IsType<ViewResult>(result);
+        Assert.IsType<EditCohortViewModel>(view.Model);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Edit_Post_RepositoryThrows_ReturnsViewWithEditViewModel(
+        Guid id,
+        CohortFormModel model,
+        OrganizationPlanMigrationCohort existing,
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
+        existing.Id = id;
+        model.Id = id;
+        model.MigrationPathSelection = "1";
+        model.ProactiveDiscountCouponCode = null;
+        model.ChurnDiscountCouponCode = null;
+
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(id).Returns(existing);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByNameAsync(model.Name).Returns((OrganizationPlanMigrationCohort?)null);
+        sutProvider.GetDependency<IGetCohortAssignmentStateQuery>()
+            .Run(Arg.Any<OrganizationPlanMigrationCohort>()).Returns(new CohortAssignmentState(0));
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohort>())
+            .ThrowsAsync(new InvalidOperationException("simulated failure"));
+
+        sutProvider.Sut.TempData = new TempDataDictionary(
+            new DefaultHttpContext(),
+            Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.Edit(id, model);
+
+        var view = Assert.IsType<ViewResult>(result);
+        Assert.IsType<EditCohortViewModel>(view.Model);
     }
 
     [Theory, BitAutoData]
@@ -533,7 +604,7 @@ public class OrganizationPlanMigrationCohortsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Edit_Get_LockedCohort_SetsMigrationPathLockedViewData(
+    public async Task Edit_Get_LockedCohort_SetsAssignmentStateOnViewModel(
         OrganizationPlanMigrationCohort cohort,
         SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
     {
@@ -547,9 +618,10 @@ public class OrganizationPlanMigrationCohortsControllerTests
 
         var result = await sutProvider.Sut.Edit(cohort.Id);
 
-        Assert.IsType<ViewResult>(result);
-        Assert.True((bool)sutProvider.Sut.ViewData["MigrationPathLocked"]!);
-        Assert.Equal(3, sutProvider.Sut.ViewData["NonPendingAssignmentCount"]);
+        var view = Assert.IsType<ViewResult>(result);
+        var viewModel = Assert.IsType<EditCohortViewModel>(view.Model);
+        Assert.True(viewModel.AssignmentState.HasNonPendingAssignments);
+        Assert.Equal(3, viewModel.AssignmentState.NonPendingAssignmentCount);
     }
 
     [Theory, BitAutoData]
