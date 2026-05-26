@@ -376,7 +376,7 @@ public class RedeemChurnMitigationOfferCommandTests
     }
 
     [Fact]
-    public async Task Run_ChurnOnlyCohort_StripeUpdateSubscriptionThrows_AppliedDateNotWritten_ExceptionBubbles()
+    public async Task RedeemForChurnOnlyCohort_StripeUpdateThrows_RollsBackAppliedDate_OriginalExceptionBubbles()
     {
         var organization = CreateOrganization();
         SetupOfferEligible();
@@ -391,11 +391,74 @@ public class RedeemChurnMitigationOfferCommandTests
                 StripeError = new StripeError { Code = "api_error", Message = "internal" }
             });
 
+        // Snapshot ChurnDiscountAppliedDate at each ReplaceAsync call. The command mutates the
+        // same assignment instance for both the stamp and the rollback, so we can't compare
+        // against the final state post-await -- capture at call time.
+        var appliedDatesAtCallTime = new List<DateTime?>();
+        _ = _assignmentRepository.ReplaceAsync(Arg.Do<OrganizationPlanMigrationCohortAssignment>(a =>
+            appliedDatesAtCallTime.Add(a.ChurnDiscountAppliedDate)));
+
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT3);
-        await _assignmentRepository.DidNotReceive().ReplaceAsync(
-            Arg.Any<OrganizationPlanMigrationCohortAssignment>());
+
+        // First call: stamp written (non-null). Second call: rollback (null).
+        Assert.Equal(2, appliedDatesAtCallTime.Count);
+        Assert.NotNull(appliedDatesAtCallTime[0]);
+        Assert.Null(appliedDatesAtCallTime[1]);
+    }
+
+    [Fact]
+    public async Task RedeemForChurnOnlyCohort_StripeFailsAndRollbackAlsoFails_FieldStaysSet_OriginalExceptionBubbles_RollbackErrorLogged()
+    {
+        var logger = Substitute.For<ILogger<RedeemChurnMitigationOfferCommand>>();
+        var command = new RedeemChurnMitigationOfferCommand(
+            logger, _getOfferQuery, _assignmentRepository, _cohortRepository, _stripeAdapter);
+
+        var organization = CreateOrganization();
+        SetupOfferEligible();
+        var assignment = SetupChurnOnlyCohortAssignment(organization);
+
+        var subscription = CreateSubscription();
+        SetupGetSubscription(organization, subscription);
+
+        var stripeException = new StripeException
+        {
+            StripeError = new StripeError { Code = "api_error", Message = "internal" }
+        };
+        _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+            .Returns<Subscription>(_ => throw stripeException);
+
+        // First ReplaceAsync (the stamp) succeeds; second ReplaceAsync (the rollback) throws.
+        // Snapshot ChurnDiscountAppliedDate at call time -- the command mutates the same
+        // assignment instance, so a post-await field check can't distinguish the two calls.
+        var appliedDatesAtCallTime = new List<DateTime?>();
+        var callCount = 0;
+        var rollbackException = new InvalidOperationException("db down");
+        _ = _assignmentRepository.ReplaceAsync(Arg.Do<OrganizationPlanMigrationCohortAssignment>(a =>
+            {
+                appliedDatesAtCallTime.Add(a.ChurnDiscountAppliedDate);
+                callCount++;
+                if (callCount == 2)
+                {
+                    throw rollbackException;
+                }
+            }));
+
+        var result = await command.Run(organization);
+
+        // BaseBillingCommand catches the original Stripe exception (not the rollback exception)
+        // and converts it to Unhandled (IsT3).
+        Assert.True(result.IsT3);
+
+        // First call: stamp written (non-null). Second call: rollback attempt (null) -- but that
+        // call threw, so the persisted ChurnDiscountAppliedDate remains the non-null stamp value
+        // and ops must clear it manually.
+        Assert.Equal(2, appliedDatesAtCallTime.Count);
+        Assert.NotNull(appliedDatesAtCallTime[0]);
+        Assert.Null(appliedDatesAtCallTime[1]);
+
+        logger.ReceivedWithAnyArgs().Log<object>(LogLevel.Error, default, default!, default, default!);
     }
 
     [Fact]

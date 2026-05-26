@@ -204,12 +204,40 @@ public class RedeemChurnMitigationOfferCommand(
 
         existingDiscounts.Add(new SubscriptionDiscountOptions { Coupon = churnDiscountCouponCode });
 
-        await stripeAdapter.UpdateSubscriptionAsync(subscription.Id,
-            new SubscriptionUpdateOptions { Discounts = existingDiscounts });
-
-        assignment.ChurnDiscountAppliedDate = DateTime.UtcNow;
-        assignment.RevisionDate = DateTime.UtcNow;
+        // Stamp the per-assignment one-shot guard BEFORE mutating Stripe. For a `once`-duration
+        // coupon this is the only post-consumption defense against double-application: if Stripe
+        // succeeds, finalizes the next invoice, and consumes the coupon, a retry from the UI must
+        // not re-evaluate as eligible.
+        var nowUtc = DateTime.UtcNow;
+        assignment.ChurnDiscountAppliedDate = nowUtc;
+        assignment.RevisionDate = nowUtc;
         await assignmentRepository.ReplaceAsync(assignment);
+
+        try
+        {
+            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id,
+                new SubscriptionUpdateOptions { Discounts = existingDiscounts });
+        }
+        catch
+        {
+            // Best-effort rollback so a Stripe failure doesn't permanently lock the org out of
+            // a UI retry. If the rollback itself fails, ops clears ChurnDiscountAppliedDate
+            // manually -- a documented recovery surface that's strictly better than the
+            // alternative (silent double-application after Stripe consumes the coupon).
+            assignment.ChurnDiscountAppliedDate = null;
+            assignment.RevisionDate = DateTime.UtcNow;
+            try
+            {
+                await assignmentRepository.ReplaceAsync(assignment);
+            }
+            catch (Exception rollbackEx)
+            {
+                _logger.LogError(rollbackEx,
+                    "{Command}: Rollback of ChurnDiscountAppliedDate failed on Assignment ({AssignmentId}) for Organization ({OrganizationId}); manual clear required",
+                    CommandName, assignment.Id, organization.Id);
+            }
+            throw;
+        }
 
         _logger.LogInformation(
             "{Command}: Applied churn coupon to Subscription ({SubscriptionId}) for Organization ({OrganizationId}) Assignment ({AssignmentId}) Cohort ({CohortId})",
