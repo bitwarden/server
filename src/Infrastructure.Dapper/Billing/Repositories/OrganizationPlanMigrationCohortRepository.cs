@@ -62,14 +62,4 @@ public class OrganizationPlanMigrationCohortRepository(
 
         return results.SingleOrDefault();
     }
-
-    public async Task UpdateIsActiveAsync(Guid id, bool isActive)
-    {
-        await using var connection = new SqlConnection(ConnectionString);
-
-        await connection.ExecuteAsync(
-            $"[{Schema}].[{Table}_UpdateIsActive]",
-            new { Id = id, IsActive = isActive, RevisionDate = DateTime.UtcNow },
-            commandType: CommandType.StoredProcedure);
-    }
 }

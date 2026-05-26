@@ -107,17 +107,4 @@ public class OrganizationPlanMigrationCohortRepository(
 
         return Mapper.Map<CoreEntities.OrganizationPlanMigrationCohort>(result);
     }
-
-    public async Task UpdateIsActiveAsync(Guid id, bool isActive)
-    {
-        using var scope = ServiceScopeFactory.CreateScope();
-        var dbContext = GetDatabaseContext(scope);
-
-        var entity = await GetDbSet(dbContext).FindAsync(id);
-        if (entity == null) return;
-
-        entity.IsActive = isActive;
-        entity.RevisionDate = DateTime.UtcNow;
-        await dbContext.SaveChangesAsync();
-    }
 }
