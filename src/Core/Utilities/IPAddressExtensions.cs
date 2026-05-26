@@ -87,26 +87,11 @@ public static class IPAddressExtensions
             }
         }
 
-        foreach (var network in _reservedIPv6Networks)
-        {
-            if (network.Contains(ip))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return _reservedIPv6Networks.Any(network => network.Contains(ip));
     }
 
     private static bool IsReservedIPv4(IPAddress ip)
     {
-        foreach (var network in _reservedIPv4Networks)
-        {
-            if (network.Contains(ip))
-            {
-                return true;
-            }
-        }
-        return false;
+        return _reservedIPv4Networks.Any(network => network.Contains(ip));
     }
 }
