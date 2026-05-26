@@ -2,7 +2,6 @@
 using System.Data.Common;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.Utilities.DebuggingInstruments;
@@ -567,19 +566,6 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
     public async Task RestoreAsync(Guid id, OrganizationUserStatusType status)
     {
         await RestoreManyAsync([id], status);
-    }
-
-    public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId, PolicyType policyType)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.QueryAsync<OrganizationUserPolicyDetails>(
-                $"[{Schema}].[{Table}_ReadByUserIdWithPolicyDetails]",
-                new { UserId = userId, PolicyType = policyType },
-                commandType: CommandType.StoredProcedure);
-
-            return results.ToList();
-        }
     }
 
     public async Task<IEnumerable<OrganizationUserResetPasswordDetails>> GetManyAccountRecoveryDetailsByOrganizationUserAsync(
