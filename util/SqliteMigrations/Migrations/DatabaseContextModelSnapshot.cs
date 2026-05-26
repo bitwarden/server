@@ -69,6 +69,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("AccessRuleId")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
@@ -77,9 +80,6 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<string>("ExternalId")
                         .HasMaxLength(300)
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("LeasingPolicyId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
@@ -97,7 +97,7 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("LeasingPolicyId");
+                    b.HasIndex("AccessRuleId");
 
                     b.HasIndex("OrganizationId");
 
@@ -2358,7 +2358,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.ToTable("Installation", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.PrivilegedAccessManagement.Models.LeasingPolicy", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.PrivilegedAccessManagement.Models.AccessRule", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
@@ -2377,11 +2377,11 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Policy")
-                        .IsRequired()
+                    b.Property<DateTime>("RevisionDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("RevisionDate")
+                    b.Property<string>("Rule")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -2389,7 +2389,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasIndex("OrganizationId", "Name")
                         .IsUnique();
 
-                    b.ToTable("LeasingPolicy", (string)null);
+                    b.ToTable("AccessRule", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.AccessPolicy", b =>
@@ -2902,9 +2902,9 @@ namespace Bit.SqliteMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Collection", b =>
                 {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.PrivilegedAccessManagement.Models.LeasingPolicy", null)
+                    b.HasOne("Bit.Infrastructure.EntityFramework.PrivilegedAccessManagement.Models.AccessRule", null)
                         .WithMany()
-                        .HasForeignKey("LeasingPolicyId")
+                        .HasForeignKey("AccessRuleId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
@@ -3436,7 +3436,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.PrivilegedAccessManagement.Models.LeasingPolicy", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.PrivilegedAccessManagement.Models.AccessRule", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
                         .WithMany()

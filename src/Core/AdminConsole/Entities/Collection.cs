@@ -47,10 +47,10 @@ public class Collection : ITableObject<Guid>
     /// </summary>
     public string? DefaultUserCollectionEmail { get; set; }
     /// <summary>
-    /// Reference to a <see cref="Bit.Core.PrivilegedAccessManagement.Entities.LeasingPolicy"/> that gates
+    /// Reference to a <see cref="Bit.Core.PrivilegedAccessManagement.Entities.AccessRule"/> that gates
     /// PAM credential leasing for this collection. Null means leasing is disabled for the collection.
     /// </summary>
-    public Guid? LeasingPolicyId { get; set; }
+    public Guid? AccessRuleId { get; set; }
 
     /// <summary>
     /// Initializes <see cref="Id"/> to a new COMB GUID.

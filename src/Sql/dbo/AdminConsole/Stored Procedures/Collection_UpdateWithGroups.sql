@@ -8,12 +8,12 @@ CREATE PROCEDURE [dbo].[Collection_UpdateWithGroups]
     @Groups AS [dbo].[CollectionAccessSelectionType] READONLY,
     @DefaultUserCollectionEmail NVARCHAR(256) = NULL,
     @Type TINYINT = 0,
-    @LeasingPolicyId UNIQUEIDENTIFIER = NULL
+    @AccessRuleId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[Collection_Update] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate, @DefaultUserCollectionEmail, @Type, @LeasingPolicyId
+    EXEC [dbo].[Collection_Update] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate, @DefaultUserCollectionEmail, @Type, @AccessRuleId
 
     -- Bump RevisionDate on all affected groups (old + new) before modifying CollectionGroup
     ;WITH [AffectedGroupsCTE] AS (

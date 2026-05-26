@@ -103,7 +103,7 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<ITransactionRepository, TransactionRepository>();
         services.AddSingleton<IUserRepository, UserRepository>();
         services.AddSingleton<IOrganizationDomainRepository, OrganizationDomainRepository>();
-        services.AddSingleton<ILeasingPolicyRepository, PrivilegedAccessManagement.Repositories.LeasingPolicyRepository>();
+        services.AddSingleton<IAccessRuleRepository, PrivilegedAccessManagement.Repositories.AccessRuleRepository>();
         services.AddSingleton<IWebAuthnCredentialRepository, WebAuthnCredentialRepository>();
         services.AddSingleton<IProviderPlanRepository, ProviderPlanRepository>();
         services.AddSingleton<IProviderInvoiceItemRepository, ProviderInvoiceItemRepository>();

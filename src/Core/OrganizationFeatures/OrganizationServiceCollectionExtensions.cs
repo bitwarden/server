@@ -70,7 +70,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationSponsorshipCommands(globalSettings);
         services.AddOrganizationApiKeyCommandsQueries();
         services.AddOrganizationCollectionCommands();
-        services.AddLeasingPolicyCommands();
+        services.AddAccessRuleCommands();
         services.AddOrganizationGroupCommands();
         services.AddOrganizationInviteLinkCommandsQueries();
         services.AddOrganizationDomainCommandsQueries();
@@ -190,12 +190,12 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IBulkAddCollectionAccessCommand, BulkAddCollectionAccessCommand>();
     }
 
-    public static void AddLeasingPolicyCommands(this IServiceCollection services)
+    public static void AddAccessRuleCommands(this IServiceCollection services)
     {
-        services.AddSingleton<ILeasingPolicyValidator, LeasingPolicyValidator>();
-        services.AddScoped<ICreateLeasingPolicyCommand, CreateLeasingPolicyCommand>();
-        services.AddScoped<IUpdateLeasingPolicyCommand, UpdateLeasingPolicyCommand>();
-        services.AddScoped<IDeleteLeasingPolicyCommand, DeleteLeasingPolicyCommand>();
+        services.AddSingleton<IAccessRuleValidator, AccessRuleValidator>();
+        services.AddScoped<ICreateAccessRuleCommand, CreateAccessRuleCommand>();
+        services.AddScoped<IUpdateAccessRuleCommand, UpdateAccessRuleCommand>();
+        services.AddScoped<IDeleteAccessRuleCommand, DeleteAccessRuleCommand>();
     }
 
     private static void AddOrganizationGroupCommands(this IServiceCollection services)

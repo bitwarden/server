@@ -44,7 +44,7 @@ public class DatabaseContext : DbContext
     public DbSet<CollectionCipher> CollectionCiphers { get; set; }
     public DbSet<CollectionGroup> CollectionGroups { get; set; }
     public DbSet<CollectionUser> CollectionUsers { get; set; }
-    public DbSet<LeasingPolicy> LeasingPolicies { get; set; }
+    public DbSet<AccessRule> AccessRules { get; set; }
     public DbSet<Device> Devices { get; set; }
     public DbSet<EmergencyAccess> EmergencyAccesses { get; set; }
     public DbSet<Event> Events { get; set; }
@@ -109,7 +109,7 @@ public class DatabaseContext : DbContext
         var eCollectionCipher = builder.Entity<CollectionCipher>();
         var eCollectionUser = builder.Entity<CollectionUser>();
         var eCollectionGroup = builder.Entity<CollectionGroup>();
-        var eLeasingPolicy = builder.Entity<LeasingPolicy>();
+        var eAccessRule = builder.Entity<AccessRule>();
         var eEmergencyAccess = builder.Entity<EmergencyAccess>();
         var eFolder = builder.Entity<Folder>();
         var eGroup = builder.Entity<Group>();
@@ -149,12 +149,12 @@ public class DatabaseContext : DbContext
         eCollectionGroup.HasKey(cg => new { cg.CollectionId, cg.GroupId });
         eGroupUser.HasKey(gu => new { gu.GroupId, gu.OrganizationUserId });
 
-        eLeasingPolicy.Property(p => p.Id).ValueGeneratedNever();
-        eLeasingPolicy.HasIndex(p => new { p.OrganizationId, p.Name }).IsUnique();
+        eAccessRule.Property(p => p.Id).ValueGeneratedNever();
+        eAccessRule.HasIndex(p => new { p.OrganizationId, p.Name }).IsUnique();
         eCollection
-            .HasOne<LeasingPolicy>()
+            .HasOne<AccessRule>()
             .WithMany()
-            .HasForeignKey(c => c.LeasingPolicyId)
+            .HasForeignKey(c => c.AccessRuleId)
             .OnDelete(DeleteBehavior.Restrict);
 
         eOrganizationMemberBaseDetail.HasNoKey();
@@ -180,7 +180,7 @@ public class DatabaseContext : DbContext
         eCipher.ToTable(nameof(Cipher));
         eCollection.ToTable(nameof(Collection));
         eCollectionCipher.ToTable(nameof(CollectionCipher));
-        eLeasingPolicy.ToTable(nameof(LeasingPolicy));
+        eAccessRule.ToTable(nameof(AccessRule));
         eEmergencyAccess.ToTable(nameof(EmergencyAccess));
         eFolder.ToTable(nameof(Folder));
         eGroup.ToTable(nameof(Group));

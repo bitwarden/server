@@ -74,6 +74,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid?>("AccessRuleId")
+                        .HasColumnType("char(36)");
+
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
@@ -83,9 +86,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<string>("ExternalId")
                         .HasMaxLength(300)
                         .HasColumnType("varchar(300)");
-
-                    b.Property<Guid?>("LeasingPolicyId")
-                        .HasColumnType("char(36)");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -102,7 +102,7 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("LeasingPolicyId");
+                    b.HasIndex("AccessRuleId");
 
                     b.HasIndex("OrganizationId");
 
@@ -2369,7 +2369,7 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("Installation", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.PrivilegedAccessManagement.Models.LeasingPolicy", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.PrivilegedAccessManagement.Models.AccessRule", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
@@ -2388,19 +2388,19 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("Policy")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Rule")
+                        .IsRequired()
+                        .HasColumnType("longtext");
 
                     b.HasKey("Id");
 
                     b.HasIndex("OrganizationId", "Name")
                         .IsUnique();
 
-                    b.ToTable("LeasingPolicy", (string)null);
+                    b.ToTable("AccessRule", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.AccessPolicy", b =>
@@ -2913,9 +2913,9 @@ namespace Bit.MySqlMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Collection", b =>
                 {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.PrivilegedAccessManagement.Models.LeasingPolicy", null)
+                    b.HasOne("Bit.Infrastructure.EntityFramework.PrivilegedAccessManagement.Models.AccessRule", null)
                         .WithMany()
-                        .HasForeignKey("LeasingPolicyId")
+                        .HasForeignKey("AccessRuleId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
@@ -3447,7 +3447,7 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.PrivilegedAccessManagement.Models.LeasingPolicy", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.PrivilegedAccessManagement.Models.AccessRule", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
                         .WithMany()
