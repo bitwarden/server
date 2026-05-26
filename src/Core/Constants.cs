@@ -214,6 +214,7 @@ public static class FeatureFlagKeys
     public const string PM32645_DeferPriceMigrationToRenewal = "pm-32645-defer-price-migration-to-renewal";
     public const string PM34515_BrowserDesktopCheckout = "pm-34515-browser-desktop-checkout";
     public const string PM35215_BusinessPlanPriceMigration = "pm-35215-business-plan-price-migration";
+    public const string PM37170_ChurnMitigationOffer = "pm-37170-churn-mitigation-offer";
     public const string PM37597_AlwaysEnableStripeAutomaticTax = "pm-37597-always-enable-stripe-automatic-tax";
 
     /* Key Management Team */
