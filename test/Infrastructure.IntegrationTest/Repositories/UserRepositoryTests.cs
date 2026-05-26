@@ -45,8 +45,8 @@ public class UserRepositoryTests
 
         var group1 = await groupRepository.CreateTestGroupAsync(organization, "test-group-1");
         var group2 = await groupRepository.CreateTestGroupAsync(organization, "test-group-2");
-        await groupRepository.UpdateUsersAsync(group1.Id, [orgUser1.Id]);
-        await groupRepository.UpdateUsersAsync(group2.Id, [orgUser3.Id]);
+        await groupRepository.UpdateUsersAsync(group1.Id, [orgUser1.Id], DateTime.UtcNow);
+        await groupRepository.UpdateUsersAsync(group2.Id, [orgUser3.Id], DateTime.UtcNow);
 
         var collection1 = new Collection
         {
@@ -562,6 +562,49 @@ public class UserRepositoryTests
         Assert.Equal("stamp", createdUser.SecurityStamp);
         Assert.Equal("password_hash", createdUser.MasterPassword);
         Assert.Equal(passwordSalt, createdUser.MasterPasswordSalt);
+    }
+
+    [Theory, DatabaseData]
+    public async Task CreateAsync_DefaultsLastApiKeyRotationDateToNull(
+        IUserRepository userRepository)
+    {
+        var user = new User
+        {
+            Name = "Test User",
+            Email = $"create+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        };
+
+        await userRepository.CreateAsync(user);
+
+        var created = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(created);
+        Assert.Null(created.LastApiKeyRotationDate);
+    }
+
+    [Theory, DatabaseData]
+    public async Task ReplaceAsync_SetsLastApiKeyRotationDate(
+        IUserRepository userRepository)
+    {
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Rotate User",
+            Email = $"rotate+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        Assert.Null(user.LastApiKeyRotationDate);
+
+        var rotatedAt = DateTime.UtcNow;
+        user.LastApiKeyRotationDate = rotatedAt;
+        await userRepository.ReplaceAsync(user);
+
+        var updated = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updated);
+        Assert.NotNull(updated.LastApiKeyRotationDate);
+        Assert.Equal(rotatedAt, updated.LastApiKeyRotationDate.Value, TimeSpan.FromMinutes(1));
     }
 
     /// <summary>

@@ -1,5 +1,9 @@
 ﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.PlanMigration;
+using Bit.Core.Billing.Organizations.PlanMigration.Entities;
+using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
+using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.Services;
@@ -12,137 +16,161 @@ namespace Bit.Core.Billing.Pricing;
 public interface IPriceIncreaseScheduler
 {
     /// <summary>
-    /// Creates a two-phase subscription schedule that defers a price increase to the subscription's renewal date.
-    /// Phase 1 echoes the current subscription state; Phase 2 applies the new price (and discount where applicable).
-    /// Gated behind the <c>PM32645_DeferPriceMigrationToRenewal</c> feature flag. No-ops if the flag is off,
-    /// an active schedule already exists, or the subscription does not match a known migration path.
+    /// Creates a two-phase subscription schedule that defers a Premium/Families price increase
+    /// to the subscription's renewal date. Phase 1 echoes the current subscription state;
+    /// Phase 2 applies the new price (and discount where applicable). Gated behind the
+    /// <c>PM32645_DeferPriceMigrationToRenewal</c> feature flag. No-ops if the flag is off,
+    /// an active schedule already exists, or the subscription does not match a known personal
+    /// migration path.
     /// </summary>
     /// <param name="subscription">The Stripe subscription to schedule a price increase for.</param>
     /// <returns>True if a new schedule was created; false if skipped.</returns>
-    Task<bool> Schedule(Subscription subscription);
+    Task<bool> SchedulePersonalPriceIncrease(Subscription subscription);
+
+    /// <summary>
+    /// Creates a two-phase subscription schedule that defers a Teams/Enterprise 2020 -> current
+    /// price increase to renewal. Phase 1 mirrors the current subscription; Phase 2 maps line
+    /// items to the cohort's target plan and preserves existing discounts. Stamps
+    /// <see cref="OrganizationPlanMigrationCohortAssignment.ScheduledDate"/> on success. Gated
+    /// behind the <c>PM35215_BusinessPlanPriceMigration</c> feature flag.
+    /// </summary>
+    /// <remarks>
+    /// Caller contract: <paramref name="subscription"/> must be loaded with <c>discounts</c>,
+    /// <c>customer</c>, and <c>customer.discount</c> expanded, and <see cref="Subscription.Metadata"/>
+    /// must contain an <c>organizationId</c> key (the scheduler throws if missing). The caller is
+    /// responsible for confirming the organization belongs to <paramref name="cohort"/>.
+    /// </remarks>
+    /// <param name="subscription">The Stripe subscription, loaded with the expansions above.</param>
+    /// <param name="cohort">The cohort the organization belongs to.</param>
+    /// <returns>True if a new schedule was created; false if skipped.</returns>
+    Task<bool> ScheduleBusinessPriceIncrease(Subscription subscription, OrganizationPlanMigrationCohort cohort);
 
     /// <summary>
     /// Releases any active subscription schedule for the given subscription, cancelling a pending
     /// deferred price increase. Use when the subscription operation makes the scheduled migration
-    /// irrelevant (e.g., plan upgrade, sponsorship, cancellation). Gated behind the
-    /// <c>PM32645_DeferPriceMigrationToRenewal</c> feature flag. Logs and re-throws on failure,
-    /// requiring manual release via the Stripe Dashboard.
+    /// irrelevant (e.g., plan upgrade, sponsorship, cancellation). Runs when either
+    /// <c>PM32645_DeferPriceMigrationToRenewal</c> or <c>PM35215_BusinessPlanPriceMigration</c> is
+    /// enabled. Logs and re-throws on failure, requiring manual release via the Stripe Dashboard.
     /// </summary>
     /// <param name="customerId">The Stripe customer ID that owns the subscription.</param>
     /// <param name="subscriptionId">The Stripe subscription ID to release the schedule for.</param>
     Task Release(string customerId, string subscriptionId);
-
-    /// <summary>
-    /// Resolves the Phase 2 subscription schedule options for a price migration based on the subscription's
-    /// current plan. Determines the appropriate target plan, pricing, and discount (if applicable) for
-    /// supported migration paths (Premium and Families plans). Gated behind the
-    /// <c>PM32645_DeferPriceMigrationToRenewal</c> feature flag.
-    /// </summary>
-    /// <param name="subscription">The Stripe subscription to resolve Phase 2 options for.</param>
-    /// <returns>
-    /// A <see cref="SubscriptionSchedulePhaseOptions"/> object containing the migration details if a supported
-    /// migration path is found; otherwise, null if the feature flag is disabled, the subscription does not
-    /// match a known migration path, or an error occurs during resolution.
-    /// </returns>
-    Task<SubscriptionSchedulePhaseOptions?> ResolvePhase2Async(Subscription subscription);
 }
 
 public class PriceIncreaseScheduler(
     IStripeAdapter stripeAdapter,
     IFeatureService featureService,
     IPricingClient pricingClient,
+    IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
     ILogger<PriceIncreaseScheduler> logger) : IPriceIncreaseScheduler
 {
-    public async Task<bool> Schedule(Subscription subscription)
+    public async Task<bool> SchedulePersonalPriceIncrease(Subscription subscription)
     {
         if (!featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
         {
             return false;
         }
 
-        var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
-            new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
-
-        if (schedules.Data.Any(s => s.SubscriptionId == subscription.Id && s.Status == SubscriptionScheduleStatus.Active))
+        if (await ActiveScheduleExistsAsync(subscription))
         {
-            logger.LogInformation(
-                "Active subscription schedule already exists for subscription ({SubscriptionId}), skipping schedule creation",
-                subscription.Id);
             return false;
         }
 
-        var phase2 = await ResolvePhase2Async(subscription);
-
+        var phase2 = await ResolvePersonalPhase2Async(subscription);
         if (phase2 == null)
         {
             return false;
         }
 
-        var schedule = await stripeAdapter.CreateSubscriptionScheduleAsync(
-            new SubscriptionScheduleCreateOptions
-            {
-                FromSubscription = subscription.Id
-            });
+        await CreateAndConfigureScheduleAsync(subscription, phase2);
+        return true;
+    }
 
+    public async Task<bool> ScheduleBusinessPriceIncrease(
+        Subscription subscription,
+        OrganizationPlanMigrationCohort cohort)
+    {
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
+        {
+            return false;
+        }
+
+        if (await ActiveScheduleExistsAsync(subscription))
+        {
+            return false;
+        }
+
+        Guid organizationId;
         try
         {
-            var phase1 = schedule.Phases[0];
-
-            await stripeAdapter.UpdateSubscriptionScheduleAsync(schedule.Id,
-                new SubscriptionScheduleUpdateOptions
+            SubscriberId subscriberId = subscription;
+            var resolved = subscriberId.Match<Guid?>(
+                _ =>
                 {
-                    EndBehavior = SubscriptionScheduleEndBehavior.Release,
-                    Phases =
-                    [
-                        new SubscriptionSchedulePhaseOptions
-                        {
-                            StartDate = phase1.StartDate,
-                            EndDate = phase1.EndDate,
-                            Items = phase1.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
-                            {
-                                Price = i.PriceId,
-                                Quantity = i.Quantity
-                            }).ToList(),
-                            Discounts = phase1.Discounts?.Select(d => new SubscriptionSchedulePhaseDiscountOptions
-                            {
-                                Coupon = d.CouponId
-                            }).ToList(),
-                            ProrationBehavior = ProrationBehavior.None
-                        },
-                        phase2
-                    ]
+                    logger.LogWarning(
+                        "User subscriptions do not support business price increase scheduling ({SubscriptionId})",
+                        subscription.Id);
+                    return null;
+                },
+                orgId => orgId.Value,
+                _ =>
+                {
+                    logger.LogWarning(
+                        "Provider subscriptions do not support business price increase scheduling ({SubscriptionId})",
+                        subscription.Id);
+                    return null;
                 });
+            if (resolved is null)
+            {
+                return false;
+            }
+            organizationId = resolved.Value;
         }
         catch (Exception ex)
         {
             logger.LogError(ex,
-                "Failed to update subscription schedule ({ScheduleId}) for subscription ({SubscriptionId}), attempting to release orphaned schedule",
-                schedule.Id, subscription.Id);
-
-            try
-            {
-                await stripeAdapter.ReleaseSubscriptionScheduleAsync(schedule.Id);
-            }
-            catch (Exception releaseEx)
-            {
-                logger.LogError(releaseEx,
-                    "Failed to release orphaned subscription schedule ({ScheduleId}) for subscription ({SubscriptionId})",
-                    schedule.Id, subscription.Id);
-            }
-
-            throw;
+                "Failed to resolve subscriber type for subscription ({SubscriptionId}), cannot schedule business price increase",
+                subscription.Id);
+            return false;
         }
+
+        var phase2 = await ResolvePhase2ForBusinessAsync(subscription, cohort);
+        if (phase2 is null)
+        {
+            return false;
+        }
+
+        var phaseMetadata = new Dictionary<string, string>
+        {
+            [MetadataKeys.MigrationCohortId] = cohort.Id.ToString(),
+            [MetadataKeys.MigrationCohortName] = cohort.Name
+        };
+
+        await CreateAndConfigureScheduleAsync(subscription, phase2, phaseMetadata);
+
+        var assignment = await assignmentRepository.GetByOrganizationIdAsync(organizationId);
+        if (assignment is null)
+        {
+            // Schedule succeeded; assignment-row drift is left for reconciliation rather than failing the call.
+            logger.LogError(
+                "Created business price schedule for subscription ({SubscriptionId}) but no cohort assignment row found for cohort ({CohortId})",
+                subscription.Id, cohort.Id);
+            return true;
+        }
+
+        assignment.ScheduledDate = DateTime.UtcNow;
+        assignment.RevisionDate = DateTime.UtcNow;
+        await assignmentRepository.ReplaceAsync(assignment);
+
+        logger.LogInformation(
+            "Scheduled business price increase for subscription ({SubscriptionId}); assignment ({AssignmentId}) stamped with ScheduledDate",
+            subscription.Id, assignment.Id);
 
         return true;
     }
 
     public async Task Release(string customerId, string subscriptionId)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
-        {
-            return;
-        }
-
         try
         {
             var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
@@ -165,10 +193,107 @@ public class PriceIncreaseScheduler(
         }
     }
 
-    public async Task<SubscriptionSchedulePhaseOptions?> ResolvePhase2Async(Subscription subscription)
+    private async Task<bool> ActiveScheduleExistsAsync(Subscription subscription)
+    {
+        var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
+            new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
+
+        var exists = schedules.Data.Any(s =>
+            s.SubscriptionId == subscription.Id && s.Status == SubscriptionScheduleStatus.Active);
+
+        if (exists)
+        {
+            logger.LogInformation(
+                "Active subscription schedule already exists for subscription ({SubscriptionId}), skipping schedule creation",
+                subscription.Id);
+        }
+
+        return exists;
+    }
+
+    private async Task<SubscriptionSchedule> CreateAndConfigureScheduleAsync(
+        Subscription subscription,
+        SubscriptionSchedulePhaseOptions phase2Options,
+        Dictionary<string, string>? phaseMetadata = null)
+    {
+        var schedule = await stripeAdapter.CreateSubscriptionScheduleAsync(
+            new SubscriptionScheduleCreateOptions { FromSubscription = subscription.Id });
+
+        try
+        {
+            var phase1 = schedule.Phases[0];
+
+            var phase1Options = new SubscriptionSchedulePhaseOptions
+            {
+                StartDate = phase1.StartDate,
+                EndDate = phase1.EndDate,
+                Items = [.. phase1.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
+                {
+                    Price = i.PriceId,
+                    Quantity = i.Quantity
+                })],
+                Discounts = phase1.Discounts is null ? null :
+                [
+                    .. phase1.Discounts.Select(d => new SubscriptionSchedulePhaseDiscountOptions
+                    {
+                        Coupon = d.CouponId
+                    })
+                ],
+                ProrationBehavior = ProrationBehavior.None
+            };
+
+            if (phaseMetadata is not null)
+            {
+                phase1Options.Metadata = phaseMetadata;
+                phase2Options.Metadata = phaseMetadata;
+            }
+
+            await stripeAdapter.UpdateSubscriptionScheduleAsync(schedule.Id,
+                new SubscriptionScheduleUpdateOptions
+                {
+                    EndBehavior = SubscriptionScheduleEndBehavior.Release,
+                    Phases = [phase1Options, phase2Options]
+                });
+
+            return schedule;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Failed to update subscription schedule ({ScheduleId}) for subscription ({SubscriptionId}), attempting to release orphaned schedule",
+                schedule.Id, subscription.Id);
+
+            try
+            {
+                await stripeAdapter.ReleaseSubscriptionScheduleAsync(schedule.Id);
+            }
+            catch (Exception releaseEx)
+            {
+                logger.LogError(releaseEx,
+                    "Failed to release orphaned subscription schedule ({ScheduleId}) for subscription ({SubscriptionId})",
+                    schedule.Id, subscription.Id);
+            }
+
+            throw;
+        }
+    }
+
+    private async Task<SubscriptionSchedulePhaseOptions?> ResolvePersonalPhase2Async(Subscription subscription)
     {
         if (!featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
         {
+            return null;
+        }
+
+        // Stripe.NET deserializes an unexpanded "discounts" array as a list of null entries;
+        // proceeding would silently drop pre-existing discounts from Phase 2.
+        if (subscription.Discounts is { Count: > 0 } && subscription.Discounts.Any(d => d == null))
+        {
+            logger.LogError(
+                "Subscription ({SubscriptionId}) was loaded without expanding 'discounts'; " +
+                "{Count} pre-existing discount(s) would be silently dropped from Phase 2. " +
+                "Caller must include \"discounts\" in the Stripe Expand list.",
+                subscription.Id, subscription.DiscountIds?.Count ?? 0);
             return null;
         }
 
@@ -190,7 +315,7 @@ public class PriceIncreaseScheduler(
         catch (Exception ex)
         {
             logger.LogError(ex,
-                "Failed to resolve subscriber type for subscription ({SubscriptionId}), cannot determine price migration path",
+                "Failed to resolve Phase 2 options for subscription ({SubscriptionId}), cannot determine price migration path",
                 subscription.Id);
             return null;
         }
@@ -244,12 +369,20 @@ public class PriceIncreaseScheduler(
             return null;
         }
 
+        List<SubscriptionSchedulePhaseDiscountOptions> discounts = [..
+            subscription.Discounts?.Select(d => new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.Coupon.Id }) ?? []];
+
+        discounts.Add(new SubscriptionSchedulePhaseDiscountOptions
+        {
+            Coupon = CouponIDs.Milestone2SubscriptionDiscount
+        });
+
         return new SubscriptionSchedulePhaseOptions
         {
             StartDate = startDate,
             EndDate = startDate.Value.AddYears(1),
             Items = items,
-            Discounts = [new() { Coupon = CouponIDs.Milestone2SubscriptionDiscount }],
+            Discounts = discounts,
             ProrationBehavior = ProrationBehavior.None
         };
     }
@@ -291,12 +424,16 @@ public class PriceIncreaseScheduler(
             });
         }
 
-        var discounts = oldPlan.Type == PlanType.FamiliesAnnually2019
-            ? new List<SubscriptionSchedulePhaseDiscountOptions>
+        List<SubscriptionSchedulePhaseDiscountOptions> discounts = [..
+            subscription.Discounts?.Select(d => new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.Coupon.Id }) ?? []];
+
+        if (oldPlan.Type == PlanType.FamiliesAnnually2019)
+        {
+            discounts.Add(new SubscriptionSchedulePhaseDiscountOptions
             {
-                new() { Coupon = CouponIDs.Milestone3SubscriptionDiscount }
-            }
-            : null;
+                Coupon = CouponIDs.Milestone3SubscriptionDiscount
+            });
+        }
 
         var startDate = subscription.GetCurrentPeriodEnd();
         if (startDate == null)
@@ -312,8 +449,102 @@ public class PriceIncreaseScheduler(
             StartDate = startDate,
             EndDate = startDate.Value.AddYears(1),
             Items = items,
-            Discounts = discounts,
+            Discounts = discounts.Count > 0 ? discounts : null,
             ProrationBehavior = ProrationBehavior.None
         };
     }
+
+    private async Task<SubscriptionSchedulePhaseOptions?> ResolvePhase2ForBusinessAsync(
+        Subscription subscription,
+        OrganizationPlanMigrationCohort cohort)
+    {
+        // Stripe.NET deserializes an unexpanded "discounts" array as a list of null entries;
+        // proceeding would silently drop pre-existing discounts from Phase 2.
+        if (subscription.Discounts is { Count: > 0 } && subscription.Discounts.Any(d => d == null))
+        {
+            logger.LogError(
+                "Subscription ({SubscriptionId}) was loaded without expanding 'discounts'; " +
+                "{Count} pre-existing discount(s) would be silently dropped from Phase 2. " +
+                "Caller must include \"discounts\" in the Stripe Expand list.",
+                subscription.Id, subscription.DiscountIds?.Count ?? 0);
+            return null;
+        }
+
+        if (cohort.MigrationPathId is null)
+        {
+            // Churn-only cohort — no migration to schedule.
+            return null;
+        }
+
+        var migrationPath = MigrationPaths.FromId(cohort.MigrationPathId.Value);
+        if (migrationPath is null)
+        {
+            logger.LogError(
+                "Unknown MigrationPathId ({MigrationPathId}) on cohort ({CohortId}); cannot schedule business price increase for subscription ({SubscriptionId})",
+                cohort.MigrationPathId, cohort.Id, subscription.Id);
+            return null;
+        }
+
+        var sourcePlan = await pricingClient.GetPlanOrThrow(migrationPath.FromPlan);
+        var targetPlan = await pricingClient.GetPlanOrThrow(migrationPath.ToPlan);
+
+        var items = new List<SubscriptionSchedulePhaseItemOptions>();
+        foreach (var item in subscription.Items.Data)
+        {
+            var targetPriceId = OrganizationPlanMigrationPriceMapper.MapOrNull(item.Price.Id, sourcePlan, targetPlan);
+            if (targetPriceId is null)
+            {
+                logger.LogWarning(
+                    "Subscription ({SubscriptionId}) line item price ({PriceId}) has no mapping in migration path {PathName}; skipping schedule",
+                    subscription.Id, item.Price.Id, migrationPath.Name);
+                return null;
+            }
+            items.Add(new SubscriptionSchedulePhaseItemOptions
+            {
+                Price = targetPriceId,
+                Quantity = item.Quantity
+            });
+        }
+
+        var discounts = new List<SubscriptionSchedulePhaseDiscountOptions>();
+
+        if (subscription.Customer?.Discount?.Coupon?.Id is { Length: > 0 } customerCouponId)
+        {
+            discounts.Add(new SubscriptionSchedulePhaseDiscountOptions { Coupon = customerCouponId });
+        }
+
+        if (subscription.Discounts is not null)
+        {
+            discounts.AddRange(subscription.Discounts.Select(d =>
+                new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.Coupon.Id }));
+        }
+
+        if (!string.IsNullOrEmpty(cohort.ProactiveDiscountCouponCode))
+        {
+            discounts.Add(new SubscriptionSchedulePhaseDiscountOptions
+            {
+                Coupon = cohort.ProactiveDiscountCouponCode
+            });
+        }
+
+        if (subscription.GetCurrentPeriod() is not { Start: { } currentStart, End: { } currentEnd })
+        {
+            logger.LogError(
+                "Could not determine current period for subscription ({SubscriptionId}); skipping business schedule creation",
+                subscription.Id);
+            return null;
+        }
+
+        var periodLength = currentEnd - currentStart;
+
+        return new SubscriptionSchedulePhaseOptions
+        {
+            StartDate = currentEnd,
+            EndDate = currentEnd + periodLength,
+            Items = items,
+            Discounts = discounts.Count > 0 ? discounts : null,
+            ProrationBehavior = ProrationBehavior.None
+        };
+    }
+
 }

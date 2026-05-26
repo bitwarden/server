@@ -23,6 +23,7 @@ public class UserSshKeyCipherScene(IUserRepository userRepository, ICipherReposi
         public string? Fingerprint { get; set; }
         public bool Reprompt { get; set; }
         public string? Notes { get; set; }
+        public Guid? FolderId { get; set; }
     }
 
     public class Result
@@ -56,6 +57,13 @@ public class UserSshKeyCipherScene(IUserRepository userRepository, ICipherReposi
         if (request.Reprompt)
         {
             cipher.Reprompt = CipherRepromptType.Password;
+        }
+        if (request.FolderId.HasValue)
+        {
+            cipher.Folders = CipherComposer.BuildFoldersJson(new Dictionary<Guid, Guid>
+            {
+                { request.UserId, request.FolderId.Value }
+            });
         }
 
         await cipherRepository.CreateAsync(cipher);

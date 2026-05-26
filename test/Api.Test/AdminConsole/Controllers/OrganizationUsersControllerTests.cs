@@ -1,9 +1,8 @@
 ﻿using System.Security.Claims;
 using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.AdminConsole.Authorization.Collections;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
-using Bit.Api.Models.Request.Organizations;
-using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
@@ -11,6 +10,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
@@ -99,7 +99,7 @@ public class OrganizationUsersControllerTests
         sutProvider.GetDependency<ISsoConfigRepository>().GetByOrganizationIdAsync(default).ReturnsForAnyArgs((SsoConfig)null);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(default, default).ReturnsForAnyArgs(orgUser);
         await sutProvider.Sut.PutResetPasswordEnrollment(orgId, userId, model);
-        await sutProvider.GetDependency<IOrganizationService>().Received(1).UpdateUserResetPasswordEnrollmentAsync(
+        await sutProvider.GetDependency<IUpdateUserResetPasswordEnrollmentCommand>().Received(1).UpdateUserResetPasswordEnrollmentAsync(
             orgId,
             userId,
             model.ResetPasswordKey,
@@ -166,7 +166,7 @@ public class OrganizationUsersControllerTests
 
         await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(1)
             .AcceptOrgUserByEmailTokenAsync(orgUserId, user, model.Token, sutProvider.GetDependency<IUserService>());
-        await sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs()
+        await sutProvider.GetDependency<IUpdateUserResetPasswordEnrollmentCommand>().DidNotReceiveWithAnyArgs()
             .UpdateUserResetPasswordEnrollmentAsync(default, default, default, default);
     }
 
@@ -200,7 +200,7 @@ public class OrganizationUsersControllerTests
         // Assert
         await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(1)
             .AcceptOrgUserByEmailTokenAsync(orgUserId, user, model.Token, userService);
-        await sutProvider.GetDependency<IOrganizationService>().Received(1)
+        await sutProvider.GetDependency<IUpdateUserResetPasswordEnrollmentCommand>().Received(1)
             .UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
 
         await userService.Received(1).GetUserByPrincipalAsync(default);
@@ -237,7 +237,7 @@ public class OrganizationUsersControllerTests
         await userService.Received(1).GetUserByPrincipalAsync(default);
         await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(1)
             .AcceptOrgUserByEmailTokenAsync(orgUserId, user, model.Token, userService);
-        await sutProvider.GetDependency<IOrganizationService>().Received(0)
+        await sutProvider.GetDependency<IUpdateUserResetPasswordEnrollmentCommand>().Received(0)
             .UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
     }
 
@@ -497,7 +497,7 @@ public class OrganizationUsersControllerTests
         // Assert
         await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(0)
             .AcceptOrgUserByEmailTokenAsync(orgUserId, user, model.Token, userService);
-        await sutProvider.GetDependency<IOrganizationService>().Received(0)
+        await sutProvider.GetDependency<IUpdateUserResetPasswordEnrollmentCommand>().Received(0)
             .UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
 
         await userService.Received(1).GetUserByPrincipalAsync(default);
@@ -507,39 +507,11 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task PutRecoverAccount_WhenOrganizationUserNotFound_ReturnsNotFound(
-        Guid orgId, Guid orgUserId, OrganizationUserResetPasswordRequestModel model,
-        SutProvider<OrganizationUsersController> sutProvider)
-    {
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns((OrganizationUser)null);
-
-        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model);
-
-        Assert.IsType<Microsoft.AspNetCore.Http.HttpResults.NotFound>(result);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task PutRecoverAccount_WhenOrganizationIdMismatch_ReturnsNotFound(
-        Guid orgId, Guid orgUserId, OrganizationUserResetPasswordRequestModel model, OrganizationUser organizationUser,
-        SutProvider<OrganizationUsersController> sutProvider)
-    {
-        organizationUser.OrganizationId = Guid.NewGuid();
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
-
-        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model);
-
-        Assert.IsType<Microsoft.AspNetCore.Http.HttpResults.NotFound>(result);
-    }
-
-    [Theory]
-    [BitAutoData]
     public async Task PutRecoverAccount_WhenAuthorizationFails_ReturnsBadRequest(
         Guid orgId, Guid orgUserId, OrganizationUserResetPasswordRequestModel model, OrganizationUser organizationUser,
         SutProvider<OrganizationUsersController> sutProvider)
     {
         organizationUser.OrganizationId = orgId;
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(
                 Arg.Any<ClaimsPrincipal>(),
@@ -547,7 +519,7 @@ public class OrganizationUsersControllerTests
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(x => x.SingleOrDefault() is RecoverAccountAuthorizationRequirement))
             .Returns(AuthorizationResult.Failed());
 
-        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model);
+        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model, organizationUser);
 
         Assert.IsType<BadRequest<ErrorResponseModel>>(result);
     }
@@ -559,7 +531,6 @@ public class OrganizationUsersControllerTests
         SutProvider<OrganizationUsersController> sutProvider)
     {
         organizationUser.OrganizationId = orgId;
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(
                 Arg.Any<ClaimsPrincipal>(),
@@ -573,7 +544,7 @@ public class OrganizationUsersControllerTests
             .RecoverAccountAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUser>(), Arg.Any<string>(), Arg.Any<string>())
             .Returns(Microsoft.AspNetCore.Identity.IdentityResult.Success);
 
-        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model);
+        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model, organizationUser);
 
         Assert.IsType<Ok>(result);
         await sutProvider.GetDependency<IAdminRecoverAccountCommand>().Received(1)
@@ -587,7 +558,6 @@ public class OrganizationUsersControllerTests
         SutProvider<OrganizationUsersController> sutProvider)
     {
         organizationUser.OrganizationId = orgId;
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(
                 Arg.Any<ClaimsPrincipal>(),
@@ -601,7 +571,7 @@ public class OrganizationUsersControllerTests
             .RecoverAccountAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUser>(), Arg.Any<string>(), Arg.Any<string>())
             .Returns(Microsoft.AspNetCore.Identity.IdentityResult.Failed(new Microsoft.AspNetCore.Identity.IdentityError { Description = "Error message" }));
 
-        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model);
+        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model, organizationUser);
 
         Assert.IsType<BadRequest<ModelStateDictionary>>(result);
     }
@@ -613,7 +583,6 @@ public class OrganizationUsersControllerTests
         SutProvider<OrganizationUsersController> sutProvider)
     {
         organizationUser.OrganizationId = orgId;
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(
                 Arg.Any<ClaimsPrincipal>(),
@@ -627,7 +596,7 @@ public class OrganizationUsersControllerTests
             .RecoverAccountAsync(Arg.Any<Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2.RecoverAccountRequest>())
             .Returns(new Bit.Core.AdminConsole.Utilities.v2.Results.CommandResult(new OneOf.Types.None()));
 
-        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model);
+        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model, organizationUser);
 
         Assert.IsType<NoContent>(result);
     }
@@ -639,7 +608,6 @@ public class OrganizationUsersControllerTests
         SutProvider<OrganizationUsersController> sutProvider)
     {
         organizationUser.OrganizationId = orgId;
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(
                 Arg.Any<ClaimsPrincipal>(),
@@ -654,7 +622,7 @@ public class OrganizationUsersControllerTests
             .Returns(new Bit.Core.AdminConsole.Utilities.v2.Results.CommandResult(
                 new Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2.PasswordUpdateFailedError("Error message")));
 
-        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model);
+        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model, organizationUser);
 
         Assert.IsType<BadRequest<ErrorResponseModel>>(result);
     }

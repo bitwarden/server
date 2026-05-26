@@ -16,6 +16,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -34,6 +35,7 @@ public class StripePaymentService : IStripePaymentService
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IGlobalSettings _globalSettings;
     private readonly IPricingClient _pricingClient;
+    private readonly IFeatureService _featureService;
 
     public StripePaymentService(
         ITransactionRepository transactionRepository,
@@ -41,7 +43,8 @@ public class StripePaymentService : IStripePaymentService
         IStripeAdapter stripeAdapter,
         Braintree.IBraintreeGateway braintreeGateway,
         IGlobalSettings globalSettings,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        IFeatureService featureService)
     {
         _transactionRepository = transactionRepository;
         _logger = logger;
@@ -49,6 +52,7 @@ public class StripePaymentService : IStripePaymentService
         _btGateway = braintreeGateway;
         _globalSettings = globalSettings;
         _pricingClient = pricingClient;
+        _featureService = featureService;
     }
 
     // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated SetUpSponsorshipCommand
@@ -123,14 +127,17 @@ public class StripePaymentService : IStripePaymentService
 
         if (subscriptionUpdate is CompleteSubscriptionUpdate)
         {
-            var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(sub.Customer.Address?.Country, sub.Customer.TaxExempt);
-            switch (sub.Customer)
+            if (!_featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
             {
-                case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
-                    when determinedTaxExemptStatus != customerTaxExemptStatus:
-                    await _stripeAdapter.UpdateCustomerAsync(sub.Customer.Id,
-                        new CustomerUpdateOptions { TaxExempt = determinedTaxExemptStatus });
-                    break;
+                var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(sub.Customer.Address?.Country, sub.Customer.TaxExempt);
+                switch (sub.Customer)
+                {
+                    case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
+                        when determinedTaxExemptStatus != customerTaxExemptStatus:
+                        await _stripeAdapter.UpdateCustomerAsync(sub.Customer.Id,
+                            new CustomerUpdateOptions { TaxExempt = determinedTaxExemptStatus });
+                        break;
+                }
             }
 
             subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
@@ -803,16 +810,6 @@ public class StripePaymentService : IStripePaymentService
                 ex.StripeError?.Code);
         }
     }
-
-    public async Task<string> AddSecretsManagerToSubscription(
-        Organization org,
-        StaticStore.Plan plan,
-        int additionalSmSeats,
-        int additionalServiceAccount) =>
-        await FinalizeSubscriptionChangeAsync(
-            org,
-            new SecretsManagerSubscribeUpdate(org, plan, additionalSmSeats, additionalServiceAccount),
-            true);
 
     public async Task<bool> HasSecretsManagerStandalone(Organization organization) =>
         await HasSecretsManagerStandaloneAsync(gatewayCustomerId: organization.GatewayCustomerId,

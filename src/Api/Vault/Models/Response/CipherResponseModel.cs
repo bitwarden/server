@@ -55,6 +55,21 @@ public class CipherMiniResponseModel : ResponseModel
                 cipherData = sshKeyData;
                 SSHKey = new CipherSSHKeyModel(sshKeyData);
                 break;
+            case CipherType.BankAccount:
+                var bankAccountData = JsonSerializer.Deserialize<CipherBankAccountData>(cipher.Data);
+                cipherData = bankAccountData;
+                BankAccount = new CipherBankAccountModel(bankAccountData);
+                break;
+            case CipherType.DriversLicense:
+                var driversLicenseData = JsonSerializer.Deserialize<CipherDriversLicenseData>(cipher.Data);
+                cipherData = driversLicenseData;
+                DriversLicense = new CipherDriversLicenseModel(driversLicenseData);
+                break;
+            case CipherType.Passport:
+                var passportData = JsonSerializer.Deserialize<CipherPassportData>(cipher.Data);
+                cipherData = passportData;
+                Passport = new CipherPassportModel(passportData);
+                break;
             default:
                 throw new ArgumentException("Unsupported " + nameof(Type) + ".");
         }
@@ -98,6 +113,15 @@ public class CipherMiniResponseModel : ResponseModel
 
     [Obsolete("Use Data instead.")]
     public CipherSSHKeyModel SSHKey { get; set; }
+
+    [Obsolete("Use Data instead.")]
+    public CipherBankAccountModel BankAccount { get; set; }
+
+    [Obsolete("Use Data instead.")]
+    public CipherDriversLicenseModel DriversLicense { get; set; }
+
+    [Obsolete("Use Data instead.")]
+    public CipherPassportModel Passport { get; set; }
 
     [Obsolete("Use Data instead.")]
     public IEnumerable<CipherFieldModel> Fields { get; set; }

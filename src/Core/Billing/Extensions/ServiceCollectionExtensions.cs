@@ -44,6 +44,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IGetBitwardenSubscriptionQuery, GetBitwardenSubscriptionQuery>();
         services.AddTransient<IReinstateSubscriptionCommand, ReinstateSubscriptionCommand>();
         services.AddTransient<IBraintreeService, BraintreeService>();
+        services.AddTransient<IAddSecretsManagerSubscriptionCommand, AddSecretsManagerSubscriptionCommand>();
         services.AddTransient<IUpdateOrganizationSubscriptionCommand, UpdateOrganizationSubscriptionCommand>();
         services.AddTransient<IUpgradeOrganizationPlanVNextCommand, UpgradeOrganizationPlanVNextCommand>();
         services.AddTransient<ICreateBillingPortalSessionCommand, CreateBillingPortalSessionCommand>();

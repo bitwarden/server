@@ -20,6 +20,9 @@
     var canEditLicensing = AccessControlService.UserHasPermission(Permission.Org_Licensing_Edit);
     var canEditBilling = AccessControlService.UserHasPermission(Permission.Org_Billing_Edit);
     var canLaunchGateway = AccessControlService.UserHasPermission(Permission.Org_Billing_LaunchGateway);
+    var canManagePlanMigrationCohorts = AccessControlService.UserHasPermission(Permission.Tools_ManagePlanMigrationCohorts);
+    var businessPlanPriceMigrationEnabled = FeatureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration);
+    var canViewMigrationCohortAssignment = businessPlanPriceMigrationEnabled && canManagePlanMigrationCohorts;
 }
 
 <form method="post" id="edit-form" asp-route-providerId="@Model.Provider?.Id">
@@ -60,6 +63,40 @@
             <div class="form-check mb-3">
                 <input type="checkbox" class="form-check-input" asp-for="Enabled" disabled='@(canCheckEnabled ? null : "disabled")'>
                 <label class="form-check-label" asp-for="Enabled"></label>
+            </div>
+        }
+
+        @if (canViewMigrationCohortAssignment && Model.Organization != null && Model.AvailableMigrationCohorts != null)
+        {
+            var migrationCohortDisabled = !canEditPlan || Model.MigrationCohortLocked;
+            <div class="row">
+                <div class="col-sm">
+                    <div class="mb-3">
+                        <label class="form-label" asp-for="MigrationCohortId"></label>
+                        @{
+                            var cohortItems = new List<SelectListItem>
+                            {
+                                new() { Value = string.Empty, Text = "(Not assigned)", Selected = !Model.MigrationCohortId.HasValue }
+                            };
+                            cohortItems.AddRange(Model.AvailableMigrationCohorts.Select(c => new SelectListItem
+                            {
+                                Value = c.Id.ToString(),
+                                Text = c.IsActive ? c.Name : $"{c.Name} (inactive)",
+                                Selected = Model.MigrationCohortId == c.Id
+                            }));
+                        }
+                        <select class="form-select" asp-for="MigrationCohortId" asp-items="cohortItems" disabled="@(migrationCohortDisabled ? "disabled" : null)"></select>
+                        @if (migrationCohortDisabled)
+                        {
+                            @* Disabled controls aren't POSTed; a hidden input round-trips the value so the lock guard isn't tripped on unrelated edits. *@
+                            <input type="hidden" asp-for="MigrationCohortId" />
+                            @if (Model.MigrationCohortLocked)
+                            {
+                                <div class="form-text mt-0">@Model.MigrationCohortLockReason</div>
+                            }
+                        }
+                    </div>
+                </div>
             </div>
         }
     }
@@ -163,6 +200,10 @@
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" asp-for="UseAutomaticUserConfirmation" disabled='@(canEditPlan ? null : "disabled")'>
                     <label class="form-check-label" asp-for="UseAutomaticUserConfirmation"></label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="UseInviteLinks" disabled='@(canEditPlan ? null : "disabled")'>
+                    <label class="form-check-label" asp-for="UseInviteLinks"></label>
                 </div>
             </div>
             <div class="col-3">
@@ -335,6 +376,14 @@
                             </button>
                         }
                     </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm">
+                <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" asp-for="ExemptFromBillingAutomation" disabled="@(!canEditBilling)">
+                    <label class="form-check-label" asp-for="ExemptFromBillingAutomation"></label>
                 </div>
             </div>
         </div>

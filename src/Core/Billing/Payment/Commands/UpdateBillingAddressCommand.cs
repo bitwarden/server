@@ -60,7 +60,7 @@ public class UpdateBillingAddressCommand(
                         City = billingAddress.City,
                         State = billingAddress.State
                     },
-                    Expand = ["subscriptions"]
+                    Expand = ["subscriptions", "subscriptions.data.test_clock"]
                 });
 
         await EnableAutomaticTaxAsync(subscriber, customer);
@@ -72,23 +72,26 @@ public class UpdateBillingAddressCommand(
         ISubscriber subscriber,
         BillingAddress billingAddress)
     {
-        var determinedTaxExemptStatus = await GetDeterminedTaxExemptStatusAsync(subscriber.GatewayCustomerId!, billingAddress.Country);
-
-        var customer = await stripeAdapter.UpdateCustomerAsync(subscriber.GatewayCustomerId,
-            new CustomerUpdateOptions
+        var updateOptions = new CustomerUpdateOptions
+        {
+            Address = new AddressOptions
             {
-                Address = new AddressOptions
-                {
-                    Country = billingAddress.Country,
-                    PostalCode = billingAddress.PostalCode,
-                    Line1 = billingAddress.Line1,
-                    Line2 = billingAddress.Line2,
-                    City = billingAddress.City,
-                    State = billingAddress.State
-                },
-                Expand = ["subscriptions", "tax_ids"],
-                TaxExempt = determinedTaxExemptStatus
-            });
+                Country = billingAddress.Country,
+                PostalCode = billingAddress.PostalCode,
+                Line1 = billingAddress.Line1,
+                Line2 = billingAddress.Line2,
+                City = billingAddress.City,
+                State = billingAddress.State
+            },
+            Expand = ["subscriptions", "subscriptions.data.test_clock", "tax_ids"]
+        };
+
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
+        {
+            updateOptions.TaxExempt = await GetDeterminedTaxExemptStatusAsync(subscriber.GatewayCustomerId!, billingAddress.Country);
+        }
+
+        var customer = await stripeAdapter.UpdateCustomerAsync(subscriber.GatewayCustomerId, updateOptions);
 
         await EnableAutomaticTaxAsync(subscriber, customer);
 
@@ -149,6 +152,43 @@ public class UpdateBillingAddressCommand(
 
                     if (activeSchedule != null)
                     {
+                        var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+                        var phases = new List<SubscriptionSchedulePhaseOptions>();
+
+                        for (var i = 0; i < activeSchedule.Phases.Count; i++)
+                        {
+                            var phase = activeSchedule.Phases[i];
+
+                            if (phase.EndDate <= now)
+                            {
+                                continue;
+                            }
+
+                            var discountConsumed = i > 0 && activeSchedule.Phases[i - 1].EndDate <= now;
+
+                            phases.Add(new SubscriptionSchedulePhaseOptions
+                            {
+                                StartDate = phase.StartDate,
+                                EndDate = phase.EndDate,
+                                Items = phase.Items.Select(item => new SubscriptionSchedulePhaseItemOptions
+                                {
+                                    Price = item.PriceId,
+                                    Quantity = item.Quantity
+                                }).ToList(),
+                                Discounts = discountConsumed
+                                    ? []
+                                    : phase.Discounts?.Select(d => new SubscriptionSchedulePhaseDiscountOptions
+                                    {
+                                        Coupon = d.CouponId
+                                    }).ToList(),
+                                ProrationBehavior = phase.ProrationBehavior,
+                                AutomaticTax = new SubscriptionSchedulePhaseAutomaticTaxOptions
+                                {
+                                    Enabled = true
+                                }
+                            });
+                        }
+
                         await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
                             new SubscriptionScheduleUpdateOptions
                             {
@@ -158,7 +198,8 @@ public class UpdateBillingAddressCommand(
                                     {
                                         Enabled = true
                                     }
-                                }
+                                },
+                                Phases = phases
                             });
                         return;
                     }

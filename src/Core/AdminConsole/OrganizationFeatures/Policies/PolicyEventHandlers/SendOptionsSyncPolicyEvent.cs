@@ -4,7 +4,6 @@ using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 
@@ -27,10 +26,11 @@ public class SendOptionsSyncPolicyEvent(
         var organizationId = policyRequest.PolicyUpdate.OrganizationId;
 
         // Step 1: sync SendOptionsPolicy.Data.DisableHideEmail -> SendControlsPolicy.Data.DisableHideEmail
+        // Leave Id as default(Guid) for new policies so UpsertAsync routes to CreateAsync;
+        // pre-assigning an Id causes UpsertAsync to attempt an UPDATE that silently affects 0 rows.
         var sendControlsPolicy = await policyRepository.GetByOrganizationIdTypeAsync(
             organizationId, PolicyType.SendControls) ?? new Policy
             {
-                Id = CoreHelpers.GenerateComb(),
                 OrganizationId = organizationId,
                 Type = PolicyType.SendControls,
             };

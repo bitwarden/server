@@ -35,6 +35,10 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         services.AddSingleton<ISeedReader>(reader);
         services.AddSingleton(new SeederSettings(password, effectiveKdf));
         services.AddSingleton(deps.Db);
+        if (deps.Progress is not null)
+        {
+            services.AddSingleton(deps.Progress);
+        }
 
         PresetLoader.RegisterRecipe(presetName, reader, services);
 
@@ -50,11 +54,15 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
         services.AddSingleton(new SeederSettings(options.Password, options.KdfIterations));
+        if (deps.Progress is not null)
+        {
+            services.AddSingleton(deps.Progress);
+        }
 
         var recipeName = "from-options";
         var builder = services.AddRecipe(recipeName);
 
-        builder.CreateOrganization(options.Name, options.Domain, options.Users + 1, options.PlanType);
+        builder.CreateOrganization(options.Name, options.Domain, options.Users + 1, options.PlanType, options.Overrides);
         builder.AddOrganizationApiKey();
         builder.AddOwner();
         builder.WithGenerator(options.Domain);
@@ -96,7 +104,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
     {
         var firstName = options.FirstName ?? new Bogus.Faker().Name.FirstName();
         var lastName = options.LastName ?? new Bogus.Faker().Name.LastName();
-        var email = $"{firstName}.{lastName}@individual.example".ToLowerInvariant();
+        var email = options.Email ?? $"{firstName}.{lastName}@individual.example".ToLowerInvariant();
 
         var premium = options.Premium;
         var maxStorageGb = premium ? (short)1 : (short)0;
@@ -105,6 +113,10 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
         services.AddSingleton(new SeederSettings(options.Password, options.KdfIterations));
+        if (deps.Progress is not null)
+        {
+            services.AddSingleton(deps.Progress);
+        }
 
         var recipeName = "individual-from-options";
         var builder = services.AddRecipe(recipeName);

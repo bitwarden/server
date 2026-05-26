@@ -126,20 +126,6 @@ public class OrganizationDomainController : Controller
     }
 
     [AllowAnonymous]
-    [HttpPost("domain/sso/details")] // must be post to accept email cleanly
-    public async Task<OrganizationDomainSsoDetailsResponseModel> GetOrgDomainSsoDetails(
-        [FromBody] OrganizationDomainSsoDetailsRequestModel model)
-    {
-        var ssoResult = await _organizationDomainRepository.GetOrganizationDomainSsoDetailsAsync(model.Email);
-        if (ssoResult is null)
-        {
-            throw new NotFoundException("Claimed org domain not found");
-        }
-
-        return new OrganizationDomainSsoDetailsResponseModel(ssoResult);
-    }
-
-    [AllowAnonymous]
     [HttpPost("domain/sso/verified")]
     public async Task<VerifiedOrganizationDomainSsoDetailsResponseModel> GetVerifiedOrgDomainSsoDetailsAsync(
         [FromBody] OrganizationDomainSsoDetailsRequestModel model)

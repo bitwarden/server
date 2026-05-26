@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.Repositories;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Subscriptions.Repositories;
@@ -114,6 +115,8 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IUserAsymmetricKeysRepository, UserAsymmetricKeysRepository>();
         services.AddSingleton<IUserSignatureKeyPairRepository, UserSignatureKeyPairRepository>();
         services.AddSingleton<IOrganizationInstallationRepository, OrganizationInstallationRepository>();
+        services.AddSingleton<IOrganizationPlanMigrationCohortRepository, OrganizationPlanMigrationCohortRepository>();
+        services.AddSingleton<IOrganizationPlanMigrationCohortAssignmentRepository, OrganizationPlanMigrationCohortAssignmentRepository>();
         services.AddSingleton<IOrganizationReportRepository, OrganizationReportRepository>();
         services.AddSingleton<IOrganizationApplicationRepository, OrganizationApplicationRepository>();
         services.AddSingleton<IOrganizationMemberBaseDetailRepository, OrganizationMemberBaseDetailRepository>();

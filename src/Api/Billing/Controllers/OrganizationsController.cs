@@ -11,6 +11,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Entities;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Queries;
@@ -192,7 +193,7 @@ public class OrganizationsController(
             throw new NotFoundException();
         }
 
-        await addSecretsManagerSubscriptionCommand.SignUpAsync(organization, model.AdditionalSmSeats,
+        await addSecretsManagerSubscriptionCommand.RunAsync(organization, model.AdditionalSmSeats,
             model.AdditionalServiceAccounts);
 
         var userId = userService.GetProperUserId(User).Value;

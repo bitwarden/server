@@ -1,8 +1,8 @@
 ﻿using System.Net;
 using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
-using Bit.Api.Models.Request.Organizations;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums;

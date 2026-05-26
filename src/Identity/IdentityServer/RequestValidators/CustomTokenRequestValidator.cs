@@ -2,9 +2,10 @@
 using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Queries.Interfaces;
@@ -38,7 +39,6 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
         IUserRepository userRepository,
-        IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
@@ -47,7 +47,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IAuthRequestRepository authRequestRepository,
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
-        IClientVersionValidator clientVersionValidator)
+        IClientVersionValidator clientVersionValidator,
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand)
         : base(
             userManager,
             userService,
@@ -60,7 +61,6 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             currentContext,
             globalSettings,
             userRepository,
-            policyService,
             featureService,
             ssoConfigRepository,
             userDecryptionOptionsBuilder,
@@ -68,7 +68,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             authRequestRepository,
             mailService,
             userAccountKeysQuery,
-            clientVersionValidator)
+            clientVersionValidator,
+            updateDeviceLastActivityCommand)
     {
         _userManager = userManager;
         _updateInstallationCommand = updateInstallationCommand;
@@ -85,6 +86,12 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             {
                 await FailAuthForLegacyUserAsync(null, context);
                 return;
+            }
+
+            // TODO: PM-34091 - remove feature flag check when cleaning up
+            if (_featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate))
+            {
+                await TryUpdateDeviceLastActivityForRefreshAsync(context);
             }
         }
 
@@ -194,6 +201,31 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         context.Result.IsError = requestContext.ValidationErrorResult.IsError;
         context.Result.ErrorDescription = requestContext.ValidationErrorResult.ErrorDescription;
         context.Result.CustomResponse = requestContext.CustomResponse;
+    }
+
+    private async Task TryUpdateDeviceLastActivityForRefreshAsync(CustomTokenRequestValidationContext context)
+    {
+        Debug.Assert(context.Result is not null);
+        try
+        {
+            var subject = context.Result.ValidatedRequest.Subject;
+            var identifier = subject?.FindFirstValue(Claims.Device);
+            var userIdString = subject?.GetSubjectId();
+            if (string.IsNullOrEmpty(identifier) || !Guid.TryParse(userIdString, out var userId))
+            {
+                return;
+            }
+
+            var clientVersion = CurrentContext.ClientVersion?.ToString();
+            await _updateDeviceLastActivityCommand.UpdateByIdentifierAndUserIdAsync(identifier, userId, clientVersion);
+        }
+        catch (Exception e)
+        {
+            // Log and swallow exceptions from this non-critical update, as we don't want to fail logins
+            // due to issues updating the device's last-activity state (LastActivityDate / ClientVersion).
+            _logger.LogWarning(e, "Failed to update device last activity for device with identifier {DeviceIdentifier}.",
+                context.Result.ValidatedRequest.Subject?.FindFirstValue(Claims.Device));
+        }
     }
 
     /// <summary>

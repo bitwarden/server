@@ -170,6 +170,8 @@ public class CipherServiceTests
 
         await sutProvider.GetDependency<IAttachmentStorageService>().Received(1)
             .UploadNewAttachmentAsync(Arg.Any<Stream>(), cipher, Arg.Any<CipherAttachment.MetaData>());
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogCipherEventAsync(cipher, EventType.Cipher_AttachmentCreated);
     }
 
     [Theory, BitAutoData]
@@ -222,6 +224,8 @@ public class CipherServiceTests
 
         Assert.NotNull(result.attachmentId);
         Assert.NotNull(result.uploadUrl);
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogCipherEventAsync(cipher, EventType.Cipher_AttachmentCreated);
     }
 
     [Theory]
@@ -2402,6 +2406,7 @@ public class CipherServiceTests
 
         await sutProvider.Sut.ValidateCipherEditForAttachmentAsync(cipher, savingUserId, false, 100);
     }
+
 
     [Theory, BitAutoData]
     public async Task GetAttachmentDownloadDataAsync_NullCipher_ThrowsNotFoundException(

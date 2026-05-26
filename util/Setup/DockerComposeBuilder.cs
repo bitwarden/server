@@ -22,7 +22,7 @@ public class DockerComposeBuilder
 
     private void Build()
     {
-        Directory.CreateDirectory("/bitwarden/docker/");
+        Directory.CreateDirectory($"{_context.App.RootDirectory}/docker/");
         Helpers.WriteLine(_context, "Building docker-compose.yml.");
         if (!_context.Config.GenerateComposeConfig)
         {
@@ -32,7 +32,7 @@ public class DockerComposeBuilder
 
         var template = Helpers.ReadTemplate("DockerCompose");
         var model = new TemplateModel(_context);
-        using (var sw = File.CreateText("/bitwarden/docker/docker-compose.yml"))
+        using (var sw = File.CreateText($"{_context.App.RootDirectory}/docker/docker-compose.yml"))
         {
             sw.Write(template(model));
         }

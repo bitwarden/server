@@ -50,6 +50,9 @@ public class Startup
         services.AddAuthorization();
 
         services.AddControllers();
+
+        Jobs.JobsHostedService.AddJobsServices(services);
+        services.AddHostedService<Jobs.JobsHostedService>();
     }
 
     public void Configure(

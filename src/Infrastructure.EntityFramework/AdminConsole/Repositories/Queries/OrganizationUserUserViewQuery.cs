@@ -30,7 +30,8 @@ public class OrganizationUserUserDetailsViewQuery : IQuery<OrganizationUserUserD
             ResetPasswordKey = x.ou.ResetPasswordKey,
             UsesKeyConnector = x.u != null && x.u.UsesKeyConnector,
             AccessSecretsManager = x.ou.AccessSecretsManager,
-            HasMasterPassword = x.u != null && !string.IsNullOrWhiteSpace(x.u.MasterPassword)
+            HasMasterPassword = x.u != null && !string.IsNullOrWhiteSpace(x.u.MasterPassword),
+            RevocationReason = x.ou.RevocationReason
         });
     }
 }

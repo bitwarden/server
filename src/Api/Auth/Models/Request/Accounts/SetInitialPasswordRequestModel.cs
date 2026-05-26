@@ -60,30 +60,11 @@ public class SetInitialPasswordRequestModel : IValidatableObject
     {
         if (IsV2Request())
         {
-            // V2 registration
-
-            // Validate Kdf
-            var authenticationKdf = MasterPasswordAuthentication!.Kdf.ToData();
-            var unlockKdf = MasterPasswordUnlock!.Kdf.ToData();
-
-            // Currently, KDF settings are not saved separately for authentication and unlock and must therefore be equal
-            if (!authenticationKdf.Equals(unlockKdf))
+            // V2 registration - validate KDF equality, salt equality, and KDF settings
+            foreach (var validationResult in KdfSettingsValidator.ValidateAuthenticationAndUnlockData(
+                         MasterPasswordAuthentication!.ToData(), MasterPasswordUnlock!.ToData()))
             {
-                yield return new ValidationResult("KDF settings must be equal for authentication and unlock.",
-                    [$"{nameof(MasterPasswordAuthentication)}.{nameof(MasterPasswordAuthenticationDataRequestModel.Kdf)}",
-                        $"{nameof(MasterPasswordUnlock)}.{nameof(MasterPasswordUnlockDataRequestModel.Kdf)}"]);
-            }
-
-            var authenticationValidationErrors = KdfSettingsValidator.Validate(authenticationKdf).ToList();
-            if (authenticationValidationErrors.Count != 0)
-            {
-                yield return authenticationValidationErrors.First();
-            }
-
-            var unlockValidationErrors = KdfSettingsValidator.Validate(unlockKdf).ToList();
-            if (unlockValidationErrors.Count != 0)
-            {
-                yield return unlockValidationErrors.First();
+                yield return validationResult;
             }
 
             yield break;

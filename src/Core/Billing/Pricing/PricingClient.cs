@@ -3,7 +3,6 @@ using System.Net.Http.Json;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing.Organizations;
 using Bit.Core.Exceptions;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 
@@ -13,7 +12,6 @@ using OrganizationPlan = Bit.Core.Models.StaticStore.Plan;
 using PremiumPlan = Premium.Plan;
 
 public class PricingClient(
-    IFeatureService featureService,
     GlobalSettings globalSettings,
     HttpClient httpClient,
     ILogger<PricingClient> logger) : IPricingClient
@@ -40,7 +38,7 @@ public class PricingClient(
             var plan = await response.Content.ReadFromJsonAsync<Plan>();
             return plan == null
                 ? throw new BillingException(message: "Deserialization of Pricing Service response resulted in null")
-                : new PlanAdapter(PreProcessFamiliesPreMigrationPlan(plan));
+                : new PlanAdapter(plan);
         }
 
         if (response.StatusCode == HttpStatusCode.NotFound)
@@ -74,7 +72,7 @@ public class PricingClient(
             var plans = await response.Content.ReadFromJsonAsync<List<Plan>>();
             return plans == null
                 ? throw new BillingException(message: "Deserialization of Pricing Service response resulted in null")
-                : plans.Select(OrganizationPlan (plan) => new PlanAdapter(PreProcessFamiliesPreMigrationPlan(plan))).ToList();
+                : plans.Select(OrganizationPlan (plan) => new PlanAdapter(plan)).ToList();
         }
 
         throw new BillingException(
@@ -121,10 +119,7 @@ public class PricingClient(
             PlanType.EnterpriseMonthly2020 => "enterprise-monthly-2020",
             PlanType.EnterpriseMonthly2023 => "enterprise-monthly-2023",
             PlanType.FamiliesAnnually => "families",
-            PlanType.FamiliesAnnually2025 =>
-                featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3)
-                    ? "families-2025"
-                    : "families",
+            PlanType.FamiliesAnnually2025 => "families-2025",
             PlanType.FamiliesAnnually2019 => "families-2019",
             PlanType.Free => "free",
             PlanType.TeamsAnnually => "teams-annually",
@@ -139,19 +134,4 @@ public class PricingClient(
             PlanType.TeamsStarter2023 => "teams-starter-2023",
             _ => null
         };
-
-    /// <summary>
-    /// Safeguard used until the feature flag is enabled. Pricing service will return the
-    /// 2025PreMigration plan with "families" lookup key. When that is detected and the FF
-    /// is still disabled, set the lookup key to families-2025 so PlanAdapter will assign
-    /// the correct plan.
-    /// </summary>
-    /// <param name="plan">The plan to preprocess</param>
-    private Plan PreProcessFamiliesPreMigrationPlan(Plan plan)
-    {
-        if (plan.LookupKey == "families" && !featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3))
-            plan.LookupKey = "families-2025";
-        return plan;
-    }
-
 }

@@ -2,6 +2,7 @@
 
 using System.Net;
 using AngleSharp.Html.Parser;
+using Bit.Core.Utilities;
 using Bit.Icons.Services;
 
 namespace Bit.Icons.Extensions;
@@ -27,7 +28,7 @@ public static class ServiceCollectionExtension
         {
             AllowAutoRedirect = false,
             AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
-        });
+        }).AddSsrfProtection(followRedirects: false);
 
         // The CreatePasswordUri handler wants similar headers as Icons to portray coming from a browser but
         // needs to follow redirects to get the final URL.
@@ -45,7 +46,7 @@ public static class ServiceCollectionExtension
         }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
         {
             AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
-        });
+        }).AddSsrfProtection();
     }
 
     public static void AddHtmlParsing(this IServiceCollection services)

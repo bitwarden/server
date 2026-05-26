@@ -9,3 +9,4 @@ public class ManagePoliciesRequirement() : BasePermissionRequirement(p => p.Mana
 public class ManageScimRequirement() : BasePermissionRequirement(p => p.ManageScim);
 public class ManageSsoRequirement() : BasePermissionRequirement(p => p.ManageSso);
 public class ManageUsersRequirement() : BasePermissionRequirement(p => p.ManageUsers);
+public class ManageUsersOrGroupsRequirement() : BasePermissionRequirement(p => p.ManageUsers || p.ManageGroups);
