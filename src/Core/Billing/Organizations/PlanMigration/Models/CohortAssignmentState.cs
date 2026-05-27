@@ -1,4 +1,4 @@
-namespace Bit.Core.Billing.Organizations.PlanMigration.Models;
+﻿namespace Bit.Core.Billing.Organizations.PlanMigration.Models;
 
 /// <summary>
 /// A snapshot of how many of a cohort's assignments have left the Pending state.

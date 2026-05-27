@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Organizations.PlanMigration.Entities;
+﻿using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Test.Common.AutoFixture;

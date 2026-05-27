@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Organizations.PlanMigration.Enums;
+﻿using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 
 namespace Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 
