@@ -267,6 +267,7 @@ public static class FeatureFlagKeys
     public const string PM32016_RemoveAtRiskCallouts = "pm-32016-remove-at-risk-callouts";
     public const string PM37785_VaultBatchBar = "pm-37785-vault-batch-bar";
     public const string PM37785_DesktopVaultBatchBar = "pm-37785-desktop-vault-batch-bar";
+    public const string PM29968_FillAfterSave = "pm-29968-fill-after-save";
 
     /* Secrets Manager Team */
     public const string SecretsVersioning = "sm-1587-secrets-versioning";
