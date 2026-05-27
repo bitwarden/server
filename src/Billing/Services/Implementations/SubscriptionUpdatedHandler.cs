@@ -92,7 +92,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
     public async Task HandleAsync(Event parsedEvent)
     {
-        var subscription = await _stripeEventService.GetSubscription(parsedEvent, true, ["customer", "discounts", "latest_invoice", "test_clock"]);
+        var subscription = await _stripeEventService.GetSubscription(parsedEvent, true, ["customer.discount", "discounts", "latest_invoice", "test_clock"]);
         SubscriberId subscriberId = subscription;
 
         var subscriber = await GetSubscriberAsync(subscriberId);
@@ -349,8 +349,6 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
     private async Task RemovePendingCancellationAsync(Subscription subscription)
     {
-        await _priceIncreaseScheduler.SchedulePersonalPriceIncrease(subscription);
-
         await _stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
         {
             CancelAtPeriodEnd = false,
@@ -363,6 +361,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 [MetadataKeys.CancellationOrigin] = string.Empty
             }
         });
+        await _priceIncreaseScheduler.ScheduleForSubscription(subscription);
     }
 
     /// <summary>

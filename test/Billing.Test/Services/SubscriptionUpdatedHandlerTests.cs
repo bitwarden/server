@@ -1413,7 +1413,7 @@ public class SubscriptionUpdatedHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_ActiveSubscription_SchedulesBeforeRemovingCancellation()
+    public async Task HandleAsync_ActiveSubscription_RemovesCancellationAndAddsSchedules()
     {
         // Arrange
         var organizationId = Guid.NewGuid();
@@ -1448,7 +1448,7 @@ public class SubscriptionUpdatedHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        await _priceIncreaseScheduler.Received(1).SchedulePersonalPriceIncrease(subscription);
+        await _priceIncreaseScheduler.Received(1).ScheduleForSubscription(subscription);
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscriptionId, Arg.Is<SubscriptionUpdateOptions>(o => o.CancelAtPeriodEnd == false));
     }
 
