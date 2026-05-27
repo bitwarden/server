@@ -67,11 +67,14 @@ public static class BuilderExtensions
                     MaxAgeInSeconds = new BicepValue<int>("30")
                 }));
             })
-            .RunAsEmulator(c =>
+            .RunAsEmulator(emulator =>
             {
-                c.WithBlobPort(10000)
+                emulator
+                    .WithBlobPort(10000)
                     .WithQueuePort(10001)
-                    .WithTablePort(10002);
+                    .WithTablePort(10002)
+                    .WithDataVolume()
+                    .WithLifetime(ContainerLifetime.Persistent);
             });
 
         builder
