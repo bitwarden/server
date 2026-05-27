@@ -116,6 +116,30 @@ public class ChangeEmailCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task ChangeEmailAsync_StripeGatewayWithNullCustomerId_SkipsStripeSync(
+        SutProvider<ChangeEmailCommand> sutProvider, User user)
+    {
+        // Free-tier users may have Gateway == Stripe but no GatewayCustomerId yet; the sync
+        // must be a no-op rather than throwing. Pins the silent-skip branch so a future
+        // tightening of the Gateway/GatewayCustomerId invariant doesn't mask the divergence.
+        user.Email = _currentEmail;
+        user.Gateway = GatewayType.Stripe;
+        user.GatewayCustomerId = null;
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(_newEmail)
+            .Returns((User)null);
+
+        await sutProvider.Sut.ChangeEmailAsync(user, _newEmail);
+
+        Assert.Equal(_newEmail, user.Email);
+        await sutProvider.GetDependency<IStripeSyncService>().DidNotReceive()
+            .UpdateCustomerEmailAddressAsync(Arg.Any<string>(), Arg.Any<string>());
+        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushSyncSettingsAsync(user.Id);
+    }
+
+    [Theory, BitAutoData]
     public async Task ChangeEmailAsync_StripeSyncThrows_RestoresPreviousEmailAndRevisionDatesThenRethrows(
         SutProvider<ChangeEmailCommand> sutProvider, User user)
     {
