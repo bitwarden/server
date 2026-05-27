@@ -13,13 +13,13 @@ using Xunit;
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 
 [SutProviderCustomize]
-public class AutomaticUserConfirmationOrganizationPolicyComplianceValidatorTests
+public class AutomaticUserConfirmationOrganizationPolicyComplianceHandlerTests
 {
     [Theory, BitAutoData]
     public async Task IsOrganizationCompliantAsync_AllUsersCompliant_NoProviders_ReturnsValid(
         Guid organizationId,
         Guid userId,
-        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceValidator> sutProvider)
+        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceHandler> sutProvider)
     {
         // Arrange
         var orgUser = new OrganizationUserUserDetails
@@ -42,7 +42,7 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceValidatorTests
             .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns([]);
 
-        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(organizationId);
+        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(organizationId);
 
         // Act
         var result = await sutProvider.Sut.IsOrganizationCompliantAsync(request);
@@ -55,7 +55,7 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceValidatorTests
     public async Task IsOrganizationCompliantAsync_UserInAnotherOrg_ReturnsUserNotCompliantWithSingleOrganization(
         Guid organizationId,
         Guid userId,
-        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceValidator> sutProvider)
+        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceHandler> sutProvider)
     {
         // Arrange
         var orgUser = new OrganizationUserUserDetails
@@ -82,7 +82,7 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceValidatorTests
             .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns([otherOrgUser]);
 
-        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(organizationId);
+        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(organizationId);
 
         // Act
         var result = await sutProvider.Sut.IsOrganizationCompliantAsync(request);
@@ -96,7 +96,7 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceValidatorTests
     public async Task IsOrganizationCompliantAsync_ProviderUsersExist_ReturnsProviderExistsInOrganization(
         Guid organizationId,
         Guid userId,
-        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceValidator> sutProvider)
+        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceHandler> sutProvider)
     {
         // Arrange
         var orgUser = new OrganizationUserUserDetails
@@ -126,7 +126,7 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceValidatorTests
             .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns([providerUser]);
 
-        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(organizationId);
+        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(organizationId);
 
         // Act
         var result = await sutProvider.Sut.IsOrganizationCompliantAsync(request);
@@ -139,7 +139,7 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceValidatorTests
     [Theory, BitAutoData]
     public async Task IsOrganizationCompliantAsync_InvitedUsersExcluded_FromSingleOrgCheck(
         Guid organizationId,
-        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceValidator> sutProvider)
+        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceHandler> sutProvider)
     {
         // Arrange - invited user has null UserId and Invited status
         var invitedUser = new OrganizationUserUserDetails
@@ -159,7 +159,7 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceValidatorTests
             .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns([]);
 
-        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(organizationId);
+        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(organizationId);
 
         // Act
         var result = await sutProvider.Sut.IsOrganizationCompliantAsync(request);
@@ -177,7 +177,7 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceValidatorTests
     public async Task IsOrganizationCompliantAsync_InvitedUserWithUserId_ExcludedFromSingleOrgCheck(
         Guid organizationId,
         Guid userId,
-        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceValidator> sutProvider)
+        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceHandler> sutProvider)
     {
         // Arrange - Invited status users are excluded regardless of UserId
         var invitedUser = new OrganizationUserUserDetails
@@ -200,7 +200,7 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceValidatorTests
             .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns([]);
 
-        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(organizationId);
+        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(organizationId);
 
         // Act
         var result = await sutProvider.Sut.IsOrganizationCompliantAsync(request);
@@ -218,7 +218,7 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceValidatorTests
     public async Task IsOrganizationCompliantAsync_UserInAnotherOrgWithInvitedStatus_ReturnsValid(
         Guid organizationId,
         Guid userId,
-        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceValidator> sutProvider)
+        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceHandler> sutProvider)
     {
         // Arrange
         var orgUser = new OrganizationUserUserDetails
@@ -250,7 +250,7 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceValidatorTests
             .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns([]);
 
-        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(organizationId);
+        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(organizationId);
 
         // Act
         var result = await sutProvider.Sut.IsOrganizationCompliantAsync(request);
@@ -263,7 +263,7 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceValidatorTests
     public async Task IsOrganizationCompliantAsync_SingleOrgViolationTakesPrecedence_OverProviderCheck(
         Guid organizationId,
         Guid userId,
-        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceValidator> sutProvider)
+        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceHandler> sutProvider)
     {
         // Arrange - user is in another org AND is a provider user
         var orgUser = new OrganizationUserUserDetails
@@ -290,7 +290,7 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceValidatorTests
             .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns([otherOrgUser]);
 
-        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(organizationId);
+        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(organizationId);
 
         // Act
         var result = await sutProvider.Sut.IsOrganizationCompliantAsync(request);
@@ -310,7 +310,7 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceValidatorTests
         Guid organizationId,
         Guid confirmedUserId,
         Guid acceptedUserId,
-        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceValidator> sutProvider)
+        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceHandler> sutProvider)
     {
         // Arrange
         var invitedUser = new OrganizationUserUserDetails
@@ -350,7 +350,7 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceValidatorTests
             .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns([]);
 
-        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(organizationId);
+        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(organizationId);
 
         // Act
         var result = await sutProvider.Sut.IsOrganizationCompliantAsync(request);
@@ -370,7 +370,7 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceValidatorTests
     [Theory, BitAutoData]
     public async Task IsOrganizationCompliantAsync_NoOrganizationUsers_ReturnsValid(
         Guid organizationId,
-        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceValidator> sutProvider)
+        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceHandler> sutProvider)
     {
         // Arrange
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -385,7 +385,7 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceValidatorTests
             .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns([]);
 
-        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(organizationId);
+        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(organizationId);
 
         // Act
         var result = await sutProvider.Sut.IsOrganizationCompliantAsync(request);
@@ -398,7 +398,7 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceValidatorTests
     public async Task IsOrganizationCompliantAsync_UserInSameOrgOnly_ReturnsValid(
         Guid organizationId,
         Guid userId,
-        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceValidator> sutProvider)
+        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceHandler> sutProvider)
     {
         // Arrange
         var orgUser = new OrganizationUserUserDetails
@@ -430,7 +430,7 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceValidatorTests
             .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns([]);
 
-        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(organizationId);
+        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(organizationId);
 
         // Act
         var result = await sutProvider.Sut.IsOrganizationCompliantAsync(request);
@@ -444,7 +444,7 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceValidatorTests
         Guid organizationId,
         Guid userId1,
         Guid userId2,
-        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceValidator> sutProvider)
+        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceHandler> sutProvider)
     {
         // Arrange - provider check includes users regardless of Invited status (only excludes null UserId)
         var confirmedUser = new OrganizationUserUserDetails
@@ -484,7 +484,7 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceValidatorTests
             .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns([]);
 
-        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(organizationId);
+        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(organizationId);
 
         // Act
         var result = await sutProvider.Sut.IsOrganizationCompliantAsync(request);
@@ -505,7 +505,7 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceValidatorTests
     public async Task IsOrganizationCompliantAsync_RevokedUserInAnotherOrg_ReturnsUserNotCompliant(
         Guid organizationId,
         Guid userId,
-        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceValidator> sutProvider)
+        SutProvider<AutomaticUserConfirmationOrganizationPolicyComplianceHandler> sutProvider)
     {
         // Arrange
         var revokedUser = new OrganizationUserUserDetails
@@ -532,7 +532,7 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceValidatorTests
             .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns([otherOrgUser]);
 
-        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(organizationId);
+        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(organizationId);
 
         // Act
         var result = await sutProvider.Sut.IsOrganizationCompliantAsync(request);
