@@ -1,8 +1,6 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using System.Net;
-using Bit.Core.Auth.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -18,13 +16,13 @@ public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
     public static OrganizationUserInvitedViewModel CreateFromInviteInfo(
         OrganizationInvitesInfo orgInvitesInfo,
         OrganizationUser orgUser,
-        ExpiringToken expiringToken,
         GlobalSettings globalSettings)
     {
         const string freeOrgTitle = "A Bitwarden member invited you to an organization. " +
                                     "Join now to start securing your passwords!";
 
         var userHasExistingUser = orgInvitesInfo.OrgUserHasExistingUserDict[orgUser.Id];
+        var expiringToken = orgInvitesInfo.OrgUserTokenPairs.First(p => p.OrgUser.Id == orgUser.Id).Token;
 
         return new OrganizationUserInvitedViewModel
         {
@@ -35,63 +33,21 @@ public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
                     : CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName, false),
             TitleThird = orgInvitesInfo.IsFreeOrg ? string.Empty : " on Bitwarden and start securing your passwords!",
             OrganizationName = CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName, false),
-            Email = WebUtility.UrlEncode(orgUser.Email),
-            OrganizationId = orgUser.OrganizationId.ToString(),
-            OrganizationUserId = orgUser.Id.ToString(),
-            Token = WebUtility.UrlEncode(expiringToken.Token),
             ExpirationDate =
                 $"{expiringToken.ExpirationDate.ToLongDateString()} {expiringToken.ExpirationDate.ToShortTimeString()} UTC",
-            OrganizationNameUrlEncoded = WebUtility.UrlEncode(orgInvitesInfo.OrganizationName),
             WebVaultUrl = globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = globalSettings.SiteName,
-            InitOrganization = orgInvitesInfo.InitOrganization,
-            OrgSsoIdentifier = orgInvitesInfo.OrgSsoIdentifier,
-            OrgSsoEnabled = orgInvitesInfo.OrgSsoEnabled,
-            OrgSsoLoginRequiredPolicyEnabled = orgInvitesInfo.OrgSsoLoginRequiredPolicyEnabled,
             OrgUserHasExistingUser = userHasExistingUser,
             JoinOrganizationButtonText = userHasExistingUser || orgInvitesInfo.IsFreeOrg ? "Accept invitation" : "Finish account setup",
-            IsFreeOrg = orgInvitesInfo.IsFreeOrg
+            IsFreeOrg = orgInvitesInfo.IsFreeOrg,
+            Url = orgInvitesInfo.GetAcceptUrl(globalSettings.BaseServiceUri.VaultWithHash, orgUser.Id)
         };
     }
 
     public string OrganizationName { get; set; }
-    public string OrganizationId { get; set; }
-    public string OrganizationUserId { get; set; }
-    public string Email { get; set; }
-    public string OrganizationNameUrlEncoded { get; set; }
-    public string Token { get; set; }
     public string ExpirationDate { get; set; }
-    public bool InitOrganization { get; set; }
-    public string OrgSsoIdentifier { get; set; }
-    public bool OrgSsoEnabled { get; set; }
-    public bool OrgSsoLoginRequiredPolicyEnabled { get; set; }
     public bool OrgUserHasExistingUser { get; set; }
     public string JoinOrganizationButtonText { get; set; } = "Join Organization";
     public bool IsFreeOrg { get; set; }
-
-    public string Url
-    {
-        get
-        {
-            var baseUrl = $"{WebVaultUrl}/accept-organization";
-            var queryParams = new List<string>
-            {
-                $"organizationId={OrganizationId}",
-                $"organizationUserId={OrganizationUserId}",
-                $"email={Email}",
-                $"organizationName={OrganizationNameUrlEncoded}",
-                $"token={Token}",
-                $"initOrganization={InitOrganization}",
-                $"orgUserHasExistingUser={OrgUserHasExistingUser}"
-            };
-
-            if (OrgSsoEnabled && OrgSsoLoginRequiredPolicyEnabled)
-            {
-                // Only send down the orgSsoIdentifier if we are going to accelerate the user to the SSO login page.
-                queryParams.Add($"orgSsoIdentifier={OrgSsoIdentifier}");
-            }
-
-            return $"{baseUrl}?{string.Join("&", queryParams)}";
-        }
-    }
+    public string Url { get; set; }
 }

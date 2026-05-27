@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Net;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Billing.Enums;
@@ -46,4 +47,30 @@ public class OrganizationInvitesInfo
     public Dictionary<Guid, bool> OrgUserHasExistingUserDict { get; }
     public string InviterEmail { get; }
 
+    public string GetAcceptUrl(string vaultWithHash, Guid orgUserId)
+    {
+        var pair = OrgUserTokenPairs.First(p => p.OrgUser.Id == orgUserId);
+        var orgUser = pair.OrgUser;
+        var token = pair.Token.Token;
+        var orgUserHasExistingUser = OrgUserHasExistingUserDict[orgUserId];
+
+        var queryParams = new List<string>
+        {
+            $"organizationId={orgUser.OrganizationId}",
+            $"organizationUserId={orgUser.Id}",
+            $"email={WebUtility.UrlEncode(orgUser.Email)}",
+            $"organizationName={WebUtility.UrlEncode(OrganizationName)}",
+            $"token={WebUtility.UrlEncode(token)}",
+            $"initOrganization={InitOrganization}",
+            $"orgUserHasExistingUser={orgUserHasExistingUser}"
+        };
+
+        if (OrgSsoEnabled && OrgSsoLoginRequiredPolicyEnabled)
+        {
+            // Only send down the orgSsoIdentifier if we are going to accelerate the user to the SSO login page.
+            queryParams.Add($"orgSsoIdentifier={OrgSsoIdentifier}");
+        }
+
+        return $"{vaultWithHash}/accept-organization?{string.Join("&", queryParams)}";
+    }
 }

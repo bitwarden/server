@@ -7,7 +7,6 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Mail;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Models.Mail;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Mail;
@@ -366,8 +365,8 @@ public class HandlebarsMailService : IMailService
         {
             Debug.Assert(orgUserTokenPair.OrgUser.Email is not null);
 
-            var orgUserInviteViewModel = OrganizationUserInvitedViewModel.CreateFromInviteInfo(orgInvitesInfo, orgUserTokenPair.OrgUser,
-                orgUserTokenPair.Token, _globalSettings);
+            var orgUserInviteViewModel = OrganizationUserInvitedViewModel.CreateFromInviteInfo(
+                orgInvitesInfo, orgUserTokenPair.OrgUser, _globalSettings);
 
             return CreateMessage(orgUserTokenPair.OrgUser.Email, orgUserInviteViewModel);
         });
@@ -405,7 +404,7 @@ public class HandlebarsMailService : IMailService
             var (subject, templateName, buttonText) = GetUpdatedInviteTemplateInfo(
                 orgInvitesInfo.PlanType, userHasExistingUser, organizationName);
 
-            var url = BuildInvitationUrl(orgInvitesInfo, orgUserTokenPair.OrgUser, orgUserTokenPair.Token);
+            var url = orgInvitesInfo.GetAcceptUrl(_globalSettings.BaseServiceUri.VaultWithHash, orgUserTokenPair.OrgUser.Id);
             var expirationDate = $"{orgUserTokenPair.Token.ExpirationDate.ToLongDateString()} {orgUserTokenPair.Token.ExpirationDate.ToShortTimeString()} UTC";
 
             var message = CreateDefaultMessage(subject, orgUserTokenPair.OrgUser.Email);
@@ -864,28 +863,6 @@ public class HandlebarsMailService : IMailService
             PlanType.FamiliesAnnually => true,
             _ => false
         };
-    }
-
-    private string BuildInvitationUrl(OrganizationInvitesInfo orgInvitesInfo, OrganizationUser orgUser, ExpiringToken token)
-    {
-        var baseUrl = $"{_globalSettings.BaseServiceUri.VaultWithHash}/accept-organization";
-        var queryParams = new List<string>
-        {
-            $"organizationId={orgUser.OrganizationId}",
-            $"organizationUserId={orgUser.Id}",
-            $"email={WebUtility.UrlEncode(orgUser.Email)}",
-            $"organizationName={WebUtility.UrlEncode(orgInvitesInfo.OrganizationName)}",
-            $"token={WebUtility.UrlEncode(token.Token)}",
-            $"initOrganization={orgInvitesInfo.InitOrganization}",
-            $"orgUserHasExistingUser={orgInvitesInfo.OrgUserHasExistingUserDict[orgUser.Id]}"
-        };
-
-        if (orgInvitesInfo.OrgSsoEnabled && orgInvitesInfo.OrgSsoLoginRequiredPolicyEnabled)
-        {
-            queryParams.Add($"orgSsoIdentifier={orgInvitesInfo.OrgSsoIdentifier}");
-        }
-
-        return $"{baseUrl}?{string.Join("&", queryParams)}";
     }
 
     private MailMessage CreateDefaultMessage(string subject, string toEmail)
