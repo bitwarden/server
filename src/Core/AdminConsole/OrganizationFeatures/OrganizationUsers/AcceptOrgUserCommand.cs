@@ -29,7 +29,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
-    private readonly IAutomaticUserConfirmationPolicyEnforcementValidator _automaticUserConfirmationPolicyEnforcementValidator;
+    private readonly IAutomaticUserConfirmationPolicyEnforcementHandler _automaticUserConfirmationPolicyEnforcementHandler;
     private readonly IPushAutoConfirmNotificationCommand _pushAutoConfirmNotificationCommand;
     private readonly IDeleteEmergencyAccessCommand _deleteEmergencyAccessCommand;
 
@@ -41,7 +41,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IPolicyRequirementQuery policyRequirementQuery,
-        IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator,
+        IAutomaticUserConfirmationPolicyEnforcementHandler automaticUserConfirmationPolicyEnforcementHandler,
         IPushAutoConfirmNotificationCommand pushAutoConfirmNotificationCommand,
         IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand)
     {
@@ -52,7 +52,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _policyRequirementQuery = policyRequirementQuery;
-        _automaticUserConfirmationPolicyEnforcementValidator = automaticUserConfirmationPolicyEnforcementValidator;
+        _automaticUserConfirmationPolicyEnforcementHandler = automaticUserConfirmationPolicyEnforcementHandler;
         _pushAutoConfirmNotificationCommand = pushAutoConfirmNotificationCommand;
         _deleteEmergencyAccessCommand = deleteEmergencyAccessCommand;
     }
@@ -238,7 +238,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
             allOrgUsers.Add(orgUser);
         }
 
-        var error = (await _automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
+        var error = (await _automaticUserConfirmationPolicyEnforcementHandler.IsCompliantAsync(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser.OrganizationId,
                     allOrgUsers,
                     user),
