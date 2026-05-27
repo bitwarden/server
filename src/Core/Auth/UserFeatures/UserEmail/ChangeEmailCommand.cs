@@ -59,10 +59,6 @@ public class ChangeEmailCommand(
                 {
                     await _stripeSyncService.UpdateCustomerEmailAddressAsync(user.GatewayCustomerId, billingEmail);
                 }
-                else
-                {
-                    throw new InvalidOperationException("Missing gateway customer ID or billing email address for Stripe sync.");
-                }
             }
             catch (Exception stripeEx)
             {
@@ -85,11 +81,9 @@ public class ChangeEmailCommand(
                         "Rollback of email change failed for user {UserId} after Stripe sync error; user record may be in an inconsistent state.",
                         user.Id);
                 }
-
                 throw;
             }
         }
-
         await _pushService.PushSyncSettingsAsync(user.Id);
     }
 
