@@ -6,8 +6,8 @@ BEGIN
 
     SELECT COUNT(1)
     FROM
-        [dbo].[OrganizationPlanMigrationCohortAssignment] A
-        INNER JOIN [dbo].[OrganizationPlanMigrationCohort] C ON C.[Id] = A.[CohortId]
+        [dbo].[OrganizationPlanMigrationCohortAssignmentView] A
+        INNER JOIN [dbo].[OrganizationPlanMigrationCohortView] C ON C.[Id] = A.[CohortId]
     WHERE
         A.[CohortId] = @CohortId
         AND (
