@@ -8,7 +8,6 @@
     <AssemblyName>SeederUtility</AssemblyName>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
     <UserSecretsId>2294c6ba-7cd0-4293-a797-3882e41c61cb</UserSecretsId>
-    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
   <ItemGroup>

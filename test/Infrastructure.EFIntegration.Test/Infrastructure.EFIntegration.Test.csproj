@@ -3,7 +3,6 @@
     <IsPackable>false</IsPackable>
     <!-- These opt outs should be removed when all warnings are addressed -->
     <WarningsNotAsErrors>$(WarningsNotAsErrors);CA1305</WarningsNotAsErrors>
-    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="$(CoverletCollectorVersion)">

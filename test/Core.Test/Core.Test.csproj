@@ -4,7 +4,6 @@
     <RootNamespace>Bit.Core.Test</RootNamespace>
     <!-- These opt outs should be removed when all warnings are addressed -->
     <WarningsNotAsErrors>$(WarningsNotAsErrors);CA1304;CA1305</WarningsNotAsErrors>
-    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="$(CoverletCollectorVersion)">
