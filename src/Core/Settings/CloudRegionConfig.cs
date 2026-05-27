@@ -53,6 +53,13 @@ public sealed class CloudRegionConfig
             "https://identity.bitwarden.eu",
             "https://vault.bitwarden.eu",
             "https://bitwarden.eu/sso-callback"),
+        new(
+            CloudRegion.Gov,
+            "bitwarden-gov.com",
+            "https://api.bitwarden-gov.com",
+            "https://identity.bitwarden-gov.com",
+            "https://vault.bitwarden-gov.com",
+            "https://bitwarden-gov.com/sso-callback"),
     ];
 
     public static CloudRegionConfig FindByDomain(string domain) =>
