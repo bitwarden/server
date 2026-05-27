@@ -1,4 +1,5 @@
 ﻿using Aspire.Hosting.Azure;
+using Aspire.Hosting.JavaScript;
 using Azure.Provisioning;
 using Azure.Provisioning.Storage;
 
@@ -256,7 +257,6 @@ public static class BuilderExtensions
     private static bool IsSelfHosted(this IDistributedApplicationBuilder builder) =>
         builder.Configuration["SelfHost"]?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
 
-#if ENABLE_NODEJS_COMMUNITY_PLUGIN
     public static void ConfigureWebFrontend(this IDistributedApplicationBuilder builder,
         IResourceBuilder<ProjectResource> api)
     {
@@ -264,22 +264,22 @@ public static class BuilderExtensions
             throw new InvalidOperationException("Invalid value for WebFrontend:Port.");
 
         builder
-            .AddBitwardenNpmApp("web-frontend", "web", api)
-            .WithHttpsEndpoint(port, port, "angular-http", isProxied: false)
+            .AddBitwardenNpmApp("web-frontend", "web", api, port: port)
             .WithUrl(builder.Required("WebFrontend:Url"))
             .WithExternalHttpEndpoints();
     }
 
-    private static IResourceBuilder<NodeAppResource> AddBitwardenNpmApp(this IDistributedApplicationBuilder builder,
-        string name, string path, IResourceBuilder<ProjectResource> api, string scriptName = "build:bit:watch")
+    private static IResourceBuilder<JavaScriptAppResource> AddBitwardenNpmApp(this IDistributedApplicationBuilder builder,
+        string name, string path, IResourceBuilder<ProjectResource> api, int port, string scriptName = "build:bit:watch")
     {
         return builder
-            .AddNpmApp(name, $"{builder.Required("ClientsPath")}/{path}", scriptName)
+            .AddJavaScriptApp(name, $"{builder.Required("ClientsPath")}/{path}", scriptName)
+            .WithHttpsEndpoint(port, port, "angular-http", isProxied: false)
+            .WithNpm(install:false)
             .WithReference(api)
             .WaitFor(api)
             .WithExplicitStart();
     }
-#endif
 
 #if ENABLE_NGROK_COMMUNITY_PLUGIN
     public static void ConfigureNgrok(this IDistributedApplicationBuilder builder,

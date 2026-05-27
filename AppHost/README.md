@@ -30,7 +30,7 @@ the services wait for the database and secrets setup to finish before launching.
 | `setup-secrets`     | Executable                | Runs `dev/setup_secrets.ps1` — applies `dev/secrets.json` to all projects |
 | `mssql`             | SQL Server 2022 container | Persistent data volume, port 1433                                         |
 | `run-db-migrations` | Executable                | Runs `dev/migrate.ps1` against `vault_dev` (or `self_host_dev`)           |
-| `azurite`           | Azure Storage emulator    | Blob :10000 · Queue :10001 · Table :10002                                 |
+| `azurite`           | Azure Storage emulator    | Blob :10000 · Queue :10001 · Table :10002 · persistent data volume        |
 | `azurite-setup`     | Executable                | Runs `dev/setup_azurite.ps1` after Azurite is ready                       |
 | `mailcatcher`       | Container                 | SMTP :10250 · Web UI :1080                                                |
 | `redis`             | Container                 | Redis with AOF persistence, port 6379                                     |
