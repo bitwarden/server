@@ -23,6 +23,12 @@
         <div class="col-auto">
             <button type="submit" class="btn btn-primary">Search</button>
         </div>
+        @if (!string.IsNullOrEmpty(Model.NameSearch))
+        {
+            <div class="col-auto">
+                <a asp-action="Index" class="btn btn-link">Clear search</a>
+            </div>
+        }
     </form>
 
     @if (Model.Items.Any())

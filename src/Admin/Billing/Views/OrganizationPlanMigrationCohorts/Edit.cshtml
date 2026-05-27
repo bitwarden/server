@@ -66,7 +66,7 @@
     <partial name="_CohortFormFields" model="Model.FormModel" />
 
     <div class="mb-3 form-check">
-        <input asp-for="FormModel.IsActive" class="form-check-input" />
+        <input asp-for="FormModel.IsActive" name="IsActive" class="form-check-input" />
         <label asp-for="FormModel.IsActive" class="form-check-label">Active</label>
         <div class="form-text">
             When off, no migrations or save-offers fire for this cohort.
