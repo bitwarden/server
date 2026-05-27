@@ -9,6 +9,7 @@
     <Description>Core library for generating and managing test data for Bitwarden</Description>
     <OutputType>library</OutputType>
     <IsPackable>false</IsPackable>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
   <ItemGroup>

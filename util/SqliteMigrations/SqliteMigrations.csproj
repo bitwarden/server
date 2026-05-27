@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <!-- These opt outs should be removed when all warnings are addressed -->
     <WarningsNotAsErrors>$(WarningsNotAsErrors);CA1305</WarningsNotAsErrors>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
   <ItemGroup>
