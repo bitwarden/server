@@ -67,7 +67,7 @@ public class OrganizationsController : Controller
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
     private readonly IOrganizationBillingService _organizationBillingService;
     private readonly IEventService _eventService;
-    private readonly IAutomaticUserConfirmationOrganizationPolicyComplianceValidator _automaticUserConfirmationOrganizationPolicyComplianceValidator;
+    private readonly IAutomaticUserConfirmationOrganizationPolicyComplianceHandler _automaticUserConfirmationOrganizationPolicyComplianceHandler;
     private readonly IOrganizationAutoConfirmEnabledNotificationCommand _organizationAutoConfirmEnabledNotificationCommand;
     private readonly ISubscriberService _subscriberService;
     private readonly IOrganizationPlanMigrationCohortRepository _organizationPlanMigrationCohortRepository;
@@ -100,7 +100,7 @@ public class OrganizationsController : Controller
         IResendOrganizationInviteCommand resendOrganizationInviteCommand,
         IOrganizationBillingService organizationBillingService,
         IEventService eventService,
-        IAutomaticUserConfirmationOrganizationPolicyComplianceValidator automaticUserConfirmationOrganizationPolicyComplianceValidator,
+        IAutomaticUserConfirmationOrganizationPolicyComplianceHandler automaticUserConfirmationOrganizationPolicyComplianceHandler,
         IOrganizationAutoConfirmEnabledNotificationCommand organizationAutoConfirmEnabledNotificationCommand,
         ISubscriberService subscriberService,
         IOrganizationPlanMigrationCohortRepository organizationPlanMigrationCohortRepository,
@@ -132,7 +132,7 @@ public class OrganizationsController : Controller
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
         _organizationBillingService = organizationBillingService;
         _eventService = eventService;
-        _automaticUserConfirmationOrganizationPolicyComplianceValidator = automaticUserConfirmationOrganizationPolicyComplianceValidator;
+        _automaticUserConfirmationOrganizationPolicyComplianceHandler = automaticUserConfirmationOrganizationPolicyComplianceHandler;
         _organizationAutoConfirmEnabledNotificationCommand = organizationAutoConfirmEnabledNotificationCommand;
         _subscriberService = subscriberService;
         _organizationPlanMigrationCohortRepository = organizationPlanMigrationCohortRepository;
@@ -492,8 +492,8 @@ public class OrganizationsController : Controller
     {
         if (!existingOrganizationData.UseAutomaticUserConfirmation && updatedOrganization.UseAutomaticUserConfirmation)
         {
-            var validationResult = await _automaticUserConfirmationOrganizationPolicyComplianceValidator.IsOrganizationCompliantAsync(
-                new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(existingOrganizationData.Id));
+            var validationResult = await _automaticUserConfirmationOrganizationPolicyComplianceHandler.IsOrganizationCompliantAsync(
+                new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(existingOrganizationData.Id));
 
             return validationResult.Match(error => error, _ => null);
         }

@@ -99,6 +99,7 @@ public static class StripeConstants
         public const string CancelledDuringDeferredPriceIncrease = "cancelled_during_deferred_price_increase";
         public const string MigrationCohortId = "migration_cohort_id";
         public const string MigrationCohortName = "migration_cohort_name";
+        public const string CancellingUserId = "cancellingUserId";
     }
 
     public static class CancellationOrigins

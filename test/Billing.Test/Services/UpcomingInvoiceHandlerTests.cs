@@ -3526,12 +3526,12 @@ public class UpcomingInvoiceHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs()
-            .ScheduleBusinessPriceIncrease(default!, default!);
+        await _priceIncreaseScheduler.Received(1)
+            .ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>());
         await _mailService.Received(1).SendInvoiceUpcoming(
             Arg.Is<IEnumerable<string>>(emails => emails.Contains("org@example.com")),
-            Arg.Any<decimal>(),
-            Arg.Any<DateTime>(),
+            Arg.Is<decimal>(amount => amount == invoice.AmountDue / 100M),
+            Arg.Is<DateTime>(dueDate => dueDate == invoice.NextPaymentAttempt!.Value),
             Arg.Any<List<string>>(),
             Arg.Is<bool>(b => b));
     }
@@ -3579,25 +3579,13 @@ public class UpcomingInvoiceHandlerTests
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert — silent fall-through: no migration logs at any severity.
-        _logger.DidNotReceive().Log(
-            LogLevel.Warning,
-            Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString()!.Contains("business price migration")),
-            Arg.Any<Exception?>(),
-            Arg.Any<Func<object, Exception?, string>>());
-        _logger.DidNotReceive().Log(
-            LogLevel.Error,
-            Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString()!.Contains("MigrationPathId")),
-            Arg.Any<Exception?>(),
-            Arg.Any<Func<object, Exception?, string>>());
-        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs()
-            .ScheduleBusinessPriceIncrease(default!, default!);
+        // Assert
+        await _priceIncreaseScheduler.Received(1)
+            .ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>());
         await _mailService.Received(1).SendInvoiceUpcoming(
             Arg.Is<IEnumerable<string>>(emails => emails.Contains("org@example.com")),
-            Arg.Any<decimal>(),
-            Arg.Any<DateTime>(),
+            Arg.Is<decimal>(amount => amount == invoice.AmountDue / 100M),
+            Arg.Is<DateTime>(dueDate => dueDate == invoice.NextPaymentAttempt!.Value),
             Arg.Any<List<string>>(),
             Arg.Is<bool>(b => b));
     }
@@ -3646,20 +3634,12 @@ public class UpcomingInvoiceHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        _logger.Received(1).Log(
-            LogLevel.Error,
-            Arg.Any<EventId>(),
-            Arg.Is<object>(o =>
-                o.ToString()!.Contains("Unknown MigrationPathId") &&
-                o.ToString()!.Contains(_organizationId.ToString())),
-            Arg.Any<Exception?>(),
-            Arg.Any<Func<object, Exception?, string>>());
-        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs()
-            .ScheduleBusinessPriceIncrease(default!, default!);
+        await _priceIncreaseScheduler.Received(1)
+            .ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>());
         await _mailService.Received(1).SendInvoiceUpcoming(
             Arg.Is<IEnumerable<string>>(emails => emails.Contains("org@example.com")),
-            Arg.Any<decimal>(),
-            Arg.Any<DateTime>(),
+            Arg.Is<decimal>(amount => amount == invoice.AmountDue / 100M),
+            Arg.Is<DateTime>(dueDate => dueDate == invoice.NextPaymentAttempt!.Value),
             Arg.Any<List<string>>(),
             Arg.Is<bool>(b => b));
     }
@@ -3708,20 +3688,12 @@ public class UpcomingInvoiceHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        _logger.Received(1).Log(
-            LogLevel.Warning,
-            Arg.Any<EventId>(),
-            Arg.Is<object>(o =>
-                o.ToString()!.Contains("Skipping business price migration") &&
-                o.ToString()!.Contains(_organizationId.ToString())),
-            Arg.Any<Exception?>(),
-            Arg.Any<Func<object, Exception?, string>>());
-        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs()
-            .ScheduleBusinessPriceIncrease(default!, default!);
+        await _priceIncreaseScheduler.Received(1)
+            .ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>());
         await _mailService.Received(1).SendInvoiceUpcoming(
             Arg.Is<IEnumerable<string>>(emails => emails.Contains("org@example.com")),
-            Arg.Any<decimal>(),
-            Arg.Any<DateTime>(),
+            Arg.Is<decimal>(amount => amount == invoice.AmountDue / 100M),
+            Arg.Is<DateTime>(dueDate => dueDate == invoice.NextPaymentAttempt!.Value),
             Arg.Any<List<string>>(),
             Arg.Is<bool>(b => b));
     }
@@ -3767,13 +3739,15 @@ public class UpcomingInvoiceHandlerTests
         _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
         _assignmentRepository.GetByOrganizationIdAsync(_organizationId).Returns(assignment);
         _cohortRepository.GetByIdAsync(cohortId).Returns(cohort);
-        _priceIncreaseScheduler.ScheduleBusinessPriceIncrease(subscription, cohort).Returns(true);
+        _priceIncreaseScheduler.ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>())
+            .Returns(true);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        await _priceIncreaseScheduler.Received(1).ScheduleBusinessPriceIncrease(subscription, cohort);
+        await _priceIncreaseScheduler.Received(1)
+            .ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>());
         _logger.Received(1).Log(
             LogLevel.Information,
             Arg.Any<EventId>(),
@@ -3794,7 +3768,7 @@ public class UpcomingInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenBusinessTier_AndSchedulerReturnsFalse_SuppressesStandardEmail_WithoutSendingPlaceholder()
+    public async Task HandleAsync_WhenBusinessTier_AndSchedulerReturnsFalse_FallsThroughToStandardEmail()
     {
         // Arrange
         _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
@@ -3832,25 +3806,23 @@ public class UpcomingInvoiceHandlerTests
         _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
         _assignmentRepository.GetByOrganizationIdAsync(_organizationId).Returns(assignment);
         _cohortRepository.GetByIdAsync(cohortId).Returns(cohort);
-        _priceIncreaseScheduler.ScheduleBusinessPriceIncrease(subscription, cohort).Returns(false);
 
-        // Act
+        // Act — scheduler returns false (NSubstitute default for Task<bool>)
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        await _mailService.DidNotReceive().SendInvoiceUpcoming(
-            Arg.Any<IEnumerable<string>>(),
-            Arg.Any<decimal>(),
-            Arg.Any<DateTime>(),
+        await _mailService.Received(1).SendInvoiceUpcoming(
+            Arg.Is<IEnumerable<string>>(emails => emails.Contains("org@example.com")),
+            Arg.Is<decimal>(amount => amount == invoice.AmountDue / 100M),
+            Arg.Is<DateTime>(dueDate => dueDate == invoice.NextPaymentAttempt!.Value),
             Arg.Any<List<string>>(),
-            Arg.Any<bool>());
+            Arg.Is<bool>(b => b));
         _logger.DidNotReceive().Log(
             LogLevel.Information,
             Arg.Any<EventId>(),
             Arg.Is<object>(o => o.ToString()!.Contains("Business renewal email is not yet wired up")),
             Arg.Any<Exception?>(),
             Arg.Any<Func<object, Exception?, string>>());
-        // Plans must not be resolved when the scheduler short-circuits — the email is the only consumer.
         await _pricingClient.DidNotReceive().GetPlanOrThrow(PlanType.EnterpriseAnnually);
     }
 
@@ -3893,7 +3865,7 @@ public class UpcomingInvoiceHandlerTests
         _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
         _assignmentRepository.GetByOrganizationIdAsync(_organizationId).Returns(assignment);
         _cohortRepository.GetByIdAsync(cohortId).Returns(cohort);
-        _priceIncreaseScheduler.ScheduleBusinessPriceIncrease(subscription, cohort)
+        _priceIncreaseScheduler.ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>())
             .ThrowsAsync(new Exception("boom"));
 
         // Act

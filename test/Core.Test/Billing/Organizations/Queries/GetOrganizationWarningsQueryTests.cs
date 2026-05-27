@@ -860,7 +860,7 @@ public class GetOrganizationWarningsQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task Run_FlagEnabled_TaxableCustomer_Has_TaxIdWarning_Missing(
+    public async Task Run_FlagEnabled_USCustomer_NoTaxIdWarning(
         Organization organization,
         SutProvider<GetOrganizationWarningsQuery> sutProvider)
     {
@@ -886,6 +886,38 @@ public class GetOrganizationWarningsQueryTests
             .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
             .Returns(true);
 
+        var response = await sutProvider.Sut.Run(organization);
+
+        Assert.Null(response.TaxId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_FlagEnabled_TaxableCustomer_Has_TaxIdWarning_Missing(
+        Organization organization,
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
+    {
+        organization.PlanType = PlanType.TeamsAnnually;
+
+        var subscription = new Subscription
+        {
+            Customer = new Customer
+            {
+                Address = new Address { Country = "DE" },
+                TaxExempt = TaxExempt.None,
+                TaxIds = new StripeList<TaxId> { Data = new List<TaxId>() },
+                InvoiceSettings = new CustomerInvoiceSettings(),
+                Metadata = new Dictionary<string, string>()
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
+            .Returns(true);
+
         sutProvider.GetDependency<ICurrentContext>()
             .OrganizationOwner(organization.Id)
             .Returns(true);
@@ -896,7 +928,7 @@ public class GetOrganizationWarningsQueryTests
             {
                 Data = new List<Registration>
                 {
-                    new() { Country = "US" }
+                    new() { Country = "DE" }
                 }
             });
 
