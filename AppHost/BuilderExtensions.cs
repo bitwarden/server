@@ -278,7 +278,7 @@ public static class BuilderExtensions
         return builder
             .AddJavaScriptApp(name, $"{builder.Required("ClientsPath")}/{path}", scriptName)
             .WithHttpsEndpoint(port, port, "angular-http", isProxied: false)
-            .WithNpm(install:false)
+            .WithNpm(install: false)
             .WithReference(api)
             .WaitFor(api)
             .WithExplicitStart();
