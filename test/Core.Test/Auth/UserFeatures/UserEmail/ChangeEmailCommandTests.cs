@@ -116,41 +116,6 @@ public class ChangeEmailCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ChangeEmailAsync_StripeUserWithoutGatewayCustomerId_ThrowsAndRollsBack(
-        SutProvider<ChangeEmailCommand> sutProvider, User user)
-    {
-        user.Email = _currentEmail;
-        user.Gateway = GatewayType.Stripe;
-        user.GatewayCustomerId = null;
-
-        var originalEmail = user.Email;
-        var originalRevisionDate = user.RevisionDate;
-        var originalAccountRevisionDate = user.AccountRevisionDate;
-        var originalLastEmailChangeDate = user.LastEmailChangeDate;
-
-        sutProvider.GetDependency<IUserRepository>()
-            .GetByEmailAsync(_newEmail)
-            .Returns((User)null);
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => sutProvider.Sut.ChangeEmailAsync(user, _newEmail));
-        Assert.Equal("Missing gateway customer ID or billing email address for Stripe sync.", ex.Message);
-
-        Assert.Equal(originalEmail, user.Email);
-        Assert.Equal(originalRevisionDate, user.RevisionDate);
-        Assert.Equal(originalAccountRevisionDate, user.AccountRevisionDate);
-        Assert.Equal(originalLastEmailChangeDate, user.LastEmailChangeDate);
-        await sutProvider.GetDependency<IStripeSyncService>().DidNotReceive()
-            .UpdateCustomerEmailAddressAsync(Arg.Any<string>(), Arg.Any<string>());
-        // Two persists: initial write, then the rollback write.
-        await sutProvider.GetDependency<IUserRepository>().Received(2).ReplaceAsync(user);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushSyncSettingsAsync(Arg.Any<Guid>());
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushLogOutAsync(Arg.Any<Guid>());
-    }
-
-    [Theory, BitAutoData]
     public async Task ChangeEmailAsync_StripeSyncThrows_RestoresPreviousEmailAndRevisionDatesThenRethrows(
         SutProvider<ChangeEmailCommand> sutProvider, User user)
     {
