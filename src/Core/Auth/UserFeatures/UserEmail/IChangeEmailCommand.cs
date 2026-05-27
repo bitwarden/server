@@ -9,11 +9,15 @@ public interface IChangeEmailCommand
     /// not invalidated.
     /// </summary>
     /// <remarks>
-    /// This command is intended to be consumed only once the master password salt is no longer
-    /// coupled to <see cref="User.Email"/>. While that coupling exists, changing the email
-    /// invalidates derived key material for sessions that still hold the old salt; callers must
-    /// either keep using the legacy flow (which logs the user out) or ensure the decoupling has
-    /// shipped before invoking this command.
+    /// For users with a master password, this command is intended to be consumed only once the
+    /// master password salt is no longer coupled to <see cref="User.Email"/>. While that coupling
+    /// exists, changing the email invalidates derived key material for sessions that still hold
+    /// the old salt; callers must either keep using the legacy flow (which logs the user out) or
+    /// ensure the decoupling has shipped before invoking this command.
+    /// <para>
+    /// For TDE/passwordless users this constraint does not apply — there is no master-password
+    /// salt to invalidate — so the command is safe to use.
+    /// </para>
     /// <para>
     /// This command performs no identity or ownership verification of the new email. Callers MUST
     /// perform robust verification before invoking it, including (at minimum):
