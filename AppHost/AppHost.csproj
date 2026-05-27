@@ -1,4 +1,4 @@
-<Project Sdk="Aspire.AppHost.Sdk/13.2.2">
+<Project Sdk="Aspire.AppHost.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -16,18 +16,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.3.2" />
-    <PackageReference Include="Aspire.Hosting.Azure.Storage" Version="13.3.2" />
-    <PackageReference Include="Aspire.Hosting.JavaScript" Version="13.3.2" />
-    <PackageReference Include="Aspire.Hosting.SqlServer" Version="13.3.2" />
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="[13.3.4]" />
+    <PackageReference Include="Aspire.Hosting.Azure.Storage" Version="[13.3.4]" />
+    <PackageReference Include="Aspire.Hosting.JavaScript" Version="[13.3.4]" />
+    <PackageReference Include="Aspire.Hosting.SqlServer" Version="[13.3.4]" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(EnableNgrokCommunityPlugin)' == 'true'">
-    <PackageReference Include="CommunityToolkit.Aspire.Hosting.Ngrok" Version="13.3.0" />
+    <PackageReference Include="CommunityToolkit.Aspire.Hosting.Ngrok" Version="[13.3.0]" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(EnableNodeJsCommunityPlugin)' == 'true'">
-    <PackageReference Include="CommunityToolkit.Aspire.Hosting.NodeJS.Extensions" Version="9.9.0"/>
+    <PackageReference Include="CommunityToolkit.Aspire.Hosting.NodeJS.Extensions" Version="[9.9.0]"/>
   </ItemGroup>
 
   <ItemGroup>

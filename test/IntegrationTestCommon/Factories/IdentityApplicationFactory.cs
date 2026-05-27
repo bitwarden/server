@@ -4,10 +4,10 @@ using System.Globalization;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
-using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.Services;
 using Bit.Identity;
@@ -238,7 +238,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         requestModel.MasterPasswordHash ??= DefaultUserPasswordHash;
         // PM-28143 - When KDF is sourced exclusively from MasterPasswordUnlockData, delete the root Kdf defaults below.
         requestModel.Kdf ??= KdfType.PBKDF2_SHA256;
-        requestModel.KdfIterations ??= AuthConstants.PBKDF2_ITERATIONS.Default;
+        requestModel.KdfIterations ??= KdfConstants.PBKDF2_ITERATIONS.Default;
         // Ensure a symmetric key is provided when no unlock data is present
         // PM-28143 - When MasterPasswordUnlockData is required, delete the UserSymmetricKey fallback block below.
         if (requestModel.MasterPasswordUnlock == null && string.IsNullOrWhiteSpace(requestModel.UserSymmetricKey))
@@ -249,16 +249,16 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         // Align unlock/auth data KDF with root KDF so login uses the provided master password hash.
         // PM-28143 - After removing root Kdf fields, build KDF exclusively from MasterPasswordUnlockData.Kdf and delete this alignment section.
         var effectiveKdfType = requestModel.Kdf ?? KdfType.PBKDF2_SHA256;
-        var effectiveIterations = requestModel.KdfIterations ?? AuthConstants.PBKDF2_ITERATIONS.Default;
+        var effectiveIterations = requestModel.KdfIterations ?? KdfConstants.PBKDF2_ITERATIONS.Default;
         int? effectiveMemory = null;
         int? effectiveParallelism = null;
         if (effectiveKdfType == KdfType.Argon2id)
         {
-            effectiveIterations = AuthConstants.ARGON2_ITERATIONS.InsideRange(effectiveIterations)
+            effectiveIterations = KdfConstants.ARGON2_ITERATIONS.InsideRange(effectiveIterations)
                 ? effectiveIterations
-                : AuthConstants.ARGON2_ITERATIONS.Default;
-            effectiveMemory = AuthConstants.ARGON2_MEMORY.Default;
-            effectiveParallelism = AuthConstants.ARGON2_PARALLELISM.Default;
+                : KdfConstants.ARGON2_ITERATIONS.Default;
+            effectiveMemory = KdfConstants.ARGON2_MEMORY.Default;
+            effectiveParallelism = KdfConstants.ARGON2_PARALLELISM.Default;
         }
 
         var alignedKdf = new KdfRequestModel
