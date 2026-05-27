@@ -7,6 +7,6 @@
     "Microsoft.Build.Traversal": "4.1.0",
     "Microsoft.Build.Sql": "2.1.0",
     "Bitwarden.Server.Sdk": "1.5.2",
-    "Aspire.AppHost.Sdk": "13.2.2"
+    "Aspire.AppHost.Sdk": "13.3.4"
   }
 }
