@@ -7,6 +7,9 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.Extensions;
+using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
+using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
@@ -39,6 +42,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IPushNotificationAdapter _pushNotificationAdapter;
     private readonly IPriceIncreaseScheduler _priceIncreaseScheduler;
     private readonly IFeatureService _featureService;
+    private readonly IOrganizationPlanMigrationCohortRepository _cohortRepository;
+    private readonly IOrganizationPlanMigrationCohortAssignmentRepository _cohortAssignmentRepository;
     private readonly ILogger<SubscriptionUpdatedHandler> _logger;
 
     public SubscriptionUpdatedHandler(
@@ -58,6 +63,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IPushNotificationAdapter pushNotificationAdapter,
         IPriceIncreaseScheduler priceIncreaseScheduler,
         IFeatureService featureService,
+        IOrganizationPlanMigrationCohortRepository cohortRepository,
+        IOrganizationPlanMigrationCohortAssignmentRepository cohortAssignmentRepository,
         ILogger<SubscriptionUpdatedHandler> logger)
     {
         _stripeEventService = stripeEventService;
@@ -78,6 +85,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _pushNotificationAdapter = pushNotificationAdapter;
         _priceIncreaseScheduler = priceIncreaseScheduler;
         _featureService = featureService;
+        _cohortRepository = cohortRepository;
+        _cohortAssignmentRepository = cohortAssignmentRepository;
         _logger = logger;
     }
 
@@ -138,6 +147,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                     {
                         await HandleScheduleTriggeredFamiliesMigrationAsync(parsedEvent, subscription, organization.Id);
                     }
+
+                    await HandleScheduleTriggeredBusinessMigrationAsync(parsedEvent, subscription, organization.Id);
 
                     await _organizationService.UpdateExpirationDateAsync(organization.Id, currentPeriodEnd);
 
@@ -524,4 +535,168 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 organizationId);
         }
     }
+
+    private async Task HandleScheduleTriggeredBusinessMigrationAsync(
+        Event parsedEvent,
+        Subscription subscription,
+        Guid organizationId)
+    {
+        try
+        {
+            if (!_featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
+            {
+                return;
+            }
+
+            if (subscription.ScheduleId == null)
+            {
+                return;
+            }
+
+            var previousSubscription = parsedEvent.Data.PreviousAttributes?.ToObject<Subscription>() as Subscription;
+            if (previousSubscription?.Items?.Data == null)
+            {
+                _logger.LogWarning(
+                    "Schedule-triggered business migration fired for organization ({OrganizationId}) but the event had no previous subscription items to inspect",
+                    organizationId);
+                return;
+            }
+
+            var assignment = await _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId);
+            if (assignment == null)
+            {
+                return;
+            }
+
+            if (assignment.MigratedDate.HasValue)
+            {
+                _logger.LogInformation(
+                    "Schedule-triggered business migration already applied for organization ({OrganizationId}); skipping (assignment.MigratedDate is set)",
+                    organizationId);
+                return;
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            if (organization == null)
+            {
+                _logger.LogWarning(
+                    "Organization ({OrganizationId}) not found for schedule-triggered business migration",
+                    organizationId);
+                return;
+            }
+
+            var cohort = await _cohortRepository.GetByIdAsync(assignment.CohortId);
+            if (cohort == null || cohort.MigrationPathId == null)
+            {
+                _logger.LogWarning(
+                    "Schedule-triggered business migration fired for organization ({OrganizationId}) but cohort ({CohortId}) is missing or has no MigrationPathId",
+                    organizationId,
+                    assignment.CohortId);
+                return;
+            }
+
+            var migrationPath = MigrationPaths.FromId(cohort.MigrationPathId.Value);
+            if (migrationPath == null)
+            {
+                _logger.LogWarning(
+                    "Schedule-triggered business migration fired for organization ({OrganizationId}) but cohort ({CohortId}) references unregistered MigrationPathId ({MigrationPathId})",
+                    organizationId,
+                    cohort.Id,
+                    cohort.MigrationPathId.Value);
+                return;
+            }
+
+            var sourcePlan = await _pricingClient.GetPlanOrThrow(migrationPath.FromPlan);
+            var sourcePriceId = GetPasswordManagerPriceId(sourcePlan);
+            if (string.IsNullOrEmpty(sourcePriceId))
+            {
+                _logger.LogWarning(
+                    "Schedule-triggered business migration for organization ({OrganizationId}): source plan ({SourcePlanType}) has no resolvable PasswordManager price id; skipping",
+                    organizationId,
+                    sourcePlan.Type);
+                return;
+            }
+
+            if (!previousSubscription.Items.Data.Any(item =>
+                    item.Price?.Id != null && item.Price.Id == sourcePriceId))
+            {
+                return;
+            }
+
+            var targetPlan = await _pricingClient.GetPlanOrThrow(migrationPath.ToPlan);
+            var targetPriceId = GetPasswordManagerPriceId(targetPlan);
+            if (string.IsNullOrEmpty(targetPriceId))
+            {
+                _logger.LogWarning(
+                    "Schedule-triggered business migration for organization ({OrganizationId}): target plan ({TargetPlanType}) has no resolvable PasswordManager price id; skipping",
+                    organizationId,
+                    targetPlan.Type);
+                return;
+            }
+
+            if (!subscription.Items.Any(item => item.Price?.Id != null && item.Price.Id == targetPriceId))
+            {
+                _logger.LogWarning(
+                    "Schedule-triggered business migration for organization ({OrganizationId}): expected target price ({ExpectedPriceId}) for PlanType ({TargetPlanType}) not found in current subscription items; skipping",
+                    organizationId,
+                    targetPriceId,
+                    targetPlan.Type);
+                return;
+            }
+
+            organization.ChangePlan(targetPlan);
+            await _organizationRepository.ReplaceAsync(organization);
+
+            try
+            {
+                assignment.MigratedDate = DateTime.UtcNow;
+                assignment.RevisionDate = DateTime.UtcNow;
+                await _cohortAssignmentRepository.ReplaceAsync(assignment);
+            }
+            catch (Exception assignmentException)
+            {
+                // Partial-write window: the organization was migrated successfully but the
+                // assignment stamp failed. Log full cohort context so the inconsistent state
+                // is observable, then surface as a BillingException. Stripe replays the same
+                // event payload on retry and ChangePlan is structurally idempotent — re-applying
+                // the same target plan shape is a no-op, and the assignment stamp re-runs cleanly.
+                _logger.LogError(
+                    assignmentException,
+                    "Business migration applied to organization ({OrganizationId}) but failed to stamp MigratedDate on cohort assignment ({CohortId}, MigrationPathId {MigrationPathId}); Stripe retry will re-apply",
+                    organizationId,
+                    cohort.Id,
+                    cohort.MigrationPathId.Value);
+                throw new BillingException(
+                    message: "Partial business migration write: organization updated but cohort assignment stamp failed.",
+                    innerException: assignmentException);
+            }
+
+            _logger.LogInformation(
+                "Schedule-triggered business migration applied for organization ({OrganizationId}): PlanType {SourcePlanType} -> {TargetPlanType}, cohort ({CohortId})",
+                organizationId,
+                migrationPath.FromPlan,
+                migrationPath.ToPlan,
+                cohort.Id);
+        }
+        catch (BillingException)
+        {
+            // Rethrow distinguishes a partial-write or pricing-service failure from a regular
+            // catch-all; without this, the generic catch below would swallow it and Stripe
+            // would not retry. GetPlanOrThrow surfaces BillingException for pricing-service
+            // errors, unknown plan types, and malformed responses.
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(
+                exception,
+                "Failed to handle schedule-triggered business migration for organization ({OrganizationId})",
+                organizationId);
+        }
+    }
+
+    private static string GetPasswordManagerPriceId(Bit.Core.Models.StaticStore.Plan plan) =>
+        plan.HasNonSeatBasedPasswordManagerPlan()
+            ? plan.PasswordManager.StripePlanId
+            : plan.PasswordManager.StripeSeatPlanId;
 }
