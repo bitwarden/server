@@ -71,7 +71,7 @@ dotnet user-secrets set "Database:Password" "<your-sa-password>"
 | Key                         | Default                            | Description                                                                          |
 |-----------------------------|------------------------------------|--------------------------------------------------------------------------------------|
 | `SelfHost`                  | `false`                            | Switch to self-hosted mode (see [Self-Hosted Mode](#self-hosted-mode))               |
-| `ClientsPath`               | `../../clients/apps`               | Path to the `clients` repo's `apps/` directory; override in `appsettings.local.json` if using worktrees |
+| `ClientsPath`               | `../../clients/apps`               | Path to the `clients` repo's `apps/` directory (see [Git Worktrees](#git-worktrees)) |
 | `WorkingDirectory`          | `../dev`                           | Directory where dev scripts are resolved                                             |
 | `Services:<name>:BasePort`  | see `appsettings.Development.json` | HTTP port for each service; pre-filled to match each service's `launchSettings.json` |
 | `Database:Image`            | `mssql/server:2022-latest`         | Docker image for SQL Server                                                          |
