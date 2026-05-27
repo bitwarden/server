@@ -1,3 +1,4 @@
+@using Bit.Admin.Billing.Models.OrganizationPlanMigrationCohorts
 @using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects
 @using Bit.Core.Enums
 @model Bit.Admin.Billing.Models.OrganizationPlanMigrationCohorts.EditCohortViewModel
@@ -45,7 +46,7 @@
                         Unresolved migration #@unresolved.Id
                     </option>
                 }
-                <option value="none">None (Churn-only cohort)</option>
+                <option value="@CohortFormModel.NoMigrationPath">None (Churn-only cohort)</option>
                 @foreach (var path in MigrationPaths.All)
                 {
                     <option value="@((byte)path.Id)">
@@ -93,7 +94,7 @@
             if (!migrationPathSelect) return;
             const churnOptionalLabel = document.getElementById('churn-optional-label');
             const updateChurnOptionalLabel = () => {
-                churnOptionalLabel.style.display = migrationPathSelect.value === 'none' ? 'none' : '';
+                churnOptionalLabel.style.display = migrationPathSelect.value === '@CohortFormModel.NoMigrationPath' ? 'none' : '';
             };
             migrationPathSelect.addEventListener('change', updateChurnOptionalLabel);
             updateChurnOptionalLabel();

@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Organizations.PlanMigration.Entities;
+﻿using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 

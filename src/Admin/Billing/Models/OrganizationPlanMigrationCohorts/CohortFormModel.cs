@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 
@@ -6,13 +6,15 @@ namespace Bit.Admin.Billing.Models.OrganizationPlanMigrationCohorts;
 
 public class CohortFormModel : IValidatableObject
 {
+    public const string NoMigrationPath = "none";
+
     public static CohortFormModel From(OrganizationPlanMigrationCohort cohort) => new()
     {
         Id = cohort.Id,
         Name = cohort.Name,
         MigrationPathSelection = cohort.MigrationPathId switch
         {
-            null => "none",
+            null => NoMigrationPath,
             var id => ((byte)id).ToString(),
         },
         ProactiveDiscountCouponCode = cohort.ProactiveDiscountCouponCode,
@@ -44,7 +46,7 @@ public class CohortFormModel : IValidatableObject
 
     public MigrationPathId? GetMigrationPathId()
     {
-        if (MigrationPathSelection == "none")
+        if (MigrationPathSelection == NoMigrationPath)
         {
             return null;
         }
@@ -60,21 +62,21 @@ public class CohortFormModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (MigrationPathSelection == "none")
-        {
-            if (!string.IsNullOrEmpty(ProactiveDiscountCouponCode))
-            {
-                yield return new ValidationResult(
-                    "Churn-only cohorts cannot have a proactive discount coupon.",
-                    new[] { nameof(ProactiveDiscountCouponCode) });
-            }
+        if (MigrationPathSelection != NoMigrationPath)
+            yield break;
 
-            if (string.IsNullOrEmpty(ChurnDiscountCouponCode))
-            {
-                yield return new ValidationResult(
-                    "Churn discount coupon is required for Churn-only cohorts.",
-                    new[] { nameof(ChurnDiscountCouponCode) });
-            }
+        if (!string.IsNullOrEmpty(ProactiveDiscountCouponCode))
+        {
+            yield return new ValidationResult(
+                "Churn-only cohorts cannot have a proactive discount coupon.",
+                [nameof(ProactiveDiscountCouponCode)]);
+        }
+
+        if (string.IsNullOrEmpty(ChurnDiscountCouponCode))
+        {
+            yield return new ValidationResult(
+                "Churn discount coupon is required for Churn-only cohorts.",
+                [nameof(ChurnDiscountCouponCode)]);
         }
     }
 }

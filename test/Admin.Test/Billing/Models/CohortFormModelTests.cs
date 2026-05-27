@@ -1,7 +1,6 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Admin.Billing.Models.OrganizationPlanMigrationCohorts;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
-using Xunit;
 
 namespace Admin.Test.Billing.Models;
 
@@ -67,9 +66,9 @@ public class CohortFormModelTests
     }
 
     [Theory]
-    [InlineData("1", null,         null)]
-    [InlineData("1", "PROACTIVE",  "CHURN15")]
-    [InlineData("none", null,      "SAVE15")]
+    [InlineData("1", null, null)]
+    [InlineData("1", "PROACTIVE", "CHURN15")]
+    [InlineData("none", null, "SAVE15")]
     public void Validate_ValidShape_HasNoErrors(string selection, string? proactive, string? churn)
     {
         var model = new CohortFormModel

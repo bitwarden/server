@@ -18,7 +18,7 @@
 
     <form method="get" asp-action="Index" class="row g-2 mb-3">
         <div class="col-auto">
-            <input type="text" name="name" value="@Model.Name" class="form-control" placeholder="Name" />
+            <input type="text" name="name" value="@Model.NameSearch" class="form-control" placeholder="Name" />
         </div>
         <div class="col-auto">
             <button type="submit" class="btn btn-primary">Search</button>
@@ -130,7 +130,7 @@
                 {
                     <li class="page-item">
                         <a class="page-link" asp-action="Index"
-                           asp-route-name="@Model.Name"
+                           asp-route-name="@Model.NameSearch"
                            asp-route-page="@Model.PreviousPage.Value"
                            asp-route-count="@Model.Count">Previous</a>
                     </li>
@@ -146,7 +146,7 @@
                 {
                     <li class="page-item">
                         <a class="page-link" asp-action="Index"
-                           asp-route-name="@Model.Name"
+                           asp-route-name="@Model.NameSearch"
                            asp-route-page="@Model.NextPage.Value"
                            asp-route-count="@Model.Count">Next</a>
                     </li>

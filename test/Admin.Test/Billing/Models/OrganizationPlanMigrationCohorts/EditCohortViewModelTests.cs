@@ -1,10 +1,9 @@
-using Bit.Admin.Billing.Models.OrganizationPlanMigrationCohorts;
+﻿using Bit.Admin.Billing.Models.OrganizationPlanMigrationCohorts;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Xunit;
 
 namespace Admin.Test.Billing.Models.OrganizationPlanMigrationCohorts;
 

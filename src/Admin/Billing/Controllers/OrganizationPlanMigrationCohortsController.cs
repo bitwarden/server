@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Admin.Billing.Models.OrganizationPlanMigrationCohorts;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Stripe;
 
+// ReSharper disable InconsistentNaming
 namespace Bit.Admin.Billing.Controllers;
 
 [Authorize]
@@ -42,7 +43,7 @@ public class OrganizationPlanMigrationCohortsController(
 
         return View(new CohortsPagedModel
         {
-            Name = name,
+            NameSearch = name,
             Items = items.Select(CohortListItemViewModel.From).ToList(),
             Page = page,
             Count = count,
@@ -129,12 +130,12 @@ public class OrganizationPlanMigrationCohortsController(
 
         if (assignmentState.HasNonPendingAssignments)
         {
-            // The locked view doesn't post a value for MigrationPathSelection.
+            // The locked migration path view doesn't post a value for MigrationPathSelection.
             // Restore from the persisted cohort so [Required] passes and the eventual
             // ReplaceAsync writes back the unchanged path.
             model.MigrationPathSelection = cohort.MigrationPathId switch
             {
-                null => "none",
+                null => CohortFormModel.NoMigrationPath,
                 var pathId => ((byte)pathId).ToString(),
             };
         }
@@ -243,11 +244,7 @@ public class OrganizationPlanMigrationCohortsController(
         var proactive = NormalizeCouponCode(model.ProactiveDiscountCouponCode);
         var churn = NormalizeCouponCode(model.ChurnDiscountCouponCode);
 
-        var ok = true;
-        if (proactive != null && !await TryValidateCouponAsync(proactive, nameof(model.ProactiveDiscountCouponCode)))
-        {
-            ok = false;
-        }
+        var ok = !(proactive != null && !await TryValidateCouponAsync(proactive, nameof(model.ProactiveDiscountCouponCode)));
         if (churn != null && !await TryValidateCouponAsync(churn, nameof(model.ChurnDiscountCouponCode)))
         {
             ok = false;
