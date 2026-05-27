@@ -2,6 +2,7 @@
 #nullable disable
 
 using System.Reflection;
+using Bit.Core.Settings;
 
 namespace Bit.Core;
 
@@ -39,7 +40,14 @@ public static class Constants
     /// <summary>
     /// Domain suffixes for Bitwarden cloud-hosted environments.
     /// </summary>
-    public static readonly string[] BitwardenCloudDomains = ["bitwarden.com", "bitwarden.eu", "bitwarden.pw"];
+    public static readonly string[] BitwardenCloudDomains =
+    [
+        // bitwarden.pw is the QA environment domain; not a user-facing cloud region so it
+        // has no CloudRegionConfig entry, but must remain in the allowlist for HTTPS redirect
+        // validation to pass in QA deployments.
+        "bitwarden.pw",
+        ..CloudRegionConfig.All.Select(c => c.Domain),
+    ];
 
     /// <summary>
     /// Server permitted SSO callback redirect URIs for mobile clients.
@@ -47,9 +55,9 @@ public static class Constants
     public static readonly string[] BitwardenMobileSsoCallbackUris =
     [
         "bitwarden://sso-callback",
-        "https://bitwarden.com/sso-callback",
-        "https://bitwarden.eu/sso-callback",
+        // bitwarden.pw is the QA environment domain; retained for QA SSO callback validation.
         "https://bitwarden.pw/sso-callback",
+        ..CloudRegionConfig.All.Select(c => c.SsoCallbackUri),
     ];
 
     /// <summary>
@@ -261,6 +269,7 @@ public static class FeatureFlagKeys
     public const string WebAuthnRelatedOrigins = "pm-30529-webauthn-related-origins";
     public const string ElectronStorageCache = "pm-32783-electron-storage-cache";
     public const string AttachmentUploadProgress = "pm-34410-attachment-upload-progress";
+    public const string FedRampGovRegion = "fedramp-gov-region";
 
     /* Tools Team */
     /// <summary>

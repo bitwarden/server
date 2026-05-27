@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Setup.Enums;
+namespace Bit.Core.Enums;
 
 public enum CloudRegion
 {
@@ -8,4 +8,6 @@ public enum CloudRegion
     US = 0,
     [Display(Name = "EU")]
     EU = 1,
+    [Display(Name = "Gov")]
+    Gov = 2,
 }
