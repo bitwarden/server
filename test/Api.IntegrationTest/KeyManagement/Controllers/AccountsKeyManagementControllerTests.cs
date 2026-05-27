@@ -344,7 +344,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     public async Task PostConvertToKeyConnectorAsync_Success()
     {
         var (ssoUserEmail, organization) = await SetupKeyConnectorTestAsync(OrganizationUserStatusType.Accepted);
-        await SeedMasterPasswordSaltAsync(ssoUserEmail);
+        await SeedMasterPasswordSaltAndHintAsync(ssoUserEmail);
 
         var response = await _client.PostAsJsonAsync("/accounts/convert-to-key-connector", new { });
         response.EnsureSuccessStatusCode();
@@ -353,6 +353,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         Assert.NotNull(user);
         Assert.Null(user.MasterPassword);
         Assert.Null(user.MasterPasswordSalt);
+        Assert.Null(user.MasterPasswordHint);
         Assert.True(user.UsesKeyConnector);
         Assert.Equal(DateTime.UtcNow, user.RevisionDate, TimeSpan.FromMinutes(1));
         Assert.Equal(DateTime.UtcNow, user.AccountRevisionDate, TimeSpan.FromMinutes(1));
@@ -394,7 +395,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     public async Task PostEnrollToKeyConnectorAsync_Success()
     {
         var (ssoUserEmail, _) = await SetupKeyConnectorTestAsync(OrganizationUserStatusType.Accepted);
-        await SeedMasterPasswordSaltAsync(ssoUserEmail);
+        await SeedMasterPasswordSaltAndHintAsync(ssoUserEmail);
 
         var request = new KeyConnectorEnrollmentRequestModel
         {
@@ -408,6 +409,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         Assert.NotNull(user);
         Assert.Null(user.MasterPassword);
         Assert.Null(user.MasterPasswordSalt);
+        Assert.Null(user.MasterPasswordHint);
         Assert.True(user.UsesKeyConnector);
         Assert.Equal(request.KeyConnectorKeyWrappedUserKey, user.Key);
         Assert.Equal(DateTime.UtcNow, user.RevisionDate, TimeSpan.FromMinutes(1));
@@ -896,18 +898,21 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         return (ssoUserEmail, organization);
     }
 
-    // Registration did not populate MasterPasswordSalt for V1 users, so tests that need to prove
-    // the salt-clearing behavior of the Key Connector conversion must seed it explicitly.
-    private async Task SeedMasterPasswordSaltAsync(string email)
+    // Registration did not populate MasterPasswordSalt or MasterPasswordHint for V1 users, so
+    // tests that need to prove the salt- and hint-clearing behavior of the Key Connector
+    // conversion must seed them explicitly.
+    private async Task SeedMasterPasswordSaltAndHintAsync(string email)
     {
         var user = await _userRepository.GetByEmailAsync(email);
         Assert.NotNull(user);
         user.MasterPasswordSalt = email;
+        user.MasterPasswordHint = "existing-hint";
         await _userRepository.ReplaceAsync(user);
 
         var reloaded = await _userRepository.GetByEmailAsync(email);
         Assert.NotNull(reloaded);
         Assert.NotNull(reloaded.MasterPasswordSalt);
+        Assert.NotNull(reloaded.MasterPasswordHint);
     }
 
     private async Task<User> SetupUserForKeyRotationAsync(

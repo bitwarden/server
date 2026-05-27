@@ -1182,11 +1182,12 @@ public class MasterPasswordServiceTests
     // --- PrepareClearMasterPassword ---
 
     [Theory, BitAutoData]
-    public void PrepareClearMasterPassword_HydratedUser_ClearsCredentialAndUpdatesRevisionDates(User user)
+    public void PrepareClearMasterPassword_HydratedUser_ClearsCredentialAndHintAndUpdatesRevisionDates(User user)
     {
         var sutProvider = CreateSutProvider();
         user.MasterPassword = "existing-hash";
         user.MasterPasswordSalt = "existing-salt";
+        user.MasterPasswordHint = "existing-hint";
         var originalLastPasswordChangeDate = user.LastPasswordChangeDate;
 
         var result = sutProvider.Sut.PrepareClearMasterPassword(user);
@@ -1196,6 +1197,7 @@ public class MasterPasswordServiceTests
         Assert.Same(user, result);
         Assert.Null(user.MasterPassword);
         Assert.Null(user.MasterPasswordSalt);
+        Assert.Null(user.MasterPasswordHint);
         Assert.Equal(expectedTime, user.RevisionDate);
         Assert.Equal(expectedTime, user.AccountRevisionDate);
         Assert.Equal(originalLastPasswordChangeDate, user.LastPasswordChangeDate);
@@ -1221,7 +1223,6 @@ public class MasterPasswordServiceTests
         var sutProvider = CreateSutProvider();
         user.MasterPassword = "existing-hash";
         user.MasterPasswordSalt = "existing-salt";
-        user.MasterPasswordHint = "existing-hint";
         user.Key = "wrapped-user-key";
         user.Kdf = KdfType.Argon2id;
         user.KdfIterations = 3;
@@ -1231,7 +1232,6 @@ public class MasterPasswordServiceTests
         sutProvider.Sut.PrepareClearMasterPassword(user);
 
         Assert.Equal("wrapped-user-key", user.Key);
-        Assert.Equal("existing-hint", user.MasterPasswordHint);
         Assert.Equal(KdfType.Argon2id, user.Kdf);
         Assert.Equal(3, user.KdfIterations);
         Assert.Equal(64, user.KdfMemory);
@@ -1267,6 +1267,7 @@ public class MasterPasswordServiceTests
         var sutProvider = CreateSutProvider();
         user.MasterPassword = null;
         user.MasterPasswordSalt = null;
+        user.MasterPasswordHint = null;
 
         var result = sutProvider.Sut.PrepareClearMasterPassword(user);
 
@@ -1275,6 +1276,7 @@ public class MasterPasswordServiceTests
         Assert.Same(user, result);
         Assert.Null(user.MasterPassword);
         Assert.Null(user.MasterPasswordSalt);
+        Assert.Null(user.MasterPasswordHint);
         Assert.Equal(expectedTime, user.RevisionDate);
         Assert.Equal(expectedTime, user.AccountRevisionDate);
     }

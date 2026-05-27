@@ -26,9 +26,7 @@ public class ConvertUserToKeyConnectorCommandTests
         User user)
     {
         // Arrange
-        user.UsesKeyConnector = false;
-        user.MasterPassword = "master-password";
-        user.MasterPasswordSalt = "master-password-salt";
+        ArrangeConvertibleUser(user);
         user.Key = "old-key";
         sutProvider.GetDependency<ICurrentContext>().Organizations = [];
         ArrangeMasterPasswordServiceMutation(sutProvider);
@@ -41,6 +39,7 @@ public class ConvertUserToKeyConnectorCommandTests
         Assert.True(user.UsesKeyConnector);
         Assert.Null(user.MasterPassword);
         Assert.Null(user.MasterPasswordSalt);
+        Assert.Null(user.MasterPasswordHint);
         Assert.Equal(wrappedUserKey, user.Key);
         sutProvider.GetDependency<IMasterPasswordService>().Received(1)
             .PrepareClearMasterPassword(user);
@@ -50,6 +49,7 @@ public class ConvertUserToKeyConnectorCommandTests
                 u.Key == wrappedUserKey &&
                 u.MasterPassword == null &&
                 u.MasterPasswordSalt == null &&
+                u.MasterPasswordHint == null &&
                 u.UsesKeyConnector));
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
@@ -62,9 +62,7 @@ public class ConvertUserToKeyConnectorCommandTests
     {
         // Arrange
         const string existingUserKey = "existing-user-key";
-        user.UsesKeyConnector = false;
-        user.MasterPassword = "master-password";
-        user.MasterPasswordSalt = "master-password-salt";
+        ArrangeConvertibleUser(user);
         user.Key = existingUserKey;
         sutProvider.GetDependency<ICurrentContext>().Organizations = [];
         ArrangeMasterPasswordServiceMutation(sutProvider);
@@ -77,6 +75,7 @@ public class ConvertUserToKeyConnectorCommandTests
         Assert.True(user.UsesKeyConnector);
         Assert.Null(user.MasterPassword);
         Assert.Null(user.MasterPasswordSalt);
+        Assert.Null(user.MasterPasswordHint);
         Assert.Equal(existingUserKey, user.Key);
         sutProvider.GetDependency<IMasterPasswordService>().Received(1)
             .PrepareClearMasterPassword(user);
@@ -86,6 +85,7 @@ public class ConvertUserToKeyConnectorCommandTests
                 u.Key == existingUserKey &&
                 u.MasterPassword == null &&
                 u.MasterPasswordSalt == null &&
+                u.MasterPasswordHint == null &&
                 u.UsesKeyConnector));
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
@@ -101,9 +101,7 @@ public class ConvertUserToKeyConnectorCommandTests
     {
         // Arrange
         const string existingUserKey = "existing-user-key";
-        user.UsesKeyConnector = false;
-        user.MasterPassword = "master-password";
-        user.MasterPasswordSalt = "master-password-salt";
+        ArrangeConvertibleUser(user);
         user.Key = existingUserKey;
         sutProvider.GetDependency<ICurrentContext>().Organizations = [];
         ArrangeMasterPasswordServiceMutation(sutProvider);
@@ -160,9 +158,7 @@ public class ConvertUserToKeyConnectorCommandTests
         User user)
     {
         // Arrange
-        user.UsesKeyConnector = false;
-        user.MasterPassword = "master-password";
-        user.MasterPasswordSalt = "master-password-salt";
+        ArrangeConvertibleUser(user);
         sutProvider.GetDependency<ICurrentContext>().Organizations =
         [
             new CurrentContextOrganization { Id = Guid.NewGuid(), Type = orgUserType }
@@ -229,6 +225,17 @@ public class ConvertUserToKeyConnectorCommandTests
             .ReplaceAsync(Arg.Any<User>());
     }
 
+    // Seeds the baseline state of a user who is eligible for Key Connector conversion: a
+    // standard master-password credential plus hint, and not already a Key Connector user.
+    // Individual tests can layer on Key or other state as needed.
+    private static void ArrangeConvertibleUser(User user)
+    {
+        user.UsesKeyConnector = false;
+        user.MasterPassword = "master-password";
+        user.MasterPasswordSalt = "master-password-salt";
+        user.MasterPasswordHint = "master-password-hint";
+    }
+
     // Configures the IMasterPasswordService mock so calling PrepareClearMasterPassword performs
     // the real mutation on the user. Tests then assert on both the call and the resulting state
     // captured in IUserRepository.ReplaceAsync.
@@ -240,6 +247,7 @@ public class ConvertUserToKeyConnectorCommandTests
             {
                 u.MasterPassword = null;
                 u.MasterPasswordSalt = null;
+                u.MasterPasswordHint = null;
             }))
             .Returns(call => (User)call[0]);
     }

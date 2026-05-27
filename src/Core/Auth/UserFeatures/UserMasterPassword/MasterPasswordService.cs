@@ -232,6 +232,7 @@ internal class MasterPasswordService(
 
         user.MasterPassword = null;
         user.MasterPasswordSalt = null;
+        user.MasterPasswordHint = null;
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         user.RevisionDate = user.AccountRevisionDate = now;
