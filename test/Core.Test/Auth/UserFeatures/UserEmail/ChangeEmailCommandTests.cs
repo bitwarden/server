@@ -234,6 +234,29 @@ public class ChangeEmailCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task ChangeEmailAsync_UserIsClaimedAndDomainNotVerified_ThrowsAndDoesNotPersist(
+        SutProvider<ChangeEmailCommand> sutProvider, User user)
+    {
+        user.Email = _currentEmail;
+        const string unverifiedEmail = "user@unverified-domain.com";
+        sutProvider.GetDependency<IOrganizationDomainAllowEmailChangeQuery>()
+            .IsAllowedAsync(user, "unverified-domain.com")
+            .Returns(OrganizationDomainAllowEmailChangeDenialReason.UserIsClaimedAndDomainNotVerified);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ChangeEmailAsync(user, unverifiedEmail));
+        Assert.Equal(
+            "Your account is managed by an organization, and this email address isn't on one of the organization's verified domains.",
+            ex.Message);
+
+        await sutProvider.GetDependency<IUserRepository>().DidNotReceive().ReplaceAsync(Arg.Any<User>());
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
+            .PushLogOutAsync(Arg.Any<Guid>());
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
+            .PushSyncSettingsAsync(Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
     public async Task ChangeEmailAsync_NewEmailDomainNotBlockedByPolicy_Succeeds(
         SutProvider<ChangeEmailCommand> sutProvider, User user)
     {

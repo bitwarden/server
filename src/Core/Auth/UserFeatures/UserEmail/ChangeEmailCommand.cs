@@ -109,18 +109,18 @@ public class ChangeEmailCommand(
         }
 
         var denialReason = await _organizationDomainAllowEmailChangeQuery.IsAllowedAsync(user, newDomain);
-        if (denialReason == OrganizationDomainAllowEmailChangeDenialReason.Allowed)
+        var errorMessage = denialReason switch
         {
-            return;
-        }
-        switch (denialReason)
+            OrganizationDomainAllowEmailChangeDenialReason.Allowed => null,
+            OrganizationDomainAllowEmailChangeDenialReason.UserIsClaimedAndDomainNotVerified =>
+                "Your account is managed by an organization, and this email address isn't on one of the organization's verified domains.",
+            OrganizationDomainAllowEmailChangeDenialReason.DomainIsBlockedByPolicy =>
+                "This email address is claimed by an organization using Bitwarden.",
+            _ => throw new InvalidOperationException($"Unhandled {nameof(OrganizationDomainAllowEmailChangeDenialReason)}: {denialReason}."),
+        };
+        if (errorMessage is not null)
         {
-            case OrganizationDomainAllowEmailChangeDenialReason.UserIsClaimedAndDomainNotVerified:
-                throw new BadRequestException(
-                    "Your account is managed by an organization, and this email address isn't on one of the organization's verified domains.");
-            case OrganizationDomainAllowEmailChangeDenialReason.DomainIsBlockedByPolicy:
-                throw new BadRequestException(
-                    "This email address is claimed by an organization using Bitwarden.");
+            throw new BadRequestException(errorMessage);
         }
     }
 }
