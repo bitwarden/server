@@ -16,10 +16,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.AppHost" Version="[13.3.2]" />
-    <PackageReference Include="Aspire.Hosting.Azure.Storage" Version="[13.3.2]" />
-    <PackageReference Include="Aspire.Hosting.JavaScript" Version="[13.3.2]" />
-    <PackageReference Include="Aspire.Hosting.SqlServer" Version="[13.3.2]" />
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="[13.3.4]" />
+    <PackageReference Include="Aspire.Hosting.Azure.Storage" Version="[13.3.4]" />
+    <PackageReference Include="Aspire.Hosting.JavaScript" Version="[13.3.4]" />
+    <PackageReference Include="Aspire.Hosting.SqlServer" Version="[13.3.4]" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(EnableNgrokCommunityPlugin)' == 'true'">
