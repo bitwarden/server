@@ -1,4 +1,4 @@
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Enums;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Enums;
 using Bit.Core.Entities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;

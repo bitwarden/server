@@ -1,4 +1,4 @@
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Enums;
+﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Enums;
 
 public enum OrganizationDomainAllowEmailChangeDenialReason
 {
