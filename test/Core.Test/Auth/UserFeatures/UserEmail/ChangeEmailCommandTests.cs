@@ -293,6 +293,25 @@ public class ChangeEmailCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task ChangeEmailAsync_SameDomainDifferentCase_SkipsOrganizationDomainQuery(
+        SutProvider<ChangeEmailCommand> sutProvider, User user)
+    {
+        // Locks in the case-insensitive short-circuit: EmailValidation.GetDomain lowercases the
+        // domain, so swapping casing on the same domain must not re-enter the policy gate.
+        user.Email = "old@Example.com";
+        user.Gateway = null;
+        const string newEmail = "new@example.com";
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(newEmail)
+            .Returns((User)null);
+
+        await sutProvider.Sut.ChangeEmailAsync(user, newEmail);
+
+        await sutProvider.GetDependency<IOrganizationDomainAllowEmailChangeQuery>().DidNotReceive()
+            .IsAllowedAsync(Arg.Any<User>(), Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
     public async Task ChangeEmailAsync_StripeRollbackWriteThrows_StillSurfacesOriginalStripeException(
         SutProvider<ChangeEmailCommand> sutProvider, User user)
     {
