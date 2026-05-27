@@ -15,12 +15,12 @@ using Xunit;
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 
 [SutProviderCustomize]
-public class AutomaticUserConfirmationPolicyEnforcementValidatorTests
+public class AutomaticUserConfirmationPolicyEnforcementHandlerTests
 {
     [Theory]
     [BitAutoData]
     public async Task IsCompliantAsync_WithPolicyEnabledAndUserIsProviderMember_ReturnsProviderUsersCannotJoinError(
-        SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
+        SutProvider<AutomaticUserConfirmationPolicyEnforcementHandler> sutProvider,
         OrganizationUser organizationUser,
         ProviderUser providerUser,
         User user)
@@ -58,7 +58,7 @@ public class AutomaticUserConfirmationPolicyEnforcementValidatorTests
     [Theory]
     [BitAutoData]
     public async Task IsCompliantAsync_WithPolicyEnabledOnOtherOrganization_ReturnsOtherOrganizationDoesNotAllowOtherMembershipError(
-        SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
+        SutProvider<AutomaticUserConfirmationPolicyEnforcementHandler> sutProvider,
         OrganizationUser organizationUser,
         OrganizationUser otherOrganizationUser,
         User user)
@@ -98,7 +98,7 @@ public class AutomaticUserConfirmationPolicyEnforcementValidatorTests
     [Theory]
     [BitAutoData]
     public async Task IsCompliantAsync_WithPolicyDisabledUserIsAMemberOfAnotherOrgReturnsValid(
-        SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
+        SutProvider<AutomaticUserConfirmationPolicyEnforcementHandler> sutProvider,
         OrganizationUser organizationUser,
         OrganizationUser otherOrgUser,
         User user)
@@ -130,7 +130,7 @@ public class AutomaticUserConfirmationPolicyEnforcementValidatorTests
     [Theory]
     [BitAutoData]
     public async Task IsCompliantAsync_WithPolicyEnabledUserIsAMemberOfAnotherOrg_ReturnsCannotBeMemberOfAnotherOrgError(
-        SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
+        SutProvider<AutomaticUserConfirmationPolicyEnforcementHandler> sutProvider,
         OrganizationUser organizationUser,
         OrganizationUser otherOrgUser,
         User user)
@@ -169,7 +169,7 @@ public class AutomaticUserConfirmationPolicyEnforcementValidatorTests
     [Theory]
     [BitAutoData]
     public async Task IsCompliantAsync_WithPolicyEnabledAndChecksConditionsInCorrectOrder_ReturnsFirstFailure(
-        SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
+        SutProvider<AutomaticUserConfirmationPolicyEnforcementHandler> sutProvider,
         OrganizationUser organizationUser,
         OrganizationUser otherOrgUser,
         ProviderUser providerUser,
@@ -207,7 +207,7 @@ public class AutomaticUserConfirmationPolicyEnforcementValidatorTests
     [Theory]
     [BitAutoData]
     public async Task IsCompliantAsync_WithPolicyIsEnabledNoOtherOrganizationsAndNotAProvider_ReturnsValid(
-        SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
+        SutProvider<AutomaticUserConfirmationPolicyEnforcementHandler> sutProvider,
         OrganizationUser organizationUser,
         User user)
     {
@@ -244,7 +244,7 @@ public class AutomaticUserConfirmationPolicyEnforcementValidatorTests
     [Theory]
     [BitAutoData]
     public async Task IsCompliantAsync_WithPolicyDisabledForCurrentAndOtherOrg_ReturnsValid(
-        SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
+        SutProvider<AutomaticUserConfirmationPolicyEnforcementHandler> sutProvider,
         OrganizationUser organizationUser,
         OrganizationUser otherOrgUser,
         User user)
@@ -275,7 +275,7 @@ public class AutomaticUserConfirmationPolicyEnforcementValidatorTests
     [Theory]
     [BitAutoData]
     public async Task IsCompliantAsync_WithPolicyDisabledForCurrentAndOtherOrgAndIsProvider_ReturnsValid(
-        SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
+        SutProvider<AutomaticUserConfirmationPolicyEnforcementHandler> sutProvider,
         OrganizationUser organizationUser,
         OrganizationUser otherOrgUser,
         ProviderUser providerUser,

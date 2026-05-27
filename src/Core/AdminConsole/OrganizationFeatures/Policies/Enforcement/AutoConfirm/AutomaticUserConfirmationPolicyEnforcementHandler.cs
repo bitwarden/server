@@ -7,10 +7,10 @@ using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpe
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 
-public class AutomaticUserConfirmationPolicyEnforcementValidator(
+public class AutomaticUserConfirmationPolicyEnforcementHandler(
     IPolicyRequirementQuery policyRequirementQuery,
     IProviderUserRepository providerUserRepository)
-    : IAutomaticUserConfirmationPolicyEnforcementValidator
+    : IAutomaticUserConfirmationPolicyEnforcementHandler
 {
     public async Task<ValidationResult<AutomaticUserConfirmationPolicyEnforcementRequest>> IsCompliantAsync(
         AutomaticUserConfirmationPolicyEnforcementRequest request)

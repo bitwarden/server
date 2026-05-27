@@ -322,9 +322,9 @@ public class OrganizationsControllerTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
 
-        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(organization.Id);
-        sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceValidator>()
-            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest>())
+        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(organization.Id);
+        sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceHandler>()
+            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest>())
             .Returns(Valid(request));
 
         // Act
@@ -358,9 +358,9 @@ public class OrganizationsControllerTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
 
-        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(organization.Id);
-        sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceValidator>()
-            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest>())
+        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(organization.Id);
+        sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceHandler>()
+            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest>())
             .Returns(Invalid(request, new UserNotCompliantWithSingleOrganization()));
 
         sutProvider.Sut.TempData = new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
@@ -399,9 +399,9 @@ public class OrganizationsControllerTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
 
-        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(organization.Id);
-        sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceValidator>()
-            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest>())
+        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(organization.Id);
+        sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceHandler>()
+            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest>())
             .Returns(Invalid(request, new ProviderExistsInOrganization()));
 
         sutProvider.Sut.TempData = new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
@@ -443,9 +443,9 @@ public class OrganizationsControllerTests
         _ = await sutProvider.Sut.Edit(organizationId, update);
 
         // Assert
-        await sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceValidator>()
+        await sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceHandler>()
             .DidNotReceive()
-            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest>());
+            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest>());
     }
 
     [BitAutoData]
@@ -475,9 +475,9 @@ public class OrganizationsControllerTests
         _ = await sutProvider.Sut.Edit(organizationId, update);
 
         // Assert
-        await sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceValidator>()
+        await sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceHandler>()
             .DidNotReceive()
-            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest>());
+            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest>());
     }
 
     [BitAutoData]
@@ -504,9 +504,9 @@ public class OrganizationsControllerTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
 
-        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(organization.Id);
-        sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceValidator>()
-            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest>())
+        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(organization.Id);
+        sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceHandler>()
+            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest>())
             .Returns(Valid(request));
 
         _ = await sutProvider.Sut.Edit(organization.Id, update);

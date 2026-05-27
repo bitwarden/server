@@ -105,6 +105,7 @@ public static class OrganizationServiceCollectionExtensions
     {
         services.AddScoped<IOrganizationUpdateKeysCommand, OrganizationUpdateKeysCommand>();
         services.AddScoped<IOrganizationUpdateCommand, OrganizationUpdateCommand>();
+        services.AddScoped<IOrganizationUpdateCollectionManagementCommand, OrganizationUpdateCollectionManagementCommand>();
     }
 
     private static void AddOrganizationEnableCommands(this IServiceCollection services) =>
@@ -213,6 +214,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IGetOrganizationDomainByOrganizationIdQuery, GetOrganizationDomainByOrganizationIdQuery>();
         services.AddScoped<IDeleteOrganizationDomainCommand, DeleteOrganizationDomainCommand>();
         services.AddScoped<IOrganizationHasVerifiedDomainsQuery, OrganizationHasVerifiedDomainsQuery>();
+        services.AddScoped<IOrganizationDomainAllowEmailChangeQuery, OrganizationDomainAllowEmailChangeQuery>();
     }
 
     private static void AddOrganizationAuthCommands(this IServiceCollection services)

@@ -657,7 +657,7 @@ public class RestoreOrganizationUserCommandTests
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([new PolicyDetails { OrganizationId = organization.Id }]));
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementHandler>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(organization.Id, [organizationUser], user)));
 
@@ -688,7 +688,7 @@ public class RestoreOrganizationUserCommandTests
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementHandler>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(organization.Id, [organizationUser], user)));
 
@@ -719,7 +719,7 @@ public class RestoreOrganizationUserCommandTests
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([new PolicyDetails { OrganizationId = organization.Id }]));
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementHandler>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Invalid(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(organization.Id, [organizationUser], user),
@@ -1154,7 +1154,7 @@ public class RestoreOrganizationUserCommandTests
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<Guid>())
             .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementHandler>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(targetOrganizationUser.OrganizationId, [], null!)));
 

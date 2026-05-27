@@ -109,41 +109,7 @@ public static class Constants
 
 public static class AuthConstants
 {
-    public static readonly RangeConstant PBKDF2_ITERATIONS = new(600_000, 2_000_000, 600_000);
-
-    public static readonly RangeConstant ARGON2_ITERATIONS = new(2, 10, 3);
-    public static readonly RangeConstant ARGON2_MEMORY = new(15, 1024, 64);
-    public static readonly RangeConstant ARGON2_PARALLELISM = new(1, 16, 4);
     public static readonly string NewDeviceVerificationExceptionCacheKeyFormat = "NewDeviceVerificationException_{0}";
-}
-
-public class RangeConstant
-{
-    public int Default { get; }
-    public int Min { get; }
-    public int Max { get; }
-
-    public RangeConstant(int min, int max, int defaultValue)
-    {
-        Default = defaultValue;
-        Min = min;
-        Max = max;
-
-        if (Min > Max)
-        {
-            throw new ArgumentOutOfRangeException($"{Min} is larger than {Max}.");
-        }
-
-        if (!InsideRange(defaultValue))
-        {
-            throw new ArgumentOutOfRangeException($"{Default} is outside allowed range of {Min}-{Max}.");
-        }
-    }
-
-    public bool InsideRange(int number)
-    {
-        return Min <= number && number <= Max;
-    }
 }
 
 public static class TokenPurposes
@@ -200,6 +166,7 @@ public static class FeatureFlagKeys
 
     /* Desktop Native Team */
     public const string SSHAgentV2 = "ssh-agent-v2";
+    public const string SSHecdsa = "ssh-ecdsa";
     public const string SSHVersionCheckQAOverride = "ssh-version-check-qa-override";
     public const string WindowsDesktopAutotype = "windows-desktop-autotype";
     public const string WindowsDesktopAutotypeGA = "windows-desktop-autotype-ga";
@@ -226,7 +193,6 @@ public static class FeatureFlagKeys
     public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
     public const string LinuxBiometricsV2 = "pm-26340-linux-biometrics-v2";
     public const string NoLogoutOnKdfChange = "pm-23995-no-logout-on-kdf-change";
-    public const string DisableType0Decryption = "pm-25174-disable-type-0-decryption";
     public const string ConsolidatedSessionTimeoutComponent = "pm-26056-consolidated-session-timeout-component";
     public const string V2RegistrationTDEJIT = "pm-27279-v2-registration-tde-jit";
     public const string EnableAccountEncryptionV2KeyConnectorRegistration = "enable-account-encryption-v2-key-connector-registration";
@@ -299,6 +265,8 @@ public static class FeatureFlagKeys
     public const string PM28091_AddCopyAndQuickLaunchActions = "pm-28091-add-copy-and-quick-launch-actions";
     public const string PM28192_CipherAttachmentOps = "pm-28192-cipher-attachment-ops-to-sdk";
     public const string PM32016_RemoveAtRiskCallouts = "pm-32016-remove-at-risk-callouts";
+    public const string PM37785_VaultBatchBar = "pm-37785-vault-batch-bar";
+    public const string PM37785_DesktopVaultBatchBar = "pm-37785-desktop-vault-batch-bar";
 
     /* Secrets Manager Team */
     public const string SecretsVersioning = "sm-1587-secrets-versioning";
