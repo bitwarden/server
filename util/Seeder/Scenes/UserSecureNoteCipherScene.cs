@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
@@ -20,6 +21,7 @@ public class UserSecureNoteCipherScene(IUserRepository userRepository, ICipherRe
         public required string Name { get; set; }
         public string? Notes { get; set; }
         public bool Reprompt { get; set; }
+        public bool Favorite { get; set; }
         public Guid? FolderId { get; set; }
     }
 
@@ -47,6 +49,13 @@ public class UserSecureNoteCipherScene(IUserRepository userRepository, ICipherRe
         if (request.Reprompt)
         {
             cipher.Reprompt = CipherRepromptType.Password;
+        }
+        if (request.Favorite)
+        {
+            cipher.Favorites = JsonSerializer.Serialize(new Dictionary<string, bool>
+            {
+                { request.UserId.ToString().ToUpperInvariant(), true}
+            });
         }
         if (request.FolderId.HasValue)
         {
