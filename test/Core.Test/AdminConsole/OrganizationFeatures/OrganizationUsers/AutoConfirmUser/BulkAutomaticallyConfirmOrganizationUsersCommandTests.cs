@@ -40,7 +40,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
         SetupValidatorAllValid(sutProvider, request, [orgUser1, orgUser2], organization);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmManyOrganizationUsersAsync(Arg.Any<IEnumerable<AcceptedOrganizationUserToConfirm>>())
+            .ConfirmManyOrganizationUsersAsync(Arg.Any<IReadOnlyCollection<AcceptedOrganizationUserToConfirm>>())
             .Returns([orgUser1.Id, orgUser2.Id]);
 
         // Act
@@ -85,7 +85,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
         SetupValidatorAllValid(sutProvider, request, [orgUser1, orgUser2], organization);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmManyOrganizationUsersAsync(Arg.Any<IEnumerable<AcceptedOrganizationUserToConfirm>>())
+            .ConfirmManyOrganizationUsersAsync(Arg.Any<IReadOnlyCollection<AcceptedOrganizationUserToConfirm>>())
             .Returns([orgUser1.Id, orgUser2.Id]);
 
         // Act
@@ -134,7 +134,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
         SetupValidatorAllValid(sutProvider, request, [orgUser1, orgUser2], organization);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmManyOrganizationUsersAsync(Arg.Any<IEnumerable<AcceptedOrganizationUserToConfirm>>())
+            .ConfirmManyOrganizationUsersAsync(Arg.Any<IReadOnlyCollection<AcceptedOrganizationUserToConfirm>>())
             .Returns([orgUser1.Id, orgUser2.Id]);
 
         // Act
@@ -244,7 +244,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
             ]);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmManyOrganizationUsersAsync(Arg.Any<IEnumerable<AcceptedOrganizationUserToConfirm>>())
+            .ConfirmManyOrganizationUsersAsync(Arg.Any<IReadOnlyCollection<AcceptedOrganizationUserToConfirm>>())
             .Returns([orgUser1.Id]);
 
         // Act
