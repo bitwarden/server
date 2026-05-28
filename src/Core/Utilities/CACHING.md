@@ -13,12 +13,19 @@ Does your data need to be shared across all instances in a horizontally-scaled d
 ├─ YES
 │   │
 │   Do you need long-term persistence with TTL (days/weeks)?
-│   ├─ YES → Use `IDistributedCache` with persistent keyed service
+│   ├─ YES
+│   │   │
+│   │   Is cross-instance L1 staleness acceptable?
+│   │   ├─ NO → Use `IDistributedCache` with persistent keyed service (every read hits the store)
+│   │   └─ YES → Use `ExtendedCache` paired with the persistent cache (L1 memory + Cosmos/SQL/EF L2)
+│   │             (see "Pairing ExtendedCache with Cosmos DB" below)
+│   │
 │   └─ NO → Use `ExtendedCache`
 │       │
 │       Notes:
 │       - With Redis configured: memory + distributed + backplane
-│       - Without Redis: memory-only with stampede protection
+│       - With a non-Redis IDistributedCache registered: memory + distributed, no backplane
+│       - With nothing registered: memory-only with stampede protection
 │       - Provides fail-safe, eager refresh, circuit breaker
 │       - For org/provider abilities: Use GetOrSetAsync with preloading pattern
 │
@@ -39,12 +46,12 @@ Does your data need to be shared across all instances in a horizontally-scaled d
 
 ## Caching Options Overview
 
-| Option                                 | Best For                                       | Horizontal Scale | TTL Support | Backend Options        |
-| -------------------------------------- | ---------------------------------------------- | ---------------- | ----------- | ---------------------- |
-| **ExtendedCache**                      | General-purpose caching with advanced features | ✅ Yes           | ✅ Yes      | Redis, Memory          |
-| **IDistributedCache** (default)        | Short-lived key-value caching                  | ✅ Yes           | ⚠️ Manual   | Redis, SQL, EF         |
-| **IDistributedCache** (`"persistent"`) | Long-lived data with TTL                       | ✅ Yes           | ✅ Yes      | Cosmos, Redis, SQL, EF |
-| **In-Memory Cache**                    | High-frequency reads, single instance          | ❌ No            | ⚠️ Manual   | Memory                 |
+| Option                                 | Best For                                       | Horizontal Scale | TTL Support | Backend Options                |
+| -------------------------------------- | ---------------------------------------------- | ---------------- | ----------- | ------------------------------ |
+| **ExtendedCache**                      | General-purpose caching with advanced features | ✅ Yes           | ✅ Yes      | Redis, Cosmos, SQL, EF, Memory |
+| **IDistributedCache** (default)        | Short-lived key-value caching                  | ✅ Yes           | ⚠️ Manual   | Redis, SQL, EF                 |
+| **IDistributedCache** (`"persistent"`) | Long-lived data with TTL                       | ✅ Yes           | ✅ Yes      | Cosmos, Redis, SQL, EF         |
+| **In-Memory Cache**                    | High-frequency reads, single instance          | ❌ No            | ⚠️ Manual   | Memory                         |
 
 ---
 
@@ -60,11 +67,12 @@ Each named cache automatically receives:
 - Optional distributed store
 - Optional backplane
 
-`ExtendedCache` supports three deployment modes:
+`ExtendedCache` supports four deployment modes:
 
 - **Memory-only caching** (with stampede protection: prevents multiple concurrent requests for the same key from hitting the backend)
 - **Memory + distributed cache + backplane** using the **shared** application Redis
 - **Memory + distributed cache + backplane** using a **fully isolated** Redis instance
+- **Memory + non-Redis distributed cache** (Cosmos DB, SQL Server, EF) — backplane unavailable (Redis-only feature)
 
 ### When to Use
 
@@ -151,6 +159,34 @@ services.AddExtendedCache("SpecializedCache", globalSettings, new GlobalSettings
 // - A dedicated IDistributedCache is created
 // - A dedicated FusionCache backplane is created
 // - All three are exposed to DI as keyed services (using the cache name as service key)
+
+// Option 5: Non-Redis L2 (Cosmos DB, SQL Server, EF) — see "Backend Configuration" below
+// Shared mode: the default unnamed IDistributedCache (whatever AddDistributedCache wired up)
+// is reused as L2.
+services.AddDistributedCache(globalSettings);
+services.AddExtendedCache("MyFeatureCache", globalSettings, new GlobalSettings.ExtendedCacheSettings
+{
+    UseSharedDistributedCache = true,
+    // No Redis.ConnectionString in globalSettings.DistributedCache.Redis
+});
+
+// Keyed mode: register an IDistributedCache under the cache name yourself, then call
+// AddExtendedCache. This is how to pair ExtendedCache with the "persistent" (Cosmos)
+// keyed service.
+services.AddDistributedCache(globalSettings); // registers the "persistent" keyed Cosmos cache
+services.AddKeyedSingleton<IDistributedCache>(
+    "MyLongLivedCache",
+    (sp, _) => sp.GetRequiredKeyedService<IDistributedCache>("persistent"));
+services.AddExtendedCache("MyLongLivedCache", globalSettings, new GlobalSettings.ExtendedCacheSettings
+{
+    UseSharedDistributedCache = false,
+    Duration = TimeSpan.FromHours(24),
+    // No settings.Redis.ConnectionString
+});
+// When configured this way (Option 5):
+// - L1 (memory) + L2 (Cosmos/SQL/EF) caching with stampede protection, eager refresh, fail-safe
+// - NO backplane (Redis-only). L1 entries on other instances will not be invalidated on write —
+//   they expire on their own TTL. See "When NOT to Use" for the staleness tradeoff.
 ```
 
 #### 2. Inject and use the cache:
@@ -239,20 +275,25 @@ public class SsoAuthorizationService
 
 ### Backend Configuration
 
-`ExtendedCache` automatically uses the configured backend:
+`ExtendedCache` works with any `IDistributedCache` as its L2 store. The chosen backend is resolved at registration time based on which knobs are set.
 
-**Cloud (Bitwarden-hosted)**:
+**Shared mode** (`UseSharedDistributedCache = true`, the default):
 
-1. Redis (primary, if `GlobalSettings.DistributedCache.Redis.ConnectionString` configured)
-2. Memory-only (fallback if Redis unavailable)
+1. **Redis** — if `GlobalSettings.DistributedCache.Redis.ConnectionString` is configured. A shared `IConnectionMultiplexer`, `IDistributedCache`, and `IFusionCacheBackplane` are registered (or reused if already present).
+2. **Whatever default `IDistributedCache` is registered** — if no Redis connection string is set, `ExtendedCache` looks up the unnamed `IDistributedCache` and uses it as L2. This is typically wired up by `services.AddDistributedCache(globalSettings)` and resolves to SQL Server or EF Cache in self-hosted deployments.
+3. **Memory-only** — if neither Redis nor an `IDistributedCache` is registered.
 
-**Self-hosted**:
+**Keyed mode** (`UseSharedDistributedCache = false`):
 
-1. Redis (if configured in `appsettings.json`)
-2. SQL Server / EF Cache (if `IDistributedCache` is registered and no Redis)
-3. Memory-only (default fallback)
+1. **Dedicated Redis** — if `settings.Redis.ConnectionString` is set. A dedicated `IConnectionMultiplexer`, `IDistributedCache`, and `IFusionCacheBackplane` are registered under the cache name as the service key.
+2. **Keyed `IDistributedCache`** — if no `settings.Redis.ConnectionString` is set, `ExtendedCache` looks up a keyed `IDistributedCache` registered under the cache name and uses it as L2. This is the path for wrapping Cosmos DB (or any other keyed `IDistributedCache`) under `ExtendedCache`.
+3. **Memory-only** — if neither is registered.
 
-> **Note**: ExtendedCache works seamlessly with any `IDistributedCache` backend. In self-hosted scenarios without Redis, you can configure ExtendedCache to use SQL Server or Entity Framework cache as its distributed layer. This provides local memory caching in front of the database cache, with the option to add Redis later if needed. You won't get the backplane (cross-instance invalidation) without Redis, but you still get stampede protection, eager refresh, and fail-safe mode.
+> **Backplane caveat**: cross-instance cache invalidation only works with Redis (it uses Redis pub/sub). With a non-Redis L2 (Cosmos, SQL, EF), each instance's L1 memory cache is independent — writes from one instance do not invalidate L1 entries on other instances. Entries on other instances stay until their TTL expires. You still get stampede protection, eager refresh, and fail-safe within each instance.
+
+#### Pairing `ExtendedCache` with Cosmos DB
+
+Cosmos DB is registered by `AddDistributedCache` as the keyed `"persistent"` `IDistributedCache` in cloud deployments. To use it as L2 under `ExtendedCache`, register an alias under your cache name and use keyed mode without a Redis connection string (see Option 5 above). This gives you L1 memory + Cosmos L2 with Cosmos's automatic container-level TTL, but no cross-instance L1 invalidation.
 
 ### Specific Example: Organization/Provider Abilities
 
@@ -321,8 +362,8 @@ public class OrganizationAbilityService
 
 ### When NOT to Use
 
-- **Long-term persistent data** (days/weeks) - Use `IDistributedCache` with persistent keyed service for structured TTL support
-- **Custom caching logic** - If ExtendedCache's API doesn't fit your use case, consider specialized in-memory cache
+- **Long-term persistent data where cross-instance L1 staleness is unacceptable** — Use `IDistributedCache` with the `"persistent"` keyed service directly. `ExtendedCache` can be paired with Cosmos (see [Backend Configuration](#backend-configuration)), but every instance has its own L1 memory cache and there is no backplane for non-Redis backends, so a write on instance A will not invalidate the L1 entry on instance B until its TTL expires. If you need every read to reflect the latest persisted value across all instances, skip the L1 layer and go straight to the persistent `IDistributedCache`.
+- **Custom caching logic** — If ExtendedCache's API doesn't fit your use case, consider specialized in-memory cache
 
 ---
 
@@ -815,12 +856,12 @@ public class MyService
 
 The following table shows how different caching options resolve to storage backends based on configuration:
 
-| Cache Option                           | Cloud Backend             | Self-Hosted Backend         | Config Setting                                            |
-| -------------------------------------- | ------------------------- | --------------------------- | --------------------------------------------------------- |
-| **ExtendedCache**                      | Redis → Memory            | Redis → Memory              | `GlobalSettings.DistributedCache.Redis.ConnectionString`  |
-| **IDistributedCache** (default)        | Redis                     | Redis → SQL → EF            | `GlobalSettings.DistributedCache.Redis.ConnectionString`  |
-| **IDistributedCache** (`"persistent"`) | Cosmos → Redis            | Redis → SQL → EF            | `GlobalSettings.DistributedCache.Cosmos.ConnectionString` |
-| **OAuth Grants** (long-lived)          | Persistent cache (Cosmos) | `IGrantRepository` (SQL/EF) | Various (see above)                                       |
+| Cache Option                           | Cloud Backend                                    | Self-Hosted Backend                          | Config Setting                                            |
+| -------------------------------------- | ------------------------------------------------ | -------------------------------------------- | --------------------------------------------------------- |
+| **ExtendedCache**                      | Redis → registered `IDistributedCache` → Memory  | Redis → registered `IDistributedCache` (SQL/EF) → Memory | `GlobalSettings.DistributedCache.Redis.ConnectionString` + any pre-registered `IDistributedCache` |
+| **IDistributedCache** (default)        | Redis                                            | Redis → SQL → EF                             | `GlobalSettings.DistributedCache.Redis.ConnectionString`  |
+| **IDistributedCache** (`"persistent"`) | Cosmos → Redis                                   | Redis → SQL → EF                             | `GlobalSettings.DistributedCache.Cosmos.ConnectionString` |
+| **OAuth Grants** (long-lived)          | Persistent cache (Cosmos)                        | `IGrantRepository` (SQL/EF)                  | Various (see above)                                       |
 
 ### Redis Configuration
 
