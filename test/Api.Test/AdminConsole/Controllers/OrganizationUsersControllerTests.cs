@@ -3,7 +3,6 @@ using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Collections;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
-using Bit.Api.Models.Request.Organizations;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
@@ -362,7 +361,8 @@ public class OrganizationUsersControllerTests
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns((OrganizationUser)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetResetPasswordDetails(orgId, orgUserId));
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.GetResetPasswordDetails(orgUserId, new Organization { Id = orgId }));
     }
 
     [Theory]
@@ -372,12 +372,13 @@ public class OrganizationUsersControllerTests
         SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
-        organizationUser.OrganizationId = Guid.NewGuid(); // Different org ID
+        organizationUser.OrganizationId = Guid.NewGuid(); // Different from the bound org
         organizationUser.UserId = Guid.NewGuid();
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetResetPasswordDetails(orgId, orgUserId));
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.GetResetPasswordDetails(orgUserId, new Organization { Id = orgId }));
     }
 
     [Theory]
@@ -392,7 +393,8 @@ public class OrganizationUsersControllerTests
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetResetPasswordDetails(orgId, orgUserId));
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.GetResetPasswordDetails(orgUserId, new Organization { Id = orgId }));
     }
 
     [Theory]
@@ -402,14 +404,14 @@ public class OrganizationUsersControllerTests
         SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
-        organizationUser.OrganizationId = orgId;
+        org.Id = orgId;
+        organizationUser.OrganizationId = org.Id;
         organizationUser.UserId = user.Id;
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
         sutProvider.GetDependency<IUserService>().GetUserByIdAsync(user.Id).Returns(user);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(org);
 
-        // Act
-        var response = await sutProvider.Sut.GetResetPasswordDetails(orgId, orgUserId);
+        // Act — org is passed directly via [BindOrganization]; the repository is no longer called
+        var response = await sutProvider.Sut.GetResetPasswordDetails(orgUserId, org);
 
         // Assert
         Assert.Equal(organizationUser.Id, response.OrganizationUserId);

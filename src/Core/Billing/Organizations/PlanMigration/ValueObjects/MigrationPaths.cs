@@ -24,10 +24,24 @@ public static class MigrationPaths
         FromPlan: PlanType.EnterpriseMonthly2020,
         ToPlan: PlanType.EnterpriseMonthly);
 
+    public static readonly MigrationPath Teams2020AnnualToCurrent = new(
+        Id: MigrationPathId.Teams2020AnnualToCurrent,
+        Name: nameof(Teams2020AnnualToCurrent),
+        FromPlan: PlanType.TeamsAnnually2020,
+        ToPlan: PlanType.TeamsAnnually);
+
+    public static readonly MigrationPath Teams2020MonthlyToCurrent = new(
+        Id: MigrationPathId.Teams2020MonthlyToCurrent,
+        Name: nameof(Teams2020MonthlyToCurrent),
+        FromPlan: PlanType.TeamsMonthly2020,
+        ToPlan: PlanType.TeamsMonthly);
+
     public static IReadOnlyList<MigrationPath> All { get; } =
     [
         Enterprise2020AnnualToCurrent,
         Enterprise2020MonthlyToCurrent,
+        Teams2020AnnualToCurrent,
+        Teams2020MonthlyToCurrent,
     ];
 
     /// <summary>

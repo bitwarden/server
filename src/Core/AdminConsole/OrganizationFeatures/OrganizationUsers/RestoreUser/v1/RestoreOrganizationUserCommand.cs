@@ -30,7 +30,7 @@ public class RestoreOrganizationUserCommand(
     IOrganizationService organizationService,
     IPolicyRequirementQuery policyRequirementQuery,
     ICollectionRepository collectionRepository,
-    IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator,
+    IAutomaticUserConfirmationPolicyEnforcementHandler automaticUserConfirmationPolicyEnforcementHandler,
     IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand) : IRestoreOrganizationUserCommand
 {
     public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, string defaultCollectionName)
@@ -357,7 +357,7 @@ public class RestoreOrganizationUserCommand(
         var policyRequirement = await policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(
             user.Id);
 
-        var validationResult = await automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
+        var validationResult = await automaticUserConfirmationPolicyEnforcementHandler.IsCompliantAsync(
             new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser.OrganizationId, allOrgUsers, user!),
             policyRequirement);
 

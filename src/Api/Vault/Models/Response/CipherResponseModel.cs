@@ -26,6 +26,19 @@ public class CipherMiniResponseModel : ResponseModel
         Id = cipher.Id;
         Type = cipher.Type;
         Data = cipher.Data;
+        RevisionDate = cipher.RevisionDate;
+        OrganizationId = cipher.OrganizationId;
+        Attachments = AttachmentResponseModel.FromCipher(cipher, globalSettings);
+        OrganizationUseTotp = orgUseTotp;
+        CreationDate = cipher.CreationDate;
+        DeletedDate = cipher.DeletedDate;
+        Reprompt = cipher.Reprompt.GetValueOrDefault(CipherRepromptType.None);
+        Key = cipher.Key;
+
+        if (cipher.IsDataBlobEncrypted())
+        {
+            return;
+        }
 
         CipherData cipherData;
         switch (cipher.Type)
@@ -78,14 +91,6 @@ public class CipherMiniResponseModel : ResponseModel
         Notes = cipherData.Notes;
         Fields = cipherData.Fields?.Select(f => new CipherFieldModel(f));
         PasswordHistory = cipherData.PasswordHistory?.Select(ph => new CipherPasswordHistoryModel(ph));
-        RevisionDate = cipher.RevisionDate;
-        OrganizationId = cipher.OrganizationId;
-        Attachments = AttachmentResponseModel.FromCipher(cipher, globalSettings);
-        OrganizationUseTotp = orgUseTotp;
-        CreationDate = cipher.CreationDate;
-        DeletedDate = cipher.DeletedDate;
-        Reprompt = cipher.Reprompt.GetValueOrDefault(CipherRepromptType.None);
-        Key = cipher.Key;
     }
 
     public Guid Id { get; set; }

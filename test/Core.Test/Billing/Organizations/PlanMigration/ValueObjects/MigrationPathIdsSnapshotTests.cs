@@ -35,6 +35,8 @@ public class MigrationPathIdsSnapshotTests
         // existing ones.
         Assert.Equal((byte)1, (byte)MigrationPathId.Enterprise2020AnnualToCurrent);
         Assert.Equal((byte)2, (byte)MigrationPathId.Enterprise2020MonthlyToCurrent);
+        Assert.Equal((byte)3, (byte)MigrationPathId.Teams2020AnnualToCurrent);
+        Assert.Equal((byte)4, (byte)MigrationPathId.Teams2020MonthlyToCurrent);
     }
 
     [Fact]
@@ -47,6 +49,10 @@ public class MigrationPathIdsSnapshotTests
             MigrationPaths.Enterprise2020AnnualToCurrent.Id);
         Assert.Equal(MigrationPathId.Enterprise2020MonthlyToCurrent,
             MigrationPaths.Enterprise2020MonthlyToCurrent.Id);
+        Assert.Equal(MigrationPathId.Teams2020AnnualToCurrent,
+            MigrationPaths.Teams2020AnnualToCurrent.Id);
+        Assert.Equal(MigrationPathId.Teams2020MonthlyToCurrent,
+            MigrationPaths.Teams2020MonthlyToCurrent.Id);
     }
 
     [Fact]
@@ -64,6 +70,14 @@ public class MigrationPathIdsSnapshotTests
             MigrationPaths.Enterprise2020MonthlyToCurrent.FromPlan);
         Assert.Equal(PlanType.EnterpriseMonthly,
             MigrationPaths.Enterprise2020MonthlyToCurrent.ToPlan);
+        Assert.Equal(PlanType.TeamsAnnually2020,
+            MigrationPaths.Teams2020AnnualToCurrent.FromPlan);
+        Assert.Equal(PlanType.TeamsAnnually,
+            MigrationPaths.Teams2020AnnualToCurrent.ToPlan);
+        Assert.Equal(PlanType.TeamsMonthly2020,
+            MigrationPaths.Teams2020MonthlyToCurrent.FromPlan);
+        Assert.Equal(PlanType.TeamsMonthly,
+            MigrationPaths.Teams2020MonthlyToCurrent.ToPlan);
     }
 
     [Fact]
@@ -71,7 +85,7 @@ public class MigrationPathIdsSnapshotTests
     {
         // Guards against accidental removal. Increment when intentionally adding a
         // new path.
-        Assert.Equal(2, MigrationPaths.All.Count);
+        Assert.Equal(4, MigrationPaths.All.Count);
     }
 
     [Fact]
