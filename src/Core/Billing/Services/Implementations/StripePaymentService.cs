@@ -798,9 +798,9 @@ public class StripePaymentService : IStripePaymentService
 
             // Override discount with Phase 2 discount
             var phase2Discount = phase2.Discounts?.FirstOrDefault();
-            if (phase2Discount?.Coupon != null)
+            if (phase2Discount?.Discount?.Source?.Coupon != null)
             {
-                subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(phase2Discount.Coupon);
+                subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(phase2Discount.Discount.Source.Coupon);
             }
         }
         catch (StripeException ex)

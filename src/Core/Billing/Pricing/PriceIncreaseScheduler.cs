@@ -553,7 +553,7 @@ public class PriceIncreaseScheduler(
 
         var discounts = new List<SubscriptionSchedulePhaseDiscountOptions>();
 
-        if (subscription.Customer?.Discount?.Coupon?.Id is { Length: > 0 } customerCouponId)
+        if (subscription.Customer?.Discount?.Source?.Coupon?.Id is { Length: > 0 } customerCouponId)
         {
             discounts.Add(new SubscriptionSchedulePhaseDiscountOptions { Coupon = customerCouponId });
         }
@@ -561,7 +561,7 @@ public class PriceIncreaseScheduler(
         if (subscription.Discounts is not null)
         {
             discounts.AddRange(subscription.Discounts.Select(d =>
-                new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.Coupon.Id }));
+                new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.Source?.Coupon?.Id }));
         }
 
         if (!string.IsNullOrEmpty(cohort.ProactiveDiscountCouponCode))

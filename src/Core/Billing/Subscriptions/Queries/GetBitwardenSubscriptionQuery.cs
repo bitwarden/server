@@ -305,8 +305,8 @@ public class GetBitwardenSubscriptionQuery(
             }
 
             return phase2.Discounts?
-                .Where(d => d?.Coupon?.Valid == true)
-                .Select(d => d.Coupon)
+                .Where(d => d?.Discount?.Source?.Coupon?.Valid == true)
+                .Select(d => d.Discount!.Source!.Coupon!)
                 .ToList() ?? [];
         }
         catch (StripeException stripeException)
