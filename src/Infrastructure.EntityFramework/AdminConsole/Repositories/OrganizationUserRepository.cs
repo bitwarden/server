@@ -1010,6 +1010,41 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
     }
 
+    public async Task<ICollection<Guid>> ConfirmManyOrganizationUsersAsync(
+        IReadOnlyCollection<AcceptedOrganizationUserToConfirm> usersToConfirm)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        using var dbContext = GetDatabaseContext(scope);
+
+        var orgUserIds = usersToConfirm.Select(u => u.OrganizationUserId).ToList();
+        var keyByOrgUserId = usersToConfirm.ToDictionary(u => u.OrganizationUserId, u => u.Key);
+
+        var rowsToUpdate = await dbContext.OrganizationUsers
+            .Where(ou => orgUserIds.Contains(ou.Id) && ou.Status == OrganizationUserStatusType.Accepted)
+            .ToListAsync();
+
+        if (rowsToUpdate.Count == 0)
+        {
+            return [];
+        }
+
+        var revisionDate = DateTime.UtcNow;
+        foreach (var ou in rowsToUpdate)
+        {
+            ou.Status = OrganizationUserStatusType.Confirmed;
+            ou.Key = keyByOrgUserId[ou.Id];
+            ou.RevisionDate = revisionDate;
+        }
+
+        await dbContext.SaveChangesAsync();
+
+        var confirmedIds = rowsToUpdate.Select(o => o.Id).ToList();
+        await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(confirmedIds);
+        await dbContext.SaveChangesAsync();
+
+        return confirmedIds;
+    }
+
 #nullable enable
 
     public async Task<OrganizationUserUserDetails?> GetDetailsByOrganizationIdUserIdAsync(Guid organizationId, Guid userId)
@@ -1045,6 +1080,21 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
             await dbContext.SaveChangesAsync();
         };
+    }
+
+    public async Task<ICollection<Core.Entities.OrganizationUser>> GetManyPendingAutoConfirmAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = from ou in dbContext.OrganizationUsers
+                        where ou.OrganizationId == organizationId &&
+                            ou.Status == OrganizationUserStatusType.Accepted &&
+                            ou.Type == OrganizationUserType.User &&
+                            ou.UserId != null
+                        select ou;
+            return Mapper.Map<List<Core.Entities.OrganizationUser>>(await query.ToListAsync());
+        }
     }
 #nullable disable
 
