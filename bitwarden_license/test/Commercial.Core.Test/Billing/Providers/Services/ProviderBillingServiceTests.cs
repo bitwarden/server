@@ -29,6 +29,7 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Braintree;
 using CsvHelper;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Stripe;
@@ -2927,6 +2928,119 @@ public class ProviderBillingServiceTests
         await providerOrganizationRepository.Received(1).CreateAsync(Arg.Any<ProviderOrganization>());
         await eventService.Received(1).LogProviderOrganizationEventAsync(
             Arg.Any<ProviderOrganization>(), EventType.ProviderOrganization_Added);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddExistingOrganization_StripeCancelSucceeds_OnlyWhenReleasePrecedesIt(
+        Provider provider,
+        Organization organization,
+        string key,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange — simulates the Stripe-side contract this PR exists to satisfy:
+        // CancelSubscriptionAsync throws when an active SubscriptionSchedule is attached.
+        // The mock returns success only after Release has run; without Release, the cancel
+        // call throws the same error shape Stripe would produce in production. This locks
+        // in the "Release must precede cancel" invariant at the contract level, not just
+        // at the call-order level — a refactor that removes the Release call but preserves
+        // call order would still fail this test.
+        provider.Type = ProviderType.Msp;
+        organization.GatewayCustomerId = "cus_stripe_contract";
+        organization.GatewaySubscriptionId = "sub_stripe_contract";
+        organization.PlanType = PlanType.EnterpriseAnnually2020;
+        organization.Seats = 10;
+
+        var releaseHasRun = false;
+        var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
+        priceIncreaseScheduler
+            .When(s => s.Release(organization.GatewayCustomerId, organization.GatewaySubscriptionId))
+            .Do(_ => releaseHasRun = true);
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .CancelSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionCancelOptions>())
+            .Returns(_ => releaseHasRun
+                ? Task.FromResult(new Subscription
+                {
+                    Id = organization.GatewaySubscriptionId,
+                    LatestInvoice = new Invoice { Status = StripeConstants.InvoiceStatus.Open }
+                })
+                : Task.FromException<Subscription>(new StripeException(
+                    "This subscription is owned by an active subscription schedule.")));
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(Arg.Any<PlanType>())
+            .Returns(MockPlans.Get(PlanType.EnterpriseMonthly));
+        sutProvider.GetDependency<IProviderPlanRepository>()
+            .GetByProviderId(provider.Id)
+            .Returns([
+                new ProviderPlan
+                {
+                    PlanType = PlanType.EnterpriseMonthly,
+                    SeatMinimum = 100,
+                    AllocatedSeats = 0,
+                    PurchasedSeats = 0
+                }
+            ]);
+        sutProvider.GetDependency<IProviderOrganizationRepository>()
+            .GetManyDetailsByProviderAsync(provider.Id)
+            .Returns([]);
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetCustomer(organization)
+            .Returns(new Customer { Balance = 0 });
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
+
+        // Act — must not throw. If Release were removed or moved after Cancel, the
+        // arranged StripeException would surface and Assert.ThrowsAsync would be needed.
+        await sutProvider.Sut.AddExistingOrganization(provider, organization, key);
+
+        // Assert — both calls fired, Release first.
+        await priceIncreaseScheduler.Received(1)
+            .Release(organization.GatewayCustomerId, "sub_stripe_contract");
+        await stripeAdapter.Received(1)
+            .CancelSubscriptionAsync("sub_stripe_contract", Arg.Any<SubscriptionCancelOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddExistingOrganization_LogsDroppedAssignment_WithProviderAndCohortContext(
+        Provider provider,
+        Organization organization,
+        string key,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange — happy path with a cohort assignment present. Verifies the
+        // information log fires with the expected level when the assignment is dropped.
+        // Guards against a refactor that silently removes the operator-facing audit
+        // signal that a stale row was cleaned up.
+        provider.Type = ProviderType.Msp;
+        organization.GatewayCustomerId = "cus_log_check";
+        organization.GatewaySubscriptionId = "sub_log_check";
+        ArrangeAddExistingOrganizationHappyPath(sutProvider, provider, organization);
+
+        var assignmentRepository =
+            sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
+        var existingAssignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organization.Id,
+            CohortId = Guid.NewGuid()
+        };
+        assignmentRepository.GetByOrganizationIdAsync(organization.Id).Returns(existingAssignment);
+
+        var logger = sutProvider.GetDependency<ILogger<ProviderBillingService>>();
+
+        // Act
+        await sutProvider.Sut.AddExistingOrganization(provider, organization, key);
+
+        // Assert — exactly one Information log fired on the cohort drop path.
+        logger.Received(1).Log(
+            LogLevel.Information,
+            Arg.Any<EventId>(),
+            Arg.Any<object>(),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception, string>>());
     }
 
     #endregion
