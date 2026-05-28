@@ -15,7 +15,8 @@ public partial class UseRiskInsightsDataMigration : Migration
                 SET
                     `UseRiskInsights` = 1
                 WHERE
-                    `PlanType` IN (4, 5, 10, 11, 14, 15, 19, 20);
+                    `PlanType` IN (4, 5, 10, 11, 14, 15, 19, 20)
+                    AND `UseRiskInsights` = 0;
             ");
     }
 
