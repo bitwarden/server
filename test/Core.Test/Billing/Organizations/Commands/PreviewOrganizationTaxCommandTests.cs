@@ -6,6 +6,7 @@ using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
+using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks.Plans;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -17,6 +18,7 @@ namespace Bit.Core.Test.Billing.Organizations.Commands;
 
 public class PreviewOrganizationTaxCommandTests
 {
+    private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly ILogger<PreviewOrganizationTaxCommand> _logger = Substitute.For<ILogger<PreviewOrganizationTaxCommand>>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
@@ -27,7 +29,7 @@ public class PreviewOrganizationTaxCommandTests
     public PreviewOrganizationTaxCommandTests()
     {
         _user = new User { Id = Guid.NewGuid(), Email = "test@example.com" };
-        _command = new PreviewOrganizationTaxCommand(_logger, _pricingClient, _stripeAdapter, _subscriptionDiscountService);
+        _command = new PreviewOrganizationTaxCommand(_featureService, _logger, _pricingClient, _stripeAdapter, _subscriptionDiscountService);
     }
 
     #region Subscription Purchase
@@ -2453,6 +2455,74 @@ public class PreviewOrganizationTaxCommandTests
 
         await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.Discounts == null || options.Discounts.Count == 0));
+    }
+
+    #endregion
+
+    #region Feature flag
+
+    [Fact]
+    public async Task Run_FlagOn_BusinessUse_DoesNotSetCustomerDetailsTaxExempt()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax).Returns(true);
+
+        var purchase = new OrganizationSubscriptionPurchase
+        {
+            Tier = ProductTierType.Teams,
+            Cadence = PlanCadenceType.Monthly,
+            PasswordManager = new OrganizationSubscriptionPurchase.PasswordManagerSelections
+            {
+                Seats = 3,
+                AdditionalStorage = 0,
+                Sponsored = false
+            }
+        };
+
+        var billingAddress = new BillingAddress { Country = "DE", PostalCode = "10115" };
+
+        var plan = new TeamsPlan(false);
+        _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 0 }], Total = 2700 });
+
+        await _command.Run(_user, purchase, billingAddress);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true &&
+            options.CustomerDetails.TaxExempt == null));
+    }
+
+    [Fact]
+    public async Task Run_FlagOn_FamiliesTier_DoesNotSetCustomerDetailsTaxExempt()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax).Returns(true);
+
+        var purchase = new OrganizationSubscriptionPurchase
+        {
+            Tier = ProductTierType.Families,
+            Cadence = PlanCadenceType.Annually,
+            PasswordManager = new OrganizationSubscriptionPurchase.PasswordManagerSelections
+            {
+                Seats = 6,
+                AdditionalStorage = 0,
+                Sponsored = false
+            }
+        };
+
+        var billingAddress = new BillingAddress { Country = "US", PostalCode = "12345" };
+
+        var plan = new FamiliesPlan();
+        _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 0 }], Total = 4000 });
+
+        await _command.Run(_user, purchase, billingAddress);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true &&
+            options.CustomerDetails.TaxExempt == null));
     }
 
     #endregion

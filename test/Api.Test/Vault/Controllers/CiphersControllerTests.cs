@@ -62,6 +62,49 @@ public class CiphersControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task Put_OpaqueLoginCipherWithOldClient_SkipsFido2VersionCheck(
+        User user,
+        SutProvider<CiphersController> sutProvider)
+    {
+        var cipherId = Guid.NewGuid();
+        var cipherDetails = new CipherDetails
+        {
+            Id = cipherId,
+            UserId = user.Id,
+            Type = CipherType.Login,
+            Data = "2.iv|ct|mac",
+            Edit = true,
+            ViewPassword = true,
+        };
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId, user.Id)
+            .Returns(cipherDetails);
+        sutProvider.GetDependency<ICurrentContext>()
+            .ClientVersion
+            .Returns(new Version(2022, 1, 0));
+
+        var model = new CipherRequestModel
+        {
+            Type = CipherType.Login,
+            Name = "2.name|encrypted",
+            Data = "2.iv|ct|mac",
+        };
+
+        var response = await sutProvider.Sut.Put(cipherId, model);
+
+        Assert.NotNull(response);
+        Assert.Equal("2.iv|ct|mac", response.Data);
+        Assert.Null(response.Login);
+        await sutProvider.GetDependency<ICipherService>()
+            .Received(1)
+            .SaveDetailsAsync(Arg.Any<CipherDetails>(), user.Id, Arg.Any<DateTime?>(), Arg.Any<IEnumerable<Guid>>());
+    }
+
+    [Theory, BitAutoData]
     public async Task PutPartialShouldThrowNotFoundExceptionWhenCipherDoesNotExist(User user, Guid folderId, SutProvider<CiphersController> sutProvider)
     {
         var isFavorite = true;

@@ -43,6 +43,8 @@ public class DeviceRepositoryTests
             Type = type,
             Identifier = identifier ?? Guid.NewGuid().ToString(),
             ClientVersion = clientVersion,
+            // Mirror production creation sites — device creation counts as first activity.
+            LastActivityDate = DateTime.UtcNow,
         });
     }
 
@@ -533,6 +535,34 @@ public class DeviceRepositoryTests
         Assert.NotNull(result.LastActivityDate);
         Assert.True(TruncateToSecond(result.LastActivityDate.Value) >= TruncateToSecond(beforeCreation),
             $"LastActivityDate {result.LastActivityDate:O} precedes beforeCreation {beforeCreation:O} at second-level precision.");
+    }
+
+    /// <summary>
+    /// Creates a device with an explicit null LastActivityDate and asserts the read path surfaces null verbatim.
+    /// </summary>
+    [DatabaseTheory]
+    [DatabaseData]
+    public async Task GetManyByUserIdWithDeviceAuth_NullLastActivityDateInDb_ReturnsNullNotDefaultAsync(
+        IDeviceRepository sutRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await CreateTestUserAsync(userRepository);
+        await sutRepository.CreateAsync(new Device
+        {
+            UserId = user.Id,
+            Name = "legacy-null-activity",
+            Type = DeviceType.ChromeBrowser,
+            Identifier = Guid.NewGuid().ToString(),
+            LastActivityDate = null,
+        });
+
+        // Act
+        var response = await sutRepository.GetManyByUserIdWithDeviceAuth(user.Id);
+
+        // Assert
+        var result = Assert.Single(response);
+        Assert.Null(result.LastActivityDate);
     }
 
     /// <summary>

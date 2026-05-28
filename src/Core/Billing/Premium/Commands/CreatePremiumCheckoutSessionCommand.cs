@@ -22,7 +22,7 @@ public interface ICreatePremiumCheckoutSessionCommand
     /// </summary>
     /// <param name="user"> The user for whom the Checkout Session is being created. </param>
     /// <param name="originatingAppVersion"> The version of the application initiating the Checkout Session. </param>
-    /// <param name="originatingPlatform"> The platform (e.g., ios, android) from which the Checkout Session is initiated. </param>
+    /// <param name="originatingPlatform"> The platform (e.g., ios, android, browser, desktop) from which the Checkout Session is initiated. </param>
     /// <returns> The url of the created Checkout Session. </returns>
     Task<BillingCommandResult<PremiumCheckoutSessionResponseModel>> Run(User user, string originatingAppVersion, string originatingPlatform);
 }
@@ -39,10 +39,12 @@ public class CreatePremiumCheckoutSessionCommand(
     private readonly IPricingClient pricingClient = pricingClient;
     private readonly ISubscriberService subscriberService = subscriberService;
     private readonly IGlobalSettings globalSettings = globalSettings;
+    private readonly ILogger<CreatePremiumCheckoutSessionCommand> logger = logger;
 
     public Task<BillingCommandResult<PremiumCheckoutSessionResponseModel>>
         Run(User user, string originatingAppVersion, string originatingPlatform) => HandleAsync<PremiumCheckoutSessionResponseModel>(async () =>
     {
+
         if (user.Premium)
         {
             return new BadRequest("User is already a premium user.");
@@ -73,7 +75,7 @@ public class CreatePremiumCheckoutSessionCommand(
     /// <param name="customer"> The Stripe customer associated with the user. </param>
     /// <param name="premiumPlan"> The premium plan for which the Checkout Session is being created. </param>
     /// <param name="originatingAppVersion"> The version of the application initiating the Checkout Session. </param>
-    /// <param name="originatingPlatform"> The platform (e.g., ios, android) from which the Checkout Session is initiated. </param>
+    /// <param name="originatingPlatform"> The platform (e.g., ios, android, browser, desktop) from which the Checkout Session is initiated. </param>
     /// <returns> The created SessionCreateOptions for Stripe Checkout Session creation. </returns>
     private SessionCreateOptions CreateSessionOptions(
         User user,
@@ -82,6 +84,8 @@ public class CreatePremiumCheckoutSessionCommand(
         string originatingAppVersion,
         string originatingPlatform)
     {
+        var (successUrl, cancelUrl) = GetCheckoutUrls(originatingPlatform);
+
         return new SessionCreateOptions
         {
             Customer = customer.Id,
@@ -104,10 +108,26 @@ public class CreatePremiumCheckoutSessionCommand(
                     [StripeConstants.MetadataKeys.OriginatingAppVersion] = originatingAppVersion,
                 }
             },
-            SuccessUrl = globalSettings.Stripe.PremiumCheckoutSuccessUrl,
-            CancelUrl = globalSettings.Stripe.PremiumCheckoutCancelUrl,
+            SuccessUrl = successUrl,
+            CancelUrl = cancelUrl,
             AutomaticTax = new SessionAutomaticTaxOptions { Enabled = true },
             PaymentMethodTypes = [StripeConstants.PaymentMethodTypes.Card]
         };
     }
+
+    private (string successUrl, string cancelUrl) GetCheckoutUrls(string platform) =>
+        platform switch
+        {
+            StripeConstants.CheckoutSession.Platforms.Ios or
+            StripeConstants.CheckoutSession.Platforms.Android =>
+                (globalSettings.Stripe.PremiumCheckoutSuccessUrl,
+                 globalSettings.Stripe.PremiumCheckoutCancelUrl),
+            StripeConstants.CheckoutSession.Platforms.Browser =>
+                (globalSettings.Stripe.BrowserPremiumCheckoutSuccessUrl,
+                 globalSettings.Stripe.BrowserPremiumCheckoutCancelUrl),
+            StripeConstants.CheckoutSession.Platforms.Desktop =>
+                (globalSettings.Stripe.DesktopPremiumCheckoutSuccessUrl,
+                 globalSettings.Stripe.DesktopPremiumCheckoutCancelUrl),
+            _ => throw new InvalidOperationException($"Unsupported platform: {platform}")
+        };
 }

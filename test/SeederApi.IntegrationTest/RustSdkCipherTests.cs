@@ -455,6 +455,115 @@ public sealed class RustSdkCipherTests
     }
 
     [Fact]
+    public void EncryptFields_Fido2AndPasswordHistory_Roundtrip()
+    {
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+
+        var cipher = new CipherViewDto
+        {
+            Name = "Login With Passkey",
+            Type = CipherTypes.Login,
+            Login = new LoginViewDto
+            {
+                Username = "user@example.com",
+                Password = "CurrentP@ss!",
+                Fido2Credentials =
+                [
+                    LoginCipherSeeder.CreateFido2Credential("example.com", "Example", "user@example.com")
+                ],
+                PasswordHistory =
+                [
+                    new PasswordHistoryViewDto
+                    {
+                        Password = "PreviousP@ss1!",
+                        LastUsedDate = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                    },
+                    new PasswordHistoryViewDto
+                    {
+                        Password = "PreviousP@ss2!",
+                        LastUsedDate = new DateTime(2025, 2, 1, 0, 0, 0, DateTimeKind.Utc)
+                    }
+                ]
+            }
+        };
+
+        var json = JsonSerializer.Serialize(cipher, _sdkJsonOptions);
+        var fieldPathsJson = JsonSerializer.Serialize(EncryptPropertyAttribute.GetFieldPaths<CipherViewDto>());
+        var encryptedJson = RustSdkService.EncryptFields(json, fieldPathsJson, orgKeys.Key);
+
+        Assert.DoesNotContain("PreviousP@ss1!", encryptedJson);
+        Assert.DoesNotContain("PreviousP@ss2!", encryptedJson);
+
+        using var doc = JsonDocument.Parse(encryptedJson);
+        var login = doc.RootElement.GetProperty("login");
+
+        var history = login.GetProperty("passwordHistory");
+        Assert.Equal(2, history.GetArrayLength());
+        Assert.Equal("PreviousP@ss1!", RustSdkService.DecryptString(history[0].GetProperty("password").GetString()!, orgKeys.Key));
+        Assert.Equal("PreviousP@ss2!", RustSdkService.DecryptString(history[1].GetProperty("password").GetString()!, orgKeys.Key));
+
+        // LastUsedDate is metadata and should remain in plaintext.
+        Assert.Equal("2025-01-01T00:00:00Z", history[0].GetProperty("lastUsedDate").GetString());
+
+        var fido2 = login.GetProperty("fido2Credentials")[0];
+        Assert.Equal("example.com", RustSdkService.DecryptString(fido2.GetProperty("rpId").GetString()!, orgKeys.Key));
+        Assert.Equal("Example", RustSdkService.DecryptString(fido2.GetProperty("rpName").GetString()!, orgKeys.Key));
+        Assert.Equal("user@example.com", RustSdkService.DecryptString(fido2.GetProperty("userName").GetString()!, orgKeys.Key));
+        Assert.StartsWith("2.", fido2.GetProperty("keyValue").GetString());
+    }
+
+    [Fact]
+    public void EncryptPropertyAttribute_GetFieldPaths_IncludesFido2AndPasswordHistory()
+    {
+        var paths = EncryptPropertyAttribute.GetFieldPaths<CipherViewDto>();
+
+        Assert.Contains("login.passwordHistory[*].password", paths);
+        Assert.Contains("login.fido2Credentials[*].keyValue", paths);
+        Assert.Contains("login.fido2Credentials[*].userName", paths);
+        Assert.Contains("login.fido2Credentials[*].credentialId", paths);
+    }
+
+    [Fact]
+    public void CipherSeeder_WithPasswordHistory_PopulatesEncryptedCipherLoginData()
+    {
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+
+        var cipher = LoginCipherSeeder.Create(new CipherSeed
+        {
+            Type = CipherType.Login,
+            Name = "Login With History",
+            EncryptionKey = orgKeys.Key,
+            OrganizationId = Guid.NewGuid(),
+            Login = new LoginViewDto
+            {
+                Username = "user@example.com",
+                Password = "CurrentP@ss!",
+                PasswordHistory =
+                [
+                    new PasswordHistoryViewDto { Password = "OldOne", LastUsedDate = DateTime.UtcNow.AddDays(-7) }
+                ],
+                Fido2Credentials =
+                [
+                    LoginCipherSeeder.CreateFido2Credential("example.com", "Example", "user@example.com")
+                ]
+            }
+        });
+
+        var loginData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
+        Assert.NotNull(loginData);
+        Assert.NotNull(loginData.PasswordHistory);
+        Assert.NotNull(loginData.Fido2Credentials);
+
+        var historyEntries = loginData.PasswordHistory.ToList();
+        Assert.Single(historyEntries);
+        Assert.StartsWith("2.", historyEntries[0].Password);
+        Assert.DoesNotContain("OldOne", cipher.Data);
+
+        Assert.Single(loginData.Fido2Credentials);
+        Assert.StartsWith("2.", loginData.Fido2Credentials[0].KeyValue);
+    }
+
+    [Fact]
     public void CipherSeeder_SshKeyCipher_ProducesServerCompatibleFormat()
     {
         var orgKeys = RustSdkService.GenerateOrganizationKeys();

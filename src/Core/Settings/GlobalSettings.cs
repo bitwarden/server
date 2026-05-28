@@ -661,6 +661,8 @@ public class GlobalSettings : IGlobalSettings
         public int CiphersLimit { get; set; }
         public int CollectionRelationshipsLimit { get; set; }
         public int CollectionsLimit { get; set; }
+        public int FoldersLimit { get; set; }
+        public int FolderRelationshipsLimit { get; set; }
     }
 
     public class BitPaySettings
@@ -724,6 +726,10 @@ public class GlobalSettings : IGlobalSettings
         public int MaxNetworkRetries { get; set; } = 2;
         public string PremiumCheckoutSuccessUrl { get; set; }
         public string PremiumCheckoutCancelUrl { get; set; }
+        public string BrowserPremiumCheckoutSuccessUrl { get; set; }
+        public string BrowserPremiumCheckoutCancelUrl { get; set; }
+        public string DesktopPremiumCheckoutSuccessUrl { get; set; }
+        public string DesktopPremiumCheckoutCancelUrl { get; set; }
     }
 
     public class DistributedIpRateLimitingSettings

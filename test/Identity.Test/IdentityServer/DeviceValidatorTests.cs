@@ -144,6 +144,7 @@ public class DeviceValidatorTests
     {
         // Arrange
         AddValidDeviceToRequest(request);
+        var beforeCall = DateTime.UtcNow;
 
         // Act
         var result = DeviceValidator.GetDeviceFromRequest(request, clientVersion: null);
@@ -154,6 +155,10 @@ public class DeviceValidatorTests
         Assert.Equal("DeviceName", result.Name);
         Assert.Equal(DeviceType.Android, result.Type);
         Assert.Equal("DevicePushToken", result.PushToken);
+        // Device creation counts as first activity — must be stamped at the construction site so
+        // legacy NULL rows still read back as null. 
+        Assert.NotNull(result.LastActivityDate);
+        Assert.InRange(result.LastActivityDate.Value, beforeCall, DateTime.UtcNow);
     }
 
     [Theory, BitAutoData]

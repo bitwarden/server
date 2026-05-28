@@ -67,7 +67,7 @@ public class SubscriberService(
         ];
 
         // Build once from survey — null when survey is absent (system-initiated cancellation)
-        var cancellationDetails = offboardingSurveyResponse != null
+        var cancellationDetails = offboardingSurveyResponse is not null
             ? new SubscriptionCancellationDetailsOptions
             {
                 Comment = offboardingSurveyResponse.Feedback,
@@ -77,21 +77,16 @@ public class SubscriberService(
             }
             : null;
 
-        var cancellingUserMetadata = offboardingSurveyResponse != null
+        var cancellingUserMetadata = offboardingSurveyResponse is not null
             ? new Dictionary<string, string>
             {
-                { "cancellingUserId", offboardingSurveyResponse.UserId.ToString() }
+                { MetadataKeys.CancellingUserId, offboardingSurveyResponse.UserId.ToString() }
             }
             : null;
 
-        if (cancelImmediately)
-        {
-            await CancelSubscriptionImmediatelyAsync(subscription, cancellationDetails, cancellingUserMetadata);
-        }
-        else
-        {
-            await CancelSubscriptionAtPeriodEndAsync(subscription, cancellationDetails, cancellingUserMetadata);
-        }
+        await (cancelImmediately
+            ? CancelSubscriptionImmediatelyAsync(subscription, cancellationDetails, cancellingUserMetadata)
+            : CancelSubscriptionAtPeriodEndAsync(subscription, cancellationDetails, cancellingUserMetadata));
     }
 
     public async Task<string> CreateBraintreeCustomer(
@@ -233,7 +228,8 @@ public class SubscriberService(
         SubscriptionCancellationDetailsOptions? cancellationDetails,
         Dictionary<string, string>? cancellingUserMetadata)
     {
-        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal) ||
+            featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
         {
             var activeSchedule = await GetActiveScheduleAsync(subscription);
             if (activeSchedule != null)
@@ -272,7 +268,8 @@ public class SubscriberService(
             updateOptions.Metadata = cancellingUserMetadata;
         }
 
-        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal) ||
+            featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
         {
             var activeSchedule = await GetActiveScheduleAsync(subscription);
 
@@ -561,7 +558,8 @@ public class SubscriberService(
 
     public async Task ResumeFromUnpaidCancellationAsync(ISubscriber subscriber)
     {
-        var subscription = await GetSubscription(subscriber);
+        var subscription = await GetSubscription(subscriber,
+            new SubscriptionGetOptions { Expand = ["customer.discount", "discounts"] });
 
         if (subscription is null ||
             subscription.Status != SubscriptionStatus.Unpaid ||
@@ -581,6 +579,8 @@ public class SubscriberService(
                 [MetadataKeys.CancellationOrigin] = string.Empty
             }
         });
+
+        await priceIncreaseScheduler.ScheduleForSubscription(subscription);
 
         logger.LogInformation(
             "Cleared pending unpaid-lifecycle cancellation for subscription ({SubscriptionId}) after subscriber re-enable",
@@ -605,6 +605,8 @@ public class SubscriberService(
         }
 
         var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+
+        await priceIncreaseScheduler.Release(subscription.CustomerId, subscription.Id);
 
         await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
         {

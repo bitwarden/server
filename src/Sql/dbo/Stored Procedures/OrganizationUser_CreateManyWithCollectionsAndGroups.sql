@@ -22,7 +22,8 @@ BEGIN
         [Permissions],
         [ResetPasswordKey],
         [AccessSecretsManager],
-        [RevocationReason]
+        [RevocationReason],
+        [StatusNew]
     )
     SELECT
         OUI.[Id],
@@ -38,7 +39,8 @@ BEGIN
         OUI.[Permissions],
         OUI.[ResetPasswordKey],
         OUI.[AccessSecretsManager],
-        OUI.[RevocationReason]
+        OUI.[RevocationReason],
+        OUI.[StatusNew]
     FROM
         OPENJSON(@organizationUserData)
                  WITH (
@@ -55,7 +57,8 @@ BEGIN
                      [Permissions] NVARCHAR (MAX) '$.Permissions',
                      [ResetPasswordKey] VARCHAR (MAX) '$.ResetPasswordKey',
                      [AccessSecretsManager] BIT '$.AccessSecretsManager',
-                     [RevocationReason] TINYINT '$.RevocationReason'
+                     [RevocationReason] TINYINT '$.RevocationReason',
+                     [StatusNew] SMALLINT '$.StatusNew'
                      ) OUI
 
     INSERT INTO [dbo].[GroupUser]
