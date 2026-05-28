@@ -1,8 +1,10 @@
 ﻿namespace Bit.Core.KeyManagement.Kdf;
 
-// These defaults are used by the prelogin enumeration-protection pool in
-// Identity/AccountsController. Changes here will affect prelogin responses
-// for non-existent users. See AccountsControllerTests for coverage.
+/// <summary>
+/// These defaults are used by the prelogin enumeration-protection pool in
+/// Identity/AccountsController. Changes here will affect prelogin responses
+/// for non-existent users. See AccountsControllerTests for coverage.
+/// </summary>
 public static class KdfConstants
 {
     public static readonly RangeConstant PBKDF2_ITERATIONS = new(600_000, 2_000_000, 600_000);
