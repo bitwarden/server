@@ -61,7 +61,7 @@ public class RedeemChurnMitigationOfferCommand(
         // Stripe-first, DB-write second. Set-union semantics make this branch self-healing
         // on retry: a re-attempt sees the coupon already on Phase 2 and no-ops the Stripe
         // call before writing ChurnDiscountAppliedDate.
-        var subscription = await FetchSubscriptionAsync(organization);
+        var subscription = await TryGetSubscriptionAsync(organization);
         if (subscription is null)
         {
             return DefaultConflict;
@@ -112,10 +112,19 @@ public class RedeemChurnMitigationOfferCommand(
         var alreadyApplied = phase2Discounts.Any(d =>
             string.Equals(d.Coupon, churnDiscountCouponCode, StringComparison.Ordinal));
 
-        if (!alreadyApplied)
+        // If the coupon is already on Phase 2 from a prior redeem, this entire flow is a no-op:
+        // we skip the Stripe call (Stripe doesn't dedupe identical coupons in a discounts array),
+        // and we preserve the existing ChurnDiscountAppliedDate -- overwriting it would lose the
+        // original redeem timestamp (relevant for Marketing analytics).
+        if (alreadyApplied)
         {
-            phase2Discounts.Add(new SubscriptionSchedulePhaseDiscountOptions { Coupon = churnDiscountCouponCode });
+            _logger.LogInformation(
+                "{Command}: Coupon already present on Phase 2 of schedule ({ScheduleId}) for Organization ({OrganizationId}); no Stripe update needed",
+                CommandName, activeSchedule.Id, organization.Id);
+            return new None();
         }
+
+        phase2Discounts.Add(new SubscriptionSchedulePhaseDiscountOptions { Coupon = churnDiscountCouponCode });
 
         var phases = new List<SubscriptionSchedulePhaseOptions>
         {
@@ -137,18 +146,6 @@ public class RedeemChurnMitigationOfferCommand(
             }
         };
 
-        // If the coupon is already on Phase 2 from a prior redeem, this entire flow is a no-op:
-        // we skip the Stripe call (Stripe doesn't dedupe identical coupons in a discounts array),
-        // and we preserve the existing ChurnDiscountAppliedDate -- overwriting it would lose the
-        // original redeem timestamp (relevant for Marketing analytics).
-        if (alreadyApplied)
-        {
-            _logger.LogInformation(
-                "{Command}: Coupon already present on Phase 2 of schedule ({ScheduleId}) for Organization ({OrganizationId}); no Stripe update needed",
-                CommandName, activeSchedule.Id, organization.Id);
-            return new None();
-        }
-
         // Customer-level discounts are not mirrored into the phase Discounts list -- Stripe
         // preserves them across schedule updates automatically.
         await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
@@ -162,8 +159,9 @@ public class RedeemChurnMitigationOfferCommand(
         // closes via Stripe's current_phase advance + MigratedDate from SubscriptionUpdatedHandler
         // when PM-37092 lands). If this write fails after the Stripe call succeeds, the set-union
         // semantics above make a retry a no-op -- harmless.
-        assignment.ChurnDiscountAppliedDate = DateTime.UtcNow;
-        assignment.RevisionDate = DateTime.UtcNow;
+        var nowUtc = DateTime.UtcNow;
+        assignment.ChurnDiscountAppliedDate = nowUtc;
+        assignment.RevisionDate = nowUtc;
         await assignmentRepository.ReplaceAsync(assignment);
 
         _logger.LogInformation(
@@ -178,7 +176,7 @@ public class RedeemChurnMitigationOfferCommand(
         Entities.OrganizationPlanMigrationCohortAssignment assignment,
         string churnDiscountCouponCode)
     {
-        var subscription = await FetchSubscriptionAsync(organization);
+        var subscription = await TryGetSubscriptionAsync(organization);
         if (subscription is null)
         {
             return DefaultConflict;
@@ -261,7 +259,7 @@ public class RedeemChurnMitigationOfferCommand(
             ProrationBehavior = phase.ProrationBehavior
         };
 
-    private async Task<Subscription?> FetchSubscriptionAsync(Organization organization)
+    private async Task<Subscription?> TryGetSubscriptionAsync(Organization organization)
     {
         try
         {
