@@ -1,7 +1,6 @@
 ﻿#nullable enable
 
 using System.Data;
-using System.Security.Cryptography;
 using Bit.Core;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Settings;
@@ -22,11 +21,15 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
     private readonly IDataProtector _dataProtector;
     private readonly ILogger<SendRepository> _logger;
 
-    public SendRepository(GlobalSettings globalSettings, IDataProtectionProvider dataProtectionProvider, ILogger<SendRepository> logger)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString, dataProtectionProvider, logger)
-    { }
+    public SendRepository(GlobalSettings globalSettings, IDataProtectionProvider dataProtectionProvider,
+        ILogger<SendRepository> logger)
+        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString,
+            dataProtectionProvider, logger)
+    {
+    }
 
-    public SendRepository(string connectionString, string readOnlyConnectionString, IDataProtectionProvider dataProtectionProvider, ILogger<SendRepository> logger)
+    public SendRepository(string connectionString, string readOnlyConnectionString,
+        IDataProtectionProvider dataProtectionProvider, ILogger<SendRepository> logger)
         : base(connectionString, readOnlyConnectionString)
     {
         _dataProtector = dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose);
@@ -40,6 +43,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
         {
             return null;
         }
+
         return UnprotectData(send) ? send : null;
     }
 
@@ -205,7 +209,11 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
         var emails = send.Emails;
 
         // Protect value
-        ProtectData(send);
+        if (!ProtectData(send))
+        {
+            throw new InvalidOperationException(
+                $"Refusing to save Send {send.Id}: Emails could not be protected");
+        }
 
         // Save
         await saveTask();
@@ -214,20 +222,31 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
         send.Emails = emails;
     }
 
-    private void ProtectData(Send send)
+    private bool ProtectData(Send send)
     {
-        if (send.Emails == null || send.Emails.StartsWith(Constants.DatabaseFieldProtectedPrefix))
+        try
         {
-            return;
-        }
+            if (string.IsNullOrWhiteSpace(send.Emails) ||
+                send.Emails.StartsWith(Constants.DatabaseFieldProtectedPrefix))
+            {
+                return true;
+            }
 
-        send.Emails = string.Concat(Constants.DatabaseFieldProtectedPrefix,
-            _dataProtector.Protect(send.Emails));
+            send.Emails = string.Concat(Constants.DatabaseFieldProtectedPrefix,
+                _dataProtector.Protect(send.Emails));
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "An exception occurred while protecting Emauls for Send {SendId}", send.Id);
+            return false;
+        }
     }
 
     private bool UnprotectData(Send send)
     {
-        if (send.Emails == null || !send.Emails.StartsWith(Constants.DatabaseFieldProtectedPrefix))
+        if (string.IsNullOrWhiteSpace(send.Emails) || !send.Emails.StartsWith(Constants.DatabaseFieldProtectedPrefix))
         {
             return true;
         }
@@ -238,9 +257,10 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
                 send.Emails.Substring(Constants.DatabaseFieldProtectedPrefix.Length));
             return true;
         }
-        catch (CryptographicException ex)
+
+        catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to unprotect Emails for Send {SendId}.", send.Id);
+            _logger.LogWarning(ex, "An exception occurred while unprotecting Emails for Send {SendId}", send.Id);
             return false;
         }
     }

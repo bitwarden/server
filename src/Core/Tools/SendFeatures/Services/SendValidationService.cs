@@ -40,6 +40,27 @@ public class SendValidationService : ISendValidationService
 
     public async Task ValidateUserCanSaveAsync(Guid? userId, Send send)
     {
+        // The below is unrelated to any policy available in the Admin Console but avoids a situation whereby
+        // Emails may be sent as a plain-text string < 4000 chars during Send creation and subsequently protected using
+        // ASP.NET Data Protection with encrypted value violating 4000 char limit
+        if (!string.IsNullOrWhiteSpace(send.Emails))
+        {
+            // The "P|" prefix is a server-internal sentinel for Data-Protection-wrapped values.
+            // Clients must not submit a value starting with this prefix.
+            if (send.Emails.StartsWith(Constants.DatabaseFieldProtectedPrefix))
+            {
+                throw new BadRequestException("The Emails field contains an invalid character sequence.");
+            }
+
+            // 2500 plaintext chars → ~3450 chars after Data Protection wrap (P| + base64 +
+            // ~84-byte binary header/MAC/IV), which fits the NVARCHAR(4000) column with headroom.
+            if (send.Emails.Length > 2500)
+            {
+                throw new BadRequestException(
+                    $"The total number of characters in the Emails field must not exceed 2,500 characters.");
+            }
+        }
+
         // The nullable userId is intended to support organization-owned Sends (never implemented).
         // If it's null, we can't enforce policies, because policies are only enforced against a specific user.
         if (!userId.HasValue)
