@@ -1618,7 +1618,7 @@ public class CiphersController : Controller
 
     private void ValidateClientVersionForFido2CredentialSupport(Cipher cipher)
     {
-        if (cipher.Type == Core.Vault.Enums.CipherType.Login)
+        if (cipher.Type == Core.Vault.Enums.CipherType.Login && !cipher.IsDataBlobEncrypted())
         {
             var loginData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
             if (loginData?.Fido2Credentials != null && _currentContext.ClientVersion < _fido2KeyCipherMinimumVersion)

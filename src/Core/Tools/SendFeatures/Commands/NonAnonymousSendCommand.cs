@@ -123,6 +123,40 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         }
     }
 
+    private async Task LogSendUpdatedEventAsync(Send send)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) || !send.UserId.HasValue)
+        {
+            return;
+        }
+
+        if (send.Type == SendType.Text)
+        {
+            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Edited_Text);
+        }
+        else
+        {
+            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Edited_File);
+        }
+    }
+
+    private async Task LogSendDeletedEventAsync(Send send)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) || !send.UserId.HasValue)
+        {
+            return;
+        }
+
+        if (send.Type == SendType.Text)
+        {
+            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Deleted_Text);
+        }
+        else
+        {
+            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Deleted_File);
+        }
+    }
+
     private static EventType ResolveSendCreatedEventType(Send send)
     {
         // send.AuthType is populated by SendRequestModel.ToSendBase before SaveSendAsync runs

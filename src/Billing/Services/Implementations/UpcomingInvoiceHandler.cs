@@ -22,6 +22,7 @@ using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Stripe;
+using Stripe.TestHelpers;
 using Event = Stripe.Event;
 using Plan = Bit.Core.Models.StaticStore.Plan;
 using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
@@ -356,45 +357,38 @@ public class UpcomingInvoiceHandler(
             }
 
             var assignment = await assignmentRepository.GetByOrganizationIdAsync(organization.Id);
-
             if (assignment is null || assignment.ScheduledDate is not null)
             {
                 return false;
             }
 
-            var cohort = await cohortRepository.GetByIdAsync(assignment.CohortId);
+            if (subscription.TestClock != null)
+            {
+                await WaitForTestClockToAdvanceAsync(subscription.TestClock);
+            }
 
-            if (cohort is null || !cohort.IsActive)
+            var migrationScheduled = await priceIncreaseScheduler.ScheduleForSubscription(subscription);
+
+            if (!migrationScheduled)
             {
                 return false;
             }
 
-            if (cohort.MigrationPathId is null)
+            var cohort = await cohortRepository.GetByIdAsync(assignment.CohortId);
+            if (cohort?.MigrationPathId is null)
             {
-                // Churn-only cohort — no migration to schedule.
-                return false;
+                logger.LogWarning(
+                    "Cohort ({CohortId}) missing or has no MigrationPathId; skipping renewal email for Organization ({OrganizationId})",
+                    assignment.CohortId, organization.Id);
+                return true;
             }
 
             var migrationPath = MigrationPaths.FromId(cohort.MigrationPathId.Value);
             if (migrationPath is null)
             {
-                logger.LogError(
-                    "Unknown MigrationPathId ({MigrationPathId}) on cohort ({CohortId}) for Organization ({OrganizationId})",
-                    cohort.MigrationPathId, cohort.Id, organization.Id);
-                return false;
-            }
-
-            if (organization.PlanType != migrationPath.FromPlan)
-            {
                 logger.LogWarning(
-                    "Skipping business price migration for Organization ({OrganizationId}); PlanType {ActualPlan} does not match cohort {CohortName} source {ExpectedPlan}",
-                    organization.Id, organization.PlanType, cohort.Name, migrationPath.FromPlan);
-                return false;
-            }
-
-            var scheduled = await priceIncreaseScheduler.ScheduleBusinessPriceIncrease(subscription, cohort);
-            if (!scheduled)
-            {
+                    "Unknown MigrationPathId ({MigrationPathId}) on cohort ({CohortId}); skipping renewal email for Organization ({OrganizationId})",
+                    cohort.MigrationPathId, cohort.Id, organization.Id);
                 return true;
             }
 
@@ -426,6 +420,19 @@ public class UpcomingInvoiceHandler(
             "Business renewal email is not yet wired up; skipping send for Organization ({OrganizationId}) cohort {CohortName} ({Source} → {Target}).",
             organization.Id, cohort.Name, sourcePlan.Type, targetPlan.Type);
         return Task.CompletedTask;
+    }
+
+    private async Task WaitForTestClockToAdvanceAsync(TestClock testClock)
+    {
+        while (testClock.Status != "ready")
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2));
+            testClock = await stripeAdapter.GetTestClockAsync(testClock.Id);
+            if (testClock.Status == "internal_failure")
+            {
+                throw new Exception("Stripe Test Clock encountered an internal failure");
+            }
+        }
     }
 
     #endregion

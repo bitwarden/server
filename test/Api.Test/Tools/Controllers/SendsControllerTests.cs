@@ -1727,6 +1727,373 @@ public class SendsControllerTests : IDisposable
 
         await _sut.AccessUsingAuth();
 
+        await _eventService.Received(1).LogUserEventAsync(userId, EventType.Send_Accessed_Text);
+    }
+
+    [Fact]
+    public async Task AccessUsingAuth_FileSend_FlagOn_DoesNotLogAccessEvent()
+    {
+        var sendId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var fileData = new SendFileData("name", "notes", "file.pdf") { Id = "fileid", Size = 1024 };
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(fileData),
+            AuthType = AuthType.None,
+            HideEmail = true,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+        };
+
+        _sut.ControllerContext = CreateControllerContextWithUser(CreateUserWithSendIdClaim(sendId));
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
+
+        await _sut.AccessUsingAuth();
+
+        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+    }
+
+    [Fact]
+    public async Task AccessUsingAuth_TextSend_FlagOff_DoesNotLogAccessEvent()
+    {
+        var sendId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("a", "b", "c", false)),
+            AuthType = AuthType.None,
+            HideEmail = true,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+        };
+
+        _sut.ControllerContext = CreateControllerContextWithUser(CreateUserWithSendIdClaim(sendId));
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(false);
+
+        await _sut.AccessUsingAuth();
+
+        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+    }
+
+    [Fact]
+    public async Task AccessUsingAuth_TextSend_FlagOn_NullUserId_DoesNotLogAccessEvent()
+    {
+        var sendId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = null,
+            OrganizationId = Guid.NewGuid(),
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("a", "b", "c", false)),
+            AuthType = AuthType.None,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+        };
+
+        _sut.ControllerContext = CreateControllerContextWithUser(CreateUserWithSendIdClaim(sendId));
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
+
+        await _sut.AccessUsingAuth();
+
+        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+    }
+
+    [Fact]
+    public async Task GetSendFileDownloadDataUsingAuth_FlagOn_LogsSendAccessedFile()
+    {
+        var sendId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var fileId = "fileid";
+        var fileData = new SendFileData("name", "notes", "file.pdf") { Id = fileId, Size = 1024 };
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(fileData),
+            AuthType = AuthType.None,
+        };
+
+        _sut.ControllerContext = CreateControllerContextWithUser(CreateUserWithSendIdClaim(sendId));
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId)
+            .Returns(("https://example.test/url", SendAccessResult.Granted));
+        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
+
+        await _sut.GetSendFileDownloadDataUsingAuth(fileId);
+
+        await _eventService.Received(1).LogUserEventAsync(userId, EventType.Send_Accessed_File);
+    }
+
+    [Fact]
+    public async Task GetSendFileDownloadDataUsingAuth_FlagOff_DoesNotLogAccessEvent()
+    {
+        var sendId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var fileId = "fileid";
+        var fileData = new SendFileData("name", "notes", "file.pdf") { Id = fileId, Size = 1024 };
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(fileData),
+            AuthType = AuthType.None,
+        };
+
+        _sut.ControllerContext = CreateControllerContextWithUser(CreateUserWithSendIdClaim(sendId));
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId)
+            .Returns(("https://example.test/url", SendAccessResult.Granted));
+        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(false);
+
+        await _sut.GetSendFileDownloadDataUsingAuth(fileId);
+
+        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+    }
+
+    [Fact]
+    public async Task GetSendFileDownloadDataUsingAuth_FlagOn_NullUserId_DoesNotLogAccessEvent()
+    {
+        var sendId = Guid.NewGuid();
+        var fileId = "fileid";
+        var fileData = new SendFileData("name", "notes", "file.pdf") { Id = fileId, Size = 1024 };
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = null,
+            OrganizationId = Guid.NewGuid(),
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(fileData),
+            AuthType = AuthType.None,
+        };
+
+        _sut.ControllerContext = CreateControllerContextWithUser(CreateUserWithSendIdClaim(sendId));
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId)
+            .Returns(("https://example.test/url", SendAccessResult.Granted));
+        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
+
+        await _sut.GetSendFileDownloadDataUsingAuth(fileId);
+
+        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+    }
+
+    #endregion
+
+    #region Anonymous Access Event Logging Tests
+
+    [Fact]
+    public async Task Access_TextSend_FlagOn_LogsSendAccessedText()
+    {
+        var sendId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var accessId = CoreHelpers.Base64UrlEncode(sendId.ToByteArray());
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("a", "b", "c", false)),
+            AuthType = AuthType.None,
+            HideEmail = true,
+        };
+
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _sendAuthorizationService.AccessAsync(send, Arg.Any<string>()).Returns(SendAccessResult.Granted);
+        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
+
+        await _sut.Access(accessId, new SendAccessRequestModel());
+
+        await _eventService.Received(1).LogUserEventAsync(userId, EventType.Send_Accessed_Text);
+    }
+
+    [Fact]
+    public async Task Access_FileSend_FlagOn_DoesNotLogAccessEvent()
+    {
+        // File Sends are logged by GetSendFileDownloadData, not Access, to avoid double-counting.
+        var sendId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var accessId = CoreHelpers.Base64UrlEncode(sendId.ToByteArray());
+        var fileData = new SendFileData("name", "notes", "file.pdf") { Id = "fileid", Size = 1024 };
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(fileData),
+            AuthType = AuthType.None,
+            HideEmail = true,
+        };
+
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _sendAuthorizationService.AccessAsync(send, Arg.Any<string>()).Returns(SendAccessResult.Granted);
+        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
+
+        await _sut.Access(accessId, new SendAccessRequestModel());
+
+        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+    }
+
+    [Fact]
+    public async Task Access_TextSend_FlagOff_DoesNotLogAccessEvent()
+    {
+        var sendId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var accessId = CoreHelpers.Base64UrlEncode(sendId.ToByteArray());
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("a", "b", "c", false)),
+            AuthType = AuthType.None,
+            HideEmail = true,
+        };
+
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _sendAuthorizationService.AccessAsync(send, Arg.Any<string>()).Returns(SendAccessResult.Granted);
+        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(false);
+
+        await _sut.Access(accessId, new SendAccessRequestModel());
+
+        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+    }
+
+    [Fact]
+    public async Task Access_TextSend_FlagOn_NullUserId_DoesNotLogAccessEvent()
+    {
+        var sendId = Guid.NewGuid();
+        var accessId = CoreHelpers.Base64UrlEncode(sendId.ToByteArray());
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = null,
+            OrganizationId = Guid.NewGuid(),
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("a", "b", "c", false)),
+            AuthType = AuthType.None,
+        };
+
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _sendAuthorizationService.AccessAsync(send, Arg.Any<string>()).Returns(SendAccessResult.Granted);
+        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
+
+        await _sut.Access(accessId, new SendAccessRequestModel());
+
+        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+    }
+
+    [Fact]
+    public async Task GetSendFileDownloadData_FlagOn_LogsSendAccessedFile()
+    {
+        var sendId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var fileId = "fileid";
+        var encodedSendId = CoreHelpers.Base64UrlEncode(sendId.ToByteArray());
+        var fileData = new SendFileData("name", "notes", "file.pdf") { Id = fileId, Size = 1024 };
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(fileData),
+            AuthType = AuthType.None,
+        };
+
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _anonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId, Arg.Any<string>())
+            .Returns(("https://example.test/url", SendAccessResult.Granted));
+        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
+
+        await _sut.GetSendFileDownloadData(encodedSendId, fileId, new SendAccessRequestModel());
+
+        await _eventService.Received(1).LogUserEventAsync(userId, EventType.Send_Accessed_File);
+    }
+
+    [Fact]
+    public async Task GetSendFileDownloadData_FlagOff_DoesNotLogAccessEvent()
+    {
+        var sendId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var fileId = "fileid";
+        var encodedSendId = CoreHelpers.Base64UrlEncode(sendId.ToByteArray());
+        var fileData = new SendFileData("name", "notes", "file.pdf") { Id = fileId, Size = 1024 };
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(fileData),
+            AuthType = AuthType.None,
+        };
+
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _anonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId, Arg.Any<string>())
+            .Returns(("https://example.test/url", SendAccessResult.Granted));
+        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(false);
+
+        await _sut.GetSendFileDownloadData(encodedSendId, fileId, new SendAccessRequestModel());
+
+        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+    }
+
+    [Fact]
+    public async Task GetSendFileDownloadData_FlagOn_NullUserId_DoesNotLogAccessEvent()
+    {
+        var sendId = Guid.NewGuid();
+        var fileId = "fileid";
+        var encodedSendId = CoreHelpers.Base64UrlEncode(sendId.ToByteArray());
+        var fileData = new SendFileData("name", "notes", "file.pdf") { Id = fileId, Size = 1024 };
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = null,
+            OrganizationId = Guid.NewGuid(),
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(fileData),
+            AuthType = AuthType.None,
+        };
+
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _anonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId, Arg.Any<string>())
+            .Returns(("https://example.test/url", SendAccessResult.Granted));
+        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
+
+        await _sut.GetSendFileDownloadData(encodedSendId, fileId, new SendAccessRequestModel());
+
+        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+    }
+
+    [Fact]
+    public async Task AccessUsingAuth_TextSend_FlagOn_LogsSendAccessedText()
+    {
+        var sendId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("a", "b", "c", false)),
+            AuthType = AuthType.None,
+            HideEmail = true,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+        };
+
+        _sut.ControllerContext = CreateControllerContextWithUser(CreateUserWithSendIdClaim(sendId));
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
+
+        await _sut.AccessUsingAuth();
+
         await _eventService.Received(1).LogUserEventAsync(
             userId,
             EventType.Send_Accessed_Text,
