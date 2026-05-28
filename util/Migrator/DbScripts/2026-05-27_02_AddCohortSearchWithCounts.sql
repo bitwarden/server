@@ -7,20 +7,17 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT
-        COALESCE(SUM(CASE
+        COUNT(CASE
             WHEN C.[MigrationPathId] IS NOT NULL AND A.[Id] IS NOT NULL AND A.[ScheduledDate] IS NULL THEN 1
             WHEN C.[MigrationPathId] IS NULL AND A.[Id] IS NOT NULL AND A.[ChurnDiscountAppliedDate] IS NULL THEN 1
-            ELSE 0
-        END), 0) AS [Pending],
-        COALESCE(SUM(CASE
+        END) AS [Pending],
+        COUNT(CASE
             WHEN C.[MigrationPathId] IS NOT NULL AND A.[ScheduledDate] IS NOT NULL AND A.[MigratedDate] IS NULL THEN 1
-            ELSE 0
-        END), 0) AS [Scheduled],
-        COALESCE(SUM(CASE
+        END) AS [Scheduled],
+        COUNT(CASE
             WHEN C.[MigrationPathId] IS NOT NULL AND A.[MigratedDate] IS NOT NULL THEN 1
             WHEN C.[MigrationPathId] IS NULL AND A.[ChurnDiscountAppliedDate] IS NOT NULL THEN 1
-            ELSE 0
-        END), 0) AS [Migrated],
+        END) AS [Migrated],
         C.[Id],
         C.[Name],
         C.[MigrationPathId],

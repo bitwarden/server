@@ -8,20 +8,6 @@ public class CohortFormModel : IValidatableObject
 {
     public const string NoMigrationPath = "none";
 
-    public static CohortFormModel From(OrganizationPlanMigrationCohort cohort) => new()
-    {
-        Id = cohort.Id,
-        Name = cohort.Name,
-        MigrationPathSelection = cohort.MigrationPathId switch
-        {
-            null => NoMigrationPath,
-            var id => ((byte)id).ToString(),
-        },
-        ProactiveDiscountCouponCode = cohort.ProactiveDiscountCouponCode,
-        ChurnDiscountCouponCode = cohort.ChurnDiscountCouponCode,
-        IsActive = cohort.IsActive,
-    };
-
     public Guid? Id { get; set; }
 
     [Required]
@@ -79,4 +65,18 @@ public class CohortFormModel : IValidatableObject
                 [nameof(ChurnDiscountCouponCode)]);
         }
     }
+
+    public static CohortFormModel From(OrganizationPlanMigrationCohort cohort) => new()
+    {
+        Id = cohort.Id,
+        Name = cohort.Name,
+        MigrationPathSelection = cohort.MigrationPathId switch
+        {
+            null => NoMigrationPath,
+            var id => ((byte)id).ToString(),
+        },
+        ProactiveDiscountCouponCode = cohort.ProactiveDiscountCouponCode,
+        ChurnDiscountCouponCode = cohort.ChurnDiscountCouponCode,
+        IsActive = cohort.IsActive,
+    };
 }
