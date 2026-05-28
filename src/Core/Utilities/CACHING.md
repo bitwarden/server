@@ -15,10 +15,12 @@ Does your data need to be shared across all instances in a horizontally-scaled d
 │   Do you need long-term persistence with TTL (days/weeks)?
 │   ├─ YES
 │   │   │
-│   │   Is cross-instance L1 staleness acceptable?
+│   │   Is it OK for a write on one instance to take a while to reach the
+│   │   in-memory caches on other instances (no cross-instance invalidation)?
 │   │   ├─ NO → Use `IDistributedCache` with persistent keyed service (every read hits the store)
-│   │   └─ YES → Use `ExtendedCache` paired with the persistent cache (L1 memory + Cosmos/SQL/EF L2)
-│   │             (see "Pairing ExtendedCache with Cosmos DB" below)
+│   │   └─ YES → Use `ExtendedCache` paired with the persistent cache
+│   │             (in-memory cache + Cosmos/SQL/EF distributed cache —
+│   │              see "Pairing ExtendedCache with Cosmos DB" below)
 │   │
 │   └─ NO → Use `ExtendedCache`
 │       │
@@ -58,6 +60,8 @@ Does your data need to be shared across all instances in a horizontally-scaled d
 ## `ExtendedCache`
 
 `ExtendedCache` is a wrapper around [FusionCache](https://github.com/ZiggyCreatures/FusionCache) that provides a simple way to register **named, isolated caches** with sensible defaults. The goal is to make it trivial for each subsystem or feature to have its own cache - with optional distributed caching and backplane support - without repeatedly wiring up FusionCache, Redis, and related infrastructure.
+
+> **Vocabulary**: throughout this section, **L1** refers to FusionCache's in-process memory cache, and **L2** refers to the configured `IDistributedCache` (Redis, Cosmos, SQL, EF, or none). FusionCache reads from L1 first, falls back to L2, and writes through to both.
 
 Each named cache automatically receives:
 
@@ -173,7 +177,10 @@ services.AddExtendedCache("MyFeatureCache", globalSettings, new GlobalSettings.E
 // Keyed mode: register an IDistributedCache under the cache name yourself, then call
 // AddExtendedCache. This is how to pair ExtendedCache with the "persistent" (Cosmos)
 // keyed service.
-services.AddDistributedCache(globalSettings); // registers the "persistent" keyed Cosmos cache
+services.AddDistributedCache(globalSettings); // registers the "persistent" keyed cache —
+                                              // Cosmos in cloud (when Cosmos.ConnectionString is set),
+                                              // aliased to the unnamed IDistributedCache
+                                              // (Redis / SQL / EF) in self-hosted
 services.AddKeyedSingleton<IDistributedCache>(
     "MyLongLivedCache",
     (sp, _) => sp.GetRequiredKeyedService<IDistributedCache>("persistent"));
@@ -187,6 +194,9 @@ services.AddExtendedCache("MyLongLivedCache", globalSettings, new GlobalSettings
 // - L1 (memory) + L2 (Cosmos/SQL/EF) caching with stampede protection, eager refresh, fail-safe
 // - NO backplane (Redis-only). L1 entries on other instances will not be invalidated on write —
 //   they expire on their own TTL. See "When NOT to Use" for the staleness tradeoff.
+// - Keys are namespaced from other "persistent" cache consumers: ExtendedCache prefixes every
+//   key with "MyLongLivedCache:", so entries cannot collide with the raw "persistent" namespace
+//   used by direct AddDistributedCache consumers (payment workflow, OAuth grants).
 ```
 
 #### 2. Inject and use the cache:
@@ -293,7 +303,13 @@ public class SsoAuthorizationService
 
 #### Pairing `ExtendedCache` with Cosmos DB
 
-Cosmos DB is registered by `AddDistributedCache` as the keyed `"persistent"` `IDistributedCache` in cloud deployments. To use it as L2 under `ExtendedCache`, register an alias under your cache name and use keyed mode without a Redis connection string (see Option 5 above). This gives you L1 memory + Cosmos L2 with Cosmos's automatic container-level TTL, but no cross-instance L1 invalidation.
+Cosmos DB is registered by `AddDistributedCache` as the keyed `"persistent"` `IDistributedCache` in cloud deployments. To use it as L2 under `ExtendedCache`, register an alias under your cache name and use keyed mode without a Redis connection string (see Option 5 above). This gives you L1 memory + Cosmos L2.
+
+**TTL.** FusionCache's `Duration` (and any per-call `SetDuration`) is translated to `DistributedCacheEntryOptions.AbsoluteExpirationRelativeToNow` and written by `CosmosCache` as a per-document `ttl` on each Cosmos item — that's the authoritative expiry per entry. The Cosmos container must have `DefaultTimeToLive` enabled (`-1` or `>0`) for per-document `ttl` to apply at all; the container value also serves as a default for items that omit `ttl`, but FusionCache always sets a per-item value so the container value never caps it.
+
+**RU profile and the eager-refresh tradeoff.** L1 absorbs most reads, which is the win: hot keys see roughly one Cosmos point-read per process per TTL window instead of one per request. The cost is on the write side — `EagerRefreshThreshold` (default `0.9f`) produces a steady cadence of background factory calls plus L2 writes (~1 per hot key per `Duration` window) that raw `CosmosCache` does not have. If your access pattern doesn't benefit from background refresh (e.g. cold keys, low read concurrency), set `EagerRefreshThreshold = null` to disable it.
+
+Cross-instance L1 invalidation is not provided — see the backplane caveat above.
 
 ### Specific Example: Organization/Provider Abilities
 
@@ -359,6 +375,66 @@ public class OrganizationAbilityService
 - **Fail-safe mode**: Serves stale data if database temporarily unavailable
 - **Redis backplane**: Automatically invalidates across all instances when abilities change
 - **No Service Bus dependency**: Simpler infrastructure (one Redis instead of Redis + Service Bus)
+
+### Specific Example: Long-Lived Per-Tenant Computed Aggregates
+
+Precomputed per-organization data — e.g. dashboard analytics, materialized usage summaries, or rolled-up compliance state — is expensive to compute, read many times per dashboard session, and stable for hours. Pairing `ExtendedCache` with the persistent Cosmos cache (see Option 5 above) puts an L1 memory cache in front of a durable Cosmos L2, so each instance amortizes the first recomputation across many subsequent reads, and snapshots survive process restarts.
+
+```csharp
+// Registration — aliases the keyed "persistent" cache (Cosmos in cloud) under the cache name
+services.AddDistributedCache(globalSettings);
+services.AddKeyedSingleton<IDistributedCache>(
+    "OrganizationAnalytics",
+    (sp, _) => sp.GetRequiredKeyedService<IDistributedCache>("persistent"));
+
+services.AddExtendedCache("OrganizationAnalytics", globalSettings, new GlobalSettings.ExtendedCacheSettings
+{
+    UseSharedDistributedCache = false,
+    Duration = TimeSpan.FromHours(6),
+    EagerRefreshThreshold = 0.9f,                  // refresh in background at 90% of TTL
+    IsFailSafeEnabled = true,
+    FailSafeMaxDuration = TimeSpan.FromHours(24),  // serve stale up to 24h on factory failures
+});
+
+public class OrganizationAnalyticsService
+{
+    private readonly IFusionCache _cache;
+    private readonly IOrganizationAnalyticsRepository _repository;
+
+    public OrganizationAnalyticsService(
+        [FromKeyedServices("OrganizationAnalytics")] IFusionCache cache,
+        IOrganizationAnalyticsRepository repository)
+    {
+        _cache = cache;
+        _repository = repository;
+    }
+
+    public async Task<OrganizationAnalyticsSnapshot> GetSnapshotAsync(Guid organizationId)
+    {
+        return await _cache.GetOrSetAsync<OrganizationAnalyticsSnapshot>(
+            $"org:{organizationId}:analytics-snapshot",
+            async _ => await _repository.ComputeSnapshotAsync(organizationId)
+        );
+    }
+
+    public async Task InvalidateAsync(Guid organizationId)
+    {
+        // No backplane on Cosmos — this clears the current instance's L1 and removes the
+        // entry from L2. Other instances continue serving their L1 entries until TTL.
+        await _cache.RemoveAsync($"org:{organizationId}:analytics-snapshot");
+    }
+}
+```
+
+**Why pair `ExtendedCache` with Cosmos for this pattern:**
+
+- **High per-key read frequency**: Each organization's snapshot is read repeatedly during a dashboard session (multiple widgets, drill-downs, refreshes). L1 absorbs these reads after the first hit per instance, so Cosmos sees roughly one point-read per process per key per TTL window.
+- **High key cardinality**: One snapshot per organization. The total dataset can grow large enough that an in-process memory-only cache cannot hold it across instances — durable Cosmos L2 is what makes the L1 layer viable as a working set.
+- **Cosmos durability across deploys**: Snapshots remain valid for hours. A process restart does not flush L2, so freshly-started instances warm L1 from Cosmos rather than triggering a thundering herd of recomputation.
+- **Expensive factory**: Computing a snapshot involves joins across multiple tables. Stampede protection coalesces concurrent dashboard loads after a TTL boundary into a single recomputation, not N.
+- **Eager refresh masks TTL boundaries**: At 90% of `Duration`, the next read returns immediately from L1 while a background factory call refreshes both L1 and L2. Users never observe hard-miss latency at the boundary.
+- **Fail-safe keeps dashboards working through transient DB issues**: If the repository call errors, recent stale data is served instead of a user-facing failure.
+- **Cross-instance staleness is acceptable**: Snapshot data may lag by minutes after an `InvalidateAsync` on another instance. Without a backplane, the stale L1 entry on instance B persists until its TTL expires — fine for analytics, not appropriate for transactional state.
 
 ### When NOT to Use
 
@@ -858,10 +934,13 @@ The following table shows how different caching options resolve to storage backe
 
 | Cache Option                           | Cloud Backend                                    | Self-Hosted Backend                          | Config Setting                                            |
 | -------------------------------------- | ------------------------------------------------ | -------------------------------------------- | --------------------------------------------------------- |
-| **ExtendedCache**                      | Redis → registered `IDistributedCache` → Memory  | Redis → registered `IDistributedCache` (SQL/EF) → Memory | `GlobalSettings.DistributedCache.Redis.ConnectionString` + any pre-registered `IDistributedCache` |
+| **ExtendedCache** [†](#extended-cache-cosmos-footnote)                      | Redis → registered `IDistributedCache` → Memory  | Redis → registered `IDistributedCache` (SQL/EF) → Memory | `GlobalSettings.DistributedCache.Redis.ConnectionString` + any pre-registered `IDistributedCache` |
 | **IDistributedCache** (default)        | Redis                                            | Redis → SQL → EF                             | `GlobalSettings.DistributedCache.Redis.ConnectionString`  |
 | **IDistributedCache** (`"persistent"`) | Cosmos → Redis                                   | Redis → SQL → EF                             | `GlobalSettings.DistributedCache.Cosmos.ConnectionString` |
 | **OAuth Grants** (long-lived)          | Persistent cache (Cosmos)                        | `IGrantRepository` (SQL/EF)                  | Various (see above)                                       |
+
+<a id="extended-cache-cosmos-footnote"></a>
+† This row shows the backend `ExtendedCache` resolves to automatically. `ExtendedCache` can also be wired to Cosmos (or any keyed `IDistributedCache`) by opting into keyed mode and aliasing under the cache name — see [Option 5](#example-usage) and the [Pairing `ExtendedCache` with Cosmos DB](#pairing-extendedcache-with-cosmos-db) subsection.
 
 ### Redis Configuration
 
