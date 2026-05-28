@@ -20,7 +20,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidator(
     IPolicyQuery policyQuery,
     IOrganizationUserRepository organizationUserRepository,
     IProviderUserRepository providerUserRepository,
-    IAutomaticUserConfirmationPolicyEnforcementValidator autoConfirmPolicyEnforcementValidator) : IBulkAutomaticallyConfirmOrganizationUsersValidator
+    IAutomaticUserConfirmationPolicyEnforcementHandler autoConfirmPolicyEnforcementValidator) : IBulkAutomaticallyConfirmOrganizationUsersValidator
 {
     public async Task<IEnumerable<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>>> ValidateManyAsync(
         IEnumerable<AutomaticallyConfirmOrganizationUserValidationRequest> requests,

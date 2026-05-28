@@ -307,7 +307,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<IEnumerable<Guid>>())
             .Returns([(userId, new AutomaticUserConfirmationPolicyRequirement([autoConfirmDetails]))]);
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementHandler>()
             .GetAutoConfirmPolicyViolation(Arg.Any<AutomaticUserConfirmationPolicyRequirement>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<int>())
             .Returns(new ProviderUsersCannotJoin());
 
@@ -339,7 +339,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<IEnumerable<Guid>>())
             .Returns([(userId, new AutomaticUserConfirmationPolicyRequirement([autoConfirmDetails]))]);
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementHandler>()
             .GetAutoConfirmPolicyViolation(Arg.Any<AutomaticUserConfirmationPolicyRequirement>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<int>())
             .Returns(new UserCannotBelongToAnotherOrganization());
 
@@ -369,7 +369,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersValidatorTests
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<IEnumerable<Guid>>())
             .Returns([(userId, new AutomaticUserConfirmationPolicyRequirement([otherOrgDetails]))]);
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementHandler>()
             .GetAutoConfirmPolicyViolation(Arg.Any<AutomaticUserConfirmationPolicyRequirement>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<int>())
             .Returns(new OtherOrganizationDoesNotAllowOtherMembership());
 
