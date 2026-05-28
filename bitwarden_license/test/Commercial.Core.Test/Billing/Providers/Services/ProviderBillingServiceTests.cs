@@ -9,6 +9,8 @@ using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.PlanMigration.Entities;
+using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Entities;
@@ -2407,6 +2409,524 @@ public class ProviderBillingServiceTests
             Arg.Is<CustomerUpdateOptions>(options =>
                 options.Email == null &&
                 options.Description == provider.Name));
+    }
+
+    #endregion
+
+    #region AddExistingOrganization
+
+    // Releasing any active migration subscription schedule before the Stripe cancel keeps
+    // 2020-plan orgs with an attached SubscriptionSchedule from tripping a Stripe-side cancel
+    // failure. The cohort assignment is dropped after the org has been fully transitioned
+    // to provider-managed, so a failure during the cleanup leaves a stale row to reconcile
+    // rather than a half-transitioned org.
+
+    private static void ArrangeAddExistingOrganizationHappyPath(
+        SutProvider<ProviderBillingService> sutProvider,
+        Provider provider,
+        Organization organization,
+        PlanType planType = PlanType.EnterpriseAnnually2020)
+    {
+        organization.PlanType = planType;
+        organization.Seats = 10;
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CancelSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionCancelOptions>())
+            .Returns(new Subscription
+            {
+                Id = organization.GatewaySubscriptionId,
+                LatestInvoice = new Invoice { Status = StripeConstants.InvoiceStatus.Open }
+            });
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(Arg.Any<PlanType>())
+            .Returns(MockPlans.Get(PlanType.EnterpriseMonthly));
+
+        sutProvider.GetDependency<IProviderPlanRepository>()
+            .GetByProviderId(provider.Id)
+            .Returns([
+                new ProviderPlan
+                {
+                    PlanType = PlanType.EnterpriseMonthly,
+                    SeatMinimum = 100,
+                    AllocatedSeats = 0,
+                    PurchasedSeats = 0
+                }
+            ]);
+
+        sutProvider.GetDependency<IProviderOrganizationRepository>()
+            .GetManyDetailsByProviderAsync(provider.Id)
+            .Returns([]);
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetCustomer(organization)
+            .Returns(new Customer { Balance = 0 });
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddExistingOrganization_ReleasesMigrationScheduleWithOrgGatewayIds_BeforeStripeOperations(
+        Provider provider,
+        Organization organization,
+        string key,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange — provider and org have distinct gateway IDs so a regression that passed
+        // the provider's IDs to Release instead of the org's would fail the Received check.
+        provider.Type = ProviderType.Msp;
+        provider.GatewayCustomerId = "cus_provider_msp";
+        provider.GatewaySubscriptionId = "sub_provider_msp";
+        organization.GatewayCustomerId = "cus_org_msp";
+        organization.GatewaySubscriptionId = "sub_org_msp";
+        ArrangeAddExistingOrganizationHappyPath(sutProvider, provider, organization);
+
+        var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var orgCustomerId = organization.GatewayCustomerId;
+        var orgSubscriptionId = organization.GatewaySubscriptionId;
+
+        // Act
+        await sutProvider.Sut.AddExistingOrganization(provider, organization, key);
+
+        // Assert — Release must run first, with the Organization's own gateway IDs
+        // (not the Provider's), and must precede both Stripe mutations.
+        Received.InOrder(() =>
+        {
+            priceIncreaseScheduler.Release(orgCustomerId, orgSubscriptionId);
+            stripeAdapter.UpdateSubscriptionAsync(orgSubscriptionId, Arg.Any<SubscriptionUpdateOptions>());
+            stripeAdapter.CancelSubscriptionAsync(orgSubscriptionId, Arg.Any<SubscriptionCancelOptions>());
+        });
+        await priceIncreaseScheduler.Received(1).Release(orgCustomerId, orgSubscriptionId);
+        await priceIncreaseScheduler.Received(0)
+            .Release(provider.GatewayCustomerId, Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddExistingOrganization_DropsCohortAssignment_AfterOrgTransitionCommits(
+        Provider provider,
+        Organization organization,
+        string key,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange — 2020-plan org with an existing cohort assignment.
+        provider.Type = ProviderType.Msp;
+        organization.GatewayCustomerId = "cus_with_assignment";
+        organization.GatewaySubscriptionId = "sub_with_assignment";
+        ArrangeAddExistingOrganizationHappyPath(sutProvider, provider, organization);
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        var assignmentRepository =
+            sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
+        var existingAssignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organization.Id,
+            CohortId = Guid.NewGuid()
+        };
+        assignmentRepository.GetByOrganizationIdAsync(organization.Id).Returns(existingAssignment);
+        var subscriptionId = organization.GatewaySubscriptionId;
+
+        // Act
+        await sutProvider.Sut.AddExistingOrganization(provider, organization, key);
+
+        // Assert — the assignment lookup and delete fire AFTER the org transition commits
+        // (ReplaceAsync + ProviderOrganization create). Drift in the assignment row is a
+        // reconciliation problem; a half-transitioned org is not.
+        Received.InOrder(() =>
+        {
+            stripeAdapter.CancelSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
+            organizationRepository.ReplaceAsync(organization);
+            providerOrganizationRepository.CreateAsync(Arg.Any<ProviderOrganization>());
+            assignmentRepository.GetByOrganizationIdAsync(organization.Id);
+            assignmentRepository.DeleteAsync(existingAssignment);
+        });
+        await assignmentRepository.Received(1).DeleteAsync(existingAssignment);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddExistingOrganization_DoesNotCallDelete_AndCompletesFlow_WhenNoCohortAssignment(
+        Provider provider,
+        Organization organization,
+        string key,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange — org with no cohort assignment (the common case).
+        provider.Type = ProviderType.Msp;
+        organization.GatewayCustomerId = "cus_no_assignment";
+        organization.GatewaySubscriptionId = "sub_no_assignment";
+        ArrangeAddExistingOrganizationHappyPath(sutProvider, provider, organization);
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        var eventService = sutProvider.GetDependency<IEventService>();
+        var assignmentRepository =
+            sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
+        assignmentRepository.GetByOrganizationIdAsync(organization.Id)
+            .Returns((OrganizationPlanMigrationCohortAssignment?)null);
+
+        // Act
+        await sutProvider.Sut.AddExistingOrganization(provider, organization, key);
+
+        // Assert — no delete fired, and the rest of the flow ran to completion.
+        await assignmentRepository.Received(0)
+            .DeleteAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
+        await organizationRepository.Received(1).ReplaceAsync(organization);
+        await providerOrganizationRepository.Received(1).CreateAsync(Arg.Is<ProviderOrganization>(po =>
+            po.ProviderId == provider.Id && po.OrganizationId == organization.Id && po.Key == key));
+        await eventService.Received(1).LogProviderOrganizationEventAsync(
+            Arg.Is<ProviderOrganization>(po => po.OrganizationId == organization.Id),
+            EventType.ProviderOrganization_Added);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddExistingOrganization_ContinuesEntireFlow_AfterReleaseSucceeds(
+        Provider provider,
+        Organization organization,
+        string key,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange
+        provider.Type = ProviderType.Msp;
+        organization.GatewayCustomerId = "cus_full_flow";
+        organization.GatewaySubscriptionId = "sub_full_flow";
+        ArrangeAddExistingOrganizationHappyPath(sutProvider, provider, organization);
+
+        var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        var eventService = sutProvider.GetDependency<IEventService>();
+        // Capture before Act — AddExistingOrganization clears GatewaySubscriptionId
+        // on the entity as part of the transition to provider-managed.
+        var customerId = organization.GatewayCustomerId;
+        var subscriptionId = organization.GatewaySubscriptionId;
+
+        // Act
+        await sutProvider.Sut.AddExistingOrganization(provider, organization, key);
+
+        // Assert
+        await priceIncreaseScheduler.Received(1).Release(customerId, subscriptionId);
+        await organizationRepository.Received(1).ReplaceAsync(organization);
+        await providerOrganizationRepository.Received(1).CreateAsync(Arg.Is<ProviderOrganization>(po =>
+            po.ProviderId == provider.Id && po.OrganizationId == organization.Id && po.Key == key));
+        await eventService.Received(1).LogProviderOrganizationEventAsync(
+            Arg.Is<ProviderOrganization>(po => po.OrganizationId == organization.Id),
+            EventType.ProviderOrganization_Added);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddExistingOrganization_DropsCohortAssignmentAndCompletes_ForMoeProvider(
+        Provider provider,
+        Organization organization,
+        string key,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange — same flow under a BusinessUnit (MOE) provider, with an existing
+        // cohort assignment. Exercises the BusinessUnit branch of GetManagedPlanTypeAsync
+        // and confirms the cohort drop applies regardless of provider type.
+        //
+        // The discriminating setup: provider plan is TeamsMonthly while the org is on
+        // EnterpriseAnnually2020. The MSP switch would map EnterpriseAnnually2020 →
+        // EnterpriseMonthly, so a final PlanType of TeamsMonthly can only have come
+        // from the BusinessUnit branch reading the provider's first plan. Without this
+        // mismatch, deleting the entire BusinessUnit branch would still pass the test.
+        provider.Type = ProviderType.BusinessUnit;
+        organization.GatewayCustomerId = "cus_moe_baseline";
+        organization.GatewaySubscriptionId = "sub_moe_baseline";
+        ArrangeAddExistingOrganizationHappyPath(sutProvider, provider, organization);
+
+        sutProvider.GetDependency<IProviderPlanRepository>()
+            .GetByProviderId(provider.Id)
+            .Returns([
+                new ProviderPlan
+                {
+                    PlanType = PlanType.TeamsMonthly,
+                    SeatMinimum = 100,
+                    AllocatedSeats = 0,
+                    PurchasedSeats = 0
+                }
+            ]);
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(PlanType.TeamsMonthly)
+            .Returns(MockPlans.Get(PlanType.TeamsMonthly));
+
+        var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        var assignmentRepository =
+            sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
+        var existingAssignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organization.Id,
+            CohortId = Guid.NewGuid()
+        };
+        assignmentRepository.GetByOrganizationIdAsync(organization.Id).Returns(existingAssignment);
+        var customerId = organization.GatewayCustomerId;
+        var subscriptionId = organization.GatewaySubscriptionId;
+
+        // Act
+        await sutProvider.Sut.AddExistingOrganization(provider, organization, key);
+
+        // Assert — Release-before-Stripe ordering is preserved, the cohort assignment is
+        // dropped only after the org transition commits, and the org lands on the
+        // provider's first plan (TeamsMonthly) — proving the BusinessUnit branch ran.
+        Received.InOrder(() =>
+        {
+            priceIncreaseScheduler.Release(customerId, subscriptionId);
+            stripeAdapter.UpdateSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionUpdateOptions>());
+            stripeAdapter.CancelSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
+            organizationRepository.ReplaceAsync(organization);
+            providerOrganizationRepository.CreateAsync(Arg.Any<ProviderOrganization>());
+            assignmentRepository.DeleteAsync(existingAssignment);
+        });
+        await priceIncreaseScheduler.Received(1).Release(customerId, subscriptionId);
+        await assignmentRepository.Received(1).DeleteAsync(existingAssignment);
+        await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
+            o.Id == organization.Id && o.PlanType == PlanType.TeamsMonthly));
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddExistingOrganization_DoesNotDropAssignment_ForCurrentGenOrg(
+        Provider provider,
+        Organization organization,
+        string key,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange — current-gen plan with no cohort assignment. Release still runs (the
+        // production code calls it unconditionally; Release itself no-ops when no active
+        // schedule exists), but no assignment row exists so DeleteAsync must not fire.
+        provider.Type = ProviderType.Msp;
+        organization.GatewayCustomerId = "cus_current_gen";
+        organization.GatewaySubscriptionId = "sub_current_gen";
+        ArrangeAddExistingOrganizationHappyPath(
+            sutProvider, provider, organization, PlanType.EnterpriseAnnually);
+
+        var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        var assignmentRepository =
+            sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
+        assignmentRepository.GetByOrganizationIdAsync(organization.Id)
+            .Returns((OrganizationPlanMigrationCohortAssignment?)null);
+        var customerId = organization.GatewayCustomerId;
+        var subscriptionId = organization.GatewaySubscriptionId;
+
+        // Act
+        await sutProvider.Sut.AddExistingOrganization(provider, organization, key);
+
+        // Assert — Release was called, no assignment was deleted, the rest of the flow
+        // ran to completion.
+        await priceIncreaseScheduler.Received(1).Release(customerId, subscriptionId);
+        await assignmentRepository.Received(0)
+            .DeleteAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
+        await organizationRepository.Received(1).ReplaceAsync(organization);
+        await providerOrganizationRepository.Received(1).CreateAsync(Arg.Any<ProviderOrganization>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddExistingOrganization_DropsStaleAssignment_ForCurrentGenOrg(
+        Provider provider,
+        Organization organization,
+        string key,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange — current-gen plan that nevertheless has a stale cohort assignment row
+        // (e.g., from a prior failed flow). The cohort drop is independent of plan tier;
+        // the assignment must still be deleted so reconciliation stays clean.
+        //
+        // Guards against a future "optimization" that gates the assignment lookup behind
+        // a plan-type check — that would silently leak stale rows for data-drift cases.
+        provider.Type = ProviderType.Msp;
+        organization.GatewayCustomerId = "cus_current_gen_stale";
+        organization.GatewaySubscriptionId = "sub_current_gen_stale";
+        ArrangeAddExistingOrganizationHappyPath(
+            sutProvider, provider, organization, PlanType.EnterpriseAnnually);
+
+        var assignmentRepository =
+            sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
+        var staleAssignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organization.Id,
+            CohortId = Guid.NewGuid()
+        };
+        assignmentRepository.GetByOrganizationIdAsync(organization.Id).Returns(staleAssignment);
+
+        // Act
+        await sutProvider.Sut.AddExistingOrganization(provider, organization, key);
+
+        // Assert — stale assignment row is dropped regardless of the org's plan tier.
+        await assignmentRepository.Received(1).DeleteAsync(staleAssignment);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddExistingOrganization_SkipsCohortCleanup_WhenBusinessPlanMigrationFlagOff(
+        Provider provider,
+        Organization organization,
+        string key,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange — PM-35215 OFF. The cohort assignment table only gets populated when the
+        // epic is enabled, so we skip the lookup entirely. Even if a stale row exists, it
+        // must not be touched while the flag is off (and the rest of the flow completes).
+        provider.Type = ProviderType.Msp;
+        organization.GatewayCustomerId = "cus_ff_off";
+        organization.GatewaySubscriptionId = "sub_ff_off";
+        ArrangeAddExistingOrganizationHappyPath(sutProvider, provider, organization);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(false);
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        var assignmentRepository =
+            sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
+        var staleAssignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organization.Id,
+            CohortId = Guid.NewGuid()
+        };
+        assignmentRepository.GetByOrganizationIdAsync(organization.Id).Returns(staleAssignment);
+
+        // Act
+        await sutProvider.Sut.AddExistingOrganization(provider, organization, key);
+
+        // Assert — no cohort I/O happened, and the rest of the flow ran to completion.
+        await assignmentRepository.Received(0).GetByOrganizationIdAsync(Arg.Any<Guid>());
+        await assignmentRepository.Received(0)
+            .DeleteAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
+        await organizationRepository.Received(1).ReplaceAsync(organization);
+        await providerOrganizationRepository.Received(1).CreateAsync(Arg.Any<ProviderOrganization>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddExistingOrganization_PropagatesAndShortCircuits_WhenReleaseFails(
+        Provider provider,
+        Organization organization,
+        string key,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange — Release throws before any other I/O. No Stripe cancel, no repo writes,
+        // no assignment lookup should fire.
+        provider.Type = ProviderType.Msp;
+        organization.GatewayCustomerId = "cus_release_fails";
+        organization.GatewaySubscriptionId = "sub_release_fails";
+
+        var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        var eventService = sutProvider.GetDependency<IEventService>();
+        var assignmentRepository =
+            sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
+        var subscriptionId = organization.GatewaySubscriptionId;
+
+        priceIncreaseScheduler
+            .Release(organization.GatewayCustomerId, subscriptionId)
+            .ThrowsAsync(new StripeException("simulated release failure"));
+
+        // Act
+        await Assert.ThrowsAsync<StripeException>(() =>
+            sutProvider.Sut.AddExistingOrganization(provider, organization, key));
+
+        // Assert — nothing downstream of Release fired.
+        await stripeAdapter.Received(0)
+            .UpdateSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionUpdateOptions>());
+        await stripeAdapter.Received(0)
+            .CancelSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
+        await organizationRepository.Received(0).ReplaceAsync(Arg.Any<Organization>());
+        await providerOrganizationRepository.Received(0).CreateAsync(Arg.Any<ProviderOrganization>());
+        await eventService.Received(0).LogProviderOrganizationEventAsync(
+            Arg.Any<ProviderOrganization>(), Arg.Any<EventType>());
+        await assignmentRepository.Received(0).GetByOrganizationIdAsync(Arg.Any<Guid>());
+        await assignmentRepository.Received(0)
+            .DeleteAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddExistingOrganization_CompletesOrgTransition_BeforeAssignmentLookupFails(
+        Provider provider,
+        Organization organization,
+        string key,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange — Stripe cancel succeeds and the org transition commits (ReplaceAsync
+        // + ProviderOrganization create + event log) before the assignment lookup runs.
+        // The lookup then throws. The exception must propagate, but the org transition
+        // has already happened — the failure leaves a stale assignment row to reconcile,
+        // not a half-transitioned org.
+        provider.Type = ProviderType.Msp;
+        organization.GatewayCustomerId = "cus_get_fails";
+        organization.GatewaySubscriptionId = "sub_get_fails";
+        ArrangeAddExistingOrganizationHappyPath(sutProvider, provider, organization);
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        var eventService = sutProvider.GetDependency<IEventService>();
+        var assignmentRepository =
+            sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
+        assignmentRepository.GetByOrganizationIdAsync(organization.Id)
+            .ThrowsAsync(new InvalidOperationException("simulated repo failure"));
+
+        // Act
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            sutProvider.Sut.AddExistingOrganization(provider, organization, key));
+
+        // Assert — the org transition committed before the lookup threw.
+        await organizationRepository.Received(1).ReplaceAsync(organization);
+        await providerOrganizationRepository.Received(1).CreateAsync(Arg.Any<ProviderOrganization>());
+        await eventService.Received(1).LogProviderOrganizationEventAsync(
+            Arg.Any<ProviderOrganization>(), EventType.ProviderOrganization_Added);
+        await assignmentRepository.Received(0)
+            .DeleteAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddExistingOrganization_CompletesOrgTransition_BeforeDeleteAssignmentFails(
+        Provider provider,
+        Organization organization,
+        string key,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange — DeleteAsync throws after the org transition has already committed.
+        // The org is already provider-managed; the failed cleanup just leaves a stale
+        // assignment row to reconcile.
+        provider.Type = ProviderType.Msp;
+        organization.GatewayCustomerId = "cus_delete_fails";
+        organization.GatewaySubscriptionId = "sub_delete_fails";
+        ArrangeAddExistingOrganizationHappyPath(sutProvider, provider, organization);
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        var eventService = sutProvider.GetDependency<IEventService>();
+        var assignmentRepository =
+            sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
+        var existingAssignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organization.Id,
+            CohortId = Guid.NewGuid()
+        };
+        assignmentRepository.GetByOrganizationIdAsync(organization.Id).Returns(existingAssignment);
+        assignmentRepository.DeleteAsync(existingAssignment)
+            .ThrowsAsync(new InvalidOperationException("simulated repo failure"));
+
+        // Act
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            sutProvider.Sut.AddExistingOrganization(provider, organization, key));
+
+        // Assert — the org transition committed before DeleteAsync threw.
+        await organizationRepository.Received(1).ReplaceAsync(organization);
+        await providerOrganizationRepository.Received(1).CreateAsync(Arg.Any<ProviderOrganization>());
+        await eventService.Received(1).LogProviderOrganizationEventAsync(
+            Arg.Any<ProviderOrganization>(), EventType.ProviderOrganization_Added);
     }
 
     #endregion
