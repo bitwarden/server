@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Api.Models.Request.Organizations;
+using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Test.Common.AutoFixture.Attributes;
