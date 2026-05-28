@@ -1104,16 +1104,21 @@ public class GetBitwardenSubscriptionQueryTests
                 {
                     new()
                     {
-                        CouponId = couponId,
-                        Coupon = new Coupon
+                        Discount = new Discount
                         {
-                            Id = couponId,
-                            Valid = validCoupon,
-                            PercentOff = percentOff,
-                            AmountOff = amountOff,
-                            AppliesTo = appliesToProductId != null
-                                ? new CouponAppliesTo { Products = [appliesToProductId] }
-                                : null
+                            Source = new DiscountSource
+                            {
+                                Coupon = new Coupon
+                                {
+                                    Id = couponId,
+                                    Valid = validCoupon,
+                                    PercentOff = percentOff,
+                                    AmountOff = amountOff,
+                                    AppliesTo = appliesToProductId != null
+                                        ? new CouponAppliesTo { Products = [appliesToProductId] }
+                                        : null
+                                }
+                            }
                         }
                     }
                 }

@@ -486,7 +486,13 @@ public class StripePaymentServiceTests
                     [
                         new SubscriptionSchedulePhaseDiscount
                         {
-                            Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                            Discount = new Discount
+                            {
+                                Source = new DiscountSource
+                                {
+                                    Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                                }
+                            }
                         }
                     ]
                 }
@@ -819,7 +825,13 @@ public class StripePaymentServiceTests
                     [
                         new SubscriptionSchedulePhaseDiscount
                         {
-                            Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                            Discount = new Discount
+                            {
+                                Source = new DiscountSource
+                                {
+                                    Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                                }
+                            }
                         }
                     ]
                 }
@@ -895,7 +907,13 @@ public class StripePaymentServiceTests
                     [
                         new SubscriptionSchedulePhaseDiscount
                         {
-                            Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                            Discount = new Discount
+                            {
+                                Source = new DiscountSource
+                                {
+                                    Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                                }
+                            }
                         }
                     ]
                 }
@@ -986,7 +1004,13 @@ public class StripePaymentServiceTests
                     [
                         new SubscriptionSchedulePhaseDiscount
                         {
-                            Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                            Discount = new Discount
+                            {
+                                Source = new DiscountSource
+                                {
+                                    Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                                }
+                            }
                         }
                     ]
                 }
