@@ -2,6 +2,7 @@
 using AutoFixture;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 
@@ -39,7 +40,7 @@ public class RegisterFinishRequestModelCustomizeAttribute : BitCustomizeAttribut
 {
     public string _email { get; set; } = "{0}@email.com";
     public KdfType _kdf { get; set; } = KdfType.PBKDF2_SHA256;
-    public int _kdfIterations { get; set; } = AuthConstants.PBKDF2_ITERATIONS.Default;
+    public int _kdfIterations { get; set; } = KdfConstants.PBKDF2_ITERATIONS.Default;
     public string? _emailVerificationToken { get; set; }
     public string? _orgInviteToken { get; set; }
     public string? _orgSponsoredFreeFamilyPlanToken { get; set; }

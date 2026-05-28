@@ -589,7 +589,7 @@ public class GetProviderWarningsQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task Run_FlagEnabled_TaxableCustomer_Has_TaxIdWarning(
+    public async Task Run_FlagEnabled_USCustomer_NoTaxIdWarning(
         Provider provider,
         SutProvider<GetProviderWarningsQuery> sutProvider)
     {
@@ -614,11 +614,42 @@ public class GetProviderWarningsQueryTests
             .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
             .Returns(true);
 
+        var response = await sutProvider.Sut.Run(provider);
+
+        Assert.Null(response!.TaxId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_FlagEnabled_TaxableCustomer_Has_TaxIdWarning(
+        Provider provider,
+        SutProvider<GetProviderWarningsQuery> sutProvider)
+    {
+        provider.Enabled = true;
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(provider, Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.SequenceEqual(_requiredExpansions)
+            ))
+            .Returns(new Subscription
+            {
+                Status = SubscriptionStatus.Active,
+                Customer = new Customer
+                {
+                    TaxIds = new StripeList<TaxId> { Data = [] },
+                    Address = new Address { Country = "DE" },
+                    TaxExempt = TaxExempt.None
+                }
+            });
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
+            .Returns(true);
+
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
         sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
-                Data = [new Registration { Country = "US" }]
+                Data = [new Registration { Country = "DE" }]
             });
 
         var response = await sutProvider.Sut.Run(provider);

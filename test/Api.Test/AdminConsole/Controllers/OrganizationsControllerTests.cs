@@ -205,8 +205,8 @@ public class OrganizationsControllerTests
         var plan = MockPlans.Get(PlanType.EnterpriseAnnually);
         sutProvider.GetDependency<IPricingClient>().GetPlan(Arg.Any<PlanType>()).Returns(plan);
 
-        sutProvider.GetDependency<IOrganizationService>()
-            .UpdateCollectionManagementSettingsAsync(
+        sutProvider.GetDependency<IOrganizationUpdateCollectionManagementCommand>()
+            .UpdateAsync(
                 organization.Id,
                 Arg.Is<OrganizationCollectionManagementSettings>(s =>
                     s.LimitCollectionCreation == model.LimitCollectionCreation &&
@@ -219,9 +219,9 @@ public class OrganizationsControllerTests
         await sutProvider.Sut.PutCollectionManagement(organization.Id, model);
 
         // Assert
-        await sutProvider.GetDependency<IOrganizationService>()
+        await sutProvider.GetDependency<IOrganizationUpdateCollectionManagementCommand>()
             .Received(1)
-            .UpdateCollectionManagementSettingsAsync(
+            .UpdateAsync(
                 organization.Id,
                 Arg.Is<OrganizationCollectionManagementSettings>(s =>
                     s.LimitCollectionCreation == model.LimitCollectionCreation &&
