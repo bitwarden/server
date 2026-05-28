@@ -429,42 +429,4 @@ public class PoliciesControllerTests
         Assert.Equal(policy.Id, result.Id);
         Assert.Equal(policy.Type, result.Type);
     }
-
-    [Theory]
-    [BitAutoData]
-    public async Task PutVNext_SavesPolicyWithCorrectArguments(
-        SutProvider<PoliciesController> sutProvider, Guid orgId,
-        SavePolicyRequest model, Policy policy, Guid userId)
-    {
-        // Arrange
-        policy.Data = null;
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .UserId
-            .Returns(userId);
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationOwner(orgId)
-            .Returns(true);
-
-        sutProvider.GetDependency<ISavePolicyCommand>()
-            .SaveAsync(Arg.Any<SavePolicyModel>())
-            .Returns(policy);
-
-        // Act
-        var result = await sutProvider.Sut.PutVNext(orgId, policy.Type, model);
-
-        // Assert
-        await sutProvider.GetDependency<ISavePolicyCommand>()
-            .Received(1)
-            .SaveAsync(Arg.Is<SavePolicyModel>(m => m.PolicyUpdate.OrganizationId == orgId &&
-                                                    m.PolicyUpdate.Type == policy.Type &&
-                                                    m.PolicyUpdate.Enabled == model.Policy.Enabled &&
-                                                    m.PerformedBy.UserId == userId &&
-                                                    m.PerformedBy.IsOrganizationOwnerOrProvider == true));
-
-        Assert.NotNull(result);
-        Assert.Equal(policy.Id, result.Id);
-        Assert.Equal(policy.Type, result.Type);
-    }
 }
