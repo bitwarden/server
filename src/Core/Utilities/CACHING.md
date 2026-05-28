@@ -6,7 +6,10 @@ Caching options available in Bitwarden's server. The server uses multiple cachin
 
 ## Choosing a Caching Option
 
-Use this decision tree to identify the appropriate caching option for your feature. Before you start, skim [Sizing, Throughput, and Cost](#sizing-throughput-and-cost) below — the tree assumes the dataset fits in the backends it points to, and if your working set, read rate, or write rate is extreme along any axis, the sizing constraints can override the tree's answer.
+Use this decision tree to identify the appropriate caching option for your feature. Before you start, skim two sections below:
+
+- [Sizing, Throughput, and Cost](#sizing-throughput-and-cost) — the tree assumes the dataset fits in the backends it points to. If your working set, read rate, or write rate is extreme along any axis, sizing can override the tree's answer.
+- [Coordinating with Infrastructure](#coordinating-with-infrastructure) — caching is shared infrastructure owned by SRE / infra maintainers. Don't assume the defaults in this doc are production-ready or that the runtime can absorb a new workload without coordination.
 
 ```
 Does your data need to be shared across all instances in a horizontally-scaled deployment?
@@ -113,6 +116,22 @@ If any answer is "no", move down the decision tree to a less-feature-rich option
 | 5 K org abilities, read on every request                 | `ExtendedCache`                | `ExtendedCache` (as the tree says) — fits in L1, read-heavy                       |
 | 50 K queue jobs, written and removed within seconds      | `ExtendedCache` w/ backplane   | `IDistributedCache` (default) — backplane traffic would dominate                  |
 | Per-tenant analytics, 100 K orgs, refreshed every 6 h    | `ExtendedCache` paired w/ Cosmos | `ExtendedCache` paired w/ Cosmos — L1 holds the hot subset, L2 holds the long tail |
+
+---
+
+## Coordinating with Infrastructure
+
+Caching is shared infrastructure. The decision tree and sizing section above help you pick the right option for your code, but the runtime that option lands on — Redis cluster sizing, Cosmos container provisioning, RU budgets, SQL Cache table maintenance, monitoring, alerting — is owned by SRE and the infrastructure maintainers, and a `services.AddExtendedCache(...)` call does **not** stand any of it up.
+
+Before standing up a new cache, or significantly changing the load profile of an existing one:
+
+- **Loop in SRE / infrastructure early.** Even a "small" cache adds a new operational concern: memory pressure, RU consumption, eviction churn, monitoring noise. SRE has visibility into existing budgets, utilization, and incident history that this codebase does not. The cost of a five-minute conversation now is much smaller than an unplanned-incident postmortem later.
+- **Do not assume defaults are production-ready.** Connection strings, cluster sizes, container TTL, eviction policies, and RU provisioning are all configured outside this repo. `AddDistributedCache` registers `CosmosCache` with `CreateIfNotExists = false` precisely because the `cache.default` container is provisioned out-of-band — and `DefaultTimeToLive` must be enabled on that container for per-document TTL to take effect at all.
+- **Shared infrastructure has tenants you don't see.** The shared application Redis is already serving the rest of the platform. A new cache that parks a large working set, sustained write rate, or noisy backplane traffic on it can starve unrelated callers. Treat shared-Redis additions the same way you would a new query against a shared database — they need awareness, not just code.
+- **New backends need provisioning, not just code.** Standing up dedicated Redis, a new Cosmos container, or a separately scaled SQL Cache table involves environments, secrets, monitoring, dashboards, and cost — none of which the registration call covers. Plan that work alongside the code change, not after it merges.
+- **Self-hosted reality differs from cloud.** Cloud has Redis + Cosmos baseline; self-hosted deployments may have only Redis, only SQL Server, or neither. The fallback paths described in [Backend Configuration](#backend-configuration) compile and run, but "works in cloud" does not imply "works in every customer's environment." Verify the fallback actually meets the requirement.
+
+If you are unsure whether your workload needs SRE involvement, ask. The decision tree gives you a code answer; the people running the infrastructure give you the production answer.
 
 ---
 
