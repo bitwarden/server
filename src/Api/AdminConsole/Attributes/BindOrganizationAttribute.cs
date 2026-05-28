@@ -1,4 +1,4 @@
-using Bit.Api.AdminConsole.Authorization;
+﻿using Bit.Api.AdminConsole.Authorization;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
