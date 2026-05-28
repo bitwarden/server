@@ -48,13 +48,19 @@
 @section Scripts {
     <script>
         (() => {
-            const migrationPathSelect = document.getElementById('@(nameof(Model.MigrationPathSelection))');
+            const NO_PATH = '@CohortFormModel.NoMigrationPath';
+            const proactiveRow = document.getElementById('proactive-coupon-row');
             const churnOptionalLabel = document.getElementById('churn-optional-label');
-            const updateChurnOptionalLabel = () => {
-                churnOptionalLabel.style.display = migrationPathSelect.value === '@CohortFormModel.NoMigrationPath' ? 'none' : '';
+            const select = document.getElementById('@(nameof(Model.MigrationPathSelection))');
+
+            const applyVisibility = (value) => {
+                const isChurnOnly = value === NO_PATH;
+                proactiveRow.hidden = isChurnOnly;
+                churnOptionalLabel.hidden = isChurnOnly;
             };
-            migrationPathSelect.addEventListener('change', updateChurnOptionalLabel);
-            updateChurnOptionalLabel();
+
+            applyVisibility(select.value);
+            select.addEventListener('change', (e) => applyVisibility(e.target.value));
         })();
     </script>
 }
