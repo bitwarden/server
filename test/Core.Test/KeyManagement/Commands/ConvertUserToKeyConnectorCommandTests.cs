@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
+﻿using System.Security.Claims;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -8,7 +9,8 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using NSubstitute;
 using Xunit;
 
@@ -26,20 +28,15 @@ public class ConvertUserToKeyConnectorCommandTests
         User user)
     {
         // Arrange
-        ArrangeConvertibleUser(user);
+        user.UsesKeyConnector = false;
         user.Key = "old-key";
-        sutProvider.GetDependency<ICurrentContext>().Organizations = [];
-        ArrangeMasterPasswordServiceMutation(sutProvider);
+        ArrangeAuthorizationSucceeds(sutProvider, user);
 
         // Act
-        var result = await sutProvider.Sut.ConvertAsync(user, wrappedUserKey);
+        await sutProvider.Sut.ConvertAsync(user, wrappedUserKey);
 
         // Assert
-        Assert.True(result.Succeeded);
         Assert.True(user.UsesKeyConnector);
-        Assert.Null(user.MasterPassword);
-        Assert.Null(user.MasterPasswordSalt);
-        Assert.Null(user.MasterPasswordHint);
         Assert.Equal(wrappedUserKey, user.Key);
         sutProvider.GetDependency<IMasterPasswordService>().Received(1)
             .PrepareClearMasterPassword(user);
@@ -47,35 +44,31 @@ public class ConvertUserToKeyConnectorCommandTests
             .ReplaceAsync(Arg.Is<User>(u =>
                 u == user &&
                 u.Key == wrappedUserKey &&
-                u.MasterPassword == null &&
-                u.MasterPasswordSalt == null &&
-                u.MasterPasswordHint == null &&
                 u.UsesKeyConnector));
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
     }
 
-    [Theory, BitAutoData]
-    public async Task ConvertAsync_WrappedUserKeyNull_DoesNotOverwriteExistingKey(
+    [Theory]
+    [BitAutoData((string?)null)]
+    [BitAutoData("")]
+    [BitAutoData("   ")]
+    public async Task ConvertAsync_WrappedUserKeyNullOrEmptyOrWhitespace_DoesNotOverwriteExistingKey(
+        string? wrappedUserKey,
         SutProvider<ConvertUserToKeyConnectorCommand> sutProvider,
         User user)
     {
         // Arrange
         const string existingUserKey = "existing-user-key";
-        ArrangeConvertibleUser(user);
+        user.UsesKeyConnector = false;
         user.Key = existingUserKey;
-        sutProvider.GetDependency<ICurrentContext>().Organizations = [];
-        ArrangeMasterPasswordServiceMutation(sutProvider);
+        ArrangeAuthorizationSucceeds(sutProvider, user);
 
         // Act
-        var result = await sutProvider.Sut.ConvertAsync(user, null);
+        await sutProvider.Sut.ConvertAsync(user, wrappedUserKey);
 
         // Assert
-        Assert.True(result.Succeeded);
         Assert.True(user.UsesKeyConnector);
-        Assert.Null(user.MasterPassword);
-        Assert.Null(user.MasterPasswordSalt);
-        Assert.Null(user.MasterPasswordHint);
         Assert.Equal(existingUserKey, user.Key);
         sutProvider.GetDependency<IMasterPasswordService>().Received(1)
             .PrepareClearMasterPassword(user);
@@ -83,37 +76,9 @@ public class ConvertUserToKeyConnectorCommandTests
             .ReplaceAsync(Arg.Is<User>(u =>
                 u == user &&
                 u.Key == existingUserKey &&
-                u.MasterPassword == null &&
-                u.MasterPasswordSalt == null &&
-                u.MasterPasswordHint == null &&
                 u.UsesKeyConnector));
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
-    }
-
-    [Theory]
-    [BitAutoData("")]
-    [BitAutoData("   ")]
-    public async Task ConvertAsync_WrappedUserKeyEmptyOrWhitespace_DoesNotOverwriteExistingKey(
-        string wrappedUserKey,
-        SutProvider<ConvertUserToKeyConnectorCommand> sutProvider,
-        User user)
-    {
-        // Arrange
-        const string existingUserKey = "existing-user-key";
-        ArrangeConvertibleUser(user);
-        user.Key = existingUserKey;
-        sutProvider.GetDependency<ICurrentContext>().Organizations = [];
-        ArrangeMasterPasswordServiceMutation(sutProvider);
-
-        // Act
-        var result = await sutProvider.Sut.ConvertAsync(user, wrappedUserKey);
-
-        // Assert
-        Assert.True(result.Succeeded);
-        Assert.Equal(existingUserKey, user.Key);
-        await sutProvider.GetDependency<IUserRepository>().Received(1)
-            .ReplaceAsync(Arg.Is<User>(u => u.Key == existingUserKey));
     }
 
     [Theory, BitAutoData]
@@ -121,26 +86,8 @@ public class ConvertUserToKeyConnectorCommandTests
         SutProvider<ConvertUserToKeyConnectorCommand> sutProvider)
     {
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => sutProvider.Sut.ConvertAsync(null, null));
+            () => sutProvider.Sut.ConvertAsync(null!, null));
 
-        await sutProvider.GetDependency<IUserRepository>().DidNotReceiveWithAnyArgs()
-            .ReplaceAsync(Arg.Any<User>());
-        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
-            .LogUserEventAsync(Arg.Any<Guid>(), Arg.Any<EventType>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task ConvertAsync_UserAlreadyUsesKeyConnector_ReturnsFailure(
-        SutProvider<ConvertUserToKeyConnectorCommand> sutProvider,
-        User user)
-    {
-        user.UsesKeyConnector = true;
-        sutProvider.GetDependency<ICurrentContext>().Organizations = [];
-
-        var result = await sutProvider.Sut.ConvertAsync(user, null);
-
-        Assert.False(result.Succeeded);
-        Assert.Contains(result.Errors, e => e.Code == new IdentityErrorDescriber().UserAlreadyHasPassword().Code);
         sutProvider.GetDependency<IMasterPasswordService>().DidNotReceiveWithAnyArgs()
             .PrepareClearMasterPassword(Arg.Any<User>());
         await sutProvider.GetDependency<IUserRepository>().DidNotReceiveWithAnyArgs()
@@ -149,48 +96,21 @@ public class ConvertUserToKeyConnectorCommandTests
             .LogUserEventAsync(Arg.Any<Guid>(), Arg.Any<EventType>());
     }
 
-    [Theory]
-    [BitAutoData(OrganizationUserType.User)]
-    [BitAutoData(OrganizationUserType.Custom)]
-    public async Task ConvertAsync_UserIsNonAdminMemberOfOrg_Succeeds(
-        OrganizationUserType orgUserType,
+    [Theory, BitAutoData]
+    public async Task ConvertAsync_UserCantUseKeyConnector_ThrowsBadRequest(
         SutProvider<ConvertUserToKeyConnectorCommand> sutProvider,
         User user)
     {
         // Arrange
-        ArrangeConvertibleUser(user);
-        sutProvider.GetDependency<ICurrentContext>().Organizations =
-        [
-            new CurrentContextOrganization { Id = Guid.NewGuid(), Type = orgUserType }
-        ];
-        ArrangeMasterPasswordServiceMutation(sutProvider);
+        var httpContext = Substitute.For<HttpContext>();
+        httpContext.User.Returns(new ClaimsPrincipal());
+        sutProvider.GetDependency<ICurrentContext>().HttpContext.Returns(httpContext);
 
-        // Act
-        var result = await sutProvider.Sut.ConvertAsync(user, "wrapped-user-key");
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), user, Arg.Any<IEnumerable<IAuthorizationRequirement>>())
+            .Returns(AuthorizationResult.Failed());
 
-        // Assert
-        Assert.True(result.Succeeded);
-        Assert.True(user.UsesKeyConnector);
-        await sutProvider.GetDependency<IUserRepository>().Received(1)
-            .ReplaceAsync(Arg.Is<User>(u => u == user && u.UsesKeyConnector));
-        await sutProvider.GetDependency<IEventService>().Received(1)
-            .LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
-    }
-
-    [Theory]
-    [BitAutoData(OrganizationUserType.Owner)]
-    [BitAutoData(OrganizationUserType.Admin)]
-    public async Task ConvertAsync_UserIsOwnerOrAdminOfOrg_ThrowsBadRequest(
-        OrganizationUserType orgUserType,
-        SutProvider<ConvertUserToKeyConnectorCommand> sutProvider,
-        User user)
-    {
-        user.UsesKeyConnector = false;
-        sutProvider.GetDependency<ICurrentContext>().Organizations =
-        [
-            new CurrentContextOrganization { Id = Guid.NewGuid(), Type = orgUserType }
-        ];
-
+        // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ConvertAsync(user, null));
 
@@ -198,57 +118,20 @@ public class ConvertUserToKeyConnectorCommandTests
             .PrepareClearMasterPassword(Arg.Any<User>());
         await sutProvider.GetDependency<IUserRepository>().DidNotReceiveWithAnyArgs()
             .ReplaceAsync(Arg.Any<User>());
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
+            .LogUserEventAsync(Arg.Any<Guid>(), Arg.Any<EventType>());
     }
 
-    [Theory]
-    [BitAutoData(OrganizationUserType.Owner)]
-    [BitAutoData(OrganizationUserType.Admin)]
-    public async Task ConvertAsync_UserIsMemberOfMultipleOrgsAndOwnerOrAdminOfOne_ThrowsBadRequest(
-        OrganizationUserType blockingOrgUserType,
+    private static void ArrangeAuthorizationSucceeds(
         SutProvider<ConvertUserToKeyConnectorCommand> sutProvider,
         User user)
     {
-        user.UsesKeyConnector = false;
-        sutProvider.GetDependency<ICurrentContext>().Organizations =
-        [
-            new CurrentContextOrganization { Id = Guid.NewGuid(), Type = OrganizationUserType.User },
-            new CurrentContextOrganization { Id = Guid.NewGuid(), Type = blockingOrgUserType },
-            new CurrentContextOrganization { Id = Guid.NewGuid(), Type = OrganizationUserType.Custom }
-        ];
+        var httpContext = Substitute.For<HttpContext>();
+        httpContext.User.Returns(new ClaimsPrincipal());
+        sutProvider.GetDependency<ICurrentContext>().HttpContext.Returns(httpContext);
 
-        await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ConvertAsync(user, null));
-
-        sutProvider.GetDependency<IMasterPasswordService>().DidNotReceiveWithAnyArgs()
-            .PrepareClearMasterPassword(Arg.Any<User>());
-        await sutProvider.GetDependency<IUserRepository>().DidNotReceiveWithAnyArgs()
-            .ReplaceAsync(Arg.Any<User>());
-    }
-
-    // Seeds the baseline state of a user who is eligible for Key Connector conversion: a
-    // standard master-password credential plus hint, and not already a Key Connector user.
-    // Individual tests can layer on Key or other state as needed.
-    private static void ArrangeConvertibleUser(User user)
-    {
-        user.UsesKeyConnector = false;
-        user.MasterPassword = "master-password";
-        user.MasterPasswordSalt = "master-password-salt";
-        user.MasterPasswordHint = "master-password-hint";
-    }
-
-    // Configures the IMasterPasswordService mock so calling PrepareClearMasterPassword performs
-    // the real mutation on the user. Tests then assert on both the call and the resulting state
-    // captured in IUserRepository.ReplaceAsync.
-    private static void ArrangeMasterPasswordServiceMutation(
-        SutProvider<ConvertUserToKeyConnectorCommand> sutProvider)
-    {
-        sutProvider.GetDependency<IMasterPasswordService>()
-            .PrepareClearMasterPassword(Arg.Do<User>(u =>
-            {
-                u.MasterPassword = null;
-                u.MasterPasswordSalt = null;
-                u.MasterPasswordHint = null;
-            }))
-            .Returns(call => (User)call[0]);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), user, Arg.Any<IEnumerable<IAuthorizationRequirement>>())
+            .Returns(AuthorizationResult.Success());
     }
 }

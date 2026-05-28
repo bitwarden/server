@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Entities;
-using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.KeyManagement.Commands.Interfaces;
 
@@ -10,5 +9,5 @@ namespace Bit.Core.KeyManagement.Commands.Interfaces;
 /// </summary>
 public interface IConvertUserToKeyConnectorCommand
 {
-    Task<IdentityResult> ConvertAsync(User user, string? keyConnectorKeyWrappedUserKey = null);
+    Task ConvertAsync(User user, string? keyConnectorKeyWrappedUserKey = null);
 }

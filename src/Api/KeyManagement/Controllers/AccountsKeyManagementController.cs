@@ -222,18 +222,7 @@ public class AccountsKeyManagementController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _convertUserToKeyConnectorCommand.ConvertAsync(user);
-        if (result.Succeeded)
-        {
-            return;
-        }
-
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        throw new BadRequestException(ModelState);
+        await _convertUserToKeyConnectorCommand.ConvertAsync(user);
     }
 
     [HttpPost("key-connector/enroll")]
@@ -245,18 +234,7 @@ public class AccountsKeyManagementController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _convertUserToKeyConnectorCommand.ConvertAsync(user, model.KeyConnectorKeyWrappedUserKey);
-        if (result.Succeeded)
-        {
-            return;
-        }
-
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        throw new BadRequestException(ModelState);
+        await _convertUserToKeyConnectorCommand.ConvertAsync(user, model.KeyConnectorKeyWrappedUserKey);
     }
 
     [HttpGet("key-connector/confirmation-details/{orgSsoIdentifier}")]
