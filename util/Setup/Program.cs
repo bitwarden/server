@@ -3,8 +3,8 @@
 
 using System.Globalization;
 using System.Net.Http.Json;
+using Bit.Core.Enums;
 using Bit.Migrator;
-using Bit.Setup.Enums;
 
 namespace Bit.Setup;
 
