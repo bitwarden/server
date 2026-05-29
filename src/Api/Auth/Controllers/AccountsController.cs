@@ -7,8 +7,9 @@ using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Services;
@@ -42,7 +43,7 @@ public class AccountsController : Controller
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IUserService _userService;
     private readonly ISelfServicePasswordChangeCommand _selfServicePasswordChangeCommand;
-    private readonly IPolicyService _policyService;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly ISetInitialMasterPasswordCommandV1 _setInitialMasterPasswordCommandV1;
     private readonly IFinishSsoJitProvisionMasterPasswordCommand _finishSsoJitProvisionMasterPasswordCommand;
     private readonly ITdeSetPasswordCommand _tdeSetPasswordCommand;
@@ -62,7 +63,7 @@ public class AccountsController : Controller
         IProviderUserRepository providerUserRepository,
         IUserService userService,
         ISelfServicePasswordChangeCommand selfServicePasswordChangeCommand,
-        IPolicyService policyService,
+        IPolicyRequirementQuery policyRequirementQuery,
         IFinishSsoJitProvisionMasterPasswordCommand finishSsoJitProvisionMasterPasswordCommand,
         ISetInitialMasterPasswordCommandV1 setInitialMasterPasswordCommandV1,
         ITdeSetPasswordCommand tdeSetPasswordCommand,
@@ -82,7 +83,7 @@ public class AccountsController : Controller
         _providerUserRepository = providerUserRepository;
         _userService = userService;
         _selfServicePasswordChangeCommand = selfServicePasswordChangeCommand;
-        _policyService = policyService;
+        _policyRequirementQuery = policyRequirementQuery;
         _finishSsoJitProvisionMasterPasswordCommand = finishSsoJitProvisionMasterPasswordCommand;
         _setInitialMasterPasswordCommandV1 = setInitialMasterPasswordCommandV1;
         _tdeSetPasswordCommand = tdeSetPasswordCommand;
@@ -304,9 +305,9 @@ public class AccountsController : Controller
 
         if (await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
         {
-            var policyData = await _policyService.GetMasterPasswordPolicyForUserAsync(user);
+            var masterPasswordPolicy = await _policyRequirementQuery.GetAsyncVNext<MasterPasswordPolicyRequirement>(user.Id);
 
-            return new MasterPasswordPolicyResponseModel(policyData);
+            return new MasterPasswordPolicyResponseModel(masterPasswordPolicy.EnforcedOptions);
         }
 
         ModelState.AddModelError(nameof(model.MasterPasswordHash), "Invalid password.");

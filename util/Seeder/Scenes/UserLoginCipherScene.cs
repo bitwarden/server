@@ -27,6 +27,7 @@ public class UserLoginCipherScene(IUserRepository userRepository, ICipherReposit
         public bool Reprompt { get; set; }
         public bool Deleted { get; set; }
         public bool Favorite { get; set; }
+        public Guid? FolderId { get; set; }
         public IEnumerable<FieldRequest>? Fields { get; set; }
         public IEnumerable<PasskeyRequest>? Passkeys { get; set; }
     }
@@ -40,6 +41,7 @@ public class UserLoginCipherScene(IUserRepository userRepository, ICipherReposit
 
     public class PasskeyRequest
     {
+        public required string RpId { get; set; }
         public required string RpName { get; set; }
         public required string UserName { get; set; }
     }
@@ -70,7 +72,7 @@ public class UserLoginCipherScene(IUserRepository userRepository, ICipherReposit
                 Password = request.Password,
                 Totp = request.Totp,
                 Uris = string.IsNullOrEmpty(request.Uri) ? null : [new LoginUriViewDto { Uri = request.Uri }],
-                Fido2Credentials = request.Passkeys?.Select(p => LoginCipherSeeder.CreateFido2Credential(p.RpName, p.UserName)).ToList()
+                Fido2Credentials = request.Passkeys?.Select(p => LoginCipherSeeder.CreateFido2Credential(p.RpId, p.RpName, p.UserName)).ToList()
             },
             Fields = request.Fields?.Select(f => new FieldViewDto
             {
@@ -92,6 +94,13 @@ public class UserLoginCipherScene(IUserRepository userRepository, ICipherReposit
             cipher.Favorites = JsonSerializer.Serialize(new Dictionary<string, bool>
             {
                 { request.UserId.ToString().ToUpperInvariant(), true}
+            });
+        }
+        if (request.FolderId.HasValue)
+        {
+            cipher.Folders = CipherComposer.BuildFoldersJson(new Dictionary<Guid, Guid>
+            {
+                { request.UserId, request.FolderId.Value }
             });
         }
 

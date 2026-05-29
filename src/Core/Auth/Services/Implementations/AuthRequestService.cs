@@ -113,6 +113,12 @@ public class AuthRequestService : IAuthRequestService
             throw new BadRequestException("User or known device not found.");
         }
 
+        // Ensure authenticated user id matches target user (allows anon scenarios still)
+        if (_currentContext.UserId.HasValue && user!.Id != _currentContext.UserId.Value)
+        {
+            throw new BadRequestException("User or known device not found.");
+        }
+
         // AdminApproval requests require correlating the user and their organization
         if (model.Type == AuthRequestType.AdminApproval)
         {

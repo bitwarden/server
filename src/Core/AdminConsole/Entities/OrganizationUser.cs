@@ -48,6 +48,8 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     public string? ResetPasswordKey { get; set; }
     /// <inheritdoc cref="OrganizationUserStatusType"/>
     public OrganizationUserStatusType Status { get; set; }
+    /// <inheritdoc cref="OrganizationUserStatusTypeNew"/>
+    public OrganizationUserStatusTypeNew? StatusNew { get; set; }
     /// <summary>
     /// The User's role in the Organization.
     /// </summary>
