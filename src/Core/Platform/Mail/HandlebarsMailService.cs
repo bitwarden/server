@@ -12,6 +12,7 @@ using Bit.Core.Auth.Models.Mail;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Mail;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;
@@ -1641,10 +1642,12 @@ public class HandlebarsMailService : IMailService
         return string.IsNullOrEmpty(userName) ? email : CoreHelpers.SanitizeForEmail(userName, false);
     }
 
-    private string GetCloudVaultSubscriptionUrl(Guid organizationId)
-        => _globalSettings.BaseServiceUri.CloudRegion?.ToLower() switch
-        {
-            "eu" => $"https://vault.bitwarden.eu/#/organizations/{organizationId}/billing/subscription",
-            _ => $"https://vault.bitwarden.com/#/organizations/{organizationId}/billing/subscription"
-        };
+    public string GetCloudVaultSubscriptionUrl(Guid organizationId)
+    {
+        var region = Enum.TryParse<CloudRegion>(_globalSettings.BaseServiceUri.CloudRegion, ignoreCase: true, out var parsed)
+            ? parsed
+            : CloudRegion.US;
+        var regionConfig = CloudRegionConfig.FindByRegion(region);
+        return $"{regionConfig.VaultUrl}/#/organizations/{organizationId}/billing/subscription";
+    }
 }

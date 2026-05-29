@@ -22,11 +22,15 @@ public class AdminRecoverAccountValidator(
             return Invalid(request, new NoActionRequestedError());
         }
 
-        // If resetting master password, hash and key are required
-        if (request.ResetMasterPassword &&
-            (string.IsNullOrEmpty(request.NewMasterPasswordHash) || string.IsNullOrEmpty(request.Key)))
+        if (request.ResetMasterPassword)
         {
-            return Invalid(request, new MissingPasswordFieldsError());
+            var hasHashAndKey = !string.IsNullOrEmpty(request.NewMasterPasswordHash) && !string.IsNullOrEmpty(request.Key);
+            var hasUnlockAndAuthenticationData = request.AuthenticationData is not null && request.UnlockData is not null;
+
+            if (!hasHashAndKey && !hasUnlockAndAuthenticationData)
+            {
+                return Invalid(request, new MissingPasswordFieldsError());
+            }
         }
 
         // If resetting 2FA, feature flag must be enabled
