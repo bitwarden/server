@@ -119,27 +119,17 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
+        if (_featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand))
+        {
+            await _selfServiceChangeEmailCommand.InitiateChangeEmailAsync(
+                user, model.MasterPasswordHash, model.NewEmail);
+
+            return;
+        }
+
         if (user.UsesKeyConnector)
         {
             throw new BadRequestException("You cannot change your email when using Key Connector.");
-        }
-
-        if (_featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand))
-        {
-            var result = await _selfServiceChangeEmailCommand.InitiateChangeEmailAsync(
-                user, model.MasterPasswordHash, model.NewEmail);
-
-            if (result.Succeeded)
-            {
-                return;
-            }
-
-            foreach (var error in result.Errors)
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
-            }
-
-            throw new BadRequestException(ModelState);
         }
 
         if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
@@ -167,31 +157,28 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
+        if (_featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand))
+        {
+            await _selfServiceChangeEmailCommand.ChangeEmailAsync(
+                user, model.MasterPasswordHash, model.NewEmail, model.Token);
+            return;
+        }
+
         if (user.UsesKeyConnector)
         {
             throw new BadRequestException("You cannot change your email when using Key Connector.");
         }
 
-        IdentityResult result;
-        if (_featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand))
+        // Legacy path still rotates the master password and wrapped user key alongside the
+        // email change; those fields are optional on the model so we have to enforce them here.
+        if (string.IsNullOrEmpty(model.NewMasterPasswordHash) || string.IsNullOrEmpty(model.Key))
         {
-            result = await _selfServiceChangeEmailCommand.ChangeEmailAsync(
-                user, model.MasterPasswordHash, model.NewEmail, model.Token);
-        }
-        else
-        {
-            // Legacy path still rotates the master password and wrapped user key alongside the
-            // email change; those fields are optional on the model so we have to enforce them here.
-            if (string.IsNullOrEmpty(model.NewMasterPasswordHash) || string.IsNullOrEmpty(model.Key))
-            {
-                ModelState.AddModelError(string.Empty, "NewMasterPasswordHash and Key are required.");
-                throw new BadRequestException(ModelState);
-            }
-
-            result = await _userService.ChangeEmailAsync(user, model.MasterPasswordHash, model.NewEmail,
-                model.NewMasterPasswordHash, model.Token, model.Key);
+            ModelState.AddModelError(string.Empty, "NewMasterPasswordHash and Key are required.");
+            throw new BadRequestException(ModelState);
         }
 
+        var result = await _userService.ChangeEmailAsync(user, model.MasterPasswordHash, model.NewEmail,
+            model.NewMasterPasswordHash, model.Token, model.Key);
         if (result.Succeeded)
         {
             return;
@@ -205,6 +192,7 @@ public class AccountsController : Controller
         await Task.Delay(2000);
         throw new BadRequestException(ModelState);
     }
+
 
     [HttpPost("verify-email")]
     public async Task PostVerifyEmail()

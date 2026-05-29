@@ -1,5 +1,4 @@
-using Bit.Core.Entities;
-using Microsoft.AspNetCore.Identity;
+﻿using Bit.Core.Entities;
 
 namespace Bit.Core.Auth.UserFeatures.UserEmail;
 
@@ -20,7 +19,7 @@ public interface ISelfServiceChangeEmailCommand
     /// <param name="masterPassword">The user's current master password hash.</param>
     /// <param name="newEmail">The new email address the user is changing to.</param>
     /// <param name="token">The change-email token previously issued for <paramref name="newEmail"/>.</param>
-    Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail, string token);
+    Task ChangeEmailAsync(User user, string masterPassword, string newEmail, string token);
 
     /// <summary>
     /// Begins the self-service email change flow by verifying the user's master password and the
@@ -32,5 +31,5 @@ public interface ISelfServiceChangeEmailCommand
     /// <param name="user">The authenticated user requesting the email change.</param>
     /// <param name="masterPassword">The user's current master password hash.</param>
     /// <param name="newEmail">The new email address the user wants to change to.</param>
-    Task<IdentityResult> InitiateChangeEmailAsync(User user, string masterPassword, string newEmail);
+    Task InitiateChangeEmailAsync(User user, string masterPassword, string newEmail);
 }

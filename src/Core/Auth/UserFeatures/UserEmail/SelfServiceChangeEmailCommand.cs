@@ -1,7 +1,11 @@
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
+using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Authorization;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 
@@ -9,6 +13,8 @@ namespace Bit.Core.Auth.UserFeatures.UserEmail;
 
 public class SelfServiceChangeEmailCommand(
     IUserService userService,
+    ICurrentContext currentContext,
+    IAuthorizationService authorizationService,
     UserManager<User> userManager,
     IUserRepository userRepository,
     IMailService mailService,
@@ -18,6 +24,8 @@ public class SelfServiceChangeEmailCommand(
     IOptions<IdentityOptions> identityOptions) : ISelfServiceChangeEmailCommand
 {
     private readonly IUserService _userService = userService;
+    private readonly ICurrentContext _currentContext = currentContext;
+    private readonly IAuthorizationService _authorizationService = authorizationService;
     private readonly UserManager<User> _userManager = userManager;
     private readonly IUserRepository _userRepository = userRepository;
     private readonly IMailService _mailService = mailService;
@@ -27,11 +35,21 @@ public class SelfServiceChangeEmailCommand(
     private readonly IdentityOptions _identityOptions = identityOptions.Value;
 
     /// <inheritdoc />
-    public async Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail, string token)
+    public async Task ChangeEmailAsync(User user, string masterPassword, string newEmail, string token)
     {
+        var authorizationResult =
+             await _authorizationService.AuthorizeAsync(
+                    _currentContext.HttpContext.User,
+                    user,
+                    KeyConnectorOperations.Use);
+        if (!authorizationResult.Succeeded)
+        {
+            throw new BadRequestException("You cannot change your email when using Key Connector.");
+        }
+
         if (!await _userService.CheckPasswordAsync(user, masterPassword))
         {
-            return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
+            throw new BadRequestException("MasterPasswordHash", "Invalid password.");
         }
 
         var changeEmailTokenIsValid = await _userManager.VerifyUserTokenAsync(
@@ -41,20 +59,31 @@ public class SelfServiceChangeEmailCommand(
             token);
         if (!changeEmailTokenIsValid)
         {
-            return IdentityResult.Failed(_identityErrorDescriber.InvalidToken());
+            throw new BadRequestException("Token", "Invalid token.");
         }
 
         await _changeEmailCommand.ChangeEmailAsync(user, newEmail);
 
-        return IdentityResult.Success;
+        return;
     }
 
     /// <inheritdoc />
-    public async Task<IdentityResult> InitiateChangeEmailAsync(User user, string masterPassword, string newEmail)
+    public async Task InitiateChangeEmailAsync(User user, string masterPassword, string newEmail)
     {
+        var authorizationResult =
+             await _authorizationService.AuthorizeAsync(
+                    _currentContext.HttpContext.User,
+                    user,
+                    KeyConnectorOperations.Use);
+        if (!authorizationResult.Succeeded)
+        {
+            throw new BadRequestException("You cannot change your email when using Key Connector.");
+        }
+
+        // throw here instead of returning an identiy resulty
         if (!await _userService.CheckPasswordAsync(user, masterPassword))
         {
-            return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
+            throw new BadRequestException("MasterPasswordHash", "Invalid password.");
         }
 
         await _organizationDomainAllowEmailChangeQuery.IsAllowedAsync(user, newEmail);
@@ -65,13 +94,13 @@ public class SelfServiceChangeEmailCommand(
             // Mirrors the legacy UserService flow: avoid leaking that the address is taken by
             // notifying the current address instead of returning a hard error to the caller.
             await _mailService.SendChangeEmailAlreadyExistsEmailAsync(user.Email, newEmail);
-            return IdentityResult.Success;
+            return;
         }
 
         var token = await _userManager.GenerateChangeEmailTokenAsync(user, newEmail);
         await _mailService.SendChangeEmailEmailAsync(newEmail, token);
 
-        return IdentityResult.Success;
+        return;
     }
 
     // Mirrors the private purpose string used by ASP.NET Core Identity's
