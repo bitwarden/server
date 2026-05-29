@@ -2,6 +2,7 @@
 #nullable disable
 
 using System.Reflection;
+using Bit.Core.Settings;
 
 namespace Bit.Core;
 
@@ -39,7 +40,14 @@ public static class Constants
     /// <summary>
     /// Domain suffixes for Bitwarden cloud-hosted environments.
     /// </summary>
-    public static readonly string[] BitwardenCloudDomains = ["bitwarden.com", "bitwarden.eu", "bitwarden.pw"];
+    public static readonly string[] BitwardenCloudDomains =
+    [
+        // bitwarden.pw is the QA environment domain; not a user-facing cloud region so it
+        // has no CloudRegionConfig entry, but must remain in the allowlist for HTTPS redirect
+        // validation to pass in QA deployments.
+        "bitwarden.pw",
+        ..CloudRegionConfig.All.Select(c => c.Domain),
+    ];
 
     /// <summary>
     /// Server permitted SSO callback redirect URIs for mobile clients.
@@ -47,9 +55,9 @@ public static class Constants
     public static readonly string[] BitwardenMobileSsoCallbackUris =
     [
         "bitwarden://sso-callback",
-        "https://bitwarden.com/sso-callback",
-        "https://bitwarden.eu/sso-callback",
+        // bitwarden.pw is the QA environment domain; retained for QA SSO callback validation.
         "https://bitwarden.pw/sso-callback",
+        ..CloudRegionConfig.All.Select(c => c.SsoCallbackUri),
     ];
 
     /// <summary>
@@ -109,41 +117,7 @@ public static class Constants
 
 public static class AuthConstants
 {
-    public static readonly RangeConstant PBKDF2_ITERATIONS = new(600_000, 2_000_000, 600_000);
-
-    public static readonly RangeConstant ARGON2_ITERATIONS = new(2, 10, 3);
-    public static readonly RangeConstant ARGON2_MEMORY = new(15, 1024, 64);
-    public static readonly RangeConstant ARGON2_PARALLELISM = new(1, 16, 4);
     public static readonly string NewDeviceVerificationExceptionCacheKeyFormat = "NewDeviceVerificationException_{0}";
-}
-
-public class RangeConstant
-{
-    public int Default { get; }
-    public int Min { get; }
-    public int Max { get; }
-
-    public RangeConstant(int min, int max, int defaultValue)
-    {
-        Default = defaultValue;
-        Min = min;
-        Max = max;
-
-        if (Min > Max)
-        {
-            throw new ArgumentOutOfRangeException($"{Min} is larger than {Max}.");
-        }
-
-        if (!InsideRange(defaultValue))
-        {
-            throw new ArgumentOutOfRangeException($"{Default} is outside allowed range of {Min}-{Max}.");
-        }
-    }
-
-    public bool InsideRange(int number)
-    {
-        return Min <= number && number <= Max;
-    }
 }
 
 public static class TokenPurposes
@@ -227,7 +201,6 @@ public static class FeatureFlagKeys
     public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
     public const string LinuxBiometricsV2 = "pm-26340-linux-biometrics-v2";
     public const string NoLogoutOnKdfChange = "pm-23995-no-logout-on-kdf-change";
-    public const string ConsolidatedSessionTimeoutComponent = "pm-26056-consolidated-session-timeout-component";
     public const string V2RegistrationTDEJIT = "pm-27279-v2-registration-tde-jit";
     public const string EnableAccountEncryptionV2KeyConnectorRegistration = "enable-account-encryption-v2-key-connector-registration";
     public const string SdkKeyRotation = "pm-30144-sdk-key-rotation";

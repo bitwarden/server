@@ -701,6 +701,27 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         return rowCount > 0;
     }
 
+    public async Task<ICollection<Guid>> ConfirmManyOrganizationUsersAsync(
+        IReadOnlyCollection<AcceptedOrganizationUserToConfirm> usersToConfirm)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var confirmedIds = await connection.QueryAsync<Guid>(
+            $"[{Schema}].[OrganizationUser_UpdateManyStatusKey]",
+            new
+            {
+                UsersJson = JsonSerializer.Serialize(usersToConfirm.Select(u => new
+                {
+                    Id = u.OrganizationUserId,
+                    u.Key,
+                })),
+                RevisionDate = DateTime.UtcNow
+            },
+            commandType: CommandType.StoredProcedure);
+
+        return confirmedIds.ToList();
+    }
+
     public async Task<OrganizationUserUserDetails?> GetDetailsByOrganizationIdUserIdAsync(Guid organizationId, Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -728,5 +749,18 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                 commandType: CommandType.StoredProcedure,
                 transaction: transaction);
         };
+    }
+
+    public async Task<ICollection<OrganizationUser>> GetManyPendingAutoConfirmAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationUser>(
+                "[dbo].[OrganizationUser_ReadByPendingAutoConfirm]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
     }
 }
