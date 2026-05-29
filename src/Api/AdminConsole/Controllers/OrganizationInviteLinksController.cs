@@ -19,7 +19,8 @@ public class OrganizationInviteLinksController(
     IGetOrganizationInviteLinkStatusQuery getOrganizationInviteLinkStatusQuery,
     IUpdateOrganizationInviteLinkCommand updateOrganizationInviteLinkCommand,
     IDeleteOrganizationInviteLinkCommand deleteOrganizationInviteLinkCommand,
-    IRefreshOrganizationInviteLinkCommand refreshOrganizationInviteLinkCommand)
+    IRefreshOrganizationInviteLinkCommand refreshOrganizationInviteLinkCommand,
+    IValidateOrganizationInviteLinkEmailDomainQuery validateOrganizationInviteLinkEmailDomainQuery)
     : BaseAdminConsoleController
 {
     [AllowAnonymous]
@@ -35,6 +36,17 @@ public class OrganizationInviteLinksController(
                 status.Sso is null
                     ? null
                     : new OrganizationInviteLinkSsoResponseModel(status.Sso.OrgSsoId, status.Sso.Required))));
+    }
+
+    [AllowAnonymous]
+    [HttpPost("/organizations/invite-link/validate-email-domain")]
+    public async Task<IResult> ValidateEmailDomain(
+        [FromBody] OrganizationInviteLinkValidateEmailDomainRequestModel model)
+    {
+        var result = await validateOrganizationInviteLinkEmailDomainQuery.ValidateAsync(model.Code, model.Email);
+
+        return Handle(result, isAllowed =>
+            TypedResults.Ok(new OrganizationInviteLinkValidateEmailDomainResponseModel(isAllowed)));
     }
 
     [HttpGet("")]

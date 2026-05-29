@@ -2,6 +2,7 @@
 #nullable disable
 
 using System.Reflection;
+using Bit.Core.Settings;
 
 namespace Bit.Core;
 
@@ -39,7 +40,14 @@ public static class Constants
     /// <summary>
     /// Domain suffixes for Bitwarden cloud-hosted environments.
     /// </summary>
-    public static readonly string[] BitwardenCloudDomains = ["bitwarden.com", "bitwarden.eu", "bitwarden.pw"];
+    public static readonly string[] BitwardenCloudDomains =
+    [
+        // bitwarden.pw is the QA environment domain; not a user-facing cloud region so it
+        // has no CloudRegionConfig entry, but must remain in the allowlist for HTTPS redirect
+        // validation to pass in QA deployments.
+        "bitwarden.pw",
+        ..CloudRegionConfig.All.Select(c => c.Domain),
+    ];
 
     /// <summary>
     /// Server permitted SSO callback redirect URIs for mobile clients.
@@ -47,9 +55,9 @@ public static class Constants
     public static readonly string[] BitwardenMobileSsoCallbackUris =
     [
         "bitwarden://sso-callback",
-        "https://bitwarden.com/sso-callback",
-        "https://bitwarden.eu/sso-callback",
+        // bitwarden.pw is the QA environment domain; retained for QA SSO callback validation.
         "https://bitwarden.pw/sso-callback",
+        ..CloudRegionConfig.All.Select(c => c.SsoCallbackUri),
     ];
 
     /// <summary>
@@ -193,7 +201,6 @@ public static class FeatureFlagKeys
     public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
     public const string LinuxBiometricsV2 = "pm-26340-linux-biometrics-v2";
     public const string NoLogoutOnKdfChange = "pm-23995-no-logout-on-kdf-change";
-    public const string ConsolidatedSessionTimeoutComponent = "pm-26056-consolidated-session-timeout-component";
     public const string V2RegistrationTDEJIT = "pm-27279-v2-registration-tde-jit";
     public const string EnableAccountEncryptionV2KeyConnectorRegistration = "enable-account-encryption-v2-key-connector-registration";
     public const string SdkKeyRotation = "pm-30144-sdk-key-rotation";
@@ -234,7 +241,6 @@ public static class FeatureFlagKeys
     /// on the desktop client.
     /// </summary>
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
-    public const string SendUIRefresh = "pm-28175-send-ui-refresh";
     public const string SendEmailOTP = "pm-19051-send-email-verification";
     public const string SendControls = "pm-31885-send-controls";
     public const string SdkSendsApi = "pm-30110-sdk-sends-api";
