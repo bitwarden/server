@@ -786,8 +786,8 @@ public class AccountsController : Controller
     [HttpPost("resend-new-device-otp")]
     public async Task ResendNewDeviceOtpAsync([FromBody] UnauthenticatedSecretVerificationRequestModel request)
     {
-        var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
-        if (!await _userService.VerifySecretAsync(user, request.Secret))
+        var user = await _userRepository.GetByEmailAsync(request.Email);
+        if (user == null || !await _userService.VerifySecretAsync(user, request.Secret))
         {
             await Task.Delay(2000);
             throw new BadRequestException(string.Empty, "User verification failed.");

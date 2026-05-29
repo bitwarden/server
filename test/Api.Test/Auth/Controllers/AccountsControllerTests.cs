@@ -652,10 +652,11 @@ public class AccountsControllerTests : IDisposable
     UnauthenticatedSecretVerificationRequestModel model)
     {
         // Arrange
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult((User)null));
+        _userRepository.GetByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult((User)null));
 
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.ResendNewDeviceOtpAsync(model));
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.ResendNewDeviceOtpAsync(model));
+        await _twoFactorEmailService.DidNotReceiveWithAnyArgs().SendNewDeviceVerificationEmailAsync(default);
     }
 
     [Theory, BitAutoData]
@@ -664,7 +665,7 @@ public class AccountsControllerTests : IDisposable
         UnauthenticatedSecretVerificationRequestModel model)
     {
         // Arrange
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _userRepository.GetByEmailAsync(model.Email).Returns(Task.FromResult(user));
         _userService.VerifySecretAsync(user, Arg.Any<string>()).Returns(Task.FromResult(false));
 
         // Act & Assert
@@ -676,7 +677,7 @@ public class AccountsControllerTests : IDisposable
         UnauthenticatedSecretVerificationRequestModel model)
     {
         // Arrange
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _userRepository.GetByEmailAsync(model.Email).Returns(Task.FromResult(user));
         _userService.VerifySecretAsync(user, Arg.Any<string>()).Returns(Task.FromResult(true));
 
         // Act
