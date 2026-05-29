@@ -69,9 +69,10 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommand(
                 confirmedRequests.Select(r => r.OrganizationUser!.UserId!.Value)))
             .ToDictionary(u => u.Id);
 
+        await LogOrganizationUserConfirmedEventsAsync(confirmedRequests);
+
         await Task.WhenAll(confirmedRequests.SelectMany<AutomaticallyConfirmOrganizationUserValidationRequest, Task>(r =>
         [
-            LogOrganizationUserConfirmedEventAsync(r),
             SendConfirmedOrganizationUserEmailAsync(r, request.Organization, usersByUserId),
             SyncOrganizationKeysAsync(r)
         ]));
@@ -202,18 +203,18 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommand(
         }
     }
 
-    private async Task LogOrganizationUserConfirmedEventAsync(
-        AutomaticallyConfirmOrganizationUserValidationRequest request)
+    private async Task LogOrganizationUserConfirmedEventsAsync(
+        IEnumerable<AutomaticallyConfirmOrganizationUserValidationRequest> requests)
     {
         try
         {
-            await eventService.LogOrganizationUserEventAsync(
-                request.OrganizationUser!, EventType.OrganizationUser_AutomaticallyConfirmed,
-                timeProvider.GetUtcNow().UtcDateTime);
+            var date = timeProvider.GetUtcNow().UtcDateTime;
+            await eventService.LogOrganizationUserEventsAsync(
+                requests.Select(r => (r.OrganizationUser!, EventType.OrganizationUser_AutomaticallyConfirmed, (DateTime?)date)));
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to log OrganizationUser_AutomaticallyConfirmed event.");
+            logger.LogError(ex, "Failed to log OrganizationUser_AutomaticallyConfirmed events.");
         }
     }
 
