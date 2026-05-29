@@ -19,14 +19,15 @@ internal static class LoginCipherSeeder
             Notes = options.Notes,
             Type = CipherTypes.Login,
             Login = options.Login,
-            Fields = options.Fields
+            Fields = options.Fields,
+            Reprompt = (int)options.Reprompt
         };
 
         var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!);
         return CipherEncryption.CreateEntity(encrypted, encrypted.ToLoginData(), CipherType.Login, options.OrganizationId, options.UserId);
     }
 
-    internal static Fido2CredentialViewDto CreateFido2Credential(string rpName, string userName)
+    internal static Fido2CredentialViewDto CreateFido2Credential(string rpId, string rpName, string userName)
     {
         // Generate ECDSA P-256 private key in PKCS#8 format
         using var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
@@ -43,7 +44,7 @@ internal static class LoginCipherSeeder
             CredentialId = JsonSerializer.Serialize(Guid.NewGuid()),
             KeyValue = keyValue,
             Counter = "0",
-            RpId = rpName,
+            RpId = rpId,
             RpName = rpName,
             UserHandle = userHandle,
             UserName = userName,

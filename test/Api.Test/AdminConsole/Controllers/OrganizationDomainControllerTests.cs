@@ -294,37 +294,15 @@ public class OrganizationDomainControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetOrgDomainSsoDetails_ShouldThrowNotFound_WhenEmailHasNotClaimedDomain(
-        OrganizationDomainSsoDetailsRequestModel model, SutProvider<OrganizationDomainController> sutProvider)
-    {
-        sutProvider.GetDependency<IOrganizationDomainRepository>()
-            .GetOrganizationDomainSsoDetailsAsync(model.Email).ReturnsNull();
-
-        var requestAction = async () => await sutProvider.Sut.GetOrgDomainSsoDetails(model);
-
-        await Assert.ThrowsAsync<NotFoundException>(requestAction);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetOrgDomainSsoDetails_ShouldReturnOrganizationDomainSsoDetails_WhenEmailHasClaimedDomain(
-        OrganizationDomainSsoDetailsRequestModel model, OrganizationDomainSsoDetailsData ssoDetailsData, SutProvider<OrganizationDomainController> sutProvider)
-    {
-        sutProvider.GetDependency<IOrganizationDomainRepository>()
-            .GetOrganizationDomainSsoDetailsAsync(model.Email).Returns(ssoDetailsData);
-
-        var result = await sutProvider.Sut.GetOrgDomainSsoDetails(model);
-
-        Assert.IsType<OrganizationDomainSsoDetailsResponseModel>(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetVerifiedOrgDomainSsoDetails_ShouldThrowNotFound_WhenEmailHasNotClaimedDomain(
+    public async Task GetVerifiedOrgDomainSsoDetails_ShouldReturnEmptyList_WhenEmailHasNoVerifiedDomain(
         OrganizationDomainSsoDetailsRequestModel model, SutProvider<OrganizationDomainController> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .GetVerifiedOrganizationDomainSsoDetailsAsync(model.Email).Returns(Array.Empty<VerifiedOrganizationDomainSsoDetail>());
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetOrgDomainSsoDetails(model));
+        var result = await sutProvider.Sut.GetVerifiedOrgDomainSsoDetailsAsync(model);
+
+        Assert.IsType<VerifiedOrganizationDomainSsoDetailsResponseModel>(result);
     }
 
     [Theory, BitAutoData]

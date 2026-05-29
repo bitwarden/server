@@ -5,6 +5,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -23,6 +25,7 @@ public class AdminRecoverAccountCommand(
     IEventService eventService,
     IPushNotificationService pushNotificationService,
     IUserService userService,
+    IMasterPasswordService masterPasswordService,
     IResetUserTwoFactorCommand resetUserTwoFactorCommand,
     IPolicyRequirementQuery policyRequirementQuery,
     IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand,
@@ -52,20 +55,42 @@ public class AdminRecoverAccountCommand(
         // Password reset
         if (request.ResetMasterPassword)
         {
-            var result = await userService.UpdatePasswordHash(user, request.NewMasterPasswordHash!);
-            if (!result.Succeeded)
+            if (request.AuthenticationData is not null && request.UnlockData is not null)
             {
-                var errorMessage = string.Join(", ", result.Errors.Select(e => e.Description));
-                return new PasswordUpdateFailedError(errorMessage);
+                var data = new SetInitialOrUpdateExistingPasswordData
+                {
+                    MasterPasswordUnlock = request.UnlockData,
+                    MasterPasswordAuthentication = request.AuthenticationData,
+                };
+
+                var result = await masterPasswordService
+                    .PrepareSetInitialOrUpdateExistingMasterPasswordAsync(user, data);
+                if (result.TryPickT1(out var errors, out _))
+                {
+                    var errorMessage = string.Join(", ", errors.Select(e => e.Description));
+                    return new PasswordUpdateFailedError(errorMessage);
+                }
+
+                user.ForcePasswordReset = true;
+                await userRepository.ReplaceAsync(user);
             }
+            else
+            {
+                var result = await userService.UpdatePasswordHash(user, request.NewMasterPasswordHash!);
+                if (!result.Succeeded)
+                {
+                    var errorMessage = string.Join(", ", result.Errors.Select(e => e.Description));
+                    return new PasswordUpdateFailedError(errorMessage);
+                }
 
-            var now = timeProvider.GetUtcNow().UtcDateTime;
-            user.RevisionDate = user.AccountRevisionDate = now;
-            user.LastPasswordChangeDate = now;
-            user.ForcePasswordReset = true;
-            user.Key = request.Key;
+                var now = timeProvider.GetUtcNow().UtcDateTime;
+                user.RevisionDate = user.AccountRevisionDate = now;
+                user.LastPasswordChangeDate = now;
+                user.ForcePasswordReset = true;
+                user.Key = request.Key;
 
-            await userRepository.ReplaceAsync(user);
+                await userRepository.ReplaceAsync(user);
+            }
         }
 
         // 2FA reset
@@ -125,7 +150,8 @@ public class AdminRecoverAccountCommand(
                     new RevokeOrganizationUsersRequest(
                         o.OrganizationId,
                         [new OrganizationUserUserDetails { Id = o.OrganizationUserId, OrganizationId = o.OrganizationId }],
-                        new SystemUser(EventSystemUser.TwoFactorDisabled)));
+                        new SystemUser(EventSystemUser.TwoFactorDisabled),
+                        RevocationReason.TwoFactorPolicyNonCompliance));
                 await mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(), user.Email);
             }).ToArray();
 

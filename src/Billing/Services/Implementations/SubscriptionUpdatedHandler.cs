@@ -1,13 +1,19 @@
 ﻿using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.Extensions;
+using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
+using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
+using Bit.Core.Entities;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -36,6 +42,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IPushNotificationAdapter _pushNotificationAdapter;
     private readonly IPriceIncreaseScheduler _priceIncreaseScheduler;
     private readonly IFeatureService _featureService;
+    private readonly IOrganizationPlanMigrationCohortRepository _cohortRepository;
+    private readonly IOrganizationPlanMigrationCohortAssignmentRepository _cohortAssignmentRepository;
     private readonly ILogger<SubscriptionUpdatedHandler> _logger;
 
     public SubscriptionUpdatedHandler(
@@ -55,6 +63,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IPushNotificationAdapter pushNotificationAdapter,
         IPriceIncreaseScheduler priceIncreaseScheduler,
         IFeatureService featureService,
+        IOrganizationPlanMigrationCohortRepository cohortRepository,
+        IOrganizationPlanMigrationCohortAssignmentRepository cohortAssignmentRepository,
         ILogger<SubscriptionUpdatedHandler> logger)
     {
         _stripeEventService = stripeEventService;
@@ -75,47 +85,87 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _pushNotificationAdapter = pushNotificationAdapter;
         _priceIncreaseScheduler = priceIncreaseScheduler;
         _featureService = featureService;
+        _cohortRepository = cohortRepository;
+        _cohortAssignmentRepository = cohortAssignmentRepository;
         _logger = logger;
     }
 
     public async Task HandleAsync(Event parsedEvent)
     {
-        var subscription = await _stripeEventService.GetSubscription(parsedEvent, true, ["customer", "discounts", "latest_invoice", "test_clock"]);
+        var subscription = await _stripeEventService.GetSubscription(parsedEvent, true, ["customer.discount", "discounts", "latest_invoice", "test_clock"]);
         SubscriberId subscriberId = subscription;
 
-        var currentPeriodEnd = subscription.GetCurrentPeriodEnd();
-
-        if (SubscriptionWentUnpaid(parsedEvent, subscription) ||
-            SubscriptionWentIncompleteExpired(parsedEvent, subscription))
+        var subscriber = await GetSubscriberAsync(subscriberId);
+        if (subscriber == null)
         {
-            await DisableSubscriberAsync(subscriberId, currentPeriodEnd);
-            await SetSubscriptionToCancelAsync(subscription);
+            _logger.LogWarning(
+                "Subscriber not found for subscription ({SubscriptionId}) in event ({EventId}), skipping handler",
+                subscription.Id,
+                parsedEvent.Id);
+            return;
+        }
+
+        var currentPeriodEnd = subscription.GetCurrentPeriodEnd();
+        var clearOrgBillingAutomationExemption = false;
+
+        if (SubscriptionWentUnpaid(parsedEvent, subscription))
+        {
+            if (SkipUnpaidBillingAutomationsForExemptOrganization(subscriber))
+            {
+                _logger.LogInformation(
+                    "Skipping billing automations for exempt organization ({OrganizationId}). Exemption will be cleared after handler completion",
+                    subscriber.Id);
+                clearOrgBillingAutomationExemption = true;
+            }
+            else
+            {
+                await DisableSubscriberAsync(subscriber, currentPeriodEnd);
+                await SetSubscriptionToCancelAsync(subscription);
+            }
+        }
+        else if (SubscriptionWentIncompleteExpired(parsedEvent, subscription))
+        {
+            // Subscription is already terminal in Stripe; any attempt to
+            // schedule a cancel would be rejected and 500 the webhook,
+            // causing Stripe to retry and re-run DisableSubscriberAsync.
+            await DisableSubscriberAsync(subscriber, currentPeriodEnd);
         }
         else if (SubscriptionBecameActive(parsedEvent, subscription))
         {
-            await EnableSubscriberAsync(subscriberId, currentPeriodEnd);
+            await EnableSubscriberAsync(subscriber, currentPeriodEnd);
             await RemovePendingCancellationAsync(subscription);
         }
 
-        await subscriberId.Match(
-            userId => _userService.UpdatePremiumExpirationAsync(userId.Value, currentPeriodEnd),
-            async organizationId =>
-            {
-                if (_featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        switch (subscriber)
+        {
+            case User user:
+                await _userService.UpdatePremiumExpirationAsync(user.Id, currentPeriodEnd);
+                break;
+            case Organization organization:
                 {
-                    await HandleScheduleTriggeredFamiliesMigrationAsync(parsedEvent, subscription, organizationId.Value);
+                    if (_featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+                    {
+                        await HandleScheduleTriggeredFamiliesMigrationAsync(parsedEvent, subscription, organization.Id);
+                    }
+
+                    await HandleScheduleTriggeredBusinessMigrationAsync(parsedEvent, subscription, organization.Id);
+
+                    await _organizationService.UpdateExpirationDateAsync(organization.Id, currentPeriodEnd);
+
+                    if (_stripeEventUtilityService.IsSponsoredSubscription(subscription) && currentPeriodEnd.HasValue)
+                    {
+                        await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(organization.Id, currentPeriodEnd.Value);
+                    }
+
+                    await RemovePasswordManagerCouponIfRemovingSecretsManagerTrialAsync(parsedEvent, subscription, organization.Id);
+
+                    if (clearOrgBillingAutomationExemption)
+                    {
+                        await ClearBillingAutomationExemptionAsync(organization.Id);
+                    }
+                    break;
                 }
-
-                await _organizationService.UpdateExpirationDateAsync(organizationId.Value, currentPeriodEnd);
-
-                if (_stripeEventUtilityService.IsSponsoredSubscription(subscription) && currentPeriodEnd.HasValue)
-                {
-                    await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(organizationId.Value, currentPeriodEnd.Value);
-                }
-
-                await RemovePasswordManagerCouponIfRemovingSecretsManagerTrialAsync(parsedEvent, subscription);
-            },
-            _ => Task.CompletedTask);
+        }
     }
 
     private static bool SubscriptionWentUnpaid(
@@ -130,7 +180,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         } && currentSubscription is
         {
             Status: SubscriptionStatus.Unpaid,
-            LatestInvoice.BillingReason: BillingReasons.SubscriptionCreate or BillingReasons.SubscriptionCycle
+            LatestInvoice.BillingReason: BillingReasons.SubscriptionCycle
         };
 
     private static bool SubscriptionWentIncompleteExpired(
@@ -159,65 +209,113 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             LatestInvoice.BillingReason: BillingReasons.SubscriptionCreate or BillingReasons.SubscriptionCycle
         };
 
-    private Task DisableSubscriberAsync(SubscriberId subscriberId, DateTime? currentPeriodEnd) =>
-        subscriberId.Match(
-            async userId =>
-            {
-                await _userService.DisablePremiumAsync(userId.Value, currentPeriodEnd);
-                var user = await _userRepository.GetByIdAsync(userId.Value);
-                if (user != null)
-                {
-                    await _pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user);
-                }
-            },
-            async organizationId =>
-            {
-                await _organizationDisableCommand.DisableAsync(organizationId.Value, currentPeriodEnd);
-                var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
-                if (organization != null)
-                {
-                    await _pushNotificationAdapter.NotifyEnabledChangedAsync(organization);
-                }
-            },
-            async providerId =>
-            {
-                var provider = await _providerRepository.GetByIdAsync(providerId.Value);
-                if (provider != null)
-                {
-                    provider.Enabled = false;
-                    await _providerService.UpdateAsync(provider);
-                }
-            });
+    private static bool SkipUnpaidBillingAutomationsForExemptOrganization(ISubscriber subscriber) =>
+        subscriber is Organization { Enabled: true, ExemptFromBillingAutomation: true };
 
-    private Task EnableSubscriberAsync(SubscriberId subscriberId, DateTime? currentPeriodEnd) =>
-        subscriberId.Match(
-            async userId =>
-            {
-                await _userService.EnablePremiumAsync(userId.Value, currentPeriodEnd);
-                var user = await _userRepository.GetByIdAsync(userId.Value);
-                if (user != null)
-                {
-                    await _pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user!);
-                }
-            },
-            async organizationId =>
-            {
-                await _organizationEnableCommand.EnableAsync(organizationId.Value, currentPeriodEnd);
-                var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
-                if (organization != null)
-                {
-                    await _pushNotificationAdapter.NotifyEnabledChangedAsync(organization);
-                }
-            },
-            async providerId =>
-            {
-                var provider = await _providerRepository.GetByIdAsync(providerId.Value);
-                if (provider != null)
-                {
-                    provider.Enabled = true;
-                    await _providerService.UpdateAsync(provider);
-                }
-            });
+    private Task<ISubscriber?> GetSubscriberAsync(SubscriberId subscriberId) =>
+        subscriberId.Match<Task<ISubscriber?>>(
+            async userId => await _userRepository.GetByIdAsync(userId.Value),
+            async organizationId => await _organizationRepository.GetByIdAsync(organizationId.Value),
+            async providerId => await _providerRepository.GetByIdAsync(providerId.Value));
+
+    private Task DisableSubscriberAsync(ISubscriber subscriber, DateTime? currentPeriodEnd) =>
+        subscriber switch
+        {
+            User user => DisableUserAsync(user.Id, currentPeriodEnd),
+            Organization organization => DisableOrganizationAsync(organization.Id, currentPeriodEnd),
+            Provider provider => DisableProviderAsync(provider.Id),
+            _ => Task.CompletedTask
+        };
+
+    private async Task DisableUserAsync(Guid userId, DateTime? currentPeriodEnd)
+    {
+        await _userService.DisablePremiumAsync(userId, currentPeriodEnd);
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user != null)
+        {
+            await _pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user);
+        }
+    }
+
+    private async Task DisableOrganizationAsync(Guid organizationId, DateTime? currentPeriodEnd)
+    {
+        await _organizationDisableCommand.DisableAsync(organizationId, currentPeriodEnd);
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        if (organization != null)
+        {
+            await _pushNotificationAdapter.NotifyEnabledChangedAsync(organization);
+        }
+    }
+
+    private async Task DisableProviderAsync(Guid providerId)
+    {
+        var provider = await _providerRepository.GetByIdAsync(providerId);
+        if (provider == null)
+        {
+            return;
+        }
+
+        provider.Enabled = false;
+        await _providerService.UpdateAsync(provider);
+    }
+
+    private async Task ClearBillingAutomationExemptionAsync(Guid organizationId)
+    {
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        if (organization == null)
+        {
+            return;
+        }
+
+        organization.ExemptFromBillingAutomation = false;
+        organization.RevisionDate = DateTime.UtcNow;
+        await _organizationRepository.ReplaceAsync(organization);
+
+        _logger.LogInformation(
+            "Exemption has been cleared for organization ({OrganizationId})",
+            organizationId);
+    }
+
+    private Task EnableSubscriberAsync(ISubscriber subscriber, DateTime? currentPeriodEnd) =>
+        subscriber switch
+        {
+            User user => EnableUserAsync(user.Id, currentPeriodEnd),
+            Organization organization => EnableOrganizationAsync(organization.Id, currentPeriodEnd),
+            Provider provider => EnableProviderAsync(provider.Id),
+            _ => Task.CompletedTask
+        };
+
+    private async Task EnableUserAsync(Guid userId, DateTime? currentPeriodEnd)
+    {
+        await _userService.EnablePremiumAsync(userId, currentPeriodEnd);
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user != null)
+        {
+            await _pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user);
+        }
+    }
+
+    private async Task EnableOrganizationAsync(Guid organizationId, DateTime? currentPeriodEnd)
+    {
+        await _organizationEnableCommand.EnableAsync(organizationId, currentPeriodEnd);
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        if (organization != null)
+        {
+            await _pushNotificationAdapter.NotifyEnabledChangedAsync(organization);
+        }
+    }
+
+    private async Task EnableProviderAsync(Guid providerId)
+    {
+        var provider = await _providerRepository.GetByIdAsync(providerId);
+        if (provider == null)
+        {
+            return;
+        }
+
+        provider.Enabled = true;
+        await _providerService.UpdateAsync(provider);
+    }
 
     private async Task SetSubscriptionToCancelAsync(Subscription subscription)
     {
@@ -237,19 +335,33 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             CancellationDetails = new SubscriptionCancellationDetailsOptions
             {
                 Comment = $"Automation: Setting unpaid subscription to cancel 7 days from {now:yyyy-MM-dd}."
+            },
+            // Stamp the origin so SubscriptionDeletedHandler can recognize the eventual
+            // customer.subscription.deleted as the tail of this platform-managed unpaid
+            // lifecycle and void any open invoices. Other cancellation paths (voluntary,
+            // off-platform, provider migration) intentionally do not set this.
+            Metadata = new Dictionary<string, string>
+            {
+                [MetadataKeys.CancellationOrigin] = CancellationOrigins.UnpaidSubscription
             }
         });
     }
 
     private async Task RemovePendingCancellationAsync(Subscription subscription)
     {
-        await _priceIncreaseScheduler.Schedule(subscription);
-
         await _stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
         {
             CancelAtPeriodEnd = false,
-            ProrationBehavior = ProrationBehavior.None
+            ProrationBehavior = ProrationBehavior.None,
+            // Clear the origin marker — the customer paid the unpaid invoice and the
+            // subscription is recovering. Stripe removes a metadata key when its value
+            // is set to an empty string.
+            Metadata = new Dictionary<string, string>
+            {
+                [MetadataKeys.CancellationOrigin] = string.Empty
+            }
         });
+        await _priceIncreaseScheduler.ScheduleForSubscription(subscription);
     }
 
     /// <summary>
@@ -258,19 +370,18 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     /// </summary>
     /// <param name="parsedEvent"></param>
     /// <param name="subscription"></param>
+    /// <param name="organizationId"></param>
     private async Task RemovePasswordManagerCouponIfRemovingSecretsManagerTrialAsync(
         Event parsedEvent,
-        Subscription subscription)
+        Subscription subscription,
+        Guid organizationId)
     {
         if (parsedEvent.Data.PreviousAttributes?.items is null)
         {
             return;
         }
 
-        var organization = subscription.Metadata.TryGetValue("organizationId", out var organizationId)
-            ? await _organizationRepository.GetByIdAsync(Guid.Parse(organizationId))
-            : null;
-
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
         if (organization == null)
         {
             return;
@@ -424,4 +535,168 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 organizationId);
         }
     }
+
+    private async Task HandleScheduleTriggeredBusinessMigrationAsync(
+        Event parsedEvent,
+        Subscription subscription,
+        Guid organizationId)
+    {
+        try
+        {
+            if (!_featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
+            {
+                return;
+            }
+
+            if (subscription.ScheduleId == null)
+            {
+                return;
+            }
+
+            var previousSubscription = parsedEvent.Data.PreviousAttributes?.ToObject<Subscription>() as Subscription;
+            if (previousSubscription?.Items?.Data == null)
+            {
+                _logger.LogWarning(
+                    "Schedule-triggered business migration fired for organization ({OrganizationId}) but the event had no previous subscription items to inspect",
+                    organizationId);
+                return;
+            }
+
+            var assignment = await _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId);
+            if (assignment == null)
+            {
+                return;
+            }
+
+            if (assignment.MigratedDate.HasValue)
+            {
+                _logger.LogInformation(
+                    "Schedule-triggered business migration already applied for organization ({OrganizationId}); skipping (assignment.MigratedDate is set)",
+                    organizationId);
+                return;
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            if (organization == null)
+            {
+                _logger.LogWarning(
+                    "Organization ({OrganizationId}) not found for schedule-triggered business migration",
+                    organizationId);
+                return;
+            }
+
+            var cohort = await _cohortRepository.GetByIdAsync(assignment.CohortId);
+            if (cohort == null || cohort.MigrationPathId == null)
+            {
+                _logger.LogWarning(
+                    "Schedule-triggered business migration fired for organization ({OrganizationId}) but cohort ({CohortId}) is missing or has no MigrationPathId",
+                    organizationId,
+                    assignment.CohortId);
+                return;
+            }
+
+            var migrationPath = MigrationPaths.FromId(cohort.MigrationPathId.Value);
+            if (migrationPath == null)
+            {
+                _logger.LogWarning(
+                    "Schedule-triggered business migration fired for organization ({OrganizationId}) but cohort ({CohortId}) references unregistered MigrationPathId ({MigrationPathId})",
+                    organizationId,
+                    cohort.Id,
+                    cohort.MigrationPathId.Value);
+                return;
+            }
+
+            var sourcePlan = await _pricingClient.GetPlanOrThrow(migrationPath.FromPlan);
+            var sourcePriceId = GetPasswordManagerPriceId(sourcePlan);
+            if (string.IsNullOrEmpty(sourcePriceId))
+            {
+                _logger.LogWarning(
+                    "Schedule-triggered business migration for organization ({OrganizationId}): source plan ({SourcePlanType}) has no resolvable PasswordManager price id; skipping",
+                    organizationId,
+                    sourcePlan.Type);
+                return;
+            }
+
+            if (!previousSubscription.Items.Data.Any(item =>
+                    item.Price?.Id != null && item.Price.Id == sourcePriceId))
+            {
+                return;
+            }
+
+            var targetPlan = await _pricingClient.GetPlanOrThrow(migrationPath.ToPlan);
+            var targetPriceId = GetPasswordManagerPriceId(targetPlan);
+            if (string.IsNullOrEmpty(targetPriceId))
+            {
+                _logger.LogWarning(
+                    "Schedule-triggered business migration for organization ({OrganizationId}): target plan ({TargetPlanType}) has no resolvable PasswordManager price id; skipping",
+                    organizationId,
+                    targetPlan.Type);
+                return;
+            }
+
+            if (!subscription.Items.Any(item => item.Price?.Id != null && item.Price.Id == targetPriceId))
+            {
+                _logger.LogWarning(
+                    "Schedule-triggered business migration for organization ({OrganizationId}): expected target price ({ExpectedPriceId}) for PlanType ({TargetPlanType}) not found in current subscription items; skipping",
+                    organizationId,
+                    targetPriceId,
+                    targetPlan.Type);
+                return;
+            }
+
+            organization.ChangePlan(targetPlan);
+            await _organizationRepository.ReplaceAsync(organization);
+
+            try
+            {
+                assignment.MigratedDate = DateTime.UtcNow;
+                assignment.RevisionDate = DateTime.UtcNow;
+                await _cohortAssignmentRepository.ReplaceAsync(assignment);
+            }
+            catch (Exception assignmentException)
+            {
+                // Partial-write window: the organization was migrated successfully but the
+                // assignment stamp failed. Log full cohort context so the inconsistent state
+                // is observable, then surface as a BillingException. Stripe replays the same
+                // event payload on retry and ChangePlan is structurally idempotent — re-applying
+                // the same target plan shape is a no-op, and the assignment stamp re-runs cleanly.
+                _logger.LogError(
+                    assignmentException,
+                    "Business migration applied to organization ({OrganizationId}) but failed to stamp MigratedDate on cohort assignment ({CohortId}, MigrationPathId {MigrationPathId}); Stripe retry will re-apply",
+                    organizationId,
+                    cohort.Id,
+                    cohort.MigrationPathId.Value);
+                throw new BillingException(
+                    message: "Partial business migration write: organization updated but cohort assignment stamp failed.",
+                    innerException: assignmentException);
+            }
+
+            _logger.LogInformation(
+                "Schedule-triggered business migration applied for organization ({OrganizationId}): PlanType {SourcePlanType} -> {TargetPlanType}, cohort ({CohortId})",
+                organizationId,
+                migrationPath.FromPlan,
+                migrationPath.ToPlan,
+                cohort.Id);
+        }
+        catch (BillingException)
+        {
+            // Rethrow distinguishes a partial-write or pricing-service failure from a regular
+            // catch-all; without this, the generic catch below would swallow it and Stripe
+            // would not retry. GetPlanOrThrow surfaces BillingException for pricing-service
+            // errors, unknown plan types, and malformed responses.
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(
+                exception,
+                "Failed to handle schedule-triggered business migration for organization ({OrganizationId})",
+                organizationId);
+        }
+    }
+
+    private static string GetPasswordManagerPriceId(Bit.Core.Models.StaticStore.Plan plan) =>
+        plan.HasNonSeatBasedPasswordManagerPlan()
+            ? plan.PasswordManager.StripePlanId
+            : plan.PasswordManager.StripeSeatPlanId;
 }
