@@ -1,7 +1,8 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
 
@@ -11,31 +12,45 @@ public class OrganizationDomainAllowEmailChangeQuery(
     : IOrganizationDomainAllowEmailChangeQuery
 {
     /// <inheritdoc />
-    public async Task<OrganizationDomainAllowEmailChangeDenialReason> IsAllowedAsync(User user, string newEmailDomain)
+    public async Task IsAllowedAsync(User user, string newEmail)
     {
-        // We want to see if the user is currently a claimed account
+        var newDomain = EmailValidation.GetDomain(newEmail);
+        if (newDomain == EmailValidation.GetDomain(user.Email))
+        {
+            return;
+        }
+
+        // If the user is claimed by any active organization that uses organization domains,
+        // the new domain must be one of those organizations' verified domains.
         var organizationsWithVerifiedUserEmailDomain =
             await organizationRepository.GetByVerifiedUserEmailDomainAsync(user.Id);
 
         var claimingOrganizations = organizationsWithVerifiedUserEmailDomain
             .Where(organization => organization is { Enabled: true, UseOrganizationDomains: true })
-            .Select(organization => organization.Id);
+            .Select(organization => organization.Id)
+            .ToList();
 
-        // If their account is claimed we need to apply those organization rules to the newEmailDomain.
-        if (claimingOrganizations.Any())
+        if (claimingOrganizations.Count > 0)
         {
-            var verifiedDomains = await organizationDomainRepository.GetVerifiedDomainsByOrganizationIdsAsync(
-                claimingOrganizations);
+            var verifiedDomains = await organizationDomainRepository
+                .GetVerifiedDomainsByOrganizationIdsAsync(claimingOrganizations);
 
-            return verifiedDomains.Any(verifiedDomain => verifiedDomain.DomainName == newEmailDomain)
-                ? OrganizationDomainAllowEmailChangeDenialReason.Allowed
-                : OrganizationDomainAllowEmailChangeDenialReason.UserIsClaimedAndDomainNotVerified;
+            if (!verifiedDomains.Any(verifiedDomain => verifiedDomain.DomainName == newDomain))
+            {
+                throw new BadRequestException(
+                    "Your account is managed by an organization, and this email address isn't on one of the organization's verified domains.");
+            }
+
+            return;
         }
 
-        // User is not claimed — fall back to the global block-policy check.
-        var isDomainBlocked = await organizationDomainRepository.HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(newEmailDomain);
-        return isDomainBlocked
-            ? OrganizationDomainAllowEmailChangeDenialReason.DomainIsBlockedByPolicy
-            : OrganizationDomainAllowEmailChangeDenialReason.Allowed;
+        // Unclaimed user — fall back to the global block-policy check.
+        var isDomainBlocked = await organizationDomainRepository
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(newDomain);
+        if (isDomainBlocked)
+        {
+            throw new BadRequestException(
+                "This email address is claimed by an organization using Bitwarden.");
+        }
     }
 }
