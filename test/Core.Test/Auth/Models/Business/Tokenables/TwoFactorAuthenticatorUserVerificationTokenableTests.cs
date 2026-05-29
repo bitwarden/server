@@ -32,10 +32,14 @@ public class TwoFactorAuthenticatorUserVerificationTokenableTests
     [Fact]
     public void Constructor_AfterInitialization_ExpirationSetToExpectedDuration()
     {
+        var before = DateTime.UtcNow;
         var token = new TwoFactorAuthenticatorUserVerificationTokenable();
-        var expectedExpiration = DateTime.UtcNow + TimeSpan.FromMinutes(30);
+        var after = DateTime.UtcNow;
 
-        Assert.True((expectedExpiration - token.ExpirationDate).Duration() < _timeTolerance);
+        Assert.InRange(
+            token.ExpirationDate,
+            before + TimeSpan.FromMinutes(30),
+            after + TimeSpan.FromMinutes(30));
     }
 
     [Theory, AutoData]

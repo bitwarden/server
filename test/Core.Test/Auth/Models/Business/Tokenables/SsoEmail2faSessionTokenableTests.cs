@@ -41,10 +41,14 @@ public class SsoEmail2faSessionTokenableTests
     [Fact]
     public void Constructor_AfterInitialization_ExpirationSetToExpectedDuration()
     {
+        var before = DateTime.UtcNow;
         var token = new SsoEmail2faSessionTokenable();
-        var expectedExpiration = DateTime.UtcNow + SsoEmail2faSessionTokenable.GetTokenLifetime();
+        var after = DateTime.UtcNow;
 
-        Assert.True(expectedExpiration - token.ExpirationDate < _timeTolerance);
+        Assert.InRange(
+            token.ExpirationDate,
+            before + SsoEmail2faSessionTokenable.GetTokenLifetime(),
+            after + SsoEmail2faSessionTokenable.GetTokenLifetime());
     }
 
     /// <summary>

@@ -52,10 +52,11 @@ public class SsoTokenableTests
     [Fact]
     public void SetsExpirationFromConstructor()
     {
-        var expectedDateTime = DateTime.UtcNow.AddSeconds(500);
+        var before = DateTime.UtcNow;
         var token = new SsoTokenable(null, 500);
+        var after = DateTime.UtcNow;
 
-        Assert.Equal(expectedDateTime, token.ExpirationDate, TimeSpan.FromMilliseconds(10));
+        Assert.InRange(token.ExpirationDate, before.AddSeconds(500), after.AddSeconds(500));
     }
 
     [Theory, AutoData]

@@ -52,10 +52,14 @@ public class RegistrationEmailVerificationTokenableTests
     [Fact]
     public void Constructor_AfterInitialization_ExpirationSetToExpectedDuration()
     {
+        var before = DateTime.UtcNow;
         var token = new RegistrationEmailVerificationTokenable();
-        var expectedExpiration = DateTime.UtcNow + SsoEmail2faSessionTokenable.GetTokenLifetime();
+        var after = DateTime.UtcNow;
 
-        Assert.True(expectedExpiration - token.ExpirationDate < _timeTolerance);
+        Assert.InRange(
+            token.ExpirationDate,
+            before + RegistrationEmailVerificationTokenable.GetTokenLifetime(),
+            after + RegistrationEmailVerificationTokenable.GetTokenLifetime());
     }
 
     /// <summary>
