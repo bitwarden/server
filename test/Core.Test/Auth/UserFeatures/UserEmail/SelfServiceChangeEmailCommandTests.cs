@@ -5,6 +5,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Authorization;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -47,6 +48,11 @@ public class SelfServiceChangeEmailCommandTests
 
         await sutProvider.GetDependency<IChangeEmailCommand>().Received(1)
             .ChangeEmailAsync(user, _newEmail);
+        // Push must run after a successful change so other devices refresh their settings;
+        // ChangeEmailCommand intentionally does not push (commit 3a25853d5), so the responsibility
+        // sits here in the calling command.
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushSyncSettingsAsync(user.Id);
     }
 
     [Theory, BitAutoData]
@@ -65,6 +71,8 @@ public class SelfServiceChangeEmailCommandTests
             .CheckPasswordAsync(default!, default!);
         await sutProvider.GetDependency<IChangeEmailCommand>().DidNotReceiveWithAnyArgs()
             .ChangeEmailAsync(default!, default!);
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs()
+            .PushSyncSettingsAsync(default!);
     }
 
     [Theory, BitAutoData]
@@ -87,6 +95,8 @@ public class SelfServiceChangeEmailCommandTests
         // effect that would have followed token verification.
         await sutProvider.GetDependency<IChangeEmailCommand>().DidNotReceiveWithAnyArgs()
             .ChangeEmailAsync(default!, default!);
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs()
+            .PushSyncSettingsAsync(default!);
     }
 
     [Theory, BitAutoData]
@@ -107,6 +117,8 @@ public class SelfServiceChangeEmailCommandTests
 
         await sutProvider.GetDependency<IChangeEmailCommand>().DidNotReceiveWithAnyArgs()
             .ChangeEmailAsync(default!, default!);
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs()
+            .PushSyncSettingsAsync(default!);
     }
 
     [Theory, BitAutoData]

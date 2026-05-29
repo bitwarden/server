@@ -27,6 +27,7 @@ using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Bit.Api.Test.Auth.Controllers;
@@ -196,9 +197,6 @@ public class AccountsControllerTests : IDisposable
         ConfigureUserServiceToReturnValidPrincipalFor(user);
         const string newEmail = "example@user.com";
         const string masterPasswordHash = "master-password-hash";
-        _selfServiceChangeEmailCommand
-            .InitiateChangeEmailAsync(user, masterPasswordHash, newEmail)
-            .Returns(IdentityResult.Success);
 
         // Act
         await _sut.PostEmailToken(new EmailTokenRequestModel
@@ -217,28 +215,29 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task PostEmailToken_FlagOn_WhenCommandFails_ShouldThrowBadRequestException()
+    public async Task PostEmailToken_FlagOn_WhenCommandThrows_PropagatesException()
     {
-        // Arrange
+        // The command now signals failure by throwing; the controller's job on the flag-on path is
+        // just to let that exception bubble up to the global ASP.NET exception handler.
         _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
+        var thrown = new BadRequestException("boom");
         _selfServiceChangeEmailCommand
             .InitiateChangeEmailAsync(user, Arg.Any<string>(), Arg.Any<string>())
-            .Returns(IdentityResult.Failed(new IdentityError { Code = "Boom", Description = "boom" }));
+            .ThrowsAsync(thrown);
 
-        // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => _sut.PostEmailToken(new EmailTokenRequestModel { NewEmail = "example@user.com" })
         );
+        Assert.Same(thrown, ex);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task PostEmailToken_WhenKeyConnectorUser_ShouldThrowBadRequestException(bool flagOn)
+    [Fact]
+    public async Task PostEmailToken_FlagOff_WhenKeyConnectorUser_ShouldThrowBadRequestException()
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(flagOn);
+        // Legacy path: the controller short-circuits on UsesKeyConnector before the password check.
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(false);
         var user = GenerateExampleUser();
         user.UsesKeyConnector = true;
         ConfigureUserServiceToReturnValidPrincipalFor(user);
@@ -289,6 +288,52 @@ public class AccountsControllerTests : IDisposable
         await Assert.ThrowsAsync<BadRequestException>(
             () => _sut.PostEmail(LegacyEmailRequestModel())
         );
+    }
+
+    [Fact]
+    public async Task PostEmail_FlagOn_DelegatesToSelfServiceChangeEmailCommand()
+    {
+        // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
+        var user = GenerateExampleUser();
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        const string newEmail = "example@user.com";
+        const string masterPasswordHash = "master-password-hash";
+        const string token = "change-email-token";
+
+        // Act
+        await _sut.PostEmail(new EmailRequestModel
+        {
+            MasterPasswordHash = masterPasswordHash,
+            NewEmail = newEmail,
+            Token = token
+        });
+
+        // Assert
+        await _selfServiceChangeEmailCommand.Received(1)
+            .ChangeEmailAsync(user, masterPasswordHash, newEmail, token);
+        // Legacy path must NOT run when the flag is on.
+        await _userService.DidNotReceiveWithAnyArgs().ChangeEmailAsync(
+            default!, default!, default!, default!, default!, default!);
+    }
+
+    [Fact]
+    public async Task PostEmail_FlagOn_WhenCommandThrows_PropagatesException()
+    {
+        // The command now signals failure by throwing; the controller's job on the flag-on path is
+        // just to let that exception bubble up to the global ASP.NET exception handler.
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
+        var user = GenerateExampleUser();
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        var thrown = new BadRequestException("boom");
+        _selfServiceChangeEmailCommand
+            .ChangeEmailAsync(user, Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+            .ThrowsAsync(thrown);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => _sut.PostEmail(new EmailRequestModel { NewEmail = "example@user.com" })
+        );
+        Assert.Same(thrown, ex);
     }
 
     // Returns a model with the legacy-path required fields (NewMasterPasswordHash and Key) populated
