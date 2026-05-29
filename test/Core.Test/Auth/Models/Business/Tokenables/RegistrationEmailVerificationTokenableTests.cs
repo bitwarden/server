@@ -97,6 +97,36 @@ public class RegistrationEmailVerificationTokenableTests
     }
 
     /// <summary>
+    /// Tests the validity of the token when the token is expired.
+    /// </summary>
+    [Theory, AutoData]
+    public void Valid_ExpiredToken_ReturnsFalse(string email, string name, bool receiveMarketingEmails)
+    {
+        var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails)
+        {
+            ExpirationDate = DateTime.UtcNow.AddMinutes(-1)
+        };
+
+        Assert.False(token.Valid);
+    }
+
+    /// <summary>
+    /// TokenIsValid(string) is a data-only check; expiration is the caller's
+    /// responsibility via the Valid property (or the static ValidateToken
+    /// helper). This documents that contract.
+    /// </summary>
+    [Theory, AutoData]
+    public void TokenIsValid_ExpiredToken_ReturnsTrue(string email, string name, bool receiveMarketingEmails)
+    {
+        var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails)
+        {
+            ExpirationDate = DateTime.UtcNow.AddMinutes(-1)
+        };
+
+        Assert.True(token.TokenIsValid(email));
+    }
+
+    /// <summary>
     /// Tests the token validity when an incorrect email is provided
     /// </summary>
     [Theory, AutoData]

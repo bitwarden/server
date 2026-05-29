@@ -88,6 +88,46 @@ public class SsoEmail2faSessionTokenableTests
     }
 
     /// <summary>
+    /// Tests the validity of the token when the token is expired.
+    /// </summary>
+    [Theory, AutoData]
+    public void Valid_ExpiredToken_ReturnsFalse(User user)
+    {
+        var token = new SsoEmail2faSessionTokenable(user)
+        {
+            ExpirationDate = DateTime.UtcNow.AddMinutes(-1)
+        };
+
+        Assert.False(token.Valid);
+    }
+
+    /// <summary>
+    /// Tests the validity of a freshly initialized token.
+    /// </summary>
+    [Theory, AutoData]
+    public void Valid_NewlyCreatedToken_ReturnsTrue(User user)
+    {
+        var token = new SsoEmail2faSessionTokenable(user);
+
+        Assert.True(token.Valid);
+    }
+
+    /// <summary>
+    /// TokenIsValid(User) is a data-only check; expiration is the caller's
+    /// responsibility via the Valid property. This documents that contract.
+    /// </summary>
+    [Theory, AutoData]
+    public void TokenIsValid_ExpiredToken_ReturnsTrue(User user)
+    {
+        var token = new SsoEmail2faSessionTokenable(user)
+        {
+            ExpirationDate = DateTime.UtcNow.AddMinutes(-1)
+        };
+
+        Assert.True(token.TokenIsValid(user));
+    }
+
+    /// <summary>
     /// Tests the token validity when user ID is null.
     /// </summary>
     [Theory, AutoData]
