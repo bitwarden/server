@@ -46,6 +46,8 @@ public class CohortFormModel : IValidatableObject
             $"MigrationPathSelection '{MigrationPathSelection}' cannot be converted to MigrationPathId.");
     }
 
+    public bool IsChurnOnly => MigrationPathSelection == NoMigrationPath;
+
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (MigrationPathSelection != NoMigrationPath)
