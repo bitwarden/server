@@ -4,11 +4,13 @@ using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Response.TwoFactor;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Identity.TokenProviders;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -249,6 +251,128 @@ public class TwoFactorControllerTests
         Assert.Equal(organization.TwoFactorProviders, request.ToOrganization(organization).TwoFactorProviders);
     }
 
+
+    [Theory, BitAutoData]
+    public async Task PutAuthenticator_ExpiredToken_ThrowsBadRequest(
+        User user,
+        UpdateTwoFactorAuthenticatorRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupAuthenticatorTokenFactoryToReturn(sutProvider, new TwoFactorAuthenticatorUserVerificationTokenable(user, model.Key)
+        {
+            ExpirationDate = DateTime.UtcNow.AddMinutes(-1)
+        });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutAuthenticator(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutAuthenticator_TryUnprotectFails_ThrowsBadRequest(
+        User user,
+        UpdateTwoFactorAuthenticatorRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable>>()
+            .TryUnprotect(model.UserVerificationToken, out Arg.Any<TwoFactorAuthenticatorUserVerificationTokenable>())
+            .Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutAuthenticator(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutAuthenticator_InvalidTokenData_ThrowsBadRequest(
+        User user,
+        User otherUser,
+        UpdateTwoFactorAuthenticatorRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupAuthenticatorTokenFactoryToReturn(sutProvider, new TwoFactorAuthenticatorUserVerificationTokenable(otherUser, "different-key"));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutAuthenticator(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+    }
+
+    [Theory, BitAutoData]
+    public async Task DisableAuthenticator_ExpiredToken_ThrowsBadRequest(
+        User user,
+        TwoFactorAuthenticatorDisableRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupAuthenticatorTokenFactoryToReturn(sutProvider, new TwoFactorAuthenticatorUserVerificationTokenable(user, model.Key)
+        {
+            ExpirationDate = DateTime.UtcNow.AddMinutes(-1)
+        });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DisableAuthenticator(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+    }
+
+    [Theory, BitAutoData]
+    public async Task DisableAuthenticator_TryUnprotectFails_ThrowsBadRequest(
+        User user,
+        TwoFactorAuthenticatorDisableRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable>>()
+            .TryUnprotect(model.UserVerificationToken, out Arg.Any<TwoFactorAuthenticatorUserVerificationTokenable>())
+            .Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DisableAuthenticator(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+    }
+
+    [Theory, BitAutoData]
+    public async Task DisableAuthenticator_InvalidTokenData_ThrowsBadRequest(
+        User user,
+        User otherUser,
+        TwoFactorAuthenticatorDisableRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupAuthenticatorTokenFactoryToReturn(sutProvider, new TwoFactorAuthenticatorUserVerificationTokenable(otherUser, "different-key"));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DisableAuthenticator(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+    }
+
+    private static void SetupGetUserByPrincipalAsync(SutProvider<TwoFactorController> sutProvider, User user)
+    {
+        // PutAuthenticator calls model.ToUser(user) which reads user.TwoFactorProviders
+        // as JSON. BitAutoData populates that with a random non-JSON string. Clear it so
+        // the request handler doesn't fail before the token validation we want to test.
+        user.TwoFactorProviders = null;
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(default)
+            .ReturnsForAnyArgs(user);
+    }
+
+    private static void SetupAuthenticatorTokenFactoryToReturn(
+        SutProvider<TwoFactorController> sutProvider,
+        TwoFactorAuthenticatorUserVerificationTokenable tokenable)
+    {
+        sutProvider.GetDependency<IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable>>()
+            .TryUnprotect(Arg.Any<string>(), out Arg.Any<TwoFactorAuthenticatorUserVerificationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = tokenable;
+                return true;
+            });
+    }
+
+    private static void AssertModelStateContains(BadRequestException exception, string key, string expectedMessage)
+    {
+        Assert.NotNull(exception.ModelState);
+        Assert.True(exception.ModelState.ContainsKey(key), $"Expected ModelState to contain key '{key}'.");
+        Assert.Contains(exception.ModelState[key]!.Errors, e => e.ErrorMessage == expectedMessage);
+    }
 
     private string GetUserTwoFactorDuoProvidersJson()
     {
