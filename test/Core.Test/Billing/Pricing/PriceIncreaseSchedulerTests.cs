@@ -193,8 +193,8 @@ public class PriceIncreaseSchedulerTests
             CreateSubscriptionItem("premium-old-seat", 1));
         subscription.Discounts =
         [
-            new Discount { Coupon = new Coupon { Id = "existing-grandfather-discount" } },
-            new Discount { Coupon = new Coupon { Id = "existing-nfr-discount" } }
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "existing-grandfather-discount" } } },
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "existing-nfr-discount" } } }
         ];
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
@@ -1041,7 +1041,7 @@ public class PriceIncreaseSchedulerTests
             CreateSubscriptionItem(source.PasswordManager.StripeSeatPlanId, 10));
         subscription.Discounts =
         [
-            new Discount { Coupon = new Coupon { Id = "grandfather" } }
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "grandfather" } } }
         ];
         var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent);
 
@@ -1089,12 +1089,12 @@ public class PriceIncreaseSchedulerTests
             CreateSubscriptionItem(source.PasswordManager.StripeSeatPlanId, 10));
         subscription.Discounts =
         [
-            new Discount { Coupon = new Coupon { Id = "grandfather" } }
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "grandfather" } } }
         ];
         subscription.Customer = new Customer
         {
             Id = "cus_1",
-            Discount = new Discount { Coupon = new Coupon { Id = "retention" } }
+            Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } }
         };
         var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent);
 
@@ -1144,7 +1144,7 @@ public class PriceIncreaseSchedulerTests
         subscription.Customer = new Customer
         {
             Id = "cus_1",
-            Discount = new Discount { Coupon = new Coupon { Id = "retention" } }
+            Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } }
         };
         var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent);
 
@@ -1192,7 +1192,7 @@ public class PriceIncreaseSchedulerTests
             CreateSubscriptionItem(source.PasswordManager.StripeSeatPlanId, 10));
         subscription.Discounts =
         [
-            new Discount { Coupon = new Coupon { Id = "grandfather" } }
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "grandfather" } } }
         ];
         var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent, proactiveCoupon: "PROACT-25");
 
@@ -1241,7 +1241,7 @@ public class PriceIncreaseSchedulerTests
             CreateSubscriptionItem(source.PasswordManager.StripeSeatPlanId, 10));
         subscription.Discounts =
         [
-            new Discount { Coupon = new Coupon { Id = "grandfather" } }
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "grandfather" } } }
         ];
         var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent, proactiveCoupon: null);
 
