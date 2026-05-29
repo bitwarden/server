@@ -906,6 +906,7 @@ public class PriceIncreaseSchedulerTests
 
         _pricingClient.ListPremiumPlans().Returns([oldPremium, newPremium]);
 
+        var currentPeriodEnd = DateTime.UtcNow.AddYears(1);
         var subscription = CreateSubscription("sub_1", "cus_1",
             CreateSubscriptionItem("premium-old-seat", 1));
         subscription.Items.Data[0].CurrentPeriodEnd = currentPeriodEnd;
