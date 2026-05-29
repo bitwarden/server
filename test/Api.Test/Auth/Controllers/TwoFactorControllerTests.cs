@@ -381,6 +381,7 @@ public class TwoFactorControllerTests
         TwoFactorAuthenticatorDisableRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
+        model.Type = TwoFactorProviderType.Authenticator;
         SetupGetUserByPrincipalAsync(sutProvider, user);
         SetupAuthenticatorTokenFactoryToUnprotectInto(
             sutProvider,
@@ -391,7 +392,7 @@ public class TwoFactorControllerTests
         Assert.IsType<TwoFactorProviderResponseModel>(response);
         await sutProvider.GetDependency<IUserService>()
             .Received(1)
-            .DisableTwoFactorProviderAsync(user, model.Type.Value);
+            .DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Authenticator);
     }
 
     private static void SetupGetUserByPrincipalAsync(SutProvider<TwoFactorController> sutProvider, User user)
