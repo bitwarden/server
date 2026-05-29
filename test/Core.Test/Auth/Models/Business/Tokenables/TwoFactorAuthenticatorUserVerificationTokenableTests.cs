@@ -8,8 +8,6 @@ namespace Bit.Core.Test.Auth.Models.Business.Tokenables;
 
 public class TwoFactorAuthenticatorUserVerificationTokenableTests
 {
-    private static readonly TimeSpan _timeTolerance = TimeSpan.FromMilliseconds(10);
-
     [Theory, AutoData]
     public void Constructor_ValidInputs_PropertiesSetFromInputs(User user, string key)
     {
@@ -153,6 +151,6 @@ public class TwoFactorAuthenticatorUserVerificationTokenableTests
 
         var result = Tokenable.FromToken<TwoFactorAuthenticatorUserVerificationTokenable>(token.ToToken());
 
-        Assert.Equal(expectedDateTime, result.ExpirationDate, precision: _timeTolerance);
+        Assert.Equal(expectedDateTime, result.ExpirationDate, precision: TimeSpan.FromMilliseconds(10));
     }
 }

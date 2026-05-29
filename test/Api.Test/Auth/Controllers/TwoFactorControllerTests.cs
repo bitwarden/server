@@ -259,7 +259,7 @@ public class TwoFactorControllerTests
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupAuthenticatorTokenFactoryToReturn(sutProvider, new TwoFactorAuthenticatorUserVerificationTokenable(user, model.Key)
+        SetupAuthenticatorTokenFactoryToUnprotectInto(sutProvider, new TwoFactorAuthenticatorUserVerificationTokenable(user, model.Key)
         {
             ExpirationDate = DateTime.UtcNow.AddMinutes(-1)
         });
@@ -291,7 +291,7 @@ public class TwoFactorControllerTests
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupAuthenticatorTokenFactoryToReturn(sutProvider, new TwoFactorAuthenticatorUserVerificationTokenable(otherUser, "different-key"));
+        SetupAuthenticatorTokenFactoryToUnprotectInto(sutProvider, new TwoFactorAuthenticatorUserVerificationTokenable(otherUser, "different-key"));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutAuthenticator(model));
         AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
@@ -304,7 +304,7 @@ public class TwoFactorControllerTests
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupAuthenticatorTokenFactoryToReturn(sutProvider, new TwoFactorAuthenticatorUserVerificationTokenable(user, model.Key)
+        SetupAuthenticatorTokenFactoryToUnprotectInto(sutProvider, new TwoFactorAuthenticatorUserVerificationTokenable(user, model.Key)
         {
             ExpirationDate = DateTime.UtcNow.AddMinutes(-1)
         });
@@ -336,7 +336,7 @@ public class TwoFactorControllerTests
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupAuthenticatorTokenFactoryToReturn(sutProvider, new TwoFactorAuthenticatorUserVerificationTokenable(otherUser, "different-key"));
+        SetupAuthenticatorTokenFactoryToUnprotectInto(sutProvider, new TwoFactorAuthenticatorUserVerificationTokenable(otherUser, "different-key"));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DisableAuthenticator(model));
         AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
@@ -354,7 +354,7 @@ public class TwoFactorControllerTests
             .ReturnsForAnyArgs(user);
     }
 
-    private static void SetupAuthenticatorTokenFactoryToReturn(
+    private static void SetupAuthenticatorTokenFactoryToUnprotectInto(
         SutProvider<TwoFactorController> sutProvider,
         TwoFactorAuthenticatorUserVerificationTokenable tokenable)
     {
