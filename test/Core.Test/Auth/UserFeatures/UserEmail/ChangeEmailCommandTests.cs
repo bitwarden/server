@@ -4,7 +4,6 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -59,7 +58,7 @@ public class ChangeEmailCommandTests
     [Theory]
     [BitAutoData("hash")]
     [BitAutoData((string)null)]
-    public async Task ChangeEmailAsync_NonStripeUser_UpdatesFieldsAndPushesSyncSettings(
+    public async Task ChangeEmailAsync_NonStripeUser_UpdatesFields(
         string masterPassword, User user)
     {
         var sutProvider = new SutProvider<ChangeEmailCommand>()
@@ -83,12 +82,6 @@ public class ChangeEmailCommandTests
         Assert.Equal(now, user.RevisionDate);
         Assert.Equal(now, user.AccountRevisionDate);
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
-        // Sessions are not invalidated regardless of master-password presence: this command
-        // assumes the master-password salt has been decoupled from User.Email.
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushSyncSettingsAsync(user.Id);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushLogOutAsync(Arg.Any<Guid>());
         await sutProvider.GetDependency<IStripeSyncService>().DidNotReceive()
             .UpdateCustomerEmailAddressAsync(Arg.Any<string>(), Arg.Any<string>());
     }
@@ -110,8 +103,6 @@ public class ChangeEmailCommandTests
         await sutProvider.GetDependency<IStripeSyncService>().Received(1)
             .UpdateCustomerEmailAddressAsync("cus_123", user.BillingEmailAddress()!);
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushSyncSettingsAsync(user.Id);
     }
 
     [Theory, BitAutoData]
@@ -134,8 +125,6 @@ public class ChangeEmailCommandTests
         await sutProvider.GetDependency<IStripeSyncService>().DidNotReceive()
             .UpdateCustomerEmailAddressAsync(Arg.Any<string>(), Arg.Any<string>());
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushSyncSettingsAsync(user.Id);
     }
 
     [Theory, BitAutoData]
@@ -170,11 +159,6 @@ public class ChangeEmailCommandTests
         Assert.Equal(originalLastEmailChangeDate, user.LastEmailChangeDate);
         // Two persists: initial write, then the rollback write.
         await sutProvider.GetDependency<IUserRepository>().Received(2).ReplaceAsync(user);
-        // No push notification fires if Stripe sync failed.
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushSyncSettingsAsync(Arg.Any<Guid>());
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushLogOutAsync(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData]
@@ -197,10 +181,6 @@ public class ChangeEmailCommandTests
         Assert.Same(thrown, ex);
 
         await sutProvider.GetDependency<IUserRepository>().DidNotReceive().ReplaceAsync(Arg.Any<User>());
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushLogOutAsync(Arg.Any<Guid>());
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushSyncSettingsAsync(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData]
@@ -259,9 +239,5 @@ public class ChangeEmailCommandTests
         Assert.Same(stripeFailure, thrown);
         // Both ReplaceAsync calls were attempted (initial write + rollback write).
         await sutProvider.GetDependency<IUserRepository>().Received(2).ReplaceAsync(user);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushSyncSettingsAsync(Arg.Any<Guid>());
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushLogOutAsync(Arg.Any<Guid>());
     }
 }

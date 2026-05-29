@@ -3,7 +3,6 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Microsoft.Extensions.Logging;
 
@@ -11,14 +10,12 @@ namespace Bit.Core.Auth.UserFeatures.UserEmail;
 
 public class ChangeEmailCommand(
         IUserRepository userRepository,
-        IPushNotificationService pushService,
         IStripeSyncService stripeSyncService,
         IOrganizationDomainAllowEmailChangeQuery organizationDomainAllowEmailChangeQuery,
         TimeProvider timeProvider,
         ILogger<ChangeEmailCommand> logger) : IChangeEmailCommand
 {
     private readonly IUserRepository _userRepository = userRepository;
-    private readonly IPushNotificationService _pushService = pushService;
     private readonly IStripeSyncService _stripeSyncService = stripeSyncService;
     private readonly IOrganizationDomainAllowEmailChangeQuery _organizationDomainAllowEmailChangeQuery = organizationDomainAllowEmailChangeQuery;
     private readonly TimeProvider _timeProvider = timeProvider;
@@ -82,6 +79,5 @@ public class ChangeEmailCommand(
                 throw;
             }
         }
-        await _pushService.PushSyncSettingsAsync(user.Id);
     }
 }
