@@ -101,8 +101,6 @@
                 churnOptionalLabel.hidden = isChurnOnly;
             };
 
-            const initialValue = select ? select.value : '@Model.FormModel.MigrationPathSelection';
-            applyVisibility(initialValue);
             select?.addEventListener('change', (e) => applyVisibility(e.target.value));
         })();
     </script>
