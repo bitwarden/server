@@ -17,6 +17,7 @@ using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TempPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserApiKey.Interfaces;
+using Bit.Core.Auth.UserFeatures.UserEmail;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -56,6 +57,7 @@ public class AccountsController : Controller
     private readonly IChangeKdfCommand _changeKdfCommand;
     private readonly IUserRepository _userRepository;
     private readonly IRotateUserApiKeyCommand _rotateUserApiKeyCommand;
+    private readonly ISelfServiceChangeEmailCommand _selfServiceChangeEmailCommand;
 
     public AccountsController(
         IOrganizationService organizationService,
@@ -75,7 +77,8 @@ public class AccountsController : Controller
         ITwoFactorEmailService twoFactorEmailService,
         IChangeKdfCommand changeKdfCommand,
         IUserRepository userRepository,
-        IRotateUserApiKeyCommand rotateUserApiKeyCommand
+        IRotateUserApiKeyCommand rotateUserApiKeyCommand,
+        ISelfServiceChangeEmailCommand selfServiceChangeEmailCommand
         )
     {
         _organizationService = organizationService;
@@ -96,6 +99,7 @@ public class AccountsController : Controller
         _changeKdfCommand = changeKdfCommand;
         _userRepository = userRepository;
         _rotateUserApiKeyCommand = rotateUserApiKeyCommand;
+        _selfServiceChangeEmailCommand = selfServiceChangeEmailCommand;
     }
 
 
@@ -118,6 +122,24 @@ public class AccountsController : Controller
         if (user.UsesKeyConnector)
         {
             throw new BadRequestException("You cannot change your email when using Key Connector.");
+        }
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand))
+        {
+            var result = await _selfServiceChangeEmailCommand.InitiateChangeEmailAsync(
+                user, model.MasterPasswordHash, model.NewEmail);
+
+            if (result.Succeeded)
+            {
+                return;
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
+            throw new BadRequestException(ModelState);
         }
 
         if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
@@ -150,8 +172,26 @@ public class AccountsController : Controller
             throw new BadRequestException("You cannot change your email when using Key Connector.");
         }
 
-        var result = await _userService.ChangeEmailAsync(user, model.MasterPasswordHash, model.NewEmail,
-            model.NewMasterPasswordHash, model.Token, model.Key);
+        IdentityResult result;
+        if (_featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand))
+        {
+            result = await _selfServiceChangeEmailCommand.ChangeEmailAsync(
+                user, model.MasterPasswordHash, model.NewEmail, model.Token);
+        }
+        else
+        {
+            // Legacy path still rotates the master password and wrapped user key alongside the
+            // email change; those fields are optional on the model so we have to enforce them here.
+            if (string.IsNullOrEmpty(model.NewMasterPasswordHash) || string.IsNullOrEmpty(model.Key))
+            {
+                ModelState.AddModelError(string.Empty, "NewMasterPasswordHash and Key are required.");
+                throw new BadRequestException(ModelState);
+            }
+
+            result = await _userService.ChangeEmailAsync(user, model.MasterPasswordHash, model.NewEmail,
+                model.NewMasterPasswordHash, model.Token, model.Key);
+        }
+
         if (result.Succeeded)
         {
             return;
@@ -674,7 +714,7 @@ public class AccountsController : Controller
         {
             // legacy path while PM37165_RotateUserApiKeyCommand rolls out
             // so temporarily disable the obsolete warning for RotateApiKeyAsync
-#pragma warning disable CS0618 
+#pragma warning disable CS0618
             await _userService.RotateApiKeyAsync(user);
 #pragma warning restore CS0618
         }
