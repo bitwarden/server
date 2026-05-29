@@ -53,6 +53,11 @@ public class OrganizationUserOrganizationDetails : IProfileOrganizationDetails
     public DateTime? FamilySponsorshipValidUntil { get; set; }
     public bool? FamilySponsorshipToDelete { get; set; }
     public bool AccessSecretsManager { get; set; }
+    /// <summary>
+    /// The reason a user is revoked. Null if the user is not revoked, or was revoked before
+    /// revocation reasons were tracked.
+    /// </summary>
+    public Enums.RevocationReason? RevocationReason { get; set; }
     public bool UsePasswordManager { get; set; }
     public int? SmSeats { get; set; }
     public int? SmServiceAccounts { get; set; }
@@ -65,4 +70,8 @@ public class OrganizationUserOrganizationDetails : IProfileOrganizationDetails
     public bool UseAdminSponsoredFamilies { get; set; }
     public bool? IsAdminInitiated { get; set; }
     public bool UseAutomaticUserConfirmation { get; set; }
+    public bool UseDisableSMAdsForUsers { get; set; }
+    public bool UsePhishingBlocker { get; set; }
+    public bool UseMyItems { get; set; }
+    public bool UseInviteLinks { get; set; }
 }

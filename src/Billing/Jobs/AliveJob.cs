@@ -10,4 +10,13 @@ public class AliveJob(ILogger<AliveJob> logger) : BaseJob(logger)
         _logger.LogInformation(Core.Constants.BypassFiltersEventId, null, "Billing service is alive!");
         return Task.FromResult(0);
     }
+
+    public static ITrigger GetTrigger()
+    {
+        return TriggerBuilder.Create()
+            .WithIdentity("EveryTopOfTheHourTrigger")
+            .StartNow()
+            .WithCronSchedule("0 0 * * * ?")
+            .Build();
+    }
 }

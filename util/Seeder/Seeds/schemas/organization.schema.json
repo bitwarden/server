@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "organization.schema.json",
+  "title": "Bitwarden Organization Seed File",
+  "description": "Defines an organization for the Bitwarden Seeder.",
+  "type": "object",
+  "required": ["name", "domain"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Display name of the organization."
+    },
+    "domain": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Domain used for billing email and identifier generation."
+    }
+  }
+}

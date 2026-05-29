@@ -61,6 +61,11 @@ CREATE TABLE [dbo].[Organization] (
     [SyncSeats]                     BIT              NOT NULL CONSTRAINT [DF_Organization_SyncSeats] DEFAULT (0),
     [UseAutomaticUserConfirmation]  BIT              NOT NULL CONSTRAINT [DF_Organization_UseAutomaticUserConfirmation] DEFAULT (0),
     [MaxStorageGbIncreased]         SMALLINT         NULL,
+    [UsePhishingBlocker]            BIT              NOT NULL CONSTRAINT [DF_Organization_UsePhishingBlocker] DEFAULT (0),
+    [UseDisableSmAdsForUsers]       BIT              NOT NULL CONSTRAINT [DF_Organization_UseDisableSmAdsForUsers] DEFAULT (0),
+    [UseMyItems]                    BIT              NOT NULL CONSTRAINT [DF_Organization_UseMyItems] DEFAULT (0),
+    [ExemptFromBillingAutomation]   BIT              NOT NULL CONSTRAINT [DF_Organization_ExemptFromBillingAutomation] DEFAULT (0),
+    [UseInviteLinks]                BIT              NOT NULL CONSTRAINT [DF_Organization_UseInviteLinks] DEFAULT (0),
     CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
@@ -68,9 +73,19 @@ CREATE TABLE [dbo].[Organization] (
 GO
 CREATE NONCLUSTERED INDEX [IX_Organization_Enabled]
     ON [dbo].[Organization]([Id] ASC, [Enabled] ASC)
-    INCLUDE ([UseTotp]);
+    INCLUDE ([UseTotp], [UsersGetPremium]);
 
 GO
 CREATE UNIQUE NONCLUSTERED INDEX [IX_Organization_Identifier]
     ON [dbo].[Organization]([Identifier] ASC)
     WHERE [Identifier] IS NOT NULL;
+
+GO
+CREATE NONCLUSTERED INDEX [IX_Organization_GatewayCustomerId]
+    ON [dbo].[Organization]([GatewayCustomerId])
+    WHERE [GatewayCustomerId] IS NOT NULL;
+
+GO
+CREATE NONCLUSTERED INDEX [IX_Organization_GatewaySubscriptionId]
+    ON [dbo].[Organization]([GatewaySubscriptionId])
+    WHERE [GatewaySubscriptionId] IS NOT NULL;

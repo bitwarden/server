@@ -48,6 +48,8 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     public string? ResetPasswordKey { get; set; }
     /// <inheritdoc cref="OrganizationUserStatusType"/>
     public OrganizationUserStatusType Status { get; set; }
+    /// <inheritdoc cref="OrganizationUserStatusTypeNew"/>
+    public OrganizationUserStatusTypeNew? StatusNew { get; set; }
     /// <summary>
     /// The User's role in the Organization.
     /// </summary>
@@ -65,7 +67,7 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     /// <summary>
     /// The last date the OrganizationUser entry was updated.
     /// </summary>
-    public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
+    public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
     /// <summary>
     /// A json blob representing the <see cref="Bit.Core.Models.Data.Permissions"/> of the OrganizationUser if they
     /// are a Custom user role (i.e. the <see cref="OrganizationUserType"/> is Custom). MAY be NULL if they are not
@@ -80,6 +82,22 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     /// True if the User has access to Secrets Manager for this Organization, false otherwise.
     /// </summary>
     public bool AccessSecretsManager { get; set; }
+    /// <summary>
+    /// The reason a user is revoked. Null if the user is not revoked, or was revoked before
+    /// revocation reasons were tracked.
+    /// </summary>
+    public RevocationReason? RevocationReason { get; set; }
+
+    /// <summary>
+    /// Checks whether the given reset password key is non-null and non-whitespace.
+    /// </summary>
+    public static bool IsValidResetPasswordKey(string? resetPasswordKey)
+        => !string.IsNullOrWhiteSpace(resetPasswordKey);
+
+    /// <summary>
+    /// Whether this organization user is enrolled in account recovery.
+    /// </summary>
+    public bool IsEnrolledInAccountRecovery() => IsValidResetPasswordKey(ResetPasswordKey);
 
     public void SetNewId()
     {

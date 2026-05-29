@@ -1,0 +1,17 @@
+@model CreateSubscriptionDiscountModel
+@{
+    ViewData["Title"] = "Import Discount From Stripe";
+}
+
+<h1>Import Discount From Stripe</h1>
+
+<div asp-validation-summary="All" class="alert alert-danger"></div>
+
+@if (!Model.IsImported)
+{
+    <partial name="Partials/_ImportCouponForm" model="Model" />
+}
+else
+{
+    <partial name="Partials/_ConfigureDiscountForm" model="Model" />
+}

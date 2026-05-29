@@ -1,7 +1,6 @@
 ﻿using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -10,6 +9,7 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -384,13 +384,13 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
                 Email = testEmail,
                 MasterPasswordHash = _testPassword,
                 Kdf = KdfType.PBKDF2_SHA256,
-                KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+                KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
                 UserAsymmetricKeys = new KeysRequestModel()
                 {
-                    PublicKey = "public_key",
-                    EncryptedPrivateKey = "private_key"
+                    PublicKey = Bit.Test.Common.Constants.TestEncryptionConstants.PublicKey,
+                    EncryptedPrivateKey = Bit.Test.Common.Constants.TestEncryptionConstants.AES256_CBC_HMAC_Encstring
                 },
-                UserSymmetricKey = "sym_key",
+                UserSymmetricKey = Bit.Test.Common.Constants.TestEncryptionConstants.AES256_CBC_HMAC_Encstring,
             });
         Assert.NotNull(user);
 
@@ -438,13 +438,13 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
                 Email = testEmail,
                 MasterPasswordHash = _testPassword,
                 Kdf = KdfType.PBKDF2_SHA256,
-                KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+                KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
                 UserAsymmetricKeys = new KeysRequestModel()
                 {
-                    PublicKey = "public_key",
-                    EncryptedPrivateKey = "private_key"
+                    PublicKey = Bit.Test.Common.Constants.TestEncryptionConstants.PublicKey,
+                    EncryptedPrivateKey = Bit.Test.Common.Constants.TestEncryptionConstants.AES256_CBC_HMAC_Encstring
                 },
-                UserSymmetricKey = "sym_key",
+                UserSymmetricKey = Bit.Test.Common.Constants.TestEncryptionConstants.AES256_CBC_HMAC_Encstring,
             });
 
         var userService = factory.GetService<IUserService>();
@@ -504,7 +504,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             new Claim("organizationId", organization.Id.ToString()),
             new Claim(JwtClaimTypes.SessionId, "SOMETHING"),
             new Claim(JwtClaimTypes.AuthenticationMethod, "external"),
-            new Claim(JwtClaimTypes.AuthenticationTime, DateTime.UtcNow.AddMinutes(-1).ToEpochTime().ToString())
+            new Claim(JwtClaimTypes.AuthenticationTime, new DateTimeOffset(DateTime.UtcNow.AddMinutes(-1)).ToUnixTimeSeconds().ToString())
         ], "Duende.IdentityServer", JwtClaimTypes.Name, JwtClaimTypes.Role));
 
         authorizationCode.Subject = subject;

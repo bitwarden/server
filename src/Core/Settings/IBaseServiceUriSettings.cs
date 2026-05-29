@@ -13,6 +13,7 @@ public interface IBaseServiceUriSettings
     public string Notifications { get; set; }
     public string Sso { get; set; }
     public string Scim { get; set; }
+    public string FillAssistRules { get; set; }
     public string InternalNotifications { get; set; }
     public string InternalAdmin { get; set; }
     public string InternalIdentity { get; set; }

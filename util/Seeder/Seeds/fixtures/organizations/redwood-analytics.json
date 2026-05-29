@@ -1,0 +1,5 @@
+{
+  "$schema": "../../schemas/organization.schema.json",
+  "name": "Redwood Analytics",
+  "domain": "redwood.example"
+}

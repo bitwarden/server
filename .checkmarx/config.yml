@@ -11,3 +11,7 @@ checkmarx:
         filter: "!test"
       kics:
         filter: "!dev,!.devcontainer"
+      sca:
+        filter: "!dev,!.devcontainer"
+      containers:
+        filter: "!dev,!.devcontainer"

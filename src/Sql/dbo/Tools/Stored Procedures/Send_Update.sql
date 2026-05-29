@@ -15,7 +15,8 @@
     @Disabled BIT,
     @HideEmail BIT,
     @CipherId UNIQUEIDENTIFIER = NULL,
-    @Emails NVARCHAR(1024) = NULL
+    @Emails NVARCHAR(4000) = NULL,
+    @AuthType TINYINT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -38,7 +39,8 @@ BEGIN
         [Disabled] = @Disabled,
         [HideEmail] = @HideEmail,
         [CipherId] = @CipherId,
-        [Emails] = @Emails
+        [Emails] = @Emails,
+        [AuthType] = @AuthType
     WHERE
         [Id] = @Id
 

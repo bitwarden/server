@@ -1,8 +1,9 @@
-﻿using Bit.Core;
-using Bit.Core.Auth.Models.Api.Request.Accounts;
+﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.IntegrationTestCommon;
 using Bit.IntegrationTestCommon.Factories;
+using Bit.Test.Common.Constants;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.TestHost;
 using Xunit;
@@ -63,13 +64,13 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
                 Email = email,
                 MasterPasswordHash = masterPasswordHash,
                 Kdf = KdfType.PBKDF2_SHA256,
-                KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+                KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
                 UserAsymmetricKeys = new KeysRequestModel()
                 {
-                    PublicKey = "public_key",
-                    EncryptedPrivateKey = "private_key"
+                    PublicKey = TestEncryptionConstants.PublicKey,
+                    EncryptedPrivateKey = TestEncryptionConstants.AES256_CBC_HMAC_Encstring
                 },
-                UserSymmetricKey = "sym_key",
+                UserSymmetricKey = TestEncryptionConstants.AES256_CBC_HMAC_Encstring,
             });
 
         return await _identityApplicationFactory.TokenFromPasswordAsync(email, masterPasswordHash);

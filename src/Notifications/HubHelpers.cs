@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Bit.Core.Billing.Models;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Microsoft.AspNetCore.SignalR;
@@ -231,9 +232,50 @@ public class HubHelpers
                 await _hubContext.Clients.User(pendingTasksData.Payload.UserId.ToString())
                     .SendAsync(_receiveMessageMethod, pendingTasksData, cancellationToken);
                 break;
+            case PushType.PolicyChanged:
+                await policyChangedNotificationHandler(notificationJson, cancellationToken);
+                break;
+            case PushType.AutoConfirm:
+                var autoConfirmNotification =
+                    JsonSerializer.Deserialize<PushNotificationData<AutoConfirmPushNotification>>(
+                        notificationJson, _deserializerOptions);
+                if (autoConfirmNotification is null)
+                {
+                    break;
+                }
+
+                await _hubContext.Clients.User(autoConfirmNotification.Payload.UserId.ToString())
+                    .SendAsync(_receiveMessageMethod, autoConfirmNotification, cancellationToken);
+                break;
+            case PushType.PremiumStatusChanged:
+                var premiumStatusNotification =
+                    JsonSerializer.Deserialize<PushNotificationData<PremiumStatusPushNotification>>(
+                        notificationJson, _deserializerOptions);
+                if (premiumStatusNotification is null)
+                {
+                    break;
+                }
+
+                await _hubContext.Clients.User(premiumStatusNotification.Payload.UserId.ToString())
+                    .SendAsync(_receiveMessageMethod, premiumStatusNotification, cancellationToken);
+                break;
             default:
                 _logger.LogWarning("Notification type '{NotificationType}' has not been registered in HubHelpers and will not be pushed as as result", notification.Type);
                 break;
         }
+    }
+
+    private async Task policyChangedNotificationHandler(string notificationJson, CancellationToken cancellationToken)
+    {
+        var policyData = JsonSerializer.Deserialize<PushNotificationData<SyncPolicyPushNotification>>(notificationJson, _deserializerOptions);
+        if (policyData is null)
+        {
+            return;
+        }
+
+        await _hubContext.Clients
+            .Group(NotificationsHub.GetOrganizationGroup(policyData.Payload.OrganizationId))
+            .SendAsync(_receiveMessageMethod, policyData, cancellationToken);
+
     }
 }

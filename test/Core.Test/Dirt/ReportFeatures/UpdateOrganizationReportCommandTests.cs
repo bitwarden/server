@@ -6,10 +6,12 @@ using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Core.Test.Dirt.ReportFeatures;
 
@@ -68,6 +70,8 @@ public class UpdateOrganizationReportCommandTests
             .Received(2).GetByIdAsync(request.ReportId);
         await sutProvider.GetDependency<IOrganizationReportRepository>()
             .Received(1).UpsertAsync(Arg.Any<OrganizationReport>());
+        await sutProvider.GetDependency<IFusionCache>().Received(1)
+            .RemoveByTagAsync(OrganizationReportCacheConstants.BuildCacheTagForOrganizationReports(request.OrganizationId));
     }
 
     [Theory]
@@ -85,7 +89,7 @@ public class UpdateOrganizationReportCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.UpdateOrganizationReportAsync(request));
 
-        Assert.Equal("OrganizationId is required", exception.Message);
+        Assert.Equal("Invalid Organization", exception.Message);
         await sutProvider.GetDependency<IOrganizationReportRepository>()
             .DidNotReceive().UpsertAsync(Arg.Any<OrganizationReport>());
     }
@@ -105,7 +109,7 @@ public class UpdateOrganizationReportCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.UpdateOrganizationReportAsync(request));
 
-        Assert.Equal("ReportId is required", exception.Message);
+        Assert.Equal("Invalid Organization", exception.Message);
         await sutProvider.GetDependency<IOrganizationReportRepository>()
             .DidNotReceive().UpsertAsync(Arg.Any<OrganizationReport>());
     }

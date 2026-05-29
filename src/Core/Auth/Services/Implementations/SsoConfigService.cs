@@ -7,8 +7,6 @@ using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -22,32 +20,26 @@ namespace Bit.Core.Auth.Services;
 public class SsoConfigService : ISsoConfigService
 {
     private readonly ISsoConfigRepository _ssoConfigRepository;
-    private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyQuery _policyQuery;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IEventService _eventService;
-    private readonly IFeatureService _featureService;
     private readonly ISavePolicyCommand _savePolicyCommand;
-    private readonly IVNextSavePolicyCommand _vNextSavePolicyCommand;
 
     public SsoConfigService(
         ISsoConfigRepository ssoConfigRepository,
-        IPolicyRepository policyRepository,
+        IPolicyQuery policyQuery,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IEventService eventService,
-        IFeatureService featureService,
-        ISavePolicyCommand savePolicyCommand,
-        IVNextSavePolicyCommand vNextSavePolicyCommand)
+        ISavePolicyCommand savePolicyCommand)
     {
         _ssoConfigRepository = ssoConfigRepository;
-        _policyRepository = policyRepository;
+        _policyQuery = policyQuery;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _eventService = eventService;
-        _featureService = featureService;
         _savePolicyCommand = savePolicyCommand;
-        _vNextSavePolicyCommand = vNextSavePolicyCommand;
     }
 
     public async Task SaveAsync(SsoConfig config, Organization organization)
@@ -97,19 +89,10 @@ public class SsoConfigService : ISsoConfigService
                 Enabled = true
             };
 
-            if (_featureService.IsEnabled(FeatureFlagKeys.PolicyValidatorsRefactor))
-            {
-                var performedBy = new SystemUser(EventSystemUser.Unknown);
-                await _vNextSavePolicyCommand.SaveAsync(new SavePolicyModel(singleOrgPolicy, performedBy));
-                await _vNextSavePolicyCommand.SaveAsync(new SavePolicyModel(resetPasswordPolicy, performedBy));
-                await _vNextSavePolicyCommand.SaveAsync(new SavePolicyModel(requireSsoPolicy, performedBy));
-            }
-            else
-            {
-                await _savePolicyCommand.SaveAsync(singleOrgPolicy);
-                await _savePolicyCommand.SaveAsync(resetPasswordPolicy);
-                await _savePolicyCommand.SaveAsync(requireSsoPolicy);
-            }
+            var performedBy = new SystemUser(EventSystemUser.Unknown);
+            await _savePolicyCommand.SaveAsync(new SavePolicyModel(singleOrgPolicy, performedBy));
+            await _savePolicyCommand.SaveAsync(new SavePolicyModel(resetPasswordPolicy, performedBy));
+            await _savePolicyCommand.SaveAsync(new SavePolicyModel(requireSsoPolicy, performedBy));
         }
 
         await LogEventsAsync(config, oldConfig);
@@ -130,14 +113,14 @@ public class SsoConfigService : ISsoConfigService
             throw new BadRequestException("Organization cannot use Key Connector.");
         }
 
-        var singleOrgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.SingleOrg);
-        if (singleOrgPolicy is not { Enabled: true })
+        var singleOrgPolicy = await _policyQuery.RunAsync(config.OrganizationId, PolicyType.SingleOrg);
+        if (!singleOrgPolicy.Enabled)
         {
             throw new BadRequestException("Key Connector requires the Single Organization policy to be enabled.");
         }
 
-        var ssoPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.RequireSso);
-        if (ssoPolicy is not { Enabled: true })
+        var ssoPolicy = await _policyQuery.RunAsync(config.OrganizationId, PolicyType.RequireSso);
+        if (!ssoPolicy.Enabled)
         {
             throw new BadRequestException("Key Connector requires the Single Sign-On Authentication policy to be enabled.");
         }

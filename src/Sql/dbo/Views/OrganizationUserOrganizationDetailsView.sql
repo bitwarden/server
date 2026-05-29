@@ -55,7 +55,12 @@ SELECT
     O.[UseAdminSponsoredFamilies],
     O.[UseOrganizationDomains],
     OS.[IsAdminInitiated],
-    O.[UseAutomaticUserConfirmation]
+    O.[UseAutomaticUserConfirmation],
+    O.[UsePhishingBlocker],
+    O.[UseDisableSmAdsForUsers],
+    O.[UseMyItems],
+    O.[UseInviteLinks],
+    OU.[RevocationReason]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN

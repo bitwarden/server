@@ -19,7 +19,7 @@ public enum EmergencyAccessStatusType : byte
     /// </summary>
     RecoveryInitiated = 3,
     /// <summary>
-    /// The grantee has excercised their emergency access.
+    /// The grantee has exercised their emergency access.
     /// </summary>
     RecoveryApproved = 4,
 }

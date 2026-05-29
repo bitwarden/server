@@ -246,7 +246,7 @@ public class CipherRepositoryTests
             OrganizationId = organization.Id,
             Name = "Edit Group",
         });
-        await groupRepository.UpdateUsersAsync(editGroup.Id, new[] { orgUser.Id });
+        await groupRepository.UpdateUsersAsync(editGroup.Id, new[] { orgUser.Id }, DateTime.UtcNow);
 
         // MANAGE
 
@@ -487,7 +487,7 @@ public class CipherRepositoryTests
             OrganizationId = organization.Id,
             Name = "Test Group",
         });
-        await groupRepository.UpdateUsersAsync(group.Id, new[] { orgUser.Id });
+        await groupRepository.UpdateUsersAsync(group.Id, new[] { orgUser.Id }, DateTime.UtcNow);
 
         var (manageCipher, nonManageCipher) = await CreateCipherInOrganizationCollectionWithGroup(
             organization, group, cipherRepository, collectionRepository, collectionCipherRepository, groupRepository);
@@ -626,12 +626,6 @@ public class CipherRepositoryTests
         var deletableCipher = ciphers.SingleOrDefault(x => x.Id == cipher.Id);
         Assert.NotNull(deletableCipher);
         Assert.True(deletableCipher.Manage);
-
-        // Annul
-        await cipherRepository.DeleteAsync(cipher);
-        await organizationUserRepository.DeleteAsync(orgUser);
-        await organizationRepository.DeleteAsync(organization);
-        await userRepository.DeleteAsync(user);
     }
 
     private async Task<(User user, Organization org, OrganizationUser orgUser)> CreateTestUserAndOrganization(
@@ -828,7 +822,7 @@ public class CipherRepositoryTests
             OrganizationId = organization.Id,
             Name = "Edit Group",
         });
-        await groupRepository.UpdateUsersAsync(editGroup.Id, new[] { orgUser1.Id });
+        await groupRepository.UpdateUsersAsync(editGroup.Id, new[] { orgUser1.Id }, DateTime.UtcNow);
 
         // Add collections to Org
         var manageCollection = await collectionRepository.CreateAsync(new Collection
@@ -1034,7 +1028,8 @@ public class CipherRepositoryTests
             ciphers: [cipher],
             collections: [collection],
             collectionCiphers: [collectionCipher],
-            collectionUsers: [collectionUser]);
+            collectionUsers: [collectionUser],
+            []);
 
         // Assert
         var orgCiphers = await cipherRepository.GetManyByOrganizationIdAsync(org.Id);
@@ -1207,10 +1202,110 @@ public class CipherRepositoryTests
         // Act
         await sutRepository.ArchiveAsync(new List<Guid> { cipher.Id }, user.Id);
 
-        // Assert
-        var archivedCipher = await sutRepository.GetByIdAsync(cipher.Id, user.Id);
-        Assert.NotNull(archivedCipher);
-        Assert.NotNull(archivedCipher.ArchivedDate);
+        // Assert – per-user view should show an archive date
+        var archivedCipherForUser = await sutRepository.GetByIdAsync(cipher.Id, user.Id);
+        Assert.NotNull(archivedCipherForUser);
+        Assert.NotNull(archivedCipherForUser.ArchivedDate);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task ArchiveAsync_IsPerUserForSharedCipher(
+        ICipherRepository cipherRepository,
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository,
+        ICollectionCipherRepository collectionCipherRepository)
+    {
+        // Arrange: two users in the same org, both with access to the same cipher
+        var user1 = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User 1",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var user2 = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User 2",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var org = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Organization",
+            BillingEmail = user1.Email,
+            Plan = "Test",
+        });
+
+        var orgUser1 = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            UserId = user1.Id,
+            OrganizationId = org.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Owner,
+        });
+
+        var orgUser2 = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            UserId = user2.Id,
+            OrganizationId = org.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.User,
+        });
+
+        var sharedCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Shared Collection",
+            OrganizationId = org.Id,
+        });
+
+        var cipher = await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = org.Id,
+            Data = "",
+        });
+
+        await collectionCipherRepository.UpdateCollectionsForAdminAsync(
+            cipher.Id,
+            org.Id,
+            new List<Guid> { sharedCollection.Id });
+
+        // Give both org users access to the shared collection
+        await collectionRepository.UpdateUsersAsync(sharedCollection.Id, new List<CollectionAccessSelection>
+    {
+        new()
+        {
+            Id = orgUser1.Id,
+            HidePasswords = false,
+            ReadOnly = false,
+            Manage = true,
+        },
+        new()
+        {
+            Id = orgUser2.Id,
+            HidePasswords = false,
+            ReadOnly = false,
+            Manage = true,
+        },
+    });
+
+        // Act: user1 archives the shared cipher
+        await cipherRepository.ArchiveAsync(new List<Guid> { cipher.Id }, user1.Id);
+
+        // Assert: user1 sees it as archived
+        var cipherForUser1 = await cipherRepository.GetByIdAsync(cipher.Id, user1.Id);
+        Assert.NotNull(cipherForUser1);
+        Assert.NotNull(cipherForUser1.ArchivedDate);
+
+        // Assert: user2 still sees it as *not* archived
+        var cipherForUser2 = await cipherRepository.GetByIdAsync(cipher.Id, user2.Id);
+        Assert.NotNull(cipherForUser2);
+        Assert.Null(cipherForUser2.ArchivedDate);
     }
 
     [DatabaseTheory, DatabaseData]

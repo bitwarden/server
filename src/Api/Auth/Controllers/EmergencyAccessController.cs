@@ -7,7 +7,7 @@ using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Response;
 using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Response;
-using Bit.Core.Auth.Services;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -173,6 +173,28 @@ public class EmergencyAccessController : Controller
     public async Task Password(Guid id, [FromBody] EmergencyAccessPasswordRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
+
+        if (model.RequestHasNewDataTypes())
+        {
+            var result = await _emergencyAccessService.FinishRecoveryTakeoverAsync(
+                id,
+                user,
+                model.UnlockData!.ToData(),
+                model.AuthenticationData!.ToData());
+
+            if (result.Succeeded)
+            {
+                return;
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
+            throw new BadRequestException(ModelState);
+        }
+
         await _emergencyAccessService.PasswordAsync(id, user, model.NewMasterPasswordHash, model.Key);
     }
 

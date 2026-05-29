@@ -25,11 +25,22 @@ public class Cipher : ITableObject<Guid>, ICloneable
     public DateTime? DeletedDate { get; set; }
     public Enums.CipherRepromptType? Reprompt { get; set; }
     public string Key { get; set; }
-    public DateTime? ArchivedDate { get; set; }
+    public string Archives { get; set; }
 
     public void SetNewId()
     {
         Id = CoreHelpers.GenerateComb();
+    }
+
+    public bool IsDataBlobEncrypted()
+    {
+        if (string.IsNullOrWhiteSpace(Data))
+        {
+            return false;
+        }
+
+        var span = Data.AsSpan().TrimStart();
+        return span.Length > 0 && span[0] != '{';
     }
 
     public Dictionary<string, CipherAttachment.MetaData> GetAttachments()

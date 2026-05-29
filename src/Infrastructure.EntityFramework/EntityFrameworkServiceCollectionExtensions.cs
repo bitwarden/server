@@ -1,7 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.Repositories;
 using Bit.Core.Billing.Providers.Repositories;
+using Bit.Core.Billing.Subscriptions.Repositories;
 using Bit.Core.Dirt.Reports.Repositories;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Enums;
@@ -88,6 +90,8 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IOrganizationRepository, OrganizationRepository>();
         services.AddSingleton<IOrganizationSponsorshipRepository, OrganizationSponsorshipRepository>();
         services.AddSingleton<IOrganizationUserRepository, OrganizationUserRepository>();
+        services.AddSingleton<IOrganizationInviteLinkRepository, OrganizationInviteLinkRepository>();
+        services.AddSingleton<IPlayItemRepository, PlayItemRepository>();
         services.AddSingleton<IPolicyRepository, PolicyRepository>();
         services.AddSingleton<IProviderOrganizationRepository, ProviderOrganizationRepository>();
         services.AddSingleton<IProviderRepository, ProviderRepository>();
@@ -101,6 +105,7 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IWebAuthnCredentialRepository, WebAuthnCredentialRepository>();
         services.AddSingleton<IProviderPlanRepository, ProviderPlanRepository>();
         services.AddSingleton<IProviderInvoiceItemRepository, ProviderInvoiceItemRepository>();
+        services.AddSingleton<ISubscriptionDiscountRepository, SubscriptionDiscountRepository>();
         services.AddSingleton<INotificationRepository, NotificationRepository>();
         services.AddSingleton<INotificationStatusRepository, NotificationStatusRepository>();
         services
@@ -110,6 +115,8 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IUserAsymmetricKeysRepository, UserAsymmetricKeysRepository>();
         services.AddSingleton<IUserSignatureKeyPairRepository, UserSignatureKeyPairRepository>();
         services.AddSingleton<IOrganizationInstallationRepository, OrganizationInstallationRepository>();
+        services.AddSingleton<IOrganizationPlanMigrationCohortRepository, OrganizationPlanMigrationCohortRepository>();
+        services.AddSingleton<IOrganizationPlanMigrationCohortAssignmentRepository, OrganizationPlanMigrationCohortAssignmentRepository>();
         services.AddSingleton<IOrganizationReportRepository, OrganizationReportRepository>();
         services.AddSingleton<IOrganizationApplicationRepository, OrganizationApplicationRepository>();
         services.AddSingleton<IOrganizationMemberBaseDetailRepository, OrganizationMemberBaseDetailRepository>();

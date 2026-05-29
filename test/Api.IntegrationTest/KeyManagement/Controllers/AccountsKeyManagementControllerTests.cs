@@ -1,11 +1,13 @@
 ﻿#nullable enable
 using System.Net;
+using System.Text.Json;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.KeyManagement.Models.Requests;
+using Bit.Api.KeyManagement.Models.Responses;
 using Bit.Api.Tools.Models.Request;
-using Bit.Api.Vault.Models;
 using Bit.Api.Vault.Models.Request;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
@@ -14,12 +16,16 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Entities;
 using Bit.Core.KeyManagement.Enums;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Api.Request;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Enums;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.KeyManagement.Controllers;
@@ -28,7 +34,11 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 {
     private static readonly string _mockEncryptedString =
         "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
+    private static readonly string _mockEncryptedType2String2 =
+        "2.06CDSJjTZaigYHUuswIq5A==|trxgZl2RCkYrrmCvGE9WNA==|w5p05eI5wsaYeSyWtsAPvBX63vj798kIMxBTfSB0BQg=";
     private static readonly string _mockEncryptedType7String = "7.AOs41Hd8OQiCPXjyJKCiDA==";
+    private static readonly string _mockEncryptedType7String2 = "7.Mi1iaXR3YXJkZW4tZGF0YQo=";
+    private static readonly string _mockEncryptedType7WrappedSigningKey = "7.DRv74Kg1RSlFSam1MNFlGD==";
 
     private readonly HttpClient _client;
     private readonly IEmergencyAccessRepository _emergencyAccessRepository;
@@ -40,13 +50,13 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IUserSignatureKeyPairRepository _userSignatureKeyPairRepository;
+    private readonly IPushNotificationService _pushNotificationService;
     private string _ownerEmail = null!;
 
     public AccountsKeyManagementControllerTests(ApiApplicationFactory factory)
     {
         _factory = factory;
-        _factory.UpdateConfiguration("globalSettings:launchDarkly:flagValues:pm-12241-private-key-regeneration",
-            "true");
+        _factory.SubstituteService<IPushNotificationService>(_ => { });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
         _userRepository = _factory.GetService<IUserRepository>();
@@ -56,6 +66,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         _passwordHasher = _factory.GetService<IPasswordHasher<User>>();
         _organizationRepository = _factory.GetService<IOrganizationRepository>();
         _userSignatureKeyPairRepository = _factory.GetService<IUserSignatureKeyPairRepository>();
+        _pushNotificationService = _factory.GetService<IPushNotificationService>();
     }
 
     public async Task InitializeAsync()
@@ -68,27 +79,6 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     {
         _client.Dispose();
         return Task.CompletedTask;
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task RegenerateKeysAsync_FeatureFlagTurnedOff_NotFound(KeyRegenerationRequestModel request)
-    {
-        // Localize factory to inject a false value for the feature flag.
-        var localFactory = new ApiApplicationFactory();
-        localFactory.UpdateConfiguration("globalSettings:launchDarkly:flagValues:pm-12241-private-key-regeneration",
-            "false");
-        var localClient = localFactory.CreateClient();
-        var localEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
-        var localLoginHelper = new LoginHelper(localFactory, localClient);
-        await localFactory.LoginWithNewAccount(localEmail);
-        await localLoginHelper.LoginAsync(localEmail);
-
-        request.UserKeyEncryptedUserPrivateKey = _mockEncryptedString;
-
-        var response = await localClient.PostAsJsonAsync("/accounts/key-management/regenerate-keys", request);
-
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Theory]
@@ -185,7 +175,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
     [Theory]
     [BitAutoData]
-    public async Task RotateUserAccountKeysAsync_NotLoggedIn_Unauthorized(
+    public async Task PasswordChangeAndRotateUserAccountKeysAsync_NotLoggedIn_Unauthorized(
         RotateUserAccountKeysAndDataRequestModel request)
     {
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
@@ -195,69 +185,12 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
     [Theory]
     [BitAutoData]
-    public async Task RotateUserAccountKeysAsync_Success(RotateUserAccountKeysAndDataRequestModel request)
+    public async Task PasswordChangeAndRotateUserAccountKeysAsync_Success(RotateUserAccountKeysAndDataRequestModel request)
     {
-        await _loginHelper.LoginAsync(_ownerEmail);
-        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
-        if (user == null)
-        {
-            throw new InvalidOperationException("User not found.");
-        }
-
-        var password = _passwordHasher.HashPassword(user, "newMasterPassword");
-        user.MasterPassword = password;
-        user.PublicKey = "publicKey";
-        user.PrivateKey = _mockEncryptedString;
-        await _userRepository.ReplaceAsync(user);
-
-        request.AccountUnlockData.MasterPasswordUnlockData.KdfType = user.Kdf;
-        request.AccountUnlockData.MasterPasswordUnlockData.KdfIterations = user.KdfIterations;
-        request.AccountUnlockData.MasterPasswordUnlockData.KdfMemory = user.KdfMemory;
-        request.AccountUnlockData.MasterPasswordUnlockData.KdfParallelism = user.KdfParallelism;
-        request.AccountUnlockData.MasterPasswordUnlockData.Email = user.Email;
-        request.AccountKeys.AccountPublicKey = "publicKey";
-        request.AccountKeys.UserKeyEncryptedAccountPrivateKey = _mockEncryptedString;
-        request.AccountKeys.PublicKeyEncryptionKeyPair = null;
-        request.AccountKeys.SignatureKeyPair = null;
-
-        request.OldMasterKeyAuthenticationHash = "newMasterPassword";
-
-        request.AccountData.Ciphers =
-        [
-            new CipherWithIdRequestModel
-            {
-                Id = Guid.NewGuid(),
-                Type = CipherType.Login,
-                Name = _mockEncryptedString,
-                Login = new CipherLoginModel
-                {
-                    Username = _mockEncryptedString,
-                    Password = _mockEncryptedString,
-                },
-            },
-        ];
-        request.AccountData.Folders = [
-            new FolderWithIdRequestModel
-            {
-                Id = Guid.NewGuid(),
-                Name = _mockEncryptedString,
-            },
-        ];
-        request.AccountData.Sends = [
-            new SendWithIdRequestModel
-            {
-                Id = Guid.NewGuid(),
-                Name = _mockEncryptedString,
-                Key = _mockEncryptedString,
-                Disabled = false,
-                DeletionDate = DateTime.UtcNow.AddDays(1),
-            },
-        ];
-        request.AccountUnlockData.MasterPasswordUnlockData.MasterKeyEncryptedUserKey = _mockEncryptedString;
-        request.AccountUnlockData.PasskeyUnlockData = [];
-        request.AccountUnlockData.DeviceKeyUnlockData = [];
-        request.AccountUnlockData.EmergencyAccessUnlockData = [];
-        request.AccountUnlockData.OrganizationAccountRecoveryUnlockData = [];
+        var user = await SetupUserForKeyRotationAsync();
+        SetupRotateUserAccountUnlockData(request, user);
+        SetupRotateUserAccountData(request);
+        SetupRotateUserAccountKeys(request, isV2Crypto: false);
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
         var responseMessage = await response.Content.ReadAsStringAsync();
@@ -283,8 +216,663 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
     [Theory]
     [BitAutoData]
-    public async Task PostSetKeyConnectorKeyAsync_Success(string organizationSsoIdentifier,
-        SetKeyConnectorKeyRequestModel request)
+    public async Task PostSetKeyConnectorKeyAsync_Success(string organizationSsoIdentifier)
+    {
+        var (ssoUserEmail, organization) = await SetupKeyConnectorTestAsync(OrganizationUserStatusType.Invited, organizationSsoIdentifier);
+
+        var ssoUser = await _userRepository.GetByEmailAsync(ssoUserEmail);
+        Assert.NotNull(ssoUser);
+
+        var request = new SetKeyConnectorKeyRequestModel
+        {
+            Key = _mockEncryptedString,
+            Keys = new KeysRequestModel { PublicKey = ssoUser.PublicKey, EncryptedPrivateKey = ssoUser.PrivateKey },
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            OrgIdentifier = organizationSsoIdentifier
+        };
+
+        var response = await _client.PostAsJsonAsync("/accounts/set-key-connector-key", request);
+        response.EnsureSuccessStatusCode();
+
+        var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
+        Assert.NotNull(user);
+        Assert.Equal(request.Key, user.Key);
+        Assert.True(user.UsesKeyConnector);
+        Assert.Equal(DateTime.UtcNow, user.RevisionDate, TimeSpan.FromMinutes(1));
+        Assert.Equal(DateTime.UtcNow, user.AccountRevisionDate, TimeSpan.FromMinutes(1));
+        var ssoOrganizationUser = await _organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id);
+        Assert.NotNull(ssoOrganizationUser);
+        Assert.Equal(OrganizationUserStatusType.Accepted, ssoOrganizationUser.Status);
+        Assert.Equal(user.Id, ssoOrganizationUser.UserId);
+        Assert.Null(ssoOrganizationUser.Email);
+    }
+
+    [Fact]
+    public async Task PostSetKeyConnectorKeyAsync_V2_NotLoggedIn_Unauthorized()
+    {
+        var request = new SetKeyConnectorKeyRequestModel
+        {
+            KeyConnectorKeyWrappedUserKey = _mockEncryptedString,
+            AccountKeys = new AccountKeysRequestModel
+            {
+                AccountPublicKey = "publicKey",
+                UserKeyEncryptedAccountPrivateKey = _mockEncryptedType7String
+            },
+            OrgIdentifier = "test-org"
+        };
+
+        var response = await _client.PostAsJsonAsync("/accounts/set-key-connector-key", request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetKeyConnectorKeyAsync_V2_Success(string organizationSsoIdentifier)
+    {
+        var (ssoUserEmail, organization) = await SetupKeyConnectorTestAsync(OrganizationUserStatusType.Invited, organizationSsoIdentifier);
+
+        var request = new SetKeyConnectorKeyRequestModel
+        {
+            KeyConnectorKeyWrappedUserKey = _mockEncryptedString,
+            AccountKeys = new AccountKeysRequestModel
+            {
+                AccountPublicKey = "publicKey",
+                UserKeyEncryptedAccountPrivateKey = _mockEncryptedType7String,
+                PublicKeyEncryptionKeyPair = new PublicKeyEncryptionKeyPairRequestModel
+                {
+                    PublicKey = "publicKey",
+                    WrappedPrivateKey = _mockEncryptedType7String,
+                    SignedPublicKey = "signedPublicKey"
+                },
+                SignatureKeyPair = new SignatureKeyPairRequestModel
+                {
+                    SignatureAlgorithm = "ed25519",
+                    WrappedSigningKey = _mockEncryptedType7WrappedSigningKey,
+                    VerifyingKey = "verifyingKey"
+                },
+                SecurityState = new SecurityStateModel
+                {
+                    SecurityVersion = 2,
+                    SecurityState = "v2"
+                }
+            },
+            OrgIdentifier = organizationSsoIdentifier
+        };
+
+        var response = await _client.PostAsJsonAsync("/accounts/set-key-connector-key", request);
+        response.EnsureSuccessStatusCode();
+
+        var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
+        Assert.NotNull(user);
+        Assert.Equal(request.KeyConnectorKeyWrappedUserKey, user.Key);
+        Assert.True(user.UsesKeyConnector);
+        Assert.Equal(KdfType.Argon2id, user.Kdf);
+        Assert.Equal(KdfConstants.ARGON2_ITERATIONS.Default, user.KdfIterations);
+        Assert.Equal(KdfConstants.ARGON2_MEMORY.Default, user.KdfMemory);
+        Assert.Equal(KdfConstants.ARGON2_PARALLELISM.Default, user.KdfParallelism);
+        Assert.Equal(request.AccountKeys.PublicKeyEncryptionKeyPair!.SignedPublicKey, user.SignedPublicKey);
+        Assert.Equal(request.AccountKeys.SecurityState!.SecurityState, user.SecurityState);
+        Assert.Equal(request.AccountKeys.SecurityState.SecurityVersion, user.SecurityVersion);
+        Assert.Equal(DateTime.UtcNow, user.RevisionDate, TimeSpan.FromMinutes(1));
+        Assert.Equal(DateTime.UtcNow, user.AccountRevisionDate, TimeSpan.FromMinutes(1));
+
+        var ssoOrganizationUser =
+            await _organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id);
+        Assert.NotNull(ssoOrganizationUser);
+        Assert.Equal(OrganizationUserStatusType.Accepted, ssoOrganizationUser.Status);
+        Assert.Equal(user.Id, ssoOrganizationUser.UserId);
+        Assert.Null(ssoOrganizationUser.Email);
+
+        var signatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(user.Id);
+        Assert.NotNull(signatureKeyPair);
+        Assert.Equal(SignatureAlgorithm.Ed25519, signatureKeyPair.SignatureAlgorithm);
+        Assert.Equal(_mockEncryptedType7WrappedSigningKey, signatureKeyPair.WrappedSigningKey);
+        Assert.Equal("verifyingKey", signatureKeyPair.VerifyingKey);
+    }
+
+    [Fact]
+    public async Task PostConvertToKeyConnectorAsync_NotLoggedIn_Unauthorized()
+    {
+        var response = await _client.PostAsJsonAsync("/accounts/convert-to-key-connector", new { });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostConvertToKeyConnectorAsync_Success()
+    {
+        var (ssoUserEmail, organization) = await SetupKeyConnectorTestAsync(OrganizationUserStatusType.Accepted);
+
+        var response = await _client.PostAsJsonAsync("/accounts/convert-to-key-connector", new { });
+        response.EnsureSuccessStatusCode();
+
+        var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
+        Assert.NotNull(user);
+        Assert.Null(user.MasterPassword);
+        Assert.True(user.UsesKeyConnector);
+        Assert.Equal(DateTime.UtcNow, user.RevisionDate, TimeSpan.FromMinutes(1));
+        Assert.Equal(DateTime.UtcNow, user.AccountRevisionDate, TimeSpan.FromMinutes(1));
+    }
+
+    [Fact]
+    public async Task PostEnrollToKeyConnectorAsync_NotLoggedIn_Unauthorized()
+    {
+        var request = new KeyConnectorEnrollmentRequestModel
+        {
+            KeyConnectorKeyWrappedUserKey = _mockEncryptedString
+        };
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-connector/enroll", request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostEnrollToKeyConnectorAsync_KeyConnectorKeyWrappedUserKeyMissing_BadRequest()
+    {
+        var (ssoUserEmail, _) = await SetupKeyConnectorTestAsync(OrganizationUserStatusType.Accepted);
+
+        var request = new KeyConnectorEnrollmentRequestModel
+        {
+            KeyConnectorKeyWrappedUserKey = " "
+        };
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-connector/enroll", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
+        Assert.NotNull(user);
+        Assert.False(user.UsesKeyConnector);
+    }
+
+    [Fact]
+    public async Task PostEnrollToKeyConnectorAsync_Success()
+    {
+        var (ssoUserEmail, _) = await SetupKeyConnectorTestAsync(OrganizationUserStatusType.Accepted);
+
+        var request = new KeyConnectorEnrollmentRequestModel
+        {
+            KeyConnectorKeyWrappedUserKey = _mockEncryptedString
+        };
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-connector/enroll", request);
+        response.EnsureSuccessStatusCode();
+
+        var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
+        Assert.NotNull(user);
+        Assert.Null(user.MasterPassword);
+        Assert.True(user.UsesKeyConnector);
+        Assert.Equal(request.KeyConnectorKeyWrappedUserKey, user.Key);
+        Assert.Equal(DateTime.UtcNow, user.RevisionDate, TimeSpan.FromMinutes(1));
+        Assert.Equal(DateTime.UtcNow, user.AccountRevisionDate, TimeSpan.FromMinutes(1));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateV2UserAccountKeysAsync_Success(RotateUserAccountKeysAndDataRequestModel request)
+    {
+        var user = await SetupUserForKeyRotationAsync(_mockEncryptedType7String, createSignatureKeyPair: true);
+        SetupRotateUserAccountUnlockData(request, user);
+        SetupRotateUserAccountData(request);
+        SetupRotateUserAccountKeys(request, isV2Crypto: true);
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
+        var responseMessage = await response.Content.ReadAsStringAsync();
+        response.EnsureSuccessStatusCode();
+
+        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userNewState);
+        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.Email, userNewState.Email);
+        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfType, userNewState.Kdf);
+        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfIterations, userNewState.KdfIterations);
+        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfMemory, userNewState.KdfMemory);
+        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfParallelism, userNewState.KdfParallelism);
+
+        // Assert V2-specific fields
+        Assert.Equal(request.AccountKeys.PublicKeyEncryptionKeyPair!.SignedPublicKey, userNewState.SignedPublicKey);
+        Assert.Equal(request.AccountKeys.SecurityState!.SecurityState, userNewState.SecurityState);
+        Assert.Equal(request.AccountKeys.SecurityState.SecurityVersion, userNewState.SecurityVersion);
+
+        var signatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(userNewState.Id);
+        Assert.NotNull(signatureKeyPair);
+        Assert.Equal(SignatureAlgorithm.Ed25519, signatureKeyPair.SignatureAlgorithm);
+        Assert.Equal(request.AccountKeys.SignatureKeyPair!.WrappedSigningKey, signatureKeyPair.WrappedSigningKey);
+        Assert.Equal(request.AccountKeys.SignatureKeyPair.VerifyingKey, signatureKeyPair.VerifyingKey);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUpgradeToV2UserAccountKeysAsync_Success(RotateUserAccountKeysAndDataRequestModel request)
+    {
+        var user = await SetupUserForKeyRotationAsync();
+        SetupRotateUserAccountUnlockData(request, user);
+        SetupRotateUserAccountData(request);
+        SetupRotateUserAccountKeys(request, isV2Crypto: true);
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
+        var responseMessage = await response.Content.ReadAsStringAsync();
+        response.EnsureSuccessStatusCode();
+
+        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userNewState);
+        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.Email, userNewState.Email);
+        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfType, userNewState.Kdf);
+        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfIterations, userNewState.KdfIterations);
+        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfMemory, userNewState.KdfMemory);
+        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfParallelism, userNewState.KdfParallelism);
+
+        // Assert V2 upgrade-specific fields
+        Assert.Equal(request.AccountKeys.PublicKeyEncryptionKeyPair!.SignedPublicKey, userNewState.SignedPublicKey);
+        Assert.Equal(request.AccountKeys.SecurityState!.SecurityState, userNewState.SecurityState);
+        Assert.Equal(request.AccountKeys.SecurityState.SecurityVersion, userNewState.SecurityVersion);
+
+        var signatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(userNewState.Id);
+        Assert.NotNull(signatureKeyPair);
+        Assert.Equal(SignatureAlgorithm.Ed25519, signatureKeyPair.SignatureAlgorithm);
+        Assert.Equal(request.AccountKeys.SignatureKeyPair!.WrappedSigningKey, signatureKeyPair.WrappedSigningKey);
+        Assert.Equal(request.AccountKeys.SignatureKeyPair.VerifyingKey, signatureKeyPair.VerifyingKey);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserAccountKeys_V1Crypto_WithV2UpgradeToken_PersistsToken_AndDoesNotLogout(
+        RotateUserAccountKeysAndDataRequestModel request)
+    {
+        var user = await SetupUserForKeyRotationAsync();
+        SetupRotateUserAccountUnlockData(request, user);
+        SetupRotateUserAccountData(request);
+        SetupRotateUserAccountKeys(request, isV2Crypto: false);
+        request.AccountUnlockData.V2UpgradeToken = new V2UpgradeTokenRequestModel
+        {
+            WrappedUserKey1 = _mockEncryptedType7String,
+            WrappedUserKey2 = _mockEncryptedString
+        };
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
+        response.EnsureSuccessStatusCode();
+
+        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userNewState);
+        Assert.NotNull(userNewState.V2UpgradeToken);
+        Assert.Contains($"\"WrappedUserKey1\":\"{_mockEncryptedType7String}\"", userNewState.V2UpgradeToken);
+        Assert.Contains($"\"WrappedUserKey2\":\"{_mockEncryptedString}\"", userNewState.V2UpgradeToken);
+        Assert.Equal(user.SecurityStamp, userNewState.SecurityStamp);
+        await _pushNotificationService.Received(1)
+            .PushLogOutAsync(userNewState.Id, false, PushNotificationLogOutReason.KeyRotation);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserAccountKeys_V2Crypto_WithV2UpgradeToken_IgnoresToken_AndLogsOut(
+        RotateUserAccountKeysAndDataRequestModel request)
+    {
+        var user = await SetupUserForKeyRotationAsync(_mockEncryptedType7String, createSignatureKeyPair: true);
+        SetupRotateUserAccountUnlockData(request, user);
+        SetupRotateUserAccountData(request);
+        SetupRotateUserAccountKeys(request, isV2Crypto: true);
+        request.AccountUnlockData.V2UpgradeToken = new V2UpgradeTokenRequestModel
+        {
+            WrappedUserKey1 = _mockEncryptedType7String,
+            WrappedUserKey2 = _mockEncryptedString
+        };
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
+        response.EnsureSuccessStatusCode();
+
+        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userNewState);
+
+        // Token must NOT be stored (V2 users don't need upgrade token)
+        Assert.Null(userNewState.V2UpgradeToken);
+
+        // Security stamp must change (logout occurred)
+        Assert.NotEqual(user.SecurityStamp, userNewState.SecurityStamp);
+
+        // Standard logout push sent without a reason (full logout, not KeyRotation)
+        await _pushNotificationService.Received(1)
+            .PushLogOutAsync(userNewState.Id, false, null);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserAccountKeys_WithoutV2UpgradeToken_DoesNotSetToken_AndLogsOut(
+        RotateUserAccountKeysAndDataRequestModel request)
+    {
+        var user = await SetupUserForKeyRotationAsync();
+        SetupRotateUserAccountUnlockData(request, user);
+        SetupRotateUserAccountData(request);
+        SetupRotateUserAccountKeys(request, isV2Crypto: false);
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
+        response.EnsureSuccessStatusCode();
+
+        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userNewState);
+        Assert.Null(userNewState.V2UpgradeToken);
+        Assert.NotEqual(user.SecurityStamp, userNewState.SecurityStamp);
+        await _pushNotificationService.Received(1).PushLogOutAsync(userNewState.Id, false, null);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserAccountKeys_WithExistingV2UpgradeToken_WithoutNewToken_ClearsStaleToken_AndLogsOut(
+        RotateUserAccountKeysAndDataRequestModel request)
+    {
+        // Arrange
+        var user = await SetupUserForKeyRotationAsync();
+
+        // Add existing stale token to user BEFORE rotation
+        var staleToken = new V2UpgradeTokenData
+        {
+            WrappedUserKey1 = _mockEncryptedType7String,
+            WrappedUserKey2 = _mockEncryptedString
+        };
+        user.V2UpgradeToken = staleToken.ToJson();
+        await _userRepository.ReplaceAsync(user);
+
+        // Setup request WITHOUT V2UpgradeToken
+        SetupRotateUserAccountUnlockData(request, user);
+        SetupRotateUserAccountData(request);
+        SetupRotateUserAccountKeys(request, isV2Crypto: false);
+        request.AccountUnlockData.V2UpgradeToken = null; // Explicit: No new token
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
+        response.EnsureSuccessStatusCode();
+
+        // Assert
+        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userNewState);
+
+        // Critical: Verify stale token is cleared
+        Assert.Null(userNewState.V2UpgradeToken);
+
+        // Verify logout behavior (SecurityStamp should be different)
+        Assert.NotEqual(user.SecurityStamp, userNewState.SecurityStamp);
+        await _pushNotificationService.Received(1).PushLogOutAsync(userNewState.Id, false, null);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserAccountKeys_WithExistingV2UpgradeToken_WithNewToken_ReplacesToken_AndDoesNotLogout(
+        RotateUserAccountKeysAndDataRequestModel request)
+    {
+        // Arrange
+        var user = await SetupUserForKeyRotationAsync();
+
+        // Add existing old token to user BEFORE rotation
+        var oldToken = new V2UpgradeTokenData
+        {
+            WrappedUserKey1 = _mockEncryptedType7String2,
+            WrappedUserKey2 = _mockEncryptedType2String2
+        };
+        user.V2UpgradeToken = oldToken.ToJson();
+        await _userRepository.ReplaceAsync(user);
+
+        // Setup request WITH new V2UpgradeToken
+        SetupRotateUserAccountUnlockData(request, user);
+        SetupRotateUserAccountData(request);
+        SetupRotateUserAccountKeys(request, isV2Crypto: false);
+        request.AccountUnlockData.V2UpgradeToken = new V2UpgradeTokenRequestModel
+        {
+            WrappedUserKey1 = _mockEncryptedType7String,
+            WrappedUserKey2 = _mockEncryptedString
+        };
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
+        response.EnsureSuccessStatusCode();
+
+        // Assert
+        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userNewState);
+        Assert.NotNull(userNewState.V2UpgradeToken);
+
+        // Verify new token is present
+        Assert.Contains($"\"WrappedUserKey1\":\"{_mockEncryptedType7String}\"", userNewState.V2UpgradeToken);
+        Assert.Contains($"\"WrappedUserKey2\":\"{_mockEncryptedString}\"", userNewState.V2UpgradeToken);
+
+        // Verify old token is NOT present
+        Assert.DoesNotContain(oldToken.WrappedUserKey1, userNewState.V2UpgradeToken);
+        Assert.DoesNotContain(oldToken.WrappedUserKey2, userNewState.V2UpgradeToken);
+
+        // Verify NO logout (SecurityStamp should be the same for key rotation with token)
+        Assert.Equal(user.SecurityStamp, userNewState.SecurityStamp);
+        await _pushNotificationService.Received(1)
+            .PushLogOutAsync(userNewState.Id, false, PushNotificationLogOutReason.KeyRotation);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserAccountKeys_V2Crypto_WithExistingV2UpgradeToken_WithoutNewToken_ClearsStaleToken_AndLogsOut(
+        RotateUserAccountKeysAndDataRequestModel request)
+    {
+        // Arrange
+        var user = await SetupUserForKeyRotationAsync(_mockEncryptedType7String, createSignatureKeyPair: true);
+
+        // Add existing stale token to V2 crypto user BEFORE rotation
+        var staleToken = new V2UpgradeTokenData
+        {
+            WrappedUserKey1 = _mockEncryptedType7String,
+            WrappedUserKey2 = _mockEncryptedString
+        };
+        user.V2UpgradeToken = staleToken.ToJson();
+        await _userRepository.ReplaceAsync(user);
+
+        // Setup request WITHOUT V2UpgradeToken
+        SetupRotateUserAccountUnlockData(request, user);
+        SetupRotateUserAccountData(request);
+        SetupRotateUserAccountKeys(request, isV2Crypto: true);
+        request.AccountUnlockData.V2UpgradeToken = null; // Explicit: No new token
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
+        response.EnsureSuccessStatusCode();
+
+        // Assert
+        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userNewState);
+
+        // Critical: Verify stale token is cleared for V2 crypto users
+        Assert.Null(userNewState.V2UpgradeToken);
+
+        // Verify logout behavior (SecurityStamp should be different)
+        Assert.NotEqual(user.SecurityStamp, userNewState.SecurityStamp);
+        await _pushNotificationService.Received(1).PushLogOutAsync(userNewState.Id, false, null);
+    }
+
+    [Fact]
+    public async Task GetKeyConnectorConfirmationDetailsAsync_Success()
+    {
+        var (ssoUserEmail, organization) = await SetupKeyConnectorTestAsync(OrganizationUserStatusType.Invited);
+
+        await OrganizationTestHelpers.CreateUserAsync(_factory, organization.Id, ssoUserEmail,
+            OrganizationUserType.User, userStatusType: OrganizationUserStatusType.Accepted);
+
+        var response = await _client.GetAsync($"/accounts/key-connector/confirmation-details/{organization.Identifier}");
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<KeyConnectorConfirmationDetailsResponseModel>();
+
+        Assert.NotNull(result);
+        Assert.Equal(organization.Name, result.OrganizationName);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserKeysAsync_NotLoggedIn_Unauthorized(
+        RotateUserKeysRequestModel request)
+    {
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserKeysAsync_V2Rotation_Success(RotateUserKeysRequestModel request)
+    {
+        var user = await SetupUserForKeyRotationAsync(_mockEncryptedType7String, true);
+        SetupMasterPasswordRotateUserAccount(request, user);
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
+        response.EnsureSuccessStatusCode();
+
+        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userNewState);
+        Assert.Equal(request.UnlockMethodData.MasterPasswordUnlockData!.MasterKeyWrappedUserKey, userNewState.Key);
+        Assert.Equal(request.WrappedAccountCryptographicState.PublicKeyEncryptionKeyPair.SignedPublicKey,
+            userNewState.SignedPublicKey);
+        Assert.Equal(request.WrappedAccountCryptographicState.SecurityState.SecurityState, userNewState.SecurityState);
+        Assert.Equal(request.WrappedAccountCryptographicState.SecurityState.SecurityVersion,
+            userNewState.SecurityVersion);
+
+        var signatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(userNewState.Id);
+        Assert.NotNull(signatureKeyPair);
+        Assert.Equal(SignatureAlgorithm.Ed25519, signatureKeyPair.SignatureAlgorithm);
+        Assert.Equal(request.WrappedAccountCryptographicState.SignatureKeyPair.WrappedSigningKey,
+            signatureKeyPair.WrappedSigningKey);
+        Assert.Equal(request.WrappedAccountCryptographicState.SignatureKeyPair.VerifyingKey,
+            signatureKeyPair.VerifyingKey);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserKeysAsync_V1ToV2Rotation_Success(RotateUserKeysRequestModel request)
+    {
+        var user = await SetupUserForKeyRotationAsync();
+        SetupMasterPasswordRotateUserAccount(request, user, true);
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
+        response.EnsureSuccessStatusCode();
+
+        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userNewState);
+        Assert.Equal(request.UnlockMethodData.MasterPasswordUnlockData!.MasterKeyWrappedUserKey, userNewState.Key);
+        Assert.Equal(request.WrappedAccountCryptographicState.PublicKeyEncryptionKeyPair.SignedPublicKey,
+            userNewState.SignedPublicKey);
+        Assert.Equal(request.WrappedAccountCryptographicState.SecurityState.SecurityState, userNewState.SecurityState);
+        Assert.Equal(request.WrappedAccountCryptographicState.SecurityState.SecurityVersion,
+            userNewState.SecurityVersion);
+        Assert.NotNull(userNewState.V2UpgradeToken);
+        Assert.Contains($"\"WrappedUserKey1\":\"{_mockEncryptedType7String}\"", userNewState.V2UpgradeToken);
+        Assert.Contains($"\"WrappedUserKey2\":\"{_mockEncryptedString}\"", userNewState.V2UpgradeToken);
+
+        var signatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(userNewState.Id);
+        Assert.NotNull(signatureKeyPair);
+        Assert.Equal(SignatureAlgorithm.Ed25519, signatureKeyPair.SignatureAlgorithm);
+        Assert.Equal(request.WrappedAccountCryptographicState.SignatureKeyPair.WrappedSigningKey,
+            signatureKeyPair.WrappedSigningKey);
+        Assert.Equal(request.WrappedAccountCryptographicState.SignatureKeyPair.VerifyingKey,
+            signatureKeyPair.VerifyingKey);
+    }
+
+    [Theory]
+    [BitAutoData(false)]
+    [BitAutoData(true)]
+    public async Task RotateUserKeysAsync_TdeUserRotation_Success(bool setupAsV2Encryption, RotateUserKeysRequestModel request)
+    {
+        var user = await SetupTdeUserForKeyRotationAsync(setupAsV2Encryption);
+        SetupTdeRotateUserAccount(request);
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
+        response.EnsureSuccessStatusCode();
+
+        var userNewState = await _userRepository.GetByEmailAsync(user.Email);
+        Assert.NotNull(userNewState);
+        Assert.Null(userNewState.Key);
+        Assert.Equal(request.WrappedAccountCryptographicState.PublicKeyEncryptionKeyPair.SignedPublicKey,
+            userNewState.SignedPublicKey);
+        Assert.Equal(request.WrappedAccountCryptographicState.SecurityState.SecurityState, userNewState.SecurityState);
+        Assert.Equal(request.WrappedAccountCryptographicState.SecurityState.SecurityVersion,
+            userNewState.SecurityVersion);
+        Assert.Null(userNewState.V2UpgradeToken);
+        Assert.NotEqual(user.SecurityStamp, userNewState.SecurityStamp);
+
+        var signatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(userNewState.Id);
+        Assert.NotNull(signatureKeyPair);
+        Assert.Equal(SignatureAlgorithm.Ed25519, signatureKeyPair.SignatureAlgorithm);
+        Assert.Equal(request.WrappedAccountCryptographicState.SignatureKeyPair.WrappedSigningKey,
+            signatureKeyPair.WrappedSigningKey);
+        Assert.Equal(request.WrappedAccountCryptographicState.SignatureKeyPair.VerifyingKey,
+            signatureKeyPair.VerifyingKey);
+
+        await _pushNotificationService.Received(1).PushLogOutAsync(userNewState.Id, false, null);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserKeysAsync_KeyConnectorV2Rotation_Success(RotateUserKeysRequestModel request)
+    {
+        var user = await SetupKeyConnectorUserForKeyRotationAsync(setupAsV2Encryption: true);
+        SetupKeyConnectorRotateUserAccount(request);
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
+        response.EnsureSuccessStatusCode();
+
+        var userNewState = await _userRepository.GetByEmailAsync(user.Email);
+        Assert.NotNull(userNewState);
+        Assert.Equal(request.UnlockMethodData.KeyConnectorKeyWrappedUserKey, userNewState.Key);
+        Assert.True(userNewState.UsesKeyConnector);
+        Assert.Equal(request.WrappedAccountCryptographicState.PublicKeyEncryptionKeyPair.SignedPublicKey,
+            userNewState.SignedPublicKey);
+        Assert.Equal(request.WrappedAccountCryptographicState.SecurityState.SecurityState, userNewState.SecurityState);
+        Assert.Equal(request.WrappedAccountCryptographicState.SecurityState.SecurityVersion,
+            userNewState.SecurityVersion);
+        Assert.Null(userNewState.V2UpgradeToken);
+        Assert.NotEqual(user.SecurityStamp, userNewState.SecurityStamp);
+
+        var signatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(userNewState.Id);
+        Assert.NotNull(signatureKeyPair);
+        Assert.Equal(SignatureAlgorithm.Ed25519, signatureKeyPair.SignatureAlgorithm);
+        Assert.Equal(request.WrappedAccountCryptographicState.SignatureKeyPair.WrappedSigningKey,
+            signatureKeyPair.WrappedSigningKey);
+        Assert.Equal(request.WrappedAccountCryptographicState.SignatureKeyPair.VerifyingKey,
+            signatureKeyPair.VerifyingKey);
+
+        await _pushNotificationService.Received(1).PushLogOutAsync(userNewState.Id, false, null);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserKeysAsync_KeyConnectorV1ToV2Rotation_Success(RotateUserKeysRequestModel request)
+    {
+        var user = await SetupKeyConnectorUserForKeyRotationAsync(setupAsV2Encryption: false);
+        SetupKeyConnectorRotateUserAccount(request, upgradeToken: true);
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
+        response.EnsureSuccessStatusCode();
+
+        var userNewState = await _userRepository.GetByEmailAsync(user.Email);
+        Assert.NotNull(userNewState);
+        Assert.Equal(request.UnlockMethodData.KeyConnectorKeyWrappedUserKey, userNewState.Key);
+        Assert.True(userNewState.UsesKeyConnector);
+        Assert.Equal(request.WrappedAccountCryptographicState.PublicKeyEncryptionKeyPair.SignedPublicKey,
+            userNewState.SignedPublicKey);
+        Assert.Equal(request.WrappedAccountCryptographicState.SecurityState.SecurityState, userNewState.SecurityState);
+        Assert.Equal(request.WrappedAccountCryptographicState.SecurityState.SecurityVersion,
+            userNewState.SecurityVersion);
+        Assert.NotNull(userNewState.V2UpgradeToken);
+        Assert.Contains($"\"WrappedUserKey1\":\"{_mockEncryptedType7String}\"", userNewState.V2UpgradeToken);
+        Assert.Contains($"\"WrappedUserKey2\":\"{_mockEncryptedString}\"", userNewState.V2UpgradeToken);
+        Assert.Equal(user.SecurityStamp, userNewState.SecurityStamp);
+
+        var signatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(userNewState.Id);
+        Assert.NotNull(signatureKeyPair);
+        Assert.Equal(SignatureAlgorithm.Ed25519, signatureKeyPair.SignatureAlgorithm);
+        Assert.Equal(request.WrappedAccountCryptographicState.SignatureKeyPair.WrappedSigningKey,
+            signatureKeyPair.WrappedSigningKey);
+        Assert.Equal(request.WrappedAccountCryptographicState.SignatureKeyPair.VerifyingKey,
+            signatureKeyPair.VerifyingKey);
+
+        await _pushNotificationService.Received(1)
+            .PushLogOutAsync(userNewState.Id, false, PushNotificationLogOutReason.KeyRotation);
+    }
+
+    private async Task<(string, Organization)> SetupKeyConnectorTestAsync(OrganizationUserStatusType userStatusType,
+        string organizationSsoIdentifier = "test-sso-identifier")
     {
         var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
             PlanType.EnterpriseAnnually, _ownerEmail, passwordManagerSeats: 10,
@@ -299,75 +887,14 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         await _loginHelper.LoginAsync(ssoUserEmail);
 
         await OrganizationTestHelpers.CreateUserAsync(_factory, organization.Id, ssoUserEmail,
-            OrganizationUserType.User, userStatusType: OrganizationUserStatusType.Invited);
+            OrganizationUserType.User, userStatusType: userStatusType);
 
-        var ssoUser = await _userRepository.GetByEmailAsync(ssoUserEmail);
-        Assert.NotNull(ssoUser);
-
-        request.Keys = new KeysRequestModel
-        {
-            PublicKey = ssoUser.PublicKey,
-            EncryptedPrivateKey = ssoUser.PrivateKey
-        };
-        request.Key = _mockEncryptedString;
-        request.OrgIdentifier = organizationSsoIdentifier;
-
-        var response = await _client.PostAsJsonAsync("/accounts/set-key-connector-key", request);
-        response.EnsureSuccessStatusCode();
-
-        var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
-        Assert.NotNull(user);
-        Assert.Equal(request.Key, user.Key);
-        Assert.True(user.UsesKeyConnector);
-        Assert.Equal(DateTime.UtcNow, user.RevisionDate, TimeSpan.FromMinutes(1));
-        Assert.Equal(DateTime.UtcNow, user.AccountRevisionDate, TimeSpan.FromMinutes(1));
-        var ssoOrganizationUser =
-            await _organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id);
-        Assert.NotNull(ssoOrganizationUser);
-        Assert.Equal(OrganizationUserStatusType.Accepted, ssoOrganizationUser.Status);
-        Assert.Equal(user.Id, ssoOrganizationUser.UserId);
-        Assert.Null(ssoOrganizationUser.Email);
+        return (ssoUserEmail, organization);
     }
 
-    [Fact]
-    public async Task PostConvertToKeyConnectorAsync_NotLoggedIn_Unauthorized()
-    {
-        var response = await _client.PostAsJsonAsync("/accounts/convert-to-key-connector", new { });
-
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task PostConvertToKeyConnectorAsync_Success()
-    {
-        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
-            PlanType.EnterpriseAnnually, _ownerEmail, passwordManagerSeats: 10,
-            paymentMethod: PaymentMethodType.Card);
-        organization.UseKeyConnector = true;
-        organization.UseSso = true;
-        await _organizationRepository.ReplaceAsync(organization);
-
-        var ssoUserEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
-        await _factory.LoginWithNewAccount(ssoUserEmail);
-        await _loginHelper.LoginAsync(ssoUserEmail);
-
-        await OrganizationTestHelpers.CreateUserAsync(_factory, organization.Id, ssoUserEmail,
-            OrganizationUserType.User, userStatusType: OrganizationUserStatusType.Accepted);
-
-        var response = await _client.PostAsJsonAsync("/accounts/convert-to-key-connector", new { });
-        response.EnsureSuccessStatusCode();
-
-        var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
-        Assert.NotNull(user);
-        Assert.Null(user.MasterPassword);
-        Assert.True(user.UsesKeyConnector);
-        Assert.Equal(DateTime.UtcNow, user.RevisionDate, TimeSpan.FromMinutes(1));
-        Assert.Equal(DateTime.UtcNow, user.AccountRevisionDate, TimeSpan.FromMinutes(1));
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task RotateV2UserAccountKeysAsync_Success(RotateUserAccountKeysAndDataRequestModel request)
+    private async Task<User> SetupUserForKeyRotationAsync(
+        string? privateKey = null,
+        bool createSignatureKeyPair = false)
     {
         await _loginHelper.LoginAsync(_ownerEmail);
         var user = await _userRepository.GetByEmailAsync(_ownerEmail);
@@ -379,61 +906,150 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         var password = _passwordHasher.HashPassword(user, "newMasterPassword");
         user.MasterPassword = password;
         user.PublicKey = "publicKey";
-        user.PrivateKey = _mockEncryptedType7String;
+        user.PrivateKey = privateKey ?? _mockEncryptedString;
+
+        // If creating signature key pair, user should already have V2 signed state
+        if (createSignatureKeyPair)
+        {
+            user.SignedPublicKey = "signedPublicKey";
+            user.SecurityState = "v2";
+            user.SecurityVersion = 2;
+        }
 
         await _userRepository.ReplaceAsync(user);
-        await _userSignatureKeyPairRepository.CreateAsync(new UserSignatureKeyPair
-        {
-            UserId = user.Id,
-            SignatureAlgorithm = SignatureAlgorithm.Ed25519,
-            SigningKey = _mockEncryptedType7String,
-            VerifyingKey = "verifyingKey",
-        });
 
+        if (createSignatureKeyPair)
+        {
+            await _userSignatureKeyPairRepository.CreateAsync(new UserSignatureKeyPair
+            {
+                UserId = user.Id,
+                SignatureAlgorithm = SignatureAlgorithm.Ed25519,
+                SigningKey = _mockEncryptedType7String,
+                VerifyingKey = "verifyingKey",
+            });
+        }
+
+        return user;
+    }
+
+    private void SetupRotateUserAccountUnlockData(
+        RotateUserAccountKeysAndDataRequestModel request,
+        User user)
+    {
+        // KDF settings
         request.AccountUnlockData.MasterPasswordUnlockData.KdfType = user.Kdf;
         request.AccountUnlockData.MasterPasswordUnlockData.KdfIterations = user.KdfIterations;
         request.AccountUnlockData.MasterPasswordUnlockData.KdfMemory = user.KdfMemory;
         request.AccountUnlockData.MasterPasswordUnlockData.KdfParallelism = user.KdfParallelism;
         request.AccountUnlockData.MasterPasswordUnlockData.Email = user.Email;
-        request.AccountKeys.AccountPublicKey = "publicKey";
-        request.AccountKeys.UserKeyEncryptedAccountPrivateKey = _mockEncryptedType7String;
-        request.AccountKeys.PublicKeyEncryptionKeyPair = new PublicKeyEncryptionKeyPairRequestModel
-        {
-            PublicKey = "publicKey",
-            WrappedPrivateKey = _mockEncryptedType7String,
-            SignedPublicKey = "signedPublicKey",
-        };
-        request.AccountKeys.SignatureKeyPair = new SignatureKeyPairRequestModel
-        {
-            SignatureAlgorithm = "ed25519",
-            WrappedSigningKey = _mockEncryptedType7String,
-            VerifyingKey = "verifyingKey",
-        };
+        request.AccountUnlockData.MasterPasswordUnlockData.MasterPasswordSalt = user.GetMasterPasswordSalt();
+        request.AccountUnlockData.MasterPasswordUnlockData.MasterKeyEncryptedUserKey = _mockEncryptedString;
 
+        // Unlock data arrays
+        request.AccountUnlockData.PasskeyUnlockData = [];
+        request.AccountUnlockData.DeviceKeyUnlockData = [];
+        request.AccountUnlockData.EmergencyAccessUnlockData = [];
+        request.AccountUnlockData.OrganizationAccountRecoveryUnlockData = [];
+
+        // Authentication hash
         request.OldMasterKeyAuthenticationHash = "newMasterPassword";
+    }
 
-        request.AccountData.Ciphers =
+    private void SetupRotateUserAccountData(RotateUserAccountKeysAndDataRequestModel request)
+    {
+        request.AccountData = BuildAccountData();
+    }
+
+    private void SetupRotateUserAccountKeys(
+        RotateUserAccountKeysAndDataRequestModel request,
+        bool isV2Crypto)
+    {
+        request.AccountKeys.AccountPublicKey = "publicKey";
+
+        if (isV2Crypto)
+        {
+            // V2 crypto: Type 7 encryption with V2 keys and SecurityState
+            request.AccountKeys.UserKeyEncryptedAccountPrivateKey = _mockEncryptedType7String;
+            request.AccountKeys.PublicKeyEncryptionKeyPair = BuildPublicKeyEncryptionKeyPair();
+            request.AccountKeys.SignatureKeyPair = BuildSignatureKeyPair();
+            request.AccountKeys.SecurityState = BuildSecurityState();
+        }
+        else
+        {
+            // V1 crypto: Type 2 encryption, no V2 keys
+            request.AccountKeys.UserKeyEncryptedAccountPrivateKey = _mockEncryptedString;
+            request.AccountKeys.PublicKeyEncryptionKeyPair = null;
+            request.AccountKeys.SignatureKeyPair = null;
+            request.AccountKeys.SecurityState = null;
+        }
+
+        request.AccountUnlockData.V2UpgradeToken = null;
+    }
+
+    private static void SetupMasterPasswordRotateUserAccount(RotateUserKeysRequestModel request, User user,
+        bool upgradeToken = false)
+    {
+        request.UnlockMethodData = new UnlockMethodRequestModel
+        {
+            UnlockMethod = Api.KeyManagement.Enums.UnlockMethod.MasterPassword,
+            MasterPasswordUnlockData = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = new KdfRequestModel
+                {
+                    KdfType = user.Kdf,
+                    Iterations = user.KdfIterations,
+                    Memory = user.KdfMemory,
+                    Parallelism = user.KdfParallelism
+                },
+                MasterKeyWrappedUserKey = _mockEncryptedType7String,
+                Salt = user.Email.ToLowerInvariant().Trim()
+            }
+        };
+        SetupCommonRotate(request, upgradeToken);
+    }
+
+    private static void SetupCommonRotate(RotateUserKeysRequestModel request, bool upgradeToken = false)
+    {
+        if (upgradeToken)
+        {
+            request.UnlockData.V2UpgradeToken = new V2UpgradeTokenRequestModel
+            {
+                WrappedUserKey1 = _mockEncryptedType7String,
+                WrappedUserKey2 = _mockEncryptedString
+            };
+        }
+        else
+        {
+            request.UnlockData.V2UpgradeToken = null;
+        }
+
+        request.WrappedAccountCryptographicState.PublicKeyEncryptionKeyPair = BuildPublicKeyEncryptionKeyPair();
+        request.WrappedAccountCryptographicState.SignatureKeyPair = BuildSignatureKeyPair();
+        request.WrappedAccountCryptographicState.SecurityState = BuildSecurityState();
+
+        request.UnlockData.PasskeyUnlockData = [];
+        request.UnlockData.DeviceKeyUnlockData = [];
+        request.UnlockData.EmergencyAccessUnlockData = [];
+        request.UnlockData.OrganizationAccountRecoveryUnlockData = [];
+
+        request.AccountData = BuildAccountData();
+    }
+
+    private static AccountDataRequestModel BuildAccountData() => new()
+    {
+        Ciphers =
         [
             new CipherWithIdRequestModel
             {
                 Id = Guid.NewGuid(),
                 Type = CipherType.Login,
                 Name = _mockEncryptedString,
-                Login = new CipherLoginModel
-                {
-                    Username = _mockEncryptedString,
-                    Password = _mockEncryptedString,
-                },
+                Data = JsonSerializer.Serialize(new { Username = _mockEncryptedString, Password = _mockEncryptedString }),
             },
-        ];
-        request.AccountData.Folders = [
-            new FolderWithIdRequestModel
-            {
-                Id = Guid.NewGuid(),
-                Name = _mockEncryptedString,
-            },
-        ];
-        request.AccountData.Sends = [
+        ],
+        Folders = [new FolderWithIdRequestModel { Id = Guid.NewGuid(), Name = _mockEncryptedString }],
+        Sends =
+        [
             new SendWithIdRequestModel
             {
                 Id = Guid.NewGuid(),
@@ -442,118 +1058,121 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
                 Disabled = false,
                 DeletionDate = DateTime.UtcNow.AddDays(1),
             },
-        ];
-        request.AccountUnlockData.MasterPasswordUnlockData.MasterKeyEncryptedUserKey = _mockEncryptedString;
-        request.AccountUnlockData.PasskeyUnlockData = [];
-        request.AccountUnlockData.DeviceKeyUnlockData = [];
-        request.AccountUnlockData.EmergencyAccessUnlockData = [];
-        request.AccountUnlockData.OrganizationAccountRecoveryUnlockData = [];
+        ],
+    };
 
-        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
-        var responseMessage = await response.Content.ReadAsStringAsync();
-        response.EnsureSuccessStatusCode();
-
-        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
-        Assert.NotNull(userNewState);
-        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.Email, userNewState.Email);
-        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfType, userNewState.Kdf);
-        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfIterations, userNewState.KdfIterations);
-        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfMemory, userNewState.KdfMemory);
-        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfParallelism, userNewState.KdfParallelism);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task RotateUpgradeToV2UserAccountKeysAsync_Success(RotateUserAccountKeysAndDataRequestModel request)
+    private static PublicKeyEncryptionKeyPairRequestModel BuildPublicKeyEncryptionKeyPair() => new()
     {
-        await _loginHelper.LoginAsync(_ownerEmail);
-        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
-        if (user == null)
-        {
-            throw new InvalidOperationException("User not found.");
-        }
+        PublicKey = "publicKey",
+        WrappedPrivateKey = _mockEncryptedType7String,
+        SignedPublicKey = "signedPublicKey",
+    };
 
-        var password = _passwordHasher.HashPassword(user, "newMasterPassword");
-        user.MasterPassword = password;
+    private static SignatureKeyPairRequestModel BuildSignatureKeyPair() => new()
+    {
+        SignatureAlgorithm = "ed25519",
+        WrappedSigningKey = _mockEncryptedType7String,
+        VerifyingKey = "verifyingKey",
+    };
+
+    private static SecurityStateModel BuildSecurityState() => new()
+    {
+        SecurityVersion = 2,
+        SecurityState = "v2",
+    };
+
+    private async Task<User> SetupTdeUserForKeyRotationAsync(bool setupAsV2Encryption)
+    {
+        var tdeUserEmail = $"integration-test-tde{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(tdeUserEmail);
+        await _loginHelper.LoginAsync(tdeUserEmail);
+
+        var user = await _userRepository.GetByEmailAsync(tdeUserEmail)
+            ?? throw new InvalidOperationException("TDE user not found.");
+
+        user.Key = null;
+        user.MasterPassword = null;
         user.PublicKey = "publicKey";
         user.PrivateKey = _mockEncryptedString;
-
+        if (setupAsV2Encryption)
+        {
+            user.PrivateKey = _mockEncryptedType7String;
+            user.SignedPublicKey = "signedPublicKey";
+            user.SecurityVersion = 2;
+            user.SecurityState = "v2-tde";
+        }
         await _userRepository.ReplaceAsync(user);
 
-        request.AccountUnlockData.MasterPasswordUnlockData.KdfType = user.Kdf;
-        request.AccountUnlockData.MasterPasswordUnlockData.KdfIterations = user.KdfIterations;
-        request.AccountUnlockData.MasterPasswordUnlockData.KdfMemory = user.KdfMemory;
-        request.AccountUnlockData.MasterPasswordUnlockData.KdfParallelism = user.KdfParallelism;
-        request.AccountUnlockData.MasterPasswordUnlockData.Email = user.Email;
-        request.AccountKeys.AccountPublicKey = "publicKey";
-        request.AccountKeys.UserKeyEncryptedAccountPrivateKey = _mockEncryptedType7String;
-        request.AccountKeys.PublicKeyEncryptionKeyPair = new PublicKeyEncryptionKeyPairRequestModel
+        if (setupAsV2Encryption)
         {
-            PublicKey = "publicKey",
-            WrappedPrivateKey = _mockEncryptedType7String,
-            SignedPublicKey = "signedPublicKey",
-        };
-        request.AccountKeys.SignatureKeyPair = new SignatureKeyPairRequestModel
+            await _userSignatureKeyPairRepository.CreateAsync(new UserSignatureKeyPair
+            {
+                UserId = user.Id,
+                SignatureAlgorithm = SignatureAlgorithm.Ed25519,
+                SigningKey = _mockEncryptedType7String,
+                VerifyingKey = "verifyingKey",
+            });
+        }
+
+        return user;
+    }
+
+    private static void SetupTdeRotateUserAccount(RotateUserKeysRequestModel request)
+    {
+        request.UnlockMethodData = new UnlockMethodRequestModel
         {
-            SignatureAlgorithm = "ed25519",
-            WrappedSigningKey = _mockEncryptedType7String,
-            VerifyingKey = "verifyingKey",
+            UnlockMethod = Api.KeyManagement.Enums.UnlockMethod.Tde,
+            MasterPasswordUnlockData = null
         };
-        request.AccountKeys.SecurityState = new SecurityStateModel
+        SetupCommonRotate(request);
+    }
+
+    private async Task<User> SetupKeyConnectorUserForKeyRotationAsync(bool setupAsV2Encryption)
+    {
+        var kcUserEmail = $"integration-test-kc{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(kcUserEmail);
+        await _loginHelper.LoginAsync(kcUserEmail);
+
+        var user = await _userRepository.GetByEmailAsync(kcUserEmail)
+            ?? throw new InvalidOperationException("Key connector user not found.");
+
+        user.Key = _mockEncryptedString;
+        user.MasterPassword = null;
+        user.UsesKeyConnector = true;
+        user.PublicKey = "publicKey";
+        user.PrivateKey = _mockEncryptedString;
+        if (setupAsV2Encryption)
         {
-            SecurityVersion = 2,
-            SecurityState = "v2",
+            user.PrivateKey = _mockEncryptedType7String;
+            user.SignedPublicKey = "signedPublicKey";
+            user.SecurityVersion = 2;
+            user.SecurityState = "v2-kc";
+        }
+        await _userRepository.ReplaceAsync(user);
+
+        if (setupAsV2Encryption)
+        {
+            await _userSignatureKeyPairRepository.CreateAsync(new UserSignatureKeyPair
+            {
+                UserId = user.Id,
+                SignatureAlgorithm = SignatureAlgorithm.Ed25519,
+                SigningKey = _mockEncryptedType7String,
+                VerifyingKey = "verifyingKey",
+            });
+        }
+
+        return user;
+    }
+
+    private static void SetupKeyConnectorRotateUserAccount(RotateUserKeysRequestModel request,
+        bool upgradeToken = false)
+    {
+        request.UnlockMethodData = new UnlockMethodRequestModel
+        {
+            UnlockMethod = Api.KeyManagement.Enums.UnlockMethod.KeyConnector,
+            MasterPasswordUnlockData = null,
+            KeyConnectorKeyWrappedUserKey = _mockEncryptedType7String
         };
-
-        request.OldMasterKeyAuthenticationHash = "newMasterPassword";
-
-        request.AccountData.Ciphers =
-        [
-            new CipherWithIdRequestModel
-            {
-                Id = Guid.NewGuid(),
-                Type = CipherType.Login,
-                Name = _mockEncryptedString,
-                Login = new CipherLoginModel
-                {
-                    Username = _mockEncryptedString,
-                    Password = _mockEncryptedString,
-                },
-            },
-        ];
-        request.AccountData.Folders = [
-            new FolderWithIdRequestModel
-            {
-                Id = Guid.NewGuid(),
-                Name = _mockEncryptedString,
-            },
-        ];
-        request.AccountData.Sends = [
-            new SendWithIdRequestModel
-            {
-                Id = Guid.NewGuid(),
-                Name = _mockEncryptedString,
-                Key = _mockEncryptedString,
-                Disabled = false,
-                DeletionDate = DateTime.UtcNow.AddDays(1),
-            },
-        ];
-        request.AccountUnlockData.MasterPasswordUnlockData.MasterKeyEncryptedUserKey = _mockEncryptedString;
-        request.AccountUnlockData.PasskeyUnlockData = [];
-        request.AccountUnlockData.DeviceKeyUnlockData = [];
-        request.AccountUnlockData.EmergencyAccessUnlockData = [];
-        request.AccountUnlockData.OrganizationAccountRecoveryUnlockData = [];
-
-        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
-        var responseMessage = await response.Content.ReadAsStringAsync();
-        response.EnsureSuccessStatusCode();
-
-        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
-        Assert.NotNull(userNewState);
-        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.Email, userNewState.Email);
-        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfType, userNewState.Kdf);
-        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfIterations, userNewState.KdfIterations);
-        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfMemory, userNewState.KdfMemory);
-        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfParallelism, userNewState.KdfParallelism);
+        SetupCommonRotate(request, upgradeToken);
     }
 }

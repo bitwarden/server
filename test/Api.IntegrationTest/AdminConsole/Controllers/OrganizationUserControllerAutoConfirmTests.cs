@@ -2,7 +2,6 @@
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
@@ -10,8 +9,6 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
@@ -29,12 +26,6 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
     public OrganizationUserControllerAutoConfirmTests(ApiApplicationFactory apiFactory)
     {
         _factory = apiFactory;
-        _factory.SubstituteService<IFeatureService>(featureService =>
-        {
-            featureService
-                .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-                .Returns(true);
-        });
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
@@ -162,7 +153,7 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
 
         var testKey = $"test-key-{Guid.NewGuid()}";
 
-        var userToConfirmEmail = $"org-user-to-confirm-{Guid.NewGuid()}@example.com";
+        var userToConfirmEmail = $"org-user-to-confirm-{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(userToConfirmEmail);
 
         await _factory.GetService<IPolicyRepository>().CreateAsync(new Policy
@@ -190,15 +181,17 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
             new Permissions(),
             OrganizationUserStatusType.Accepted);
 
-        var tenRequests = Enumerable.Range(0, 10)
-            .Select(_ => _client.PostAsJsonAsync($"organizations/{organization.Id}/users/{organizationUser.Id}/auto-confirm",
+        var results = new List<HttpResponseMessage>();
+
+        foreach (var _ in Enumerable.Range(0, 10))
+        {
+            results.Add(await _client.PostAsJsonAsync($"organizations/{organization.Id}/users/{organizationUser.Id}/auto-confirm",
                 new OrganizationUserConfirmRequestModel
                 {
                     Key = testKey,
                     DefaultUserCollectionName = _mockEncryptedString
-                })).ToList();
-
-        var results = await Task.WhenAll(tenRequests);
+                }));
+        }
 
         Assert.Contains(results, r => r.StatusCode == HttpStatusCode.NoContent);
 

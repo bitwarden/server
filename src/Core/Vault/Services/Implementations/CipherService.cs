@@ -2,12 +2,13 @@
 #nullable disable
 
 using System.Text.Json;
-using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Services;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -19,7 +20,6 @@ using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
 using Bit.Core.Vault.Repositories;
-
 namespace Bit.Core.Vault.Services;
 
 public class CipherService : ICipherService
@@ -31,20 +31,19 @@ public class CipherService : ICipherService
     private readonly ICollectionRepository _collectionRepository;
     private readonly IUserRepository _userRepository;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ICollectionCipherRepository _collectionCipherRepository;
     private readonly ISecurityTaskRepository _securityTaskRepository;
     private readonly IPushNotificationService _pushService;
     private readonly IAttachmentStorageService _attachmentStorageService;
     private readonly IEventService _eventService;
     private readonly IUserService _userService;
-    private readonly IPolicyService _policyService;
     private readonly GlobalSettings _globalSettings;
     private const long _fileSizeLeeway = 1024L * 1024L; // 1MB
     private readonly IGetCipherPermissionsForUserQuery _getCipherPermissionsForUserQuery;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IFeatureService _featureService;
+    private readonly IPricingClient _pricingClient;
 
     public CipherService(
         ICipherRepository cipherRepository,
@@ -52,38 +51,36 @@ public class CipherService : ICipherService
         ICollectionRepository collectionRepository,
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
-        IOrganizationUserRepository organizationUserRepository,
         ICollectionCipherRepository collectionCipherRepository,
         ISecurityTaskRepository securityTaskRepository,
         IPushNotificationService pushService,
         IAttachmentStorageService attachmentStorageService,
         IEventService eventService,
         IUserService userService,
-        IPolicyService policyService,
         GlobalSettings globalSettings,
         IGetCipherPermissionsForUserQuery getCipherPermissionsForUserQuery,
         IPolicyRequirementQuery policyRequirementQuery,
         IApplicationCacheService applicationCacheService,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IPricingClient pricingClient)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
         _collectionRepository = collectionRepository;
         _userRepository = userRepository;
         _organizationRepository = organizationRepository;
-        _organizationUserRepository = organizationUserRepository;
         _collectionCipherRepository = collectionCipherRepository;
         _securityTaskRepository = securityTaskRepository;
         _pushService = pushService;
         _attachmentStorageService = attachmentStorageService;
         _eventService = eventService;
         _userService = userService;
-        _policyService = policyService;
         _globalSettings = globalSettings;
         _getCipherPermissionsForUserQuery = getCipherPermissionsForUserQuery;
         _policyRequirementQuery = policyRequirementQuery;
         _applicationCacheService = applicationCacheService;
         _featureService = featureService;
+        _pricingClient = pricingClient;
     }
 
     public async Task SaveAsync(Cipher cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
@@ -148,11 +145,10 @@ public class CipherService : ICipherService
             }
             else
             {
-                var organizationDataOwnershipEnabled = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
-                    ? (await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(savingUserId)).State == OrganizationDataOwnershipState.Enabled
-                    : await _policyService.AnyPoliciesApplicableToUserAsync(savingUserId, PolicyType.OrganizationDataOwnership);
+                var organizationDataOwnershipPolicyRequirement =
+                    await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(savingUserId);
 
-                if (organizationDataOwnershipEnabled)
+                if (organizationDataOwnershipPolicyRequirement.State == OrganizationDataOwnershipState.Enabled)
                 {
                     throw new BadRequestException("Due to an Enterprise Policy, you are restricted from saving items to your personal vault.");
                 }
@@ -174,7 +170,6 @@ public class CipherService : ICipherService
             ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
             cipher.RevisionDate = DateTime.UtcNow;
             await ValidateChangeInCollectionsAsync(cipher, collectionIds, savingUserId);
-            await ValidateViewPasswordUserAsync(cipher);
             await _cipherRepository.ReplaceAsync(cipher);
             await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_Updated);
 
@@ -183,8 +178,10 @@ public class CipherService : ICipherService
         }
     }
 
-    public async Task UploadFileForExistingAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachment)
+    public async Task UploadFileForExistingAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachment, Guid savingUserId, bool orgAdmin = false)
     {
+        await ValidateCipherEditForAttachmentAsync(cipher, savingUserId, orgAdmin, attachment.Size);
+
         if (attachment == null)
         {
             throw new BadRequestException("Cipher attachment does not exist");
@@ -226,6 +223,8 @@ public class CipherService : ICipherService
         });
         cipher.AddAttachment(attachmentId, data);
 
+        await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_AttachmentCreated);
+
         // Update the revision date when an attachment is added
         cipher.RevisionDate = DateTime.UtcNow;
         await _cipherRepository.ReplaceAsync((CipherDetails)cipher);
@@ -265,7 +264,6 @@ public class CipherService : ICipherService
             };
 
             await _cipherRepository.UpdateAttachmentAsync(attachment);
-            await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_AttachmentCreated);
             cipher.AddAttachment(attachmentId, data);
 
             if (!await ValidateCipherAttachmentFile(cipher, data))
@@ -279,6 +277,8 @@ public class CipherService : ICipherService
             await _attachmentStorageService.DeleteAttachmentAsync(cipher.Id, data);
             throw;
         }
+
+        await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_AttachmentCreated);
 
         // Update the revision date when an attachment is added
         cipher.RevisionDate = DateTime.UtcNow;
@@ -407,12 +407,14 @@ public class CipherService : ICipherService
             throw new NotFoundException();
         }
 
+        var url = await _attachmentStorageService.GetAttachmentDownloadUrlAsync(cipher, data);
+
         var response = new AttachmentResponseData
         {
             Cipher = cipher,
             Data = data,
             Id = attachmentId,
-            Url = await _attachmentStorageService.GetAttachmentDownloadUrlAsync(cipher, data),
+            Url = url,
         };
 
         return response;
@@ -452,6 +454,12 @@ public class CipherService : ICipherService
             await _cipherRepository.DeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId);
         }
 
+        // Clean up attachment files from storage
+        foreach (var cipher in deletingCiphers)
+        {
+            await _attachmentStorageService.DeleteAttachmentsForCipherAsync(cipher.Id);
+        }
+
         var events = deletingCiphers.Select(c =>
             new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Deleted, null));
         foreach (var eventsBatch in events.Chunk(100))
@@ -486,8 +494,24 @@ public class CipherService : ICipherService
         {
             throw new NotFoundException();
         }
+
+
+        await DeleteAttachmentsForOrganizationAsync(organizationId);
+
         await _cipherRepository.DeleteByOrganizationIdAsync(organizationId);
+
         await _eventService.LogOrganizationEventAsync(org, EventType.Organization_PurgedVault);
+    }
+
+    public async Task DeleteAttachmentsForOrganizationAsync(Guid organizationId)
+    {
+        var cipherIdsWithAttachments = (await _cipherRepository.GetManyByOrganizationIdAsync(organizationId))
+            .Where(c => c.GetAttachments()?.Count > 0).Select(c => c.Id);
+
+        foreach (var cipherId in cipherIdsWithAttachments)
+        {
+            await _attachmentStorageService.DeleteAttachmentsForCipherAsync(cipherId);
+        }
     }
 
     public async Task MoveManyAsync(IEnumerable<Guid> cipherIds, Guid? destinationFolderId, Guid movingUserId)
@@ -718,13 +742,6 @@ public class CipherService : ICipherService
 
         cipherDetails.DeletedDate = cipherDetails.RevisionDate = DateTime.UtcNow;
 
-        if (cipherDetails.ArchivedDate.HasValue)
-        {
-            // If the cipher was archived, clear the archived date when soft deleting
-            // If a user were to restore an archived cipher, it should go back to the vault not the archive vault
-            cipherDetails.ArchivedDate = null;
-        }
-
         await _securityTaskRepository.MarkAsCompleteByCipherIds([cipherDetails.Id]);
         await _cipherRepository.UpsertAsync(cipherDetails);
         await _eventService.LogCipherEventAsync(cipherDetails, EventType.Cipher_SoftDeleted);
@@ -877,7 +894,7 @@ public class CipherService : ICipherService
         if ((cipher.RevisionDate - lastKnownRevisionDate.Value).Duration() > TimeSpan.FromSeconds(1))
         {
             throw new BadRequestException(
-                "The cipher you are updating is out of date. Please save your work, sync your vault, and try again."
+                "The item cannot be saved because it is out of date. To edit this item, first sync your vault, or log out and back in."
             );
         }
     }
@@ -911,7 +928,7 @@ public class CipherService : ICipherService
         return new DeleteAttachmentResponseData(cipher);
     }
 
-    private async Task ValidateCipherEditForAttachmentAsync(Cipher cipher, Guid savingUserId, bool orgAdmin,
+    public async Task ValidateCipherEditForAttachmentAsync(Cipher cipher, Guid savingUserId, bool orgAdmin,
         long requestLength)
     {
         if (!orgAdmin && !(await UserCanEditAsync(cipher, savingUserId)))
@@ -949,10 +966,19 @@ public class CipherService : ICipherService
             }
             else
             {
-                // Users that get access to file storage/premium from their organization get the default
-                // 1 GB max storage.
-                storageBytesRemaining = user.StorageBytesRemaining(
-                    _globalSettings.SelfHosted ? Constants.SelfHostedMaxStorageGb : (short)1);
+                // Users that get access to file storage/premium from their organization get storage
+                // based on the current premium plan from the pricing service
+                short provided;
+                if (_globalSettings.SelfHosted)
+                {
+                    provided = Constants.SelfHostedMaxStorageGb;
+                }
+                else
+                {
+                    var premiumPlan = await _pricingClient.GetAvailablePremiumPlan();
+                    provided = (short)premiumPlan.Storage.Provided;
+                }
+                storageBytesRemaining = user.StorageBytesRemaining(provided);
             }
         }
         else if (cipher.OrganizationId.HasValue)
@@ -990,11 +1016,6 @@ public class CipherService : ICipherService
             throw new BadRequestException("One or more ciphers do not belong to you.");
         }
 
-        if (cipher.ArchivedDate.HasValue)
-        {
-            throw new BadRequestException("Cipher cannot be shared with organization because it is archived.");
-        }
-
         var attachments = cipher.GetAttachments();
         var hasAttachments = attachments?.Any() ?? false;
         var org = await _organizationRepository.GetByIdAsync(organizationId);
@@ -1004,57 +1025,41 @@ public class CipherService : ICipherService
             throw new BadRequestException("Could not find organization.");
         }
 
-        if (hasAttachments && !org.MaxStorageGb.HasValue)
+        if (!await IgnoreStorageLimitsOnMigrationAsync(sharingUserId, org))
         {
-            throw new BadRequestException("This organization cannot use attachments.");
-        }
+            if (hasAttachments && !org.MaxStorageGb.HasValue)
+            {
+                throw new BadRequestException("This organization cannot use attachments.");
+            }
 
-        var storageAdjustment = attachments?.Sum(a => a.Value.Size) ?? 0;
-        if (org.StorageBytesRemaining() < storageAdjustment)
-        {
-            throw new BadRequestException("Not enough storage available for this organization.");
+            var storageAdjustment = attachments?.Sum(a => a.Value.Size) ?? 0;
+            if (org.StorageBytesRemaining() < storageAdjustment)
+            {
+                throw new BadRequestException("Not enough storage available for this organization.");
+            }
         }
 
         ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
     }
 
-    private async Task ValidateViewPasswordUserAsync(Cipher cipher)
+    /// <summary>
+    /// Checks if the storage limit for the org should be ignored due to the Organization Data Ownership Policy
+    /// </summary>
+    private async Task<bool> IgnoreStorageLimitsOnMigrationAsync(Guid userId, Organization organization)
     {
-        if (cipher.Data == null || !cipher.OrganizationId.HasValue)
+        if (!_featureService.IsEnabled(FeatureFlagKeys.MigrateMyVaultToMyItems))
         {
-            return;
+            return false;
         }
-        var existingCipher = await _cipherRepository.GetByIdAsync(cipher.Id);
-        if (existingCipher == null) return;
 
-        var cipherPermissions = await _getCipherPermissionsForUserQuery.GetByOrganization(cipher.OrganizationId.Value);
-        // Check if user is a "hidden password" user
-        if (!cipherPermissions.TryGetValue(cipher.Id, out var permission) || !(permission.ViewPassword && permission.Edit))
+        if (!organization.UsePolicies)
         {
-            var existingCipherData = DeserializeCipherData(existingCipher);
-            var newCipherData = DeserializeCipherData(cipher);
-
-            // "hidden password" users may not add cipher key encryption
-            if (existingCipher.Key == null && cipher.Key != null)
-            {
-                throw new BadRequestException("You do not have permission to add cipher key encryption.");
-            }
-            // Keep only non-hidden fileds from the new cipher
-            var nonHiddenFields = newCipherData.Fields?.Where(f => f.Type != FieldType.Hidden) ?? [];
-            // Get hidden fields from the existing cipher
-            var hiddenFields = existingCipherData.Fields?.Where(f => f.Type == FieldType.Hidden) ?? [];
-            // Replace the hidden fields in new cipher data with the existing ones
-            newCipherData.Fields = nonHiddenFields.Concat(hiddenFields);
-            cipher.Data = SerializeCipherData(newCipherData);
-            if (existingCipherData is CipherLoginData existingLoginData && newCipherData is CipherLoginData newLoginCipherData)
-            {
-                // "hidden password" users may not change passwords, TOTP codes, or passkeys, so we need to set them back to the original values
-                newLoginCipherData.Fido2Credentials = existingLoginData.Fido2Credentials;
-                newLoginCipherData.Totp = existingLoginData.Totp;
-                newLoginCipherData.Password = existingLoginData.Password;
-                cipher.Data = SerializeCipherData(newLoginCipherData);
-            }
+            return false;
         }
+
+        var requirement = await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId);
+
+        return requirement.IgnoreStorageLimitsOnMigration(organization.Id);
     }
 
     // Validates that a cipher is not being added to a default collection when it is only currently only in shared collections
@@ -1104,6 +1109,9 @@ public class CipherService : ICipherService
             CipherCardData cardData => JsonSerializer.Serialize(cardData),
             CipherSecureNoteData noteData => JsonSerializer.Serialize(noteData),
             CipherSSHKeyData sshKeyData => JsonSerializer.Serialize(sshKeyData),
+            CipherBankAccountData bankAccountData => JsonSerializer.Serialize(bankAccountData),
+            CipherDriversLicenseData driversLicenseData => JsonSerializer.Serialize(driversLicenseData),
+            CipherPassportData passportData => JsonSerializer.Serialize(passportData),
             _ => throw new ArgumentException("Unsupported cipher data type.", nameof(data))
         };
     }
@@ -1117,6 +1125,9 @@ public class CipherService : ICipherService
             CipherType.Card => JsonSerializer.Deserialize<CipherCardData>(cipher.Data),
             CipherType.SecureNote => JsonSerializer.Deserialize<CipherSecureNoteData>(cipher.Data),
             CipherType.SSHKey => JsonSerializer.Deserialize<CipherSSHKeyData>(cipher.Data),
+            CipherType.BankAccount => JsonSerializer.Deserialize<CipherBankAccountData>(cipher.Data),
+            CipherType.DriversLicense => JsonSerializer.Deserialize<CipherDriversLicenseData>(cipher.Data),
+            CipherType.Passport => JsonSerializer.Deserialize<CipherPassportData>(cipher.Data),
             _ => throw new ArgumentException("Unsupported cipher type.", nameof(cipher))
         };
     }
@@ -1128,11 +1139,15 @@ public class CipherService : ICipherService
         Guid userId) where T : CipherDetails
     {
         var user = await _userService.GetUserByIdAsync(userId);
-        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
 
-        var filteredCiphers = ciphers
+        var groupedCiphers = ciphers
             .Where(c => cipherIdsSet.Contains(c.Id))
             .GroupBy(c => c.OrganizationId)
+            .ToList();
+
+        var organizationAbilities = await GetOrganizationAbilitiesAsync(groupedCiphers);
+
+        var filteredCiphers = groupedCiphers
             .SelectMany(group =>
             {
                 var organizationAbility = group.Key.HasValue &&
@@ -1144,5 +1159,17 @@ public class CipherService : ICipherService
             .ToList();
 
         return filteredCiphers;
+    }
+
+    private async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync<T>(IEnumerable<IGrouping<Guid?, T>> groupedCiphers) where T : CipherDetails
+    {
+        var organizationIds = groupedCiphers
+            .Select(group => group.Key)
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .ToList();
+
+        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync(organizationIds);
+        return organizationAbilities;
     }
 }

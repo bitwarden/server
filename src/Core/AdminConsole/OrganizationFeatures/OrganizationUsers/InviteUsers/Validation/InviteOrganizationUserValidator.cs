@@ -2,10 +2,10 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
 using Bit.Core.AdminConsole.Utilities.Errors;
 using Bit.Core.AdminConsole.Utilities.Validation;
+using Bit.Core.Billing.Services;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 
@@ -15,7 +15,7 @@ public class InviteOrganizationUsersValidator(
     IOrganizationRepository organizationRepository,
     IInviteUsersPasswordManagerValidator inviteUsersPasswordManagerValidator,
     IUpdateSecretsManagerSubscriptionCommand secretsManagerSubscriptionCommand,
-    IPaymentService paymentService) : IInviteUsersValidator
+    IStripePaymentService paymentService) : IInviteUsersValidator
 {
     public async Task<ValidationResult<InviteOrganizationUsersValidationRequest>> ValidateAsync(
         InviteOrganizationUsersValidationRequest request)
@@ -57,6 +57,14 @@ public class InviteOrganizationUsersValidator(
             InviteOrganizationUsersValidationRequest request,
             PasswordManagerSubscriptionUpdate subscriptionUpdate)
     {
+        if (request.InviteOrganization.Plan is null)
+        {
+            return new Invalid<InviteOrganizationUsersValidationRequest>(
+                new Error<InviteOrganizationUsersValidationRequest>(
+                    "Cannot adjust Secrets Manager seats: organization plan is unavailable.",
+                    request));
+        }
+
         try
         {
             var organization = await organizationRepository.GetByIdAsync(request.InviteOrganization.OrganizationId);

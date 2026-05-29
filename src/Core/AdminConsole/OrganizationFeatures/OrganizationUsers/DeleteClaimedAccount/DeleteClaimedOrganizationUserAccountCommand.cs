@@ -1,6 +1,9 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
+using Bit.Core.Billing;
+using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -20,7 +23,9 @@ public class DeleteClaimedOrganizationUserAccountCommand(
     IUserRepository userRepository,
     IPushNotificationService pushService,
     ILogger<DeleteClaimedOrganizationUserAccountCommand> logger,
-    IDeleteClaimedOrganizationUserAccountValidator deleteClaimedOrganizationUserAccountValidator)
+    IDeleteClaimedOrganizationUserAccountValidator deleteClaimedOrganizationUserAccountValidator,
+    IFeatureService featureService,
+    ISubscriberService subscriberService)
     : IDeleteClaimedOrganizationUserAccountCommand
 {
     public async Task<BulkCommandResult> DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId)
@@ -127,9 +132,20 @@ public class DeleteClaimedOrganizationUserAccountCommand(
         {
             try
             {
-                await userService.CancelPremiumAsync(user);
+                if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+                {
+                    // In cases where the subscription is not active, the cancellation will fail and be logged.
+                    await subscriberService.CancelSubscription(
+                        user,
+                        cancelImmediately: false,
+                        offboardingSurveyResponse: new OffboardingSurveyResponse { UserId = user.Id });
+                }
+                else
+                {
+                    await userService.CancelPremiumAsync(user);
+                }
             }
-            catch (GatewayException exception)
+            catch (Exception exception) when (exception is GatewayException or BillingException)
             {
                 logger.LogWarning(exception, "Failed to cancel premium subscription for {userId}.", user.Id);
             }

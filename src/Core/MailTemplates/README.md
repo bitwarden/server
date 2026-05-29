@@ -75,4 +75,41 @@ The `IMailService` automatically uses both versions when sending emails:
 - Test plain text templates to ensure they're readable and convey the same message
 
 ## `*.mjml`
-This is a templating language we use to increase efficiency when creating email content. See the readme within the `./mjml` directory for more comprehensive information.
+This is a templating language we use to increase efficiency when creating email content. See the `MJML` [documentation](./Mjml/README.md) for more details.
+
+# Managing email assets
+
+We host assets that are included in emails at `assets.bitwarden.com`, at the `/email/v1` path. This corresponds to a static file storage container that is managed by our SRE team.  For example: https://assets.bitwarden.com/email/v1/mail-github.png. This is the URL for all assets for emails sent from any environment.
+
+## Adding an asset
+
+The process for adding an asset uses the typical git workflow for submitting a pull request. You can use the steps below to add, remove, or edit assets being hosted in the repo.
+
+Clone the assets repo:
+```bash
+git clone git@github.com:bitwarden/assets.git
+```
+
+Create a new branch to make and stage the changes you need:
+```bash
+git checkout -b name-of-your-branch
+```
+
+Add and commit your changes:
+```bash
+git add path/to/your-asset.png
+git commit -m "commit message"
+```
+
+Push the changes to remote repo:
+```bash
+git push origin <branch>
+```
+
+Open a PR for review.
+
+Once the changes have been approved, you can merge the PR, which will build and deploy the `assets.bitwarden.com` Github Pages site. 
+
+> [!NOTE]
+>
+> The changes following the merge may take some time to propagate.

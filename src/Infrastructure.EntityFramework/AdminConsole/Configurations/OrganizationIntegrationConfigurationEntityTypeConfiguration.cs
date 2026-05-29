@@ -1,4 +1,4 @@
-﻿using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
+﻿using Bit.Infrastructure.EntityFramework.Dirt.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

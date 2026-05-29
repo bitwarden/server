@@ -1,9 +1,9 @@
 <Project>
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
 
-    <Version>2025.11.1</Version>
+    <Version>2026.5.0</Version>
 
     <RootNamespace>Bit.$(MSBuildProjectName)</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -11,23 +11,28 @@
     <Nullable Condition="'$(Nullable)' == '' and '$(IsTestProject)' == 'true'">annotations</Nullable>
     <Nullable Condition="'$(Nullable)' == '' and '$(IsTestProject)' != 'true'">enable</Nullable>
     <TreatWarningsAsErrors Condition="'$(TreatWarningsAsErrors)' == ''">true</TreatWarningsAsErrors>
+    <NuGetAuditLevel>critical</NuGetAuditLevel>
   </PropertyGroup>
 
-  
   <PropertyGroup>
-    
-    <MicrosoftNetTestSdkVersion>17.8.0</MicrosoftNetTestSdkVersion>
-    
+    <BitIncludeAuthentication>false</BitIncludeAuthentication>
+    <BitIncludeFeatures>false</BitIncludeFeatures>
+  </PropertyGroup>
+
+  <PropertyGroup>
+
+    <MicrosoftNetTestSdkVersion>18.0.1</MicrosoftNetTestSdkVersion>
+
     <XUnitVersion>2.6.6</XUnitVersion>
-    
+
     <XUnitRunnerVisualStudioVersion>2.5.6</XUnitRunnerVisualStudioVersion>
-    
+
     <CoverletCollectorVersion>6.0.0</CoverletCollectorVersion>
-    
+
     <NSubstituteVersion>5.1.0</NSubstituteVersion>
-    
+
     <AutoFixtureXUnit2Version>4.18.1</AutoFixtureXUnit2Version>
-    
+
     <AutoFixtureAutoNSubstituteVersion>4.18.1</AutoFixtureAutoNSubstituteVersion>
   </PropertyGroup>
 </Project>

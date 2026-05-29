@@ -1,0 +1,60 @@
+{
+  "$schema": "../../schemas/roster.schema.json",
+  "users": [
+    { "firstName": "Family", "lastName": "Mom", "role": "owner" },
+    { "firstName": "Family", "lastName": "Dad", "role": "admin" },
+    { "firstName": "Family", "lastName": "Son", "role": "user" },
+    { "firstName": "Family", "lastName": "Daughter", "role": "user" },
+    { "firstName": "Family", "lastName": "Grandpa", "role": "user" },
+    { "firstName": "Family", "lastName": "Grandma", "role": "user" }
+  ],
+  "groups": [
+    {
+      "name": "Everyone",
+      "members": [
+        "family.mom",
+        "family.dad",
+        "family.son",
+        "family.daughter",
+        "family.grandpa",
+        "family.grandma"
+      ]
+    },
+    {
+      "name": "Parents",
+      "members": ["family.mom", "family.dad"]
+    },
+    {
+      "name": "Grandparents",
+      "members": ["family.grandpa", "family.grandma"]
+    }
+  ],
+  "collections": [
+    {
+      "name": "Streaming",
+      "groups": [{ "group": "Everyone" }]
+    },
+    {
+      "name": "Banking",
+      "groups": [{ "group": "Parents", "manage": true }]
+    },
+    {
+      "name": "Wi-Fi & Home",
+      "groups": [{ "group": "Everyone" }]
+    },
+    {
+      "name": "School",
+      "users": [
+        { "user": "family.son" },
+        { "user": "family.daughter" }
+      ]
+    },
+    {
+      "name": "Medical",
+      "groups": [
+        { "group": "Parents" },
+        { "group": "Grandparents" }
+      ]
+    }
+  ]
+}

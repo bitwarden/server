@@ -2,6 +2,7 @@
 #nullable disable
 
 using Bit.Core.Billing.Enums;
+using Bit.Core.KeyManagement.Models.Data;
 
 namespace Bit.Core.Models.Business;
 
@@ -13,8 +14,7 @@ public class OrganizationUpgrade
     public short AdditionalStorageGb { get; set; }
     public bool PremiumAccessAddon { get; set; }
     public TaxInfo TaxInfo { get; set; }
-    public string PublicKey { get; set; }
-    public string PrivateKey { get; set; }
+    public PublicKeyEncryptionKeyPairData Keys { get; set; }
     public int? AdditionalSmSeats { get; set; }
     public int? AdditionalServiceAccounts { get; set; }
     public bool UseSecretsManager { get; set; }

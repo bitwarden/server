@@ -1,4 +1,5 @@
-﻿using Bit.Core.Tools.Models.Data;
+﻿using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
 
@@ -11,6 +12,7 @@ public class SendAuthenticationQuery : ISendAuthenticationQuery
 {
     private static readonly NotAuthenticated NOT_AUTHENTICATED = new NotAuthenticated();
     private static readonly NeverAuthenticate NEVER_AUTHENTICATE = new NeverAuthenticate();
+    private static readonly SendInaccessible SEND_INACCESSIBLE = new SendInaccessible();
 
     private readonly ISendRepository _sendRepository;
 
@@ -36,17 +38,24 @@ public class SendAuthenticationQuery : ISendAuthenticationQuery
         SendAuthenticationMethod method = send switch
         {
             null => NEVER_AUTHENTICATE,
-            var s when s.AccessCount >= s.MaxAccessCount => NEVER_AUTHENTICATE,
-            var s when s.Emails is not null => emailOtp(s.Emails),
-            var s when s.Password is not null => new ResourcePassword(s.Password),
+            var s when s.Disabled => SEND_INACCESSIBLE,
+            var s when s.AccessCount >= s.MaxAccessCount.GetValueOrDefault(int.MaxValue) => SEND_INACCESSIBLE,
+            var s when s.ExpirationDate.GetValueOrDefault(DateTime.MaxValue) < DateTime.UtcNow => SEND_INACCESSIBLE,
+            var s when s.DeletionDate <= DateTime.UtcNow => SEND_INACCESSIBLE,
+            var s when s.AuthType == AuthType.Email && s.Emails is not null => EmailOtp(s.Emails),
+            var s when s.AuthType == AuthType.Password && s.Password is not null => new ResourcePassword(s.Password),
             _ => NOT_AUTHENTICATED
         };
 
         return method;
     }
 
-    private EmailOtp emailOtp(string emails)
+    private static EmailOtp EmailOtp(string? emails)
     {
+        if (string.IsNullOrWhiteSpace(emails))
+        {
+            return new EmailOtp([]);
+        }
         var list = emails.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         return new EmailOtp(list);
     }

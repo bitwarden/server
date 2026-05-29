@@ -8,6 +8,7 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Services;
 using Stripe;
@@ -15,8 +16,8 @@ using Stripe.Tax;
 
 namespace Bit.Core.Billing.Organizations.Queries;
 
-using static Core.Constants;
 using static StripeConstants;
+using CountryAbbreviations = Bit.Core.Constants.CountryAbbreviations;
 using FreeTrialWarning = OrganizationWarnings.FreeTrialWarning;
 using InactiveSubscriptionWarning = OrganizationWarnings.InactiveSubscriptionWarning;
 using ResellerRenewalWarning = OrganizationWarnings.ResellerRenewalWarning;
@@ -30,6 +31,7 @@ public interface IGetOrganizationWarningsQuery
 
 public class GetOrganizationWarningsQuery(
     ICurrentContext currentContext,
+    IFeatureService featureService,
     IHasPaymentMethodQuery hasPaymentMethodQuery,
     IProviderRepository providerRepository,
     IStripeAdapter stripeAdapter,
@@ -55,7 +57,7 @@ public class GetOrganizationWarningsQuery(
 
         warnings.InactiveSubscription = await GetInactiveSubscriptionWarningAsync(organization, provider, subscription);
 
-        warnings.ResellerRenewal = await GetResellerRenewalWarningAsync(provider, subscription);
+        warnings.ResellerRenewal = await GetResellerRenewalWarningAsync(organization, provider, subscription);
 
         warnings.TaxId = await GetTaxIdWarningAsync(organization, subscription.Customer, provider);
 
@@ -100,6 +102,11 @@ public class GetOrganizationWarningsQuery(
         Provider? provider,
         Subscription subscription)
     {
+        if (organization.ExemptFromBillingAutomation)
+        {
+            return null;
+        }
+
         // If the organization is enabled or the subscription is active, don't return a warning.
         if (organization.Enabled || subscription is not
             {
@@ -140,9 +147,15 @@ public class GetOrganizationWarningsQuery(
     }
 
     private async Task<ResellerRenewalWarning?> GetResellerRenewalWarningAsync(
+        Organization organization,
         Provider? provider,
         Subscription subscription)
     {
+        if (organization.ExemptFromBillingAutomation)
+        {
+            return null;
+        }
+
         if (provider is not
             {
                 Type: ProviderType.Reseller
@@ -201,7 +214,7 @@ public class GetOrganizationWarningsQuery(
         // ReSharper disable once InvertIf
         if (subscription.Status == SubscriptionStatus.PastDue)
         {
-            var openInvoices = await stripeAdapter.InvoiceSearchAsync(new InvoiceSearchOptions
+            var openInvoices = await stripeAdapter.SearchInvoiceAsync(new InvoiceSearchOptions
             {
                 Query = $"subscription:'{subscription.Id}' status:'open'"
             });
@@ -231,9 +244,24 @@ public class GetOrganizationWarningsQuery(
         Customer customer,
         Provider? provider)
     {
-        if (customer.Address?.Country == CountryAbbreviations.UnitedStates)
+        if (featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
         {
-            return null;
+            if (customer.TaxExempt != TaxExempt.None)
+            {
+                return null;
+            }
+
+            if (customer.Address?.Country == CountryAbbreviations.UnitedStates)
+            {
+                return null;
+            }
+        }
+        else
+        {
+            if (TaxHelpers.IsDirectTaxCountry(customer.Address?.Country))
+            {
+                return null;
+            }
         }
 
         var productTier = organization.PlanType.GetProductTier();
@@ -257,8 +285,8 @@ public class GetOrganizationWarningsQuery(
 
         // Get active and scheduled registrations
         var registrations = (await Task.WhenAll(
-                stripeAdapter.TaxRegistrationsListAsync(new RegistrationListOptions { Status = TaxRegistrationStatus.Active }),
-                stripeAdapter.TaxRegistrationsListAsync(new RegistrationListOptions { Status = TaxRegistrationStatus.Scheduled })))
+                stripeAdapter.ListTaxRegistrationsAsync(new RegistrationListOptions { Status = TaxRegistrationStatus.Active }),
+                stripeAdapter.ListTaxRegistrationsAsync(new RegistrationListOptions { Status = TaxRegistrationStatus.Scheduled })))
             .SelectMany(registrations => registrations.Data);
 
         // Find the matching registration for the customer

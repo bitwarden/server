@@ -5,6 +5,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
@@ -47,7 +48,11 @@ public abstract class BaseProfileOrganizationResponseModel : ResponseModel
         UseAdminSponsoredFamilies = organizationDetails.UseAdminSponsoredFamilies;
         UseAutomaticUserConfirmation = organizationDetails.UseAutomaticUserConfirmation;
         UseSecretsManager = organizationDetails.UseSecretsManager;
+        UsePhishingBlocker = organizationDetails.UsePhishingBlocker;
+        UseDisableSMAdsForUsers = organizationDetails.UseDisableSMAdsForUsers;
         UsePasswordManager = organizationDetails.UsePasswordManager;
+        UseMyItems = organizationDetails.UseMyItems;
+        UseInviteLinks = organizationDetails.UseInviteLinks;
         SelfHost = organizationDetails.SelfHost;
         Seats = organizationDetails.Seats;
         MaxCollections = organizationDetails.MaxCollections;
@@ -55,7 +60,7 @@ public abstract class BaseProfileOrganizationResponseModel : ResponseModel
         Key = organizationDetails.Key;
         HasPublicAndPrivateKeys = organizationDetails.PublicKey != null && organizationDetails.PrivateKey != null;
         SsoBound = !string.IsNullOrWhiteSpace(organizationDetails.SsoExternalId);
-        ResetPasswordEnrolled = !string.IsNullOrWhiteSpace(organizationDetails.ResetPasswordKey);
+        ResetPasswordEnrolled = OrganizationUser.IsValidResetPasswordKey(organizationDetails.ResetPasswordKey);
         ProviderId = organizationDetails.ProviderId;
         ProviderName = organizationDetails.ProviderName;
         ProviderType = organizationDetails.ProviderType;
@@ -99,6 +104,10 @@ public abstract class BaseProfileOrganizationResponseModel : ResponseModel
     public bool UseOrganizationDomains { get; set; }
     public bool UseAdminSponsoredFamilies { get; set; }
     public bool UseAutomaticUserConfirmation { get; set; }
+    public bool UseDisableSMAdsForUsers { get; set; }
+    public bool UsePhishingBlocker { get; set; }
+    public bool UseMyItems { get; set; }
+    public bool UseInviteLinks { get; set; }
     public bool SelfHost { get; set; }
     public int? Seats { get; set; }
     public short? MaxCollections { get; set; }

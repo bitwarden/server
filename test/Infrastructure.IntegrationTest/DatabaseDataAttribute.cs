@@ -3,8 +3,6 @@ using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
-using Bit.Infrastructure.EntityFramework.Repositories;
-using Bit.Infrastructure.IntegrationTest.Services;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,21 +29,6 @@ public class DatabaseDataAttribute : DataAttribute
 
     public bool SelfHosted { get; set; }
     public bool UseFakeTimeProvider { get; set; }
-    public string? MigrationName { get; set; }
-
-    private void AddSqlMigrationTester(IServiceCollection services, string connectionString, string migrationName)
-    {
-        services.AddSingleton<IMigrationTesterService, SqlMigrationTesterService>(_ => new SqlMigrationTesterService(connectionString, migrationName));
-    }
-
-    private void AddEfMigrationTester(IServiceCollection services, SupportedDatabaseProviders databaseType, string migrationName)
-    {
-        services.AddSingleton<IMigrationTesterService, EfMigrationTesterService>(sp =>
-        {
-            var dbContext = sp.GetRequiredService<DatabaseContext>();
-            return new EfMigrationTesterService(dbContext, databaseType, migrationName);
-        });
-    }
 
     public override ValueTask<IReadOnlyCollection<ITheoryDataRow>> GetData(MethodInfo testMethod, DisposalTracker disposalTracker)
     {
@@ -128,7 +111,6 @@ public class DatabaseDataAttribute : DataAttribute
 
     private void AddDapperServices(IServiceCollection services, Database database)
     {
-        services.AddDapperRepositories(SelfHosted);
         var globalSettings = new GlobalSettings
         {
             DatabaseProvider = "sqlServer",
@@ -141,6 +123,7 @@ public class DatabaseDataAttribute : DataAttribute
                 UserRequestExpiration = TimeSpan.FromMinutes(15),
             }
         };
+        services.AddDapperRepositories(SelfHosted);
         services.AddSingleton(globalSettings);
         services.AddSingleton<IGlobalSettings>(globalSettings);
         services.AddSingleton(database);
@@ -150,17 +133,11 @@ public class DatabaseDataAttribute : DataAttribute
             o.SchemaName = "dbo";
             o.TableName = "Cache";
         });
-
-        if (!string.IsNullOrEmpty(MigrationName))
-        {
-            AddSqlMigrationTester(services, database.ConnectionString, MigrationName);
-        }
     }
 
     private void AddEfServices(IServiceCollection services, Database database)
     {
         services.SetupEntityFramework(database.ConnectionString, database.Type);
-        services.AddPasswordManagerEFRepositories(SelfHosted);
 
         var globalSettings = new GlobalSettings
         {
@@ -169,16 +146,12 @@ public class DatabaseDataAttribute : DataAttribute
                 UserRequestExpiration = TimeSpan.FromMinutes(15),
             },
         };
+        services.AddPasswordManagerEFRepositories(SelfHosted);
         services.AddSingleton(globalSettings);
         services.AddSingleton<IGlobalSettings>(globalSettings);
 
         services.AddSingleton(database);
         services.AddSingleton<IDistributedCache, EntityFrameworkCache>();
-
-        if (!string.IsNullOrEmpty(MigrationName))
-        {
-            AddEfMigrationTester(services, database.Type, MigrationName);
-        }
     }
 
     public override bool SupportsDiscoveryEnumeration()

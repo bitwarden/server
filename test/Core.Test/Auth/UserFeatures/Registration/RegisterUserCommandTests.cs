@@ -1,8 +1,8 @@
 ﻿using System.Text;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Auth.Entities;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -10,10 +10,12 @@ using Bit.Core.Auth.UserFeatures.Registration.Implementations;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
@@ -23,6 +25,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 using NSubstitute;
 using Xunit;
+using EmergencyAccessEntity = Bit.Core.Auth.Entities.EmergencyAccess;
 
 namespace Bit.Core.Test.Auth.UserFeatures.Registration;
 
@@ -104,8 +107,13 @@ public class RegisterUserCommandTests
     {
         // Arrange
         user.Id = Guid.NewGuid();
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
         organization.Id = Guid.NewGuid();
         organization.Name = "Test Organization";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), organization.Id)
+            .Returns(false);
 
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user)
@@ -132,6 +140,12 @@ public class RegisterUserCommandTests
         SutProvider<RegisterUserCommand> sutProvider)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), organization.Id)
+            .Returns(false);
+
         var expectedError = new IdentityError();
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user)
@@ -159,8 +173,13 @@ public class RegisterUserCommandTests
         SutProvider<RegisterUserCommand> sutProvider)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
         organization.PlanType = planType;
         organization.Name = "Enterprise Org";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), organization.Id)
+            .Returns(false);
 
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user)
@@ -190,6 +209,12 @@ public class RegisterUserCommandTests
         SutProvider<RegisterUserCommand> sutProvider)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), organization.Id)
+            .Returns(false);
+
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user)
             .Returns(IdentityResult.Success);
@@ -215,24 +240,29 @@ public class RegisterUserCommandTests
     [Theory]
     [BitAutoData]
     public async Task RegisterUserViaOrganizationInviteToken_NoOrgInviteOrOrgUserIdOrReferenceData_Succeeds(
-        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash)
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
         user.ReferenceData = null;
 
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
         sutProvider.GetDependency<IUserService>()
-            .CreateUserAsync(user, masterPasswordHash)
+            .CreateUserAsync(user, registerFinishData)
             .Returns(IdentityResult.Success);
 
         // Act
-        var result = await sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, null, null);
+        var result = await sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, registerFinishData, null, null);
 
         // Assert
         Assert.True(result.Succeeded);
 
         await sutProvider.GetDependency<IUserService>()
             .Received(1)
-            .CreateUserAsync(user, masterPasswordHash);
+            .CreateUserAsync(user, registerFinishData);
     }
 
     // Complex happy path test
@@ -241,9 +271,16 @@ public class RegisterUserCommandTests
     [BitAutoData(true, "sampleInitiationPath")]
     [BitAutoData(true, "Secrets Manager trial")]
     public async Task RegisterUserViaOrganizationInviteToken_ComplexHappyPath_Succeeds(bool addUserReferenceData, string initiationPath,
-        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId, Policy twoFactorPolicy)
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId,
+        [Policy(PolicyType.TwoFactorAuthentication, true)] PolicyStatus policy)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
+
         sutProvider.GetDependency<IGlobalSettings>()
             .DisableUserRegistration.Returns(false);
 
@@ -267,28 +304,27 @@ public class RegisterUserCommandTests
             .GetByIdAsync(orgUserId)
             .Returns(orgUser);
 
-        twoFactorPolicy.Enabled = true;
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(orgUser.OrganizationId, PolicyType.TwoFactorAuthentication)
-            .Returns(twoFactorPolicy);
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(orgUser.OrganizationId, PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
 
         sutProvider.GetDependency<IUserService>()
-            .CreateUserAsync(user, masterPasswordHash)
+            .CreateUserAsync(user, registerFinishData)
             .Returns(IdentityResult.Success);
 
         user.ReferenceData = addUserReferenceData ? $"{{\"initiationPath\":\"{initiationPath}\"}}" : null;
 
         // Act
-        var result = await sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUserId);
+        var result = await sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, registerFinishData, orgInviteToken, orgUserId);
 
         // Assert
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .GetByIdAsync(orgUserId);
 
-        await sutProvider.GetDependency<IPolicyRepository>()
+        await sutProvider.GetDependency<IPolicyQuery>()
             .Received(1)
-            .GetByOrganizationIdTypeAsync(orgUser.OrganizationId, PolicyType.TwoFactorAuthentication);
+            .RunAsync(orgUser.OrganizationId, PolicyType.TwoFactorAuthentication);
 
         sutProvider.GetDependency<IUserService>()
             .Received(1)
@@ -311,7 +347,7 @@ public class RegisterUserCommandTests
 
         await sutProvider.GetDependency<IUserService>()
             .Received(1)
-            .CreateUserAsync(Arg.Is<User>(u => u.EmailVerified == true && u.ApiKey != null), masterPasswordHash);
+            .CreateUserAsync(Arg.Is<User>(u => u.EmailVerified == true && u.ApiKey != null), registerFinishData);
 
         if (addUserReferenceData)
         {
@@ -345,9 +381,15 @@ public class RegisterUserCommandTests
     [BitAutoData("nullOrgInviteToken")]
     [BitAutoData("nullOrgUserId")]
     public async Task RegisterUserViaOrganizationInviteToken_MissingOrInvalidOrgInviteDataWithDisabledOpenRegistration_ThrowsBadRequestException(string scenario,
-        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid? orgUserId)
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData, OrganizationUser orgUser, string orgInviteToken, Guid? orgUserId)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
         sutProvider.GetDependency<IGlobalSettings>()
             .DisableUserRegistration.Returns(true);
 
@@ -374,7 +416,7 @@ public class RegisterUserCommandTests
         }
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUserId));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, registerFinishData, orgInviteToken, orgUserId));
         Assert.Equal("Open registration has been disabled by the system administrator.", exception.Message);
     }
 
@@ -383,9 +425,15 @@ public class RegisterUserCommandTests
     [BitAutoData("nullOrgInviteToken")]
     [BitAutoData("nullOrgUserId")]
     public async Task RegisterUserViaOrganizationInviteToken_MissingOrInvalidOrgInviteDataWithEnabledOpenRegistration_ThrowsBadRequestException(string scenario,
-        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid? orgUserId)
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData, OrganizationUser orgUser, string orgInviteToken, Guid? orgUserId)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
         sutProvider.GetDependency<IGlobalSettings>()
             .DisableUserRegistration.Returns(false);
 
@@ -404,7 +452,7 @@ public class RegisterUserCommandTests
                         return true;
                     });
 
-                expectedErrorMessage = "Organization invite token is invalid.";
+                expectedErrorMessage = "Invalid token.";
                 break;
             case "nullOrgInviteToken":
                 orgInviteToken = null;
@@ -419,19 +467,20 @@ public class RegisterUserCommandTests
         user.ReferenceData = null;
 
         sutProvider.GetDependency<IUserService>()
-            .CreateUserAsync(user, masterPasswordHash)
+            .CreateUserAsync(user, registerFinishData)
             .Returns(IdentityResult.Success);
 
         // Act
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUserId));
+            sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, registerFinishData, orgInviteToken, orgUserId));
         Assert.Equal(expectedErrorMessage, exception.Message);
     }
 
     [Theory]
     [BitAutoData]
     public async Task RegisterUserViaOrganizationInviteToken_BlockedDomainFromDifferentOrg_ThrowsBadRequestException(
-        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId)
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy)
     {
         // Arrange
         user.Email = "user@blocked-domain.com";
@@ -454,25 +503,26 @@ public class RegisterUserCommandTests
             .GetByIdAsync(orgUserId)
             .Returns(orgUser);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
-
         // Mock the new overload that excludes the organization - it should return true (domain IS blocked by another org)
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com", orgUser.OrganizationId)
             .Returns(true);
 
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
+
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUserId));
+            sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, registerFinishData, orgInviteToken, orgUserId));
         Assert.Equal("This email address is claimed by an organization using Bitwarden.", exception.Message);
     }
 
     [Theory]
     [BitAutoData]
     public async Task RegisterUserViaOrganizationInviteToken_BlockedDomainFromSameOrg_Succeeds(
-        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId)
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy)
     {
         // Arrange
         user.Email = "user@company-domain.com";
@@ -496,21 +546,21 @@ public class RegisterUserCommandTests
             .GetByIdAsync(orgUserId)
             .Returns(orgUser);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
-
         // Mock the new overload - it should return false (domain is NOT blocked by OTHER orgs)
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("company-domain.com", orgUser.OrganizationId)
             .Returns(false);
 
         sutProvider.GetDependency<IUserService>()
-            .CreateUserAsync(user, masterPasswordHash)
+            .CreateUserAsync(user, registerFinishData)
             .Returns(IdentityResult.Success);
 
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
+
         // Act
-        var result = await sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUserId);
+        var result = await sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, registerFinishData, orgInviteToken, orgUserId);
 
         // Assert
         Assert.True(result.Succeeded);
@@ -522,12 +572,16 @@ public class RegisterUserCommandTests
     [Theory]
     [BitAutoData]
     public async Task RegisterUserViaOrganizationInviteToken_WithValidTokenButNullOrgUser_ThrowsBadRequestException(
-        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId)
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId)
     {
         // Arrange
         user.Email = "user@example.com";
         orgUser.Email = user.Email;
         orgUser.Id = orgUserId;
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
 
         var orgInviteTokenable = new OrgUserInviteTokenable(orgUser);
 
@@ -546,7 +600,7 @@ public class RegisterUserCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUserId));
+            sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, registerFinishData, orgInviteToken, orgUserId));
         Assert.Equal("Invalid organization user invitation.", exception.Message);
 
         // Verify that GetByIdAsync was called
@@ -557,7 +611,7 @@ public class RegisterUserCommandTests
         // Verify that user creation was never attempted
         await sutProvider.GetDependency<IUserService>()
             .DidNotReceive()
-            .CreateUserAsync(Arg.Any<User>(), Arg.Any<string>());
+            .CreateUserAsync(Arg.Any<User>(), Arg.Any<RegisterFinishData>());
     }
 
     // -----------------------------------------------------------------------------------------------
@@ -566,7 +620,7 @@ public class RegisterUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task RegisterUserViaEmailVerificationToken_Succeeds(SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, string emailVerificationToken, bool receiveMarketingMaterials)
+    public async Task RegisterUserViaEmailVerificationToken_Succeeds(SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData, string emailVerificationToken, bool receiveMarketingMaterials)
     {
         // Arrange
         user.Email = $"test+{Guid.NewGuid()}@example.com";
@@ -584,18 +638,18 @@ public class RegisterUserCommandTests
             });
 
         sutProvider.GetDependency<IUserService>()
-            .CreateUserAsync(user, masterPasswordHash)
+            .CreateUserAsync(user, registerFinishData)
             .Returns(IdentityResult.Success);
 
         // Act
-        var result = await sutProvider.Sut.RegisterUserViaEmailVerificationToken(user, masterPasswordHash, emailVerificationToken);
+        var result = await sutProvider.Sut.RegisterUserViaEmailVerificationToken(user, registerFinishData, emailVerificationToken);
 
         // Assert
         Assert.True(result.Succeeded);
 
         await sutProvider.GetDependency<IUserService>()
             .Received(1)
-            .CreateUserAsync(Arg.Is<User>(u => u.Name == user.Name && u.EmailVerified == true && u.ApiKey != null), masterPasswordHash);
+            .CreateUserAsync(Arg.Is<User>(u => u.Name == user.Name && u.EmailVerified == true && u.ApiKey != null), registerFinishData);
 
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
@@ -604,7 +658,7 @@ public class RegisterUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task RegisterUserViaEmailVerificationToken_InvalidToken_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, string emailVerificationToken, bool receiveMarketingMaterials)
+    public async Task RegisterUserViaEmailVerificationToken_InvalidToken_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData, string emailVerificationToken, bool receiveMarketingMaterials)
     {
         // Arrange
         user.Email = $"test+{Guid.NewGuid()}@example.com";
@@ -622,21 +676,27 @@ public class RegisterUserCommandTests
             });
 
         // Act & Assert
-        var result = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RegisterUserViaEmailVerificationToken(user, masterPasswordHash, emailVerificationToken));
+        var result = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RegisterUserViaEmailVerificationToken(user, registerFinishData, emailVerificationToken));
         Assert.Equal("Invalid email verification token.", result.Message);
 
     }
 
     [Theory]
     [BitAutoData]
-    public async Task RegisterUserViaEmailVerificationToken_DisabledOpenRegistration_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, string emailVerificationToken)
+    public async Task RegisterUserViaEmailVerificationToken_DisabledOpenRegistration_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData, string emailVerificationToken)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
         sutProvider.GetDependency<IGlobalSettings>()
             .DisableUserRegistration = true;
 
         // Act & Assert
-        var result = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RegisterUserViaEmailVerificationToken(user, masterPasswordHash, emailVerificationToken));
+        var result = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RegisterUserViaEmailVerificationToken(user, registerFinishData, emailVerificationToken));
         Assert.Equal("Open registration has been disabled by the system administrator.", result.Message);
 
     }
@@ -647,7 +707,7 @@ public class RegisterUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken_Succeeds(SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash,
+    public async Task RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken_Succeeds(SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
         string orgSponsoredFreeFamilyPlanInviteToken)
     {
         // Arrange
@@ -662,18 +722,18 @@ public class RegisterUserCommandTests
             .Returns((true, new OrganizationSponsorship()));
 
         sutProvider.GetDependency<IUserService>()
-            .CreateUserAsync(user, masterPasswordHash)
+            .CreateUserAsync(user, registerFinishData)
             .Returns(IdentityResult.Success);
 
         // Act
-        var result = await sutProvider.Sut.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, masterPasswordHash, orgSponsoredFreeFamilyPlanInviteToken);
+        var result = await sutProvider.Sut.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, registerFinishData, orgSponsoredFreeFamilyPlanInviteToken);
 
         // Assert
         Assert.True(result.Succeeded);
 
         await sutProvider.GetDependency<IUserService>()
             .Received(1)
-            .CreateUserAsync(Arg.Is<User>(u => u.Name == user.Name && u.EmailVerified == true && u.ApiKey != null), masterPasswordHash);
+            .CreateUserAsync(Arg.Is<User>(u => u.Name == user.Name && u.EmailVerified == true && u.ApiKey != null), registerFinishData);
 
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
@@ -683,7 +743,7 @@ public class RegisterUserCommandTests
     [Theory]
     [BitAutoData]
     public async Task RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken_InvalidToken_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user,
-        string masterPasswordHash, string orgSponsoredFreeFamilyPlanInviteToken)
+        RegisterFinishData registerFinishData, string orgSponsoredFreeFamilyPlanInviteToken)
     {
         // Arrange
         user.Email = $"test+{Guid.NewGuid()}@example.com";
@@ -698,7 +758,7 @@ public class RegisterUserCommandTests
 
         // Act & Assert
         var result = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, masterPasswordHash, orgSponsoredFreeFamilyPlanInviteToken));
+            sutProvider.Sut.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, registerFinishData, orgSponsoredFreeFamilyPlanInviteToken));
         Assert.Equal("Invalid org sponsored free family plan token.", result.Message);
 
     }
@@ -706,15 +766,21 @@ public class RegisterUserCommandTests
     [Theory]
     [BitAutoData]
     public async Task RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken_DisabledOpenRegistration_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user,
-        string masterPasswordHash, string orgSponsoredFreeFamilyPlanInviteToken)
+        RegisterFinishData registerFinishData, string orgSponsoredFreeFamilyPlanInviteToken)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
         sutProvider.GetDependency<IGlobalSettings>()
             .DisableUserRegistration = true;
 
         // Act & Assert
         var result = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, masterPasswordHash, orgSponsoredFreeFamilyPlanInviteToken));
+            sutProvider.Sut.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, registerFinishData, orgSponsoredFreeFamilyPlanInviteToken));
         Assert.Equal("Open registration has been disabled by the system administrator.", result.Message);
     }
 
@@ -725,8 +791,8 @@ public class RegisterUserCommandTests
     [Theory]
     [BitAutoData]
     public async Task RegisterUserViaAcceptEmergencyAccessInviteToken_Succeeds(
-        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash,
-        EmergencyAccess emergencyAccess, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        EmergencyAccessEntity emergencyAccess, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
     {
         // Arrange
         user.Email = $"test+{Guid.NewGuid()}@example.com";
@@ -746,18 +812,18 @@ public class RegisterUserCommandTests
             });
 
         sutProvider.GetDependency<IUserService>()
-            .CreateUserAsync(user, masterPasswordHash)
+            .CreateUserAsync(user, registerFinishData)
             .Returns(IdentityResult.Success);
 
         // Act
-        var result = await sutProvider.Sut.RegisterUserViaAcceptEmergencyAccessInviteToken(user, masterPasswordHash, acceptEmergencyAccessInviteToken, acceptEmergencyAccessId);
+        var result = await sutProvider.Sut.RegisterUserViaAcceptEmergencyAccessInviteToken(user, registerFinishData, acceptEmergencyAccessInviteToken, acceptEmergencyAccessId);
 
         // Assert
         Assert.True(result.Succeeded);
 
         await sutProvider.GetDependency<IUserService>()
             .Received(1)
-            .CreateUserAsync(Arg.Is<User>(u => u.Name == user.Name && u.EmailVerified == true && u.ApiKey != null), masterPasswordHash);
+            .CreateUserAsync(Arg.Is<User>(u => u.Name == user.Name && u.EmailVerified == true && u.ApiKey != null), registerFinishData);
 
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
@@ -767,7 +833,7 @@ public class RegisterUserCommandTests
     [Theory]
     [BitAutoData]
     public async Task RegisterUserViaAcceptEmergencyAccessInviteToken_InvalidToken_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user,
-        string masterPasswordHash, EmergencyAccess emergencyAccess, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
+        RegisterFinishData registerFinishData, EmergencyAccessEntity emergencyAccess, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
     {
         // Arrange
         user.Email = $"test+{Guid.NewGuid()}@example.com";
@@ -788,7 +854,7 @@ public class RegisterUserCommandTests
 
         // Act & Assert
         var result = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RegisterUserViaAcceptEmergencyAccessInviteToken(user, masterPasswordHash, acceptEmergencyAccessInviteToken, acceptEmergencyAccessId));
+            sutProvider.Sut.RegisterUserViaAcceptEmergencyAccessInviteToken(user, registerFinishData, acceptEmergencyAccessInviteToken, acceptEmergencyAccessId));
         Assert.Equal("Invalid accept emergency access invite token.", result.Message);
 
     }
@@ -796,15 +862,21 @@ public class RegisterUserCommandTests
     [Theory]
     [BitAutoData]
     public async Task RegisterUserViaAcceptEmergencyAccessInviteToken_DisabledOpenRegistration_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user,
-        string masterPasswordHash, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
+        RegisterFinishData registerFinishData, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
         sutProvider.GetDependency<IGlobalSettings>()
             .DisableUserRegistration = true;
 
         // Act & Assert
         var result = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RegisterUserViaAcceptEmergencyAccessInviteToken(user, masterPasswordHash, acceptEmergencyAccessInviteToken, acceptEmergencyAccessId));
+            sutProvider.Sut.RegisterUserViaAcceptEmergencyAccessInviteToken(user, registerFinishData, acceptEmergencyAccessInviteToken, acceptEmergencyAccessId));
         Assert.Equal("Open registration has been disabled by the system administrator.", result.Message);
     }
 
@@ -815,7 +887,7 @@ public class RegisterUserCommandTests
     [Theory]
     [BitAutoData]
     public async Task RegisterUserViaProviderInviteToken_Succeeds(SutProvider<RegisterUserCommand> sutProvider,
-        User user, string masterPasswordHash, Guid providerUserId)
+        User user, RegisterFinishData registerFinishData, Guid providerUserId)
     {
         // Arrange
         user.Email = $"test+{Guid.NewGuid()}@example.com";
@@ -847,7 +919,7 @@ public class RegisterUserCommandTests
             .Returns(false);
 
         sutProvider.GetDependency<IUserService>()
-            .CreateUserAsync(user, masterPasswordHash)
+            .CreateUserAsync(user, registerFinishData)
             .Returns(IdentityResult.Success);
 
         // Using sutProvider in the parameters of the function means that the constructor has already run for the
@@ -855,14 +927,14 @@ public class RegisterUserCommandTests
         sutProvider.Create();
 
         // Act
-        var result = await sutProvider.Sut.RegisterUserViaProviderInviteToken(user, masterPasswordHash, base64EncodedProviderInvToken, providerUserId);
+        var result = await sutProvider.Sut.RegisterUserViaProviderInviteToken(user, registerFinishData, base64EncodedProviderInvToken, providerUserId);
 
         // Assert
         Assert.True(result.Succeeded);
 
         await sutProvider.GetDependency<IUserService>()
             .Received(1)
-            .CreateUserAsync(Arg.Is<User>(u => u.Name == user.Name && u.EmailVerified == true && u.ApiKey != null), masterPasswordHash);
+            .CreateUserAsync(Arg.Is<User>(u => u.Name == user.Name && u.EmailVerified == true && u.ApiKey != null), registerFinishData);
 
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
@@ -872,7 +944,7 @@ public class RegisterUserCommandTests
     [Theory]
     [BitAutoData]
     public async Task RegisterUserViaProviderInviteToken_InvalidToken_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider,
-        User user, string masterPasswordHash, Guid providerUserId)
+        User user, RegisterFinishData registerFinishData, Guid providerUserId)
     {
         // Arrange
         user.Email = $"test+{Guid.NewGuid()}@example.com";
@@ -909,16 +981,18 @@ public class RegisterUserCommandTests
 
         // Act & Assert
         var result = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RegisterUserViaProviderInviteToken(user, masterPasswordHash, base64EncodedProviderInvToken, Guid.NewGuid()));
+            sutProvider.Sut.RegisterUserViaProviderInviteToken(user, registerFinishData, base64EncodedProviderInvToken, Guid.NewGuid()));
         Assert.Equal("Invalid provider invite token.", result.Message);
     }
 
     [Theory]
     [BitAutoData]
     public async Task RegisterUserViaProviderInviteToken_DisabledOpenRegistration_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider,
-        User user, string masterPasswordHash, Guid providerUserId)
+        User user, RegisterFinishData registerFinishData, Guid providerUserId)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
         // Start with plaintext
         var nowMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow);
         var decryptedProviderInviteToken = $"ProviderUserInvite {providerUserId} {user.Email} {nowMillis}";
@@ -938,6 +1012,10 @@ public class RegisterUserCommandTests
             .CreateProtector("ProviderServiceDataProtector")
             .Returns(mockDataProtector);
 
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
         sutProvider.GetDependency<IGlobalSettings>()
             .DisableUserRegistration = true;
 
@@ -947,7 +1025,7 @@ public class RegisterUserCommandTests
 
         // Act & Assert
         var result = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RegisterUserViaProviderInviteToken(user, masterPasswordHash, base64EncodedProviderInvToken, providerUserId));
+            sutProvider.Sut.RegisterUserViaProviderInviteToken(user, registerFinishData, base64EncodedProviderInvToken, providerUserId));
         Assert.Equal("Open registration has been disabled by the system administrator.", result.Message);
     }
 
@@ -962,10 +1040,6 @@ public class RegisterUserCommandTests
     {
         // Arrange
         user.Email = "user@blocked-domain.com";
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com")
@@ -990,10 +1064,6 @@ public class RegisterUserCommandTests
         // Arrange
         user.Email = "user@allowed-domain.com";
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
-
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("allowed-domain.com")
             .Returns(false);
@@ -1017,6 +1087,7 @@ public class RegisterUserCommandTests
     [Theory]
     [BitAutoData(PlanType.FamiliesAnnually)]
     [BitAutoData(PlanType.FamiliesAnnually2019)]
+    [BitAutoData(PlanType.FamiliesAnnually2025)]
     [BitAutoData(PlanType.Free)]
     public async Task SendWelcomeEmail_FamilyOrg_SendsFamilyWelcomeEmail(
         PlanType planType,
@@ -1025,8 +1096,13 @@ public class RegisterUserCommandTests
         SutProvider<RegisterUserCommand> sutProvider)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
         organization.PlanType = planType;
         organization.Name = "Family Org";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), organization.Id)
+            .Returns(false);
 
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user)
@@ -1052,15 +1128,11 @@ public class RegisterUserCommandTests
     [Theory]
     [BitAutoData]
     public async Task RegisterUserViaEmailVerificationToken_BlockedDomain_ThrowsBadRequestException(
-        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash,
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
         string emailVerificationToken, bool receiveMarketingMaterials)
     {
         // Arrange
         user.Email = "user@blocked-domain.com";
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com")
@@ -1076,22 +1148,18 @@ public class RegisterUserCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RegisterUserViaEmailVerificationToken(user, masterPasswordHash, emailVerificationToken));
+            sutProvider.Sut.RegisterUserViaEmailVerificationToken(user, registerFinishData, emailVerificationToken));
         Assert.Equal("This email address is claimed by an organization using Bitwarden.", exception.Message);
     }
 
     [Theory]
     [BitAutoData]
     public async Task RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken_BlockedDomain_ThrowsBadRequestException(
-        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash,
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
         string orgSponsoredFreeFamilyPlanInviteToken)
     {
         // Arrange
         user.Email = "user@blocked-domain.com";
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com")
@@ -1103,24 +1171,20 @@ public class RegisterUserCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, masterPasswordHash, orgSponsoredFreeFamilyPlanInviteToken));
+            sutProvider.Sut.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, registerFinishData, orgSponsoredFreeFamilyPlanInviteToken));
         Assert.Equal("This email address is claimed by an organization using Bitwarden.", exception.Message);
     }
 
     [Theory]
     [BitAutoData]
     public async Task RegisterUserViaAcceptEmergencyAccessInviteToken_BlockedDomain_ThrowsBadRequestException(
-        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash,
-        EmergencyAccess emergencyAccess, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        EmergencyAccessEntity emergencyAccess, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
     {
         // Arrange
         user.Email = "user@blocked-domain.com";
         emergencyAccess.Email = user.Email;
         emergencyAccess.Id = acceptEmergencyAccessId;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com")
@@ -1136,14 +1200,14 @@ public class RegisterUserCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RegisterUserViaAcceptEmergencyAccessInviteToken(user, masterPasswordHash, acceptEmergencyAccessInviteToken, acceptEmergencyAccessId));
+            sutProvider.Sut.RegisterUserViaAcceptEmergencyAccessInviteToken(user, registerFinishData, acceptEmergencyAccessInviteToken, acceptEmergencyAccessId));
         Assert.Equal("This email address is claimed by an organization using Bitwarden.", exception.Message);
     }
 
     [Theory]
     [BitAutoData]
     public async Task RegisterUserViaProviderInviteToken_BlockedDomain_ThrowsBadRequestException(
-        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, Guid providerUserId)
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData, Guid providerUserId)
     {
         // Arrange
         user.Email = "user@blocked-domain.com";
@@ -1170,10 +1234,6 @@ public class RegisterUserCommandTests
         sutProvider.GetDependency<IGlobalSettings>()
             .OrganizationInviteExpirationHours.Returns(120); // 5 days
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
-
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com")
             .Returns(true);
@@ -1184,7 +1244,7 @@ public class RegisterUserCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RegisterUserViaProviderInviteToken(user, masterPasswordHash, base64EncodedProviderInvToken, providerUserId));
+            sutProvider.Sut.RegisterUserViaProviderInviteToken(user, registerFinishData, base64EncodedProviderInvToken, providerUserId));
         Assert.Equal("This email address is claimed by an organization using Bitwarden.", exception.Message);
     }
 
@@ -1200,10 +1260,6 @@ public class RegisterUserCommandTests
         // Arrange
         user.Email = "invalid-email-format";
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
-
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.RegisterUser(user));
@@ -1213,15 +1269,11 @@ public class RegisterUserCommandTests
     [Theory]
     [BitAutoData]
     public async Task RegisterUserViaEmailVerificationToken_InvalidEmailFormat_ThrowsBadRequestException(
-        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash,
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
         string emailVerificationToken, bool receiveMarketingMaterials)
     {
         // Arrange
         user.Email = "invalid-email-format";
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
 
         sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
             .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
@@ -1233,7 +1285,7 @@ public class RegisterUserCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RegisterUserViaEmailVerificationToken(user, masterPasswordHash, emailVerificationToken));
+            sutProvider.Sut.RegisterUserViaEmailVerificationToken(user, registerFinishData, emailVerificationToken));
         Assert.Equal("Invalid email address format.", exception.Message);
     }
 
@@ -1243,24 +1295,30 @@ public class RegisterUserCommandTests
         User user,
         OrganizationUser orgUser,
         string orgInviteToken,
-        string masterPasswordHash,
+        RegisterFinishData registerFinishData,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy,
         SutProvider<RegisterUserCommand> sutProvider)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
         user.ReferenceData = null;
         orgUser.Email = user.Email;
 
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
+
         sutProvider.GetDependency<IUserService>()
-            .CreateUserAsync(user, masterPasswordHash)
+            .CreateUserAsync(user, registerFinishData)
             .Returns(IdentityResult.Success);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(orgUser.Id)
             .Returns(orgUser);
 
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication)
-            .Returns((Policy)null);
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(orgUser.OrganizationId)
@@ -1281,7 +1339,7 @@ public class RegisterUserCommandTests
             });
 
         // Act
-        var result = await sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUser.Id);
+        var result = await sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, registerFinishData, orgInviteToken, orgUser.Id);
 
         // Assert
         await sutProvider.GetDependency<IMailService>()
@@ -1296,10 +1354,15 @@ public class RegisterUserCommandTests
         SutProvider<RegisterUserCommand> sutProvider)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
         Organization organization = new Organization
         {
             Name = null
         };
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
 
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user)
@@ -1328,26 +1391,32 @@ public class RegisterUserCommandTests
         Organization organization,
         User user,
         OrganizationUser orgUser,
-        string masterPasswordHash,
+        RegisterFinishData registerFinishData,
         string orgInviteToken,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy,
         SutProvider<RegisterUserCommand> sutProvider)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
         user.ReferenceData = null;
         orgUser.Email = user.Email;
         organization.PlanType = PlanType.EnterpriseAnnually;
 
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
+
         sutProvider.GetDependency<IUserService>()
-            .CreateUserAsync(user, masterPasswordHash)
+            .CreateUserAsync(user, registerFinishData)
             .Returns(IdentityResult.Success);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(orgUser.Id)
             .Returns(orgUser);
 
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication)
-            .Returns((Policy)null);
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(orgUser.OrganizationId)
@@ -1368,7 +1437,7 @@ public class RegisterUserCommandTests
             });
 
         // Act
-        var result = await sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUser.Id);
+        var result = await sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, registerFinishData, orgInviteToken, orgUser.Id);
 
         // Assert
         Assert.True(result.Succeeded);
@@ -1380,5 +1449,79 @@ public class RegisterUserCommandTests
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
             .SendOrganizationUserWelcomeEmailAsync(user, organization.DisplayName());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RegisterSSOAutoProvisionedUserAsync_WithBlockedDomain_ThrowsException(
+        User user,
+        Organization organization,
+        SutProvider<RegisterUserCommand> sutProvider)
+    {
+        // Arrange
+        user.Email = "user@blocked-domain.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com", organization.Id)
+            .Returns(true);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterSSOAutoProvisionedUserAsync(user, organization));
+        Assert.Equal("This email address is claimed by an organization using Bitwarden.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RegisterSSOAutoProvisionedUserAsync_WithOwnClaimedDomain_Succeeds(
+        User user,
+        Organization organization,
+        SutProvider<RegisterUserCommand> sutProvider)
+    {
+        // Arrange
+        user.Email = "user@company-domain.com";
+
+        // Domain is claimed by THIS organization, so it should be allowed
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("company-domain.com", organization.Id)
+            .Returns(false); // Not blocked because organization.Id is excluded
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterSSOAutoProvisionedUserAsync(user, organization);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .CreateUserAsync(user);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RegisterSSOAutoProvisionedUserAsync_WithNonClaimedDomain_Succeeds(
+        User user,
+        Organization organization,
+        SutProvider<RegisterUserCommand> sutProvider)
+    {
+        // Arrange
+        user.Email = "user@unclaimed-domain.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("unclaimed-domain.com", organization.Id)
+            .Returns(false); // Domain is not claimed by any org
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterSSOAutoProvisionedUserAsync(user, organization);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .CreateUserAsync(user);
     }
 }

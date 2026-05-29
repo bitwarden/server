@@ -46,7 +46,7 @@ public class ChargeSucceededHandler : IChargeSucceededHandler
             return;
         }
 
-        var transaction = _stripeEventUtilityService.FromChargeToTransaction(charge, organizationId, userId, providerId);
+        var transaction = await _stripeEventUtilityService.FromChargeToTransactionAsync(charge, organizationId, userId, providerId);
         if (!transaction.PaymentMethodType.HasValue)
         {
             _logger.LogWarning("Charge success from unsupported source/method. {ChargeId}", charge.Id);

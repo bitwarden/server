@@ -1,8 +1,10 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Providers.Queries;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Services;
 using Stripe;
@@ -10,13 +12,14 @@ using Stripe.Tax;
 
 namespace Bit.Commercial.Core.Billing.Providers.Queries;
 
-using static Bit.Core.Constants;
 using static StripeConstants;
+using CountryAbbreviations = Bit.Core.Constants.CountryAbbreviations;
 using SuspensionWarning = ProviderWarnings.SuspensionWarning;
 using TaxIdWarning = ProviderWarnings.TaxIdWarning;
 
 public class GetProviderWarningsQuery(
     ICurrentContext currentContext,
+    IFeatureService featureService,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService) : IGetProviderWarningsQuery
 {
@@ -62,9 +65,24 @@ public class GetProviderWarningsQuery(
         Provider provider,
         Customer customer)
     {
-        if (customer.Address?.Country == CountryAbbreviations.UnitedStates)
+        if (featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
         {
-            return null;
+            if (customer.TaxExempt != TaxExempt.None)
+            {
+                return null;
+            }
+
+            if (customer.Address?.Country == CountryAbbreviations.UnitedStates)
+            {
+                return null;
+            }
+        }
+        else
+        {
+            if (TaxHelpers.IsDirectTaxCountry(customer.Address?.Country))
+            {
+                return null;
+            }
         }
 
         if (!currentContext.ProviderProviderAdmin(provider.Id))
@@ -76,8 +94,8 @@ public class GetProviderWarningsQuery(
 
         // Get active and scheduled registrations
         var registrations = (await Task.WhenAll(
-                stripeAdapter.TaxRegistrationsListAsync(new RegistrationListOptions { Status = TaxRegistrationStatus.Active }),
-                stripeAdapter.TaxRegistrationsListAsync(new RegistrationListOptions { Status = TaxRegistrationStatus.Scheduled })))
+                stripeAdapter.ListTaxRegistrationsAsync(new RegistrationListOptions { Status = TaxRegistrationStatus.Active }),
+                stripeAdapter.ListTaxRegistrationsAsync(new RegistrationListOptions { Status = TaxRegistrationStatus.Scheduled })))
             .SelectMany(registrations => registrations.Data);
 
         // Find the matching registration for the customer

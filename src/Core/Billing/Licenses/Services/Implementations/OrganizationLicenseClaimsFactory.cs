@@ -57,6 +57,10 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
             new(nameof(OrganizationLicenseConstants.UseAdminSponsoredFamilies), entity.UseAdminSponsoredFamilies.ToString()),
             new(nameof(OrganizationLicenseConstants.UseOrganizationDomains), entity.UseOrganizationDomains.ToString()),
             new(nameof(OrganizationLicenseConstants.UseAutomaticUserConfirmation), entity.UseAutomaticUserConfirmation.ToString()),
+            new(nameof(OrganizationLicenseConstants.UseDisableSmAdsForUsers), entity.UseDisableSmAdsForUsers.ToString()),
+            new(nameof(OrganizationLicenseConstants.UsePhishingBlocker), entity.UsePhishingBlocker.ToString()),
+            new(nameof(OrganizationLicenseConstants.UseMyItems), entity.UseMyItems.ToString()),
+            new(nameof(OrganizationLicenseConstants.UseInviteLinks), entity.UseInviteLinks.ToString()),
         };
 
         if (entity.Name is not null)

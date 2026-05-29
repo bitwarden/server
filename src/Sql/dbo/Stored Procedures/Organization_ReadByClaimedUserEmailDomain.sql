@@ -6,7 +6,7 @@ BEGIN
 
     WITH CTE_User AS (
         SELECT
-            U.*,
+            U.[Id],
             SUBSTRING(U.Email, CHARINDEX('@', U.Email) + 1, LEN(U.Email)) AS EmailDomain
         FROM dbo.[UserView] U
         WHERE U.[Id] = @UserId
@@ -19,4 +19,5 @@ BEGIN
     WHERE OD.[VerifiedDate] IS NOT NULL
       AND CU.EmailDomain = OD.[DomainName]
       AND O.[Enabled] = 1
+      AND OU.[Status] != 0 -- Exclude invited users
 END

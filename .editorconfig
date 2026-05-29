@@ -71,10 +71,10 @@ dotnet_naming_symbols.any_async_methods.applicable_kinds = method
 dotnet_naming_symbols.any_async_methods.applicable_accessibilities = *
 dotnet_naming_symbols.any_async_methods.required_modifiers = async
 
-dotnet_naming_style.end_in_async.required_prefix = 
+dotnet_naming_style.end_in_async.required_prefix =
 dotnet_naming_style.end_in_async.required_suffix = Async
 dotnet_naming_style.end_in_async.capitalization = pascal_case
-dotnet_naming_style.end_in_async.word_separator = 
+dotnet_naming_style.end_in_async.word_separator =
 
 # Obsolete warnings, this should be removed or changed to warning once we address some of the obsolete items.
 dotnet_diagnostic.CS0618.severity = suggestion
@@ -84,6 +84,12 @@ dotnet_diagnostic.CS0612.severity = suggestion
 
 # Remove unnecessary using directives https://docs.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0005
 dotnet_diagnostic.IDE0005.severity = warning
+
+# Specify CultureInfo https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca1304
+dotnet_diagnostic.CA1304.severity = warning
+
+# Specify IFormatProvider https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca1305
+dotnet_diagnostic.CA1305.severity = warning
 
 # CSharp code style settings:
 [*.cs]

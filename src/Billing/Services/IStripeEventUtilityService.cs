@@ -36,7 +36,7 @@ public interface IStripeEventUtilityService
     /// <param name="userId"></param>
     /// /// <param name="providerId"></param>
     /// <returns></returns>
-    Transaction FromChargeToTransaction(Charge charge, Guid? organizationId, Guid? userId, Guid? providerId);
+    Task<Transaction> FromChargeToTransactionAsync(Charge charge, Guid? organizationId, Guid? userId, Guid? providerId);
 
     /// <summary>
     /// Attempts to pay the specified invoice. If a customer is eligible, the invoice is paid using Braintree or Stripe.
@@ -53,15 +53,4 @@ public interface IStripeEventUtilityService
     /// <param name="invoice">The invoice to be evaluated.</param>
     /// <returns>A boolean value indicating whether the invoice should be attempted to be paid.</returns>
     bool ShouldAttemptToPayInvoice(Invoice invoice);
-
-    /// <summary>
-    /// The ID for the premium annual plan.
-    /// </summary>
-    const string PremiumPlanId = "premium-annually";
-
-    /// <summary>
-    /// The ID for the premium annual plan via the App Store.
-    /// </summary>
-    const string PremiumPlanIdAppStore = "premium-annually-app";
-
 }

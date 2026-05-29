@@ -14,7 +14,7 @@ public class NormalCipherPermissions
             throw new Exception("Cipher needs to belong to a user or an organization.");
         }
 
-        if (user.Id == cipherDetails.UserId)
+        if (cipherDetails.OrganizationId == null && user.Id == cipherDetails.UserId)
         {
             return true;
         }

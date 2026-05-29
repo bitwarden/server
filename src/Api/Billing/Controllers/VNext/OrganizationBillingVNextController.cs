@@ -4,9 +4,10 @@ using Bit.Api.Billing.Attributes;
 using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Api.Billing.Models.Requests.Subscriptions;
 using Bit.Api.Billing.Models.Requirements;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Organizations.PlanMigration.Commands;
+using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Queries;
@@ -25,10 +26,12 @@ namespace Bit.Api.Billing.Controllers.VNext;
 public class OrganizationBillingVNextController(
     ICreateBitPayInvoiceForCreditCommand createBitPayInvoiceForCreditCommand,
     IGetBillingAddressQuery getBillingAddressQuery,
+    IGetChurnMitigationOfferQuery getChurnMitigationOfferQuery,
     IGetCreditQuery getCreditQuery,
     IGetOrganizationMetadataQuery getOrganizationMetadataQuery,
     IGetOrganizationWarningsQuery getOrganizationWarningsQuery,
     IGetPaymentMethodQuery getPaymentMethodQuery,
+    IRedeemChurnMitigationOfferCommand redeemChurnMitigationOfferCommand,
     IRestartSubscriptionCommand restartSubscriptionCommand,
     IUpdateBillingAddressCommand updateBillingAddressCommand,
     IUpdatePaymentMethodCommand updatePaymentMethodCommand) : BaseBillingController
@@ -117,7 +120,6 @@ public class OrganizationBillingVNextController(
 
     [Authorize<MemberOrProviderRequirement>]
     [HttpGet("metadata")]
-    [RequireFeature(FeatureFlagKeys.PM25379_UseNewOrganizationMetadataStructure)]
     [InjectOrganization]
     public async Task<IResult> GetMetadataAsync(
         [BindNever] Organization organization)
@@ -140,5 +142,25 @@ public class OrganizationBillingVNextController(
     {
         var warnings = await getOrganizationWarningsQuery.Run(organization);
         return TypedResults.Ok(warnings);
+    }
+
+    [Authorize<ManageOrganizationBillingRequirement>]
+    [HttpGet("churn-mitigation-offer")]
+    [InjectOrganization]
+    public async Task<IResult> GetChurnMitigationOfferAsync(
+        [BindNever] Organization organization)
+    {
+        var offer = await getChurnMitigationOfferQuery.Run(organization);
+        return TypedResults.Ok(offer);
+    }
+
+    [Authorize<ManageOrganizationBillingRequirement>]
+    [HttpPost("churn-mitigation-offer/redeem")]
+    [InjectOrganization]
+    public async Task<IResult> RedeemChurnMitigationOfferAsync(
+        [BindNever] Organization organization)
+    {
+        var result = await redeemChurnMitigationOfferCommand.Run(organization);
+        return Handle(result);
     }
 }

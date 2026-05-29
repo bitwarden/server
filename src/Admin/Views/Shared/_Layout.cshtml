@@ -1,8 +1,10 @@
 @using Bit.Admin.Enums;
+@using Bit.Core;
 
 @inject SignInManager<IdentityUser> SignInManager
 @inject Bit.Core.Settings.GlobalSettings GlobalSettings
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
+@inject Bit.Core.Services.IFeatureService FeatureService
 
 @{
     var canViewUsers = AccessControlService.UserHasPermission(Permission.User_List_View);
@@ -14,6 +16,7 @@
     var canPromoteProviderServiceUser = AccessControlService.UserHasPermission(Permission.Tools_PromoteProviderServiceUser);
     var canGenerateLicense = AccessControlService.UserHasPermission(Permission.Tools_GenerateLicenseFile);
     var canProcessStripeEvents = AccessControlService.UserHasPermission(Permission.Tools_ProcessStripeEvents);
+    var enablePersonalDiscounts = FeatureService.IsEnabled(FeatureFlagKeys.PM29108_EnablePersonalDiscounts);
 
     var canViewTools = canChargeBraintree || canCreateTransaction || canPromoteAdmin || canPromoteProviderServiceUser ||
                         canGenerateLicense;
@@ -61,6 +64,14 @@
                             {
                                 <li class="nav-item" active-controller="Providers">
                                     <a class="nav-link" asp-controller="Providers" asp-action="Index">Providers</a>
+                                </li>
+                            }
+                            @if (canCreateTransaction && enablePersonalDiscounts)
+                            {
+                                <li class="nav-item" active-controller="SubscriptionDiscounts">
+                                    <a class="nav-link" asp-controller="SubscriptionDiscounts" asp-action="Index">
+                                        Discounts
+                                    </a>
                                 </li>
                             }
                             @if (canViewTools)

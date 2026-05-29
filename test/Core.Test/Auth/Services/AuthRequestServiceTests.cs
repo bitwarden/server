@@ -375,7 +375,8 @@ public class AuthRequestServiceTests
 
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
-            .LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval);
+            .LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval,
+                includeAcceptedStatusOrgs: true);
 
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
@@ -457,7 +458,8 @@ public class AuthRequestServiceTests
 
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
-            .LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval);
+            .LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval,
+                includeAcceptedStatusOrgs: true);
 
         await sutProvider.GetDependency<IMailService>()
             .Received(0)
@@ -470,6 +472,50 @@ public class AuthRequestServiceTests
         sutProvider.GetDependency<ILogger<AuthRequestService>>()
             .Received(1)
             .LogWarning("There are no admin emails to send to.");
+    }
+
+    [Theory]
+    [BitAutoData(AuthRequestType.AdminApproval)]
+    [BitAutoData(AuthRequestType.AuthenticateAndUnlock)]
+    [BitAutoData(AuthRequestType.Unlock)]
+    public async Task CreateAuthRequestAsync_AuthenticatedCallerUserIdMismatch_ThrowsBadRequest(
+        AuthRequestType type,
+        SutProvider<AuthRequestService> sutProvider,
+        AuthRequestCreateRequestModel createModel,
+        User user,
+        Guid authenticatedUserId)
+    {
+        createModel.Type = type;
+        createModel.Email = user.Email;
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(user.Email)
+            .Returns(user);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .DeviceType
+            .Returns(DeviceType.ChromeExtension);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .UserId
+            .Returns(authenticatedUserId);
+
+        // Mock this as false so we pin the test failure to the userId mismatch guard rather than to the first
+        // identically-worded "User or known device not found." exception that could fire earlier.
+        sutProvider.GetDependency<IGlobalSettings>()
+            .PasswordlessAuth.KnownDevicesOnly
+            .Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.CreateAuthRequestAsync(createModel));
+
+        // For the AuthRequestType.AdminApproval test case, this assertion pins the test failure to the userId mismatch guard
+        // rather than to the "User does not belong to any organizations." exception, which is also of type BadRequestException.
+        Assert.Equal("User or known device not found.", exception.Message);
+
+        await sutProvider.GetDependency<IAuthRequestRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(default!);
     }
 
     /// <summary>

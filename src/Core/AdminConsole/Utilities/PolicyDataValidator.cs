@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
@@ -30,7 +31,8 @@ public static class PolicyDataValidator
             switch (policyType)
             {
                 case PolicyType.MasterPassword:
-                    CoreHelpers.LoadClassFromJsonData<MasterPasswordPolicyData>(json);
+                    var masterPasswordData = CoreHelpers.LoadClassFromJsonData<MasterPasswordPolicyData>(json);
+                    ValidateModel(masterPasswordData, policyType);
                     break;
                 case PolicyType.SendOptions:
                     CoreHelpers.LoadClassFromJsonData<SendOptionsPolicyData>(json);
@@ -44,8 +46,21 @@ public static class PolicyDataValidator
         }
         catch (JsonException ex)
         {
-            var fieldInfo = !string.IsNullOrEmpty(ex.Path) ? $": field '{ex.Path}' has invalid type" : "";
+            var fieldName = !string.IsNullOrEmpty(ex.Path) ? ex.Path.TrimStart('$', '.') : null;
+            var fieldInfo = !string.IsNullOrEmpty(fieldName) ? $": {fieldName} has an invalid value" : "";
             throw new BadRequestException($"Invalid data for {policyType} policy{fieldInfo}.");
+        }
+    }
+
+    private static void ValidateModel(object model, PolicyType policyType)
+    {
+        var validationContext = new ValidationContext(model);
+        var validationResults = new List<ValidationResult>();
+
+        if (!Validator.TryValidateObject(model, validationContext, validationResults, true))
+        {
+            var errors = string.Join(", ", validationResults.Select(r => r.ErrorMessage));
+            throw new BadRequestException($"Invalid data for {policyType} policy: {errors}");
         }
     }
 

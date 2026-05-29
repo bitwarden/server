@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
@@ -88,8 +89,9 @@ public class SelfHostedOrganizationSponsorshipsController : Controller
         await RevokeSponsorship(sponsoringOrgId);
     }
 
-    [HttpDelete("{sponsoringOrgId}/{sponsoredFriendlyName}/revoke")]
-    public async Task AdminInitiatedRevokeSponsorshipAsync(Guid sponsoringOrgId, string sponsoredFriendlyName)
+    [Authorize<ManageUsersRequirement>]
+    [HttpDelete("{organizationId}/{sponsoredFriendlyName}/revoke")]
+    public async Task AdminInitiatedRevokeSponsorshipAsync([FromRoute(Name = "organizationId")] Guid sponsoringOrgId, string sponsoredFriendlyName)
     {
         var sponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrgId);
         var existingOrgSponsorship = sponsorships.FirstOrDefault(s => s.FriendlyName != null && s.FriendlyName.Equals(sponsoredFriendlyName, StringComparison.OrdinalIgnoreCase));

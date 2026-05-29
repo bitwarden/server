@@ -31,7 +31,7 @@ public class BitPayControllerTests
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly IProviderRepository _providerRepository = Substitute.For<IProviderRepository>();
     private readonly IMailService _mailService = Substitute.For<IMailService>();
-    private readonly IPaymentService _paymentService = Substitute.For<IPaymentService>();
+    private readonly IStripePaymentService _paymentService = Substitute.For<IStripePaymentService>();
 
     private readonly IPremiumUserBillingService _premiumUserBillingService =
         Substitute.For<IPremiumUserBillingService>();

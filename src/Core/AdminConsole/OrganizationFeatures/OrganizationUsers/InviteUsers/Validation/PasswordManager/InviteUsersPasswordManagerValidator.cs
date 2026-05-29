@@ -9,8 +9,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.V
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.Validation;
+using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
@@ -22,7 +22,7 @@ public class InviteUsersPasswordManagerValidator(
     IInviteUsersEnvironmentValidator inviteUsersEnvironmentValidator,
     IInviteUsersOrganizationValidator inviteUsersOrganizationValidator,
     IProviderRepository providerRepository,
-    IPaymentService paymentService,
+    IStripePaymentService paymentService,
     IOrganizationRepository organizationRepository
     ) : IInviteUsersPasswordManagerValidator
 {
@@ -40,6 +40,13 @@ public class InviteUsersPasswordManagerValidator(
 
         if (subscriptionUpdate.SeatsRequiredToAdd == 0)
         {
+            return new Valid<PasswordManagerSubscriptionUpdate>(subscriptionUpdate);
+        }
+
+        if (subscriptionUpdate.PasswordManagerPlan is null)
+        {
+            // Plan is null on self-hosted. Skip plan-based checks and pass through so
+            // InviteUsersEnvironmentValidator can return the "cannot autoscale on self-hosted" error.
             return new Valid<PasswordManagerSubscriptionUpdate>(subscriptionUpdate);
         }
 

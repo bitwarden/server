@@ -25,7 +25,9 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IAuthorizationCodeStore, AuthorizationCodeStore>();
         services.AddTransient<IUserDecryptionOptionsBuilder, UserDecryptionOptionsBuilder>();
         services.AddTransient<IDeviceValidator, DeviceValidator>();
+        services.AddTransient<IClientVersionValidator, ClientVersionValidator>();
         services.AddTransient<ITwoFactorAuthenticationValidator, TwoFactorAuthenticationValidator>();
+        services.AddTransient<ISsoRequestValidator, SsoRequestValidator>();
         services.AddTransient<ILoginApprovingClientTypes, LoginApprovingClientTypes>();
         services.AddTransient<ISendAuthenticationMethodValidator<ResourcePassword>, SendPasswordRequestValidator>();
         services.AddTransient<ISendAuthenticationMethodValidator<EmailOtp>, SendEmailOtpRequestValidator>();
@@ -41,6 +43,7 @@ public static class ServiceCollectionExtensions
                 options.Endpoints.EnableUserInfoEndpoint = false;
                 options.Endpoints.EnableCheckSessionEndpoint = false;
                 options.Endpoints.EnableTokenRevocationEndpoint = false;
+                options.Endpoints.EnablePushedAuthorizationEndpoint = false;
                 options.IssuerUri = $"{issuerUri.Scheme}://{issuerUri.Host}";
                 options.Caching.ClientStoreExpiration = new TimeSpan(0, 5, 0);
                 if (env.IsDevelopment())

@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Data.Common;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Entities;
@@ -17,7 +18,7 @@ namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class OrganizationRepository : Repository<Organization, Guid>, IOrganizationRepository
 {
-    private readonly ILogger<OrganizationRepository> _logger;
+    protected readonly ILogger<OrganizationRepository> _logger;
 
     public OrganizationRepository(
         GlobalSettings globalSettings,
@@ -25,6 +26,32 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     {
         _logger = logger;
+    }
+
+    public async Task<Organization?> GetByGatewayCustomerIdAsync(string gatewayCustomerId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<Organization>(
+                "[dbo].[Organization_ReadByGatewayCustomerId]",
+                new { GatewayCustomerId = gatewayCustomerId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.FirstOrDefault();
+        }
+    }
+
+    public async Task<Organization?> GetByGatewaySubscriptionIdAsync(string gatewaySubscriptionId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<Organization>(
+                "[dbo].[Organization_ReadByGatewaySubscriptionId]",
+                new { GatewaySubscriptionId = gatewaySubscriptionId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.FirstOrDefault();
+        }
     }
 
     public async Task<Organization?> GetByIdentifierAsync(string identifier)
@@ -101,6 +128,19 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
                 commandType: CommandType.StoredProcedure);
 
             return results.ToList();
+        }
+    }
+
+    public async Task<OrganizationAbility?> GetAbilityAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var result = await connection.QueryAsync<OrganizationAbility>(
+                "[dbo].[Organization_ReadAbilityById]",
+                new { Id = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return result.SingleOrDefault();
         }
     }
 
@@ -250,5 +290,32 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         await connection.ExecuteAsync("[dbo].[Organization_IncrementSeatCount]",
             new { OrganizationId = organizationId, SeatsToAdd = increaseAmount, RequestDate = requestDate },
             commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task InitializeOrganizationAsync(Organization organization, Func<DbConnection, DbTransaction, Task> confirmOwnerAction)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.OpenAsync();
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync();
+
+        try
+        {
+            await connection.ExecuteAsync(
+                "[dbo].[Organization_Update]",
+                organization,
+                commandType: CommandType.StoredProcedure,
+                transaction: transaction);
+
+            await confirmOwnerAction(connection, transaction);
+
+            await transaction.CommitAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to initialize organization. Rolling back transaction.");
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 }

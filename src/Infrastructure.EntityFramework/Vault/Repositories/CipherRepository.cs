@@ -10,6 +10,8 @@ using Bit.Core.Utilities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.Queries;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
@@ -171,7 +173,8 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
     public async Task CreateAsync(IEnumerable<Core.Vault.Entities.Cipher> ciphers,
         IEnumerable<Core.Entities.Collection> collections,
         IEnumerable<Core.Entities.CollectionCipher> collectionCiphers,
-        IEnumerable<Core.Entities.CollectionUser> collectionUsers)
+        IEnumerable<Core.Entities.CollectionUser> collectionUsers,
+        IEnumerable<Core.Vault.Entities.Folder> folders)
     {
         if (!ciphers.Any())
         {
@@ -199,6 +202,12 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             {
                 var collectionUserEntities = Mapper.Map<List<CollectionUser>>(collectionUsers);
                 await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, collectionUserEntities);
+            }
+
+            if (folders.Any())
+            {
+                var folderEntities = Mapper.Map<List<Folder>>(folders);
+                await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, folderEntities);
             }
 
             await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(ciphers.First().OrganizationId.Value);
@@ -704,6 +713,9 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             trackedCipher.RevisionDate = cipher.RevisionDate;
             trackedCipher.DeletedDate = cipher.DeletedDate;
             trackedCipher.Key = cipher.Key;
+            trackedCipher.Folders = cipher.Folders;
+            trackedCipher.Favorites = cipher.Favorites;
+            trackedCipher.Reprompt = cipher.Reprompt;
 
             await transaction.CommitAsync();
 
@@ -798,7 +810,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             var query = from ucd in await userCipherDetailsQuery.Run(dbContext).ToListAsync()
                         join c in cipherEntitiesToCheck
                             on ucd.Id equals c.Id
-                        where ucd.Edit && FilterArchivedDate(action, ucd)
+                        where FilterArchivedDate(action, ucd)
                         select c;
 
             var utcNow = DateTime.UtcNow;
@@ -808,7 +820,29 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             await cipherEntitiesToModify.ForEachAsync(cipher =>
             {
                 dbContext.Attach(cipher);
-                cipher.ArchivedDate = action == CipherStateAction.Unarchive ? null : utcNow;
+
+                // Build or load the per-user archives map
+                var archives = string.IsNullOrWhiteSpace(cipher.Archives)
+                    ? new Dictionary<Guid, DateTime>()
+                    : CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, DateTime>>(cipher.Archives)
+                      ?? new Dictionary<Guid, DateTime>();
+
+                if (action == CipherStateAction.Unarchive)
+                {
+                    // Remove this user's archive record
+                    archives.Remove(userId);
+                }
+                else if (action == CipherStateAction.Archive)
+                {
+                    // Set this user's archive date
+                    archives[userId] = utcNow;
+                }
+
+                // Persist the updated JSON or clear it if empty
+                cipher.Archives = archives.Count == 0
+                    ? null
+                    : CoreHelpers.ClassToJsonData(archives);
+
                 cipher.RevisionDate = utcNow;
             });
 
@@ -1040,7 +1074,6 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         var query = from c in dbContext.Ciphers.AsNoTracking()
                     where c.UserId == null
                        && c.OrganizationId == organizationId
-                       && c.Organization.Enabled
                        && (
                             c.CollectionCiphers.Count() == 0
                             || c.CollectionCiphers.Any(cc => (int)cc.Collection.Type != defaultTypeInt)

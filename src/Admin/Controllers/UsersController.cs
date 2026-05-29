@@ -5,6 +5,7 @@ using Bit.Admin.Models;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -20,22 +21,26 @@ public class UsersController : Controller
 {
     private readonly IUserRepository _userRepository;
     private readonly ICipherRepository _cipherRepository;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly GlobalSettings _globalSettings;
     private readonly IAccessControlService _accessControlService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IUserService _userService;
     private readonly IFeatureService _featureService;
+    private readonly ISubscriberService _subscriberService;
+    private readonly ILogger<UsersController> _logger;
 
     public UsersController(
         IUserRepository userRepository,
         ICipherRepository cipherRepository,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         GlobalSettings globalSettings,
         IAccessControlService accessControlService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IUserService userService,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        ISubscriberService subscriberService,
+        ILogger<UsersController> logger)
     {
         _userRepository = userRepository;
         _cipherRepository = cipherRepository;
@@ -45,6 +50,8 @@ public class UsersController : Controller
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _userService = userService;
         _featureService = featureService;
+        _subscriberService = subscriberService;
+        _logger = logger;
     }
 
     [RequirePermission(Permission.User_List_View)]
@@ -85,7 +92,7 @@ public class UsersController : Controller
             return RedirectToAction("Index");
         }
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id, withOrganizations: false);
 
         var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var verifiedDomain = await _userService.IsClaimedByAnyOrganizationAsync(user.Id);
@@ -124,6 +131,8 @@ public class UsersController : Controller
 
         var canUpgradePremium = _accessControlService.UserHasPermission(Permission.User_UpgradePremium);
 
+        var originalPremium = user.Premium;
+
         if (_accessControlService.UserHasPermission(Permission.User_Premium_Edit) ||
             canUpgradePremium)
         {
@@ -146,6 +155,40 @@ public class UsersController : Controller
         }
 
         await _userRepository.ReplaceAsync(user);
+
+        // Clear any pending unpaid-lifecycle cancellation when re-enabling premium on a billing-disabled user
+        if (!originalPremium && user.Premium)
+        {
+            try
+            {
+                await _subscriberService.ResumeFromUnpaidCancellationAsync(user);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to clear pending unpaid cancellation for user {UserId} on premium re-enable.",
+                    user.Id);
+                TempData["Warning"] = "User updated successfully, but clearing the pending Stripe cancellation failed.";
+            }
+        }
+
+        // Schedule the unpaid-lifecycle cancellation when disabling premium on a user whose Stripe subscription
+        // is unpaid but was never scheduled by the webhook handler.
+        if (originalPremium && !user.Premium)
+        {
+            try
+            {
+                await _subscriberService.ScheduleUnpaidCancellationAsync(user);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to schedule unpaid cancellation for user {UserId} on premium disable.",
+                    user.Id);
+                TempData["Warning"] = "User updated successfully, but scheduling the Stripe cancellation failed.";
+            }
+        }
+
         return RedirectToAction("Edit", new { id });
     }
 

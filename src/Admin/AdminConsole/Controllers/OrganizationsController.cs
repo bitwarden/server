@@ -6,16 +6,25 @@ using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.PlanMigration.Entities;
+using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
+using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
+using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -41,7 +50,7 @@ public class OrganizationsController : Controller
     private readonly ICollectionRepository _collectionRepository;
     private readonly IGroupRepository _groupRepository;
     private readonly IPolicyRepository _policyRepository;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly GlobalSettings _globalSettings;
     private readonly IProviderRepository _providerRepository;
@@ -56,6 +65,14 @@ public class OrganizationsController : Controller
     private readonly IOrganizationInitiateDeleteCommand _organizationInitiateDeleteCommand;
     private readonly IPricingClient _pricingClient;
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
+    private readonly IOrganizationBillingService _organizationBillingService;
+    private readonly IEventService _eventService;
+    private readonly IAutomaticUserConfirmationOrganizationPolicyComplianceHandler _automaticUserConfirmationOrganizationPolicyComplianceHandler;
+    private readonly IOrganizationAutoConfirmEnabledNotificationCommand _organizationAutoConfirmEnabledNotificationCommand;
+    private readonly ISubscriberService _subscriberService;
+    private readonly IOrganizationPlanMigrationCohortRepository _organizationPlanMigrationCohortRepository;
+    private readonly IOrganizationPlanMigrationCohortAssignmentRepository _organizationPlanMigrationCohortAssignmentRepository;
+    private readonly IFeatureService _featureService;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -66,7 +83,7 @@ public class OrganizationsController : Controller
         ICollectionRepository collectionRepository,
         IGroupRepository groupRepository,
         IPolicyRepository policyRepository,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         IApplicationCacheService applicationCacheService,
         GlobalSettings globalSettings,
         IProviderRepository providerRepository,
@@ -80,7 +97,15 @@ public class OrganizationsController : Controller
         IProviderBillingService providerBillingService,
         IOrganizationInitiateDeleteCommand organizationInitiateDeleteCommand,
         IPricingClient pricingClient,
-        IResendOrganizationInviteCommand resendOrganizationInviteCommand)
+        IResendOrganizationInviteCommand resendOrganizationInviteCommand,
+        IOrganizationBillingService organizationBillingService,
+        IEventService eventService,
+        IAutomaticUserConfirmationOrganizationPolicyComplianceHandler automaticUserConfirmationOrganizationPolicyComplianceHandler,
+        IOrganizationAutoConfirmEnabledNotificationCommand organizationAutoConfirmEnabledNotificationCommand,
+        ISubscriberService subscriberService,
+        IOrganizationPlanMigrationCohortRepository organizationPlanMigrationCohortRepository,
+        IOrganizationPlanMigrationCohortAssignmentRepository organizationPlanMigrationCohortAssignmentRepository,
+        IFeatureService featureService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -105,7 +130,19 @@ public class OrganizationsController : Controller
         _organizationInitiateDeleteCommand = organizationInitiateDeleteCommand;
         _pricingClient = pricingClient;
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
+        _organizationBillingService = organizationBillingService;
+        _eventService = eventService;
+        _automaticUserConfirmationOrganizationPolicyComplianceHandler = automaticUserConfirmationOrganizationPolicyComplianceHandler;
+        _organizationAutoConfirmEnabledNotificationCommand = organizationAutoConfirmEnabledNotificationCommand;
+        _subscriberService = subscriberService;
+        _organizationPlanMigrationCohortRepository = organizationPlanMigrationCohortRepository;
+        _organizationPlanMigrationCohortAssignmentRepository = organizationPlanMigrationCohortAssignmentRepository;
+        _featureService = featureService;
     }
+
+    private bool CanManagePlanMigrationCohortAssignment() =>
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+        && _accessControlService.UserHasPermission(Permission.Tools_ManagePlanMigrationCohorts);
 
     [RequirePermission(Permission.Org_List_View)]
     public async Task<IActionResult> Index(string name = null, string userEmail = null, bool? paid = null,
@@ -206,7 +243,21 @@ public class OrganizationsController : Controller
 
         var plans = await _pricingClient.ListPlans();
 
-        return View(new OrganizationEditModel(
+        var canManageMigrationCohortAssignment = CanManagePlanMigrationCohortAssignment();
+        List<OrganizationPlanMigrationCohort> visibleCohorts = null;
+        OrganizationPlanMigrationCohortAssignment currentAssignment = null;
+        if (canManageMigrationCohortAssignment)
+        {
+            var migrationCohorts = await _organizationPlanMigrationCohortRepository.GetManyAsync();
+            visibleCohorts = migrationCohorts
+                .Where(c => !c.MigrationPathId.HasValue
+                            || MigrationPaths.FromId(c.MigrationPathId.Value)?.FromPlan == organization.PlanType)
+                .ToList();
+            currentAssignment =
+                await _organizationPlanMigrationCohortAssignmentRepository.GetByOrganizationIdAsync(id);
+        }
+
+        var model = new OrganizationEditModel(
             organization,
             provider,
             users,
@@ -222,7 +273,21 @@ public class OrganizationsController : Controller
             secrets,
             projects,
             serviceAccounts,
-            smSeats));
+            smSeats)
+        {
+            MigrationCohortId = currentAssignment?.CohortId,
+            AvailableMigrationCohorts = visibleCohorts,
+            MigrationCohortLocked = currentAssignment?.IsLocked() ?? false,
+            MigrationCohortLockReason = currentAssignment switch
+            {
+                { MigratedDate: not null } => "Locked: this organization has already been migrated.",
+                { ScheduledDate: not null } => "Locked: a migration has already been scheduled for this organization.",
+                { ChurnDiscountAppliedDate: not null } => "Locked: a churn-mitigation discount has already been applied to this organization.",
+                _ => null,
+            },
+        };
+
+        return View(model);
     }
 
     [HttpPost]
@@ -230,6 +295,12 @@ public class OrganizationsController : Controller
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<IActionResult> Edit(Guid id, OrganizationEditModel model)
     {
+        if (!ModelState.IsValid)
+        {
+            TempData["Error"] = ModelState.GetErrorMessage();
+            return RedirectToAction("Edit", new { id });
+        }
+
         var organization = await _organizationRepository.GetByIdAsync(id);
 
         if (organization == null)
@@ -241,9 +312,13 @@ public class OrganizationsController : Controller
         var existingOrganizationData = new Organization
         {
             Id = organization.Id,
+            Name = organization.Name,
+            BillingEmail = organization.BillingEmail,
             Status = organization.Status,
             PlanType = organization.PlanType,
-            Seats = organization.Seats
+            Seats = organization.Seats,
+            UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation,
+            Enabled = organization.Enabled
         };
 
         if (model.PlanType.HasValue)
@@ -278,15 +353,152 @@ public class OrganizationsController : Controller
             return RedirectToAction("Edit", new { id });
         }
 
+        if (await CheckOrganizationPolicyComplianceAsync(existingOrganizationData, organization) is { } error)
+        {
+            TempData["Error"] = error.Message;
+
+            return RedirectToAction("Edit", new { id });
+        }
+
+        var cohortResolution = await ResolveMigrationCohortAssignmentChangeAsync(organization, model);
+        if (cohortResolution.ErrorMessage != null)
+        {
+            TempData["Error"] = cohortResolution.ErrorMessage;
+            return RedirectToAction("Edit", new { id });
+        }
+
         await HandlePotentialProviderSeatScalingAsync(
             existingOrganizationData,
             model);
 
         await _organizationRepository.ReplaceAsync(organization);
 
+        if (cohortResolution.ShouldWrite)
+        {
+            try
+            {
+                if (cohortResolution.AssignmentToReplace != null)
+                {
+                    await _organizationPlanMigrationCohortAssignmentRepository.DeleteAsync(cohortResolution.AssignmentToReplace);
+                }
+                if (cohortResolution.CohortToAssign != null)
+                {
+                    await _organizationPlanMigrationCohortAssignmentRepository.CreateAsync(
+                        new OrganizationPlanMigrationCohortAssignment
+                        {
+                            OrganizationId = id,
+                            CohortId = cohortResolution.CohortToAssign.Id,
+                        });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to update migration cohort assignment for organization {OrganizationId}.",
+                    id);
+                TempData["Warning"] =
+                    "Organization updated successfully, but the migration cohort assignment could not be saved. Reload this page and retry.";
+            }
+        }
+
         await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
 
+        if (existingOrganizationData.UseAutomaticUserConfirmation != organization.UseAutomaticUserConfirmation)
+        {
+            var eventType = organization.UseAutomaticUserConfirmation
+                ? EventType.Organization_AutoConfirmEnabled_Portal
+                : EventType.Organization_AutoConfirmDisabled_Portal;
+
+            await _eventService.LogOrganizationEventAsync(organization, eventType, EventSystemUser.BitwardenPortal);
+        }
+
+        if (!existingOrganizationData.UseAutomaticUserConfirmation && organization.UseAutomaticUserConfirmation)
+        {
+            try
+            {
+                var emailsToNotify =
+                    (await _organizationUserRepository.GetManyDetailsByOrganizationAsync_vNext(organization.Id))
+                    .Where(x =>
+                        (x.Type == OrganizationUserType.Admin
+                         || x.Type == OrganizationUserType.Owner
+                         || x.GetPermissions()?.ManageUsers == true)
+                        && !string.IsNullOrWhiteSpace(x.Email))
+                    .Select(x => x.Email)
+                    .ToList();
+
+                await _organizationAutoConfirmEnabledNotificationCommand.SendEmailAsync(
+                    new OrganizationAutoConfirmEnabledNotificationRequest(organization, emailsToNotify));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send email notification to admins when organization auto-confirm was enabled.");
+                TempData["Warning"] = "Organization updated successfully, but email notification to admins failed.";
+            }
+        }
+
+        // Sync name/email changes to Stripe
+        if (existingOrganizationData.Name != organization.Name || existingOrganizationData.BillingEmail != organization.BillingEmail)
+        {
+            try
+            {
+                await _organizationBillingService.UpdateOrganizationNameAndEmail(organization);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to update Stripe customer for organization {OrganizationId}. Database was updated successfully.",
+                    organization.Id);
+                TempData["Warning"] = "Organization updated successfully, but Stripe customer name/email synchronization failed.";
+            }
+        }
+
+        // Clear any pending unpaid-lifecycle cancellation when re-enabling a billing-disabled organization
+        if (!existingOrganizationData.Enabled && organization.Enabled)
+        {
+            try
+            {
+                await _subscriberService.ResumeFromUnpaidCancellationAsync(organization);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to clear pending unpaid cancellation for organization {OrganizationId} on re-enable.",
+                    organization.Id);
+                TempData["Warning"] = "Organization updated successfully, but clearing the pending Stripe cancellation failed.";
+            }
+        }
+
+        // Schedule the unpaid-lifecycle cancellation when disabling an organization whose Stripe subscription
+        // is unpaid but was never scheduled by the webhook handler.
+        if (existingOrganizationData.Enabled && !organization.Enabled)
+        {
+            try
+            {
+                await _subscriberService.ScheduleUnpaidCancellationAsync(organization);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to schedule unpaid cancellation for organization {OrganizationId} on disable.",
+                    organization.Id);
+                TempData["Warning"] = "Organization updated successfully, but scheduling the Stripe cancellation failed.";
+            }
+        }
+
         return RedirectToAction("Edit", new { id });
+    }
+
+    private async Task<Error> CheckOrganizationPolicyComplianceAsync(Organization existingOrganizationData, Organization updatedOrganization)
+    {
+        if (!existingOrganizationData.UseAutomaticUserConfirmation && updatedOrganization.UseAutomaticUserConfirmation)
+        {
+            var validationResult = await _automaticUserConfirmationOrganizationPolicyComplianceHandler.IsOrganizationCompliantAsync(
+                new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(existingOrganizationData.Id));
+
+            return validationResult.Match(error => error, _ => null);
+        }
+
+        return null;
     }
 
     [HttpPost]
@@ -432,6 +644,71 @@ public class OrganizationsController : Controller
         return Json(null);
     }
 
+    // Form binding can surface "(Not assigned)" as either null or Guid.Empty; collapse them so
+    // the diff against the current assignment and the GetByIdAsync lookup are not driven by
+    // Guid.Empty as if it were a real cohort id.
+    private static Guid? NormalizeCohortId(Guid? value) =>
+        value is { } id && id != Guid.Empty ? id : null;
+
+    private sealed record MigrationCohortAssignmentChange(
+        OrganizationPlanMigrationCohortAssignment AssignmentToReplace,
+        OrganizationPlanMigrationCohort CohortToAssign,
+        bool ShouldWrite,
+        string ErrorMessage)
+    {
+        public static MigrationCohortAssignmentChange NoChange { get; } = new(null, null, false, null);
+
+        public static MigrationCohortAssignmentChange Error(string message) => new(null, null, false, message);
+    }
+
+    private async Task<MigrationCohortAssignmentChange> ResolveMigrationCohortAssignmentChangeAsync(
+        Organization organization,
+        OrganizationEditModel model)
+    {
+        if (!CanManagePlanMigrationCohortAssignment())
+        {
+            return MigrationCohortAssignmentChange.NoChange;
+        }
+
+        var submittedCohortId = NormalizeCohortId(model.MigrationCohortId);
+        var assignmentToReplace =
+            await _organizationPlanMigrationCohortAssignmentRepository.GetByOrganizationIdAsync(organization.Id);
+
+        if (assignmentToReplace?.CohortId == submittedCohortId)
+        {
+            return MigrationCohortAssignmentChange.NoChange;
+        }
+
+        if (assignmentToReplace?.IsLocked() == true)
+        {
+            return MigrationCohortAssignmentChange.Error(
+                "This organization's migration cohort is locked because its assignment has already entered the migration pipeline.");
+        }
+
+        OrganizationPlanMigrationCohort cohortToAssign = null;
+        if (submittedCohortId.HasValue)
+        {
+            cohortToAssign =
+                await _organizationPlanMigrationCohortRepository.GetByIdAsync(submittedCohortId.Value);
+            if (cohortToAssign == null)
+            {
+                return MigrationCohortAssignmentChange.Error("The selected migration cohort no longer exists.");
+            }
+
+            if (cohortToAssign.MigrationPathId.HasValue)
+            {
+                var path = MigrationPaths.FromId(cohortToAssign.MigrationPathId.Value);
+                if (path == null || path.FromPlan != organization.PlanType)
+                {
+                    return MigrationCohortAssignmentChange.Error(
+                        "The selected migration cohort is not compatible with this organization's plan.");
+                }
+            }
+        }
+
+        return new MigrationCohortAssignmentChange(assignmentToReplace, cohortToAssign, true, null);
+    }
+
     private void UpdateOrganization(Organization organization, OrganizationEditModel model)
     {
         if (_accessControlService.UserHasPermission(Permission.Org_Name_Edit))
@@ -473,6 +750,10 @@ public class OrganizationsController : Controller
             organization.UseOrganizationDomains = model.UseOrganizationDomains;
             organization.UseAdminSponsoredFamilies = model.UseAdminSponsoredFamilies;
             organization.UseAutomaticUserConfirmation = model.UseAutomaticUserConfirmation;
+            organization.UseDisableSmAdsForUsers = model.UseDisableSmAdsForUsers;
+            organization.UsePhishingBlocker = model.UsePhishingBlocker;
+            organization.UseMyItems = model.UseMyItems;
+            organization.UseInviteLinks = model.UseInviteLinks;
 
             //secrets
             organization.SmSeats = model.SmSeats;
@@ -493,6 +774,7 @@ public class OrganizationsController : Controller
             organization.Gateway = model.Gateway;
             organization.GatewayCustomerId = model.GatewayCustomerId;
             organization.GatewaySubscriptionId = model.GatewaySubscriptionId;
+            organization.ExemptFromBillingAutomation = model.ExemptFromBillingAutomation;
         }
     }
 

@@ -15,9 +15,9 @@ public interface ISendAuthorizationService
     /// <param name="password">A hashed and base64-encoded password. This is compared with the send's password to authorize access.</param>
     /// <returns><see cref="SendAccessResult" /> will be returned to determine if the user can access send.
     /// </returns>
-    Task<SendAccessResult> AccessAsync(Send send, string password);
+    Task<SendAccessResult> AccessAsync(Send send, string? password);
     SendAccessResult SendCanBeAccessed(Send send,
-        string password);
+        string? password);
 
     /// <summary>
     /// Hashes the password using the password hasher.

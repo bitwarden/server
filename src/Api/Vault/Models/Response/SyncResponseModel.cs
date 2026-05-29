@@ -1,11 +1,15 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Tools.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.Provider;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Api.Response;
 using Bit.Core.KeyManagement.Models.Data;
@@ -39,24 +43,39 @@ public class SyncResponseModel() : ResponseModel("sync")
         IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersDict,
         bool excludeDomains,
         IEnumerable<Policy> policies,
-        IEnumerable<Send> sends)
+        IEnumerable<Send> sends,
+        IEnumerable<WebAuthnCredential> webAuthnCredentials,
+        IEnumerable<Policy> policiesNew = null,
+        IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetailsNew = null)
         : this()
     {
         Profile = new ProfileResponseModel(user, userAccountKeysData, organizationUserDetails, providerUserDetails,
-            providerUserOrganizationDetails, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsClaimingingUser);
+            providerUserOrganizationDetails, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsClaimingingUser,
+            organizationUserDetailsNew);
         Folders = folders.Select(f => new FolderResponseModel(f));
         Ciphers = ciphers.Select(cipher =>
             new CipherDetailsResponseModel(
                 cipher,
                 user,
-                organizationAbilities,
+                GetOrganizationAbility(cipher, organizationAbilities),
                 globalSettings,
                 collectionCiphersDict));
         Collections = collections?.Select(
             c => new CollectionDetailsResponseModel(c)) ?? new List<CollectionDetailsResponseModel>();
         Domains = excludeDomains ? null : new DomainsResponseModel(user, false);
         Policies = policies?.Select(p => new PolicyResponseModel(p)) ?? new List<PolicyResponseModel>();
-        Sends = sends.Select(s => new SendResponseModel(s, globalSettings));
+        PoliciesNew = policiesNew?.Select(p => new PolicyResponseModel(p));
+        Sends = sends.Select(s => new SendResponseModel(s));
+        var webAuthnPrfOptions = webAuthnCredentials
+            .Where(c => c.GetPrfStatus() == WebAuthnPrfStatus.Enabled)
+            .Select(c => new WebAuthnPrfDecryptionOption(
+                c.EncryptedPrivateKey,
+                c.EncryptedUserKey,
+                c.CredentialId,
+                [] // transports as empty array
+            ))
+            .ToArray();
+
         UserDecryption = new UserDecryptionResponseModel
         {
             MasterPasswordUnlock = user.HasMasterPassword()
@@ -70,11 +89,33 @@ public class SyncResponseModel() : ResponseModel("sync")
                         Parallelism = user.KdfParallelism
                     },
                     MasterKeyEncryptedUserKey = user.Key!,
-                    Salt = user.Email.ToLowerInvariant()
+                    Salt = user.GetMasterPasswordSalt()
+                }
+                : null,
+            WebAuthnPrfOptions = webAuthnPrfOptions.Length > 0 ? webAuthnPrfOptions : null,
+            V2UpgradeToken = V2UpgradeTokenData.FromJson(user.V2UpgradeToken) is { } tokenData
+                ? new V2UpgradeTokenResponseModel
+                {
+                    WrappedUserKey1 = tokenData.WrappedUserKey1,
+                    WrappedUserKey2 = tokenData.WrappedUserKey2
                 }
                 : null
         };
     }
+
+#nullable enable
+
+    private static OrganizationAbility? GetOrganizationAbility(CipherDetails cipherDetails, IDictionary<Guid, OrganizationAbility> organizationAbilities)
+    {
+        if (!cipherDetails.OrganizationId.HasValue)
+        {
+            return null;
+        }
+        organizationAbilities.TryGetValue(cipherDetails.OrganizationId.Value, out var organizationAbility);
+        return organizationAbility;
+    }
+
+#nullable disable
 
     public ProfileResponseModel Profile { get; set; }
     public IEnumerable<FolderResponseModel> Folders { get; set; }
@@ -82,6 +123,12 @@ public class SyncResponseModel() : ResponseModel("sync")
     public IEnumerable<CipherDetailsResponseModel> Ciphers { get; set; }
     public DomainsResponseModel Domains { get; set; }
     public IEnumerable<PolicyResponseModel> Policies { get; set; }
+    /// <summary>
+    /// Policies for organizations where the user is in the Confirmed or Accepted status.
+    /// Null when the <c>pm-34145-policies-in-accepted-state</c> feature flag is disabled.
+    /// New clients should prefer this property and fall back to <see cref="Policies"/> if absent.
+    /// </summary>
+    public IEnumerable<PolicyResponseModel> PoliciesNew { get; set; }
     public IEnumerable<SendResponseModel> Sends { get; set; }
     public UserDecryptionResponseModel UserDecryption { get; set; }
 }

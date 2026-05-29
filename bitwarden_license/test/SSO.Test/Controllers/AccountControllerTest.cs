@@ -3,13 +3,14 @@ using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
-using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tokens;
 using Bit.Sso.Controllers;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -19,7 +20,6 @@ using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -129,111 +129,8 @@ public class AccountControllerTest
         }
     }
 
-    private enum MeasurementScenario
-    {
-        ExistingSsoLinkedAccepted,
-        ExistingUserNoOrgUser,
-        JitProvision
-    }
-
-    private sealed class LookupCounts
-    {
-        public int UserGetBySso { get; init; }
-        public int UserGetByEmail { get; init; }
-        public int OrgGetById { get; init; }
-        public int OrgUserGetByOrg { get; init; }
-        public int OrgUserGetByEmail { get; init; }
-    }
-
-    private async Task<LookupCounts> MeasureCountsForScenarioAsync(
-        SutProvider<AccountController> sutProvider,
-        MeasurementScenario scenario,
-        bool preventNonCompliant)
-    {
-        var orgId = Guid.NewGuid();
-        var providerUserId = $"meas-{scenario}-{(preventNonCompliant ? "on" : "off")}";
-        var email = scenario == MeasurementScenario.JitProvision
-            ? "jit.compare@example.com"
-            : "existing.compare@example.com";
-
-        var organization = new Organization { Id = orgId, Name = "Org" };
-        var user = new User { Id = Guid.NewGuid(), Email = email };
-
-        var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, email);
-        SetupHttpContextWithAuth(sutProvider, authResult);
-
-        // SSO config present
-        var ssoConfigRepository = sutProvider.GetDependency<ISsoConfigRepository>();
-        var userRepository = sutProvider.GetDependency<IUserRepository>();
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        var featureService = sutProvider.GetDependency<IFeatureService>();
-        var interactionService = sutProvider.GetDependency<IIdentityServerInteractionService>();
-
-        var ssoConfig = new SsoConfig { OrganizationId = orgId, Enabled = true };
-        var ssoData = new SsoConfigurationData();
-        ssoConfig.SetData(ssoData);
-        ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
-
-        switch (scenario)
-        {
-            case MeasurementScenario.ExistingSsoLinkedAccepted:
-                userRepository.GetBySsoUserAsync(providerUserId, orgId).Returns(user);
-                organizationRepository.GetByIdAsync(orgId).Returns(organization);
-                organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id)
-                    .Returns(new OrganizationUser
-                    {
-                        OrganizationId = orgId,
-                        UserId = user.Id,
-                        Status = OrganizationUserStatusType.Accepted,
-                        Type = OrganizationUserType.User
-                    });
-                break;
-            case MeasurementScenario.ExistingUserNoOrgUser:
-                userRepository.GetBySsoUserAsync(providerUserId, orgId).Returns(user);
-                organizationRepository.GetByIdAsync(orgId).Returns(organization);
-                organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id)
-                    .Returns((OrganizationUser?)null);
-                break;
-            case MeasurementScenario.JitProvision:
-                userRepository.GetBySsoUserAsync(providerUserId, orgId).Returns((User?)null);
-                userRepository.GetByEmailAsync(email).Returns((User?)null);
-                organizationRepository.GetByIdAsync(orgId).Returns(organization);
-                organizationUserRepository.GetByOrganizationEmailAsync(orgId, email)
-                    .Returns((OrganizationUser?)null);
-                break;
-        }
-
-        featureService.IsEnabled(Arg.Any<string>()).Returns(preventNonCompliant);
-        interactionService.GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
-
-        try
-        {
-            _ = await sutProvider.Sut.ExternalCallback();
-        }
-        catch
-        {
-            // Ignore exceptions for measurement; some flows can throw based on status enforcement
-        }
-
-        var counts = new LookupCounts
-        {
-            UserGetBySso = userRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IUserRepository.GetBySsoUserAsync)),
-            UserGetByEmail = userRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IUserRepository.GetByEmailAsync)),
-            OrgGetById = organizationRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationRepository.GetByIdAsync)),
-            OrgUserGetByOrg = organizationUserRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationUserRepository.GetByOrganizationAsync)),
-            OrgUserGetByEmail = organizationUserRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationUserRepository.GetByOrganizationEmailAsync)),
-        };
-
-        userRepository.ClearReceivedCalls();
-        organizationRepository.ClearReceivedCalls();
-        organizationUserRepository.ClearReceivedCalls();
-
-        return counts;
-    }
-
     [Theory, BitAutoData]
-    public async Task ExternalCallback_PreventNonCompliantTrue_ExistingUser_NoOrgUser_ThrowsCouldNotFindOrganizationUser(
+    public async Task ExternalCallback_ExistingUser_NoOrgUser_ThrowsCouldNotFindOrganizationUser(
         SutProvider<AccountController> sutProvider)
     {
         // Arrange
@@ -262,7 +159,6 @@ public class AccountControllerTest
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(organization.Id, user.Id).Returns((OrganizationUser?)null);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
         sutProvider.GetDependency<IIdentityServerInteractionService>()
             .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
@@ -272,7 +168,7 @@ public class AccountControllerTest
     }
 
     [Theory, BitAutoData]
-    public async Task ExternalCallback_PreventNonCompliantTrue_ExistingUser_OrgUserInvited_AllowsLogin(
+    public async Task ExternalCallback_ExistingUser_OrgUserInvited_AllowsLogin(
         SutProvider<AccountController> sutProvider)
     {
         // Arrange
@@ -303,7 +199,6 @@ public class AccountControllerTest
             organization,
             orgUser);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
         sutProvider.GetDependency<IIdentityServerInteractionService>()
             .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
@@ -327,7 +222,7 @@ public class AccountControllerTest
     }
 
     [Theory, BitAutoData]
-    public async Task ExternalCallback_PreventNonCompliantTrue_ExistingUser_OrgUserRevoked_ThrowsAccessRevoked(
+    public async Task ExternalCallback_ExistingUser_OrgUserRevoked_ThrowsAccessRevoked(
         SutProvider<AccountController> sutProvider)
     {
         // Arrange
@@ -358,7 +253,6 @@ public class AccountControllerTest
             organization,
             orgUser);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
         sutProvider.GetDependency<IIdentityServerInteractionService>()
             .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
@@ -368,7 +262,7 @@ public class AccountControllerTest
     }
 
     [Theory, BitAutoData]
-    public async Task ExternalCallback_PreventNonCompliantTrue_ExistingUser_OrgUserUnknown_ThrowsUnknown(
+    public async Task ExternalCallback_ExistingUser_OrgUserUnknown_ThrowsUnknown(
         SutProvider<AccountController> sutProvider)
     {
         // Arrange
@@ -400,7 +294,6 @@ public class AccountControllerTest
             organization,
             orgUser);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
         sutProvider.GetDependency<IIdentityServerInteractionService>()
             .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
@@ -437,7 +330,6 @@ public class AccountControllerTest
             organization,
             orgUser);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
         sutProvider.GetDependency<IIdentityServerInteractionService>()
             .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
@@ -460,54 +352,8 @@ public class AccountControllerTest
             Arg.Any<AuthenticationProperties>());
     }
 
-    /// <summary>
-    /// PM-24579: Temporary test, remove with feature flag.
-    /// </summary>
     [Theory, BitAutoData]
-    public async Task ExternalCallback_PreventNonCompliantFalse_SkipsOrgLookupAndSignsIn(
-        SutProvider<AccountController> sutProvider)
-    {
-        // Arrange
-        var orgId = Guid.NewGuid();
-        var providerUserId = "ext-flag-off";
-        var user = new User { Id = Guid.NewGuid(), Email = "flagoff@example.com" };
-
-        var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, user.Email!);
-        var authService = SetupHttpContextWithAuth(sutProvider, authResult);
-
-        ConfigureSsoAndUser(
-            sutProvider,
-            orgId,
-            providerUserId,
-            user);
-
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(false);
-        sutProvider.GetDependency<IIdentityServerInteractionService>()
-            .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
-
-        // Act
-        var result = await sutProvider.Sut.ExternalCallback();
-
-        // Assert
-        var redirect = Assert.IsType<RedirectResult>(result);
-        Assert.Equal("~/", redirect.Url);
-
-        await authService.Received().SignInAsync(
-            Arg.Any<HttpContext>(),
-            Arg.Any<string?>(),
-            Arg.Any<ClaimsPrincipal>(),
-            Arg.Any<AuthenticationProperties>());
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
-            .GetByOrganizationAsync(Guid.Empty, Guid.Empty);
-    }
-
-    /// <summary>
-    /// PM-24579: Permanent test, remove the True in PreventNonCompliantTrue and remove the configure for the feature
-    /// flag.
-    /// </summary>
-    [Theory, BitAutoData]
-    public async Task ExternalCallback_PreventNonCompliantTrue_ExistingSsoLinkedAccepted_MeasureLookups(
+    public async Task ExternalCallback_ExistingSsoLinkedAccepted_MeasureLookups(
         SutProvider<AccountController> sutProvider)
     {
         // Arrange
@@ -534,7 +380,6 @@ public class AccountControllerTest
             organization,
             orgUser);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
         sutProvider.GetDependency<IIdentityServerInteractionService>()
             .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
@@ -574,12 +419,8 @@ public class AccountControllerTest
         Assert.Equal(0, orgUserGetByEmail);
     }
 
-    /// <summary>
-    /// PM-24579: Permanent test, remove the True in PreventNonCompliantTrue and remove the configure for the feature
-    /// flag.
-    /// </summary>
     [Theory, BitAutoData]
-    public async Task ExternalCallback_PreventNonCompliantTrue_JitProvision_MeasureLookups(
+    public async Task ExternalCallback_JitProvision_MeasureLookups(
         SutProvider<AccountController> sutProvider)
     {
         // Arrange
@@ -607,7 +448,6 @@ public class AccountControllerTest
         organizationRepository.GetByIdAsync(orgId).Returns(organization);
         organizationUserRepository.GetByOrganizationEmailAsync(orgId, email).Returns((OrganizationUser?)null);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
         sutProvider.GetDependency<IIdentityServerInteractionService>()
             .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
@@ -642,15 +482,8 @@ public class AccountControllerTest
         Assert.Equal(1, orgUserGetByEmail);
     }
 
-    /// <summary>
-    /// PM-24579: Permanent test, remove the True in PreventNonCompliantTrue and remove the configure for the feature
-    /// flag.
-    ///
-    /// This test will trigger both the GetByOrganizationAsync and the fallback attempt to get by email
-    /// GetByOrganizationEmailAsync.
-    /// </summary>
     [Theory, BitAutoData]
-    public async Task ExternalCallback_PreventNonCompliantTrue_ExistingUser_NoOrgUser_MeasureLookups(
+    public async Task ExternalCallback_ExistingUser_NoOrgUser_MeasureLookups(
         SutProvider<AccountController> sutProvider)
     {
         // Arrange
@@ -674,7 +507,6 @@ public class AccountControllerTest
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(organization.Id, user.Id).Returns((OrganizationUser?)null);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
         sutProvider.GetDependency<IIdentityServerInteractionService>()
             .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
@@ -712,150 +544,6 @@ public class AccountControllerTest
         Assert.Equal(1, orgGet);
         Assert.Equal(1, orgUserGetByOrg);
         Assert.Equal(1, orgUserGetByEmail);
-    }
-
-    /// <summary>
-    /// PM-24579: Temporary test, remove with feature flag.
-    /// </summary>
-    [Theory, BitAutoData]
-    public async Task ExternalCallback_PreventNonCompliantFalse_ExistingSsoLinkedAccepted_MeasureLookups(
-        SutProvider<AccountController> sutProvider)
-    {
-        // Arrange
-        var orgId = Guid.NewGuid();
-        var providerUserId = "ext-measure-existing-flagoff";
-        var user = new User { Id = Guid.NewGuid(), Email = "existing.flagoff@example.com" };
-
-        var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, user.Email!);
-        SetupHttpContextWithAuth(sutProvider, authResult);
-
-        var ssoConfig = new SsoConfig { OrganizationId = orgId, Enabled = true };
-        var ssoData = new SsoConfigurationData();
-        ssoConfig.SetData(ssoData);
-        sutProvider.GetDependency<ISsoConfigRepository>().GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
-        sutProvider.GetDependency<IUserRepository>().GetBySsoUserAsync(providerUserId, orgId).Returns(user);
-
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(false);
-        sutProvider.GetDependency<IIdentityServerInteractionService>()
-            .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
-
-        // Act
-        try { _ = await sutProvider.Sut.ExternalCallback(); } catch { }
-
-        // Assert (measurement)
-        var userRepository = sutProvider.GetDependency<IUserRepository>();
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-
-        var userGetBySso = userRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IUserRepository.GetBySsoUserAsync));
-        var userGetByEmail = userRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IUserRepository.GetByEmailAsync));
-        var orgGet = organizationRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationRepository.GetByIdAsync));
-        var orgUserGetByOrg = organizationUserRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationUserRepository.GetByOrganizationAsync));
-        var orgUserGetByEmail = organizationUserRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationUserRepository.GetByOrganizationEmailAsync));
-
-        _output.WriteLine($"[flag off] GetBySsoUserAsync: {userGetBySso}");
-        _output.WriteLine($"[flag off] GetByEmailAsync: {userGetByEmail}");
-        _output.WriteLine($"[flag off] GetByIdAsync (Org): {orgGet}");
-        _output.WriteLine($"[flag off] GetByOrganizationAsync (OrgUser): {orgUserGetByOrg}");
-        _output.WriteLine($"[flag off] GetByOrganizationEmailAsync (OrgUser): {orgUserGetByEmail}");
-    }
-
-    /// <summary>
-    /// PM-24579: Temporary test, remove with feature flag.
-    /// </summary>
-    [Theory, BitAutoData]
-    public async Task ExternalCallback_PreventNonCompliantFalse_ExistingUser_NoOrgUser_MeasureLookups(
-        SutProvider<AccountController> sutProvider)
-    {
-        // Arrange
-        var orgId = Guid.NewGuid();
-        var providerUserId = "ext-measure-existing-no-orguser-flagoff";
-        var user = new User { Id = Guid.NewGuid(), Email = "existing2.flagoff@example.com" };
-
-        var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, user.Email!);
-        SetupHttpContextWithAuth(sutProvider, authResult);
-
-        var ssoConfig = new SsoConfig { OrganizationId = orgId, Enabled = true };
-        var ssoData = new SsoConfigurationData();
-        ssoConfig.SetData(ssoData);
-        sutProvider.GetDependency<ISsoConfigRepository>().GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
-        sutProvider.GetDependency<IUserRepository>().GetBySsoUserAsync(providerUserId, orgId).Returns(user);
-
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(false);
-        sutProvider.GetDependency<IIdentityServerInteractionService>()
-            .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
-
-        // Act
-        try { _ = await sutProvider.Sut.ExternalCallback(); } catch { }
-
-        // Assert (measurement)
-        var userRepository = sutProvider.GetDependency<IUserRepository>();
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-
-        var userGetBySso = userRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IUserRepository.GetBySsoUserAsync));
-        var userGetByEmail = userRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IUserRepository.GetByEmailAsync));
-        var orgGet = organizationRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationRepository.GetByIdAsync));
-        var orgUserGetByOrg = organizationUserRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationUserRepository.GetByOrganizationAsync));
-        var orgUserGetByEmail = organizationUserRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationUserRepository.GetByOrganizationEmailAsync));
-
-        _output.WriteLine($"[flag off] GetBySsoUserAsync: {userGetBySso}");
-        _output.WriteLine($"[flag off] GetByEmailAsync: {userGetByEmail}");
-        _output.WriteLine($"[flag off] GetByIdAsync (Org): {orgGet}");
-        _output.WriteLine($"[flag off] GetByOrganizationAsync (OrgUser): {orgUserGetByOrg}");
-        _output.WriteLine($"[flag off] GetByOrganizationEmailAsync (OrgUser): {orgUserGetByEmail}");
-    }
-
-    /// <summary>
-    /// PM-24579: Temporary test, remove with feature flag.
-    /// </summary>
-    [Theory, BitAutoData]
-    public async Task ExternalCallback_PreventNonCompliantFalse_JitProvision_MeasureLookups(
-        SutProvider<AccountController> sutProvider)
-    {
-        // Arrange
-        var orgId = Guid.NewGuid();
-        var providerUserId = "ext-measure-jit-flagoff";
-        var email = "jit.flagoff@example.com";
-        var organization = new Organization { Id = orgId, Name = "Org", Seats = null };
-
-        var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, email);
-        SetupHttpContextWithAuth(sutProvider, authResult);
-
-        var ssoConfig = new SsoConfig { OrganizationId = orgId, Enabled = true };
-        var ssoData = new SsoConfigurationData();
-        ssoConfig.SetData(ssoData);
-        sutProvider.GetDependency<ISsoConfigRepository>().GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
-
-        // JIT (no existing user or sso link)
-        sutProvider.GetDependency<IUserRepository>().GetBySsoUserAsync(providerUserId, orgId).Returns((User?)null);
-        sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(email).Returns((User?)null);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(organization);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationEmailAsync(orgId, email).Returns((OrganizationUser?)null);
-
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(false);
-        sutProvider.GetDependency<IIdentityServerInteractionService>()
-            .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
-
-        // Act
-        try { _ = await sutProvider.Sut.ExternalCallback(); } catch { }
-
-        // Assert (measurement)
-        var userRepository = sutProvider.GetDependency<IUserRepository>();
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-
-        var userGetBySso = userRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IUserRepository.GetBySsoUserAsync));
-        var userGetByEmail = userRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IUserRepository.GetByEmailAsync));
-        var orgGet = organizationRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationRepository.GetByIdAsync));
-        var orgUserGetByOrg = organizationUserRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationUserRepository.GetByOrganizationAsync));
-        var orgUserGetByEmail = organizationUserRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationUserRepository.GetByOrganizationEmailAsync));
-
-        _output.WriteLine($"[flag off] GetBySsoUserAsync: {userGetBySso}");
-        _output.WriteLine($"[flag off] GetByEmailAsync: {userGetByEmail}");
-        _output.WriteLine($"[flag off] GetByIdAsync (Org): {orgGet}");
-        _output.WriteLine($"[flag off] GetByOrganizationAsync (OrgUser): {orgUserGetByOrg}");
-        _output.WriteLine($"[flag off] GetByOrganizationEmailAsync (OrgUser): {orgUserGetByEmail}");
     }
 
     [Theory, BitAutoData]
@@ -976,165 +664,128 @@ public class AccountControllerTest
         Assert.Equal("AcceptInviteBeforeUsingSSO", ex.Message);
     }
 
-    /// <summary>
-    /// PM-24579: Temporary comparison test to ensure the feature flag ON does not
-    /// regress lookup counts compared to OFF. When removing the flag, delete this
-    /// comparison test and keep the specific scenario snapshot tests if desired.
-    /// </summary>
     [Theory, BitAutoData]
-    public async Task ExternalCallback_Measurements_FlagOnVsOff_Comparisons(
-        SutProvider<AccountController> sutProvider)
+    public void ExternalChallenge_WithMatchingOrgId_Succeeds(
+        SutProvider<AccountController> sutProvider,
+        Organization organization)
     {
         // Arrange
-        var scenarios = new[]
-        {
-            MeasurementScenario.ExistingSsoLinkedAccepted,
-            MeasurementScenario.ExistingUserNoOrgUser,
-            MeasurementScenario.JitProvision
-        };
+        var orgId = organization.Id;
+        var scheme = orgId.ToString();
+        var returnUrl = "~/vault";
+        var state = "test-state";
+        var userIdentifier = "user-123";
+        var ssoToken = "valid-sso-token";
 
-        foreach (var scenario in scenarios)
-        {
-            // Act
-            var onCounts = await MeasureCountsForScenarioAsync(sutProvider, scenario, preventNonCompliant: true);
-            var offCounts = await MeasureCountsForScenarioAsync(sutProvider, scenario, preventNonCompliant: false);
+        // Mock the data protector to return a tokenable with matching org ID
+        var dataProtector = sutProvider.GetDependency<IDataProtectorTokenFactory<SsoTokenable>>();
+        var tokenable = new SsoTokenable(organization, 3600);
+        dataProtector.Unprotect(ssoToken).Returns(tokenable);
 
-            // Assert: off should not exceed on in any measured lookup type
-            Assert.True(offCounts.UserGetBySso <= onCounts.UserGetBySso, $"{scenario}: off UserGetBySso={offCounts.UserGetBySso} > on {onCounts.UserGetBySso}");
-            Assert.True(offCounts.UserGetByEmail <= onCounts.UserGetByEmail, $"{scenario}: off UserGetByEmail={offCounts.UserGetByEmail} > on {onCounts.UserGetByEmail}");
-            Assert.True(offCounts.OrgGetById <= onCounts.OrgGetById, $"{scenario}: off OrgGetById={offCounts.OrgGetById} > on {onCounts.OrgGetById}");
-            Assert.True(offCounts.OrgUserGetByOrg <= onCounts.OrgUserGetByOrg, $"{scenario}: off OrgUserGetByOrg={offCounts.OrgUserGetByOrg} > on {onCounts.OrgUserGetByOrg}");
-            Assert.True(offCounts.OrgUserGetByEmail <= onCounts.OrgUserGetByEmail, $"{scenario}: off OrgUserGetByEmail={offCounts.OrgUserGetByEmail} > on {onCounts.OrgUserGetByEmail}");
+        // Mock URL helper for IsLocalUrl check
+        var urlHelper = Substitute.For<IUrlHelper>();
+        urlHelper.IsLocalUrl(returnUrl).Returns(true);
+        sutProvider.Sut.Url = urlHelper;
 
-            _output.WriteLine($"Scenario={scenario} | ON: SSO={onCounts.UserGetBySso}, Email={onCounts.UserGetByEmail}, Org={onCounts.OrgGetById}, OrgUserByOrg={onCounts.OrgUserGetByOrg}, OrgUserByEmail={onCounts.OrgUserGetByEmail}");
-            _output.WriteLine($"Scenario={scenario} | OFF: SSO={offCounts.UserGetBySso}, Email={offCounts.UserGetByEmail}, Org={offCounts.OrgGetById}, OrgUserByOrg={offCounts.OrgUserGetByOrg}, OrgUserByEmail={offCounts.OrgUserGetByEmail}");
-        }
+        // Mock interaction service for IsValidReturnUrl check
+        var interactionService = sutProvider.GetDependency<IIdentityServerInteractionService>();
+        interactionService.IsValidReturnUrl(returnUrl).Returns(true);
+
+        // Act
+        var result = sutProvider.Sut.ExternalChallenge(scheme, returnUrl, state, userIdentifier, ssoToken);
+
+        // Assert
+        var challengeResult = Assert.IsType<ChallengeResult>(result);
+        Assert.Contains(scheme, challengeResult.AuthenticationSchemes);
+        Assert.NotNull(challengeResult.Properties);
+        Assert.Equal(scheme, challengeResult.Properties.Items["scheme"]);
+        Assert.Equal(returnUrl, challengeResult.Properties.Items["return_url"]);
+        Assert.Equal(state, challengeResult.Properties.Items["state"]);
+        Assert.Equal(userIdentifier, challengeResult.Properties.Items["user_identifier"]);
     }
 
     [Theory, BitAutoData]
-    public async Task AutoProvisionUserAsync_WithFeatureFlagEnabled_CallsRegisterSSOAutoProvisionedUser(
+    public void ExternalChallenge_WithMismatchedOrgId_ThrowsSsoOrganizationIdMismatch(
+        SutProvider<AccountController> sutProvider,
+        Organization organization)
+    {
+        // Arrange
+        var correctOrgId = organization.Id;
+        var wrongOrgId = Guid.NewGuid();
+        var scheme = wrongOrgId.ToString(); // Different from tokenable's org ID
+        var returnUrl = "~/vault";
+        var state = "test-state";
+        var userIdentifier = "user-123";
+        var ssoToken = "valid-sso-token";
+
+        // Mock the data protector to return a tokenable with different org ID
+        var dataProtector = sutProvider.GetDependency<IDataProtectorTokenFactory<SsoTokenable>>();
+        var tokenable = new SsoTokenable(organization, 3600); // Contains correctOrgId
+        dataProtector.Unprotect(ssoToken).Returns(tokenable);
+
+        // Mock i18n service to return the key
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>())
+            .Returns(ci => (string)ci[0]!);
+
+        // Act & Assert
+        var ex = Assert.Throws<Exception>(() =>
+            sutProvider.Sut.ExternalChallenge(scheme, returnUrl, state, userIdentifier, ssoToken));
+        Assert.Equal("SsoOrganizationIdMismatch", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public void ExternalChallenge_WithInvalidSchemeFormat_ThrowsSsoOrganizationIdMismatch(
+        SutProvider<AccountController> sutProvider,
+        Organization organization)
+    {
+        // Arrange
+        var scheme = "not-a-valid-guid";
+        var returnUrl = "~/vault";
+        var state = "test-state";
+        var userIdentifier = "user-123";
+        var ssoToken = "valid-sso-token";
+
+        // Mock the data protector to return a valid tokenable
+        var dataProtector = sutProvider.GetDependency<IDataProtectorTokenFactory<SsoTokenable>>();
+        var tokenable = new SsoTokenable(organization, 3600);
+        dataProtector.Unprotect(ssoToken).Returns(tokenable);
+
+        // Mock i18n service to return the key
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>())
+            .Returns(ci => (string)ci[0]!);
+
+        // Act & Assert
+        var ex = Assert.Throws<Exception>(() =>
+            sutProvider.Sut.ExternalChallenge(scheme, returnUrl, state, userIdentifier, ssoToken));
+        Assert.Equal("SsoOrganizationIdMismatch", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public void ExternalChallenge_WithInvalidSsoToken_ThrowsInvalidSsoToken(
         SutProvider<AccountController> sutProvider)
     {
         // Arrange
         var orgId = Guid.NewGuid();
-        var providerUserId = "ext-new-user";
-        var email = "newuser@example.com";
-        var organization = new Organization { Id = orgId, Name = "Test Org", Seats = null };
+        var scheme = orgId.ToString();
+        var returnUrl = "~/vault";
+        var state = "test-state";
+        var userIdentifier = "user-123";
+        var ssoToken = "invalid-corrupted-token";
 
-        // No existing user (JIT provisioning scenario)
-        sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(email).Returns((User?)null);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(organization);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationEmailAsync(orgId, email)
-            .Returns((OrganizationUser?)null);
+        // Mock the data protector to throw when trying to unprotect
+        var dataProtector = sutProvider.GetDependency<IDataProtectorTokenFactory<SsoTokenable>>();
+        dataProtector.Unprotect(ssoToken).Returns(_ => throw new Exception("Token validation failed"));
 
-        // Feature flag enabled
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
-            .Returns(true);
+        // Mock i18n service to return the key
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>())
+            .Returns(ci => (string)ci[0]!);
 
-        // Mock the RegisterSSOAutoProvisionedUserAsync to return success
-        sutProvider.GetDependency<IRegisterUserCommand>()
-            .RegisterSSOAutoProvisionedUserAsync(Arg.Any<User>(), Arg.Any<Organization>())
-            .Returns(IdentityResult.Success);
-
-        var claims = new[]
-        {
-            new Claim(JwtClaimTypes.Email, email),
-            new Claim(JwtClaimTypes.Name, "New User")
-        } as IEnumerable<Claim>;
-        var config = new SsoConfigurationData();
-
-        var method = typeof(AccountController).GetMethod(
-            "CreateUserAndOrgUserConditionallyAsync",
-            BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.NotNull(method);
-
-        // Act
-        var task = (Task<(User user, Organization organization, OrganizationUser orgUser)>)method!.Invoke(
-            sutProvider.Sut,
-            new object[]
-            {
-                orgId.ToString(),
-                providerUserId,
-                claims,
-                null!,
-                config
-            })!;
-
-        var result = await task;
-
-        // Assert
-        await sutProvider.GetDependency<IRegisterUserCommand>().Received(1)
-            .RegisterSSOAutoProvisionedUserAsync(
-                Arg.Is<User>(u => u.Email == email && u.Name == "New User"),
-                Arg.Is<Organization>(o => o.Id == orgId && o.Name == "Test Org"));
-
-        Assert.NotNull(result.user);
-        Assert.Equal(email, result.user.Email);
-        Assert.Equal(organization.Id, result.organization.Id);
-    }
-
-    [Theory, BitAutoData]
-    public async Task AutoProvisionUserAsync_WithFeatureFlagDisabled_CallsRegisterUserInstead(
-        SutProvider<AccountController> sutProvider)
-    {
-        // Arrange
-        var orgId = Guid.NewGuid();
-        var providerUserId = "ext-legacy-user";
-        var email = "legacyuser@example.com";
-        var organization = new Organization { Id = orgId, Name = "Test Org", Seats = null };
-
-        // No existing user (JIT provisioning scenario)
-        sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(email).Returns((User?)null);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(organization);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationEmailAsync(orgId, email)
-            .Returns((OrganizationUser?)null);
-
-        // Feature flag disabled
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
-            .Returns(false);
-
-        // Mock the RegisterUser to return success
-        sutProvider.GetDependency<IRegisterUserCommand>()
-            .RegisterUser(Arg.Any<User>())
-            .Returns(IdentityResult.Success);
-
-        var claims = new[]
-        {
-            new Claim(JwtClaimTypes.Email, email),
-            new Claim(JwtClaimTypes.Name, "Legacy User")
-        } as IEnumerable<Claim>;
-        var config = new SsoConfigurationData();
-
-        var method = typeof(AccountController).GetMethod(
-            "CreateUserAndOrgUserConditionallyAsync",
-            BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.NotNull(method);
-
-        // Act
-        var task = (Task<(User user, Organization organization, OrganizationUser orgUser)>)method!.Invoke(
-            sutProvider.Sut,
-            new object[]
-            {
-                orgId.ToString(),
-                providerUserId,
-                claims,
-                null!,
-                config
-            })!;
-
-        var result = await task;
-
-        // Assert
-        await sutProvider.GetDependency<IRegisterUserCommand>().Received(1)
-            .RegisterUser(Arg.Is<User>(u => u.Email == email && u.Name == "Legacy User"));
-
-        // Verify the new method was NOT called
-        await sutProvider.GetDependency<IRegisterUserCommand>().DidNotReceive()
-            .RegisterSSOAutoProvisionedUserAsync(Arg.Any<User>(), Arg.Any<Organization>());
-
-        Assert.NotNull(result.user);
-        Assert.Equal(email, result.user.Email);
+        // Act & Assert
+        var ex = Assert.Throws<Exception>(() =>
+            sutProvider.Sut.ExternalChallenge(scheme, returnUrl, state, userIdentifier, ssoToken));
+        Assert.Equal("InvalidSsoToken", ex.Message);
     }
 }

@@ -3,7 +3,6 @@ using System.Text;
 using AutoFixture;
 using AutoFixture.Kernel;
 using AutoFixture.Xunit2;
-using Bit.Core;
 using Bit.Core.Test.Helpers.Factories;
 using Microsoft.AspNetCore.DataProtection;
 using NSubstitute;
@@ -36,11 +35,11 @@ public class GlobalSettingsBuilder : ISpecimenBuilder
             var dataProtector = Substitute.For<IDataProtector>();
             dataProtector.Unprotect(Arg.Any<byte[]>())
                 .Returns(data =>
-                    Encoding.UTF8.GetBytes(Constants.DatabaseFieldProtectedPrefix +
+                    Encoding.UTF8.GetBytes(Core.Constants.DatabaseFieldProtectedPrefix +
                                            Encoding.UTF8.GetString((byte[])data[0])));
 
             var dataProtectionProvider = Substitute.For<IDataProtectionProvider>();
-            dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose)
+            dataProtectionProvider.CreateProtector(Core.Constants.DatabaseFieldProtectorPurpose)
                 .Returns(dataProtector);
 
             return dataProtectionProvider;

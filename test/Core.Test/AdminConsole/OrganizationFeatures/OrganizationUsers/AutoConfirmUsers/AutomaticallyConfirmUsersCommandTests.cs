@@ -3,13 +3,13 @@ using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationConfirmation;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -203,14 +203,10 @@ public class AutomaticallyConfirmUsersCommandTests
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .Received(1)
-            .CreateAsync(
-                Arg.Is<Collection>(c =>
-                    c.OrganizationId == organization.Id &&
-                    c.Name == defaultCollectionName &&
-                    c.Type == CollectionType.DefaultUserCollection),
-                Arg.Is<IEnumerable<CollectionAccessSelection>>(groups => groups == null),
-                Arg.Is<IEnumerable<CollectionAccessSelection>>(access =>
-                    access.FirstOrDefault(x => x.Id == organizationUser.Id && x.Manage) != null));
+            .CreateDefaultCollectionsAsync(
+                organization.Id,
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Single() == organizationUser.Id),
+                defaultCollectionName);
     }
 
     [Theory]
@@ -252,9 +248,7 @@ public class AutomaticallyConfirmUsersCommandTests
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceive()
-            .CreateAsync(Arg.Any<Collection>(),
-                Arg.Any<IEnumerable<CollectionAccessSelection>>(),
-                Arg.Any<IEnumerable<CollectionAccessSelection>>());
+            .CreateDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
     }
 
     [Theory]
@@ -290,9 +284,7 @@ public class AutomaticallyConfirmUsersCommandTests
 
         var collectionException = new Exception("Collection creation failed");
         sutProvider.GetDependency<ICollectionRepository>()
-            .CreateAsync(Arg.Any<Collection>(),
-                Arg.Any<IEnumerable<CollectionAccessSelection>>(),
-                Arg.Any<IEnumerable<CollectionAccessSelection>>())
+            .CreateDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>())
             .ThrowsAsync(collectionException);
 
         // Act
@@ -397,8 +389,8 @@ public class AutomaticallyConfirmUsersCommandTests
             .Returns(true);
 
         var emailException = new Exception("Email sending failed");
-        sutProvider.GetDependency<IMailService>()
-            .SendOrganizationConfirmedEmailAsync(organization.Name, user.Email, organizationUser.AccessSecretsManager)
+        sutProvider.GetDependency<ISendOrganizationConfirmationCommand>()
+            .SendConfirmationAsync(organization, user.Email, organizationUser.AccessSecretsManager)
             .ThrowsAsync(emailException);
 
         // Act
@@ -710,10 +702,10 @@ public class AutomaticallyConfirmUsersCommandTests
                 EventType.OrganizationUser_AutomaticallyConfirmed,
                 Arg.Any<DateTime?>());
 
-        await sutProvider.GetDependency<IMailService>()
+        await sutProvider.GetDependency<ISendOrganizationConfirmationCommand>()
             .Received(1)
-            .SendOrganizationConfirmedEmailAsync(
-                organization.Name,
+            .SendConfirmationAsync(
+                organization,
                 user.Email,
                 organizationUser.AccessSecretsManager);
 
@@ -727,4 +719,5 @@ public class AutomaticallyConfirmUsersCommandTests
                 Arg.Any<IEnumerable<string>>(),
                 organization.Id.ToString());
     }
+
 }

@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
@@ -16,6 +17,7 @@ public class OrganizationUserReadByClaimedOrganizationDomainsQuery : IQuery<Orga
         var query = from ou in dbContext.OrganizationUsers
                     join u in dbContext.Users on ou.UserId equals u.Id
                     where ou.OrganizationId == _organizationId
+                          && ou.Status != OrganizationUserStatusType.Invited
                           && dbContext.OrganizationDomains
                               .Any(od => od.OrganizationId == _organizationId &&
                                          od.VerifiedDate != null &&

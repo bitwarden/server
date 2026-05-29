@@ -32,7 +32,7 @@ public class TwoFactorAuthenticationValidatorTests
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _ssoEmail2faSessionTokenable;
-    private readonly ITwoFactorIsEnabledQuery _twoFactorenabledQuery;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorEnabledQuery;
     private readonly ICurrentContext _currentContext;
     private readonly TwoFactorAuthenticationValidator _sut;
 
@@ -45,7 +45,7 @@ public class TwoFactorAuthenticationValidatorTests
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _organizationRepository = Substitute.For<IOrganizationRepository>();
         _ssoEmail2faSessionTokenable = Substitute.For<IDataProtectorTokenFactory<SsoEmail2faSessionTokenable>>();
-        _twoFactorenabledQuery = Substitute.For<ITwoFactorIsEnabledQuery>();
+        _twoFactorEnabledQuery = Substitute.For<ITwoFactorIsEnabledQuery>();
         _currentContext = Substitute.For<ICurrentContext>();
 
         _sut = new TwoFactorAuthenticationValidator(
@@ -56,7 +56,7 @@ public class TwoFactorAuthenticationValidatorTests
                     _organizationUserRepository,
                     _organizationRepository,
                     _ssoEmail2faSessionTokenable,
-                    _twoFactorenabledQuery,
+                    _twoFactorEnabledQuery,
                     _currentContext);
     }
 
@@ -135,7 +135,7 @@ public class TwoFactorAuthenticationValidatorTests
         _currentContext.OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), Arg.Any<Guid>())
             .Returns(Task.FromResult(organizationCollection));
 
-        _applicationCacheService.GetOrganizationAbilitiesAsync()
+        _applicationCacheService.GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>()
             {
                 { orgUser.OrganizationId, new OrganizationAbility(organization)}
@@ -150,6 +150,58 @@ public class TwoFactorAuthenticationValidatorTests
         Assert.True(result.Item1);
         Assert.NotNull(result.Item2);
         Assert.IsType<Organization>(result.Item2);
+    }
+
+    [Theory]
+    [BitAutoData("password")]
+    [BitAutoData("authorization_code")]
+    public async void RequiresTwoFactorAsync_OrganizationRequired_OnlyFetchesAbilitiesForUserOrgs(
+        string grantType,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
+        User user,
+        OrganizationUserOrganizationDetails orgUser,
+        Organization organization,
+        OrganizationUserOrganizationDetails orgUserNotInCache,
+        Organization organizationNotInCache,
+        ICollection<CurrentContextOrganization> organizationCollection)
+    {
+        // Arrange
+        request.GrantType = grantType;
+        orgUser.UserId = user.Id;
+        organization.Id = orgUser.OrganizationId;
+        organization.Use2fa = true;
+        organization.TwoFactorProviders = GetTwoFactorOrganizationDuoProviderJson();
+        organization.Enabled = true;
+
+        orgUserNotInCache.UserId = user.Id;
+        organizationNotInCache.Id = orgUserNotInCache.OrganizationId;
+        orgUserNotInCache.Permissions = "{}";
+
+        organizationCollection.Clear();
+        orgUser.Permissions = "{}";
+        organizationCollection.Add(new CurrentContextOrganization(orgUser));
+        organizationCollection.Add(new CurrentContextOrganization(orgUserNotInCache));
+
+        _currentContext.OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), Arg.Any<Guid>())
+            .Returns(Task.FromResult(organizationCollection));
+
+        _applicationCacheService.GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, OrganizationAbility>()
+            {
+                { orgUser.OrganizationId, new OrganizationAbility(organization) }
+            });
+
+        _organizationRepository.GetManyByUserIdAsync(Arg.Any<Guid>()).Returns([organization]);
+
+        // Act
+        await _sut.RequiresTwoFactorAsync(user, request);
+
+        // Assert - verify both org IDs were requested, not just one
+        await _applicationCacheService.Received(1).GetOrganizationAbilitiesAsync(
+            Arg.Is<IEnumerable<Guid>>(ids =>
+                ids.Contains(orgUser.OrganizationId) &&
+                ids.Contains(orgUserNotInCache.OrganizationId) &&
+                ids.Count() == 2));
     }
 
     [Theory]

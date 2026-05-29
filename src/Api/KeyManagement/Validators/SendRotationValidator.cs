@@ -44,7 +44,7 @@ public class SendRotationValidator : IRotationValidator<IEnumerable<SendWithIdRe
                 throw new BadRequestException("All existing sends must be included in the rotation.");
             }
 
-            result.Add(send.ToSend(existing, _sendAuthorizationService));
+            result.Add(send.UpdateSend(existing, _sendAuthorizationService));
         }
 
         return result;

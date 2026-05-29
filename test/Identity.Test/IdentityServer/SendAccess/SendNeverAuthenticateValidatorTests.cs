@@ -51,7 +51,7 @@ public class SendNeverAuthenticateRequestValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateRequestAsync_EmailErrorSelected_HasEmail_ReturnsEmailInvalid(
+    public async Task ValidateRequestAsync_EmailErrorSelected_HasEmail_ReturnsEmailAndOtpRequired(
         SutProvider<SendNeverAuthenticateRequestValidator> sutProvider,
         [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         string email)
@@ -69,12 +69,12 @@ public class SendNeverAuthenticateRequestValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, result.Error);
-        Assert.Equal(SendAccessConstants.EmailOtpValidatorResults.EmailInvalid, result.ErrorDescription);
+        Assert.Equal(OidcConstants.TokenErrors.InvalidRequest, result.Error);
+        Assert.Equal(SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired, result.ErrorDescription);
 
         var customResponse = result.CustomResponse as Dictionary<string, object>;
         Assert.NotNull(customResponse);
-        Assert.Equal(SendAccessConstants.EmailOtpValidatorResults.EmailInvalid, customResponse[SendAccessConstants.SendAccessError]);
+        Assert.Equal(SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired, customResponse[SendAccessConstants.SendAccessError]);
     }
 
     [Theory, BitAutoData]

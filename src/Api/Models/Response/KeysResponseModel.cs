@@ -1,27 +1,32 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.Entities;
+﻿using Bit.Core.KeyManagement.Models.Api.Response;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Api;
 
 namespace Bit.Api.Models.Response;
 
 public class KeysResponseModel : ResponseModel
 {
-    public KeysResponseModel(User user)
+    public KeysResponseModel(UserAccountKeysData accountKeys, string? masterKeyWrappedUserKey)
         : base("keys")
     {
-        if (user == null)
+        if (masterKeyWrappedUserKey != null)
         {
-            throw new ArgumentNullException(nameof(user));
+            Key = masterKeyWrappedUserKey;
         }
 
-        Key = user.Key;
-        PublicKey = user.PublicKey;
-        PrivateKey = user.PrivateKey;
+        PublicKey = accountKeys.PublicKeyEncryptionKeyPairData.PublicKey;
+        PrivateKey = accountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey;
+        AccountKeys = new PrivateKeysResponseModel(accountKeys);
     }
 
-    public string Key { get; set; }
+    /// <summary>
+    /// The master key wrapped user key. The master key can either be a master-password master key or a
+    /// key-connector master key.
+    /// </summary>
+    public string? Key { get; set; }
+    [Obsolete("Use AccountKeys.PublicKeyEncryptionKeyPair.PublicKey instead")]
     public string PublicKey { get; set; }
+    [Obsolete("Use AccountKeys.PublicKeyEncryptionKeyPair.WrappedPrivateKey instead")]
     public string PrivateKey { get; set; }
+    public PrivateKeysResponseModel AccountKeys { get; set; }
 }
