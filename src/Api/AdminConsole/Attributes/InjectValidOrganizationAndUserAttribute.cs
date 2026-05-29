@@ -1,7 +1,6 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
-using Bit.Api.AdminConsole.Models.Request;
-using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization.Validation;
+using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 
@@ -48,28 +47,24 @@ public class ValidOrganizationAndUserModelBinder(
 
         if (orgId is null || orgUserId is null)
         {
-            throw new NotFoundException();
+            bindingContext.Result = ModelBindingResult.Failed();
+            return;
         }
 
-        var organizationRepo = bindingContext.HttpContext.RequestServices.GetRequiredService<IOrganizationRepository>();
-        var organizationUserRepo = bindingContext.HttpContext.RequestServices.GetRequiredService<IOrganizationUserRepository>();
+        var validator = bindingContext.HttpContext.RequestServices.GetService<IOrganizationAndOrganizationUserValidator>();
 
-        var organization = await organizationRepo.GetByIdAsync(orgId.Value);
-        if (organization is null)
+        if (validator is null)
         {
-            throw new NotFoundException();
+            throw new InvalidOperationException("Organization and user validator service is not registered.");
         }
 
-        var organizationUser = await organizationUserRepo.GetByIdAsync(orgUserId.Value);
-        if (organizationUser is null || organization.Id != organizationUser.OrganizationId)
-        {
-            throw new NotFoundException();
-        }
-
-        bindingContext.Result = ModelBindingResult.Success(new ValidOrganizationAndUser
-        {
-            Organization = organization,
-            OrganizationUser = organizationUser
-        });
+        (await validator.ValidateAsync(new OrganizationScope(orgId.Value), orgUserId.Value))
+            .SwitchResult(
+                error =>
+                {
+                    bindingContext.ModelState.AddModelError("request", error.Message);
+                    bindingContext.Result = ModelBindingResult.Failed();
+                },
+                valid => bindingContext.Result = ModelBindingResult.Success(valid));
     }
 }
