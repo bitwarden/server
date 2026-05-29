@@ -3,6 +3,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Authorization;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -19,11 +20,12 @@ public class SelfServiceChangeEmailCommand(
     IUserRepository userRepository,
     IMailService mailService,
     IOrganizationDomainAllowEmailChangeQuery organizationDomainAllowEmailChangeQuery,
+    IPushNotificationService pushService,
     IChangeEmailCommand changeEmailCommand,
-    IdentityErrorDescriber identityErrorDescriber,
     IOptions<IdentityOptions> identityOptions) : ISelfServiceChangeEmailCommand
 {
     private readonly IUserService _userService = userService;
+    private readonly IPushNotificationService _pushService = pushService;
     private readonly ICurrentContext _currentContext = currentContext;
     private readonly IAuthorizationService _authorizationService = authorizationService;
     private readonly UserManager<User> _userManager = userManager;
@@ -31,32 +33,19 @@ public class SelfServiceChangeEmailCommand(
     private readonly IMailService _mailService = mailService;
     private readonly IOrganizationDomainAllowEmailChangeQuery _organizationDomainAllowEmailChangeQuery = organizationDomainAllowEmailChangeQuery;
     private readonly IChangeEmailCommand _changeEmailCommand = changeEmailCommand;
-    private readonly IdentityErrorDescriber _identityErrorDescriber = identityErrorDescriber;
     private readonly IdentityOptions _identityOptions = identityOptions.Value;
 
     /// <inheritdoc />
     public async Task ChangeEmailAsync(User user, string masterPassword, string newEmail, string token)
     {
-        var authorizationResult =
-             await _authorizationService.AuthorizeAsync(
-                    _currentContext.HttpContext.User,
-                    user,
-                    KeyConnectorOperations.Use);
-        if (!authorizationResult.Succeeded)
-        {
-            throw new BadRequestException("You cannot change your email when using Key Connector.");
-        }
-
-        if (!await _userService.CheckPasswordAsync(user, masterPassword))
-        {
-            throw new BadRequestException("MasterPasswordHash", "Invalid password.");
-        }
+        await CheckPasswordAndKeyConnector(user, masterPassword);
 
         var changeEmailTokenIsValid = await _userManager.VerifyUserTokenAsync(
             user,
             _identityOptions.Tokens.ChangeEmailTokenProvider,
             GetChangeEmailTokenPurpose(newEmail),
             token);
+
         if (!changeEmailTokenIsValid)
         {
             throw new BadRequestException("Token", "Invalid token.");
@@ -64,28 +53,20 @@ public class SelfServiceChangeEmailCommand(
 
         await _changeEmailCommand.ChangeEmailAsync(user, newEmail);
 
+        await _pushService.PushSyncSettingsAsync(user.Id);
+
         return;
     }
 
     /// <inheritdoc />
     public async Task InitiateChangeEmailAsync(User user, string masterPassword, string newEmail)
     {
-        var authorizationResult =
-             await _authorizationService.AuthorizeAsync(
-                    _currentContext.HttpContext.User,
-                    user,
-                    KeyConnectorOperations.Use);
-        if (!authorizationResult.Succeeded)
-        {
-            throw new BadRequestException("You cannot change your email when using Key Connector.");
-        }
+        await CheckPasswordAndKeyConnector(user, masterPassword);
 
-        // throw here instead of returning an identiy resulty
-        if (!await _userService.CheckPasswordAsync(user, masterPassword))
-        {
-            throw new BadRequestException("MasterPasswordHash", "Invalid password.");
-        }
-
+        //? This query runs twice for self-service. Once here and once in the ChangeEmailCommand
+        //? Maybe think about returning a Expiring Tokenable that tracks email change as valid
+        //? tokenable could be used to signal that the user has satisfied the user verification so
+        //? the MP hash can be removed from state.
         await _organizationDomainAllowEmailChangeQuery.IsAllowedAsync(user, newEmail);
 
         var existingUser = await _userRepository.GetByEmailAsync(newEmail);
@@ -107,4 +88,22 @@ public class SelfServiceChangeEmailCommand(
     // UserManager.GenerateChangeEmailTokenAsync so VerifyUserTokenAsync accepts tokens issued
     // through the standard UserManager flow.
     private static string GetChangeEmailTokenPurpose(string newEmail) => "ChangeEmail:" + newEmail;
+
+    private async Task CheckPasswordAndKeyConnector(User user, string masterPassword)
+    {
+        var authorizationResult =
+            await _authorizationService.AuthorizeAsync(
+                    _currentContext.HttpContext.User,
+                    user,
+                    KeyConnectorOperations.Use);
+        if (!authorizationResult.Succeeded)
+        {
+            throw new BadRequestException("You cannot change your email when using Key Connector.");
+        }
+
+        if (!await _userService.CheckPasswordAsync(user, masterPassword))
+        {
+            throw new BadRequestException("MasterPasswordHash", "Invalid password.");
+        }
+    }
 }

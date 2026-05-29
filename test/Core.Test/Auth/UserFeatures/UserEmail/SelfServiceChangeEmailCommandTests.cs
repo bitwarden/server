@@ -1,11 +1,15 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
+﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserEmail;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Authorization;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -34,30 +38,48 @@ public class SelfServiceChangeEmailCommandTests
         userManager.VerifyUserTokenAsync(user, _changeEmailTokenProvider, _changeEmailPurpose, _token)
             .Returns(true);
         var sutProvider = CreateSutProvider(userManager);
+        AllowKeyConnector(sutProvider, user);
         sutProvider.GetDependency<IUserService>()
             .CheckPasswordAsync(user, _masterPasswordHash)
             .Returns(true);
 
-        var result = await sutProvider.Sut.ChangeEmailAsync(user, _masterPasswordHash, _newEmail, _token);
+        await sutProvider.Sut.ChangeEmailAsync(user, _masterPasswordHash, _newEmail, _token);
 
-        Assert.True(result.Succeeded);
         await sutProvider.GetDependency<IChangeEmailCommand>().Received(1)
             .ChangeEmailAsync(user, _newEmail);
     }
 
     [Theory, BitAutoData]
-    public async Task ChangeEmailAsync_WrongMasterPassword_ReturnsPasswordMismatchAndShortCircuits(User user)
+    public async Task ChangeEmailAsync_KeyConnectorDenied_ThrowsAndShortCircuits(User user)
     {
         var userManager = SubstituteUserManager();
         var sutProvider = CreateSutProvider(userManager);
+        DenyKeyConnector(sutProvider, user);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ChangeEmailAsync(user, _masterPasswordHash, _newEmail, _token));
+        Assert.Equal("You cannot change your email when using Key Connector.", ex.Message);
+
+        // KeyConnector denial short-circuits ahead of password verification and token issuance.
+        await sutProvider.GetDependency<IUserService>().DidNotReceiveWithAnyArgs()
+            .CheckPasswordAsync(default!, default!);
+        await sutProvider.GetDependency<IChangeEmailCommand>().DidNotReceiveWithAnyArgs()
+            .ChangeEmailAsync(default!, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ChangeEmailAsync_WrongMasterPassword_ThrowsAndShortCircuits(User user)
+    {
+        var userManager = SubstituteUserManager();
+        var sutProvider = CreateSutProvider(userManager);
+        AllowKeyConnector(sutProvider, user);
         sutProvider.GetDependency<IUserService>()
             .CheckPasswordAsync(user, _masterPasswordHash)
             .Returns(false);
 
-        var result = await sutProvider.Sut.ChangeEmailAsync(user, _masterPasswordHash, _newEmail, _token);
-
-        Assert.False(result.Succeeded);
-        Assert.Contains(result.Errors, e => e.Code == new IdentityErrorDescriber().PasswordMismatch().Code);
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ChangeEmailAsync(user, _masterPasswordHash, _newEmail, _token));
+        Assert.True(ex.ModelState!.ContainsKey("MasterPasswordHash"));
 
         // No further work happens after a password mismatch. We can't assert against the real-ish
         // UserManager substitute's calls here because AutoNSubstitute does not proxy concrete
@@ -68,20 +90,20 @@ public class SelfServiceChangeEmailCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ChangeEmailAsync_InvalidToken_ReturnsInvalidTokenAndShortCircuits(User user)
+    public async Task ChangeEmailAsync_InvalidToken_ThrowsAndShortCircuits(User user)
     {
         var userManager = SubstituteUserManager();
         userManager.VerifyUserTokenAsync(user, _changeEmailTokenProvider, _changeEmailPurpose, _token)
             .Returns(false);
         var sutProvider = CreateSutProvider(userManager);
+        AllowKeyConnector(sutProvider, user);
         sutProvider.GetDependency<IUserService>()
             .CheckPasswordAsync(user, _masterPasswordHash)
             .Returns(true);
 
-        var result = await sutProvider.Sut.ChangeEmailAsync(user, _masterPasswordHash, _newEmail, _token);
-
-        Assert.False(result.Succeeded);
-        Assert.Contains(result.Errors, e => e.Code == new IdentityErrorDescriber().InvalidToken().Code);
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ChangeEmailAsync(user, _masterPasswordHash, _newEmail, _token));
+        Assert.True(ex.ModelState!.ContainsKey("Token"));
 
         await sutProvider.GetDependency<IChangeEmailCommand>().DidNotReceiveWithAnyArgs()
             .ChangeEmailAsync(default!, default!);
@@ -97,13 +119,13 @@ public class SelfServiceChangeEmailCommandTests
         userManager.VerifyUserTokenAsync(user, customProvider, _changeEmailPurpose, _token)
             .Returns(true);
         var sutProvider = CreateSutProvider(userManager, customProvider);
+        AllowKeyConnector(sutProvider, user);
         sutProvider.GetDependency<IUserService>()
             .CheckPasswordAsync(user, _masterPasswordHash)
             .Returns(true);
 
-        var result = await sutProvider.Sut.ChangeEmailAsync(user, _masterPasswordHash, _newEmail, _token);
+        await sutProvider.Sut.ChangeEmailAsync(user, _masterPasswordHash, _newEmail, _token);
 
-        Assert.True(result.Succeeded);
         await userManager.Received(1)
             .VerifyUserTokenAsync(user, customProvider, _changeEmailPurpose, _token);
     }
@@ -115,6 +137,7 @@ public class SelfServiceChangeEmailCommandTests
         var userManager = SubstituteUserManager();
         userManager.GenerateChangeEmailTokenAsync(user, _newEmail).Returns(_token);
         var sutProvider = CreateSutProvider(userManager);
+        AllowKeyConnector(sutProvider, user);
         sutProvider.GetDependency<IUserService>()
             .CheckPasswordAsync(user, _masterPasswordHash)
             .Returns(true);
@@ -122,9 +145,8 @@ public class SelfServiceChangeEmailCommandTests
             .GetByEmailAsync(_newEmail)
             .Returns((User?)null);
 
-        var result = await sutProvider.Sut.InitiateChangeEmailAsync(user, _masterPasswordHash, _newEmail);
+        await sutProvider.Sut.InitiateChangeEmailAsync(user, _masterPasswordHash, _newEmail);
 
-        Assert.True(result.Succeeded);
         await sutProvider.GetDependency<IMailService>().Received(1)
             .SendChangeEmailEmailAsync(_newEmail, _token);
         await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs()
@@ -139,6 +161,7 @@ public class SelfServiceChangeEmailCommandTests
         user.Email = _currentEmail;
         var userManager = SubstituteUserManager();
         var sutProvider = CreateSutProvider(userManager);
+        AllowKeyConnector(sutProvider, user);
         sutProvider.GetDependency<IUserService>()
             .CheckPasswordAsync(user, _masterPasswordHash)
             .Returns(true);
@@ -146,11 +169,10 @@ public class SelfServiceChangeEmailCommandTests
             .GetByEmailAsync(_newEmail)
             .Returns(new User { Email = _newEmail });
 
-        var result = await sutProvider.Sut.InitiateChangeEmailAsync(user, _masterPasswordHash, _newEmail);
+        // Completes without throwing so the API surface does not leak whether the new email is
+        // already registered; instead the existing account is notified out-of-band.
+        await sutProvider.Sut.InitiateChangeEmailAsync(user, _masterPasswordHash, _newEmail);
 
-        // Success is returned to the caller so the API surface does not leak whether the new
-        // email is already registered; instead the existing account is notified out-of-band.
-        Assert.True(result.Succeeded);
         await sutProvider.GetDependency<IMailService>().Received(1)
             .SendChangeEmailAlreadyExistsEmailAsync(user.Email, _newEmail);
         await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs()
@@ -160,19 +182,44 @@ public class SelfServiceChangeEmailCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task InitiateChangeEmailAsync_WrongMasterPassword_ReturnsPasswordMismatchAndShortCircuits(User user)
+    public async Task InitiateChangeEmailAsync_KeyConnectorDenied_ThrowsAndShortCircuits(User user)
     {
         user.Email = _currentEmail;
         var userManager = SubstituteUserManager();
         var sutProvider = CreateSutProvider(userManager);
+        DenyKeyConnector(sutProvider, user);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.InitiateChangeEmailAsync(user, _masterPasswordHash, _newEmail));
+        Assert.Equal("You cannot change your email when using Key Connector.", ex.Message);
+
+        await sutProvider.GetDependency<IUserService>().DidNotReceiveWithAnyArgs()
+            .CheckPasswordAsync(default!, default!);
+        await sutProvider.GetDependency<IOrganizationDomainAllowEmailChangeQuery>().DidNotReceiveWithAnyArgs()
+            .IsAllowedAsync(default!, default!);
+        await sutProvider.GetDependency<IUserRepository>().DidNotReceiveWithAnyArgs()
+            .GetByEmailAsync(default!);
+        await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs()
+            .SendChangeEmailEmailAsync(default!, default!);
+        await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs()
+            .SendChangeEmailAlreadyExistsEmailAsync(default!, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitiateChangeEmailAsync_WrongMasterPassword_ThrowsAndShortCircuits(User user)
+    {
+        user.Email = _currentEmail;
+        var userManager = SubstituteUserManager();
+        var sutProvider = CreateSutProvider(userManager);
+        AllowKeyConnector(sutProvider, user);
         sutProvider.GetDependency<IUserService>()
             .CheckPasswordAsync(user, _masterPasswordHash)
             .Returns(false);
 
-        var result = await sutProvider.Sut.InitiateChangeEmailAsync(user, _masterPasswordHash, _newEmail);
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.InitiateChangeEmailAsync(user, _masterPasswordHash, _newEmail));
+        Assert.True(ex.ModelState!.ContainsKey("MasterPasswordHash"));
 
-        Assert.False(result.Succeeded);
-        Assert.Contains(result.Errors, e => e.Code == new IdentityErrorDescriber().PasswordMismatch().Code);
         await sutProvider.GetDependency<IOrganizationDomainAllowEmailChangeQuery>().DidNotReceiveWithAnyArgs()
             .IsAllowedAsync(default!, default!);
         await sutProvider.GetDependency<IUserRepository>().DidNotReceiveWithAnyArgs()
@@ -194,6 +241,7 @@ public class SelfServiceChangeEmailCommandTests
         const string newEmail = "new@other-domain.com";
         var userManager = SubstituteUserManager();
         var sutProvider = CreateSutProvider(userManager);
+        AllowKeyConnector(sutProvider, user);
         sutProvider.GetDependency<IUserService>()
             .CheckPasswordAsync(user, _masterPasswordHash)
             .Returns(true);
@@ -214,6 +262,28 @@ public class SelfServiceChangeEmailCommandTests
             .SendChangeEmailAlreadyExistsEmailAsync(default!, default!);
         await userManager.DidNotReceiveWithAnyArgs()
             .GenerateChangeEmailTokenAsync(default!, default!);
+    }
+
+    private static void AllowKeyConnector(SutProvider<SelfServiceChangeEmailCommand> sutProvider, User user) =>
+        SetKeyConnectorAuthorization(sutProvider, user, AuthorizationResult.Success());
+
+    private static void DenyKeyConnector(SutProvider<SelfServiceChangeEmailCommand> sutProvider, User user) =>
+        SetKeyConnectorAuthorization(sutProvider, user, AuthorizationResult.Failed());
+
+    private static void SetKeyConnectorAuthorization(
+        SutProvider<SelfServiceChangeEmailCommand> sutProvider,
+        User user,
+        AuthorizationResult result)
+    {
+        var principal = new ClaimsPrincipal();
+        sutProvider.GetDependency<ICurrentContext>().HttpContext.User.Returns(principal);
+        // IAuthorizationService.AuthorizeAsync(principal, resource, requirement) is an extension
+        // that wraps the requirement in an array and calls the IEnumerable overload — substitute
+        // the underlying method so NSubstitute returns our result instead of null.
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(principal, user, Arg.Is<IEnumerable<IAuthorizationRequirement>>(
+                requirements => requirements.Contains(KeyConnectorOperations.Use)))
+            .Returns(result);
     }
 
     private static SutProvider<SelfServiceChangeEmailCommand> CreateSutProvider(
