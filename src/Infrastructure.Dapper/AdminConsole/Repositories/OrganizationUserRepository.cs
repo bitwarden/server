@@ -612,7 +612,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         await using var connection = new SqlConnection(ConnectionString);
 
         await connection.ExecuteAsync(
-            "[dbo].[OrganizationUser_RevokeMany]",
+            "[dbo].[OrganizationUser_UpdateManyRevoke]",
             new
             {
                 OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP(),
@@ -626,7 +626,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         await using var connection = new SqlConnection(ConnectionString);
 
         await connection.ExecuteAsync(
-            "[dbo].[OrganizationUser_RestoreMany]",
+            "[dbo].[OrganizationUser_UpdateManyRestore]",
             new
             {
                 OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP(),

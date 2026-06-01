@@ -1073,23 +1073,4 @@ public class OrganizationService : IOrganizationService
 
         return true;
     }
-
-    public static OrganizationUserStatusType GetPriorActiveOrganizationUserStatusType(OrganizationUser organizationUser)
-    {
-        // Determine status to revert back to
-        var status = OrganizationUserStatusType.Invited;
-        if (organizationUser.UserId.HasValue && string.IsNullOrWhiteSpace(organizationUser.Email))
-        {
-            // Has UserId & Email is null, then Accepted
-            status = OrganizationUserStatusType.Accepted;
-            if (!string.IsNullOrWhiteSpace(organizationUser.Key))
-            {
-                // We have an org key for this user, user was confirmed
-                status = OrganizationUserStatusType.Confirmed;
-            }
-        }
-
-        return status;
-    }
-
 }
