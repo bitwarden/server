@@ -26,6 +26,13 @@ public static class StripeConstants
         public const string SendInvoice = "send_invoice";
     }
 
+    public static class CouponDurations
+    {
+        public const string Once = "once";
+        public const string Repeating = "repeating";
+        public const string Forever = "forever";
+    }
+
     public static class CouponIDs
     {
         public const string LegacyMSPDiscount = "msp-discount-35";
