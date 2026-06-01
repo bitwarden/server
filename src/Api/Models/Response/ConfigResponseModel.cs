@@ -55,7 +55,8 @@ public class ConfigResponseModel : ResponseModel
         Communication = CommunicationSettings.Build(globalSettings);
         Settings = new ServerSettingsResponseModel
         {
-            DisableUserRegistration = globalSettings.DisableUserRegistration
+            DisableUserRegistration = globalSettings.DisableUserRegistration,
+            SuppressOnboardingInterstitials = globalSettings.SuppressOnboardingInterstitials
         };
     }
 }
@@ -132,4 +133,5 @@ public class CommunicationBootstrapSettings
 public class ServerSettingsResponseModel
 {
     public bool DisableUserRegistration { get; set; }
+    public bool SuppressOnboardingInterstitials { get; set; }
 }

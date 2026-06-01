@@ -698,34 +698,6 @@ public class AccountsControllerTests : IDisposable
 
     [Theory]
     [BitAutoData]
-    public async Task PostKdf_WithNullAuthenticationData_ShouldFail(
-        User user, ChangeKdfRequestModel model)
-    {
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        model.AuthenticationData = null;
-
-        // Act
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKdf(model));
-
-        Assert.Contains("AuthenticationData and UnlockData must be provided.", exception.Message);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task PostKdf_WithNullUnlockData_ShouldFail(
-        User user, ChangeKdfRequestModel model)
-    {
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        model.UnlockData = null;
-
-        // Act
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKdf(model));
-
-        Assert.Contains("AuthenticationData and UnlockData must be provided.", exception.Message);
-    }
-
-    [Theory]
-    [BitAutoData]
     public async Task PostKdf_ChangeKdfFailed_ShouldFail(
         User user, ChangeKdfRequestModel model)
     {

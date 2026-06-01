@@ -13,9 +13,7 @@ builder.ConfigureRedis();
 builder.ConfigureIdp();
 var services = builder.ConfigureServices(db, secretsSetup, mail, azurite);
 
-#if ENABLE_NODEJS_COMMUNITY_PLUGIN
 builder.ConfigureWebFrontend(services["api"]);
-#endif
 
 #if ENABLE_NGROK_COMMUNITY_PLUGIN
 builder.ConfigureNgrok((services["billing"], "http"));

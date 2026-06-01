@@ -269,4 +269,43 @@ public class CipherResponseModelTests
 
         Assert.Equal(serializedData, response.Data);
     }
+
+    [Theory]
+    [InlineData(CipherType.Login)]
+    [InlineData(CipherType.SecureNote)]
+    [InlineData(CipherType.Card)]
+    [InlineData(CipherType.Identity)]
+    [InlineData(CipherType.SSHKey)]
+    [InlineData(CipherType.BankAccount)]
+    [InlineData(CipherType.DriversLicense)]
+    [InlineData(CipherType.Passport)]
+    public void Constructor_OpaqueData_DoesNotThrowAndSkipsLegacyFields(CipherType type)
+    {
+        const string opaque = "2.iv|ct|mac";
+        var cipher = new Cipher
+        {
+            Id = Guid.NewGuid(),
+            Type = type,
+            Data = opaque,
+            RevisionDate = DateTime.UtcNow,
+            CreationDate = DateTime.UtcNow,
+        };
+
+        var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
+
+        Assert.Equal(type, response.Type);
+        Assert.Equal(opaque, response.Data);
+        Assert.Null(response.Name);
+        Assert.Null(response.Notes);
+        Assert.Null(response.Login);
+        Assert.Null(response.SecureNote);
+        Assert.Null(response.Card);
+        Assert.Null(response.Identity);
+        Assert.Null(response.SSHKey);
+        Assert.Null(response.BankAccount);
+        Assert.Null(response.DriversLicense);
+        Assert.Null(response.Passport);
+        Assert.Null(response.Fields);
+        Assert.Null(response.PasswordHistory);
+    }
 }
