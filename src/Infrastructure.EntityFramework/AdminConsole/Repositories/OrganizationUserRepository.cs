@@ -3,6 +3,7 @@
 
 using System.Data.Common;
 using AutoMapper;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Enums;
@@ -894,10 +895,14 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
         var dbContext = GetDatabaseContext(scope);
 
-        await dbContext.OrganizationUsers.Where(x => organizationUserIds.Contains(x.Id))
+        // Ordering of property updates here is important, see: https://github.com/dotnet/efcore/issues/35361
+        // Potentially fixed in EF 10, and covered by integration tests
+        await dbContext.OrganizationUsers
+            .Where(x => organizationUserIds.Contains(x.Id) && x.Status != OrganizationUserStatusType.Revoked)
             .ExecuteUpdateAsync(s => s
+                .SetProperty(x => x.RevocationReason, reason)
                 .SetProperty(x => x.Status, OrganizationUserStatusType.Revoked)
-                .SetProperty(x => x.RevocationReason, reason));
+                .SetProperty(x => x.StatusNew, x => (OrganizationUserStatusTypeNew?)(short)x.Status));
 
         await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(organizationUserIds);
     }
@@ -912,6 +917,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             .Where(x => organizationUserIds.Contains(x.Id) && x.Status == OrganizationUserStatusType.Revoked)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(x => x.Status, status)
+                .SetProperty(x => x.StatusNew, (OrganizationUserStatusTypeNew?)null)
                 .SetProperty(x => x.RevocationReason, (RevocationReason?)null));
 
         await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(organizationUserIds);
