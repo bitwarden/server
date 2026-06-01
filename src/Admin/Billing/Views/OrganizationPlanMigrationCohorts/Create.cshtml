@@ -57,6 +57,9 @@
                 const isChurnOnly = value === NO_PATH;
                 proactiveRow.hidden = isChurnOnly;
                 churnOptionalLabel.hidden = isChurnOnly;
+                if (isChurnOnly) {
+                    proactiveRow.querySelector('input').value = '';
+                }
             };
 
             select.addEventListener('change', (e) => applyVisibility(e.target.value));
