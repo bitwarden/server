@@ -190,12 +190,6 @@ public class Startup
         {
             app.UsePathBase("/identity");
             app.UseForwardedHeaders(globalSettings);
-
-            if (!CoreHelpers.SettingHasValue(globalSettings.KdfDefaultHashKey))
-            {
-                logger.LogWarning(
-                    "globalSettings__kdfdefaulthashkey is not set. This value not being set degrades account enumeration protections. Set this value to a strong random secret (used as an HMAC key) in production environments.");
-            }
         }
 
         // Default Middleware

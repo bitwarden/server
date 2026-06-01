@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Core\Core.csproj" />
     <ProjectReference Include="..\Migrator\Migrator.csproj" />
   </ItemGroup>
 

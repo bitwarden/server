@@ -1,7 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
@@ -65,7 +64,6 @@ public class CustomTokenRequestValidatorTests
             Substitute.For<ICurrentContext>(),
             Substitute.For<GlobalSettings>(),
             Substitute.For<IUserRepository>(),
-            Substitute.For<IPolicyService>(),
             _featureService,
             Substitute.For<ISsoConfigRepository>(),
             Substitute.For<IUserDecryptionOptionsBuilder>(),
@@ -271,7 +269,6 @@ public class CustomTokenRequestValidatorTests
             currentContext,
             Substitute.For<GlobalSettings>(),
             Substitute.For<IUserRepository>(),
-            Substitute.For<IPolicyService>(),
             _featureService,
             Substitute.For<ISsoConfigRepository>(),
             Substitute.For<IUserDecryptionOptionsBuilder>(),
