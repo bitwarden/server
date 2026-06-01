@@ -4,6 +4,7 @@ using AutoFixture;
 using AutoFixture.Kernel;
 using AutoFixture.Xunit2;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Billing.Enums;
@@ -138,10 +139,8 @@ internal class OrganizationInvite : ICustomization
     public void Customize(IFixture fixture)
     {
         var organizationId = Guid.NewGuid();
-        PermissionsBlob = PermissionsBlob ?? JsonSerializer.Serialize(new Permissions(), new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        });
+        PermissionsBlob = PermissionsBlob ?? JsonSerializer.Serialize(new Permissions(),
+            AdminConsoleJsonContext.Default.Permissions);
         fixture.Customize<Organization>(composer => composer
             .With(o => o.Id, organizationId)
             .With(o => o.Seats, (short)100));
