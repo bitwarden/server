@@ -19,7 +19,7 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.Auto
 [SutProviderCustomize]
 public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
 {
-    [Fact, BitAutoData]
+    [Theory, BitAutoData]
     public async Task BulkAutomaticallyConfirmOrganizationUsersAsync_ConfirmedUsers_LogsEventForEach(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser1,
@@ -54,7 +54,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
                 events.Any(e => e.Item1 == orgUser2 && e.Item2 == EventType.OrganizationUser_AutomaticallyConfirmed)));
     }
 
-    [Fact, BitAutoData]
+    [Theory, BitAutoData]
     public async Task BulkAutomaticallyConfirmOrganizationUsersAsync_ConfirmedUsers_SendsConfirmationEmailForEach(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser1,
@@ -99,7 +99,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
             .SendConfirmationAsync(organization, user2.Email, orgUser2.AccessSecretsManager);
     }
 
-    [Fact, BitAutoData]
+    [Theory, BitAutoData]
     public async Task BulkAutomaticallyConfirmOrganizationUsersAsync_ConfirmedUsers_SyncsOrgKeysAndDeletesDeviceRegistrationForEach(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser1,
@@ -161,7 +161,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
                 organization.Id.ToString());
     }
 
-    [Fact, BitAutoData]
+    [Theory, BitAutoData]
     public async Task BulkAutomaticallyConfirmOrganizationUsersAsync_AllValidationFails_DoesNotRunSideEffects(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser1,
@@ -208,7 +208,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
             .DeleteUserRegistrationOrganizationAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>());
     }
 
-    [Fact, BitAutoData]
+    [Theory, BitAutoData]
     public async Task BulkAutomaticallyConfirmOrganizationUsersAsync_OneSucceedsOneFails_RunsSideEffectsOnlyForConfirmedUser(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser1,
@@ -272,7 +272,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
             .PushSyncOrgKeysAsync(orgUser2.UserId!.Value);
     }
 
-    [Fact, BitAutoData]
+    [Theory, BitAutoData]
     public async Task BulkAutomaticallyConfirmOrganizationUsersAsync_EmptyList_DoesNotValidate(
         Organization organization,
         SutProvider<BulkAutomaticallyConfirmOrganizationUsersCommand> sutProvider)
