@@ -1421,6 +1421,7 @@
       "setup": {
         "type": "Project",
         "dependencies": {
+          "Core": "[2026.5.0, )",
           "Handlebars.Net": "[2.1.6, 2.1.6]",
           "Microsoft.Extensions.Logging": "[10.0.7, 10.0.7]",
           "Migrator": "[2026.5.0, )",
