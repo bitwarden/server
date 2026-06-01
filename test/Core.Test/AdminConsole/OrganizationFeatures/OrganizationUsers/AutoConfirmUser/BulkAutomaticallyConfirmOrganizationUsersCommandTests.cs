@@ -19,7 +19,7 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.Auto
 [SutProviderCustomize]
 public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
 {
-    [Theory, BitAutoData]
+    [Fact, BitAutoData]
     public async Task BulkAutomaticallyConfirmOrganizationUsersAsync_ConfirmedUsers_LogsEventForEach(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser1,
@@ -46,17 +46,15 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
         // Act
         await sutProvider.Sut.RunAsync(request);
 
-        // Assert — one per-user event call for each confirmed user
+        // Assert — one batch event call containing both confirmed users
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
-            .LogOrganizationUserEventAsync(orgUser1, EventType.OrganizationUser_AutomaticallyConfirmed, Arg.Any<DateTime?>());
-
-        await sutProvider.GetDependency<IEventService>()
-            .Received(1)
-            .LogOrganizationUserEventAsync(orgUser2, EventType.OrganizationUser_AutomaticallyConfirmed, Arg.Any<DateTime?>());
+            .LogOrganizationUserEventsAsync(Arg.Is<IEnumerable<(OrganizationUser, EventType, DateTime?)>>(events =>
+                events.Any(e => e.Item1 == orgUser1 && e.Item2 == EventType.OrganizationUser_AutomaticallyConfirmed) &&
+                events.Any(e => e.Item1 == orgUser2 && e.Item2 == EventType.OrganizationUser_AutomaticallyConfirmed)));
     }
 
-    [Theory, BitAutoData]
+    [Fact, BitAutoData]
     public async Task BulkAutomaticallyConfirmOrganizationUsersAsync_ConfirmedUsers_SendsConfirmationEmailForEach(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser1,
@@ -101,7 +99,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
             .SendConfirmationAsync(organization, user2.Email, orgUser2.AccessSecretsManager);
     }
 
-    [Theory, BitAutoData]
+    [Fact, BitAutoData]
     public async Task BulkAutomaticallyConfirmOrganizationUsersAsync_ConfirmedUsers_SyncsOrgKeysAndDeletesDeviceRegistrationForEach(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser1,
@@ -163,7 +161,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
                 organization.Id.ToString());
     }
 
-    [Theory, BitAutoData]
+    [Fact, BitAutoData]
     public async Task BulkAutomaticallyConfirmOrganizationUsersAsync_AllValidationFails_DoesNotRunSideEffects(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser1,
@@ -195,7 +193,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
         // Assert — no side effects fired when no users were confirmed
         await sutProvider.GetDependency<IEventService>()
             .DidNotReceive()
-            .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>(), Arg.Any<DateTime?>());
+            .LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, DateTime?)>>());
 
         await sutProvider.GetDependency<ISendOrganizationConfirmationCommand>()
             .DidNotReceive()
@@ -210,7 +208,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
             .DeleteUserRegistrationOrganizationAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>());
     }
 
-    [Theory, BitAutoData]
+    [Fact, BitAutoData]
     public async Task BulkAutomaticallyConfirmOrganizationUsersAsync_OneSucceedsOneFails_RunsSideEffectsOnlyForConfirmedUser(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser1,
@@ -250,14 +248,12 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
         // Act
         await sutProvider.Sut.RunAsync(request);
 
-        // Assert — event logged only for orgUser1
+        // Assert — batch event call contains only orgUser1
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
-            .LogOrganizationUserEventAsync(orgUser1, EventType.OrganizationUser_AutomaticallyConfirmed, Arg.Any<DateTime?>());
-
-        await sutProvider.GetDependency<IEventService>()
-            .DidNotReceive()
-            .LogOrganizationUserEventAsync(orgUser2, Arg.Any<EventType>(), Arg.Any<DateTime?>());
+            .LogOrganizationUserEventsAsync(Arg.Is<IEnumerable<(OrganizationUser, EventType, DateTime?)>>(events =>
+                events.Any(e => e.Item1 == orgUser1 && e.Item2 == EventType.OrganizationUser_AutomaticallyConfirmed) &&
+                events.All(e => e.Item1 != orgUser2)));
 
         await sutProvider.GetDependency<ISendOrganizationConfirmationCommand>()
             .Received(1)
@@ -276,7 +272,7 @@ public class BulkAutomaticallyConfirmOrganizationUsersCommandTests
             .PushSyncOrgKeysAsync(orgUser2.UserId!.Value);
     }
 
-    [Theory, BitAutoData]
+    [Fact, BitAutoData]
     public async Task BulkAutomaticallyConfirmOrganizationUsersAsync_EmptyList_DoesNotValidate(
         Organization organization,
         SutProvider<BulkAutomaticallyConfirmOrganizationUsersCommand> sutProvider)
