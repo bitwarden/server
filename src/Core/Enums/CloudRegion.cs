@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Setup.Enums;
+namespace Bit.Core.Enums;
 
 public enum CloudRegion
 {

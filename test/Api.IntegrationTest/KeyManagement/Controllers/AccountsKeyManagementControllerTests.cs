@@ -7,7 +7,6 @@ using Bit.Api.KeyManagement.Models.Requests;
 using Bit.Api.KeyManagement.Models.Responses;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -17,6 +16,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Entities;
 using Bit.Core.KeyManagement.Enums;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
@@ -228,7 +228,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
             Key = _mockEncryptedString,
             Keys = new KeysRequestModel { PublicKey = ssoUser.PublicKey, EncryptedPrivateKey = ssoUser.PrivateKey },
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
             OrgIdentifier = organizationSsoIdentifier
         };
 
@@ -309,9 +309,9 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         Assert.Equal(request.KeyConnectorKeyWrappedUserKey, user.Key);
         Assert.True(user.UsesKeyConnector);
         Assert.Equal(KdfType.Argon2id, user.Kdf);
-        Assert.Equal(AuthConstants.ARGON2_ITERATIONS.Default, user.KdfIterations);
-        Assert.Equal(AuthConstants.ARGON2_MEMORY.Default, user.KdfMemory);
-        Assert.Equal(AuthConstants.ARGON2_PARALLELISM.Default, user.KdfParallelism);
+        Assert.Equal(KdfConstants.ARGON2_ITERATIONS.Default, user.KdfIterations);
+        Assert.Equal(KdfConstants.ARGON2_MEMORY.Default, user.KdfMemory);
+        Assert.Equal(KdfConstants.ARGON2_PARALLELISM.Default, user.KdfParallelism);
         Assert.Equal(request.AccountKeys.PublicKeyEncryptionKeyPair!.SignedPublicKey, user.SignedPublicKey);
         Assert.Equal(request.AccountKeys.SecurityState!.SecurityState, user.SecurityState);
         Assert.Equal(request.AccountKeys.SecurityState.SecurityVersion, user.SecurityVersion);
