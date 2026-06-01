@@ -77,6 +77,39 @@ public static class RecipeBuilderExtensions
     }
 
     /// <summary>
+    /// Seed one or more claimed (verified) organization domains.
+    /// Domain names are trimmed; empty entries are dropped and duplicates removed case-insensitively.
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <param name="domainNames">Domain names to seed. Empty (or all-empty/whitespace) is a no-op.</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no organization exists.</exception>
+    public static RecipeBuilder WithOrganizationDomain(
+        this RecipeBuilder builder,
+        IReadOnlyList<string> domainNames)
+    {
+        if (!builder.HasOrg)
+        {
+            throw new InvalidOperationException(
+                "Organization domains require an organization. Call UseOrganization() or CreateOrganization() first.");
+        }
+
+        var unique = domainNames
+            .Select(d => d.Trim())
+            .Where(d => !string.IsNullOrWhiteSpace(d))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (unique.Count == 0)
+        {
+            return builder;
+        }
+
+        builder.AddStep(_ => new CreateOrganizationDomainsStep(unique));
+        return builder;
+    }
+
+    /// <summary>
     /// Add an organization owner user with admin privileges.
     /// </summary>
     /// <param name="builder">The recipe builder</param>

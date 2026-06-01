@@ -21,6 +21,11 @@ public class OrganizationVaultOptions
     public required string Domain { get; init; }
 
     /// <summary>
+    /// Claimed (verified) domains to seed for the organization. Each becomes a verified <see cref="Bit.Core.Entities.OrganizationDomain"/> row.
+    /// </summary>
+    public IReadOnlyList<string> ClaimedDomains { get; init; } = [];
+
+    /// <summary>
     /// Number of member users to create.
     /// </summary>
     public required int Users { get; init; }
