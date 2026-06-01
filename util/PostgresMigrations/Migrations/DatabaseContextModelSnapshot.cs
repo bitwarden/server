@@ -1835,6 +1835,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<short>("Status")
                         .HasColumnType("smallint");
 
+                    b.Property<short?>("StatusNew")
+                        .HasColumnType("smallint");
+
                     b.Property<byte>("Type")
                         .HasColumnType("smallint");
 
@@ -1906,6 +1909,7 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Data")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime>("DeletionDate")
@@ -1925,6 +1929,7 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<string>("Key")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<int?>("MaxAccessCount")

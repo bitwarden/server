@@ -474,6 +474,50 @@ public class AuthRequestServiceTests
             .LogWarning("There are no admin emails to send to.");
     }
 
+    [Theory]
+    [BitAutoData(AuthRequestType.AdminApproval)]
+    [BitAutoData(AuthRequestType.AuthenticateAndUnlock)]
+    [BitAutoData(AuthRequestType.Unlock)]
+    public async Task CreateAuthRequestAsync_AuthenticatedCallerUserIdMismatch_ThrowsBadRequest(
+        AuthRequestType type,
+        SutProvider<AuthRequestService> sutProvider,
+        AuthRequestCreateRequestModel createModel,
+        User user,
+        Guid authenticatedUserId)
+    {
+        createModel.Type = type;
+        createModel.Email = user.Email;
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(user.Email)
+            .Returns(user);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .DeviceType
+            .Returns(DeviceType.ChromeExtension);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .UserId
+            .Returns(authenticatedUserId);
+
+        // Mock this as false so we pin the test failure to the userId mismatch guard rather than to the first
+        // identically-worded "User or known device not found." exception that could fire earlier.
+        sutProvider.GetDependency<IGlobalSettings>()
+            .PasswordlessAuth.KnownDevicesOnly
+            .Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.CreateAuthRequestAsync(createModel));
+
+        // For the AuthRequestType.AdminApproval test case, this assertion pins the test failure to the userId mismatch guard
+        // rather than to the "User does not belong to any organizations." exception, which is also of type BadRequestException.
+        Assert.Equal("User or known device not found.", exception.Message);
+
+        await sutProvider.GetDependency<IAuthRequestRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(default!);
+    }
+
     /// <summary>
     /// Story: When an <see cref="AuthRequest"> is approved we want to update it in the database so it cannot have
     /// it's status changed again and we want to push a notification to let the user know of the approval.

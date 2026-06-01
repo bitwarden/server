@@ -1,15 +1,15 @@
 # Aspire AppHost
 
-.NET Aspire orchestrates the entire Bitwarden server local development environment — SQL Server,
-Azure Storage (Azurite), MailCatcher, and all five application services — from a single command,
-replacing the manual docker-compose workflow.
+.NET Aspire orchestrates the entire Bitwarden server local development environment — supporting
+infrastructure and the Bitwarden application services — from a single command, replacing the
+manual docker-compose workflow.
 
 ## Prerequisites
 
 | Requirement            | Notes                                                                                                                            |
 |------------------------|----------------------------------------------------------------------------------------------------------------------------------|
 | .NET SDK 10            | Required by Aspire                                                                                                               |
-| Docker Desktop         | Runs SQL Server, Azurite, and MailCatcher containers                                                                             |
+| Docker Desktop         | Runs the supporting infrastructure containers                                                                                    |
 | PowerShell (`pwsh`)    | Used by migration and secrets scripts                                                                                            |
 | Completed server setup | `dev/secrets.json` must exist — follow the [setup guide](https://contributing.bitwarden.com/getting-started/server/guide/) first |
 
@@ -30,14 +30,21 @@ the services wait for the database and secrets setup to finish before launching.
 | `setup-secrets`     | Executable                | Runs `dev/setup_secrets.ps1` — applies `dev/secrets.json` to all projects |
 | `mssql`             | SQL Server 2022 container | Persistent data volume, port 1433                                         |
 | `run-db-migrations` | Executable                | Runs `dev/migrate.ps1` against `vault_dev` (or `self_host_dev`)           |
-| `azurite`           | Azure Storage emulator    | Blob :10000 · Queue :10001 · Table :10002                                 |
+| `azurite`           | Azure Storage emulator    | Blob :10000 · Queue :10001 · Table :10002 · persistent data volume        |
 | `azurite-setup`     | Executable                | Runs `dev/setup_azurite.ps1` after Azurite is ready                       |
 | `mailcatcher`       | Container                 | SMTP :10250 · Web UI :1080                                                |
+| `redis`             | Container                 | Redis with AOF persistence, port 6379                                     |
+| `idp`               | SimpleSAMLphp container   | SAML IdP for SSO testing (**explicit start** from the dashboard)          |
 | `admin`             | .NET project              | Admin portal                                                              |
 | `api`               | .NET project              | Main API (waits for Azurite)                                              |
 | `billing`           | .NET project              | Billing service                                                           |
+| `events`            | .NET project              | Events service (waits for Azurite)                                        |
+| `eventsProcessor`   | .NET project              | Events processor (waits for Azurite)                                      |
+| `icons`             | .NET project              | Icons service                                                             |
 | `identity`          | .NET project              | Identity / auth service                                                   |
 | `notifications`     | .NET project              | Notifications service (waits for Azurite)                                 |
+| `scim`              | .NET project              | SCIM provisioning service                                                 |
+| `sso`               | .NET project              | SSO service                                                               |
 
 ## Configuration
 
@@ -64,7 +71,7 @@ dotnet user-secrets set "Database:Password" "<your-sa-password>"
 | Key                         | Default                            | Description                                                                          |
 |-----------------------------|------------------------------------|--------------------------------------------------------------------------------------|
 | `SelfHost`                  | `false`                            | Switch to self-hosted mode (see [Self-Hosted Mode](#self-hosted-mode))               |
-| `ClientsPath`               | `../../clients/apps`               | Path to the `clients` repo's `apps/` directory (used by the Node.js plugin)          |
+| `ClientsPath`               | `../../clients/apps`               | Path to the `clients` repo's `apps/` directory (see [Git Worktrees](#git-worktrees)) |
 | `WorkingDirectory`          | `../dev`                           | Directory where dev scripts are resolved                                             |
 | `Services:<name>:BasePort`  | see `appsettings.Development.json` | HTTP port for each service; pre-filled to match each service's `launchSettings.json` |
 | `Database:Image`            | `mssql/server:2022-latest`         | Docker image for SQL Server                                                          |
@@ -78,33 +85,23 @@ dotnet user-secrets set "Database:Password" "<your-sa-password>"
 | `MailCatcher:SmtpPort`      | `10250`                            | Host SMTP port                                                                       |
 | `MailCatcher:WebPort`       | `1080`                             | MailCatcher web UI port                                                              |
 | `NgrokAuthToken`            | _(empty)_                          | ngrok auth token (used only when ngrok plugin is enabled)                            |
-| `WebFrontend:Port`          | `8080`                             | Web frontend port (used only when Node.js plugin is enabled)                         |
+| `WebFrontend:Port`          | `8080`                             | Web frontend port                                                                    |
 | `WebFrontend:Url`           | `https://bitwarden.test:8080`      | Web frontend URL shown in the dashboard                                              |
 
 ## Optional Features
 
-### Web Frontend (Node.js community plugin)
+### Web Frontend
 
 Runs the web client alongside the server services. Requires the Bitwarden
 [clients](https://github.com/bitwarden/clients) repo cloned as a sibling to `server`.
 
-1. Create an `AppHost.csproj.user` file next to `AppHost.csproj` (it is covered by `.gitignore`):
-
-   ```xml
-   <Project>
-     <PropertyGroup>
-       <EnableNodeJsCommunityPlugin>true</EnableNodeJsCommunityPlugin>
-     </PropertyGroup>
-   </Project>
-   ```
-
-2. If the clients repo is not at `../../clients/apps`, override the path:
+1. If the clients repo is not at `../../clients/apps`, override the path:
 
    ```bash
    dotnet user-secrets set "ClientsPath" "<path/to/clients/apps>"
    ```
 
-3. Run `dotnet run` as normal. The `web-frontend` resource starts with **explicit start** — open
+2. Run `dotnet run` as normal. The `web-frontend` resource starts with **explicit start** — open
    the Aspire dashboard and start it manually when you're ready.
 
 ### Ngrok (Billing Webhook Tunneling)
@@ -186,6 +183,26 @@ variables for every resource.
   `AppHost.csproj`, and are never tracked by git.
 - If you create an `appsettings.local.json`, add it to `.gitignore` before writing any values
   to it.
+
+## Git Worktrees
+
+Path-based settings resolve relative to where you run `dotnet run`. If your worktree lives in
+a different location than the main checkout, those paths won't resolve correctly. Use absolute
+paths for any such setting:
+
+- **`ClientsPath`** defaults to `../../clients/apps` — override if your worktree is not
+  alongside the `clients` repo:
+
+  ```bash
+  dotnet user-secrets set "ClientsPath" "<absolute/path/to/clients/apps>"
+  ```
+
+- **`AdditionalProjects:<name>:Path`** — use an absolute path when adding projects via user
+  secrets in a worktree:
+
+  ```bash
+  dotnet user-secrets set "AdditionalProjects:<name>:Path" "<absolute/path/to/Project.csproj>"
+  ```
 
 ## Troubleshooting
 

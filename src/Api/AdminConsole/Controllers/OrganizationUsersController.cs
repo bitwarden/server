@@ -8,9 +8,9 @@ using Bit.Api.AdminConsole.Authorization.Collections;
 using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
-using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
@@ -43,6 +43,7 @@ using Bit.Core.Utilities;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using AccountRecoveryV2 = Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
 using V1_RevokeOrganizationUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1.IRevokeOrganizationUserCommand;
@@ -230,10 +231,11 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpGet("{id}/reset-password-details")]
     [Authorize<ManageAccountRecoveryRequirement>]
-    public async Task<OrganizationUserResetPasswordDetailsResponseModel> GetResetPasswordDetails(Guid orgId, Guid id)
+    public async Task<OrganizationUserResetPasswordDetailsResponseModel> GetResetPasswordDetails(Guid id,
+        [BindOrganization] Organization organization)
     {
         var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
-        if (organizationUser is null || organizationUser.OrganizationId != orgId || organizationUser.UserId is null)
+        if (organizationUser is null || organizationUser.OrganizationId != organization.Id || organizationUser.UserId is null)
         {
             throw new NotFoundException();
         }
@@ -246,14 +248,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
             throw new NotFoundException();
         }
 
-        // Retrieve Encrypted Private Key from organization
-        var org = await _organizationRepository.GetByIdAsync(orgId);
-        if (org == null)
-        {
-            throw new NotFoundException();
-        }
-
-        return new OrganizationUserResetPasswordDetailsResponseModel(new OrganizationUserResetPasswordDetails(organizationUser, user, org));
+        return new OrganizationUserResetPasswordDetailsResponseModel(new OrganizationUserResetPasswordDetails(organizationUser, user, organization));
     }
 
     [HttpPost("account-recovery-details")]
@@ -535,8 +530,17 @@ public class OrganizationUsersController : BaseAdminConsoleController
             return Handle(await _adminRecoverAccountCommandV2.RecoverAccountAsync(commandRequest));
         }
 
-        var result = await _adminRecoverAccountCommand.RecoverAccountAsync(
-            orgId, targetOrganizationUser, model.NewMasterPasswordHash!, model.Key!);
+        IdentityResult result;
+        if (model.RequestHasNewDataTypes())
+        {
+            result = await _adminRecoverAccountCommand.RecoverAccountAsync(
+                orgId, targetOrganizationUser, model.UnlockData!.ToData(), model.AuthenticationData!.ToData());
+        }
+        else
+        {
+            result = await _adminRecoverAccountCommand.RecoverAccountAsync(
+                orgId, targetOrganizationUser, model.NewMasterPasswordHash!, model.Key!);
+        }
         if (result.Succeeded)
         {
             return TypedResults.Ok();
