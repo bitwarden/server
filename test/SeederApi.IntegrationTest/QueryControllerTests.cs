@@ -51,7 +51,6 @@ public class QueryControllerTests : IClassFixture<SeederApiApplicationFactory>, 
             new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         Assert.NotNull(response2);
         Assert.NotNull(response2.Urls);
-        // For a non-existent email, we expect an empty list
         Assert.Empty(response2.Urls);
     }
 
