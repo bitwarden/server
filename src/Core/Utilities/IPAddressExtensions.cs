@@ -16,6 +16,7 @@ public static class IPAddressExtensions
         new(IPAddress.Parse("10.0.0.0"), 8),          // RFC 1918 Private
         new(IPAddress.Parse("100.64.0.0"), 10),       // RFC 6598 CGNAT
         new(IPAddress.Parse("127.0.0.0"), 8),         // RFC 1122 Loopback
+        new(IPAddress.Parse("168.63.129.16"), 32),    // Azure IP address 168.63.129.16 (https://learn.microsoft.com/en-us/azure/virtual-network/what-is-ip-address-168-63-129-16)
         new(IPAddress.Parse("169.254.0.0"), 16),      // RFC 3927 Link-local / cloud metadata
         new(IPAddress.Parse("172.16.0.0"), 12),       // RFC 1918 Private
         new(IPAddress.Parse("192.0.0.0"), 24),        // RFC 6890 IETF Protocol Assignments (includes Oracle Cloud metadata 192.0.0.192)
