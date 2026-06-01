@@ -35,7 +35,7 @@ public class OrganizationPlanMigrationCohortRepository(
         await using var connection = new SqlConnection(ConnectionString);
 
         return await connection.QueryAsync<CohortListItem, OrganizationPlanMigrationCohort, CohortListItem>(
-            $"[{Schema}].[{Table}_SearchWithCounts]",
+            $"[{Schema}].[{Table}_ReadManyWithCountsByName]",
             (item, cohort) =>
             {
                 item.Cohort = cohort;

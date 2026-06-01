@@ -32,7 +32,7 @@ public class OrganizationPlanMigrationCohortAssignmentRepository(
         await using var connection = new SqlConnection(ConnectionString);
 
         return await connection.ExecuteScalarAsync<int>(
-            $"[{Schema}].[{Table}_CountNonPendingByCohortId]",
+            $"[{Schema}].[{Table}_ReadNonPendingCountByCohortId]",
             new { CohortId = cohortId },
             commandType: CommandType.StoredProcedure);
     }

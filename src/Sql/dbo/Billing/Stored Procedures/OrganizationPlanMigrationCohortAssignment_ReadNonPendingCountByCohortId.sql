@@ -1,13 +1,15 @@
-CREATE PROCEDURE [dbo].[OrganizationPlanMigrationCohortAssignment_CountNonPendingByCohortId]
+CREATE PROCEDURE [dbo].[OrganizationPlanMigrationCohortAssignment_ReadNonPendingCountByCohortId]
     @CohortId UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT COUNT(1)
+    SELECT
+        COUNT(1)
     FROM
         [dbo].[OrganizationPlanMigrationCohortAssignmentView] A
-        INNER JOIN [dbo].[OrganizationPlanMigrationCohortView] C ON C.[Id] = A.[CohortId]
+    INNER JOIN
+        [dbo].[OrganizationPlanMigrationCohortView] C ON C.[Id] = A.[CohortId]
     WHERE
         A.[CohortId] = @CohortId
         AND (
