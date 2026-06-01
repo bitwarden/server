@@ -18,3 +18,4 @@ WHILE @RowsAffected > 0
 
         SET @RowsAffected = @@ROWCOUNT;
     END
+GO
