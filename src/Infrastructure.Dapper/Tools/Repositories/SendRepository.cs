@@ -189,19 +189,9 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
                 cmd.ExecuteNonQuery();
             }
 
-            // Restore in-memory Emails. The DB write only touched Key/RevisionDate, so a
-            // per-row decryption failure here is benign — UnprotectData logs the SendId
-            // before throwing; swallow so one bad row can't undo a successful rotation.
             foreach (var send in sendsList)
             {
-                try
-                {
-                    UnprotectData(send);
-                }
-                catch (CryptographicException)
-                {
-                    // Logged by UnprotectData; intentionally swallowed here.
-                }
+                UnprotectData(send);
             }
         };
     }

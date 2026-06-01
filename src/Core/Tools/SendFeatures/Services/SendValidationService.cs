@@ -57,7 +57,7 @@ public class SendValidationService : ISendValidationService
             if (send.Emails.Length > 2500)
             {
                 throw new BadRequestException(
-                    $"The total number of characters in the Emails field must not exceed 2,500 characters.");
+                    "The total number of characters in the Emails field must not exceed 2,500 characters.");
             }
         }
 

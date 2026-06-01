@@ -99,12 +99,10 @@ public class DatabaseDataAttribute : DataAttribute
     {
         // Common services
         services.AddDataProtection();
-        var capturingLoggerProvider = new CapturingLoggerProvider();
-        services.AddSingleton(capturingLoggerProvider);
         services.AddLogging(logging =>
         {
             logging.AddProvider(new XUnitLoggerProvider());
-            logging.AddProvider(capturingLoggerProvider);
+            logging.AddFakeLogging();
         });
         if (UseFakeTimeProvider)
         {
