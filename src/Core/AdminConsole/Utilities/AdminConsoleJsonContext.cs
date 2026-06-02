@@ -9,4 +9,4 @@ namespace Bit.Core.AdminConsole.Utilities;
 [JsonSerializable(typeof(MasterPasswordPolicyData))]
 [JsonSerializable(typeof(SendOptionsPolicyData))]
 [JsonSerializable(typeof(ResetPasswordDataModel))]
-internal partial class AdminConsoleJsonContext : JsonSerializerContext;
+public partial class AdminConsoleJsonContext : JsonSerializerContext;
