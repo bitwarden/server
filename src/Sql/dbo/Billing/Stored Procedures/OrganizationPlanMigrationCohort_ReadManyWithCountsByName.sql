@@ -21,7 +21,8 @@ BEGIN
         WHERE
             (@Name IS NULL OR C.[Name] LIKE '%' + @Name + '%')
         ORDER BY
-            C.[CreationDate] DESC, C.[Id] ASC
+            C.[CreationDate] DESC,
+            C.[Id] ASC
         OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY
     )
     SELECT
