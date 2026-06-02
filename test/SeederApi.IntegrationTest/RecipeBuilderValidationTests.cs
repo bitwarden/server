@@ -1,5 +1,4 @@
-﻿using Bit.Seeder;
-using Bit.Seeder.Models;
+﻿using Bit.Seeder.Models;
 using Bit.Seeder.Pipeline;
 using Bit.Seeder.Services;
 using Xunit;

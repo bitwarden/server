@@ -1,4 +1,4 @@
-namespace Bit.Seeder;
+﻿namespace Bit.Seeder;
 
 /// <summary>
 /// Marker interface for steps that must run after <see cref="Pipeline.BulkCommitter"/> has

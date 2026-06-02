@@ -1,4 +1,4 @@
-using Bit.Seeder.Recipes;
+﻿using Bit.Seeder.Recipes;
 using Bit.SeederUtility.Configuration;
 using Bit.SeederUtility.Helpers;
 using CommandDotNet;

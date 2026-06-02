@@ -1,4 +1,4 @@
-using Bit.Seeder.Pipeline;
+﻿using Bit.Seeder.Pipeline;
 
 namespace Bit.Seeder;
 

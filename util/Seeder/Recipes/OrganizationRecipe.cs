@@ -1,4 +1,4 @@
-using Bit.Seeder.Models;
+﻿using Bit.Seeder.Models;
 using Bit.Seeder.Options;
 using Bit.Seeder.Pipeline;
 

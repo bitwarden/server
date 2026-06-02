@@ -1,4 +1,4 @@
-namespace Bit.Seeder.Pipeline;
+﻿namespace Bit.Seeder.Pipeline;
 
 /// <summary>
 /// Wraps an <see cref="IStep"/> or <see cref="IAsyncStep"/> with an order index and a

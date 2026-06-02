@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using Bit.Core.Settings;
 using Bit.SeederApi.Extensions;
 using Bit.SeederApi.Utilities;

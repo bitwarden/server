@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Extensions;
+﻿using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Entities;

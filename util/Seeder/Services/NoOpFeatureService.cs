@@ -1,4 +1,4 @@
-using Bit.Core.Services;
+﻿using Bit.Core.Services;
 
 namespace Bit.Seeder.Services;
 

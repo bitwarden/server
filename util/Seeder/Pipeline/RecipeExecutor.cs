@@ -1,4 +1,4 @@
-using Bit.Seeder.Models;
+﻿using Bit.Seeder.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Seeder.Pipeline;
