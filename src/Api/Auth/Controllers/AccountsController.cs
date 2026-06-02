@@ -270,75 +270,38 @@ public class AccountsController : Controller
             return;
         }
 
-        // V1 encryption - new data properties (MP JIT only - AccountKeys on the request means it's not a TDE user)
-        // TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
-        if (
-            model.HasAuthAndUnlockData() &&
-            model.IsJitMpSetPasswordRequest())
+        // V1 encryption — handles both modern clients (sending MPAD/MPUD + legacy Keys) and
+        // legacy clients (sending only legacy fields). The model's ToUser() handles the fallback.
+        // TODO: removal requires that BOTH flags have been removed:
+        //  - https://bitwarden.atlassian.net/browse/PM-27327 (MP)
+        //  - https://bitwarden.atlassian.net/browse/PM-27329 (TDE)
+        try
         {
-            try
-            {
-                user = model.ToUserV1EncryptionFromNewDataTypes(user);
-            }
-            catch (Exception e)
-            {
-                ModelState.AddModelError(string.Empty, e.Message);
-                throw new BadRequestException(ModelState);
-            }
-
-            var result = await _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
-                user,
-                model.MasterPasswordAuthentication.MasterPasswordAuthenticationHash,
-                model.MasterPasswordUnlock.MasterKeyWrappedUserKey,
-                model.OrgIdentifier
-            );
-
-            if (result.Succeeded)
-            {
-                return;
-            }
-
-            foreach (var error in result.Errors)
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
-            }
-
+            user = model.ToUser(user);
+        }
+        catch (Exception e)
+        {
+            ModelState.AddModelError(string.Empty, e.Message);
             throw new BadRequestException(ModelState);
         }
-        else
+
+        var result = await _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
+            user,
+            model.MasterPasswordAuthentication?.MasterPasswordAuthenticationHash ?? model.MasterPasswordHash,
+            model.MasterPasswordUnlock?.MasterKeyWrappedUserKey ?? model.Key,
+            model.OrgIdentifier);
+
+        if (result.Succeeded)
         {
-            // V1 encryption - legacy data properties
-            // TODO: code removal requires that BOTH flags have been removed:
-            //  - https://bitwarden.atlassian.net/browse/PM-27327 (MP)
-            //  - https://bitwarden.atlassian.net/browse/PM-27329 (TDE)
-            try
-            {
-                user = model.ToUser(user);
-            }
-            catch (Exception e)
-            {
-                ModelState.AddModelError(string.Empty, e.Message);
-                throw new BadRequestException(ModelState);
-            }
-
-            var result = await _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
-                user,
-                model.MasterPasswordHash,
-                model.Key,
-                model.OrgIdentifier);
-
-            if (result.Succeeded)
-            {
-                return;
-            }
-
-            foreach (var error in result.Errors)
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
-            }
-
-            throw new BadRequestException(ModelState);
+            return;
         }
+
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+
+        throw new BadRequestException(ModelState);
     }
 
     [HttpPost("verify-password")]

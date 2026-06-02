@@ -45,30 +45,20 @@ public class SetInitialPasswordRequestModel : IValidatableObject
     [Required]
     public required string OrgIdentifier { get; set; }
 
+    // Reads KDF/key from MasterPasswordAuthentication/MasterPasswordUnlock when present (modern clients),
+    // and falls back to the top-level legacy properties when not (clients ≤3 releases back).
     // TODO: removal requires that BOTH flags have been removed:
     //  - https://bitwarden.atlassian.net/browse/PM-27327 (MP)
     //  - https://bitwarden.atlassian.net/browse/PM-27329 (TDE)
     public User ToUser(User existingUser)
     {
         existingUser.MasterPasswordHint = MasterPasswordHint;
-        existingUser.Kdf = Kdf!.Value;
-        existingUser.KdfIterations = KdfIterations!.Value;
-        existingUser.KdfMemory = KdfMemory;
-        existingUser.KdfParallelism = KdfParallelism;
-        existingUser.Key = Key;
+        existingUser.Kdf = MasterPasswordAuthentication?.Kdf.KdfType ?? Kdf!.Value;
+        existingUser.KdfIterations = MasterPasswordAuthentication?.Kdf.Iterations ?? KdfIterations!.Value;
+        existingUser.KdfMemory = MasterPasswordAuthentication?.Kdf.Memory ?? KdfMemory;
+        existingUser.KdfParallelism = MasterPasswordAuthentication?.Kdf.Parallelism ?? KdfParallelism;
+        existingUser.Key = MasterPasswordUnlock?.MasterKeyWrappedUserKey ?? Key;
         Keys?.ToUser(existingUser);
-        return existingUser;
-    }
-
-    // TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
-    public User ToUserV1EncryptionFromNewDataTypes(User existingUser)
-    {
-        existingUser.MasterPasswordHint = MasterPasswordHint;
-        existingUser.Kdf = MasterPasswordAuthentication!.Kdf.KdfType;
-        existingUser.KdfIterations = MasterPasswordAuthentication.Kdf.Iterations;
-        existingUser.KdfMemory = MasterPasswordAuthentication.Kdf.Memory;
-        existingUser.KdfParallelism = MasterPasswordAuthentication.Kdf.Parallelism;
-        AccountKeys!.ToUserV1Encryption(existingUser);
         return existingUser;
     }
 
@@ -145,14 +135,18 @@ public class SetInitialPasswordRequestModel : IValidatableObject
         return MasterPasswordAuthentication != null && MasterPasswordUnlock != null;
     }
 
+    // TDE users don't send any key material (their keypair already exists).
+    // Checks both AccountKeys (new) and Keys (legacy) so the predicate is correct for
+    // the transitional period where clients may send either key shape.
     public bool IsTdeSetPasswordRequest()
     {
-        return AccountKeys == null;
+        return AccountKeys == null && Keys == null;
     }
 
+    // MP JIT users send new key material — either via the new AccountKeys shape or the legacy Keys shape.
     public bool IsJitMpSetPasswordRequest()
     {
-        return AccountKeys != null;
+        return AccountKeys != null || Keys != null;
     }
 
     public SetInitialMasterPasswordDataModel ToData()
