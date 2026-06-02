@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Models.Data;
+using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.Utilities;
 
