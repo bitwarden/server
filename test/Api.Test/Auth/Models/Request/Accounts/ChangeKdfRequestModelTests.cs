@@ -12,7 +12,7 @@ public class ChangeKdfRequestModelTests
     [Theory]
     [BitAutoData(KdfType.PBKDF2_SHA256, 600000, null, null)]
     [BitAutoData(KdfType.Argon2id, 3, 64, 4)]
-    public void Validate_NewPayloadsOnly_NoErrors(
+    public void Validate_SubmitWithAuthnAndUnlockData_NoErrors(
         KdfType kdfType, int iterations, int? memory, int? parallelism)
     {
         var kdf = new KdfRequestModel
@@ -46,8 +46,45 @@ public class ChangeKdfRequestModelTests
     }
 
     [Theory]
+    [BitAutoData(true, false)]
+    [BitAutoData(false, true)]
+    [BitAutoData(true, true)]
+    public void Validate_EitherFieldNull_ReturnsNoErrors(bool authNull, bool unlockNull,
+        string masterPasswordHash)
+    {
+        // Defensive guard: [Required] reports null-field errors via ModelState, so Validate()
+        // must not throw or report when either cross-field input is null.
+        var kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600000 };
+
+        var model = new ChangeKdfRequestModel
+        {
+            MasterPasswordHash = masterPasswordHash,
+            AuthenticationData = authNull
+                ? null
+                : new MasterPasswordAuthenticationDataRequestModel
+                {
+                    Kdf = kdf,
+                    MasterPasswordAuthenticationHash = "authHash",
+                    Salt = "salt"
+                },
+            UnlockData = unlockNull
+                ? null
+                : new MasterPasswordUnlockDataRequestModel
+                {
+                    Kdf = kdf,
+                    MasterKeyWrappedUserKey = "wrappedKey",
+                    Salt = "salt"
+                }
+        };
+
+        var result = model.Validate(new ValidationContext(model)).ToList();
+
+        Assert.Empty(result);
+    }
+
+    [Theory]
     [BitAutoData]
-    public void Validate_NewPayloadsOnly_WithMismatchedKdfSettings_ReturnsKdfValidationError(
+    public void Validate_WithMismatchedKdfSettings_ReturnsKdfValidationError(
         string masterPasswordHash)
     {
         var authKdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600000 };
@@ -74,114 +111,5 @@ public class ChangeKdfRequestModelTests
 
         Assert.Single(result);
         Assert.Contains("must have the same KDF configuration", result[0].ErrorMessage);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public void Validate_LegacyPayloadsOnly_NoErrors(
-        string masterPasswordHash, string newHash, string key)
-    {
-        var model = new ChangeKdfRequestModel
-        {
-            MasterPasswordHash = masterPasswordHash,
-            NewMasterPasswordHash = newHash,
-            Key = key
-        };
-
-        var result = model.Validate(new ValidationContext(model)).ToList();
-
-        Assert.Empty(result);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public void Validate_BothNewAndLegacyPayloads_NoErrors(
-        string masterPasswordHash, string newHash, string key)
-    {
-        var kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600000 };
-
-        var model = new ChangeKdfRequestModel
-        {
-            MasterPasswordHash = masterPasswordHash,
-            NewMasterPasswordHash = newHash,
-            Key = key,
-            AuthenticationData = new MasterPasswordAuthenticationDataRequestModel
-            {
-                Kdf = kdf,
-                MasterPasswordAuthenticationHash = "authHash",
-                Salt = "salt"
-            },
-            UnlockData = new MasterPasswordUnlockDataRequestModel
-            {
-                Kdf = kdf,
-                MasterKeyWrappedUserKey = "wrappedKey",
-                Salt = "salt"
-            }
-        };
-
-        var result = model.Validate(new ValidationContext(model)).ToList();
-
-        Assert.Empty(result);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public void Validate_NeitherNewNorLegacyPayloads_ReturnsError(string masterPasswordHash)
-    {
-        var model = new ChangeKdfRequestModel
-        {
-            MasterPasswordHash = masterPasswordHash
-        };
-
-        var result = model.Validate(new ValidationContext(model)).ToList();
-
-        Assert.Single(result);
-        Assert.Contains("Must provide either", result[0].ErrorMessage);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public void Validate_OnlyUnlockData_ReturnsError(string masterPasswordHash)
-    {
-        var kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600000 };
-
-        var model = new ChangeKdfRequestModel
-        {
-            MasterPasswordHash = masterPasswordHash,
-            UnlockData = new MasterPasswordUnlockDataRequestModel
-            {
-                Kdf = kdf,
-                MasterKeyWrappedUserKey = "wrappedKey",
-                Salt = "salt"
-            }
-        };
-
-        var result = model.Validate(new ValidationContext(model)).ToList();
-
-        Assert.Single(result);
-        Assert.Contains("Must provide either", result[0].ErrorMessage);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public void Validate_OnlyAuthenticationData_ReturnsError(string masterPasswordHash)
-    {
-        var kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600000 };
-
-        var model = new ChangeKdfRequestModel
-        {
-            MasterPasswordHash = masterPasswordHash,
-            AuthenticationData = new MasterPasswordAuthenticationDataRequestModel
-            {
-                Kdf = kdf,
-                MasterPasswordAuthenticationHash = "authHash",
-                Salt = "salt"
-            }
-        };
-
-        var result = model.Validate(new ValidationContext(model)).ToList();
-
-        Assert.Single(result);
-        Assert.Contains("Must provide either", result[0].ErrorMessage);
     }
 }

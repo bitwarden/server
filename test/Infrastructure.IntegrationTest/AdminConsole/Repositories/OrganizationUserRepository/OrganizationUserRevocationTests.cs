@@ -1,4 +1,5 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Xunit;
 
@@ -28,9 +29,75 @@ public class OrganizationUserRevocationTests
         var updated1 = await organizationUserRepository.GetByIdAsync(orgUser1.Id);
         var updated2 = await organizationUserRepository.GetByIdAsync(orgUser2.Id);
         Assert.Equal(OrganizationUserStatusType.Revoked, updated1!.Status);
+        Assert.Equal(OrganizationUserStatusTypeNew.Confirmed, updated1.StatusNew);
         Assert.Equal(RevocationReason.TwoFactorPolicyNonCompliance, updated1.RevocationReason);
         Assert.Equal(OrganizationUserStatusType.Revoked, updated2!.Status);
+        Assert.Equal(OrganizationUserStatusTypeNew.Confirmed, updated2.StatusNew);
         Assert.Equal(RevocationReason.TwoFactorPolicyNonCompliance, updated2.RevocationReason);
+    }
+
+    [Theory, DatabaseData]
+    public async Task RevokeManyAsync_FromInvited_SnapshotsInvitedIntoStatusNew(
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var orgUser = await organizationUserRepository.CreateTestOrganizationUserInviteAsync(organization);
+
+        // Act
+        await organizationUserRepository.RevokeManyAsync([orgUser.Id], RevocationReason.Manual);
+
+        // Assert
+        var updated = await organizationUserRepository.GetByIdAsync(orgUser.Id);
+        Assert.Equal(OrganizationUserStatusType.Revoked, updated!.Status);
+        Assert.Equal(OrganizationUserStatusTypeNew.Invited, updated.StatusNew);
+        Assert.Equal(RevocationReason.Manual, updated.RevocationReason);
+    }
+
+    [Theory, DatabaseData]
+    public async Task RevokeManyAsync_FromAccepted_SnapshotsAcceptedIntoStatusNew(
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var user = await userRepository.CreateTestUserAsync();
+        var orgUser = await organizationUserRepository.CreateAcceptedTestOrganizationUserAsync(organization, user);
+
+        // Act
+        await organizationUserRepository.RevokeManyAsync([orgUser.Id], RevocationReason.Manual);
+
+        // Assert
+        var updated = await organizationUserRepository.GetByIdAsync(orgUser.Id);
+        Assert.Equal(OrganizationUserStatusType.Revoked, updated!.Status);
+        Assert.Equal(OrganizationUserStatusTypeNew.Accepted, updated.StatusNew);
+        Assert.Equal(RevocationReason.Manual, updated.RevocationReason);
+    }
+
+    [Theory, DatabaseData]
+    public async Task RevokeManyAsync_AlreadyRevoked_DoesNotOverwriteStatusNewOrRevocationReason(
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var user = await userRepository.CreateTestUserAsync();
+        var orgUser = await organizationUserRepository.CreateConfirmedTestOrganizationUserAsync(organization, user);
+        await organizationUserRepository.RevokeManyAsync([orgUser.Id], RevocationReason.Manual);
+
+        // Act
+        await organizationUserRepository.RevokeManyAsync(
+            [orgUser.Id],
+            RevocationReason.TwoFactorPolicyNonCompliance);
+
+        // Assert
+        var updated = await organizationUserRepository.GetByIdAsync(orgUser.Id);
+        Assert.Equal(OrganizationUserStatusType.Revoked, updated!.Status);
+        Assert.Equal(OrganizationUserStatusTypeNew.Confirmed, updated.StatusNew);
+        Assert.Equal(RevocationReason.Manual, updated.RevocationReason);
     }
 
     [Theory, DatabaseData]
@@ -54,12 +121,12 @@ public class OrganizationUserRevocationTests
     }
 
     [Theory, DatabaseData]
-    public async Task RestoreManyAsync_ClearsRevocationReason(
+    public async Task RestoreManyAsync_ClearsStatusNewAndRevocationReason(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
         IUserRepository userRepository)
     {
-        // Arrange — revoke with a reason
+        // Arrange
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var user = await userRepository.CreateTestUserAsync();
         var orgUser = await organizationUserRepository.CreateConfirmedTestOrganizationUserAsync(organization, user);
@@ -71,6 +138,7 @@ public class OrganizationUserRevocationTests
         // Assert
         var restored = await organizationUserRepository.GetByIdAsync(orgUser.Id);
         Assert.Equal(OrganizationUserStatusType.Confirmed, restored!.Status);
+        Assert.Null(restored.StatusNew);
         Assert.Null(restored.RevocationReason);
     }
 
@@ -88,12 +156,12 @@ public class OrganizationUserRevocationTests
         var orgUser2 = await organizationUserRepository.CreateConfirmedTestOrganizationUserAsync(organization, user2);
         await organizationUserRepository.RevokeManyAsync([orgUser1.Id], RevocationReason.Manual);
 
-        // Act — attempt to restore both
+        // Act
         await organizationUserRepository.RestoreManyAsync(
             [orgUser1.Id, orgUser2.Id],
             OrganizationUserStatusType.Confirmed);
 
-        // Assert — only the revoked user should have changed
+        // Assert
         var restored = await organizationUserRepository.GetByIdAsync(orgUser1.Id);
         Assert.Equal(OrganizationUserStatusType.Confirmed, restored!.Status);
         Assert.Null(restored.RevocationReason);
