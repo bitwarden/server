@@ -151,7 +151,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
 
     private async Task<PipelineExecutionResult> BuildAndExecute(string recipeName, ServiceCollection services)
     {
-        ForwardOuterServices(services);
+        ForwardBillingServices(services);
         await using var serviceProvider = services.BuildServiceProvider();
         var committer = new BulkCommitter(deps.Db, deps.Mapper);
         var executor = new RecipeExecutor(recipeName, serviceProvider, committer);
@@ -159,24 +159,34 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
     }
 
     /// <summary>
-    /// Forwards a known set of services from the outer scope into the per-recipe container so
-    /// post-commit steps (e.g. Stripe finalization) can resolve their dependencies. Also adds
-    /// logging so <c>ILogger&lt;T&gt;</c> resolves to a real logger when an outer
-    /// <see cref="ILoggerFactory"/> is forwarded; otherwise a no-op factory is used.
+    /// Registers the billing services that <see cref="Steps.FinalizeOrganizationBillingStep"/>
+    /// depends on, taken directly from <see cref="SeederDependencies"/>. Each is registered
+    /// only when supplied — missing ones surface as a clear DI resolution error if a recipe
+    /// actually uses the billing step.
     /// </summary>
-    private void ForwardOuterServices(ServiceCollection services)
+    private void ForwardBillingServices(ServiceCollection services)
     {
         services.AddLogging();
 
-        if (deps.OuterServices is null)
+        if (deps.LoggerFactory is not null)
         {
-            return;
+            services.AddSingleton(deps.LoggerFactory);
         }
 
-        services.AddSingleton(_ => deps.OuterServices.GetRequiredService<ILoggerFactory>());
-        services.AddSingleton(_ => deps.OuterServices.GetRequiredService<IGlobalSettings>());
-        services.AddSingleton(_ => deps.OuterServices.GetRequiredService<IOrganizationBillingService>());
-        services.AddSingleton(_ => deps.OuterServices.GetRequiredService<IPricingClient>());
+        if (deps.GlobalSettings is not null)
+        {
+            services.AddSingleton(deps.GlobalSettings);
+        }
+
+        if (deps.OrganizationBillingService is not null)
+        {
+            services.AddSingleton(deps.OrganizationBillingService);
+        }
+
+        if (deps.PricingClient is not null)
+        {
+            services.AddSingleton(deps.PricingClient);
+        }
     }
 
 }
