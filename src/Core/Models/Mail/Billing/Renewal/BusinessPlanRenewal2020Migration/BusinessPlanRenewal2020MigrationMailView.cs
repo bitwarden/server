@@ -7,10 +7,10 @@ public class BusinessPlanRenewal2020MigrationMailView : BaseMailView
     public required string RenewalDate { get; set; }
     public required int Seats { get; set; }
     public required string PerUserMonthlyPrice { get; set; }
-    public required string AnnualTotalPrice { get; set; }
-
+    public required bool IsAnnual { get; set; }
+    public required string TotalPrice { get; set; }
+    public string TotalPeriod => IsAnnual ? "year" : "month";
     public string? DiscountPercent { get; set; }
-
     public bool HasDiscount => !string.IsNullOrEmpty(DiscountPercent);
 }
 

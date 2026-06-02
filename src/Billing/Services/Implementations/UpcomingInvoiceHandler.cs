@@ -458,17 +458,19 @@ public class UpcomingInvoiceHandler(
         var culture = new CultureInfo("en-US");
         var seats = ResolveSeatCount(subscription, sourcePlan, organization);
 
+        // SeatPrice is a per-year figure on annual plans and a per-month figure on monthly plans. The per-user
+        // monthly line always shows a monthly rate (annual ÷ 12); the recurring total is quoted in the plan's own
+        // billing period — per year for annual cohorts, per month for monthly cohorts.
         var seatPrice = targetPlan.PasswordManager.SeatPrice;
         var perUserMonthly = targetPlan.IsAnnual ? seatPrice / 12 : seatPrice;
-        var perSeatAnnual = targetPlan.IsAnnual ? seatPrice : seatPrice * 12;
-        var annualTotal = perSeatAnnual * seats;
+        var total = seatPrice * seats;
 
         // The per-user monthly price is shown at the list (undiscounted) rate by design; the email itemizes
-        // the discount on its own line and applies it only to the annual total below.
+        // the discount on its own line and applies it only to the recurring total below.
         var discountPercent = await ResolveDiscountPercentAsync(cohort, organization);
         if (discountPercent is { } percent)
         {
-            annualTotal = annualTotal * (100 - percent) / 100;
+            total = total * (100 - percent) / 100;
         }
 
         await mailer.SendEmail(new BusinessPlanRenewal2020MigrationMail
@@ -479,7 +481,8 @@ public class UpcomingInvoiceHandler(
                 RenewalDate = renewalDate.Value.ToString("MMMM d, yyyy", culture),
                 Seats = seats,
                 PerUserMonthlyPrice = perUserMonthly.ToString("C", culture),
-                AnnualTotalPrice = annualTotal.ToString("C", culture),
+                IsAnnual = targetPlan.IsAnnual,
+                TotalPrice = total.ToString("C", culture),
                 DiscountPercent = discountPercent is { } p ? $"{p}%" : null
             }
         });
@@ -487,7 +490,7 @@ public class UpcomingInvoiceHandler(
 
     private int ResolveSeatCount(Subscription subscription, Plan sourcePlan, Organization organization)
     {
-        var seatItem = subscription.Items?.Data?
+        var seatItem = subscription.Items.Data
             .FirstOrDefault(item => item.Price?.Id == sourcePlan.PasswordManager.StripeSeatPlanId);
 
         var seats = seatItem?.Quantity ?? organization.Seats;

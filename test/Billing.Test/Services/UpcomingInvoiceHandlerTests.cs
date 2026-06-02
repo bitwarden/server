@@ -3833,15 +3833,16 @@ public class UpcomingInvoiceHandlerTests
             .ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>());
         // EnterprisePlan annual SeatPrice is $72.00; BasePrice is $0.00. Asserting the per-user
         // monthly renders as SeatPrice/12 (not $0.00) guards against the BasePrice copy-paste bug.
-        // 320 seats x $72 = $23,040.00 gross; less 20% = $18,432.00.
+        // Annual cohorts are quoted a per-year total: 320 seats x $72 = $23,040.00 gross; less 20% = $18,432.00.
         await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
             mail.ToEmails.Contains("org@example.com") &&
             mail.View.HasDiscount &&
+            mail.View.IsAnnual &&
             mail.View.Seats == 320 &&
             mail.View.RenewalDate == "June 12, 2026" &&
             mail.View.PerUserMonthlyPrice == "$6.00" &&
             mail.View.DiscountPercent == "20%" &&
-            mail.View.AnnualTotalPrice == "$18,432.00"));
+            mail.View.TotalPrice == "$18,432.00"));
         await _mailService.DidNotReceive().SendInvoiceUpcoming(
             Arg.Any<IEnumerable<string>>(),
             Arg.Any<decimal>(),
@@ -3898,13 +3899,14 @@ public class UpcomingInvoiceHandlerTests
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert — full price, no discount section; 320 seats x $72 = $23,040.00.
+        // Assert — full price, no discount section; annual per-year total: 320 seats x $72 = $23,040.00.
         await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
             mail.ToEmails.Contains("org@example.com") &&
             !mail.View.HasDiscount &&
+            mail.View.IsAnnual &&
             mail.View.Seats == 320 &&
             mail.View.PerUserMonthlyPrice == "$6.00" &&
-            mail.View.AnnualTotalPrice == "$23,040.00"));
+            mail.View.TotalPrice == "$23,040.00"));
         await _stripeAdapter.DidNotReceive().GetCouponAsync(Arg.Any<string>(), Arg.Any<CouponGetOptions>());
     }
 
@@ -4081,12 +4083,13 @@ public class UpcomingInvoiceHandlerTests
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert — monthly EnterprisePlan SeatPrice is $7.00 (used as-is, NOT /12);
-        // annual total = $7 x 12 x 320 = $26,880.00.
+        // Assert — monthly EnterprisePlan SeatPrice is $7.00 (used as-is, NOT /12). Monthly cohorts are quoted a
+        // per-month total, so IsAnnual is false and TotalPrice = $7 x 320 = $2,240.00 (NOT annualized).
         await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
             mail.View.Seats == 320 &&
+            !mail.View.IsAnnual &&
             mail.View.PerUserMonthlyPrice == "$7.00" &&
-            mail.View.AnnualTotalPrice == "$26,880.00"));
+            mail.View.TotalPrice == "$2,240.00"));
     }
 
     [Fact]
@@ -4139,13 +4142,14 @@ public class UpcomingInvoiceHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         // Assert — annual TeamsPlan SeatPrice is $48.00; per-user monthly is $48/12 = $4.00;
-        // annual total = $48 x 320 = $15,360.00. No coupon, so no discount section.
+        // annual per-year total = $48 x 320 = $15,360.00. No coupon, so no discount section.
         await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
             mail.ToEmails.Contains("org@example.com") &&
             !mail.View.HasDiscount &&
+            mail.View.IsAnnual &&
             mail.View.Seats == 320 &&
             mail.View.PerUserMonthlyPrice == "$4.00" &&
-            mail.View.AnnualTotalPrice == "$15,360.00"));
+            mail.View.TotalPrice == "$15,360.00"));
     }
 
     [Fact]
@@ -4197,12 +4201,13 @@ public class UpcomingInvoiceHandlerTests
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert — monthly TeamsPlan SeatPrice is $5.00 (used as-is, NOT /12);
-        // annual total = $5 x 12 x 320 = $19,200.00.
+        // Assert — monthly TeamsPlan SeatPrice is $5.00 (used as-is, NOT /12). Monthly cohorts are quoted a
+        // per-month total, so IsAnnual is false and TotalPrice = $5 x 320 = $1,600.00 (NOT annualized).
         await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
             mail.View.Seats == 320 &&
+            !mail.View.IsAnnual &&
             mail.View.PerUserMonthlyPrice == "$5.00" &&
-            mail.View.AnnualTotalPrice == "$19,200.00"));
+            mail.View.TotalPrice == "$1,600.00"));
     }
 
     [Fact]
@@ -4283,15 +4288,17 @@ public class UpcomingInvoiceHandlerTests
         // service-account (75) quantity. Annual EnterprisePlan SeatPrice is $72: 320 x $72 = $23,040.
         await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
             mail.View.Seats == 320 &&
+            mail.View.IsAnnual &&
             mail.View.PerUserMonthlyPrice == "$6.00" &&
-            mail.View.AnnualTotalPrice == "$23,040.00"));
+            mail.View.TotalPrice == "$23,040.00"));
     }
 
     [Fact]
     public async Task HandleAsync_WhenBusinessTier_AndNoRenewalDate_SkipsRenewalEmail_AndLogsError()
     {
         // Arrange — subscription has no items, so the current period (and renewal date) can't be
-        // determined; we must skip the email (no blank-date send) and log a warning.
+        // determined; we must skip the email (no blank-date send) and log an error (the migration is
+        // already committed, so an indeterminate renewal date needs alerting, not just a warning).
         _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
         var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
         var (invoice, subscription, customer) = BuildBusinessFixture(PlanType.EnterpriseAnnually2020);

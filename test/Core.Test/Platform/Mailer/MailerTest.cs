@@ -54,7 +54,8 @@ public class MailerTest
                 RenewalDate = "June 12, 2026",
                 Seats = 320,
                 PerUserMonthlyPrice = "$7.00",
-                AnnualTotalPrice = "$18,432.00",
+                IsAnnual = true,
+                TotalPrice = "$18,432.00",
                 DiscountPercent = "25%"
             }
         };
@@ -74,6 +75,8 @@ public class MailerTest
             Assert.Contains("$7.00", body);
             Assert.Contains("25% discount", body);
             Assert.Contains("$18,432.00", body);
+            // An annual cohort renders the per-year period label.
+            Assert.Contains("total / year", body);
         }
     }
 
@@ -90,7 +93,8 @@ public class MailerTest
                 RenewalDate = "June 12, 2026",
                 Seats = 320,
                 PerUserMonthlyPrice = "$7.00",
-                AnnualTotalPrice = "$23,040.00",
+                IsAnnual = false,
+                TotalPrice = "$2,240.00",
                 DiscountPercent = null
             }
         };
@@ -104,7 +108,13 @@ public class MailerTest
         // Both bodies render (proving the templates resolve)...
         Assert.False(string.IsNullOrWhiteSpace(sentMessage.HtmlContent));
         Assert.False(string.IsNullOrWhiteSpace(sentMessage.TextContent));
-        Assert.Contains("$23,040.00", sentMessage.HtmlContent);
+        Assert.Contains("$2,240.00", sentMessage.HtmlContent);
+        // ...a monthly cohort renders the per-month period label (not per-year)...
+        foreach (var body in new[] { sentMessage.HtmlContent, sentMessage.TextContent })
+        {
+            Assert.Contains("total / month", body);
+            Assert.DoesNotContain("total / year", body);
+        }
         // ...and the {{#if HasDiscount}} discount line is skipped.
         Assert.DoesNotContain("discount", sentMessage.HtmlContent);
         Assert.DoesNotContain("discount", sentMessage.TextContent);
