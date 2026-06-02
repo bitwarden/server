@@ -1,4 +1,4 @@
-using Bit.Core.Models.Mail.Billing.Renewal.BusinessPlanRenewal2020Migration;
+﻿using Bit.Core.Models.Mail.Billing.Renewal.BusinessPlanRenewal2020Migration;
 using Xunit;
 
 namespace Bit.Core.Test.Models.Mail.Billing.Renewal.BusinessPlanRenewal2020Migration;
