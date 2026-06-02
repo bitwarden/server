@@ -1010,17 +1010,25 @@ public class AccountsControllerTests : IDisposable
         await Assert.ThrowsAsync<Exception>(() => _sut.PostSetPasswordAsync(setInitialPasswordRequestModel));
     }
 
-    // V1 encryption with new data types (transitional path — V2 flags off, request carries Auth + Unlock + AccountKeys)
-    // TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
+    // V1 encryption with new data types (transitional path — V2 flags off, modern client carries MPAD/MPUD + legacy Keys)
+    // TODO: removal requires that BOTH flags have been removed:
+    //  - https://bitwarden.atlassian.net/browse/PM-27327 (MP)
+    //  - https://bitwarden.atlassian.net/browse/PM-27329 (TDE)
     [Theory]
     [BitAutoData]
-    public async Task PostSetPasswordAsync_V1WithNewDataTypes_WhenUserExistsAndSettingPasswordSucceeds_ShouldCallV1CommandAsync(
+    public async Task PostSetPasswordAsync_V1_NewClientMpJit_UsesMpadMpudValues_ShouldCallV1CommandAsync(
         User user,
         SetInitialPasswordRequestModel setInitialPasswordRequestModel)
     {
-        // Arrange — V2-shape model, V2 flags left disabled → routes to V1-new-data branch.
-        // Existing user has no keys so AccountKeys.ToUserV1Encryption takes the "set new keys" branch.
+        // Arrange — modern MP JIT client: sends MPAD + MPUD + legacy Keys (no AccountKeys, no V2 flag).
+        // ToUser() should map KDF from MPAD and the wrapped user key from MPUD; legacy Keys?.ToUser sets the keypair.
         UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
+        setInitialPasswordRequestModel.AccountKeys = null;
+        setInitialPasswordRequestModel.Keys = new KeysRequestModel
+        {
+            PublicKey = "newPublicKey",
+            EncryptedPrivateKey = "newEncryptedPrivateKey"
+        };
         user.PublicKey = null;
         user.PrivateKey = null;
 
@@ -1035,7 +1043,7 @@ public class AccountsControllerTests : IDisposable
         // Act
         await _sut.PostSetPasswordAsync(setInitialPasswordRequestModel);
 
-        // Assert — V1 command called with new-data-type values
+        // Assert — V1 command called with MPAD hash + MPUD wrapped key (not legacy MasterPasswordHash/Key)
         await _setInitialMasterPasswordCommandV1.Received(1)
             .SetInitialMasterPasswordAsync(
                 Arg.Is<User>(u => u == user),
@@ -1043,12 +1051,14 @@ public class AccountsControllerTests : IDisposable
                 Arg.Is<string>(s => s == setInitialPasswordRequestModel.MasterPasswordUnlock.MasterKeyWrappedUserKey),
                 Arg.Is<string>(s => s == setInitialPasswordRequestModel.OrgIdentifier));
 
-        // KDF + keys mapped onto user from the new data types
+        // KDF mapped from MPAD
         Assert.Equal(setInitialPasswordRequestModel.MasterPasswordHint, user.MasterPasswordHint);
         Assert.Equal(setInitialPasswordRequestModel.MasterPasswordAuthentication.Kdf.KdfType, user.Kdf);
         Assert.Equal(setInitialPasswordRequestModel.MasterPasswordAuthentication.Kdf.Iterations, user.KdfIterations);
-        Assert.Equal(setInitialPasswordRequestModel.AccountKeys.AccountPublicKey, user.PublicKey);
-        Assert.Equal(setInitialPasswordRequestModel.AccountKeys.UserKeyEncryptedAccountPrivateKey, user.PrivateKey);
+
+        // Public/private keys mapped from legacy Keys
+        Assert.Equal("newPublicKey", user.PublicKey);
+        Assert.Equal("newEncryptedPrivateKey", user.PrivateKey);
 
         // V2 commands not called
         await _finishSsoJitProvisionMasterPasswordCommand.DidNotReceiveWithAnyArgs()
@@ -1059,45 +1069,44 @@ public class AccountsControllerTests : IDisposable
 
     [Theory]
     [BitAutoData]
-    public async Task PostSetPasswordAsync_V1WithNewDataTypes_WhenExistingKeysCannotBeReplaced_ShouldThrowBadRequestAsync(
+    public async Task PostSetPasswordAsync_V1_NewClientTde_UsesMpadMpudValues_DoesNotMutateExistingKeysAsync(
         User user,
         SetInitialPasswordRequestModel setInitialPasswordRequestModel)
     {
-        // Arrange — V2-shape model + existing user has DIFFERENT keys from the model.
-        // AccountKeys.ToUserV1Encryption should throw "Cannot replace existing key(s)", caught by the
-        // controller and rethrown as BadRequestException.
-        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
-        user.PublicKey = "differentExistingPublicKey";
-        user.PrivateKey = "differentExistingPrivateKey";
+        // Arrange — modern TDE client: sends MPAD + MPUD with both AccountKeys and Keys null (V2 TDE flag off).
+        // TDE users already have a keypair; Keys?.ToUser is a no-op and the existing keys are left alone.
+        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel, includeTdeSetPassword: true);
 
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-
-        // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostSetPasswordAsync(setInitialPasswordRequestModel));
-
-        // V1 command must not be invoked when mapping fails
-        await _setInitialMasterPasswordCommandV1.DidNotReceiveWithAnyArgs()
-            .SetInitialMasterPasswordAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task PostSetPasswordAsync_V1WithNewDataTypes_WhenSettingPasswordFails_ShouldThrowBadRequestAsync(
-        User user,
-        SetInitialPasswordRequestModel setInitialPasswordRequestModel)
-    {
-        // Arrange — V2-shape model, fresh user keys, V1 command returns a failed IdentityResult.
-        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
-        user.PublicKey = null;
-        user.PrivateKey = null;
+        const string existingPublicKey = "tdeUserExistingPublicKey";
+        const string existingPrivateKey = "tdeUserExistingPrivateKey";
+        user.PublicKey = existingPublicKey;
+        user.PrivateKey = existingPrivateKey;
 
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
         _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
                 Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
-            .Returns(Task.FromResult(IdentityResult.Failed(new IdentityError { Description = "boom" })));
+            .Returns(Task.FromResult(IdentityResult.Success));
 
-        // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostSetPasswordAsync(setInitialPasswordRequestModel));
+        // Act
+        await _sut.PostSetPasswordAsync(setInitialPasswordRequestModel);
+
+        // Assert — V1 command called with MPAD hash + MPUD wrapped key
+        await _setInitialMasterPasswordCommandV1.Received(1)
+            .SetInitialMasterPasswordAsync(
+                Arg.Is<User>(u => u == user),
+                Arg.Is<string>(s => s == setInitialPasswordRequestModel.MasterPasswordAuthentication.MasterPasswordAuthenticationHash),
+                Arg.Is<string>(s => s == setInitialPasswordRequestModel.MasterPasswordUnlock.MasterKeyWrappedUserKey),
+                Arg.Is<string>(s => s == setInitialPasswordRequestModel.OrgIdentifier));
+
+        // Existing keypair preserved
+        Assert.Equal(existingPublicKey, user.PublicKey);
+        Assert.Equal(existingPrivateKey, user.PrivateKey);
+
+        // V2 commands not called
+        await _finishSsoJitProvisionMasterPasswordCommand.DidNotReceiveWithAnyArgs()
+            .FinishProvisionAsync(Arg.Any<User>(), Arg.Any<SetInitialMasterPasswordDataModel>());
+        await _tdeSetPasswordCommand.DidNotReceiveWithAnyArgs()
+            .SetMasterPasswordAsync(Arg.Any<User>(), Arg.Any<SetInitialMasterPasswordDataModel>());
     }
 
     private void UpdateSetInitialPasswordRequestModelToV1(SetInitialPasswordRequestModel model)
