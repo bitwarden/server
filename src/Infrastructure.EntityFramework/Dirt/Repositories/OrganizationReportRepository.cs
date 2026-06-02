@@ -44,14 +44,17 @@ public class OrganizationReportRepository :
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            // Substring match is coupled to SetReportFile (OrganizationReport.cs) writing via
-            // JsonHelpers.IgnoreWritingNull (PascalCase, no whitespace). The Dapper/MSSQL path
-            // uses JSON_VALUE which is format-agnostic; changing the serializer options would
-            // silently return zero rows here without affecting the MSSQL path.
+            // Substring match relies on SetReportFile (OrganizationReport.cs) serializing via
+            // JsonHelpers.IgnoreWritingNull (PascalCase, no whitespace). If those serializer
+            // options ever change, the substring stops matching V2 rows on non-MSSQL providers
+            // and the OR fallback silently serves the latest V1 inline row instead, masking
+            // the bug. The Dapper/MSSQL path uses JSON_VALUE which is format-agnostic.
             var result = await dbContext.OrganizationReports
                 .Where(p => p.OrganizationId == organizationId
-                    && p.ReportFile != null
-                    && p.ReportFile.Contains("\"Validated\":true"))
+                    && (
+                        (p.ReportFile != null && p.ReportFile.Contains("\"Validated\":true"))
+                        || p.ReportData != string.Empty
+                    ))
                 .OrderByDescending(p => p.RevisionDate)
                 .Take(1)
                 .FirstOrDefaultAsync();

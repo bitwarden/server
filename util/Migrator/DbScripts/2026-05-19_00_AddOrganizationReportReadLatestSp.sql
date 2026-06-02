@@ -10,7 +10,10 @@ BEGIN
         [dbo].[OrganizationReportView]
     WHERE
         [OrganizationId] = @OrganizationId
-        AND JSON_VALUE([ReportFile], '$.Validated') = 'true'
+        AND (
+            JSON_VALUE([ReportFile], '$.Validated') = 'true'
+            OR [ReportData] <> ''
+        )
     ORDER BY
         [RevisionDate] DESC
 END

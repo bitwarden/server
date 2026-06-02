@@ -71,6 +71,45 @@ public class OrganizationReportControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task GetLatestOrganizationReportAsync_FlagOn_WithOnlyInlineV1Report_ReturnsOkWithoutDownloadUrl(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        OrganizationReport expectedReport)
+    {
+        // Arrange: V2 flag on, but the latest row is a V1-shape inline report
+        // (e.g., org has not yet generated a V2-validated file after the flag flipped on).
+        // Explicitly null ReportFile so OrganizationReport.GetReportFile() returns null;
+        // BitAutoData would otherwise fill the nullable string with a random value and
+        // GetReportFile() would throw a JsonException trying to deserialize it.
+        expectedReport.ReportData = "inline-encrypted-payload";
+        expectedReport.ReportFile = null;
+
+        SetupAuthorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(true);
+
+        sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .ReadLatestOrganizationReportAsync(orgId)
+            .Returns(expectedReport);
+
+        // Act
+        var result = await sutProvider.Sut.GetLatestOrganizationReportAsync(orgId);
+
+        // Assert: response is OK, has reportData, no file download URL
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<OrganizationReportResponseModel>(okResult.Value);
+        Assert.Null(response.ReportFileDownloadUrl);
+        Assert.Null(response.FileUploadType);
+
+        // Confirm the storage service was NOT asked for a download URL
+        await sutProvider.GetDependency<IOrganizationReportStorageService>()
+            .DidNotReceive()
+            .GetReportDataDownloadUrlAsync(Arg.Any<OrganizationReport>(), Arg.Any<ReportFile>());
+    }
+
+    [Theory, BitAutoData]
     public async Task GetLatestOrganizationReportAsync_FlagOn_CallsReadLatest(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
