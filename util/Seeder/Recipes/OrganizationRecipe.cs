@@ -1,4 +1,4 @@
-﻿using Bit.Seeder.Models;
+using Bit.Seeder.Models;
 using Bit.Seeder.Options;
 using Bit.Seeder.Pipeline;
 
@@ -10,7 +10,7 @@ namespace Bit.Seeder.Recipes;
 /// <remarks>
 /// Thin facade over the internal Pipeline architecture (RecipeOrchestrator).
 /// All orchestration logic is encapsulated within the Pipeline, keeping this Recipe simple.
-/// The CLI remains "dumb" - it creates this recipe and calls Seed().
+/// The CLI remains "dumb" - it creates this recipe and calls SeedAsync().
 /// </remarks>
 public class OrganizationRecipe(SeederDependencies deps)
 {
@@ -23,9 +23,9 @@ public class OrganizationRecipe(SeederDependencies deps)
     /// <param name="password">Optional password for all seeded accounts</param>
     /// <param name="kdfIterations">Optional KDF iteration count override</param>
     /// <returns>The organization ID and summary statistics.</returns>
-    public OrganizationSeedResult Seed(string presetName, string? password = null, int? kdfIterations = null)
+    public async Task<OrganizationSeedResult> SeedAsync(string presetName, string? password = null, int? kdfIterations = null)
     {
-        var result = _orchestrator.Execute(presetName, password, kdfIterations);
+        var result = await _orchestrator.ExecuteAsync(presetName, password, kdfIterations);
 
         if (result.OrganizationId is null)
         {
@@ -41,9 +41,9 @@ public class OrganizationRecipe(SeederDependencies deps)
     /// </summary>
     /// <param name="options">Options specifying what to seed.</param>
     /// <returns>The organization ID and summary statistics.</returns>
-    public OrganizationSeedResult Seed(OrganizationVaultOptions options)
+    public async Task<OrganizationSeedResult> SeedAsync(OrganizationVaultOptions options)
     {
-        var result = _orchestrator.Execute(options);
+        var result = await _orchestrator.ExecuteAsync(options);
         return OrganizationSeedResult.From(result);
     }
 }

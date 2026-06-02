@@ -484,6 +484,26 @@ public static class RecipeBuilderExtensions
     }
 
     /// <summary>
+    /// Finalize organization billing by creating a Stripe customer + trialing subscription via the
+    /// production sign-up helpers. Runs as a post-commit step so the organization row exists when
+    /// the billing service persists Stripe IDs.
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no organization exists.</exception>
+    public static RecipeBuilder FinalizeOrganizationBilling(this RecipeBuilder builder)
+    {
+        if (!builder.HasOrg)
+        {
+            throw new InvalidOperationException(
+                "Organization billing requires an organization. Call UseOrganization() or CreateOrganization() first.");
+        }
+
+        builder.AddAsyncStep<FinalizeOrganizationBillingStep>();
+        return builder;
+    }
+
+    /// <summary>
     /// Validates the builder state to ensure all required steps are present and dependencies are met.
     /// </summary>
     /// <param name="builder">The recipe builder</param>

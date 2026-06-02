@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Bit.Core.Entities;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder.Options;
@@ -35,8 +35,10 @@ internal sealed class SeederServiceScope : IDisposable
 
     internal IManglerService Mangler { get; }
 
+    internal IServiceProvider Services { get; }
+
     internal SeederDependencies ToDependencies()
-        => new(Db, Mapper, PasswordHasher, Mangler);
+        => new(Db, Mapper, PasswordHasher, Mangler) { OuterServices = Services };
 
     private readonly ServiceProvider _provider;
 
@@ -47,6 +49,7 @@ internal sealed class SeederServiceScope : IDisposable
         _provider = provider;
         _scope = scope;
         var sp = scope.ServiceProvider;
+        Services = sp;
         Db = sp.GetRequiredService<DatabaseContext>();
         Mapper = sp.GetRequiredService<IMapper>();
         PasswordHasher = sp.GetRequiredService<IPasswordHasher<User>>();

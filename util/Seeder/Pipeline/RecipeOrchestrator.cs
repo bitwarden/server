@@ -1,7 +1,11 @@
-﻿using Bit.Seeder.Models;
+﻿using Bit.Core.Billing.Organizations.Services;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Settings;
+using Bit.Seeder.Models;
 using Bit.Seeder.Options;
 using Bit.Seeder.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Seeder.Pipeline;
 
@@ -17,7 +21,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
     /// <param name="password">Optional password for all seeded accounts</param>
     /// <param name="kdfIterations">Optional KDF iteration count. Defaults to 5,000 for fast seeding.</param>
     /// <returns>Execution result with organization ID and entity counts</returns>
-    internal PipelineExecutionResult Execute(
+    internal Task<PipelineExecutionResult> ExecuteAsync(
         string presetName,
         string? password = null,
         int? kdfIterations = null)
@@ -30,6 +34,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         var effectiveKdf = kdfIterations ?? preset.KdfIterations ?? 5_000;
 
         var services = new ServiceCollection();
+        services.AddSingleton(deps);
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
         services.AddSingleton<ISeedReader>(reader);
@@ -48,9 +53,10 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
     /// <summary>
     /// Executes a recipe built programmatically from CLI options.
     /// </summary>
-    internal PipelineExecutionResult Execute(OrganizationVaultOptions options)
+    internal Task<PipelineExecutionResult> ExecuteAsync(OrganizationVaultOptions options)
     {
         var services = new ServiceCollection();
+        services.AddSingleton(deps);
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
         services.AddSingleton(new SeederSettings(options.Password, options.KdfIterations));
@@ -98,6 +104,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
             builder.AddCiphers(options.Ciphers, options.CipherTypeDistribution, options.PasswordDistribution, density: options.Density);
         }
 
+        builder.FinalizeOrganizationBilling();
         builder.Validate();
 
         return BuildAndExecute(recipeName, services);
@@ -106,7 +113,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
     /// <summary>
     /// Executes a recipe for an individual user built programmatically from CLI options.
     /// </summary>
-    internal PipelineExecutionResult Execute(IndividualUserOptions options)
+    internal Task<PipelineExecutionResult> ExecuteAsync(IndividualUserOptions options)
     {
         var firstName = options.FirstName ?? new Bogus.Faker().Name.FirstName();
         var lastName = options.LastName ?? new Bogus.Faker().Name.LastName();
@@ -116,6 +123,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         var maxStorageGb = premium ? (short)1 : (short)0;
 
         var services = new ServiceCollection();
+        services.AddSingleton(deps);
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
         services.AddSingleton(new SeederSettings(options.Password, options.KdfIterations));
@@ -141,12 +149,34 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         return BuildAndExecute(recipeName, services);
     }
 
-    private PipelineExecutionResult BuildAndExecute(string recipeName, ServiceCollection services)
+    private async Task<PipelineExecutionResult> BuildAndExecute(string recipeName, ServiceCollection services)
     {
-        using var serviceProvider = services.BuildServiceProvider();
+        ForwardOuterServices(services);
+        await using var serviceProvider = services.BuildServiceProvider();
         var committer = new BulkCommitter(deps.Db, deps.Mapper);
         var executor = new RecipeExecutor(recipeName, serviceProvider, committer);
-        return executor.Execute();
+        return await executor.ExecuteAsync();
+    }
+
+    /// <summary>
+    /// Forwards a known set of services from the outer scope into the per-recipe container so
+    /// post-commit steps (e.g. Stripe finalization) can resolve their dependencies. Also adds
+    /// logging so <c>ILogger&lt;T&gt;</c> resolves to a real logger when an outer
+    /// <see cref="ILoggerFactory"/> is forwarded; otherwise a no-op factory is used.
+    /// </summary>
+    private void ForwardOuterServices(ServiceCollection services)
+    {
+        services.AddLogging();
+
+        if (deps.OuterServices is null)
+        {
+            return;
+        }
+
+        services.AddSingleton(_ => deps.OuterServices.GetRequiredService<ILoggerFactory>());
+        services.AddSingleton(_ => deps.OuterServices.GetRequiredService<IGlobalSettings>());
+        services.AddSingleton(_ => deps.OuterServices.GetRequiredService<IOrganizationBillingService>());
+        services.AddSingleton(_ => deps.OuterServices.GetRequiredService<IPricingClient>());
     }
 
 }

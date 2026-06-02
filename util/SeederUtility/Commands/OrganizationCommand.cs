@@ -1,4 +1,4 @@
-﻿using Bit.Seeder.Recipes;
+using Bit.Seeder.Recipes;
 using Bit.SeederUtility.Configuration;
 using Bit.SeederUtility.Helpers;
 using CommandDotNet;
@@ -9,7 +9,7 @@ namespace Bit.SeederUtility.Commands;
 public class OrganizationCommand
 {
     [DefaultCommand]
-    public void Execute(OrganizationArgs args)
+    public async Task ExecuteAsync(OrganizationArgs args)
     {
         try
         {
@@ -17,9 +17,9 @@ public class OrganizationCommand
 
             using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
 
-            var result = ConsoleProgressReporter.RunWithProgress(
+            var result = await ConsoleProgressReporter.RunWithProgressAsync(
                 deps.ToDependencies(),
-                d => new OrganizationRecipe(d).Seed(args.ToOptions()));
+                d => new OrganizationRecipe(d).SeedAsync(args.ToOptions()));
 
             ConsoleOutput.PrintRow("Organization", result.OrganizationId);
             if (result.OwnerEmail is not null)
