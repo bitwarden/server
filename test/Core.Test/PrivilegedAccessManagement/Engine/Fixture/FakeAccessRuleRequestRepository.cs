@@ -10,9 +10,15 @@ public sealed class FakeAccessRuleRequestRepository : IAccessRuleRequestReposito
 
     public void Seed(AccessRuleRequest request) => _requests.Add(request);
 
-    public AccessRuleRequest Create(Guid cipherId, string username)
+    public AccessRuleRequest Create(Guid cipherId, AccessRuleSignals signals)
     {
-        var request = new AccessRuleRequest { CipherId = cipherId, Username = username, Approved = false };
+        var request = new AccessRuleRequest
+        {
+            CipherId = cipherId,
+            Username = signals.Username,
+            Approved = false,
+            Signals = signals,
+        };
         _requests.Add(request);
         CreatedCount++;
         return request;
@@ -27,7 +33,13 @@ public sealed class FakeAccessRuleRequestRepository : IAccessRuleRequestReposito
         }
 
         _requests.Remove(existing);
-        _requests.Add(new AccessRuleRequest { CipherId = existing.CipherId, Username = existing.Username, Approved = true });
+        _requests.Add(new AccessRuleRequest
+        {
+            CipherId = existing.CipherId,
+            Username = existing.Username,
+            Approved = true,
+            Signals = existing.Signals,
+        });
     }
 
     public bool Delete(AccessRuleRequest request) => _requests.Remove(request);

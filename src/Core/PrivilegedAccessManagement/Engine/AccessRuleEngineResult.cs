@@ -11,6 +11,4 @@ public enum AccessOutcome
 {
     Granted,
     Denied,
-    RequiresApproval,
-    LeaseCreationFailed,
 }

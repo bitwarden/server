@@ -38,7 +38,6 @@ public sealed class AccessRuleEngineFixture
     };
 
     public int LeasesCreated => _leases.CreatedCount;
-    public bool RequestWasCreated => _requests.CreatedCount > 0;
     public int RequestsCreated => _requests.CreatedCount;
 
     public AccessRuleEngineFixture WithNoRules()
@@ -97,11 +96,6 @@ public sealed class AccessRuleEngineFixture
         return SeedLease(username, Now.UtcDateTime.AddHours(1));
     }
 
-    public AccessRuleEngineFixture WithApprovedRequest()
-    {
-        return SeedRequest(approved: true);
-    }
-
     public AccessRuleEngineFixture WithPendingRequest()
     {
         return SeedRequest(approved: false);
@@ -127,13 +121,29 @@ public sealed class AccessRuleEngineFixture
 
     public AccessRuleEngineResult Check(CipherDetails cipher)
     {
+        return CreateEngine().Check(cipher, Signals);
+    }
+
+    public RequestAccessResult RequestAccess(CipherDetails cipher)
+    {
+        ApplyRule(cipher);
+        return CreateEngine().RequestAccess(cipher, Signals);
+    }
+
+    public ExchangeResult Exchange(CipherDetails cipher, string? username = null)
+    {
+        ApplyRule(cipher);
+        return CreateEngine().ExchangeRequestForLease(cipher, username ?? RequestingUser);
+    }
+
+    private AccessRuleEngine CreateEngine() => new(_time, _resolver, _requests, _leases);
+
+    private void ApplyRule(CipherDetails cipher)
+    {
         if (_rule != null)
         {
             _resolver.SetRule(cipher.Id, _rule);
         }
-
-        var engine = new AccessRuleEngine(_time, _resolver, _requests, _leases);
-        return engine.Check(cipher, Signals);
     }
 
     private AccessRuleEngineFixture SeedLease(string username, DateTime expires)
@@ -144,7 +154,13 @@ public sealed class AccessRuleEngineFixture
 
     private AccessRuleEngineFixture SeedRequest(bool approved)
     {
-        _requests.Seed(new AccessRuleRequest { CipherId = Cipher.Id, Username = RequestingUser, Approved = approved });
+        _requests.Seed(new AccessRuleRequest
+        {
+            CipherId = Cipher.Id,
+            Username = RequestingUser,
+            Approved = approved,
+            Signals = Signals,
+        });
         return this;
     }
 

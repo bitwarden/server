@@ -10,8 +10,9 @@ public enum DecisionKind
 public enum DenyReason
 {
     None = 0,
+    NoLease,
+    InvalidLease,
     NotWithinIpRange,
-    SingletonHeld,
     NotWithinTimeWindow,
 }
 
