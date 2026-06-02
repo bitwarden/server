@@ -1608,26 +1608,28 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     }
 
     [Fact]
-    public async Task PostResendNewDeviceOtp_WrongSecret_BadRequest_AndDoesNotSendEmail()
+    public async Task PostResendNewDeviceOtp_WrongSecret_SilentlySucceedsWithoutSendingEmail()
     {
         var user = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(user);
 
         var response = await PostResendNewDeviceOtpAsync(_ownerEmail, "wrong-master-password-hash");
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        // Silent 200 to avoid account enumeration via response shape.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         await _twoFactorEmailService.DidNotReceive()
             .SendNewDeviceVerificationEmailAsync(Arg.Is<User>(u => u.Id == user.Id));
     }
 
     [Fact]
-    public async Task PostResendNewDeviceOtp_UnknownEmail_BadRequest()
+    public async Task PostResendNewDeviceOtp_UnknownEmail_SilentlySucceeds()
     {
         var response = await PostResendNewDeviceOtpAsync(
             $"does-not-exist-{Guid.NewGuid()}@bitwarden.com",
             _masterPasswordHash);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        // Silent 200 to avoid account enumeration via response shape.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     private async Task<HttpResponseMessage> PostResendNewDeviceOtpAsync(string email, string masterPasswordHash)

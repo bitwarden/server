@@ -648,19 +648,21 @@ public class AccountsControllerTests : IDisposable
 
     [Theory]
     [BitAutoData]
-    public async Task ResendNewDeviceVerificationEmail_WhenUserNotFound_ShouldFail(
+    public async Task ResendNewDeviceVerificationEmail_WhenUserNotFound_SilentlySucceedsWithoutSendingEmail(
     UnauthenticatedSecretVerificationRequestModel model)
     {
         // Arrange
         _userRepository.GetByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult((User)null));
 
-        // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(() => _sut.ResendNewDeviceOtpAsync(model));
+        // Act
+        await _sut.ResendNewDeviceOtpAsync(model);
+
+        // Assert
         await _twoFactorEmailService.DidNotReceiveWithAnyArgs().SendNewDeviceVerificationEmailAsync(default);
     }
 
     [Theory, BitAutoData]
-    public async Task ResendNewDeviceVerificationEmail_WhenSecretNotValid_ShouldFail(
+    public async Task ResendNewDeviceVerificationEmail_WhenSecretNotValid_SilentlySucceedsWithoutSendingEmail(
         User user,
         UnauthenticatedSecretVerificationRequestModel model)
     {
@@ -668,8 +670,11 @@ public class AccountsControllerTests : IDisposable
         _userRepository.GetByEmailAsync(model.Email).Returns(Task.FromResult(user));
         _userService.VerifySecretAsync(user, Arg.Any<string>()).Returns(Task.FromResult(false));
 
-        // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(() => _sut.ResendNewDeviceOtpAsync(model));
+        // Act
+        await _sut.ResendNewDeviceOtpAsync(model);
+
+        // Assert
+        await _twoFactorEmailService.DidNotReceiveWithAnyArgs().SendNewDeviceVerificationEmailAsync(default);
     }
 
     [Theory, BitAutoData]

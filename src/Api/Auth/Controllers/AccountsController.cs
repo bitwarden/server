@@ -789,10 +789,11 @@ public class AccountsController : Controller
         var user = await _userRepository.GetByEmailAsync(request.Email);
         if (user == null || !await _userService.VerifySecretAsync(user, request.Secret))
         {
-            await Task.Delay(2000);
-            throw new BadRequestException(string.Empty, "User verification failed.");
+            // If the user is not found, or the secret is not valid, we still return
+            // a success response, to avoid account enumeration; account existence
+            // cannot be signaled by response shape.
+            return;
         }
-
         await _twoFactorEmailService.SendNewDeviceVerificationEmailAsync(user);
     }
 
