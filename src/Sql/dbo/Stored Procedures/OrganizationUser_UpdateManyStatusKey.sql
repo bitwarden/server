@@ -1,13 +1,15 @@
-CREATE PROCEDURE [dbo].[OrganizationUser_ConfirmByIds]
+CREATE PROCEDURE [dbo].[OrganizationUser_UpdateManyStatusKey]
     @UsersJson    NVARCHAR(MAX),
     @RevisionDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
 
+    DECLARE @RowCount INT
+
     DECLARE @UsersToUpdate AS TABLE (
         [Id]  UNIQUEIDENTIFIER NOT NULL,
-        [Key] NVARCHAR(MAX)    NULL
+        [Key] VARCHAR(MAX)     NULL
     )
 
     INSERT INTO @UsersToUpdate
@@ -17,7 +19,7 @@ BEGIN
     FROM OPENJSON(@UsersJson)
     WITH (
         [Id]  UNIQUEIDENTIFIER '$.Id',
-        [Key] NVARCHAR(MAX)    '$.Key'
+        [Key] VARCHAR(MAX)     '$.Key'
     )
 
     DECLARE @UpdatedIds [dbo].[GuidIdArray]
@@ -36,7 +38,11 @@ BEGIN
     WHERE
         OU.[Status] = 1 -- Accepted
 
-    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserIds] @UpdatedIds
+    SET @RowCount = @@ROWCOUNT;
+    IF @RowCount > 0
+    BEGIN
+        EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserIds] @UpdatedIds
+    END
 
     -- Return the IDs that were actually updated so the caller can track idempotency
     SELECT [Id] FROM @UpdatedIds
