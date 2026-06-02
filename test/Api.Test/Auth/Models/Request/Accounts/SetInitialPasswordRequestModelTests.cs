@@ -468,9 +468,9 @@ public class SetInitialPasswordRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void IsTdeSetPasswordRequest_WithNullAccountKeys_ReturnsTrue(string orgIdentifier)
+    public void IsTdeSetPasswordRequest_WithBothAccountKeysAndKeysNull_ReturnsTrue(string orgIdentifier)
     {
-        // Arrange
+        // Arrange — TDE user sends no key material at all (they already have a keypair)
         var model = new SetInitialPasswordRequestModel
         {
             OrgIdentifier = orgIdentifier,
@@ -494,7 +494,8 @@ public class SetInitialPasswordRequestModelTests
                 MasterKeyWrappedUserKey = "wrappedKey",
                 Salt = "salt"
             },
-            AccountKeys = null
+            AccountKeys = null,
+            Keys = null
         };
 
         // Act
@@ -541,6 +542,99 @@ public class SetInitialPasswordRequestModelTests
 
         // Act
         var result = model.IsTdeSetPasswordRequest();
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void IsTdeSetPasswordRequest_WithLegacyKeysPresent_ReturnsFalse(string orgIdentifier)
+    {
+        // Arrange — MP JIT request shape: AccountKeys null but legacy Keys populated.
+        // Without checking Keys, this would be misclassified as TDE.
+        var model = new SetInitialPasswordRequestModel
+        {
+            OrgIdentifier = orgIdentifier,
+            AccountKeys = null,
+            Keys = new KeysRequestModel
+            {
+                PublicKey = "publicKey",
+                EncryptedPrivateKey = "encryptedPrivateKey"
+            }
+        };
+
+        // Act
+        var result = model.IsTdeSetPasswordRequest();
+
+        // Assert
+        Assert.False(result);
+    }
+
+    #endregion
+
+    #region IsJitMpSetPasswordRequest Tests
+
+    [Theory]
+    [BitAutoData]
+    public void IsJitMpSetPasswordRequest_WithAccountKeys_ReturnsTrue(string orgIdentifier)
+    {
+        // Arrange — new client / future MP JIT shape
+        var model = new SetInitialPasswordRequestModel
+        {
+            OrgIdentifier = orgIdentifier,
+            AccountKeys = new AccountKeysRequestModel
+            {
+                UserKeyEncryptedAccountPrivateKey = "privateKey",
+                AccountPublicKey = "publicKey"
+            },
+            Keys = null
+        };
+
+        // Act
+        var result = model.IsJitMpSetPasswordRequest();
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void IsJitMpSetPasswordRequest_WithLegacyKeys_ReturnsTrue(string orgIdentifier)
+    {
+        // Arrange — modern MP JIT client (Option Y) sends legacy Keys, no AccountKeys
+        var model = new SetInitialPasswordRequestModel
+        {
+            OrgIdentifier = orgIdentifier,
+            AccountKeys = null,
+            Keys = new KeysRequestModel
+            {
+                PublicKey = "publicKey",
+                EncryptedPrivateKey = "encryptedPrivateKey"
+            }
+        };
+
+        // Act
+        var result = model.IsJitMpSetPasswordRequest();
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void IsJitMpSetPasswordRequest_WithBothAccountKeysAndKeysNull_ReturnsFalse(string orgIdentifier)
+    {
+        // Arrange — TDE shape: no key material at all
+        var model = new SetInitialPasswordRequestModel
+        {
+            OrgIdentifier = orgIdentifier,
+            AccountKeys = null,
+            Keys = null
+        };
+
+        // Act
+        var result = model.IsJitMpSetPasswordRequest();
 
         // Assert
         Assert.False(result);
@@ -622,6 +716,169 @@ public class SetInitialPasswordRequestModelTests
         Assert.Equal("key", result.Key);
         Assert.Null(result.PublicKey);
         Assert.Null(result.PrivateKey);
+    }
+
+    [Theory]
+    [InlineData(KdfType.PBKDF2_SHA256, 600000, null, null)]
+    [InlineData(KdfType.Argon2id, 3, 64, 4)]
+    public void ToUser_WithMasterPasswordAuthAndUnlock_AndKeys_ReadsKdfAndKeyFromNewData(
+        KdfType kdfType, int kdfIterations, int? kdfMemory, int? kdfParallelism)
+    {
+        // Arrange — modern client: MPAD + MPUD + legacy Keys, no top-level legacy KDF/key fields
+        var existingUser = new User();
+        var model = new SetInitialPasswordRequestModel
+        {
+            OrgIdentifier = "orgIdentifier",
+            MasterPasswordHint = "hint",
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = new KdfRequestModel
+                {
+                    KdfType = kdfType,
+                    Iterations = kdfIterations,
+                    Memory = kdfMemory,
+                    Parallelism = kdfParallelism
+                },
+                MasterPasswordAuthenticationHash = "authHash",
+                Salt = "salt"
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = new KdfRequestModel
+                {
+                    KdfType = kdfType,
+                    Iterations = kdfIterations,
+                    Memory = kdfMemory,
+                    Parallelism = kdfParallelism
+                },
+                MasterKeyWrappedUserKey = "wrappedKeyFromMpud",
+                Salt = "salt"
+            },
+            Keys = new KeysRequestModel
+            {
+                PublicKey = "publicKey",
+                EncryptedPrivateKey = "encryptedPrivateKey"
+            }
+        };
+
+        // Act
+        var result = model.ToUser(existingUser);
+
+        // Assert — KDF mapped from MPAD, user.Key from MPUD, public/private from legacy Keys
+        Assert.Same(existingUser, result);
+        Assert.Equal("hint", result.MasterPasswordHint);
+        Assert.Equal(kdfType, result.Kdf);
+        Assert.Equal(kdfIterations, result.KdfIterations);
+        Assert.Equal(kdfMemory, result.KdfMemory);
+        Assert.Equal(kdfParallelism, result.KdfParallelism);
+        Assert.Equal("wrappedKeyFromMpud", result.Key);
+        Assert.Equal("publicKey", result.PublicKey);
+        Assert.Equal("encryptedPrivateKey", result.PrivateKey);
+    }
+
+    [Fact]
+    public void ToUser_WithBothNewAndLegacyFieldsSet_PrefersNewData()
+    {
+        // Arrange — defensive: if a request somehow includes both new and legacy KDF/key fields,
+        // ToUser should source from MPAD/MPUD, not the legacy top-level properties.
+        // Uses Argon2id in MPAD so Memory/Parallelism are populated (not null) on the new shape;
+        // verifies the new values win for every non-nullable field.
+        var existingUser = new User();
+        var model = new SetInitialPasswordRequestModel
+        {
+            OrgIdentifier = "orgIdentifier",
+            MasterPasswordHint = "hint",
+
+            // Legacy top-level (should NOT win)
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = 600000,
+            KdfMemory = 999,
+            KdfParallelism = 9,
+            Key = "legacyKey",
+
+            // New shape (should win)
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = new KdfRequestModel
+                {
+                    KdfType = KdfType.Argon2id,
+                    Iterations = 3,
+                    Memory = 64,
+                    Parallelism = 4
+                },
+                MasterPasswordAuthenticationHash = "authHash",
+                Salt = "salt"
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = new KdfRequestModel
+                {
+                    KdfType = KdfType.Argon2id,
+                    Iterations = 3,
+                    Memory = 64,
+                    Parallelism = 4
+                },
+                MasterKeyWrappedUserKey = "wrappedKeyFromMpud",
+                Salt = "salt"
+            }
+        };
+
+        // Act
+        var result = model.ToUser(existingUser);
+
+        // Assert — values came from MPAD/MPUD, not legacy fields
+        Assert.Equal(KdfType.Argon2id, result.Kdf);
+        Assert.Equal(3, result.KdfIterations);
+        Assert.Equal(64, result.KdfMemory);
+        Assert.Equal(4, result.KdfParallelism);
+        Assert.Equal("wrappedKeyFromMpud", result.Key);
+    }
+
+    [Fact]
+    public void ToUser_WithMasterPasswordAuthAndUnlock_AndNullKeys_DoesNotMutateExistingPublicPrivateKey()
+    {
+        // Arrange — TDE flow: modern client sends MPAD + MPUD with no key material.
+        // Existing user has a keypair that must not be replaced.
+        var existingUser = new User
+        {
+            PublicKey = "existingPublicKey",
+            PrivateKey = "existingPrivateKey"
+        };
+        var model = new SetInitialPasswordRequestModel
+        {
+            OrgIdentifier = "orgIdentifier",
+            MasterPasswordHint = "hint",
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = new KdfRequestModel
+                {
+                    KdfType = KdfType.PBKDF2_SHA256,
+                    Iterations = 600000
+                },
+                MasterPasswordAuthenticationHash = "authHash",
+                Salt = "salt"
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = new KdfRequestModel
+                {
+                    KdfType = KdfType.PBKDF2_SHA256,
+                    Iterations = 600000
+                },
+                MasterKeyWrappedUserKey = "wrappedKeyFromMpud",
+                Salt = "salt"
+            },
+            Keys = null
+        };
+
+        // Act
+        var result = model.ToUser(existingUser);
+
+        // Assert — KDF/Key mapped from new data, public/private kept intact
+        Assert.Equal(KdfType.PBKDF2_SHA256, result.Kdf);
+        Assert.Equal("wrappedKeyFromMpud", result.Key);
+        Assert.Equal("existingPublicKey", result.PublicKey);
+        Assert.Equal("existingPrivateKey", result.PrivateKey);
     }
 
     #endregion
