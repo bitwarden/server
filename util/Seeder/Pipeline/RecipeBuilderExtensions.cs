@@ -32,7 +32,7 @@ public static class RecipeBuilderExtensions
         OrganizationOverrides? overrides = null)
     {
         builder.HasOrg = true;
-        builder.AddStep(_ => CreateOrganizationStep.FromFixture(fixture, planType, seats, overrides));
+        builder.AddAsyncStep(_ => CreateOrganizationStep.FromFixture(fixture, planType, seats, overrides));
         return builder;
     }
 
@@ -55,7 +55,7 @@ public static class RecipeBuilderExtensions
         OrganizationOverrides? overrides = null)
     {
         builder.HasOrg = true;
-        builder.AddStep(_ => CreateOrganizationStep.FromParams(name, domain, seats, planType, overrides));
+        builder.AddAsyncStep(_ => CreateOrganizationStep.FromParams(name, domain, seats, planType, overrides));
         return builder;
     }
 

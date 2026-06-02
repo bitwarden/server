@@ -20,7 +20,8 @@ namespace Bit.Seeder.Steps;
 /// <c>Finalize</c> persists Stripe IDs via <c>IOrganizationRepository.ReplaceAsync</c>.
 /// Mirrors the Free-plan short-circuit in <c>CloudOrganizationSignUpCommand</c>; skips Stripe
 /// entirely when the API key is missing or the opt-out flag is set so the seeder still works
-/// offline.
+/// offline. Plan-derived org capacity is applied earlier by
+/// <see cref="CreateOrganizationStep"/>.
 /// </remarks>
 internal sealed class FinalizeOrganizationBillingStep(
     IOrganizationBillingService organizationBillingService,
@@ -53,31 +54,7 @@ internal sealed class FinalizeOrganizationBillingStep(
             return;
         }
 
-        var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
-
-        // The seeder doesn't have access to the (async) pricing client in CreateOrganizationStep,
-        // so it sets capacity fields without consulting plan baselines. Patch them here so the
-        // org matches what CloudOrganizationSignUpCommand would produce — otherwise the admin
-        // UI shows negative "additional" values (e.g. -50 machine accounts on Enterprise,
-        // -6 seats on Teams Starter with --users 3).
-
-        // Password Manager: clamp Seats and MaxStorageGb to at least the plan baseline. The
-        // user's --users intent is preserved when it meets or exceeds the baseline; sub-baseline
-        // values would put the org in a state production can't produce.
-        organization.Seats = Math.Max(plan.PasswordManager.BaseSeats, organization.Seats ?? 0);
-        if (plan.PasswordManager.BaseStorageGb > 0)
-        {
-            organization.MaxStorageGb = (short)Math.Max(plan.PasswordManager.BaseStorageGb, organization.MaxStorageGb ?? 0);
-        }
-
-        // Secrets Manager: store as (plan baseline + additional), matching
-        // CloudOrganizationSignUpCommand.cs:111-115. The seeder never sets these directly,
-        // so existing values are treated as additional (0 by default).
-        if (organization.UseSecretsManager)
-        {
-            organization.SmSeats = plan.SecretsManager.BaseSeats + (organization.SmSeats ?? 0);
-            organization.SmServiceAccounts = plan.SecretsManager.BaseServiceAccount + (organization.SmServiceAccounts ?? 0);
-        }
+        var plan = context.Plan ?? await pricingClient.GetPlanOrThrow(organization.PlanType);
 
         var signup = new OrganizationSignup
         {
