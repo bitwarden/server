@@ -617,6 +617,51 @@ public class OrganizationPlanMigrationCohortsControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task Edit_Post_LockedCohort_SavesDespiteMissingMigrationPathSelectionBindingError(
+        Guid id,
+        CohortFormModel model,
+        OrganizationPlanMigrationCohort existing,
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
+        existing.Id = id;
+        existing.MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent;
+        existing.RevisionDate = DateTime.UtcNow.AddDays(-1);
+        model.Id = id;
+        model.ProactiveDiscountCouponCode = null;
+        model.ChurnDiscountCouponCode = null;
+
+        // The locked Edit view posts no value for MigrationPathSelection, so model binding leaves
+        // it empty and the [Required] validator records an error before the action runs.
+        model.MigrationPathSelection = string.Empty;
+        sutProvider.Sut.ModelState.AddModelError(
+            nameof(CohortFormModel.MigrationPathSelection), "Please select a migration path or None.");
+
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(id).Returns(existing);
+        sutProvider.GetDependency<IGetCohortAssignmentStateQuery>()
+            .Run(Arg.Any<OrganizationPlanMigrationCohort>()).Returns(new CohortAssignmentState(7));
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByNameAsync(model.Name).Returns(existing);
+
+        sutProvider.Sut.TempData = new TempDataDictionary(
+            new DefaultHttpContext(),
+            Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.Edit(id, model);
+
+        Assert.IsType<RedirectToActionResult>(result);
+        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationPlanMigrationCohort>(c =>
+                c.Id == id
+                && c.MigrationPathId == MigrationPathId.Enterprise2020AnnualToCurrent
+                && c.Name == model.Name));
+    }
+
+    [Theory, BitAutoData]
     public async Task Edit_Post_UnlockedCohort_AcceptsMigrationPathSelectionChange(
         Guid id,
         CohortFormModel model,

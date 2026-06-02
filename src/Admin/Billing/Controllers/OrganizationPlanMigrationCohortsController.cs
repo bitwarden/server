@@ -131,13 +131,14 @@ public class OrganizationPlanMigrationCohortsController(
         if (assignmentState.HasNonPendingAssignments)
         {
             // The locked migration path view doesn't post a value for MigrationPathSelection.
-            // Restore from the persisted cohort so [Required] passes and the eventual
-            // ReplaceAsync writes back the unchanged path.
+            // Restore from the persisted cohort so the eventual ReplaceAsync writes back the
+            // unchanged path, and clear the binding-time [Required] error so the model is valid.
             model.MigrationPathSelection = cohort.MigrationPathId switch
             {
                 null => CohortFormModel.NoMigrationPath,
                 var pathId => ((byte)pathId).ToString(),
             };
+            ModelState.Remove(nameof(model.MigrationPathSelection));
         }
 
         MergeCrossFieldValidationErrors(model);
