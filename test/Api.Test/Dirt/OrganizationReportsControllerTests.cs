@@ -29,10 +29,10 @@ namespace Bit.Api.Test.Dirt;
 [SutProviderCustomize]
 public class OrganizationReportControllerTests
 {
-    // GetLatestOrganizationReportAsync
+    // GetLatestOrganizationReportAsync (see method name for FlagOn/FlagOff indicator)
 
     [Theory, BitAutoData]
-    public async Task GetLatestOrganizationReportAsync_WithValidatedFile_ReturnsOkWithDownloadUrl(
+    public async Task GetLatestOrganizationReportAsync_FlagOn_WithValidatedFile_ReturnsOkWithDownloadUrl(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
         OrganizationReport expectedReport,
