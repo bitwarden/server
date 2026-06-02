@@ -64,6 +64,12 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
 
         builder.CreateOrganization(options.Name, options.Domain, options.Users + 1, options.PlanType, options.Overrides);
         builder.AddOrganizationApiKey();
+
+        if (options.ClaimedDomains.Count > 0)
+        {
+            builder.WithOrganizationDomain(options.ClaimedDomains);
+        }
+
         builder.AddOwner();
         builder.WithGenerator(options.Domain);
         builder.AddUsers(options.Users, options.RealisticStatusMix);
