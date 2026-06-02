@@ -15,6 +15,13 @@ public class AccessRuleRequestModel
     [Required]
     public object Rule { get; set; } = null!;
 
+    /// <summary>
+    /// The complete set of collections this rule governs. The rule's associations are replaced to match
+    /// exactly this set; an empty array clears all associations.
+    /// </summary>
+    [Required]
+    public IEnumerable<Guid> Collections { get; set; } = null!;
+
     public AccessRule ToAccessRule(Guid organizationId) => new()
     {
         OrganizationId = organizationId,

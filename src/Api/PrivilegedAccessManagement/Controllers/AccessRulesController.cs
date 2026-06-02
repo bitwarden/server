@@ -28,9 +28,9 @@ public class AccessRulesController(
     {
         await EnsureMemberAsync(orgId);
 
-        var rules = await repository.GetManyByOrganizationIdAsync(orgId);
+        var rules = await repository.GetManyDetailsByOrganizationIdAsync(orgId);
         return new ListResponseModel<AccessRuleResponseModel>(
-            rules.Select(p => new AccessRuleResponseModel(p)));
+            rules.Select(rule => new AccessRuleResponseModel(rule)));
     }
 
     [HttpGet("{id:guid}")]
@@ -38,7 +38,7 @@ public class AccessRulesController(
     {
         await EnsureMemberAsync(orgId);
 
-        var rule = await repository.GetByIdAsync(id);
+        var rule = await repository.GetDetailsByIdAsync(id);
         if (rule is null || rule.OrganizationId != orgId)
         {
             throw new NotFoundException();
@@ -52,7 +52,7 @@ public class AccessRulesController(
     {
         await EnsureAdminAsync(orgId);
 
-        var rule = await createCommand.CreateAsync(model.ToAccessRule(orgId));
+        var rule = await createCommand.CreateAsync(model.ToAccessRule(orgId), model.Collections);
         return new AccessRuleResponseModel(rule);
     }
 
@@ -61,7 +61,7 @@ public class AccessRulesController(
     {
         await EnsureAdminAsync(orgId);
 
-        var rule = await updateCommand.UpdateAsync(orgId, id, model.ToAccessRule(orgId));
+        var rule = await updateCommand.UpdateAsync(orgId, id, model.ToAccessRule(orgId), model.Collections);
         return new AccessRuleResponseModel(rule);
     }
 

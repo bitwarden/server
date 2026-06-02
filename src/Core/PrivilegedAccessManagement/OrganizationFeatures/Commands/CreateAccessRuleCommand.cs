@@ -1,28 +1,34 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.PrivilegedAccessManagement.Entities;
+using Bit.Core.PrivilegedAccessManagement.Models;
 using Bit.Core.PrivilegedAccessManagement.OrganizationFeatures.Commands.Interfaces;
 using Bit.Core.PrivilegedAccessManagement.Repositories;
 using Bit.Core.PrivilegedAccessManagement.Services;
+using Bit.Core.Repositories;
 
 namespace Bit.Core.PrivilegedAccessManagement.OrganizationFeatures.Commands;
 
 public class CreateAccessRuleCommand : ICreateAccessRuleCommand
 {
     private readonly IAccessRuleRepository _repository;
+    private readonly ICollectionRepository _collectionRepository;
     private readonly IAccessRuleValidator _validator;
     private readonly TimeProvider _timeProvider;
 
     public CreateAccessRuleCommand(
         IAccessRuleRepository repository,
+        ICollectionRepository collectionRepository,
         IAccessRuleValidator validator,
         TimeProvider timeProvider)
     {
         _repository = repository;
+        _collectionRepository = collectionRepository;
         _validator = validator;
         _timeProvider = timeProvider;
     }
 
-    public async Task<AccessRule> CreateAsync(AccessRule rule)
+    public async Task<AccessRuleDetails> CreateAsync(AccessRule rule, IEnumerable<Guid> collectionIds)
     {
         if (string.IsNullOrWhiteSpace(rule.Name))
         {
@@ -41,10 +47,47 @@ public class CreateAccessRuleCommand : ICreateAccessRuleCommand
             throw new BadRequestException("A rule with that name already exists.");
         }
 
+        var desiredCollectionIds = await ValidateCollectionsAsync(rule.OrganizationId, collectionIds);
+
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         rule.CreationDate = now;
         rule.RevisionDate = now;
 
-        return await _repository.CreateAsync(rule);
+        var created = await _repository.CreateAsync(rule);
+
+        await _repository.SetCollectionAssociationsAsync(
+            created.OrganizationId, created.Id, desiredCollectionIds, []);
+
+        return AccessRuleDetails.From(created, desiredCollectionIds);
     }
+
+    private async Task<List<Guid>> ValidateCollectionsAsync(Guid organizationId, IEnumerable<Guid> collectionIds)
+    {
+        var distinctIds = collectionIds.Distinct().ToList();
+        if (distinctIds.Count == 0)
+        {
+            return distinctIds;
+        }
+
+        var collections = await _collectionRepository.GetManyByManyIdsAsync(distinctIds);
+        if (collections.Count != distinctIds.Count)
+        {
+            throw new BadRequestException("One or more collections could not be found.");
+        }
+
+        if (collections.Any(c => c.OrganizationId != organizationId))
+        {
+            throw new BadRequestException("One or more collections do not belong to this organization.");
+        }
+
+        if (collections.Any(IsGovernedByAnotherRule))
+        {
+            throw new BadRequestException("One or more collections are already governed by another access rule.");
+        }
+
+        return distinctIds;
+    }
+
+    // A new rule has no Id yet, so any existing association is a conflict.
+    private static bool IsGovernedByAnotherRule(Collection collection) => collection.AccessRuleId.HasValue;
 }

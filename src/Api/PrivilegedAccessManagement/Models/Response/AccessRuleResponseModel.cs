@@ -1,12 +1,12 @@
 ﻿using System.Text.Json;
 using Bit.Core.Models.Api;
-using Bit.Core.PrivilegedAccessManagement.Entities;
+using Bit.Core.PrivilegedAccessManagement.Models;
 
 namespace Bit.Api.PrivilegedAccessManagement.Models.Response;
 
 public class AccessRuleResponseModel : ResponseModel
 {
-    public AccessRuleResponseModel(AccessRule rule)
+    public AccessRuleResponseModel(AccessRuleDetails rule)
         : base("accessRule")
     {
         ArgumentNullException.ThrowIfNull(rule);
@@ -18,6 +18,7 @@ public class AccessRuleResponseModel : ResponseModel
         Rule = TryParseRule(rule.Rule);
         CreationDate = rule.CreationDate;
         RevisionDate = rule.RevisionDate;
+        Collections = rule.CollectionIds.ToList();
     }
 
     public Guid Id { get; }
@@ -27,6 +28,7 @@ public class AccessRuleResponseModel : ResponseModel
     public JsonElement? Rule { get; }
     public DateTime CreationDate { get; }
     public DateTime RevisionDate { get; }
+    public IEnumerable<Guid> Collections { get; }
 
     private static JsonElement? TryParseRule(string? ruleJson)
     {

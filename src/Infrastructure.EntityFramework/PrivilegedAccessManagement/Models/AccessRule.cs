@@ -16,5 +16,6 @@ public class AccessRuleMapperProfile : Profile
     public AccessRuleMapperProfile()
     {
         CreateMap<Core.PrivilegedAccessManagement.Entities.AccessRule, AccessRule>().ReverseMap();
+        CreateMap<AccessRule, Core.PrivilegedAccessManagement.Models.AccessRuleDetails>();
     }
 }
