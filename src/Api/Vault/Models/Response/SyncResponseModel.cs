@@ -46,7 +46,8 @@ public class SyncResponseModel() : ResponseModel("sync")
         IEnumerable<Send> sends,
         IEnumerable<WebAuthnCredential> webAuthnCredentials,
         IEnumerable<Policy> policiesNew = null,
-        IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetailsNew = null)
+        IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetailsNew = null,
+        ISet<Guid> partialDataCipherIds = null)
         : this()
     {
         Profile = new ProfileResponseModel(user, userAccountKeysData, organizationUserDetails, providerUserDetails,
@@ -59,7 +60,8 @@ public class SyncResponseModel() : ResponseModel("sync")
                 user,
                 GetOrganizationAbility(cipher, organizationAbilities),
                 globalSettings,
-                collectionCiphersDict));
+                collectionCiphersDict,
+                isPartial: partialDataCipherIds?.Contains(cipher.Id) ?? false));
         Collections = collections?.Select(
             c => new CollectionDetailsResponseModel(c)) ?? new List<CollectionDetailsResponseModel>();
         Domains = excludeDomains ? null : new DomainsResponseModel(user, false);

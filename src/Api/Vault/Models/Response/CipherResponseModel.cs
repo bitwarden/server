@@ -1,6 +1,7 @@
 ﻿
 
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data.Organizations;
@@ -15,7 +16,7 @@ namespace Bit.Api.Vault.Models.Response;
 
 public class CipherMiniResponseModel : ResponseModel
 {
-    public CipherMiniResponseModel(Cipher cipher, IGlobalSettings globalSettings, bool orgUseTotp, string obj = "cipherMini")
+    public CipherMiniResponseModel(Cipher cipher, IGlobalSettings globalSettings, bool orgUseTotp, string obj = "cipherMini", bool isPartial = false)
         : base(obj)
     {
         if (cipher == null)
@@ -34,6 +35,16 @@ public class CipherMiniResponseModel : ResponseModel
         DeletedDate = cipher.DeletedDate;
         Reprompt = cipher.Reprompt.GetValueOrDefault(CipherRepromptType.None);
         Key = cipher.Key;
+
+        if (isPartial)
+        {
+            // Under credential leasing the full data blob and all the obsolete typed fields are withheld;
+            // the reduced blob is returned only in PartialData, signalling that this cipher is leasing-gated.
+            // The client decrypts PartialData itself.
+            Data = null;
+            PartialData = PartialCipherData.Strip(cipher.Type, cipher.Data);
+            return;
+        }
 
         if (cipher.IsDataBlobEncrypted())
         {
@@ -98,6 +109,14 @@ public class CipherMiniResponseModel : ResponseModel
     public CipherType Type { get; set; }
     public string Data { get; set; }
 
+    /// <summary>
+    /// The reduced data blob returned in place of <see cref="Data"/> when the caller can only reach this
+    /// cipher through leasing-enabled collections (PAM credential leasing). Contains the encrypted title
+    /// and, for logins, the encrypted URIs — never the dropped secrets. Null for non-leased ciphers.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string PartialData { get; set; }
+
     [Obsolete("Use Data instead.")]
     public string Name { get; set; }
 
@@ -149,8 +168,9 @@ public class CipherResponseModel : CipherMiniResponseModel
         User user,
         OrganizationAbility? organizationAbility,
         IGlobalSettings globalSettings,
-        string obj = "cipher")
-        : base(cipher, globalSettings, cipher.OrganizationUseTotp, obj)
+        string obj = "cipher",
+        bool isPartial = false)
+        : base(cipher, globalSettings, cipher.OrganizationUseTotp, obj, isPartial)
     {
         FolderId = cipher.FolderId;
         Favorite = cipher.Favorite;
@@ -175,8 +195,9 @@ public class CipherDetailsResponseModel : CipherResponseModel
         User user,
         OrganizationAbility? organizationAbility,
         GlobalSettings globalSettings,
-        IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, string obj = "cipherDetails")
-        : base(cipher, user, organizationAbility, globalSettings, obj)
+        IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, string obj = "cipherDetails",
+        bool isPartial = false)
+        : base(cipher, user, organizationAbility, globalSettings, obj, isPartial)
     {
         if (collectionCiphers?.TryGetValue(cipher.Id, out var collectionCipher) ?? false)
         {
