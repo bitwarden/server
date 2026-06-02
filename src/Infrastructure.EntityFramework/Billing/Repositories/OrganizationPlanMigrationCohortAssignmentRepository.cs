@@ -54,4 +54,20 @@ public class OrganizationPlanMigrationCohortAssignmentRepository(
 
         return Mapper.Map<CoreEntities.OrganizationPlanMigrationCohortAssignment>(result);
     }
+
+    public async Task<int> GetCohortNonPendingAssignmentsCountAsync(Guid cohortId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var query =
+            from a in dbContext.OrganizationPlanMigrationCohortAssignments
+            join c in dbContext.OrganizationPlanMigrationCohorts on a.CohortId equals c.Id
+            where a.CohortId == cohortId
+                  && ((c.MigrationPathId != null && a.ScheduledDate != null)
+                      || (c.MigrationPathId == null && a.ChurnDiscountAppliedDate != null))
+            select a.Id;
+
+        return await query.CountAsync();
+    }
 }
