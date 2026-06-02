@@ -790,8 +790,7 @@ public class AccountsController : Controller
         if (user == null || !await _userService.VerifySecretAsync(user, request.Secret))
         {
             // If the user is not found, or the secret is not valid, we still return
-            // a success response, to avoid account enumeration; account existence
-            // cannot be signaled by response shape.
+            // a success response, to avoid account enumeration via response shape.
             return;
         }
         await _twoFactorEmailService.SendNewDeviceVerificationEmailAsync(user);
