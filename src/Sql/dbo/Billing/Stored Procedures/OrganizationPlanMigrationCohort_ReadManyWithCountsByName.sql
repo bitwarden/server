@@ -46,8 +46,8 @@ BEGIN
         P.[RevisionDate]
     FROM
         [PagedCohorts] P
-        LEFT JOIN [dbo].[OrganizationPlanMigrationCohortAssignmentView] A
-            ON A.[CohortId] = P.[Id]
+    LEFT JOIN [dbo].[OrganizationPlanMigrationCohortAssignmentView] A
+        ON A.[CohortId] = P.[Id]
     GROUP BY
         P.[Id],
         P.[Name],
@@ -58,5 +58,6 @@ BEGIN
         P.[CreationDate],
         P.[RevisionDate]
     ORDER BY
-        P.[CreationDate] DESC, P.[Id] ASC
+        P.[CreationDate] DESC,
+        P.[Id] ASC
 END
