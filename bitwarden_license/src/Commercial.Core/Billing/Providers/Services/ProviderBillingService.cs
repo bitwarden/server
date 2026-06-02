@@ -156,13 +156,8 @@ public class ProviderBillingService(
             providerOrganization,
             EventType.ProviderOrganization_Added);
 
-        // Drop any stale cohort assignment after the org transition commits. Placing the
-        // cleanup here (rather than alongside Release) makes a failure here a reconciliation
-        // problem — stale assignment row — rather than a half-transitioned org. Gated on
-        // PM35215 because the cohort table is only populated when the epic is enabled.
-        // TODO(PM-37085): once Release(customerId, subscriptionId, organizationId) lands,
-        //   1) pass organization.Id as the third arg to the Release call above, and
-        //   2) delete this cohortAssignment lookup/delete block.
+        // TODO(PM-37085): once Release(customerId, subscriptionId, organizationId) lands, pass
+        // organization.Id to the Release call above and delete this cohort cleanup block.
         if (featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
         {
             var cohortAssignment =
