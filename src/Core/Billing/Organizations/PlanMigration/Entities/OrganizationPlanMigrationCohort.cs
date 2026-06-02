@@ -22,7 +22,7 @@ public class OrganizationPlanMigrationCohort : ITableObject<Guid>
 
     /// <summary>
     /// Identifies which <see cref="ValueObjects.MigrationPath"/> this cohort follows.
-    /// Nullable so a cohort can be created and named before its path is decided.
+    /// A non-null value is a Migration cohort; null is a Churn-only cohort.
     /// </summary>
     /// <remarks>
     /// Byte values are immortal once persisted; see <see cref="MigrationPathId"/>
