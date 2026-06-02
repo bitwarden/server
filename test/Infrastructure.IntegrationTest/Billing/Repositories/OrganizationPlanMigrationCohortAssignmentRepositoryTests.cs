@@ -221,4 +221,61 @@ public class OrganizationPlanMigrationCohortAssignmentRepositoryTests
         var result = await assignmentRepository.GetByIdAsync(assignment.Id);
         Assert.Null(result);
     }
+
+    private static OrganizationPlanMigrationCohort CreateChurnOnlyCohort() =>
+        new()
+        {
+            Name = $"churn-{Guid.NewGuid()}",
+            MigrationPathId = null,
+            ChurnDiscountCouponCode = "SAVE15",
+            IsActive = true,
+            CreationDate = DateTime.UtcNow,
+            RevisionDate = DateTime.UtcNow,
+        };
+
+    [Theory, DatabaseData]
+    public async Task GetCohortNonPendingAssignmentsCountAsync_ChurnOnly_CountsOnlyRedemptions(
+        IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
+        IOrganizationPlanMigrationCohortRepository cohortRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        var cohort = await cohortRepository.CreateAsync(CreateChurnOnlyCohort());
+
+        var pendingOrg = await organizationRepository.CreateTestOrganizationAsync();
+        var redeemedOrg = await organizationRepository.CreateTestOrganizationAsync();
+
+        await assignmentRepository.CreateAsync(CreateTestAssignment(pendingOrg, cohort));
+        await assignmentRepository.CreateAsync(CreateTestAssignment(
+            redeemedOrg, cohort, churnDiscountAppliedAt: DateTime.UtcNow));
+
+        var count = await assignmentRepository.GetCohortNonPendingAssignmentsCountAsync(cohort.Id);
+
+        Assert.Equal(1, count);
+
+        await cohortRepository.DeleteAsync(cohort);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetCohortNonPendingAssignmentsCountAsync_MigrationCohort_CountsScheduledOrMigrated(
+        IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
+        IOrganizationPlanMigrationCohortRepository cohortRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        var cohort = await cohortRepository.CreateAsync(CreateTestCohort());
+
+        var pendingOrg = await organizationRepository.CreateTestOrganizationAsync();
+        var scheduledOrg = await organizationRepository.CreateTestOrganizationAsync();
+        var migratedOrg = await organizationRepository.CreateTestOrganizationAsync();
+
+        await assignmentRepository.CreateAsync(CreateTestAssignment(pendingOrg, cohort));
+        await assignmentRepository.CreateAsync(CreateTestAssignment(scheduledOrg, cohort, scheduledAt: DateTime.UtcNow));
+        await assignmentRepository.CreateAsync(CreateTestAssignment(
+            migratedOrg, cohort, scheduledAt: DateTime.UtcNow, migratedAt: DateTime.UtcNow));
+
+        var count = await assignmentRepository.GetCohortNonPendingAssignmentsCountAsync(cohort.Id);
+
+        Assert.Equal(2, count);
+
+        await cohortRepository.DeleteAsync(cohort);
+    }
 }

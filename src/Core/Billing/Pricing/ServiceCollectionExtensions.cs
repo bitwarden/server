@@ -1,4 +1,5 @@
-﻿using Bit.Core.Settings;
+﻿using System.Globalization;
+using Bit.Core.Settings;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Billing.Pricing;
@@ -16,6 +17,10 @@ public static class ServiceCollectionExtensions
             }
             httpClient.BaseAddress = new Uri(globalSettings.PricingUri);
             httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
+            httpClient.DefaultRequestHeaders.Add(
+                "Bitwarden-Region",
+                globalSettings.BaseServiceUri.CloudRegion?.ToLower(CultureInfo.InvariantCulture) ?? "us"
+            );
         });
     }
 }

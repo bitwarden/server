@@ -5,16 +5,16 @@ using Bit.Core.KeyManagement.Models.Data;
 namespace Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
 
 /// <summary>
-/// Input data for updating a user's existing master password hash together with new KDF parameters.
+/// Input data for updating a user's KDF configuration together with the re-derived authentication hash.
 /// Salt is validated as unchanged; KDF validation is intentionally skipped since KDF is being replaced.
 ///
 /// <para>
 /// Use when: constructing a call to
-/// <see cref="Interfaces.IMasterPasswordService.SaveUpdateExistingMasterPasswordAndKdfAsync"/>
+/// <see cref="Interfaces.IMasterPasswordService.SaveUpdateExistingKdfConfigurationAsync"/>
 /// (KDF rotation flows). For hash-only updates, use <see cref="UpdateExistingPasswordData"/> instead.
 /// </para>
 /// </summary>
-public class UpdateExistingPasswordAndKdfData
+public class UpdateExistingKdfConfigurationData
 {
     public required MasterPasswordUnlockData MasterPasswordUnlock { get; set; }
     public required MasterPasswordAuthenticationData MasterPasswordAuthentication { get; set; }

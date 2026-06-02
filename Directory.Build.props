@@ -12,6 +12,7 @@
     <Nullable Condition="'$(Nullable)' == '' and '$(IsTestProject)' != 'true'">enable</Nullable>
     <TreatWarningsAsErrors Condition="'$(TreatWarningsAsErrors)' == ''">true</TreatWarningsAsErrors>
     <NuGetAuditLevel>critical</NuGetAuditLevel>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
   <PropertyGroup>
