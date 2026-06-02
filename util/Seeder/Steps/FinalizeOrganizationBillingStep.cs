@@ -2,6 +2,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Settings;
 using Bit.Seeder.Options;
@@ -32,6 +33,11 @@ internal sealed class FinalizeOrganizationBillingStep(
     : IAsyncStep, IPostCommitStep
 {
     private const int TrialLengthDays = 30;
+
+    // Stripe magic test PaymentMethod ID — a pre-created Visa card in test mode that
+    // can be attached directly to a customer without a SetupIntent.
+    // See https://docs.stripe.com/testing#payment-methods.
+    private const string StripeTestVisaPaymentMethod = "pm_card_visa";
 
     public async Task ExecuteAsync(SeederContext context)
     {
@@ -79,6 +85,17 @@ internal sealed class FinalizeOrganizationBillingStep(
             InitiationPath = "Seeder",
             IsFromProvider = false,
             IsFromSecretsManagerTrial = false,
+            // Attach a Stripe test Visa so the seeded org has a real payment method on file —
+            // unblocks flows (upgrades, invoice payment) that require one. Tax info is mandatory
+            // when a payment source is set; we use a generic US address that Stripe's
+            // automatic-tax validation accepts in test mode.
+            PaymentMethodType = PaymentMethodType.Card,
+            PaymentToken = StripeTestVisaPaymentMethod,
+            TaxInfo = new TaxInfo
+            {
+                BillingAddressCountry = "US",
+                BillingAddressPostalCode = "10001",
+            },
         };
 
         var sale = OrganizationSale.From(organization, signup);
