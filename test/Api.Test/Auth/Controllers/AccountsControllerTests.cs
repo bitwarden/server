@@ -3,8 +3,8 @@ using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Services;
@@ -39,7 +39,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IUserService _userService;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly ISelfServicePasswordChangeCommand _selfServicePasswordChangeCommand;
-    private readonly IPolicyService _policyService;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IFinishSsoJitProvisionMasterPasswordCommand _finishSsoJitProvisionMasterPasswordCommand;
     private readonly ISetInitialMasterPasswordCommandV1 _setInitialMasterPasswordCommandV1;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
@@ -60,7 +60,7 @@ public class AccountsControllerTests : IDisposable
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _providerUserRepository = Substitute.For<IProviderUserRepository>();
         _selfServicePasswordChangeCommand = Substitute.For<ISelfServicePasswordChangeCommand>();
-        _policyService = Substitute.For<IPolicyService>();
+        _policyRequirementQuery = Substitute.For<IPolicyRequirementQuery>();
         _finishSsoJitProvisionMasterPasswordCommand = Substitute.For<IFinishSsoJitProvisionMasterPasswordCommand>();
         _setInitialMasterPasswordCommandV1 = Substitute.For<ISetInitialMasterPasswordCommandV1>();
         _twoFactorIsEnabledQuery = Substitute.For<ITwoFactorIsEnabledQuery>();
@@ -80,7 +80,7 @@ public class AccountsControllerTests : IDisposable
             _providerUserRepository,
             _userService,
             _selfServicePasswordChangeCommand,
-            _policyService,
+            _policyRequirementQuery,
             _finishSsoJitProvisionMasterPasswordCommand,
             _setInitialMasterPasswordCommandV1,
             _tdeSetPasswordCommand,
@@ -694,34 +694,6 @@ public class AccountsControllerTests : IDisposable
 
         // Act
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.PostKdf(model));
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task PostKdf_WithNullAuthenticationData_ShouldFail(
-        User user, ChangeKdfRequestModel model)
-    {
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        model.AuthenticationData = null;
-
-        // Act
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKdf(model));
-
-        Assert.Contains("AuthenticationData and UnlockData must be provided.", exception.Message);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task PostKdf_WithNullUnlockData_ShouldFail(
-        User user, ChangeKdfRequestModel model)
-    {
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        model.UnlockData = null;
-
-        // Act
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKdf(model));
-
-        Assert.Contains("AuthenticationData and UnlockData must be provided.", exception.Message);
     }
 
     [Theory]

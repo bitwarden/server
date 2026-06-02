@@ -12,6 +12,7 @@ using EfGroup = Bit.Infrastructure.EntityFramework.Models.Group;
 using EfGroupUser = Bit.Infrastructure.EntityFramework.Models.GroupUser;
 using EfOrganization = Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization;
 using EfOrganizationApiKey = Bit.Infrastructure.EntityFramework.Models.OrganizationApiKey;
+using EfOrganizationDomain = Bit.Infrastructure.EntityFramework.Models.OrganizationDomain;
 using EfOrganizationUser = Bit.Infrastructure.EntityFramework.Models.OrganizationUser;
 using EfUser = Bit.Infrastructure.EntityFramework.Models.User;
 
@@ -39,6 +40,8 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
     internal void Commit(SeederContext context)
     {
         MapCopyAndClear<Core.AdminConsole.Entities.Organization, EfOrganization>(context.Organizations);
+
+        MapCopyAndClear<Core.Entities.OrganizationDomain, EfOrganizationDomain>(context.OrganizationDomains);
 
         MapAndCopy<Core.Entities.OrganizationApiKey, EfOrganizationApiKey>(context.OrganizationApiKey);
 
