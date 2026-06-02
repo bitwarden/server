@@ -15,6 +15,7 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Pricing.Premium;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
+using Bit.Core.Models.Mail.Billing.Renewal.BusinessPlanRenewal2020Migration;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2019Renewal;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2020Renewal;
 using Bit.Core.Models.Mail.Billing.Renewal.Premium;
@@ -3575,6 +3576,8 @@ public class UpcomingInvoiceHandlerTests
         _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
         _assignmentRepository.GetByOrganizationIdAsync(_organizationId).Returns(assignment);
         _cohortRepository.GetByIdAsync(cohortId).Returns(cohort);
+        _priceIncreaseScheduler.ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>())
+            .Returns(true);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -3582,12 +3585,84 @@ public class UpcomingInvoiceHandlerTests
         // Assert
         await _priceIncreaseScheduler.Received(1)
             .ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>());
-        await _mailService.Received(1).SendInvoiceUpcoming(
-            Arg.Is<IEnumerable<string>>(emails => emails.Contains("org@example.com")),
-            Arg.Is<decimal>(amount => amount == invoice.AmountDue / 100M),
-            Arg.Is<DateTime>(dueDate => dueDate == invoice.NextPaymentAttempt!.Value),
+        // The migration was scheduled, so the standard upcoming-invoice email must be suppressed even though
+        // the cohort has no migration path and therefore no renewal email is sent.
+        await _mailer.DidNotReceive().SendEmail(Arg.Any<BusinessPlanRenewal2020MigrationMail>());
+        await _mailService.DidNotReceive().SendInvoiceUpcoming(
+            Arg.Any<IEnumerable<string>>(),
+            Arg.Any<decimal>(),
+            Arg.Any<DateTime>(),
             Arg.Any<List<string>>(),
-            Arg.Is<bool>(b => b));
+            Arg.Any<bool>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenBusinessTier_AndRenewalEmailSendFailsAfterScheduling_SuppressesStandardEmail_AndLogsError()
+    {
+        // Arrange — the migration is scheduled successfully, but sending the renewal email throws. Because the
+        // migration is already committed at Stripe, we must NOT fall through to the standard upcoming-invoice
+        // email (which would quote the pre-migration price); the failure is logged instead.
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var (invoice, subscription, customer) = BuildBusinessFixture(PlanType.EnterpriseAnnually2020);
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.EnterpriseAnnually2020
+        };
+        var enterprise2020Plan = new Enterprise2020Plan(isAnnual: true);
+        var enterprisePlan = new EnterprisePlan(isAnnual: true);
+        var cohortId = Guid.NewGuid();
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = _organizationId,
+            CohortId = cohortId,
+            ScheduledDate = null
+        };
+        var cohort = new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "enterprise-2020-annual",
+            MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
+            IsActive = true
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(customer.Id, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(enterprise2020Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(enterprisePlan);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+        _assignmentRepository.GetByOrganizationIdAsync(_organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(cohort);
+        _priceIncreaseScheduler.ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>())
+            .Returns(true);
+        _mailer.SendEmail(Arg.Any<BusinessPlanRenewal2020MigrationMail>())
+            .ThrowsAsync(new Exception("Delivery service unavailable"));
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — the send was attempted, the standard email was suppressed, and the failure was logged.
+        await _mailer.Received(1).SendEmail(Arg.Any<BusinessPlanRenewal2020MigrationMail>());
+        await _mailService.DidNotReceive().SendInvoiceUpcoming(
+            Arg.Any<IEnumerable<string>>(),
+            Arg.Any<decimal>(),
+            Arg.Any<DateTime>(),
+            Arg.Any<List<string>>(),
+            Arg.Any<bool>());
+        _logger.Received(1).Log(
+            LogLevel.Error,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(o =>
+                o.ToString()!.Contains("renewal notification email failed") &&
+                o.ToString()!.Contains(_organizationId.ToString())),
+            Arg.Any<Exception?>(),
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
@@ -3629,6 +3704,8 @@ public class UpcomingInvoiceHandlerTests
         _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
         _assignmentRepository.GetByOrganizationIdAsync(_organizationId).Returns(assignment);
         _cohortRepository.GetByIdAsync(cohortId).Returns(cohort);
+        _priceIncreaseScheduler.ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>())
+            .Returns(true);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -3636,12 +3713,15 @@ public class UpcomingInvoiceHandlerTests
         // Assert
         await _priceIncreaseScheduler.Received(1)
             .ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>());
-        await _mailService.Received(1).SendInvoiceUpcoming(
-            Arg.Is<IEnumerable<string>>(emails => emails.Contains("org@example.com")),
-            Arg.Is<decimal>(amount => amount == invoice.AmountDue / 100M),
-            Arg.Is<DateTime>(dueDate => dueDate == invoice.NextPaymentAttempt!.Value),
+        // The migration was scheduled, so the standard upcoming-invoice email must be suppressed even though
+        // the unknown migration path id means no renewal email is sent.
+        await _mailer.DidNotReceive().SendEmail(Arg.Any<BusinessPlanRenewal2020MigrationMail>());
+        await _mailService.DidNotReceive().SendInvoiceUpcoming(
+            Arg.Any<IEnumerable<string>>(),
+            Arg.Any<decimal>(),
+            Arg.Any<DateTime>(),
             Arg.Any<List<string>>(),
-            Arg.Is<bool>(b => b));
+            Arg.Any<bool>());
     }
 
     [Fact]
@@ -3699,7 +3779,7 @@ public class UpcomingInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenBusinessTier_AndSchedulerReturnsTrue_InvokesPlaceholderEmail_AndSuppressesStandardEmail()
+    public async Task HandleAsync_WhenBusinessTier_AndSchedulerReturnsTrue_SendsBusinessRenewalEmail_WithDiscount_AndSuppressesStandardEmail()
     {
         // Arrange
         _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
@@ -3726,6 +3806,79 @@ public class UpcomingInvoiceHandlerTests
             Id = cohortId,
             Name = "enterprise-2020-annual",
             MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
+            ProactiveDiscountCouponCode = "loyalty-20",
+            IsActive = true
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(customer.Id, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(enterprise2020Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(enterprisePlan);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+        _assignmentRepository.GetByOrganizationIdAsync(_organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(cohort);
+        _priceIncreaseScheduler.ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>())
+            .Returns(true);
+        _stripeAdapter.GetCouponAsync("loyalty-20", Arg.Any<CouponGetOptions>())
+            .Returns(new Coupon { PercentOff = 20 });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _priceIncreaseScheduler.Received(1)
+            .ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>());
+        // EnterprisePlan annual SeatPrice is $72.00; BasePrice is $0.00. Asserting the per-user
+        // monthly renders as SeatPrice/12 (not $0.00) guards against the BasePrice copy-paste bug.
+        // 320 seats x $72 = $23,040.00 gross; less 20% = $18,432.00.
+        await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
+            mail.ToEmails.Contains("org@example.com") &&
+            mail.View.HasDiscount &&
+            mail.View.Seats == 320 &&
+            mail.View.RenewalDate == "June 12, 2026" &&
+            mail.View.PerUserMonthlyPrice == "$6.00" &&
+            mail.View.DiscountPercent == "20%" &&
+            mail.View.AnnualTotalPrice == "$18,432.00"));
+        await _mailService.DidNotReceive().SendInvoiceUpcoming(
+            Arg.Any<IEnumerable<string>>(),
+            Arg.Any<decimal>(),
+            Arg.Any<DateTime>(),
+            Arg.Any<List<string>>(),
+            Arg.Any<bool>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenBusinessTier_AndCohortHasNoCoupon_SendsPriceOnlyRenewalEmail()
+    {
+        // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var (invoice, subscription, customer) = BuildBusinessFixture(PlanType.EnterpriseAnnually2020);
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.EnterpriseAnnually2020
+        };
+        var enterprise2020Plan = new Enterprise2020Plan(isAnnual: true);
+        var enterprisePlan = new EnterprisePlan(isAnnual: true);
+        var cohortId = Guid.NewGuid();
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = _organizationId,
+            CohortId = cohortId,
+            ScheduledDate = null
+        };
+        var cohort = new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "enterprise-2020-annual",
+            MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
+            ProactiveDiscountCouponCode = null,
             IsActive = true
         };
 
@@ -3745,26 +3898,457 @@ public class UpcomingInvoiceHandlerTests
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert
-        await _priceIncreaseScheduler.Received(1)
-            .ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>());
+        // Assert — full price, no discount section; 320 seats x $72 = $23,040.00.
+        await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
+            mail.ToEmails.Contains("org@example.com") &&
+            !mail.View.HasDiscount &&
+            mail.View.Seats == 320 &&
+            mail.View.PerUserMonthlyPrice == "$6.00" &&
+            mail.View.AnnualTotalPrice == "$23,040.00"));
+        await _stripeAdapter.DidNotReceive().GetCouponAsync(Arg.Any<string>(), Arg.Any<CouponGetOptions>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenBusinessTier_AndCouponUnresolvable_SendsPriceOnlyRenewalEmail()
+    {
+        // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var (invoice, subscription, customer) = BuildBusinessFixture(PlanType.EnterpriseAnnually2020);
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.EnterpriseAnnually2020
+        };
+        var enterprise2020Plan = new Enterprise2020Plan(isAnnual: true);
+        var enterprisePlan = new EnterprisePlan(isAnnual: true);
+        var cohortId = Guid.NewGuid();
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = _organizationId,
+            CohortId = cohortId,
+            ScheduledDate = null
+        };
+        var cohort = new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "enterprise-2020-annual",
+            MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
+            ProactiveDiscountCouponCode = "missing-coupon",
+            IsActive = true
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(customer.Id, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(enterprise2020Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(enterprisePlan);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+        _assignmentRepository.GetByOrganizationIdAsync(_organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(cohort);
+        _priceIncreaseScheduler.ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>())
+            .Returns(true);
+        _stripeAdapter.GetCouponAsync("missing-coupon", Arg.Any<CouponGetOptions>())
+            .ThrowsAsync(new StripeException("No such coupon"));
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — the email is still sent, price-only, and the StripeException does not propagate.
+        await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
+            mail.ToEmails.Contains("org@example.com") &&
+            !mail.View.HasDiscount));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenBusinessTier_AndCouponHasNoPercentOff_SendsPriceOnlyRenewalEmail_AndWarns()
+    {
+        // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var (invoice, subscription, customer) = BuildBusinessFixture(PlanType.EnterpriseAnnually2020);
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.EnterpriseAnnually2020
+        };
+        var enterprise2020Plan = new Enterprise2020Plan(isAnnual: true);
+        var enterprisePlan = new EnterprisePlan(isAnnual: true);
+        var cohortId = Guid.NewGuid();
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = _organizationId,
+            CohortId = cohortId,
+            ScheduledDate = null
+        };
+        var cohort = new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "enterprise-2020-annual",
+            MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
+            ProactiveDiscountCouponCode = "amount-off-10",
+            IsActive = true
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(customer.Id, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(enterprise2020Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(enterprisePlan);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+        _assignmentRepository.GetByOrganizationIdAsync(_organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(cohort);
+        _priceIncreaseScheduler.ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>())
+            .Returns(true);
+        // An amount-off coupon resolves successfully but exposes no PercentOff.
+        _stripeAdapter.GetCouponAsync("amount-off-10", Arg.Any<CouponGetOptions>())
+            .Returns(new Coupon { PercentOff = null, AmountOff = 1000 });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — email is sent price-only, and the misconfiguration is logged as an error (an amount-off
+        // coupon mis-quotes every org in the cohort, so it must reach alerting rather than be a warning).
+        await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
+            mail.ToEmails.Contains("org@example.com") &&
+            !mail.View.HasDiscount));
         _logger.Received(1).Log(
-            LogLevel.Information,
+            LogLevel.Error,
             Arg.Any<EventId>(),
             Arg.Is<object>(o =>
-                o.ToString()!.Contains("Business renewal email is not yet wired up") &&
-                o.ToString()!.Contains(_organizationId.ToString()) &&
-                o.ToString()!.Contains(cohort.Name) &&
-                o.ToString()!.Contains(nameof(PlanType.EnterpriseAnnually2020)) &&
-                o.ToString()!.Contains(nameof(PlanType.EnterpriseAnnually))),
+                o.ToString()!.Contains("no PercentOff") &&
+                o.ToString()!.Contains("amount-off-10") &&
+                o.ToString()!.Contains(_organizationId.ToString())),
             Arg.Any<Exception?>(),
             Arg.Any<Func<object, Exception?, string>>());
-        await _mailService.DidNotReceive().SendInvoiceUpcoming(
-            Arg.Any<IEnumerable<string>>(),
-            Arg.Any<decimal>(),
-            Arg.Any<DateTime>(),
-            Arg.Any<List<string>>(),
-            Arg.Any<bool>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenBusinessTier_AndMonthlyTargetPlan_QuotesMonthlySeatPriceWithoutDividing()
+    {
+        // Arrange — the monthly migration path. SeatPrice on a monthly plan is already the per-user
+        // monthly figure, so it must NOT be divided by 12, and the annual total is SeatPrice x 12 x
+        // seats. This is the regression guard for the cadence bug the review flagged.
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var (invoice, subscription, customer) = BuildBusinessFixture(PlanType.EnterpriseMonthly2020);
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.EnterpriseMonthly2020
+        };
+        var enterprise2020MonthlyPlan = new Enterprise2020Plan(isAnnual: false);
+        var enterpriseMonthlyPlan = new EnterprisePlan(isAnnual: false);
+        var cohortId = Guid.NewGuid();
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = _organizationId,
+            CohortId = cohortId,
+            ScheduledDate = null
+        };
+        var cohort = new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "enterprise-2020-monthly",
+            MigrationPathId = MigrationPathId.Enterprise2020MonthlyToCurrent,
+            ProactiveDiscountCouponCode = null,
+            IsActive = true
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(customer.Id, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseMonthly2020).Returns(enterprise2020MonthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseMonthly).Returns(enterpriseMonthlyPlan);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+        _assignmentRepository.GetByOrganizationIdAsync(_organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(cohort);
+        _priceIncreaseScheduler.ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>())
+            .Returns(true);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — monthly EnterprisePlan SeatPrice is $7.00 (used as-is, NOT /12);
+        // annual total = $7 x 12 x 320 = $26,880.00.
+        await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
+            mail.View.Seats == 320 &&
+            mail.View.PerUserMonthlyPrice == "$7.00" &&
+            mail.View.AnnualTotalPrice == "$26,880.00"));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenBusinessTier_AndTeamsAnnualMigrationPath_QuotesTeamsTargetPlanPricing()
+    {
+        // Arrange — the Teams annual migration path. Guards the Teams source/target plan resolution, whose
+        // SeatPrice ($48 annual) differs from Enterprise ($72), so a swapped From/To mapping would surface here.
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var (invoice, subscription, customer) = BuildBusinessFixture(PlanType.TeamsAnnually2020);
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.TeamsAnnually2020
+        };
+        var teams2020Plan = new Teams2020Plan(isAnnual: true);
+        var teamsPlan = new TeamsPlan(isAnnual: true);
+        var cohortId = Guid.NewGuid();
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = _organizationId,
+            CohortId = cohortId,
+            ScheduledDate = null
+        };
+        var cohort = new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "teams-2020-annual",
+            MigrationPathId = MigrationPathId.Teams2020AnnualToCurrent,
+            ProactiveDiscountCouponCode = null,
+            IsActive = true
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(customer.Id, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually2020).Returns(teams2020Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(teamsPlan);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+        _assignmentRepository.GetByOrganizationIdAsync(_organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(cohort);
+        _priceIncreaseScheduler.ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>())
+            .Returns(true);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — annual TeamsPlan SeatPrice is $48.00; per-user monthly is $48/12 = $4.00;
+        // annual total = $48 x 320 = $15,360.00. No coupon, so no discount section.
+        await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
+            mail.ToEmails.Contains("org@example.com") &&
+            !mail.View.HasDiscount &&
+            mail.View.Seats == 320 &&
+            mail.View.PerUserMonthlyPrice == "$4.00" &&
+            mail.View.AnnualTotalPrice == "$15,360.00"));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenBusinessTier_AndTeamsMonthlyMigrationPath_QuotesMonthlySeatPriceWithoutDividing()
+    {
+        // Arrange — the Teams monthly migration path. Combines the monthly cadence (SeatPrice used as-is,
+        // not divided by 12) with the Teams tier, completing the four-path cadence x tier matrix.
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var (invoice, subscription, customer) = BuildBusinessFixture(PlanType.TeamsMonthly2020);
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.TeamsMonthly2020
+        };
+        var teams2020MonthlyPlan = new Teams2020Plan(isAnnual: false);
+        var teamsMonthlyPlan = new TeamsPlan(isAnnual: false);
+        var cohortId = Guid.NewGuid();
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = _organizationId,
+            CohortId = cohortId,
+            ScheduledDate = null
+        };
+        var cohort = new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "teams-2020-monthly",
+            MigrationPathId = MigrationPathId.Teams2020MonthlyToCurrent,
+            ProactiveDiscountCouponCode = null,
+            IsActive = true
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(customer.Id, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(teams2020MonthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthlyPlan);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+        _assignmentRepository.GetByOrganizationIdAsync(_organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(cohort);
+        _priceIncreaseScheduler.ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>())
+            .Returns(true);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — monthly TeamsPlan SeatPrice is $5.00 (used as-is, NOT /12);
+        // annual total = $5 x 12 x 320 = $19,200.00.
+        await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
+            mail.View.Seats == 320 &&
+            mail.View.PerUserMonthlyPrice == "$5.00" &&
+            mail.View.AnnualTotalPrice == "$19,200.00"));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenBusinessTier_AndSecretsManagerItemsPrecedePasswordManagerSeat_QuotesPasswordManagerSeatCount()
+    {
+        // Arrange — the subscription carries Secrets Manager seats and service accounts ahead of the
+        // password-manager seat line, with different quantities. Stripe does not guarantee item
+        // ordering, so the email must resolve seats by matching the source plan's seat price ID, not
+        // by taking the first positive-quantity item. This is the regression guard for the seat-count
+        // bug the review flagged.
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var (invoice, subscription, customer) = BuildBusinessFixture(PlanType.EnterpriseAnnually2020);
+        // Prepend non-seat lines with quantities a naive "first positive quantity" lookup would grab.
+        subscription.Items.Data =
+        [
+            new SubscriptionItem
+            {
+                Price = new Price { Id = "secrets-manager-enterprise-seat-annually" },
+                Quantity = 50,
+                CurrentPeriodEnd = new DateTime(2026, 6, 12, 0, 0, 0, DateTimeKind.Utc)
+            },
+            new SubscriptionItem
+            {
+                Price = new Price { Id = "secrets-manager-service-account-annually" },
+                Quantity = 75,
+                CurrentPeriodEnd = new DateTime(2026, 6, 12, 0, 0, 0, DateTimeKind.Utc)
+            },
+            new SubscriptionItem
+            {
+                Price = new Price { Id = "2020-enterprise-org-seat-annually" },
+                Quantity = 320,
+                CurrentPeriodEnd = new DateTime(2026, 6, 12, 0, 0, 0, DateTimeKind.Utc)
+            }
+        ];
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.EnterpriseAnnually2020
+        };
+        var enterprise2020Plan = new Enterprise2020Plan(isAnnual: true);
+        var enterprisePlan = new EnterprisePlan(isAnnual: true);
+        var cohortId = Guid.NewGuid();
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = _organizationId,
+            CohortId = cohortId,
+            ScheduledDate = null
+        };
+        var cohort = new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "enterprise-2020-annual",
+            MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
+            ProactiveDiscountCouponCode = null,
+            IsActive = true
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(customer.Id, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(enterprise2020Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(enterprisePlan);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+        _assignmentRepository.GetByOrganizationIdAsync(_organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(cohort);
+        _priceIncreaseScheduler.ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>())
+            .Returns(true);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — the password-manager seat quantity (320) is quoted, NOT the SM-seat (50) or
+        // service-account (75) quantity. Annual EnterprisePlan SeatPrice is $72: 320 x $72 = $23,040.
+        await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
+            mail.View.Seats == 320 &&
+            mail.View.PerUserMonthlyPrice == "$6.00" &&
+            mail.View.AnnualTotalPrice == "$23,040.00"));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenBusinessTier_AndNoRenewalDate_SkipsRenewalEmail_AndLogsError()
+    {
+        // Arrange — subscription has no items, so the current period (and renewal date) can't be
+        // determined; we must skip the email (no blank-date send) and log a warning.
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var (invoice, subscription, customer) = BuildBusinessFixture(PlanType.EnterpriseAnnually2020);
+        subscription.Items.Data = [];
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.EnterpriseAnnually2020
+        };
+        var enterprise2020Plan = new Enterprise2020Plan(isAnnual: true);
+        var enterprisePlan = new EnterprisePlan(isAnnual: true);
+        var cohortId = Guid.NewGuid();
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = _organizationId,
+            CohortId = cohortId,
+            ScheduledDate = null
+        };
+        var cohort = new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "enterprise-2020-annual",
+            MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
+            ProactiveDiscountCouponCode = null,
+            IsActive = true
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(customer.Id, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(enterprise2020Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(enterprisePlan);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+        _assignmentRepository.GetByOrganizationIdAsync(_organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(cohort);
+        _priceIncreaseScheduler.ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>())
+            .Returns(true);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — no email sent, and because the migration is already committed the indeterminate renewal
+        // date is logged at Error level (same alerting severity as a post-schedule send failure).
+        await _mailer.DidNotReceive().SendEmail(Arg.Any<BusinessPlanRenewal2020MigrationMail>());
+        _logger.Received(1).Log(
+            LogLevel.Error,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(o =>
+                o.ToString()!.Contains("renewal date") &&
+                o.ToString()!.Contains("indeterminate") &&
+                o.ToString()!.Contains(_organizationId.ToString())),
+            Arg.Any<Exception?>(),
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
@@ -3972,13 +4556,24 @@ public class UpcomingInvoiceHandlerTests
                 Data = [new() { Description = "Test Item" }]
             }
         };
+        // The renewal email resolves the seat count by matching the source plan's
+        // password-manager seat price ID, so the fixture's seat line must carry that ID.
+        var seatPriceId = SourceSeatPriceId(planType);
         var subscription = new Subscription
         {
             Id = subscriptionId,
             CustomerId = customerId,
             Items = new StripeList<SubscriptionItem>
             {
-                Data = [new SubscriptionItem { Price = new Price { Id = "stub-price" } }]
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = seatPriceId },
+                        Quantity = 320,
+                        CurrentPeriodEnd = new DateTime(2026, 6, 12, 0, 0, 0, DateTimeKind.Utc)
+                    }
+                ]
             },
             AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
             Customer = new Customer { Id = customerId },
@@ -3993,6 +4588,19 @@ public class UpcomingInvoiceHandlerTests
         };
         return (invoice, subscription, customer);
     }
+
+    // Mirrors the password-manager seat price IDs on the mock source plans so the renewal email's
+    // price-ID-based seat lookup resolves the fixture's seat line. Only the 2020 source plans drive
+    // the business renewal email; other plan types return a non-matching stub (the email path isn't
+    // reached for them).
+    private static string SourceSeatPriceId(PlanType planType) => planType switch
+    {
+        PlanType.EnterpriseAnnually2020 => "2020-enterprise-org-seat-annually",
+        PlanType.EnterpriseMonthly2020 => "2020-enterprise-seat-monthly",
+        PlanType.TeamsAnnually2020 => "2020-teams-org-seat-annually",
+        PlanType.TeamsMonthly2020 => "2020-teams-org-seat-monthly",
+        _ => "stub-price"
+    };
 
 }
 
