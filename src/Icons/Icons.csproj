@@ -22,4 +22,8 @@
     <ProjectReference Include="..\Core\Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Icons.Test" />
+  </ItemGroup>
+
 </Project>

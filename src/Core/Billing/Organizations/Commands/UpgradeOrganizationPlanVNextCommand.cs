@@ -43,6 +43,7 @@ public class UpgradeOrganizationPlanVNextCommand(
     IOrganizationBillingService organizationBillingService,
     IOrganizationService organizationService,
     IPricingClient pricingClient,
+    IPriceIncreaseScheduler priceIncreaseScheduler,
     IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand) : BaseBillingCommand<UpgradeOrganizationPlanVNextCommand>(logger), IUpgradeOrganizationPlanVNextCommand
 {
     protected override Conflict DefaultConflict => new("We had a problem upgrading your plan. Please contact support for assistance.");
@@ -102,6 +103,8 @@ public class UpgradeOrganizationPlanVNextCommand(
 
             return new None();
         }
+
+        await priceIncreaseScheduler.Release(organization.GatewayCustomerId, organization.GatewaySubscriptionId!, organization.Id);
 
         var builder = OrganizationSubscriptionChangeSet.Builder(currentPlan);
 

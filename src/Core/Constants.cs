@@ -234,6 +234,7 @@ public static class FeatureFlagKeys
     public const string WebAuthnRelatedOrigins = "pm-30529-webauthn-related-origins";
     public const string ElectronStorageCache = "pm-32783-electron-storage-cache";
     public const string AttachmentUploadProgress = "pm-34410-attachment-upload-progress";
+    public const string FedRampGovRegion = "fedramp-gov-region";
 
     /* Tools Team */
     /// <summary>
@@ -273,6 +274,7 @@ public static class FeatureFlagKeys
     public const string PM32016_RemoveAtRiskCallouts = "pm-32016-remove-at-risk-callouts";
     public const string PM37785_VaultBatchBar = "pm-37785-vault-batch-bar";
     public const string PM37785_DesktopVaultBatchBar = "pm-37785-desktop-vault-batch-bar";
+    public const string PM29968_FillAfterSave = "pm-29968-fill-after-save";
 
     /* Secrets Manager Team */
     public const string SecretsVersioning = "sm-1587-secrets-versioning";
