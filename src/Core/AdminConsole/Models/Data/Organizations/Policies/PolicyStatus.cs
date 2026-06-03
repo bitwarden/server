@@ -1,5 +1,8 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
@@ -21,6 +24,10 @@ public class PolicyStatus
 
     public T GetDataModel<T>() where T : IPolicyDataModel, new()
     {
+        if (string.IsNullOrWhiteSpace(Data))
+            return new T();
+        if (AdminConsoleJsonContext.Default.GetTypeInfo(typeof(T)) is JsonTypeInfo<T> typeInfo)
+            return JsonSerializer.Deserialize(Data, typeInfo) ?? new T();
         return CoreHelpers.LoadClassFromJsonData<T>(Data);
     }
 }

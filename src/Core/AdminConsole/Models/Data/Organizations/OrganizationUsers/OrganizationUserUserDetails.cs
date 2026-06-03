@@ -1,7 +1,9 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Text.Json;
 using Bit.Core.AdminConsole.Interfaces;
+using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Enums;
@@ -77,6 +79,6 @@ public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser, I
     public Permissions GetPermissions()
     {
         return string.IsNullOrWhiteSpace(Permissions) ? null
-            : CoreHelpers.LoadClassFromJsonData<Permissions>(Permissions);
+            : JsonSerializer.Deserialize(Permissions, AdminConsoleJsonContext.Default.Permissions);
     }
 }

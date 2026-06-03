@@ -1,7 +1,8 @@
-﻿using Bit.Core.Enums;
+﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Utilities;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Utilities;
 
 namespace Bit.Core.Context;
 
@@ -17,7 +18,9 @@ public class CurrentContextOrganization
     {
         Id = orgUser.OrganizationId;
         Type = orgUser.Type;
-        Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(orgUser.Permissions);
+        Permissions = string.IsNullOrWhiteSpace(orgUser.Permissions)
+            ? new Permissions()
+            : JsonSerializer.Deserialize(orgUser.Permissions, AdminConsoleJsonContext.Default.Permissions) ?? new Permissions();
         AccessSecretsManager = orgUser.AccessSecretsManager && orgUser.UseSecretsManager && orgUser.Enabled;
     }
 

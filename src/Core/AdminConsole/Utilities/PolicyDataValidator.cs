@@ -31,14 +31,14 @@ public static class PolicyDataValidator
             switch (policyType)
             {
                 case PolicyType.MasterPassword:
-                    var masterPasswordData = CoreHelpers.LoadClassFromJsonData<MasterPasswordPolicyData>(json);
+                    var masterPasswordData = JsonSerializer.Deserialize(json, AdminConsoleJsonContext.Default.MasterPasswordPolicyData) ?? new MasterPasswordPolicyData();
                     ValidateModel(masterPasswordData, policyType);
                     break;
                 case PolicyType.SendOptions:
-                    CoreHelpers.LoadClassFromJsonData<SendOptionsPolicyData>(json);
+                    JsonSerializer.Deserialize(json, AdminConsoleJsonContext.Default.SendOptionsPolicyData);
                     break;
                 case PolicyType.ResetPassword:
-                    CoreHelpers.LoadClassFromJsonData<ResetPasswordDataModel>(json);
+                    JsonSerializer.Deserialize(json, AdminConsoleJsonContext.Default.ResetPasswordDataModel);
                     break;
             }
 

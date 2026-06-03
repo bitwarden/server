@@ -1,7 +1,10 @@
 ﻿#nullable enable
 
+using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
@@ -32,8 +35,16 @@ public class PolicyDetails
     public bool IsProvider { get; set; }
 
     public T GetDataModel<T>() where T : IPolicyDataModel, new()
-        => CoreHelpers.LoadClassFromJsonData<T>(PolicyData);
+    {
+        if (string.IsNullOrWhiteSpace(PolicyData))
+            return new T();
+        if (AdminConsoleJsonContext.Default.GetTypeInfo(typeof(T)) is JsonTypeInfo<T> typeInfo)
+            return JsonSerializer.Deserialize(PolicyData, typeInfo) ?? new T();
+        return CoreHelpers.LoadClassFromJsonData<T>(PolicyData);
+    }
 
     public Permissions GetOrganizationUserCustomPermissions()
-        => CoreHelpers.LoadClassFromJsonData<Permissions>(OrganizationUserPermissionsData);
+        => string.IsNullOrWhiteSpace(OrganizationUserPermissionsData)
+            ? new Permissions()
+            : JsonSerializer.Deserialize(OrganizationUserPermissionsData, AdminConsoleJsonContext.Default.Permissions) ?? new Permissions();
 }

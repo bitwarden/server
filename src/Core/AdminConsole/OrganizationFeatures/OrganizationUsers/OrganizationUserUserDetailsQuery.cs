@@ -1,10 +1,11 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+﻿using System.Text.Json;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
-using Bit.Core.Utilities;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 
@@ -44,7 +45,7 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
                 if (o.Type == OrganizationUserType.Custom)
                 {
                     var userPermissions = o.GetPermissions();
-                    o.Permissions = CoreHelpers.ClassToJsonData(userPermissions);
+                    o.Permissions = JsonSerializer.Serialize(userPermissions, AdminConsoleJsonContext.Default.Permissions);
                 }
 
                 return o;
@@ -75,7 +76,7 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
             if (organizationUserDetails.Type == OrganizationUserType.Custom)
             {
                 var organizationUserPermissions = organizationUserDetails.GetPermissions();
-                organizationUserDetails.Permissions = CoreHelpers.ClassToJsonData(organizationUserPermissions);
+                organizationUserDetails.Permissions = JsonSerializer.Serialize(organizationUserPermissions, AdminConsoleJsonContext.Default.Permissions);
             }
 
             var userHasTwoFactorEnabled = organizationUsersTwoFactorEnabled[organizationUserDetails.Id];
@@ -114,7 +115,7 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
             if (organizationUserDetails.Type == OrganizationUserType.Custom)
             {
                 var organizationUserPermissions = organizationUserDetails.GetPermissions();
-                organizationUserDetails.Permissions = CoreHelpers.ClassToJsonData(organizationUserPermissions);
+                organizationUserDetails.Permissions = JsonSerializer.Serialize(organizationUserPermissions, AdminConsoleJsonContext.Default.Permissions);
             }
 
             var userHasTwoFactorEnabled = organizationUsersTwoFactorEnabled[organizationUserDetails.Id];

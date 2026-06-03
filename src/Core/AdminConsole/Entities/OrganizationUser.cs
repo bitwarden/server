@@ -1,7 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Interfaces;
+using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Data;
@@ -146,11 +148,11 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     public Permissions? GetPermissions()
     {
         return string.IsNullOrWhiteSpace(Permissions) ? null
-            : CoreHelpers.LoadClassFromJsonData<Permissions>(Permissions);
+            : JsonSerializer.Deserialize(Permissions, AdminConsoleJsonContext.Default.Permissions);
     }
 
     public void SetPermissions(Permissions permissions)
     {
-        Permissions = CoreHelpers.ClassToJsonData(permissions);
+        Permissions = JsonSerializer.Serialize(permissions, AdminConsoleJsonContext.Default.Permissions);
     }
 }
