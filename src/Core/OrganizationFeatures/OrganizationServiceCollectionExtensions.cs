@@ -203,6 +203,7 @@ public static class OrganizationServiceCollectionExtensions
         services.TryAddScoped<IUpdateOrganizationInviteLinkCommand, UpdateOrganizationInviteLinkCommand>();
         services.TryAddScoped<IDeleteOrganizationInviteLinkCommand, DeleteOrganizationInviteLinkCommand>();
         services.TryAddScoped<IRefreshOrganizationInviteLinkCommand, RefreshOrganizationInviteLinkCommand>();
+        services.TryAddScoped<IAcceptOrganizationInviteLinkCommand, AcceptOrganizationInviteLinkCommand>();
     }
 
     private static void AddOrganizationDomainCommandsQueries(this IServiceCollection services)
