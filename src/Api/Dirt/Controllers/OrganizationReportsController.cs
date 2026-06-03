@@ -152,7 +152,7 @@ public class OrganizationReportsController : Controller
         if (isAccessIntelligenceV2)
         {
             var fileData = latestReport.GetReportFile();
-            if (fileData != null)
+            if (fileData is { Validated: true })
             {
                 response.ReportFileDownloadUrl = await _storageService.GetReportDataDownloadUrlAsync(latestReport, fileData);
                 response.FileUploadType = _storageService.FileUploadType;
