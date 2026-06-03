@@ -1,0 +1,110 @@
+@using Bit.Admin.Billing.Models.OrganizationPlanMigrationCohorts
+@using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects
+@using Bit.Core.Enums
+@model Bit.Admin.Billing.Models.OrganizationPlanMigrationCohorts.EditCohortViewModel
+@{
+    ViewData["Title"] = $"Cohort: {Model.FormModel.Name}";
+    var unresolved = Model.CohortType as CohortType.UnresolvedMigration;
+}
+
+<div class="mx-auto" style="max-width: 768px;">
+    <h1>Cohort: @Model.FormModel.Name</h1>
+
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+<form method="post" asp-action="Edit" asp-route-id="@Model.FormModel.Id" id="cohort-form">
+
+    <div class="mb-3">
+        <label asp-for="FormModel.MigrationPathSelection" class="form-label">Migration path</label>
+        @if (Model.AssignmentState.HasNonPendingAssignments)
+        {
+            <div>
+                <span class="me-1">🔒</span>
+                @switch (Model.CohortType)
+                {
+                    case CohortType.ChurnOnly:
+                        <span>None (Churn-only cohort)</span>
+                        break;
+                    case CohortType.Migration migration:
+                        @($"{migration.Path.FromPlan.GetDisplayName()} → {migration.Path.ToPlan.GetDisplayName()}")
+                        break;
+                    case CohortType.UnresolvedMigration u:
+                        <span class="text-warning">Unresolved migration #@u.Id</span>
+                        break;
+                }
+            </div>
+            <div class="form-text">
+                Migration path cannot be changed because this cohort has @Model.AssignmentState.NonPendingAssignmentCount.ToString("N0") assignment(s) that have left the Pending state.
+            </div>
+        }
+        else
+        {
+            <select asp-for="FormModel.MigrationPathSelection" name="MigrationPathSelection" class="form-select">
+                @if (unresolved != null)
+                {
+                    <option value="@unresolved.Id" disabled selected>
+                        Unresolved migration #@unresolved.Id
+                    </option>
+                }
+                <option value="@CohortFormModel.NoMigrationPath">None (Churn-only cohort)</option>
+                @foreach (var path in MigrationPaths.All)
+                {
+                    <option value="@((byte)path.Id)">
+                        @($"{path.FromPlan.GetDisplayName()} → {path.ToPlan.GetDisplayName()}")
+                    </option>
+                }
+            </select>
+            @Html.ValidationMessage("MigrationPathSelection", "", new { @class = "text-danger" })
+            <div class="form-text">
+                Pick a source → target plan pair to make this a <strong>Migration</strong> cohort,
+                or <strong>None</strong> to define a <strong>Churn-only</strong> population
+                (no migration scheduled; only the churn save-offer applies).
+            </div>
+        }
+    </div>
+
+    <partial name="_CohortFormFields" model="Model.FormModel" />
+
+    <div class="mb-3 form-check">
+        <input asp-for="FormModel.IsActive" name="IsActive" class="form-check-input" />
+        <label asp-for="FormModel.IsActive" class="form-check-label">Active</label>
+        <div class="form-text">
+            When off, no migrations or save-offers fire for this cohort.
+        </div>
+    </div>
+
+</form>
+
+<div class="d-flex mt-4">
+    <button type="submit" class="btn btn-primary" form="cohort-form">Save</button>
+    <a asp-action="Index" class="btn btn-secondary ms-2">Cancel</a>
+    <div class="ms-auto d-flex">
+        <form method="post" asp-action="Delete" asp-route-id="@Model.FormModel.Id"
+              onsubmit="return confirm('Are you sure you want to delete this cohort?')">
+            <button class="btn btn-danger" type="submit"><i class="fa fa-trash"></i> Delete</button>
+        </form>
+    </div>
+</div>
+</div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const NO_PATH = '@CohortFormModel.NoMigrationPath';
+            const proactiveRow = document.getElementById('proactive-coupon-row');
+            const churnOptionalLabel = document.getElementById('churn-optional-label');
+            const select = document.getElementById('@Html.IdFor(m => m.FormModel.MigrationPathSelection)');
+
+            const applyVisibility = (value) => {
+                const isChurnOnly = value === NO_PATH;
+                proactiveRow.hidden = isChurnOnly;
+                churnOptionalLabel.hidden = isChurnOnly;
+                if (isChurnOnly) {
+                    proactiveRow.querySelector('input').value = '';
+                }
+            };
+
+            select?.addEventListener('change', (e) => applyVisibility(e.target.value));
+        })();
+    </script>
+}

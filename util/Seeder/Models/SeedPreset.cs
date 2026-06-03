@@ -25,6 +25,7 @@ internal record SeedPresetOrganization
     public string? Fixture { get; init; }
     public string? Name { get; init; }
     public string? Domain { get; init; }
+    public List<string>? ClaimedDomains { get; init; }
     public int? Seats { get; init; }
     public string? PlanType { get; init; }
     public bool? UseAutomaticUserConfirmation { get; init; }

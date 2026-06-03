@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Bit.Core.Test.Auth.UserFeatures.UserMasterPassword.Data;
 
-public class UpdateExistingPasswordAndKdfDataTests
+public class UpdateExistingKdfConfigurationDataTests
 {
     private static User BuildValidUser()
     {
@@ -24,7 +24,7 @@ public class UpdateExistingPasswordAndKdfDataTests
         };
     }
 
-    private static UpdateExistingPasswordAndKdfData BuildData(User user, string? saltOverride = null)
+    private static UpdateExistingKdfConfigurationData BuildData(User user, string? saltOverride = null)
     {
         var salt = saltOverride ?? user.GetMasterPasswordSalt();
         var newKdf = new KdfSettings
@@ -34,7 +34,7 @@ public class UpdateExistingPasswordAndKdfDataTests
             Memory = 64,
             Parallelism = 4
         };
-        return new UpdateExistingPasswordAndKdfData
+        return new UpdateExistingKdfConfigurationData
         {
             MasterPasswordUnlock = new MasterPasswordUnlockData
             {
@@ -100,7 +100,7 @@ public class UpdateExistingPasswordAndKdfDataTests
         var user = BuildValidUser();
         var correctSalt = user.GetMasterPasswordSalt();
         var newKdf = new KdfSettings { KdfType = KdfType.Argon2id, Iterations = 3, Memory = 64, Parallelism = 4 };
-        var data = new UpdateExistingPasswordAndKdfData
+        var data = new UpdateExistingKdfConfigurationData
         {
             MasterPasswordUnlock = new MasterPasswordUnlockData
             {

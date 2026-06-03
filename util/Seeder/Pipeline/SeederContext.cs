@@ -56,6 +56,8 @@ public sealed class SeederContext(IServiceProvider services)
 
     internal List<Organization> Organizations { get; } = [];
 
+    internal List<OrganizationDomain> OrganizationDomains { get; } = [];
+
     internal List<User> Users { get; } = [];
 
     internal List<OrganizationUser> OrganizationUsers { get; } = [];
