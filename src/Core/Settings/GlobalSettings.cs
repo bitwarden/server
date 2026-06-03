@@ -80,7 +80,6 @@ public class GlobalSettings : IGlobalSettings
     public virtual BitPaySettings BitPay { get; set; } = new BitPaySettings();
     public virtual AmazonSettings Amazon { get; set; } = new AmazonSettings();
     public virtual ServiceBusSettings ServiceBus { get; set; } = new ServiceBusSettings();
-    public virtual AppleIapSettings AppleIap { get; set; } = new AppleIapSettings();
     public virtual ISsoSettings Sso { get; set; } = new SsoSettings();
     public virtual StripeSettings Stripe { get; set; } = new StripeSettings();
     public virtual DistributedIpRateLimitingSettings DistributedIpRateLimiting { get; set; } =
@@ -706,12 +705,6 @@ public class GlobalSettings : IGlobalSettings
         public string ApplicationCacheTopicName { get; set; }
         public string ApplicationCacheSubscriptionName { get; set; }
         public string WebSiteInstanceId { get; set; }
-    }
-
-    public class AppleIapSettings
-    {
-        public string Password { get; set; }
-        public bool AppInReview { get; set; }
     }
 
     public class SsoSettings : ISsoSettings
