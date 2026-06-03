@@ -1557,7 +1557,7 @@ public class OrganizationReportControllerTests
             .GetOrganizationReportAsync(report.Id)
             .Returns(report);
 
-        var stream = new MemoryStream(new byte[] { 1, 2, 3 });
+        using var stream = new MemoryStream(new byte[] { 1, 2, 3 });
         sutProvider.GetDependency<IOrganizationReportStorageService>()
             .GetReportReadStreamAsync(report, Arg.Any<ReportFile>())
             .Returns(stream);
@@ -1591,7 +1591,7 @@ public class OrganizationReportControllerTests
             .GetOrganizationReportAsync(report.Id)
             .Returns(report);
 
-        var stream = new MemoryStream(new byte[] { 1, 2, 3 });
+        using var stream = new MemoryStream(new byte[] { 1, 2, 3 });
         sutProvider.GetDependency<IOrganizationReportStorageService>()
             .GetReportReadStreamAsync(report, Arg.Any<ReportFile>())
             .Returns(stream);
