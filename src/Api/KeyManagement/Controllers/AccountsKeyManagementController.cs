@@ -47,6 +47,7 @@ public class AccountsKeyManagementController : Controller
     private readonly IRotationValidator<IEnumerable<OtherDeviceKeysUpdateRequestModel>, IEnumerable<Device>> _deviceValidator;
     private readonly IKeyConnectorConfirmationDetailsQuery _keyConnectorConfirmationDetailsQuery;
     private readonly ISetKeyConnectorKeyCommand _setKeyConnectorKeyCommand;
+    private readonly IConvertUserToKeyConnectorCommand _convertUserToKeyConnectorCommand;
 
     public AccountsKeyManagementController(IUserService userService,
         IOrganizationUserRepository organizationUserRepository,
@@ -64,7 +65,8 @@ public class AccountsKeyManagementController : Controller
         IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
             webAuthnKeyValidator,
         IRotationValidator<IEnumerable<OtherDeviceKeysUpdateRequestModel>, IEnumerable<Device>> deviceValidator,
-        ISetKeyConnectorKeyCommand setKeyConnectorKeyCommand)
+        ISetKeyConnectorKeyCommand setKeyConnectorKeyCommand,
+        IConvertUserToKeyConnectorCommand convertUserToKeyConnectorCommand)
     {
         _userService = userService;
         _regenerateUserAsymmetricKeysCommand = regenerateUserAsymmetricKeysCommand;
@@ -80,6 +82,7 @@ public class AccountsKeyManagementController : Controller
         _deviceValidator = deviceValidator;
         _keyConnectorConfirmationDetailsQuery = keyConnectorConfirmationDetailsQuery;
         _setKeyConnectorKeyCommand = setKeyConnectorKeyCommand;
+        _convertUserToKeyConnectorCommand = convertUserToKeyConnectorCommand;
     }
 
     [HttpPost("key-management/regenerate-keys")]
@@ -219,18 +222,7 @@ public class AccountsKeyManagementController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _userService.ConvertToKeyConnectorAsync(user, null);
-        if (result.Succeeded)
-        {
-            return;
-        }
-
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        throw new BadRequestException(ModelState);
+        await _convertUserToKeyConnectorCommand.ConvertAsync(user);
     }
 
     [HttpPost("key-connector/enroll")]
@@ -242,18 +234,7 @@ public class AccountsKeyManagementController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _userService.ConvertToKeyConnectorAsync(user, model.KeyConnectorKeyWrappedUserKey);
-        if (result.Succeeded)
-        {
-            return;
-        }
-
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        throw new BadRequestException(ModelState);
+        await _convertUserToKeyConnectorCommand.ConvertAsync(user, model.KeyConnectorKeyWrappedUserKey);
     }
 
     [HttpGet("key-connector/confirmation-details/{orgSsoIdentifier}")]
