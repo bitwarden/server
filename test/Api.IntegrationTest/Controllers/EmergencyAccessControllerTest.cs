@@ -1,16 +1,19 @@
 ﻿using System.Net;
+using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
+using Bit.Core.Tokens;
 using Microsoft.AspNetCore.Identity;
 using Xunit;
 
@@ -284,6 +287,50 @@ public class EmergencyAccessControllerTest : IClassFixture<ApiApplicationFactory
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("Emergency Access not valid.", content);
+    }
+
+    /// <summary>
+    /// Verifies the accept-invite call site composes its token guard correctly
+    /// </summary>
+    [Fact]
+    public async Task PostAccept_ExpiredToken_BadRequest()
+    {
+        // Seed a separate EA in Invited state addressed to the grantee. The
+        // class-level seed targets RecoveryApproved for the password tests; we
+        // need a distinct Invited row so the accept-invite handler will reach
+        // the token-validation gate.
+        var grantor = await _userRepository.GetByEmailAsync(_grantorEmail);
+        Assert.NotNull(grantor);
+        var invitedEa = await _emergencyAccessRepository.CreateAsync(new EmergencyAccess
+        {
+            GrantorId = grantor.Id,
+            Email = _granteeEmail,
+            Type = EmergencyAccessType.View,
+            Status = EmergencyAccessStatusType.Invited,
+            WaitTimeDays = 1,
+        });
+
+        // Round-trip through the real DataProtector so TryUnprotect succeeds at
+        // the controller — the rejection must come from the .Valid expiration
+        // check, not from a parse failure.
+        var tokenFactory = _factory.GetService<IDataProtectorTokenFactory<EmergencyAccessInviteTokenable>>();
+        var expiredToken = tokenFactory.Protect(new EmergencyAccessInviteTokenable(invitedEa, hoursTillExpiration: -1));
+
+        await _loginHelper.LoginAsync(_granteeEmail);
+
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"/emergency-access/{invitedEa.Id}/accept");
+        message.Content = JsonContent.Create(new OrganizationUserAcceptRequestModel { Token = expiredToken });
+        var response = await _client.SendAsync(message);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Invalid token.", content);
+
+        // Row must not have advanced past Invited or picked up a GranteeId.
+        var unchanged = await _emergencyAccessRepository.GetByIdAsync(invitedEa.Id);
+        Assert.NotNull(unchanged);
+        Assert.Equal(EmergencyAccessStatusType.Invited, unchanged.Status);
+        Assert.Null(unchanged.GranteeId);
     }
 
     /// <summary>

@@ -11,6 +11,7 @@ using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Stripe;
 using Xunit;
 
@@ -21,6 +22,7 @@ public class UpgradeOrganizationPlanVNextCommandTests
     private readonly IOrganizationBillingService _organizationBillingService = Substitute.For<IOrganizationBillingService>();
     private readonly IOrganizationService _organizationService = Substitute.For<IOrganizationService>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
+    private readonly IPriceIncreaseScheduler _priceIncreaseScheduler = Substitute.For<IPriceIncreaseScheduler>();
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand = Substitute.For<IUpdateOrganizationSubscriptionCommand>();
     private readonly UpgradeOrganizationPlanVNextCommand _command;
 
@@ -31,6 +33,7 @@ public class UpgradeOrganizationPlanVNextCommandTests
             _organizationBillingService,
             _organizationService,
             _pricingClient,
+            _priceIncreaseScheduler,
             _updateOrganizationSubscriptionCommand);
     }
 
@@ -343,6 +346,110 @@ public class UpgradeOrganizationPlanVNextCommandTests
         // Result is mapped through — BadRequest becomes T1
         Assert.True(result.IsT1);
         await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>(), Arg.Any<EventType?>());
+    }
+
+    [Fact]
+    public async Task Run_PaidUpgrade_TrackAOrg_ReleasesScheduleWithOrganizationId()
+    {
+        // Track A: a 2020-era source plan upgrading to a current plan. Tiers ascend
+        // (Teams sort order 3 -> Enterprise sort order 4) so the upgrade is accepted.
+        var organization = CreateOrganization(PlanType.TeamsAnnually2020);
+        var currentPlan = MockPlans.Get(PlanType.TeamsAnnually2020);
+        var targetPlan = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        SetupSubscriptionCommandSuccess();
+
+        var result = await _command.Run(organization, targetPlan, null);
+
+        Assert.True(result.IsT0);
+        await _priceIncreaseScheduler.Received(1).Release(
+            organization.GatewayCustomerId!,
+            organization.GatewaySubscriptionId!,
+            organization.Id);
+    }
+
+    [Fact]
+    public async Task Run_PaidUpgrade_TwentyTwentyToTwentyTwenty_ReleasesScheduleWithOrganizationId()
+    {
+        // 2020-era source upgrading to a 2020-era target across ascending tiers
+        // (Teams 2020 sort order 3 -> Enterprise 2020 sort order 4).
+        var organization = CreateOrganization(PlanType.TeamsAnnually2020);
+        var currentPlan = MockPlans.Get(PlanType.TeamsAnnually2020);
+        var targetPlan = MockPlans.Get(PlanType.EnterpriseAnnually2020);
+
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        SetupSubscriptionCommandSuccess();
+
+        var result = await _command.Run(organization, targetPlan, null);
+
+        Assert.True(result.IsT0);
+        await _priceIncreaseScheduler.Received(1).Release(
+            organization.GatewayCustomerId!,
+            organization.GatewaySubscriptionId!,
+            organization.Id);
+    }
+
+    [Fact]
+    public async Task Run_UpgradeFromFree_DoesNotReleaseSchedule()
+    {
+        var organization = CreateOrganization(
+            PlanType.Free,
+            gatewaySubscriptionId: null,
+            seats: 2);
+        var currentPlan = MockPlans.Get(PlanType.Free);
+        var targetPlan = MockPlans.Get(PlanType.TeamsAnnually);
+
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+
+        var result = await _command.Run(organization, targetPlan, null);
+
+        Assert.True(result.IsT0);
+        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs()
+            .Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
+    }
+
+    [Fact]
+    public async Task Run_PaidUpgrade_NonTrackAOrg_StillReleasesScheduleWithOrganizationId()
+    {
+        // Non-Track-A: a current (non-2020) source plan still releases on upgrade.
+        var organization = CreateOrganization(PlanType.TeamsAnnually);
+        var currentPlan = MockPlans.Get(PlanType.TeamsAnnually);
+        var targetPlan = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        SetupSubscriptionCommandSuccess();
+
+        var result = await _command.Run(organization, targetPlan, null);
+
+        Assert.True(result.IsT0);
+        await _priceIncreaseScheduler.Received(1).Release(
+            organization.GatewayCustomerId!,
+            organization.GatewaySubscriptionId!,
+            organization.Id);
+    }
+
+    [Fact]
+    public async Task Run_PaidUpgrade_ReleaseThrows_AbortsUpgrade()
+    {
+        var organization = CreateOrganization(PlanType.TeamsAnnually);
+        var currentPlan = MockPlans.Get(PlanType.TeamsAnnually);
+        var targetPlan = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+
+        _priceIncreaseScheduler
+            .Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>())
+            .ThrowsAsync(new InvalidOperationException("release failed"));
+
+        var result = await _command.Run(organization, targetPlan, null);
+
+        // HandleAsync converts the thrown exception into an Unhandled error result.
+        Assert.True(result.IsT3);
+        await _updateOrganizationSubscriptionCommand.DidNotReceiveWithAnyArgs()
+            .Run(Arg.Any<Organization>(), Arg.Any<OrganizationSubscriptionChangeSet>());
+        await _organizationService.DidNotReceive()
+            .ReplaceAndUpdateCacheAsync(Arg.Any<Organization>(), Arg.Any<EventType?>());
     }
 
     private void SetupSubscriptionCommandSuccess()
