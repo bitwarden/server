@@ -694,6 +694,154 @@ public class PriceIncreaseSchedulerTests
         await Assert.ThrowsAsync<StripeException>(() => sut.Release("cus_1", "sub_1"));
     }
 
+    [Fact]
+    public async Task Release_WithOrganizationId_ReleasesScheduleThenDeletesAssignment()
+    {
+        var orgId = Guid.NewGuid();
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data = [CreateSchedule("sched_1", "sub_1", SubscriptionScheduleStatus.Active)]
+            });
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CohortId = Guid.NewGuid()
+        };
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(assignment);
+
+        var sut = CreateSut();
+
+        await sut.Release("cus_1", "sub_1", orgId);
+
+        await _stripeAdapter.Received(1).ReleaseSubscriptionScheduleAsync("sched_1", null);
+        await _assignmentRepository.Received(1).DeleteAsync(assignment);
+    }
+
+    [Fact]
+    public async Task Release_WithOrganizationId_NoAssignmentRow_ReleasesScheduleAndDoesNotDelete()
+    {
+        var orgId = Guid.NewGuid();
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data = [CreateSchedule("sched_1", "sub_1", SubscriptionScheduleStatus.Active)]
+            });
+
+        _assignmentRepository.GetByOrganizationIdAsync(orgId)
+            .Returns((OrganizationPlanMigrationCohortAssignment?)null);
+
+        var sut = CreateSut();
+
+        await sut.Release("cus_1", "sub_1", orgId);
+
+        await _stripeAdapter.Received(1).ReleaseSubscriptionScheduleAsync("sched_1", null);
+        await _assignmentRepository.DidNotReceiveWithAnyArgs()
+            .DeleteAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
+    }
+
+    [Fact]
+    public async Task Release_WithoutOrganizationId_NeverTouchesAssignmentRepository()
+    {
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data = [CreateSchedule("sched_1", "sub_1", SubscriptionScheduleStatus.Active)]
+            });
+
+        var sut = CreateSut();
+
+        await sut.Release("cus_1", "sub_1");
+
+        await _stripeAdapter.Received(1).ReleaseSubscriptionScheduleAsync("sched_1", null);
+        await _assignmentRepository.DidNotReceiveWithAnyArgs()
+            .GetByOrganizationIdAsync(Arg.Any<Guid>());
+        await _assignmentRepository.DidNotReceiveWithAnyArgs()
+            .DeleteAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
+    }
+
+    [Fact]
+    public async Task Release_WithOrganizationId_NoActiveSchedule_StillDeletesAssignment()
+    {
+        var orgId = Guid.NewGuid();
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CohortId = Guid.NewGuid()
+        };
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(assignment);
+
+        var sut = CreateSut();
+
+        await sut.Release("cus_1", "sub_1", orgId);
+
+        await _stripeAdapter.DidNotReceiveWithAnyArgs()
+            .ReleaseSubscriptionScheduleAsync(Arg.Any<string>(), Arg.Any<SubscriptionScheduleReleaseOptions>());
+        await _assignmentRepository.Received(1).DeleteAsync(assignment);
+    }
+
+    [Fact]
+    public async Task Release_WithOrganizationId_StripeReleaseThrows_DoesNotDeleteAndRethrows()
+    {
+        var orgId = Guid.NewGuid();
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data = [CreateSchedule("sched_1", "sub_1", SubscriptionScheduleStatus.Active)]
+            });
+
+        _stripeAdapter.ReleaseSubscriptionScheduleAsync("sched_1", null)
+            .ThrowsAsync(new StripeException("release failed"));
+
+        var sut = CreateSut();
+
+        await Assert.ThrowsAsync<StripeException>(() => sut.Release("cus_1", "sub_1", orgId));
+
+        await _assignmentRepository.DidNotReceiveWithAnyArgs()
+            .DeleteAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
+    }
+
+    [Fact]
+    public async Task Release_WithOrganizationId_AssignmentDeleteThrows_DoesNotRethrow()
+    {
+        var orgId = Guid.NewGuid();
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data = [CreateSchedule("sched_1", "sub_1", SubscriptionScheduleStatus.Active)]
+            });
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CohortId = Guid.NewGuid()
+        };
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(assignment);
+        _assignmentRepository.DeleteAsync(assignment)
+            .ThrowsAsync(new InvalidOperationException("delete failed"));
+
+        var sut = CreateSut();
+
+        // The schedule release succeeded, so a failure to drop the cohort assignment is logged
+        // and swallowed rather than failing the operation.
+        await sut.Release("cus_1", "sub_1", orgId);
+
+        await _stripeAdapter.Received(1).ReleaseSubscriptionScheduleAsync("sched_1", null);
+        await _assignmentRepository.Received(1).DeleteAsync(assignment);
+    }
+
     // --- Business path tests ---
 
     [Fact]
