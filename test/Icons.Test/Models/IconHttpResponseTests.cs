@@ -93,7 +93,11 @@ public class IconHttpResponseTests
         var handler = new MockedHttpMessageHandler();
         handler.Fallback
             .WithStatusCode(HttpStatusCode.OK)
-            .WithContent("image/png", new byte[] { 137, 80, 78, 71 });
+            .WithContent("image/png", new byte[]
+            {
+                137, 80, 78, 71, 13, 10, 26, 10,
+                0, 0, 0, 0, 73, 69, 78, 68, 0, 0, 0, 0,
+            });
 
         substitute.CreateClient("Icons").Returns(handler.ToHttpClient());
         return substitute;

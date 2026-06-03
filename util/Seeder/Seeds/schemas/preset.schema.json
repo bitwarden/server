@@ -30,6 +30,12 @@
           "type": "string",
           "description": "Organization domain (used with inline creation and generator seeding)."
         },
+        "claimedDomains": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true,
+          "description": "Claimed (verified) organization domains to seed. Each becomes a verified OrganizationDomain row."
+        },
         "seats": {
           "type": "integer",
           "minimum": 1,

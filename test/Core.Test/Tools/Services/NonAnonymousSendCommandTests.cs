@@ -1078,8 +1078,8 @@ public class NonAnonymousSendCommandTests
             .Returns(Task.CompletedTask);
 
         // Configure validation to fail due to file size mismatch
-        _nonAnonymousSendCommand.ConfirmFileSize(send)
-            .Returns(false);
+        _sendFileStorageService.ValidateFileAsync(send, fileId, Arg.Any<long>(), Arg.Any<long>())
+            .Returns((false, 0L));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -1518,14 +1518,17 @@ public class NonAnonymousSendCommandTests
         await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
     }
 
-    [Fact]
-    public async Task SaveSendAsync_ExistingSend_FlagOn_DoesNotLogEvent()
+    [Theory]
+    [InlineData(SendType.Text, EventType.Send_Edited_Text)]
+    [InlineData(SendType.File, EventType.Send_Edited_File)]
+    public async Task SaveSendAsync_ExistingSend_FlagOn_LogsExpectedEventType(
+        SendType sendType, EventType expectedEventType)
     {
         var userId = Guid.NewGuid();
         var send = new Send
         {
             Id = Guid.NewGuid(),
-            Type = SendType.Text,
+            Type = sendType,
             UserId = userId,
         };
 
@@ -1535,6 +1538,68 @@ public class NonAnonymousSendCommandTests
         await _nonAnonymousSendCommand.SaveSendAsync(send);
 
         await _sendRepository.Received(1).UpsertAsync(send);
+        await _eventService.Received(1).LogUserEventAsync(userId, expectedEventType);
+    }
+
+    [Fact]
+    public async Task SaveSendAsync_ExistingSend_FlagOff_DoesNotLogEvent()
+    {
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.Text,
+            UserId = userId,
+        };
+
+        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(false);
+        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
+
+        await _nonAnonymousSendCommand.SaveSendAsync(send);
+
+        await _sendRepository.Received(1).UpsertAsync(send);
+        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+    }
+
+    [Theory]
+    [InlineData(SendType.Text, EventType.Send_Deleted_Text)]
+    [InlineData(SendType.File, EventType.Send_Deleted_File)]
+    public async Task DeleteSendAsync_FlagOn_LogsExpectedEventType(
+        SendType sendType, EventType expectedEventType)
+    {
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = sendType,
+            UserId = userId,
+        };
+
+        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
+
+        await _nonAnonymousSendCommand.DeleteSendAsync(send);
+
+        await _sendRepository.Received(1).DeleteAsync(send);
+        await _pushNotificationService.Received(1).PushSyncSendDeleteAsync(send);
+        await _eventService.Received(1).LogUserEventAsync(userId, expectedEventType);
+    }
+
+    [Fact]
+    public async Task DeleteSendAsync_FlagOff_DoesNotLogEvent()
+    {
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.Text,
+            UserId = userId,
+        };
+
+        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(false);
+
+        await _nonAnonymousSendCommand.DeleteSendAsync(send);
+
+        await _sendRepository.Received(1).DeleteAsync(send);
         await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
     }
 }
