@@ -45,6 +45,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     private readonly LoginHelper _loginHelper;
     private readonly IUserRepository _userRepository;
     private readonly IPushNotificationService _pushNotificationService;
+    private readonly IMailService _mailService;
     private readonly IFeatureService _featureService;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IOrganizationRepository _organizationRepository;
@@ -62,10 +63,12 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         _factory.SubstituteService<IPushNotificationService>(_ => { });
         _factory.SubstituteService<IFeatureService>(_ => { });
         _factory.SubstituteService<IStripeSyncService>(_ => { });
+        _factory.SubstituteService<IMailService>(_ => { });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
         _userRepository = _factory.GetService<IUserRepository>();
         _pushNotificationService = _factory.GetService<IPushNotificationService>();
+        _mailService = _factory.GetService<IMailService>();
         _featureService = _factory.GetService<IFeatureService>();
         _passwordHasher = _factory.GetService<IPasswordHasher<User>>();
         _organizationRepository = _factory.GetService<IOrganizationRepository>();
@@ -1365,6 +1368,9 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     public async Task PostEmail_Success_UpdatesEmailAndPassword()
     {
         // Arrange
+        // Pin the self-service flag off: the class-scoped IFeatureService substitute persists
+        // returns set by other tests in this class, so legacy-path tests must opt out explicitly.
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(false);
         var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
         await _loginHelper.LoginAsync(_ownerEmail);
 
@@ -1394,6 +1400,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     public async Task PostEmail_WhenInvalidMasterPassword_ReturnsBadRequest()
     {
         // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(false);
         var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
         await _loginHelper.LoginAsync(_ownerEmail);
 
@@ -1429,6 +1436,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     public async Task PostEmail_WhenStripeSyncFails_MasterPasswordSaltIsRolledBack()
     {
         // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(false);
         var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
         await _loginHelper.LoginAsync(_ownerEmail);
 
@@ -1619,6 +1627,222 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         {
             MasterPasswordHash = masterPasswordHash
         });
+        return await _client.SendAsync(message);
+    }
+
+    [Fact]
+    public async Task PostEmail_SelfServiceFlagOn_Success_UpdatesEmailWithoutTouchingPasswordOrKey()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
+        var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var userBefore = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userBefore);
+        var originalKey = userBefore.Key;
+        var originalMasterPassword = userBefore.MasterPassword;
+        var originalSecurityStamp = userBefore.SecurityStamp;
+
+        var userManager = _factory.GetService<UserManager<User>>();
+        var token = await userManager.GenerateChangeEmailTokenAsync(userBefore, newEmail);
+
+        var response = await PostEmailSelfServiceAsync(newEmail, token, _masterPasswordHash);
+
+        response.EnsureSuccessStatusCode();
+
+        var updatedUser = await _userRepository.GetByEmailAsync(newEmail);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(newEmail, updatedUser.Email);
+        Assert.True(updatedUser.EmailVerified);
+        // Post-decoupling self-service flow: the master password, derived security stamp, and
+        // wrapped user key MUST NOT rotate just because the email changed.
+        Assert.Equal(originalKey, updatedUser.Key);
+        Assert.Equal(originalMasterPassword, updatedUser.MasterPassword);
+        Assert.Equal(originalSecurityStamp, updatedUser.SecurityStamp);
+    }
+
+    [Fact]
+    public async Task PostEmail_SelfServiceFlagOn_InvalidMasterPassword_BadRequest_AndDoesNotChangeEmail()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
+        var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(user);
+
+        var userManager = _factory.GetService<UserManager<User>>();
+        var token = await userManager.GenerateChangeEmailTokenAsync(user, newEmail);
+
+        var response = await PostEmailSelfServiceAsync(newEmail, token, "wrong-master-password-hash");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var unchangedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(unchangedUser);
+        Assert.Equal(_ownerEmail, unchangedUser.Email);
+    }
+
+    [Fact]
+    public async Task PostEmail_SelfServiceFlagOn_InvalidToken_BadRequest_AndDoesNotChangeEmail()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
+        var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var response = await PostEmailSelfServiceAsync(newEmail, "not-a-valid-token", _masterPasswordHash);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var unchangedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(unchangedUser);
+        Assert.Equal(_ownerEmail, unchangedUser.Email);
+    }
+
+    [Fact]
+    public async Task PostEmail_LegacyFlagOff_MissingNewMasterPasswordHashAndKey_BadRequest()
+    {
+        // With the flag off, the legacy path still requires NewMasterPasswordHash and Key. The
+        // self-service-only payload (no password rotation, no key) must be rejected so legacy
+        // clients can't accidentally bypass key rotation.
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(false);
+        var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(user);
+
+        var userManager = _factory.GetService<UserManager<User>>();
+        var token = await userManager.GenerateChangeEmailTokenAsync(user, newEmail);
+
+        var response = await PostEmailSelfServiceAsync(newEmail, token, _masterPasswordHash);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var unchangedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(unchangedUser);
+        Assert.Equal(_ownerEmail, unchangedUser.Email);
+    }
+
+    [Fact]
+    public async Task PostEmail_SelfServiceFlagOn_KeyConnectorUser_BadRequest_AndDoesNotChangeEmail()
+    {
+        // The KeyConnector gate now lives inside SelfServiceChangeEmailCommand via
+        // KeyConnectorOperations.Use. This test exercises the full DI graph (KeyConnectorAuthorizationHandler
+        // wired up, ICurrentContext populated, IAuthorizationService resolving the requirement) to
+        // confirm KeyConnector users still get a BadRequest on the flag-on path.
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
+        var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(user);
+        user.UsesKeyConnector = true;
+        await _userRepository.ReplaceAsync(user);
+
+        var userManager = _factory.GetService<UserManager<User>>();
+        var token = await userManager.GenerateChangeEmailTokenAsync(user, newEmail);
+
+        var response = await PostEmailSelfServiceAsync(newEmail, token, _masterPasswordHash);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var unchangedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(unchangedUser);
+        Assert.Equal(_ownerEmail, unchangedUser.Email);
+    }
+
+    [Fact]
+    public async Task PostEmailToken_SelfServiceFlagOn_NewEmailAvailable_SendsChangeEmailWithToken()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
+        var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var response = await PostEmailTokenAsync(newEmail, _masterPasswordHash);
+
+        response.EnsureSuccessStatusCode();
+
+        await _mailService.Received(1)
+            .SendChangeEmailEmailAsync(newEmail, Arg.Is<string>(t => !string.IsNullOrEmpty(t)));
+        await _mailService.DidNotReceive()
+            .SendChangeEmailAlreadyExistsEmailAsync(Arg.Any<string>(), newEmail);
+
+        var unchangedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(unchangedUser);
+        Assert.Equal(_ownerEmail, unchangedUser.Email);
+    }
+
+    [Fact]
+    public async Task PostEmailToken_SelfServiceFlagOn_NewEmailInUse_NotifiesCurrentEmailAndDoesNotIssueToken()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
+
+        // Register a second account to take the target email, then log back in as the owner.
+        var existingEmail = $"existing-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(existingEmail);
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var response = await PostEmailTokenAsync(existingEmail, _masterPasswordHash);
+
+        // Success is returned to the caller so the API surface does not leak whether the new
+        // email is already registered; the existing account is notified out-of-band instead.
+        response.EnsureSuccessStatusCode();
+
+        await _mailService.Received(1)
+            .SendChangeEmailAlreadyExistsEmailAsync(_ownerEmail, existingEmail);
+        await _mailService.DidNotReceive()
+            .SendChangeEmailEmailAsync(existingEmail, Arg.Any<string>());
+
+        var unchangedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(unchangedUser);
+        Assert.Equal(_ownerEmail, unchangedUser.Email);
+    }
+
+    [Fact]
+    public async Task PostEmailToken_SelfServiceFlagOn_InvalidMasterPassword_BadRequest_AndDoesNotSendMail()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
+        var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var response = await PostEmailTokenAsync(newEmail, "wrong-master-password-hash");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        await _mailService.DidNotReceive()
+            .SendChangeEmailEmailAsync(newEmail, Arg.Any<string>());
+        await _mailService.DidNotReceive()
+            .SendChangeEmailAlreadyExistsEmailAsync(Arg.Any<string>(), newEmail);
+    }
+
+    // Posts the self-service-shaped payload (no new master password / key) to the merged
+    // /accounts/email endpoint. The same endpoint serves both paths; the feature flag picks
+    // which command actually runs.
+    private async Task<HttpResponseMessage> PostEmailSelfServiceAsync(string newEmail, string token, string masterPasswordHash)
+    {
+        var requestModel = new EmailRequestModel
+        {
+            MasterPasswordHash = masterPasswordHash,
+            NewEmail = newEmail,
+            Token = token
+        };
+
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/email");
+        message.Content = JsonContent.Create(requestModel);
+        return await _client.SendAsync(message);
+    }
+
+    private async Task<HttpResponseMessage> PostEmailTokenAsync(string newEmail, string masterPasswordHash)
+    {
+        var requestModel = new EmailTokenRequestModel
+        {
+            MasterPasswordHash = masterPasswordHash,
+            NewEmail = newEmail
+        };
+
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/email-token");
+        message.Content = JsonContent.Create(requestModel);
         return await _client.SendAsync(message);
     }
 }

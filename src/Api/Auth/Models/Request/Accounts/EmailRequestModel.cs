@@ -12,11 +12,12 @@ public class EmailRequestModel : SecretVerificationRequestModel
     [StrictEmailAddress]
     [StringLength(256)]
     public string NewEmail { get; set; }
-    [Required]
+    // Optional at the model level; the legacy /accounts/email path still requires it and validates
+    // explicitly when the PM30806_SelfServiceChangeEmailCommand feature flag is off.
     [StringLength(300)]
     public string NewMasterPasswordHash { get; set; }
     [Required]
     public string Token { get; set; }
-    [Required]
+    // Optional at the model level; same legacy-path validation as NewMasterPasswordHash.
     public string Key { get; set; }
 }
