@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Interfaces;
 using Bit.Core.Enums;
 using Bit.Core.Models;
@@ -49,6 +50,18 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     /// <inheritdoc cref="OrganizationUserStatusType"/>
     public OrganizationUserStatusType Status { get; set; }
     /// <summary>
+    /// Represents the different stages of a member's lifecycle in an organization.
+    /// The <see cref="OrganizationUser"/> object is populated differently depending on their Status.
+    /// </summary>
+    /// <remarks>
+    /// This is effectively a v2 version of OrganizationUserStatusType that severs Revoked as a status type.
+    ///
+    /// It is not fully in use yet and should not be used outside the restore/revoke flows.
+    /// It is only used to back up the Status before revoking a user, and restore
+    /// the user to the correct status later. It should be null if the user is not revoked.
+    /// </remarks>
+    public OrganizationUserStatusTypeNew? StatusNew { get; set; }
+    /// <summary>
     /// The User's role in the Organization.
     /// </summary>
     public OrganizationUserType Type { get; set; }
@@ -96,6 +109,34 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     /// Whether this organization user is enrolled in account recovery.
     /// </summary>
     public bool IsEnrolledInAccountRecovery() => IsValidResetPasswordKey(ResetPasswordKey);
+
+    /// <summary>
+    /// Resolves the status the user should return to when restored from Revoked. Prefers
+    /// <see cref="StatusNew"/> when populated (set by revoke); otherwise falls back to inferring
+    /// the prior status from the row's property arrangement, for rows revoked before that snapshot
+    /// was being tracked.
+    /// </summary>
+    public OrganizationUserStatusType GetPriorActiveOrganizationUserStatusType()
+    {
+        if (StatusNew.HasValue)
+        {
+            return StatusNew.Value.ToOrganizationUserStatusType();
+        }
+
+        var status = OrganizationUserStatusType.Invited;
+        if (UserId.HasValue && string.IsNullOrWhiteSpace(Email))
+        {
+            // Has UserId & Email is null, then Accepted
+            status = OrganizationUserStatusType.Accepted;
+            if (!string.IsNullOrWhiteSpace(Key))
+            {
+                // We have an org key for this user, user was confirmed
+                status = OrganizationUserStatusType.Confirmed;
+            }
+        }
+
+        return status;
+    }
 
     public void SetNewId()
     {

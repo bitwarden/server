@@ -19,4 +19,6 @@ public enum MigrationPathId : byte
 {
     Enterprise2020AnnualToCurrent = 1,
     Enterprise2020MonthlyToCurrent = 2,
+    Teams2020AnnualToCurrent = 3,
+    Teams2020MonthlyToCurrent = 4,
 }

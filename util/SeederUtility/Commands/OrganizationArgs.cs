@@ -21,6 +21,9 @@ public class OrganizationArgs : IArgumentModel
     [Option('d', "domain", Description = "Email domain for users")]
     public string Domain { get; set; } = null!;
 
+    [Option("claimed-domain", Description = "Claimed (verified) domain to seed. Repeat to add multiple, e.g. --claimed-domain acme.example --claimed-domain hr.acme.example")]
+    public List<string>? ClaimedDomains { get; set; }
+
     [Option('c', "ciphers", Description = "Number of ciphers to create (default: 0, no vault data)")]
     public int? Ciphers { get; set; }
 
@@ -112,6 +115,7 @@ public class OrganizationArgs : IArgumentModel
         Ciphers = Ciphers ?? 0,
         Groups = Groups ?? 0,
         Collections = Collections ?? 0,
+        ClaimedDomains = ClaimedDomains ?? [],
         RealisticStatusMix = MixStatuses,
         StructureModel = ParseOrgStructure(Structure),
         Region = ParseGeographicRegion(Region),

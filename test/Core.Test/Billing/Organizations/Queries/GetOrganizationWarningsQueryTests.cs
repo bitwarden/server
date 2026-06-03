@@ -8,6 +8,7 @@ using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
+using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -856,6 +857,365 @@ public class GetOrganizationWarningsQueryTests
         var response = await sutProvider.Sut.Run(organization);
 
         Assert.Null(response.InactiveSubscription);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_FlagEnabled_USCustomer_NoTaxIdWarning(
+        Organization organization,
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
+    {
+        organization.PlanType = PlanType.TeamsAnnually;
+
+        var subscription = new Subscription
+        {
+            Customer = new Customer
+            {
+                Address = new Address { Country = "US" },
+                TaxExempt = TaxExempt.None,
+                TaxIds = new StripeList<TaxId> { Data = new List<TaxId>() },
+                InvoiceSettings = new CustomerInvoiceSettings(),
+                Metadata = new Dictionary<string, string>()
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
+            .Returns(true);
+
+        var response = await sutProvider.Sut.Run(organization);
+
+        Assert.Null(response.TaxId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_FlagEnabled_TaxableCustomer_Has_TaxIdWarning_Missing(
+        Organization organization,
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
+    {
+        organization.PlanType = PlanType.TeamsAnnually;
+
+        var subscription = new Subscription
+        {
+            Customer = new Customer
+            {
+                Address = new Address { Country = "DE" },
+                TaxExempt = TaxExempt.None,
+                TaxIds = new StripeList<TaxId> { Data = new List<TaxId>() },
+                InvoiceSettings = new CustomerInvoiceSettings(),
+                Metadata = new Dictionary<string, string>()
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organization.Id)
+            .Returns(true);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
+            .Returns(new StripeList<Registration>
+            {
+                Data = new List<Registration>
+                {
+                    new() { Country = "DE" }
+                }
+            });
+
+        var response = await sutProvider.Sut.Run(organization);
+
+        Assert.True(response is
+        {
+            TaxId.Type: "tax_id_missing"
+        });
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_FlagEnabled_ExemptCustomer_NoTaxIdWarning(
+        Organization organization,
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
+    {
+        organization.PlanType = PlanType.TeamsAnnually;
+
+        var subscription = new Subscription
+        {
+            Customer = new Customer
+            {
+                Address = new Address { Country = "CA" },
+                TaxExempt = TaxExempt.Exempt,
+                TaxIds = new StripeList<TaxId> { Data = new List<TaxId>() },
+                InvoiceSettings = new CustomerInvoiceSettings(),
+                Metadata = new Dictionary<string, string>()
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
+            .Returns(true);
+
+        var response = await sutProvider.Sut.Run(organization);
+
+        Assert.Null(response.TaxId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_FlagEnabled_ReverseCustomer_NoTaxIdWarning(
+        Organization organization,
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
+    {
+        organization.PlanType = PlanType.TeamsAnnually;
+
+        var subscription = new Subscription
+        {
+            Customer = new Customer
+            {
+                Address = new Address { Country = "CA" },
+                TaxExempt = TaxExempt.Reverse,
+                TaxIds = new StripeList<TaxId> { Data = new List<TaxId>() },
+                InvoiceSettings = new CustomerInvoiceSettings(),
+                Metadata = new Dictionary<string, string>()
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
+            .Returns(true);
+
+        var response = await sutProvider.Sut.Run(organization);
+
+        Assert.Null(response.TaxId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_FlagEnabled_NoRegistrationInCountry_NoTaxIdWarning(
+        Organization organization,
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
+    {
+        organization.PlanType = PlanType.TeamsAnnually;
+
+        var subscription = new Subscription
+        {
+            Customer = new Customer
+            {
+                Address = new Address { Country = "CA" },
+                TaxExempt = TaxExempt.None,
+                TaxIds = new StripeList<TaxId> { Data = new List<TaxId>() },
+                InvoiceSettings = new CustomerInvoiceSettings(),
+                Metadata = new Dictionary<string, string>()
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organization.Id)
+            .Returns(true);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
+            .Returns(new StripeList<Registration>
+            {
+                Data = new List<Registration>
+                {
+                    new() { Country = "GB" }
+                }
+            });
+
+        var response = await sutProvider.Sut.Run(organization);
+
+        Assert.Null(response.TaxId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_FlagEnabled_TaxableCustomer_Has_TaxIdWarning_PendingVerification(
+        Organization organization,
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
+    {
+        organization.PlanType = PlanType.TeamsAnnually;
+
+        var taxId = new TaxId
+        {
+            Verification = new TaxIdVerification
+            {
+                Status = TaxIdVerificationStatus.Pending
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Customer = new Customer
+            {
+                Address = new Address { Country = "CA" },
+                TaxExempt = TaxExempt.None,
+                TaxIds = new StripeList<TaxId> { Data = new List<TaxId> { taxId } },
+                InvoiceSettings = new CustomerInvoiceSettings(),
+                Metadata = new Dictionary<string, string>()
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organization.Id)
+            .Returns(true);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
+            .Returns(new StripeList<Registration>
+            {
+                Data = new List<Registration>
+                {
+                    new() { Country = "CA" }
+                }
+            });
+
+        var response = await sutProvider.Sut.Run(organization);
+
+        Assert.True(response is
+        {
+            TaxId.Type: "tax_id_pending_verification"
+        });
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_FlagEnabled_TaxableCustomer_Has_TaxIdWarning_FailedVerification(
+        Organization organization,
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
+    {
+        organization.PlanType = PlanType.TeamsAnnually;
+
+        var taxId = new TaxId
+        {
+            Verification = new TaxIdVerification
+            {
+                Status = TaxIdVerificationStatus.Unverified
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Customer = new Customer
+            {
+                Address = new Address { Country = "CA" },
+                TaxExempt = TaxExempt.None,
+                TaxIds = new StripeList<TaxId> { Data = new List<TaxId> { taxId } },
+                InvoiceSettings = new CustomerInvoiceSettings(),
+                Metadata = new Dictionary<string, string>()
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organization.Id)
+            .Returns(true);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
+            .Returns(new StripeList<Registration>
+            {
+                Data = new List<Registration>
+                {
+                    new() { Country = "CA" }
+                }
+            });
+
+        var response = await sutProvider.Sut.Run(organization);
+
+        Assert.True(response is
+        {
+            TaxId.Type: "tax_id_failed_verification"
+        });
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_FlagEnabled_TaxableCustomer_VerifiedTaxId_NoTaxIdWarning(
+        Organization organization,
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
+    {
+        organization.PlanType = PlanType.TeamsAnnually;
+
+        var taxId = new TaxId
+        {
+            Verification = new TaxIdVerification
+            {
+                Status = TaxIdVerificationStatus.Verified
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Customer = new Customer
+            {
+                Address = new Address { Country = "CA" },
+                TaxExempt = TaxExempt.None,
+                TaxIds = new StripeList<TaxId> { Data = new List<TaxId> { taxId } },
+                InvoiceSettings = new CustomerInvoiceSettings(),
+                Metadata = new Dictionary<string, string>()
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organization.Id)
+            .Returns(true);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
+            .Returns(new StripeList<Registration>
+            {
+                Data = new List<Registration>
+                {
+                    new() { Country = "CA" }
+                }
+            });
+
+        var response = await sutProvider.Sut.Run(organization);
+
+        Assert.Null(response.TaxId);
     }
 
     [Theory, BitAutoData]

@@ -26,6 +26,13 @@ public static class StripeConstants
         public const string SendInvoice = "send_invoice";
     }
 
+    public static class CouponDurations
+    {
+        public const string Once = "once";
+        public const string Repeating = "repeating";
+        public const string Forever = "forever";
+    }
+
     public static class CouponIDs
     {
         public const string LegacyMSPDiscount = "msp-discount-35";
@@ -97,6 +104,9 @@ public static class StripeConstants
         public const string OriginatingAppVersion = "originatingAppVersion";
         public const string TrialInitiationPath = "trialInitiationPath";
         public const string CancelledDuringDeferredPriceIncrease = "cancelled_during_deferred_price_increase";
+        public const string MigrationCohortId = "migration_cohort_id";
+        public const string MigrationCohortName = "migration_cohort_name";
+        public const string CancellingUserId = "cancellingUserId";
     }
 
     public static class CancellationOrigins
@@ -241,6 +251,8 @@ public static class StripeConstants
         {
             public const string Ios = "ios";
             public const string Android = "android";
+            public const string Browser = "browser";
+            public const string Desktop = "desktop";
         }
     }
 

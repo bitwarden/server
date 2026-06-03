@@ -1,5 +1,4 @@
 ﻿using System.Data.Common;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Entities;
@@ -80,7 +79,6 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// <param name="id">The ID of the organization user to restore.</param>
     /// <param name="status">The status to restore the user to (their status prior to being revoked).</param>
     Task RestoreAsync(Guid id, OrganizationUserStatusType status);
-    Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId, PolicyType policyType);
     Task<int> GetOccupiedSmSeatCountByOrganizationIdAsync(Guid organizationId);
     Task<IEnumerable<OrganizationUserResetPasswordDetails>> GetManyAccountRecoveryDetailsByOrganizationUserAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds);
 
@@ -131,6 +129,27 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// <param name="organizationUserToConfirm">Accepted OrganizationUser to confirm</param>
     /// <returns>True, if the user was updated. False, if not performed.</returns>
     Task<bool> ConfirmOrganizationUserAsync(AcceptedOrganizationUserToConfirm organizationUserToConfirm);
+
+    /// <summary>
+    /// Confirms multiple organization users in a single database operation. Only users that are
+    /// currently in the <c>Accepted</c> state will be updated; rows in any other state are skipped.
+    ///
+    /// This is an idempotent operation.
+    /// </summary>
+    /// <param name="usersToConfirm">The collection of accepted organization users to confirm.</param>
+    /// <returns>
+    /// The IDs of the organization users that were actually updated (i.e. those that were in the
+    /// <c>Accepted</c> state and are now <c>Confirmed</c>). Users that were already confirmed or in
+    /// any other state are excluded from the result.
+    /// </returns>
+    Task<ICollection<Guid>> ConfirmManyOrganizationUsersAsync(
+        IReadOnlyCollection<AcceptedOrganizationUserToConfirm> usersToConfirm);
+
+    /// <summary>
+    /// Returns all Accepted, User-role organization users pending automatic confirmation for the given organization.
+    /// </summary>
+    /// <param name="organizationId">The organization to search within.</param>
+    Task<ICollection<OrganizationUser>> GetManyPendingAutoConfirmAsync(Guid organizationId);
 
     /// <summary>
     /// Returns the OrganizationUserUserDetails if found.

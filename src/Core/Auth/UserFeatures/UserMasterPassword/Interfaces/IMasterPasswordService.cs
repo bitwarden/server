@@ -71,7 +71,7 @@ namespace Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 /// the server is the source of truth for fields that must not change — it validates the client's
 /// values match what's stored before applying the update.</para>
 /// </summary>
-internal interface IMasterPasswordService
+public interface IMasterPasswordService
 {
     /// <summary>
     /// Inspects the user's current state and dispatches to either
@@ -255,11 +255,12 @@ internal interface IMasterPasswordService
     Task<OneOf<User, IdentityError[]>> PrepareUpdateExistingMasterPasswordAsync(User user, UpdateExistingPasswordData updateExistingData);
 
     /// <summary>
-    /// Applies a new master password and updated KDF parameters over the user's existing ones
-    /// and persists the updated user to the database. KDF validation is intentionally skipped.
+    /// Updates the user's KDF parameters and persists the updated user to the database.
+    /// The user's master password is not changed; the
+    /// authentication hash is re-derived from the existing password using the new KDF parameters.
     ///
     /// <para>
-    /// Use when: rotating KDF parameters.
+    /// Use when: updating KDF parameters.
     /// </para>
     ///
     /// <para>
@@ -275,18 +276,18 @@ internal interface IMasterPasswordService
     /// <param name="user">
     /// The user object to mutate and persist. Must already have a master password;
     /// must not be a Key Connector user. Salt must be unchanged. Validated via
-    /// <see cref="UpdateExistingPasswordAndKdfData.ValidateDataForUser"/>.
+    /// <see cref="UpdateExistingKdfConfigurationData.ValidateDataForUser"/>.
     /// </param>
     /// <param name="updateExistingData">
-    /// Cryptographic and authentication data for the updated password and KDF parameters,
-    /// including <c>MasterPasswordUnlock</c>, <c>MasterPasswordAuthentication</c>,
+    /// Cryptographic and authentication data for KDF configuration, including
+    /// <c>MasterPasswordUnlock</c>, <c>MasterPasswordAuthentication</c>,
     /// and control flags <c>ValidatePassword</c> and <c>RefreshStamp</c>.
     /// </param>
     /// <returns>
     /// On success, the modified <see cref="User"/>. On failure, an array of
     /// <see cref="IdentityError"/> describing validation failures.
     /// </returns>
-    Task<OneOf<User, IdentityError[]>> SaveUpdateExistingMasterPasswordAndKdfAsync(User user, UpdateExistingPasswordAndKdfData updateExistingData);
+    Task<OneOf<User, IdentityError[]>> SaveUpdateExistingKdfConfigurationAsync(User user, UpdateExistingKdfConfigurationData updateExistingData);
 
     /// <summary>
     /// Applies a new master password over the user's existing one and persists the updated user

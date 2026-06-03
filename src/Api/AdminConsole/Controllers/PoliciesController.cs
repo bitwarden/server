@@ -142,15 +142,4 @@ public class PoliciesController : Controller
 
         return new PolicyResponseModel(policy);
     }
-
-    [HttpPut("{type}/vnext")]
-    [Authorize<ManagePoliciesRequirement>]
-    public async Task<PolicyResponseModel> PutVNext(Guid orgId, PolicyType type, [FromBody] SavePolicyRequest model)
-    {
-        var savePolicyRequest = await model.ToSavePolicyModelAsync(orgId, type, _currentContext);
-
-        var policy = await _savePolicyCommand.SaveAsync(savePolicyRequest);
-
-        return new PolicyResponseModel(policy);
-    }
 }
