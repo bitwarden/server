@@ -44,6 +44,7 @@ public class ProviderBillingService(
     IGlobalSettings globalSettings,
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
+    IPriceIncreaseScheduler priceIncreaseScheduler,
     IPricingClient pricingClient,
     IProviderInvoiceItemRepository providerInvoiceItemRepository,
     IProviderOrganizationRepository providerOrganizationRepository,
@@ -58,6 +59,11 @@ public class ProviderBillingService(
         Organization organization,
         string key)
     {
+        await priceIncreaseScheduler.Release(
+            organization.GatewayCustomerId,
+            organization.GatewaySubscriptionId,
+            organization.Id);
+
         await stripeAdapter.UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             new SubscriptionUpdateOptions { CancelAtPeriodEnd = false });
 
