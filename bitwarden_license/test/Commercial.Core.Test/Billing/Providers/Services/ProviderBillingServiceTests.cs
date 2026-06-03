@@ -9,8 +9,6 @@ using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Organizations.PlanMigration.Entities;
-using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Entities;
@@ -29,7 +27,6 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Braintree;
 using CsvHelper;
-using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Stripe;
@@ -2418,9 +2415,9 @@ public class ProviderBillingServiceTests
 
     // Releasing any active migration subscription schedule before the Stripe cancel keeps
     // 2020-plan orgs with an attached SubscriptionSchedule from tripping a Stripe-side cancel
-    // failure. The cohort assignment is dropped after the org has been fully transitioned
-    // to provider-managed, so a failure during the cleanup leaves a stale row to reconcile
-    // rather than a half-transitioned org.
+    // failure. Dropping the org's migration cohort assignment is delegated to Release by
+    // passing organization.Id; the assignment-cleanup behavior itself is owned and covered by
+    // PriceIncreaseScheduler.Release (see PriceIncreaseSchedulerTests).
 
     private static void ArrangeAddExistingOrganizationHappyPath(
         SutProvider<ProviderBillingService> sutProvider,
@@ -2462,10 +2459,6 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<ISubscriberService>()
             .GetCustomer(organization)
             .Returns(new Customer { Balance = 0 });
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
-            .Returns(true);
     }
 
     [Theory, BitAutoData]
@@ -2488,100 +2481,60 @@ public class ProviderBillingServiceTests
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var orgCustomerId = organization.GatewayCustomerId;
         var orgSubscriptionId = organization.GatewaySubscriptionId;
+        var orgId = organization.Id;
 
         // Act
         await sutProvider.Sut.AddExistingOrganization(provider, organization, key);
 
-        // Assert — Release must run first, with the Organization's own gateway IDs
-        // (not the Provider's), and must precede both Stripe mutations.
+        // Assert — Release must run first, with the Organization's own gateway IDs and its
+        // own Id (not the Provider's), and must precede both Stripe mutations. Passing
+        // organization.Id is what delegates the migration cohort cleanup to Release.
         Received.InOrder(() =>
         {
-            priceIncreaseScheduler.Release(orgCustomerId, orgSubscriptionId);
+            priceIncreaseScheduler.Release(orgCustomerId, orgSubscriptionId, orgId);
             stripeAdapter.UpdateSubscriptionAsync(orgSubscriptionId, Arg.Any<SubscriptionUpdateOptions>());
             stripeAdapter.CancelSubscriptionAsync(orgSubscriptionId, Arg.Any<SubscriptionCancelOptions>());
         });
-        await priceIncreaseScheduler.Received(1).Release(orgCustomerId, orgSubscriptionId);
+        await priceIncreaseScheduler.Received(1).Release(orgCustomerId, orgSubscriptionId, orgId);
         await priceIncreaseScheduler.Received(0)
-            .Release(provider.GatewayCustomerId, Arg.Any<string>());
+            .Release(provider.GatewayCustomerId, Arg.Any<string>(), Arg.Any<Guid?>());
     }
 
     [Theory, BitAutoData]
-    public async Task AddExistingOrganization_DropsCohortAssignment_AfterOrgTransitionCommits(
+    public async Task AddExistingOrganization_DelegatesCohortCleanupToRelease_AfterStripeCancel(
         Provider provider,
         Organization organization,
         string key,
         SutProvider<ProviderBillingService> sutProvider)
     {
-        // Arrange — 2020-plan org with an existing cohort assignment.
+        // Arrange — 2020-plan org. The service no longer touches the cohort assignment
+        // repository directly; it hands organization.Id to Release, which owns the cleanup.
         provider.Type = ProviderType.Msp;
         organization.GatewayCustomerId = "cus_with_assignment";
         organization.GatewaySubscriptionId = "sub_with_assignment";
         ArrangeAddExistingOrganizationHappyPath(sutProvider, provider, organization);
 
+        var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
-        var assignmentRepository =
-            sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
-        var existingAssignment = new OrganizationPlanMigrationCohortAssignment
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = organization.Id,
-            CohortId = Guid.NewGuid()
-        };
-        assignmentRepository.GetByOrganizationIdAsync(organization.Id).Returns(existingAssignment);
+        var customerId = organization.GatewayCustomerId;
         var subscriptionId = organization.GatewaySubscriptionId;
+        var orgId = organization.Id;
 
         // Act
         await sutProvider.Sut.AddExistingOrganization(provider, organization, key);
 
-        // Assert — the assignment lookup and delete fire AFTER the org transition commits
-        // (ReplaceAsync + ProviderOrganization create). Drift in the assignment row is a
-        // reconciliation problem; a half-transitioned org is not.
+        // Assert — Release is invoked once with organization.Id (delegating cohort cleanup)
+        // before the Stripe cancel and the org-transition writes.
         Received.InOrder(() =>
         {
+            priceIncreaseScheduler.Release(customerId, subscriptionId, orgId);
             stripeAdapter.CancelSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
             organizationRepository.ReplaceAsync(organization);
             providerOrganizationRepository.CreateAsync(Arg.Any<ProviderOrganization>());
-            assignmentRepository.GetByOrganizationIdAsync(organization.Id);
-            assignmentRepository.DeleteAsync(existingAssignment);
         });
-        await assignmentRepository.Received(1).DeleteAsync(existingAssignment);
-    }
-
-    [Theory, BitAutoData]
-    public async Task AddExistingOrganization_DoesNotCallDelete_AndCompletesFlow_WhenNoCohortAssignment(
-        Provider provider,
-        Organization organization,
-        string key,
-        SutProvider<ProviderBillingService> sutProvider)
-    {
-        // Arrange — org with no cohort assignment (the common case).
-        provider.Type = ProviderType.Msp;
-        organization.GatewayCustomerId = "cus_no_assignment";
-        organization.GatewaySubscriptionId = "sub_no_assignment";
-        ArrangeAddExistingOrganizationHappyPath(sutProvider, provider, organization);
-
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
-        var eventService = sutProvider.GetDependency<IEventService>();
-        var assignmentRepository =
-            sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
-        assignmentRepository.GetByOrganizationIdAsync(organization.Id)
-            .Returns((OrganizationPlanMigrationCohortAssignment?)null);
-
-        // Act
-        await sutProvider.Sut.AddExistingOrganization(provider, organization, key);
-
-        // Assert — no delete fired, and the rest of the flow ran to completion.
-        await assignmentRepository.Received(0)
-            .DeleteAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
-        await organizationRepository.Received(1).ReplaceAsync(organization);
-        await providerOrganizationRepository.Received(1).CreateAsync(Arg.Is<ProviderOrganization>(po =>
-            po.ProviderId == provider.Id && po.OrganizationId == organization.Id && po.Key == key));
-        await eventService.Received(1).LogProviderOrganizationEventAsync(
-            Arg.Is<ProviderOrganization>(po => po.OrganizationId == organization.Id),
-            EventType.ProviderOrganization_Added);
+        await priceIncreaseScheduler.Received(1).Release(customerId, subscriptionId, orgId);
     }
 
     [Theory, BitAutoData]
@@ -2605,12 +2558,13 @@ public class ProviderBillingServiceTests
         // on the entity as part of the transition to provider-managed.
         var customerId = organization.GatewayCustomerId;
         var subscriptionId = organization.GatewaySubscriptionId;
+        var orgId = organization.Id;
 
         // Act
         await sutProvider.Sut.AddExistingOrganization(provider, organization, key);
 
         // Assert
-        await priceIncreaseScheduler.Received(1).Release(customerId, subscriptionId);
+        await priceIncreaseScheduler.Received(1).Release(customerId, subscriptionId, orgId);
         await organizationRepository.Received(1).ReplaceAsync(organization);
         await providerOrganizationRepository.Received(1).CreateAsync(Arg.Is<ProviderOrganization>(po =>
             po.ProviderId == provider.Id && po.OrganizationId == organization.Id && po.Key == key));
@@ -2620,15 +2574,15 @@ public class ProviderBillingServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task AddExistingOrganization_DropsCohortAssignmentAndCompletes_ForMoeProvider(
+    public async Task AddExistingOrganization_CompletesAndDelegatesCohortCleanup_ForMoeProvider(
         Provider provider,
         Organization organization,
         string key,
         SutProvider<ProviderBillingService> sutProvider)
     {
-        // Arrange — same flow under a BusinessUnit (MOE) provider, with an existing
-        // cohort assignment. Exercises the BusinessUnit branch of GetManagedPlanTypeAsync
-        // and confirms the cohort drop applies regardless of provider type.
+        // Arrange — same flow under a BusinessUnit (MOE) provider. Exercises the
+        // BusinessUnit branch of GetManagedPlanTypeAsync and confirms Release receives
+        // organization.Id (delegating cohort cleanup) regardless of provider type.
         //
         // The discriminating setup: provider plan is TeamsMonthly while the org is on
         // EnterpriseAnnually2020. The MSP switch would map EnterpriseAnnually2020 →
@@ -2659,152 +2613,27 @@ public class ProviderBillingServiceTests
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
-        var assignmentRepository =
-            sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
-        var existingAssignment = new OrganizationPlanMigrationCohortAssignment
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = organization.Id,
-            CohortId = Guid.NewGuid()
-        };
-        assignmentRepository.GetByOrganizationIdAsync(organization.Id).Returns(existingAssignment);
         var customerId = organization.GatewayCustomerId;
         var subscriptionId = organization.GatewaySubscriptionId;
+        var orgId = organization.Id;
 
         // Act
         await sutProvider.Sut.AddExistingOrganization(provider, organization, key);
 
-        // Assert — Release-before-Stripe ordering is preserved, the cohort assignment is
-        // dropped only after the org transition commits, and the org lands on the
-        // provider's first plan (TeamsMonthly) — proving the BusinessUnit branch ran.
+        // Assert — Release (with organization.Id) precedes the Stripe operations and the
+        // org transition commits, and the org lands on the provider's first plan
+        // (TeamsMonthly) — proving the BusinessUnit branch ran.
         Received.InOrder(() =>
         {
-            priceIncreaseScheduler.Release(customerId, subscriptionId);
+            priceIncreaseScheduler.Release(customerId, subscriptionId, orgId);
             stripeAdapter.UpdateSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionUpdateOptions>());
             stripeAdapter.CancelSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
             organizationRepository.ReplaceAsync(organization);
             providerOrganizationRepository.CreateAsync(Arg.Any<ProviderOrganization>());
-            assignmentRepository.DeleteAsync(existingAssignment);
         });
-        await priceIncreaseScheduler.Received(1).Release(customerId, subscriptionId);
-        await assignmentRepository.Received(1).DeleteAsync(existingAssignment);
+        await priceIncreaseScheduler.Received(1).Release(customerId, subscriptionId, orgId);
         await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
             o.Id == organization.Id && o.PlanType == PlanType.TeamsMonthly));
-    }
-
-    [Theory, BitAutoData]
-    public async Task AddExistingOrganization_DoesNotDropAssignment_ForCurrentGenOrg(
-        Provider provider,
-        Organization organization,
-        string key,
-        SutProvider<ProviderBillingService> sutProvider)
-    {
-        // Arrange — current-gen plan with no cohort assignment. Release still runs (the
-        // production code calls it unconditionally; Release itself no-ops when no active
-        // schedule exists), but no assignment row exists so DeleteAsync must not fire.
-        provider.Type = ProviderType.Msp;
-        organization.GatewayCustomerId = "cus_current_gen";
-        organization.GatewaySubscriptionId = "sub_current_gen";
-        ArrangeAddExistingOrganizationHappyPath(
-            sutProvider, provider, organization, PlanType.EnterpriseAnnually);
-
-        var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
-        var assignmentRepository =
-            sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
-        assignmentRepository.GetByOrganizationIdAsync(organization.Id)
-            .Returns((OrganizationPlanMigrationCohortAssignment?)null);
-        var customerId = organization.GatewayCustomerId;
-        var subscriptionId = organization.GatewaySubscriptionId;
-
-        // Act
-        await sutProvider.Sut.AddExistingOrganization(provider, organization, key);
-
-        // Assert — Release was called, no assignment was deleted, the rest of the flow
-        // ran to completion.
-        await priceIncreaseScheduler.Received(1).Release(customerId, subscriptionId);
-        await assignmentRepository.Received(0)
-            .DeleteAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
-        await organizationRepository.Received(1).ReplaceAsync(organization);
-        await providerOrganizationRepository.Received(1).CreateAsync(Arg.Any<ProviderOrganization>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task AddExistingOrganization_DropsStaleAssignment_ForCurrentGenOrg(
-        Provider provider,
-        Organization organization,
-        string key,
-        SutProvider<ProviderBillingService> sutProvider)
-    {
-        // Arrange — current-gen plan that nevertheless has a stale cohort assignment row
-        // (e.g., from a prior failed flow). The cohort drop is independent of plan tier;
-        // the assignment must still be deleted so reconciliation stays clean.
-        //
-        // Guards against a future "optimization" that gates the assignment lookup behind
-        // a plan-type check — that would silently leak stale rows for data-drift cases.
-        provider.Type = ProviderType.Msp;
-        organization.GatewayCustomerId = "cus_current_gen_stale";
-        organization.GatewaySubscriptionId = "sub_current_gen_stale";
-        ArrangeAddExistingOrganizationHappyPath(
-            sutProvider, provider, organization, PlanType.EnterpriseAnnually);
-
-        var assignmentRepository =
-            sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
-        var staleAssignment = new OrganizationPlanMigrationCohortAssignment
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = organization.Id,
-            CohortId = Guid.NewGuid()
-        };
-        assignmentRepository.GetByOrganizationIdAsync(organization.Id).Returns(staleAssignment);
-
-        // Act
-        await sutProvider.Sut.AddExistingOrganization(provider, organization, key);
-
-        // Assert — stale assignment row is dropped regardless of the org's plan tier.
-        await assignmentRepository.Received(1).DeleteAsync(staleAssignment);
-    }
-
-    [Theory, BitAutoData]
-    public async Task AddExistingOrganization_SkipsCohortCleanup_WhenBusinessPlanMigrationFlagOff(
-        Provider provider,
-        Organization organization,
-        string key,
-        SutProvider<ProviderBillingService> sutProvider)
-    {
-        // Arrange — PM-35215 OFF. The cohort assignment table only gets populated when the
-        // epic is enabled, so we skip the lookup entirely. Even if a stale row exists, it
-        // must not be touched while the flag is off (and the rest of the flow completes).
-        provider.Type = ProviderType.Msp;
-        organization.GatewayCustomerId = "cus_ff_off";
-        organization.GatewaySubscriptionId = "sub_ff_off";
-        ArrangeAddExistingOrganizationHappyPath(sutProvider, provider, organization);
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
-            .Returns(false);
-
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
-        var assignmentRepository =
-            sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
-        var staleAssignment = new OrganizationPlanMigrationCohortAssignment
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = organization.Id,
-            CohortId = Guid.NewGuid()
-        };
-        assignmentRepository.GetByOrganizationIdAsync(organization.Id).Returns(staleAssignment);
-
-        // Act
-        await sutProvider.Sut.AddExistingOrganization(provider, organization, key);
-
-        // Assert — no cohort I/O happened, and the rest of the flow ran to completion.
-        await assignmentRepository.Received(0).GetByOrganizationIdAsync(Arg.Any<Guid>());
-        await assignmentRepository.Received(0)
-            .DeleteAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
-        await organizationRepository.Received(1).ReplaceAsync(organization);
-        await providerOrganizationRepository.Received(1).CreateAsync(Arg.Any<ProviderOrganization>());
     }
 
     [Theory, BitAutoData]
@@ -2815,7 +2644,7 @@ public class ProviderBillingServiceTests
         SutProvider<ProviderBillingService> sutProvider)
     {
         // Arrange — Release throws before any other I/O. No Stripe cancel, no repo writes,
-        // no assignment lookup should fire.
+        // no event log should fire.
         provider.Type = ProviderType.Msp;
         organization.GatewayCustomerId = "cus_release_fails";
         organization.GatewaySubscriptionId = "sub_release_fails";
@@ -2825,12 +2654,10 @@ public class ProviderBillingServiceTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
-        var assignmentRepository =
-            sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
         var subscriptionId = organization.GatewaySubscriptionId;
 
         priceIncreaseScheduler
-            .Release(organization.GatewayCustomerId, subscriptionId)
+            .Release(organization.GatewayCustomerId, subscriptionId, organization.Id)
             .ThrowsAsync(new StripeException("simulated release failure"));
 
         // Act
@@ -2846,88 +2673,6 @@ public class ProviderBillingServiceTests
         await providerOrganizationRepository.Received(0).CreateAsync(Arg.Any<ProviderOrganization>());
         await eventService.Received(0).LogProviderOrganizationEventAsync(
             Arg.Any<ProviderOrganization>(), Arg.Any<EventType>());
-        await assignmentRepository.Received(0).GetByOrganizationIdAsync(Arg.Any<Guid>());
-        await assignmentRepository.Received(0)
-            .DeleteAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task AddExistingOrganization_CompletesOrgTransition_BeforeAssignmentLookupFails(
-        Provider provider,
-        Organization organization,
-        string key,
-        SutProvider<ProviderBillingService> sutProvider)
-    {
-        // Arrange — Stripe cancel succeeds and the org transition commits (ReplaceAsync
-        // + ProviderOrganization create + event log) before the assignment lookup runs.
-        // The lookup then throws. The exception must propagate, but the org transition
-        // has already happened — the failure leaves a stale assignment row to reconcile,
-        // not a half-transitioned org.
-        provider.Type = ProviderType.Msp;
-        organization.GatewayCustomerId = "cus_get_fails";
-        organization.GatewaySubscriptionId = "sub_get_fails";
-        ArrangeAddExistingOrganizationHappyPath(sutProvider, provider, organization);
-
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
-        var eventService = sutProvider.GetDependency<IEventService>();
-        var assignmentRepository =
-            sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
-        assignmentRepository.GetByOrganizationIdAsync(organization.Id)
-            .ThrowsAsync(new InvalidOperationException("simulated repo failure"));
-
-        // Act
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            sutProvider.Sut.AddExistingOrganization(provider, organization, key));
-
-        // Assert — the org transition committed before the lookup threw.
-        await organizationRepository.Received(1).ReplaceAsync(organization);
-        await providerOrganizationRepository.Received(1).CreateAsync(Arg.Any<ProviderOrganization>());
-        await eventService.Received(1).LogProviderOrganizationEventAsync(
-            Arg.Any<ProviderOrganization>(), EventType.ProviderOrganization_Added);
-        await assignmentRepository.Received(0)
-            .DeleteAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task AddExistingOrganization_CompletesOrgTransition_BeforeDeleteAssignmentFails(
-        Provider provider,
-        Organization organization,
-        string key,
-        SutProvider<ProviderBillingService> sutProvider)
-    {
-        // Arrange — DeleteAsync throws after the org transition has already committed.
-        // The org is already provider-managed; the failed cleanup just leaves a stale
-        // assignment row to reconcile.
-        provider.Type = ProviderType.Msp;
-        organization.GatewayCustomerId = "cus_delete_fails";
-        organization.GatewaySubscriptionId = "sub_delete_fails";
-        ArrangeAddExistingOrganizationHappyPath(sutProvider, provider, organization);
-
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
-        var eventService = sutProvider.GetDependency<IEventService>();
-        var assignmentRepository =
-            sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
-        var existingAssignment = new OrganizationPlanMigrationCohortAssignment
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = organization.Id,
-            CohortId = Guid.NewGuid()
-        };
-        assignmentRepository.GetByOrganizationIdAsync(organization.Id).Returns(existingAssignment);
-        assignmentRepository.DeleteAsync(existingAssignment)
-            .ThrowsAsync(new InvalidOperationException("simulated repo failure"));
-
-        // Act
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            sutProvider.Sut.AddExistingOrganization(provider, organization, key));
-
-        // Assert — the org transition committed before DeleteAsync threw.
-        await organizationRepository.Received(1).ReplaceAsync(organization);
-        await providerOrganizationRepository.Received(1).CreateAsync(Arg.Any<ProviderOrganization>());
-        await eventService.Received(1).LogProviderOrganizationEventAsync(
-            Arg.Any<ProviderOrganization>(), EventType.ProviderOrganization_Added);
     }
 
     [Theory, BitAutoData]
@@ -2953,7 +2698,8 @@ public class ProviderBillingServiceTests
         var releaseHasRun = false;
         var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
         priceIncreaseScheduler
-            .When(s => s.Release(organization.GatewayCustomerId, organization.GatewaySubscriptionId))
+            .When(s => s.Release(
+                organization.GatewayCustomerId, organization.GatewaySubscriptionId, organization.Id))
             .Do(_ => releaseHasRun = true);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
@@ -2988,9 +2734,6 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<ISubscriberService>()
             .GetCustomer(organization)
             .Returns(new Customer { Balance = 0 });
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
-            .Returns(true);
 
         // Act — must not throw. If Release were removed or moved after Cancel, the
         // arranged StripeException would surface and Assert.ThrowsAsync would be needed.
@@ -2998,49 +2741,9 @@ public class ProviderBillingServiceTests
 
         // Assert — both calls fired, Release first.
         await priceIncreaseScheduler.Received(1)
-            .Release(organization.GatewayCustomerId, "sub_stripe_contract");
+            .Release(organization.GatewayCustomerId, "sub_stripe_contract", organization.Id);
         await stripeAdapter.Received(1)
             .CancelSubscriptionAsync("sub_stripe_contract", Arg.Any<SubscriptionCancelOptions>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task AddExistingOrganization_LogsDroppedAssignment_WithProviderAndCohortContext(
-        Provider provider,
-        Organization organization,
-        string key,
-        SutProvider<ProviderBillingService> sutProvider)
-    {
-        // Arrange — happy path with a cohort assignment present. Verifies the
-        // information log fires with the expected level when the assignment is dropped.
-        // Guards against a refactor that silently removes the operator-facing audit
-        // signal that a stale row was cleaned up.
-        provider.Type = ProviderType.Msp;
-        organization.GatewayCustomerId = "cus_log_check";
-        organization.GatewaySubscriptionId = "sub_log_check";
-        ArrangeAddExistingOrganizationHappyPath(sutProvider, provider, organization);
-
-        var assignmentRepository =
-            sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>();
-        var existingAssignment = new OrganizationPlanMigrationCohortAssignment
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = organization.Id,
-            CohortId = Guid.NewGuid()
-        };
-        assignmentRepository.GetByOrganizationIdAsync(organization.Id).Returns(existingAssignment);
-
-        var logger = sutProvider.GetDependency<ILogger<ProviderBillingService>>();
-
-        // Act
-        await sutProvider.Sut.AddExistingOrganization(provider, organization, key);
-
-        // Assert — exactly one Information log fired on the cohort drop path.
-        logger.Received(1).Log(
-            LogLevel.Information,
-            Arg.Any<EventId>(),
-            Arg.Any<object>(),
-            Arg.Any<Exception>(),
-            Arg.Any<Func<object, Exception, string>>());
     }
 
     #endregion

@@ -12,7 +12,6 @@ using Bit.Core.Billing;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
-using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Entities;
@@ -44,7 +43,6 @@ public class ProviderBillingService(
     IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<ProviderBillingService> logger,
-    IOrganizationPlanMigrationCohortAssignmentRepository organizationPlanMigrationCohortAssignmentRepository,
     IOrganizationRepository organizationRepository,
     IPriceIncreaseScheduler priceIncreaseScheduler,
     IPricingClient pricingClient,
@@ -63,7 +61,8 @@ public class ProviderBillingService(
     {
         await priceIncreaseScheduler.Release(
             organization.GatewayCustomerId,
-            organization.GatewaySubscriptionId);
+            organization.GatewaySubscriptionId,
+            organization.Id);
 
         await stripeAdapter.UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             new SubscriptionUpdateOptions { CancelAtPeriodEnd = false });
@@ -155,21 +154,6 @@ public class ProviderBillingService(
         await eventService.LogProviderOrganizationEventAsync(
             providerOrganization,
             EventType.ProviderOrganization_Added);
-
-        // TODO(PM-37085): once Release(customerId, subscriptionId, organizationId) lands, pass
-        // organization.Id to the Release call above and delete this cohort cleanup block.
-        if (featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
-        {
-            var cohortAssignment =
-                await organizationPlanMigrationCohortAssignmentRepository.GetByOrganizationIdAsync(organization.Id);
-            if (cohortAssignment is not null)
-            {
-                await organizationPlanMigrationCohortAssignmentRepository.DeleteAsync(cohortAssignment);
-                logger.LogInformation(
-                    "Dropped plan-migration cohort assignment ({AssignmentId}) from cohort ({CohortId}) for organization ({OrganizationId}) added to provider ({ProviderId})",
-                    cohortAssignment.Id, cohortAssignment.CohortId, organization.Id, provider.Id);
-            }
-        }
     }
 
     public async Task ChangePlan(ChangeProviderPlanCommand command)
