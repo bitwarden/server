@@ -13,8 +13,6 @@ namespace Bit.Core.Test.AdminConsole.Utilities;
 /// </summary>
 public class AdminConsoleJsonContextTests
 {
-    // ----- Permissions -----
-
     [Fact]
     public void Serialize_Permissions_MatchesCamelCaseOptions()
     {
@@ -73,8 +71,6 @@ public class AdminConsoleJsonContextTests
         Assert.Equal(expected, reserialised);
     }
 
-    // ----- MasterPasswordPolicyData -----
-
     [Fact]
     public void Serialize_MasterPasswordPolicyData_MatchesCamelCaseOptions()
     {
@@ -121,8 +117,6 @@ public class AdminConsoleJsonContextTests
         Assert.Equal(expected, reserialised);
     }
 
-    // ----- SendOptionsPolicyData -----
-
     [Fact]
     public void Serialize_SendOptionsPolicyData_MatchesCamelCaseOptions()
     {
@@ -147,8 +141,6 @@ public class AdminConsoleJsonContextTests
         var reserialised = JsonSerializer.Serialize(obj, AdminConsoleJsonContext.Default.SendOptionsPolicyData);
         Assert.Equal(fixture, reserialised);
     }
-
-    // ----- ResetPasswordDataModel -----
 
     [Fact]
     public void Serialize_ResetPasswordDataModel_MatchesCamelCaseOptions()
@@ -175,7 +167,6 @@ public class AdminConsoleJsonContextTests
         Assert.Equal(fixture, reserialised);
     }
 
-    // Reflection-based reference options that mirror what CoreHelpers uses.
     private static readonly JsonSerializerOptions _camelCaseOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
