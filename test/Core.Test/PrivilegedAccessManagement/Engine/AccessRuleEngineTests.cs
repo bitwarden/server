@@ -148,8 +148,91 @@ public sealed class AccessRuleEngineTests
         Assert.Equal(RequestAccessOutcome.Created, result.Outcome);
     }
 
-    // ExchangeRequestForLease: gate on approval, re-evaluate the rule against the stored signals,
-    // enforce lease-issuance constraints, then issue the lease.
+    [Fact]
+    public void RequestAccess_NoRuleGovernsCipher_FailsWithNoRule()
+    {
+        // Without a governing rule there is no policy under which access could ever be granted, so
+        // the request is rejected rather than created.
+        var fixture = new AccessRuleEngineFixture()
+            .WithNoRules();
+
+        var result = fixture.RequestAccess(fixture.Cipher);
+
+        Assert.Equal(RequestAccessOutcome.Failed, result.Outcome);
+        Assert.Equal(RequestAccessFailReason.NoRule, result.FailReason);
+        Assert.Equal(0, fixture.RequestsCreated);
+    }
+
+    [Fact]
+    public void RequestAccess_ApprovalRequired_StillCreatesRequest()
+    {
+        // Approval is not a denial, so an approval-required rule does not block the request from
+        // being created; the approval gate is enforced later at exchange.
+        var fixture = new AccessRuleEngineFixture()
+            .RequiringApproval();
+
+        var result = fixture.RequestAccess(fixture.Cipher);
+
+        Assert.Equal(RequestAccessOutcome.Created, result.Outcome);
+        Assert.Equal(1, fixture.RequestsCreated);
+    }
+
+    [Fact]
+    public void RequestAccess_IpAddressOutsideRequiredCidr_FailsWithAccessDeniedNotWithinIpRange()
+    {
+        var fixture = new AccessRuleEngineFixture()
+            .RestrictedToCidr("10.0.0.0/24")
+            .FromIpAddress("192.168.1.5");
+
+        var result = fixture.RequestAccess(fixture.Cipher);
+
+        Assert.Equal(RequestAccessOutcome.Failed, result.Outcome);
+        Assert.Equal(RequestAccessFailReason.AccessDenied, result.FailReason);
+        Assert.Equal(DenyReason.NotWithinIpRange, result.DenyReason);
+        Assert.Equal(0, fixture.RequestsCreated);
+    }
+
+    [Fact]
+    public void RequestAccess_IpAddressWithinRequiredCidr_CreatesRequest()
+    {
+        var fixture = new AccessRuleEngineFixture()
+            .RestrictedToCidr("10.0.0.0/24")
+            .FromIpAddress("10.0.0.5");
+
+        var result = fixture.RequestAccess(fixture.Cipher);
+
+        Assert.Equal(RequestAccessOutcome.Created, result.Outcome);
+    }
+
+    [Fact]
+    public void RequestAccess_UnparseableCidrEntryIsSkipped_AndALaterMatchCreatesRequest()
+    {
+        var fixture = new AccessRuleEngineFixture()
+            .RestrictedToCidr("not-a-cidr", "10.0.0.0/24")
+            .FromIpAddress("10.0.0.5");
+
+        var result = fixture.RequestAccess(fixture.Cipher);
+
+        Assert.Equal(RequestAccessOutcome.Created, result.Outcome);
+    }
+
+    [Fact]
+    public void RequestAccess_OutsideTimeWindow_FailsWithAccessDeniedNotWithinTimeWindow()
+    {
+        // The fixture's signal time is 12:00 UTC, outside the 13:00-17:00 window.
+        var fixture = new AccessRuleEngineFixture()
+            .RestrictedToTimeWindow("UTC", new TimeOnly(13, 0), new TimeOnly(17, 0));
+
+        var result = fixture.RequestAccess(fixture.Cipher);
+
+        Assert.Equal(RequestAccessOutcome.Failed, result.Outcome);
+        Assert.Equal(RequestAccessFailReason.AccessDenied, result.FailReason);
+        Assert.Equal(DenyReason.NotWithinTimeWindow, result.DenyReason);
+        Assert.Equal(0, fixture.RequestsCreated);
+    }
+
+    // ExchangeRequestForLease: gate on approval, enforce lease-issuance constraints, then issue the
+    // lease. The rule's non-approval conditions were already evaluated at request time.
 
     [Fact]
     public void Exchange_NoRequest_FailsWithRequestNotFound()
@@ -165,9 +248,11 @@ public sealed class AccessRuleEngineTests
     [Fact]
     public void Exchange_NoRuleGovernsCipher_FailsWithNoRule()
     {
+        // A request was created while a rule governed the cipher, but the rule has since been
+        // removed; the exchange defensively rejects rather than issue a lease with no policy.
         var fixture = new AccessRuleEngineFixture()
+            .WithPendingRequest()
             .WithNoRules();
-        fixture.RequestAccess(fixture.Cipher);
 
         var result = fixture.Exchange(fixture.Cipher);
 
@@ -217,21 +302,6 @@ public sealed class AccessRuleEngineTests
     }
 
     [Fact]
-    public void Exchange_IpAddressOutsideRequiredCidr_FailsWithAccessDeniedNotWithinIpRange()
-    {
-        var fixture = new AccessRuleEngineFixture()
-            .RestrictedToCidr("10.0.0.0/24")
-            .FromIpAddress("192.168.1.5");
-        fixture.RequestAccess(fixture.Cipher);
-
-        var result = fixture.Exchange(fixture.Cipher);
-
-        Assert.Equal(ExchangeOutcome.Failed, result.Outcome);
-        Assert.Equal(ExchangeFailReason.AccessDenied, result.FailReason);
-        Assert.Equal(DenyReason.NotWithinIpRange, result.DenyReason);
-    }
-
-    [Fact]
     public void Exchange_IpAddressWithinRequiredCidr_CreatesLease()
     {
         var fixture = new AccessRuleEngineFixture()
@@ -242,34 +312,6 @@ public sealed class AccessRuleEngineTests
         var result = fixture.Exchange(fixture.Cipher);
 
         Assert.Equal(ExchangeOutcome.Created, result.Outcome);
-    }
-
-    [Fact]
-    public void Exchange_UnparseableCidrEntryIsSkipped_AndALaterMatchCreatesLease()
-    {
-        var fixture = new AccessRuleEngineFixture()
-            .RestrictedToCidr("not-a-cidr", "10.0.0.0/24")
-            .FromIpAddress("10.0.0.5");
-        fixture.RequestAccess(fixture.Cipher);
-
-        var result = fixture.Exchange(fixture.Cipher);
-
-        Assert.Equal(ExchangeOutcome.Created, result.Outcome);
-    }
-
-    [Fact]
-    public void Exchange_OutsideTimeWindow_FailsWithAccessDeniedNotWithinTimeWindow()
-    {
-        // The fixture's signal time is 12:00 UTC, outside the 13:00-17:00 window.
-        var fixture = new AccessRuleEngineFixture()
-            .RestrictedToTimeWindow("UTC", new TimeOnly(13, 0), new TimeOnly(17, 0));
-        fixture.RequestAccess(fixture.Cipher);
-
-        var result = fixture.Exchange(fixture.Cipher);
-
-        Assert.Equal(ExchangeOutcome.Failed, result.Outcome);
-        Assert.Equal(ExchangeFailReason.AccessDenied, result.FailReason);
-        Assert.Equal(DenyReason.NotWithinTimeWindow, result.DenyReason);
     }
 
     [Fact]
@@ -314,10 +356,10 @@ public sealed class AccessRuleEngineTests
     }
 
     [Fact]
-    public void Exchange_EvaluatesStoredSignals_GrantsEvenWhenLiveContextWouldBeDenied()
+    public void Exchange_IgnoresLiveContext_GrantsEvenWhenLiveContextWouldBeDenied()
     {
         // Request from an allowed address, then move to a denied one before exchanging. The lease is
-        // still issued because the rule is evaluated against the signals captured at request time.
+        // still issued because the rule is only evaluated at request time, not at exchange.
         var fixture = new AccessRuleEngineFixture()
             .RestrictedToCidr("10.0.0.0/24")
             .FromIpAddress("10.0.0.5");
@@ -330,21 +372,21 @@ public sealed class AccessRuleEngineTests
     }
 
     [Fact]
-    public void Exchange_EvaluatesStoredSignals_DeniesEvenWhenLiveContextWouldBeAllowed()
+    public void RequestAccess_DeniedContext_RejectedBeforeAnyLaterContextChange()
     {
-        // Request from a denied address, then move to an allowed one before exchanging. Access is
-        // still denied because the rule is evaluated against the signals captured at request time.
+        // The rule is evaluated against the requesting user's signals, so a request from a denied
+        // address is rejected immediately; a later move to an allowed address cannot resurrect it
+        // because no request was ever created.
         var fixture = new AccessRuleEngineFixture()
             .RestrictedToCidr("10.0.0.0/24")
             .FromIpAddress("192.168.1.5");
-        fixture.RequestAccess(fixture.Cipher);
-        fixture.FromIpAddress("10.0.0.5");
 
-        var result = fixture.Exchange(fixture.Cipher);
+        var result = fixture.RequestAccess(fixture.Cipher);
 
-        Assert.Equal(ExchangeOutcome.Failed, result.Outcome);
-        Assert.Equal(ExchangeFailReason.AccessDenied, result.FailReason);
+        Assert.Equal(RequestAccessOutcome.Failed, result.Outcome);
+        Assert.Equal(RequestAccessFailReason.AccessDenied, result.FailReason);
         Assert.Equal(DenyReason.NotWithinIpRange, result.DenyReason);
+        Assert.Equal(0, fixture.RequestsCreated);
     }
 
     [Fact]

@@ -42,7 +42,12 @@ public sealed class AccessRuleEngine(
 
     /// <summary>
     /// Requests access to a cipher by creating a pending request that can later be exchanged for a
-    /// lease. Fails when the user already holds an active lease or already has a pending request.
+    /// lease. The rule is evaluated here against the requesting user's signals so a request that the
+    /// rule denies (for example, from a disallowed IP or outside an allowed time window) is rejected
+    /// up front rather than at exchange time. Human approval is the one gate deferred to exchange: it
+    /// yields <see cref="DecisionKind.RequiresApproval"/> rather than a denial, so it does not block
+    /// the request from being created. Also fails when the user already holds an active lease or
+    /// already has a pending request.
     /// </summary>
     public RequestAccessResult RequestAccess(CipherDetails cipher, AccessRuleSignals signals)
     {
@@ -58,14 +63,32 @@ public sealed class AccessRuleEngine(
             return RequestAccessResult.Failed(RequestAccessFailReason.ExistingRequest);
         }
 
+        var rule = _ruleResolver.Resolve(cipher);
+        if (rule is null)
+        {
+            // No rule governs this cipher, so there is no policy under which access could ever be
+            // granted; reject the request rather than create one that can never be exchanged.
+            return RequestAccessResult.Failed(RequestAccessFailReason.NoRule);
+        }
+
+        // Evaluate every condition except approval (which yields RequiresApproval, not a denial) and
+        // reject the request if the rule denies access for the requesting user's signals.
+        var context = new AccessRuleEngineContext { Rule = rule, Signals = signals };
+        var decision = AccessDecision.Combine(_conditions.Select(condition => condition.Evaluate(context)));
+        if (decision.Kind == DecisionKind.Deny)
+        {
+            return RequestAccessResult.AccessDenied(decision.Reason);
+        }
+
         var request = _requests.Create(cipher.Id, signals);
         return RequestAccessResult.Created(request);
     }
 
     /// <summary>
-    /// Exchanges a pending request for a lease. Approval is an explicit gate; the rule is then
-    /// re-evaluated against the signals captured when the request was made, and a lease is issued
-    /// when access is granted and lease-issuance constraints are satisfied.
+    /// Exchanges a pending request for a lease. The rule's non-approval conditions were already
+    /// evaluated against the captured signals when the request was created, so the only rule gate
+    /// applied here is approval; a lease is then issued when the lease-issuance constraints
+    /// (singleton) are satisfied.
     /// </summary>
     public ExchangeResult ExchangeRequestForLease(CipherDetails cipher, string username)
     {
@@ -85,15 +108,6 @@ public sealed class AccessRuleEngine(
         if (rule.RequireApproval && !request.Approved)
         {
             return ExchangeResult.Failed(ExchangeFailReason.NotApproved);
-        }
-
-        // Evaluate the rule against the signals captured at request time so the requester cannot
-        // change their context (IP, time of day) between requesting and exchanging.
-        var context = new AccessRuleEngineContext { Rule = rule, Signals = request.Signals };
-        var decision = AccessDecision.Combine(_conditions.Select(condition => condition.Evaluate(context)));
-        if (decision.Kind == DecisionKind.Deny)
-        {
-            return ExchangeResult.AccessDenied(decision.Reason);
         }
 
         // A singleton rule allows only one active lease per cipher at a time.
