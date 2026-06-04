@@ -46,7 +46,7 @@ public class SetInitialPasswordRequestModel : IValidatableObject
     public required string OrgIdentifier { get; set; }
 
     // Reads KDF/key from MasterPasswordAuthentication/MasterPasswordUnlock when present (modern clients),
-    // and falls back to the top-level legacy properties when not (clients ≤3 releases back).
+    // and falls back to the top-level legacy properties when not (older clients).
     // TODO: removal requires that BOTH flags have been removed:
     //  - https://bitwarden.atlassian.net/browse/PM-27327 (MP)
     //  - https://bitwarden.atlassian.net/browse/PM-27329 (TDE)
@@ -58,6 +58,13 @@ public class SetInitialPasswordRequestModel : IValidatableObject
         existingUser.KdfMemory = MasterPasswordAuthentication?.Kdf.Memory ?? KdfMemory;
         existingUser.KdfParallelism = MasterPasswordAuthentication?.Kdf.Parallelism ?? KdfParallelism;
         existingUser.Key = MasterPasswordUnlock?.MasterKeyWrappedUserKey ?? Key;
+
+        // MasterPasswordSalt column must never be null/empty after a successful password-set
+        // operation. Modern clients send an explicit salt via MPUD; older clients don't send one,
+        // so we fall back to the email-derived V1 salt (matching the implicit contract that
+        // User.GetMasterPasswordSalt() already encodes at read time).
+        existingUser.MasterPasswordSalt = MasterPasswordUnlock?.Salt ?? existingUser.Email.ToLowerInvariant().Trim();
+
         Keys?.ToUser(existingUser);
         return existingUser;
     }

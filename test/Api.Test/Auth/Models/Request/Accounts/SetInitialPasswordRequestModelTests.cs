@@ -581,7 +581,7 @@ public class SetInitialPasswordRequestModelTests
     public void ToUser_WithKeys_MapsPropertiesCorrectly(KdfType kdfType, int kdfIterations, int? kdfMemory, int? kdfParallelism)
     {
         // Arrange
-        var existingUser = new User();
+        var existingUser = new User { Email = "user@example.com" };
         var model = new SetInitialPasswordRequestModel
         {
             OrgIdentifier = "orgIdentifier",
@@ -620,7 +620,7 @@ public class SetInitialPasswordRequestModelTests
     public void ToUser_WithoutKeys_MapsPropertiesCorrectly(KdfType kdfType, int kdfIterations, int? kdfMemory, int? kdfParallelism)
     {
         // Arrange
-        var existingUser = new User();
+        var existingUser = new User { Email = "user@example.com" };
         var model = new SetInitialPasswordRequestModel
         {
             OrgIdentifier = "orgIdentifier",
@@ -656,7 +656,7 @@ public class SetInitialPasswordRequestModelTests
         KdfType kdfType, int kdfIterations, int? kdfMemory, int? kdfParallelism)
     {
         // Arrange — modern client: MPAD + MPUD + legacy Keys, no top-level legacy KDF/key fields
-        var existingUser = new User();
+        var existingUser = new User { Email = "user@example.com" };
         var model = new SetInitialPasswordRequestModel
         {
             OrgIdentifier = "orgIdentifier",
@@ -714,7 +714,7 @@ public class SetInitialPasswordRequestModelTests
         // ToUser should source from MPAD/MPUD, not the legacy top-level properties.
         // Uses Argon2id in MPAD so Memory/Parallelism are populated (not null) on the new shape;
         // verifies the new values win for every non-nullable field.
-        var existingUser = new User();
+        var existingUser = new User { Email = "user@example.com" };
         var model = new SetInitialPasswordRequestModel
         {
             OrgIdentifier = "orgIdentifier",
@@ -810,6 +810,57 @@ public class SetInitialPasswordRequestModelTests
         Assert.Equal("wrappedKeyFromMpud", result.Key);
         Assert.Equal("existingPublicKey", result.PublicKey);
         Assert.Equal("existingPrivateKey", result.PrivateKey);
+    }
+
+    [Fact]
+    public void ToUser_WithMasterPasswordUnlock_PersistsMpudSalt()
+    {
+        // Arrange — modern client sends an explicit salt via MPUD; ToUser must persist it
+        var existingUser = new User { Email = "user@example.com" };
+        var model = new SetInitialPasswordRequestModel
+        {
+            OrgIdentifier = "orgIdentifier",
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600000 },
+                MasterPasswordAuthenticationHash = "authHash",
+                Salt = "explicitSalt"
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600000 },
+                MasterKeyWrappedUserKey = "wrappedKey",
+                Salt = "explicitSalt"
+            }
+        };
+
+        // Act
+        var result = model.ToUser(existingUser);
+
+        // Assert
+        Assert.Equal("explicitSalt", result.MasterPasswordSalt);
+    }
+
+    [Fact]
+    public void ToUser_WithoutMasterPasswordUnlock_PersistsEmailDerivedSalt()
+    {
+        // Arrange — older client doesn't send MPUD; ToUser falls back to email-derived V1 salt
+        // so the MasterPasswordSalt column is never null after a successful set.
+        var existingUser = new User { Email = "User@Example.COM " };
+        var model = new SetInitialPasswordRequestModel
+        {
+            OrgIdentifier = "orgIdentifier",
+            MasterPasswordHash = "hash",
+            Key = "key",
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = 600000
+        };
+
+        // Act
+        var result = model.ToUser(existingUser);
+
+        // Assert — lowercased and trimmed
+        Assert.Equal("user@example.com", result.MasterPasswordSalt);
     }
 
     #endregion

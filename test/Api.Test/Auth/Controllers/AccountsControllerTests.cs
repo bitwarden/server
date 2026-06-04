@@ -1133,6 +1133,65 @@ public class AccountsControllerTests : IDisposable
             .SetInitialMasterPasswordAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
     }
 
+    // MasterPasswordSalt column must never be null/empty after a successful password-set operation.
+    // Modern clients send a salt via MPUD; ToUser should persist that exact value.
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_V1_NewClient_PersistsMpudSaltAsync(
+        User user,
+        SetInitialPasswordRequestModel setInitialPasswordRequestModel)
+    {
+        // Arrange — modern MP JIT client: MPAD + MPUD + legacy Keys (no AccountKeys)
+        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
+        setInitialPasswordRequestModel.AccountKeys = null;
+        setInitialPasswordRequestModel.Keys = new KeysRequestModel
+        {
+            PublicKey = "newPublicKey",
+            EncryptedPrivateKey = "newEncryptedPrivateKey"
+        };
+        user.PublicKey = null;
+        user.PrivateKey = null;
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
+                Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+            .Returns(Task.FromResult(IdentityResult.Success));
+
+        // Act
+        await _sut.PostSetPasswordAsync(setInitialPasswordRequestModel);
+
+        // Assert — user.MasterPasswordSalt matches the MPUD-provided salt
+        Assert.Equal(setInitialPasswordRequestModel.MasterPasswordUnlock.Salt, user.MasterPasswordSalt);
+        Assert.False(string.IsNullOrEmpty(user.MasterPasswordSalt));
+    }
+
+    // For older clients that don't send MPUD, MasterPasswordSalt falls back to the email-derived
+    // V1 salt (email.ToLowerInvariant().Trim()) so the column is never null after a successful set.
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_V1_OldClient_PersistsEmailDerivedSaltAsync(
+        User user,
+        SetInitialPasswordRequestModel setInitialPasswordRequestModel)
+    {
+        // Arrange — legacy-only request shape (no MPAD/MPUD)
+        UpdateSetInitialPasswordRequestModelToV1(setInitialPasswordRequestModel);
+        user.Email = "User@Example.COM ";
+        user.MasterPasswordSalt = null;
+        user.PublicKey = null;
+        user.PrivateKey = null;
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
+                Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+            .Returns(Task.FromResult(IdentityResult.Success));
+
+        // Act
+        await _sut.PostSetPasswordAsync(setInitialPasswordRequestModel);
+
+        // Assert — salt is the email-derived V1 salt (lowercased and trimmed)
+        Assert.Equal("user@example.com", user.MasterPasswordSalt);
+    }
+
     // Regression test for the V2 MP JIT routing fix: when the V2 MP JIT flag is ON but the request
     // shape is modern V1 MP JIT (MPAD + MPUD + legacy Keys, no AccountKeys), the V2 MP JIT branch
     // should NOT fire — its predicate requires AccountKeys != null. The request must fall through to V1.
