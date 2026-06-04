@@ -110,13 +110,6 @@ public class UpgradeOrganizationPlanVNextCommand(
 
         await priceIncreaseScheduler.Release(organization.GatewayCustomerId, organization.GatewaySubscriptionId!, organization.Id);
 
-        await stripeAdapter.UpdateSubscriptionAsync(
-            organization.GatewaySubscriptionId!,
-            new SubscriptionUpdateOptions
-            {
-                Metadata = new Dictionary<string, string> { [MetadataKeys.MigrationGraceServiceAccounts] = string.Empty }
-            });
-
         var builder = OrganizationSubscriptionChangeSet.Builder(currentPlan);
 
         builder.ChangePasswordManagerPrice(plan);
@@ -145,6 +138,13 @@ public class UpgradeOrganizationPlanVNextCommand(
         }
 
         await UpdateOrganizationFeaturesAsync(organization, plan, keys);
+
+        await stripeAdapter.UpdateSubscriptionAsync(
+            organization.GatewaySubscriptionId!,
+            new SubscriptionUpdateOptions
+            {
+                Metadata = new Dictionary<string, string> { [MetadataKeys.MigrationGraceServiceAccounts] = string.Empty }
+            });
 
         return result.Map(_ => new None());
     });

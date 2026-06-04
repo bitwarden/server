@@ -395,6 +395,27 @@ public class UpgradeOrganizationPlanVNextCommandTests
     }
 
     [Fact]
+    public async Task Run_PaidUpgrade_CommandFailure_DoesNotForfeitGraceMetadata()
+    {
+        var organization = CreateOrganization(PlanType.TeamsAnnually);
+        var currentPlan = MockPlans.Get(PlanType.TeamsAnnually);
+        var targetPlan = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+
+        BillingCommandResult<Subscription> failureResult = new BadRequest("Stripe error");
+        _updateOrganizationSubscriptionCommand
+            .Run(organization, Arg.Any<OrganizationSubscriptionChangeSet>())
+            .Returns(failureResult);
+
+        var result = await _command.Run(organization, targetPlan, null);
+
+        Assert.True(result.IsT1);
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
     public async Task Run_PaidUpgrade_TwentyTwentyToTwentyTwenty_ReleasesScheduleWithOrganizationId()
     {
         // 2020-era source upgrading to a 2020-era target across ascending tiers
