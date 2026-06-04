@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Bit.Admin.Billing.Controllers;
 using Bit.Admin.Billing.Models.OrganizationPlanMigrationCohortAssignments;
 using Bit.Core;
@@ -12,7 +12,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using NSubstitute;
-using Xunit;
 
 namespace Admin.Test.Billing.Controllers;
 

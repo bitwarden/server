@@ -1,8 +1,7 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Admin.Utilities;
 using Bit.Core;
 using Bit.Core.Billing.Organizations.PlanMigration.Models;
-using Microsoft.AspNetCore.Http;
 
 namespace Bit.Admin.Billing.Models.OrganizationPlanMigrationCohortAssignments;
 

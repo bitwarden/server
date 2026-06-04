@@ -1,4 +1,4 @@
-using Bit.Core.AdminConsole.Models.Data;
+﻿using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Commands;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;

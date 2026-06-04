@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Bit.Core.Billing.Organizations.PlanMigration.Utilities;
 using Microsoft.AspNetCore.Http;
 using Xunit;

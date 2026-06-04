@@ -1,8 +1,7 @@
-using Bit.Admin.Utilities;
+﻿using Bit.Admin.Utilities;
 using Bit.Core;
 using Microsoft.AspNetCore.Http;
 using NSubstitute;
-using Xunit;
 
 namespace Admin.Test.Utilities;
 
