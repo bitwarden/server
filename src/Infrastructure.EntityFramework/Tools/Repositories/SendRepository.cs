@@ -95,7 +95,7 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
         {
             var dbContext = GetDatabaseContext(scope);
             var results = await dbContext.Sends.Where(s => s.DeletionDate < deletionDateBefore).ToListAsync();
-            // Don't unprotect here DeleteSendsJob needs suceed regardless of protected values
+            // Don't unprotect here DeleteSendsJob needs to succeed regardless of protected values
             // Only the DeletionDate needs to read, and it is not protected
             return Mapper.Map<List<Core.Tools.Entities.Send>>(results);
         }
