@@ -1,0 +1,42 @@
+@model Bit.Admin.Billing.Models.OrganizationPlanMigrationCohortAssignments.BulkAssignmentUploadModel
+@{
+    ViewData["Title"] = "Bulk assign cohorts";
+}
+
+<div class="mx-auto" style="max-width: 768px;">
+    <h1>Bulk assign cohorts</h1>
+    <p class="text-muted">
+        Upload a 2-column CSV (<code>OrganizationId,CohortName</code>) with a header row to bulk-assign
+        organizations to cohorts. An empty cohort cell (<code>OrgId,</code>) un-assigns the organization.
+        Organizations not listed in the file are left unchanged. Cohort names match case-insensitively.
+        Max file size 25 MB.
+    </p>
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
+    }
+
+    @if (Model.Errors.Count > 0)
+    {
+        <div class="alert alert-danger" role="alert">
+            <strong>@Model.Errors.Count error@(Model.Errors.Count == 1 ? "" : "s") found in CSV.</strong>
+            <p class="mb-2">Fix the file and re-upload. No changes have been applied to the database.</p>
+            <ul class="mb-0">
+                @foreach (var error in Model.Errors)
+                {
+                    <li>Line @error.LineNumber: @error.Message</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <form method="post" asp-action="Upload" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label asp-for="File" class="form-label"></label>
+            <input asp-for="File" type="file" accept=".csv" class="form-control" />
+            <span asp-validation-for="File" class="text-danger"></span>
+        </div>
+        <button type="submit" class="btn btn-primary">Upload and apply</button>
+    </form>
+</div>

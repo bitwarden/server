@@ -1,0 +1,37 @@
+@model Bit.Admin.Billing.Models.OrganizationPlanMigrationCohortAssignments.BulkAssignmentResultModel
+@{
+    ViewData["Title"] = "Bulk assignment result";
+}
+
+<div class="mx-auto" style="max-width: 768px;">
+    <h1>Bulk assignment applied</h1>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Inserted</th>
+                <th>Updated</th>
+                <th>Unassigned</th>
+                <th>Plan mismatch</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="text-success">@Model.Summary.Inserted</td>
+                <td>@Model.Summary.Updated</td>
+                <td>@Model.Summary.Unassigned</td>
+                <td class="@(Model.Summary.PlanMismatch > 0 ? "text-warning" : "")">@Model.Summary.PlanMismatch</td>
+            </tr>
+        </tbody>
+    </table>
+
+    @if (Model.Summary.PlanMismatch > 0)
+    {
+        <div class="alert alert-warning">
+            @Model.Summary.PlanMismatch organization(s) are on a plan that doesn't match their cohort's
+            migration path; their migrations will be silently skipped at scheduling time.
+        </div>
+    }
+
+    <a asp-action="Index" class="btn btn-secondary">Upload another file</a>
+</div>
