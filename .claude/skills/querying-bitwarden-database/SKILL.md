@@ -63,7 +63,9 @@ Provider-agnostic Bitwarden domain facts that contradict assumptions an LLM woul
    JSON_VALUE(Favorites, CONCAT('$."', @UserId, '"'))
    ```
 8. **`Organization.Plan` is a display string; `PlanType` (TINYINT) is the enum.** `Organization.Enabled = 1` is the active flag; `Organization.Status` is the provider-management lifecycle (Pending/Created/Managed).
-9. **Avoid `SELECT *` on Cipher/Send/User/Organization; never `LIKE` on encrypted columns.** See [references/protected-columns.md](references/protected-columns.md).
+9. **Avoid `SELECT *` on Cipher/Send/User/Organization; never `LIKE` on encrypted columns.** Non-obvious encrypted columns: `Folder.Name`, `Collection.Name`, `Group.Name` look like plain strings but are AES256-CBC ciphertext. `Cipher.Data`, `Send.Data`/`Key`, `User.Key`/`MasterPassword`/`PrivateKey` are also opaque — null-check or length-check only. Conversely, `User.Email`, `User.Name`, and `Organization.Name` are plaintext — searchable with `LIKE`/`=` (only Collection/Folder/Group names are encrypted).
+10. **`Send` has three dates, a disabled bit, and an access-count cap — all must compose.** A live Send satisfies: `DeletionDate > GETUTCDATE()`, `ExpirationDate IS NULL OR ExpirationDate > GETUTCDATE()`, `Disabled = 0`, and `MaxAccessCount IS NULL OR AccessCount < MaxAccessCount`. Filtering on only one date silently over-counts available Sends.
+11. **`AuthRequest` has no `ExpirationDate` column — expiry is a runtime offset from `CreationDate`.** Pending requests: `ResponseDate IS NULL AND CreationDate > DATEADD(SECOND, -900, GETUTCDATE())`. Do not attempt to filter on a non-existent expiry field.
 
 ## Reference Library
 
@@ -76,8 +78,6 @@ These references are bundled so the always-loaded skill stays lean — pull in o
 | [references/schema-views.md](references/schema-views.md)                         | Before hand-rolling joins — a view may already compute the answer; also which views' filtering has drifted                              |
 | [references/sources.md](references/sources.md)                                   | Master registry of every source file cited in this skill                                                                                |
 | [references/enums.md](references/enums.md)                                       | Integer values for `Status`, `Type`, `PolicyType`, `RevocationReason`, etc.                                                             |
-| [references/protected-columns.md](references/protected-columns.md)               | Verifying a column is encrypted before composing `LIKE`/`ORDER BY`                                                                      |
-| [references/bitwarden-query-patterns.md](references/bitwarden-query-patterns.md) | Recipes — cipher TVF usage, permission resolution, manual enumeration, Send lifecycle, AuthRequest, and more                            |
 | [references/schema-discovery-queries.md](references/schema-discovery-queries.md) | Introspection — list tables, find FKs, fetch a view definition                                                                          |
 | [references/providers/mssql.md](references/providers/mssql.md)                   | MSSQL connection, sqlcmd flags, MSSQL syntax glossary                                                                                   |
 | [references/providers/mysql.md](references/providers/mysql.md)                   | (Stub)                                                                                                                                  |
