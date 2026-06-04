@@ -12,7 +12,7 @@ The fastest way to verify a preset is to let Claude Code run the queries and com
    ```
 2. Paste the seeder output (with Org ID) into Claude Code and ask:
    > Run Q1-Q8 against Org ID {id} and compare results to the Sterling Cooper expected values in verification.md
-3. Claude Code runs each query via the `bitwarden-mssql` skill, formats results as a pass/fail table, and flags any deviations beyond tolerance.
+3. Claude Code runs each query via the `querying-bitwarden-database` skill, formats results as a pass/fail table, and flags any deviations beyond tolerance.
 
 This is how the density algorithms were originally validated — Claude Code ran every query, computed pass/fail against the expected values below, and flagged distribution bugs that were then fixed in the same session.
 
