@@ -179,7 +179,7 @@ public class OrganizationsControllerTests
         User user,
         Organization organization,
         OrganizationUser organizationUser,
-        [Policy(PolicyType.ResetPassword, data: "{\"AutoEnrollEnabled\": true}")] PolicyStatus policy)
+        [Policy(PolicyType.ResetPassword, data: "{\"autoEnrollEnabled\": true}")] PolicyStatus policy)
     {
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdentifierAsync(organization.Id.ToString()).Returns(organization);
