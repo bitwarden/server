@@ -143,6 +143,32 @@ public class AdminConsoleJsonContextTests
     }
 
     [Fact]
+    public void Serialize_SendControlsPolicyData_MatchesCamelCaseOptions()
+    {
+        var obj = new SendControlsPolicyData { DisableSend = true, DisableHideEmail = false };
+
+        var contextJson = JsonSerializer.Serialize(obj, AdminConsoleJsonContext.Default.SendControlsPolicyData);
+        var referenceJson = JsonSerializer.Serialize(obj, _camelCaseOptions);
+
+        Assert.Equal(referenceJson, contextJson);
+    }
+
+    [Fact]
+    public void Deserialize_SendControlsPolicyData_RoundTrips()
+    {
+        const string fixture = """{"disableSend":true,"disableHideEmail":false}""";
+
+        var obj = JsonSerializer.Deserialize(fixture, AdminConsoleJsonContext.Default.SendControlsPolicyData);
+
+        Assert.NotNull(obj);
+        Assert.True(obj.DisableSend);
+        Assert.False(obj.DisableHideEmail);
+
+        var reserialised = JsonSerializer.Serialize(obj, AdminConsoleJsonContext.Default.SendControlsPolicyData);
+        Assert.Equal(fixture, reserialised);
+    }
+
+    [Fact]
     public void Serialize_ResetPasswordDataModel_MatchesCamelCaseOptions()
     {
         var obj = new ResetPasswordDataModel { AutoEnrollEnabled = true };
