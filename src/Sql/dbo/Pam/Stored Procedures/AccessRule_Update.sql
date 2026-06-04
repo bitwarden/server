@@ -3,16 +3,9 @@ CREATE PROCEDURE [dbo].[AccessRule_Update]
     @OrganizationId UNIQUEIDENTIFIER,
     @Name NVARCHAR(256),
     @Description NVARCHAR(MAX) = NULL,
-    @Conditions NVARCHAR(MAX),
-    @SingleActiveLease BIT = 0,
-    @DefaultLeaseDurationSeconds INT = NULL,
-    @MaxLeaseDurationSeconds INT = NULL,
-    @Enabled BIT = 1,
-    @AllowsExtensions BIT = 0,
-    @MaxExtensionDurationSeconds INT = NULL,
+    @Rule NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7),
-    @LastEditedBy UNIQUEIDENTIFIER = NULL
+    @RevisionDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -23,16 +16,9 @@ BEGIN
         [OrganizationId] = @OrganizationId,
         [Name] = @Name,
         [Description] = @Description,
-        [Conditions] = @Conditions,
-        [SingleActiveLease] = @SingleActiveLease,
-        [DefaultLeaseDurationSeconds] = @DefaultLeaseDurationSeconds,
-        [MaxLeaseDurationSeconds] = @MaxLeaseDurationSeconds,
-        [Enabled] = @Enabled,
-        [AllowsExtensions] = @AllowsExtensions,
-        [MaxExtensionDurationSeconds] = @MaxExtensionDurationSeconds,
+        [Rule] = @Rule,
         [CreationDate] = @CreationDate,
-        [RevisionDate] = @RevisionDate,
-        [LastEditedBy] = @LastEditedBy
+        [RevisionDate] = @RevisionDate
     WHERE
         [Id] = @Id
 END

@@ -1,9 +1,9 @@
 ﻿using System.Data;
+using Bit.Core.Pam.Entities;
+using Bit.Core.Pam.Models;
+using Bit.Core.Pam.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
-using Bit.Pam.Entities;
-using Bit.Pam.Models;
-using Bit.Pam.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
@@ -40,7 +40,7 @@ public class AccessRuleRepository : Repository<AccessRule, Guid>, IAccessRuleRep
             new { Id = id },
             commandType: CommandType.StoredProcedure);
 
-        var rule = await results.ReadFirstOrDefaultAsync<AccessRuleDetails>();
+        var rule = (await results.ReadAsync<AccessRuleDetails>()).SingleOrDefault();
         if (rule is null)
         {
             return null;
@@ -74,9 +74,25 @@ public class AccessRuleRepository : Repository<AccessRule, Guid>, IAccessRuleRep
         return rules;
     }
 
+    public async Task SetCollectionAssociationsAsync(Guid organizationId, Guid accessRuleId,
+        IEnumerable<Guid> collectionIdsToAssign, IEnumerable<Guid> collectionIdsToClear)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        await connection.ExecuteAsync(
+            $"[{Schema}].[Collection_SetAccessRuleAssociations]",
+            new
+            {
+                AccessRuleId = accessRuleId,
+                OrganizationId = organizationId,
+                ToAssign = collectionIdsToAssign.ToGuidIdArrayTVP(),
+                ToClear = collectionIdsToClear.ToGuidIdArrayTVP(),
+            },
+            commandType: CommandType.StoredProcedure);
+    }
+
     private sealed class CollectionAccessRuleMapping
     {
-        public Guid AccessRuleId { get; set; }
-        public Guid CollectionId { get; set; }
+        public Guid AccessRuleId { get; init; }
+        public Guid CollectionId { get; init; }
     }
 }

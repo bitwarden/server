@@ -1,10 +1,10 @@
 ﻿using AutoMapper;
+using Bit.Core.Pam.Models;
+using Bit.Core.Pam.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
-using Bit.Pam.Models;
-using Bit.Pam.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using CoreEntity = Bit.Pam.Entities.AccessRule;
+using CoreEntity = Bit.Core.Pam.Entities.AccessRule;
 using EfModel = Bit.Infrastructure.EntityFramework.Pam.Models.AccessRule;
 
 #nullable enable
@@ -82,30 +82,59 @@ public class AccessRuleRepository : Repository<CoreEntity, EfModel, Guid>, IAcce
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
+        var now = DateTime.UtcNow;
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
-        // Clear the collection links before deleting the rule: the FK Collection.AccessRuleId -> AccessRule does
-        // not cascade (RESTRICT here, NO ACTION on SQL Server), so the delete fails while any collection still
-        // points at it.
+        // The Collection -> AccessRule FK is Restrict, so clear it from governed collections before deleting.
         await dbContext.Collections
             .Where(c => c.AccessRuleId == accessRule.Id)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(c => c.AccessRuleId, (Guid?)null)
-                .SetProperty(c => c.RevisionDate, DateTime.UtcNow));
-
-        // Detach the requests that pinned this rule for the same reason: FK_AccessRequest_AccessRule does not
-        // cascade either, so a request recording this rule as its governing rule would block the delete. RuleId is
-        // provenance rather than authority, and is already nullable for requests never gated through a stored rule.
-        await dbContext.AccessRequests
-            .Where(r => r.RuleId == accessRule.Id)
-            .ExecuteUpdateAsync(s => s.SetProperty(r => r.RuleId, (Guid?)null));
+                .SetProperty(c => c.RevisionDate, now));
 
         await dbContext.AccessRules
             .Where(r => r.Id == accessRule.Id)
             .ExecuteDeleteAsync();
 
         await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(accessRule.OrganizationId);
+        await dbContext.SaveChangesAsync();
+        await transaction.CommitAsync();
+    }
+
+    public async Task SetCollectionAssociationsAsync(Guid organizationId, Guid accessRuleId,
+        IEnumerable<Guid> collectionIdsToAssign, IEnumerable<Guid> collectionIdsToClear)
+    {
+        var assignIds = collectionIdsToAssign.ToList();
+        var clearIds = collectionIdsToClear.ToList();
+
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var now = DateTime.UtcNow;
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        if (clearIds.Count > 0)
+        {
+            await dbContext.Collections
+                .Where(c => c.OrganizationId == organizationId
+                    && c.AccessRuleId == accessRuleId
+                    && clearIds.Contains(c.Id))
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(c => c.AccessRuleId, (Guid?)null)
+                    .SetProperty(c => c.RevisionDate, now));
+        }
+
+        if (assignIds.Count > 0)
+        {
+            await dbContext.Collections
+                .Where(c => c.OrganizationId == organizationId && assignIds.Contains(c.Id))
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(c => c.AccessRuleId, accessRuleId)
+                    .SetProperty(c => c.RevisionDate, now));
+        }
+
+        await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId);
         await dbContext.SaveChangesAsync();
         await transaction.CommitAsync();
     }

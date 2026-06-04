@@ -10,7 +10,6 @@ using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.NotificationCenter.Models;
 using Bit.Infrastructure.EntityFramework.Pam.Models;
 using Bit.Infrastructure.EntityFramework.Platform;
-using Bit.Infrastructure.EntityFramework.PrivilegedAccessManagement.Models;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Microsoft.EntityFrameworkCore;

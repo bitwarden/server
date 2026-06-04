@@ -2592,7 +2592,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.ToTable("Installation", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.PrivilegedAccessManagement.Models.AccessRule", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRule", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
@@ -3136,7 +3136,7 @@ namespace Bit.SqliteMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Collection", b =>
                 {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.PrivilegedAccessManagement.Models.AccessRule", null)
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRule", null)
                         .WithMany()
                         .HasForeignKey("AccessRuleId")
                         .OnDelete(DeleteBehavior.Restrict);
@@ -3677,7 +3677,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.PrivilegedAccessManagement.Models.AccessRule", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRule", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
                         .WithMany()
