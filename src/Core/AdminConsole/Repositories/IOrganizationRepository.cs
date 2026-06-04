@@ -1,6 +1,7 @@
 ﻿using System.Data.Common;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
@@ -33,6 +34,13 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
 
     Task<ICollection<Organization>> GetAddableToProviderByUserIdAsync(Guid userId, ProviderType providerType);
     Task<ICollection<Organization>> GetManyByIdsAsync(IEnumerable<Guid> ids);
+
+    /// <summary>
+    /// Returns a lightweight projection of <c>(OrganizationId, PlanType)</c> for the given organization ids.
+    /// Only organizations that exist are returned; ids with no matching organization are omitted.
+    /// </summary>
+    /// <param name="ids">The organization ids to look up.</param>
+    Task<ICollection<OrganizationPlanType>> GetPlanTypesByOrganizationIdsAsync(IEnumerable<Guid> ids);
 
     /// <summary>
     /// Returns the number of occupied seats for an organization.

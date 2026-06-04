@@ -5,6 +5,7 @@ using System.Data.Common;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
@@ -64,6 +65,22 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .FirstOrDefaultAsync();
             return organization;
         }
+    }
+
+    public async Task<ICollection<OrganizationPlanType>> GetPlanTypesByOrganizationIdsAsync(IEnumerable<Guid> ids)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var query = from organization in dbContext.Organizations
+                    where ids.Contains(organization.Id)
+                    select new OrganizationPlanType
+                    {
+                        OrganizationId = organization.Id,
+                        PlanType = organization.PlanType,
+                    };
+
+        return await query.ToArrayAsync();
     }
 
     public async Task<ICollection<Core.AdminConsole.Entities.Organization>> GetManyByEnabledAsync()
