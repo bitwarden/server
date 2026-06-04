@@ -1,7 +1,8 @@
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
+using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Repositories;
 using Xunit;
@@ -51,4 +52,65 @@ public class CohortBulkAssignmentRepositoryTests
         var match = Assert.Single(results);
         Assert.Equal(a.Id, match.Id);
     }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task SyncManyAsync_InsertsUpdatesAndUnassigns(
+        IOrganizationRepository organizationRepository,
+        IOrganizationPlanMigrationCohortRepository cohortRepository,
+        IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository)
+    {
+        var orgToInsert = await CreateOrgAsync(organizationRepository);
+        var orgToMove = await CreateOrgAsync(organizationRepository);
+        var orgToUnassign = await CreateOrgAsync(organizationRepository);
+        var cohortA = await cohortRepository.CreateAsync(new OrganizationPlanMigrationCohort
+        {
+            Name = $"Cohort A {Guid.NewGuid()}",
+            MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
+        });
+        var cohortB = await cohortRepository.CreateAsync(new OrganizationPlanMigrationCohort
+        {
+            Name = $"Cohort B {Guid.NewGuid()}",
+            MigrationPathId = MigrationPathId.Enterprise2020MonthlyToCurrent,
+        });
+
+        // Seed: orgToMove is on cohortA (CSV moves it to cohortB → UPDATE);
+        // orgToUnassign is on cohortA (sentinel row removes it → DELETE).
+        await assignmentRepository.CreateAsync(new OrganizationPlanMigrationCohortAssignment
+        {
+            OrganizationId = orgToMove.Id,
+            CohortId = cohortA.Id,
+        });
+        await assignmentRepository.CreateAsync(new OrganizationPlanMigrationCohortAssignment
+        {
+            OrganizationId = orgToUnassign.Id,
+            CohortId = cohortA.Id,
+        });
+
+        var rows = new[]
+        {
+            new ResolvedCohortBulkAssignmentRow(orgToInsert.Id, cohortA.Id),    // insert
+            new ResolvedCohortBulkAssignmentRow(orgToMove.Id, cohortB.Id),      // update (move A -> B)
+            new ResolvedCohortBulkAssignmentRow(orgToUnassign.Id, null),        // unassign
+        };
+
+        var result = await assignmentRepository.SyncManyAsync(rows);
+
+        Assert.Equal(1, result.Inserted);
+        Assert.Equal(1, result.Updated);
+        Assert.Equal(1, result.Unassigned);
+        Assert.NotNull(await assignmentRepository.GetByOrganizationIdAsync(orgToInsert.Id));
+        var moved = await assignmentRepository.GetByOrganizationIdAsync(orgToMove.Id);
+        Assert.NotNull(moved);
+        Assert.Equal(cohortB.Id, moved!.CohortId);
+        Assert.Null(await assignmentRepository.GetByOrganizationIdAsync(orgToUnassign.Id));
+    }
+
+    private static async Task<Organization> CreateOrgAsync(IOrganizationRepository repo) =>
+        await repo.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            BillingEmail = "billing@example.com",
+            Plan = "Enterprise (Annually) 2020",
+            PlanType = PlanType.EnterpriseAnnually2020,
+        });
 }
