@@ -1,0 +1,91 @@
+---
+name: querying-bitwarden-database
+description: Read-only query access to a local Bitwarden database (MSSQL primary; MySQL/PostgreSQL/SQLite reference scaffolds in place).
+when-to-use: Use when phrases include "query the Bitwarden database", "run SQL against Bitwarden", "look up data in Bitwarden", "explore the Bitwarden schema", "query Cipher records", "query Organization data", "look up vault items", "how many users", "show me collections", "what orgs have feature X", or any variation of querying, exploring, or inspecting Bitwarden data.
+argument-hint: natural language question or SQL query
+user-invocable: true
+allowed-tools: "Bash(which sqlcmd), Bash(sqlcmd:*)"
+hooks:
+  PreToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/block-mutating-sql.sh"
+          timeout: 5
+---
+
+# Bitwarden Database Reader
+
+Read-only access to a local Bitwarden database, grounded in Bitwarden's actual schema, enums, and access-control semantics. Provider-pluggable: MSSQL is wired today, the others are scaffolds.
+
+Bitwarden's schema encodes business and security meaning, not just storage — ownership, membership, access policy, and lifecycle state all live in how these tables relate. Grasping what the data _represents_ is what turns a business-language question into a correct query.
+
+## Zero-knowledge invariant
+
+> Bitwarden servers store and synchronize **encrypted vault data** only. No SQL query produces decrypted Vault Data — the server cannot decrypt the blobs.
+
+## Read-only enforcement (three layers)
+
+1. **Skill self-enforces.** Allowed verbs: `SELECT`, `WITH` (CTEs), and `INFORMATION_SCHEMA` / `sys.*` introspection. Refuse anything else before composing SQL.
+2. **PreToolUse hooks block at the bash boundary.** A single shared hook (`.claude/hooks/block-mutating-sql.sh`) covers all providers. Deny `INSERT`/`UPDATE`/`DELETE`/`DROP`/`ALTER`/`TRUNCATE`/`CREATE`/`MERGE`/`EXEC`/`BULK INSERT`/`SELECT INTO`/`GRANT`/`REVOKE`/`DENY`, plus dangerous primitives (`xp_*`, `sp_executesql`, `sp_OA*`, `RECONFIGURE`, `OPENROWSET`/`OPENQUERY`/`OPENDATASOURCE`, sqlcmd `:!!` and `:r`).
+3. **DB login is read-only at the server.**
+
+## Cross-provider rules
+
+- **Secrets.** Never echo, log, `cat`, `printenv`, or `hexdump` any password env var. Set passwords inline on the command (e.g., `SQLCMDPASSWORD="$BW_MSSQL_PASSWORD" sqlcmd ...`); never `export` them.
+- **Result presentation.** Format <20 rows as a markdown table; summarize larger sets as top-N + count. Always echo the SQL ran. Trim CLI footers (`(N rows affected)`, `Query OK`) before presenting.
+- **Heredoc footgun.** Use single-quoted heredoc tags (`<<'SQL'`) — without quotes, bash expands `$` inside the SQL before the database CLI sees it, breaking column references.
+
+## Provider selection
+
+Detect the active provider from the `BW_*_*` env-var prefix that is set, then read the matching provider reference before composing SQL.
+
+Schema source of truth: `src/Sql/dbo/` (MSSQL SSDT). MySQL/PostgreSQL/SQLite mirror it via `util/{MySql,Postgres,Sqlite}Migrations/` + `src/Infrastructure.EntityFramework/`.
+
+| Provider   | Env prefix    | CLI       | Reference                                                                | Status    |
+| ---------- | ------------- | --------- | ------------------------------------------------------------------------ | --------- |
+| MSSQL      | `BW_MSSQL_*`  | `sqlcmd`  | [references/providers/mssql.md](references/providers/mssql.md)           | **Ready** |
+| MySQL      | `BW_MYSQL_*`  | `mysql`   | [references/providers/mysql.md](references/providers/mysql.md)           | Stub      |
+| PostgreSQL | `BW_PG_*`     | `psql`    | [references/providers/postgresql.md](references/providers/postgresql.md) | Stub      |
+| SQLite     | `BW_SQLITE_*` | `sqlite3` | [references/providers/sqlite.md](references/providers/sqlite.md)         | Stub      |
+
+## Bitwarden grounding rules
+
+Provider-agnostic Bitwarden domain facts that contradict assumptions an LLM would otherwise make from public training data. Source citations in [references/sources.md](references/sources.md).
+
+1. **Active member = `OrganizationUser.Status = 2`** (Confirmed). `Status` is `SMALLINT` — full values in [references/enums.md](references/enums.md).
+2. **Active cipher = `Cipher.DeletedDate IS NULL`.** No `IsDeleted` bit.
+3. **`Cipher.UserId XOR OrganizationId` is enforced in code only** — no CHECK constraint. Personal-vault filters must include `OrganizationId IS NULL`.
+4. **Use `[dbo].[UserCipherDetails](@UserId)` for "what ciphers can user X see"** — the canonical TVF unions personal + direct + group-mediated access with the `Organization.Enabled = 1` gate.
+5. **`CollectionUser.OrganizationUserId` joins to `OrganizationUser.Id`, not `User.Id`.** Same for `GroupUser`:
+   ```sql
+   CollectionUser CU
+   JOIN OrganizationUser OU ON CU.OrganizationUserId = OU.Id
+   JOIN [User] U             ON OU.UserId             = U.Id
+   ```
+6. **Permission resolution = `COALESCE(CollectionUser.x, CollectionGroup.x, 0)`** — direct user grants beat group grants. `Edit = NOT ReadOnly`, `ViewPassword = NOT HidePasswords`, `Manage` standalone.
+7. **`Cipher.Favorites`, `.Folders`, `.Archives` are per-user JSON keyed by UPPERCASE GUID.** SQL Server interpolates `UNIQUEIDENTIFIER` as uppercase; JSON keys are case-sensitive. Interpolate from a `UNIQUEIDENTIFIER` variable:
+   ```sql
+   JSON_VALUE(Favorites, CONCAT('$."', @UserId, '"'))
+   ```
+8. **`Organization.Plan` is a display string; `PlanType` (TINYINT) is the enum.** `Organization.Enabled = 1` is the active flag; `Organization.Status` is the provider-management lifecycle (Pending/Created/Managed).
+9. **Avoid `SELECT *` on Cipher/Send/User/Organization; never `LIKE` on encrypted columns.** See [references/protected-columns.md](references/protected-columns.md).
+
+## Reference Library
+
+These references are bundled so the always-loaded skill stays lean — pull in only what a question needs, when you need it. **DO NOT** compose SQL from a generic mental model of how a schema "probably" looks: Bitwarden's tables encode domain rules that public training data gets wrong, so guessing yields a query that runs cleanly but answers the wrong question. Before anything past a trivial single-table lookup, open the reference that matches what you're reasoning about — entity choice, joins, or reusing a view.
+
+| Reference                                                                        | When to read                                                                                                                            |
+| -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| [references/schema-tables.md](references/schema-tables.md)                       | Choosing the right starting entity and confirming it means what you assume (names mislead); which mandatory filters a valid query needs |
+| [references/schema-relationships.md](references/schema-relationships.md)         | Composing any multi-table join — cardinality, the `OrganizationUser`-not-`User` pitfall, `UserId` XOR `OrganizationId`                  |
+| [references/schema-views.md](references/schema-views.md)                         | Before hand-rolling joins — a view may already compute the answer; also which views' filtering has drifted                              |
+| [references/sources.md](references/sources.md)                                   | Master registry of every source file cited in this skill                                                                                |
+| [references/enums.md](references/enums.md)                                       | Integer values for `Status`, `Type`, `PolicyType`, `RevocationReason`, etc.                                                             |
+| [references/protected-columns.md](references/protected-columns.md)               | Verifying a column is encrypted before composing `LIKE`/`ORDER BY`                                                                      |
+| [references/bitwarden-query-patterns.md](references/bitwarden-query-patterns.md) | Recipes — cipher TVF usage, permission resolution, manual enumeration, Send lifecycle, AuthRequest, and more                            |
+| [references/schema-discovery-queries.md](references/schema-discovery-queries.md) | Introspection — list tables, find FKs, fetch a view definition                                                                          |
+| [references/providers/mssql.md](references/providers/mssql.md)                   | MSSQL connection, sqlcmd flags, MSSQL syntax glossary                                                                                   |
+| [references/providers/mysql.md](references/providers/mysql.md)                   | (Stub)                                                                                                                                  |
+| [references/providers/postgresql.md](references/providers/postgresql.md)         | (Stub)                                                                                                                                  |
+| [references/providers/sqlite.md](references/providers/sqlite.md)                 | (Stub)                                                                                                                                  |
