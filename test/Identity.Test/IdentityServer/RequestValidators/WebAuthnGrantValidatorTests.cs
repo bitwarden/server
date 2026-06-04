@@ -6,6 +6,7 @@ using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Tokens;
+using Bit.Identity.IdentityServer;
 using Bit.Identity.IdentityServer.RequestValidators;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;

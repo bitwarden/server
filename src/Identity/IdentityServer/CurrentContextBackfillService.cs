@@ -4,7 +4,7 @@ using Bit.Core.Context;
 using Duende.IdentityModel;
 using Duende.IdentityServer.Validation;
 
-namespace Bit.Identity.IdentityServer.RequestValidators;
+namespace Bit.Identity.IdentityServer;
 
 /// <summary>
 /// Back-fills <see cref="ICurrentContext"/> from grant-validator state that

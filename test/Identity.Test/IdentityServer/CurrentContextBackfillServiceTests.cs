@@ -4,7 +4,6 @@ using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Identity.IdentityServer;
-using Bit.Identity.IdentityServer.RequestValidators;
 using Duende.IdentityModel;
 using Duende.IdentityServer.Validation;
 using Microsoft.Extensions.Logging;
@@ -13,7 +12,7 @@ using Microsoft.Extensions.Logging.Testing;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Identity.Test.IdentityServer.RequestValidators;
+namespace Bit.Identity.Test.IdentityServer;
 
 public class CurrentContextBackfillServiceTests
 {
