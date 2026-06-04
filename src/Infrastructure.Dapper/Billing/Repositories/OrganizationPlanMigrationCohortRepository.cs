@@ -66,7 +66,9 @@ public class OrganizationPlanMigrationCohortRepository(
 
     public async Task<IReadOnlyList<OrganizationPlanMigrationCohort>> GetManyByNamesAsync(IEnumerable<string> names)
     {
-        var payload = names.Select(name => new { Name = name });
+        var payload = names
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(name => new { Name = name });
 
         await using var connection = new SqlConnection(ConnectionString);
 
