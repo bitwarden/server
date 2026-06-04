@@ -74,11 +74,13 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IDeleteClaimedOrganizationUserAccountCommand _deleteClaimedOrganizationUserAccountCommand;
     private readonly IGetOrganizationUsersClaimedStatusQuery _getOrganizationUsersClaimedStatusQuery;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IGetPendingAutoConfirmUsersQuery _getPendingAutoConfirmUsersQuery;
     private readonly IFeatureService _featureService;
     private readonly IPricingClient _pricingClient;
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
     private readonly IBulkResendOrganizationInvitesCommand _bulkResendOrganizationInvitesCommand;
     private readonly IAutomaticallyConfirmOrganizationUserCommand _automaticallyConfirmOrganizationUserCommand;
+    private readonly IBulkAutomaticallyConfirmOrganizationUsersCommand _bulkAutomaticallyConfirmOrganizationUsersCommand;
     private readonly V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand _revokeOrganizationUserCommandVNext;
     private readonly IConfirmOrganizationUserCommand _confirmOrganizationUserCommand;
     private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
@@ -119,9 +121,11 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IAdminRecoverAccountCommand adminRecoverAccountCommand,
         AccountRecoveryV2.IAdminRecoverAccountCommand adminRecoverAccountCommandV2,
         IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand,
+        IBulkAutomaticallyConfirmOrganizationUsersCommand bulkAutomaticallyConfirmOrganizationUsersCommand,
         V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext,
         ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand,
-        IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand)
+        IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand,
+        IGetPendingAutoConfirmUsersQuery getPendingAutoConfirmUsersQuery)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -142,11 +146,13 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _deleteClaimedOrganizationUserAccountCommand = deleteClaimedOrganizationUserAccountCommand;
         _getOrganizationUsersClaimedStatusQuery = getOrganizationUsersClaimedStatusQuery;
         _policyRequirementQuery = policyRequirementQuery;
+        _getPendingAutoConfirmUsersQuery = getPendingAutoConfirmUsersQuery;
         _featureService = featureService;
         _pricingClient = pricingClient;
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
         _bulkResendOrganizationInvitesCommand = bulkResendOrganizationInvitesCommand;
         _automaticallyConfirmOrganizationUserCommand = automaticallyConfirmOrganizationUserCommand;
+        _bulkAutomaticallyConfirmOrganizationUsersCommand = bulkAutomaticallyConfirmOrganizationUsersCommand;
         _revokeOrganizationUserCommandVNext = revokeOrganizationUserCommandVNext;
         _confirmOrganizationUserCommand = confirmOrganizationUserCommand;
         _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
@@ -802,7 +808,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         {
             return TypedResults.Unauthorized();
         }
-
         return Handle(await _automaticallyConfirmOrganizationUserCommand.AutomaticallyConfirmOrganizationUserAsync(
             new AutomaticallyConfirmOrganizationUserRequest
             {
@@ -812,6 +817,45 @@ public class OrganizationUsersController : BaseAdminConsoleController
                 DefaultUserCollectionName = model.DefaultUserCollectionName,
                 PerformedBy = new StandardUser(userId.Value, await _currentContext.OrganizationOwner(orgId)),
             }));
+    }
+
+    [HttpGet("pending-auto-confirm")]
+    [Authorize<ManageUsersRequirement>]
+    [RequireFeature(FeatureFlagKeys.BulkAutoConfirmOnLogin)]
+    public async Task<ListResponseModel<OrganizationUserPendingAutoConfirmResponseModel>> GetPendingAutoConfirmUsersAsync(Guid orgId)
+    {
+        var pendingUsers = await _getPendingAutoConfirmUsersQuery.GetPendingAutoConfirmUsersAsync(orgId);
+        return new ListResponseModel<OrganizationUserPendingAutoConfirmResponseModel>(
+            pendingUsers.Select(u => new OrganizationUserPendingAutoConfirmResponseModel(u)));
+    }
+
+    [HttpPost("bulk-auto-confirm")]
+    [Authorize<ManageUsersRequirement>]
+    [RequireFeature(FeatureFlagKeys.BulkAutoConfirmOnLogin)]
+    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkAutomaticallyConfirmOrganizationUsersAsync(
+        [BindOrganization] Organization organization,
+        [FromBody] OrganizationUserBulkConfirmRequestModel model)
+    {
+        var request = new BulkAutomaticallyConfirmOrganizationUsersRequest
+        {
+            Organization = organization,
+            DefaultUserCollectionName = model.DefaultUserCollectionName,
+            UsersToConfirm = model.Keys
+                .Select(entry => new BulkAutoConfirmUserEntry
+                {
+                    OrganizationUserId = entry.Id,
+                    Key = entry.Key,
+                })
+                .ToList(),
+        };
+
+        var results = await _bulkAutomaticallyConfirmOrganizationUsersCommand.RunAsync(request);
+
+        return new ListResponseModel<OrganizationUserBulkResponseModel>(results
+            .Select(r => new OrganizationUserBulkResponseModel(r.Id,
+                r.Result.Match(
+                    error => error.Message,
+                    _ => string.Empty))));
     }
 
     private async Task RestoreOrRevokeUserAsync(
