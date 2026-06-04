@@ -2,7 +2,7 @@
 name: querying-bitwarden-database
 description: Read-only query access to a local Bitwarden database (MSSQL primary; MySQL/PostgreSQL/SQLite reference scaffolds in place).
 when-to-use: Use when phrases include "query the Bitwarden database", "run SQL against Bitwarden", "look up data in Bitwarden", "explore the Bitwarden schema", "query Cipher records", "query Organization data", "look up vault items", "how many users", "show me collections", "what orgs have feature X", or any variation of querying, exploring, or inspecting Bitwarden data.
-argument-hint: natural language question or SQL query
+argument-hint: "[mssql|mysql|postgresql|sqlite] <question or SQL>"
 user-invocable: true
 allowed-tools: "Bash(which sqlcmd), Bash(sqlcmd:*)"
 hooks:
@@ -20,15 +20,11 @@ Read-only access to a local Bitwarden database, grounded in Bitwarden's actual s
 
 Bitwarden's schema encodes business and security meaning, not just storage — ownership, membership, access policy, and lifecycle state all live in how these tables relate. Grasping what the data _represents_ is what turns a business-language question into a correct query.
 
-## Zero-knowledge invariant
+## Read-only, defense in depth
 
-> Bitwarden servers store and synchronize **encrypted vault data** only. No SQL query produces decrypted Vault Data — the server cannot decrypt the blobs.
-
-## Read-only enforcement (three layers)
-
-1. **Skill self-enforces.** Allowed verbs: `SELECT`, `WITH` (CTEs), and `INFORMATION_SCHEMA` / `sys.*` introspection. Refuse anything else before composing SQL.
-2. **PreToolUse hooks block at the bash boundary.** A single shared hook (`.claude/hooks/block-mutating-sql.sh`) covers all providers. Deny `INSERT`/`UPDATE`/`DELETE`/`DROP`/`ALTER`/`TRUNCATE`/`CREATE`/`MERGE`/`EXEC`/`BULK INSERT`/`SELECT INTO`/`GRANT`/`REVOKE`/`DENY`, plus dangerous primitives (`xp_*`, `sp_executesql`, `sp_OA*`, `RECONFIGURE`, `OPENROWSET`/`OPENQUERY`/`OPENDATASOURCE`, sqlcmd `:!!` and `:r`).
-3. **DB login is read-only at the server.**
+1. Database login is read-only at the server — mutations will fail regardless of what you send.
+2. PreToolUse hook blocks non-read SQL at the bash boundary.
+3. Allowed: `SELECT`, `WITH` (CTEs), and `INFORMATION_SCHEMA` / `sys.*` introspection.
 
 ## Cross-provider rules
 
@@ -38,9 +34,7 @@ Bitwarden's schema encodes business and security meaning, not just storage — o
 
 ## Provider selection
 
-Detect the active provider from the `BW_*_*` env-var prefix that is set, then read the matching provider reference before composing SQL.
-
-Schema source of truth: `src/Sql/dbo/` (MSSQL SSDT). MySQL/PostgreSQL/SQLite mirror it via `util/{MySql,Postgres,Sqlite}Migrations/` + `src/Infrastructure.EntityFramework/`.
+First arg picks the provider — `mssql` (default), `mysql`, `postgresql`, or `sqlite`. Read the matching provider reference before composing SQL.
 
 | Provider   | Env prefix    | CLI       | Reference                                                                | Status    |
 | ---------- | ------------- | --------- | ------------------------------------------------------------------------ | --------- |
