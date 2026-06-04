@@ -1109,6 +1109,72 @@ public class AccountsControllerTests : IDisposable
             .SetMasterPasswordAsync(Arg.Any<User>(), Arg.Any<SetInitialMasterPasswordDataModel>());
     }
 
+    // Defensive guard: V1 path cannot consume AccountKeys (the new key shape). A request that
+    // carries AccountKeys must be routed through V2; if it lands on V1 (e.g., V2 MP JIT flag off
+    // while a non-Angular caller posted AccountKeys), fail loudly instead of silently dropping the keypair.
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_V1_WithAccountKeys_ShouldThrowBadRequestAsync(
+        User user,
+        SetInitialPasswordRequestModel setInitialPasswordRequestModel)
+    {
+        // Arrange — V2-shape model (MPAD + MPUD + AccountKeys), V2 MP JIT flag left OFF.
+        // Routes past the V2 MP JIT branch (flag off), then the V1 defensive guard fires.
+        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => _sut.PostSetPasswordAsync(setInitialPasswordRequestModel));
+
+        // V1 command must NOT be invoked when the defensive guard rejects the request
+        await _setInitialMasterPasswordCommandV1.DidNotReceiveWithAnyArgs()
+            .SetInitialMasterPasswordAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    // Regression test for the V2 MP JIT routing fix: when the V2 MP JIT flag is ON but the request
+    // shape is modern V1 MP JIT (MPAD + MPUD + legacy Keys, no AccountKeys), the V2 MP JIT branch
+    // should NOT fire — its predicate requires AccountKeys != null. The request must fall through to V1.
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_ModernV1MpJit_WithV2MpJitFlagOn_StillRoutesToV1Async(
+        User user,
+        SetInitialPasswordRequestModel setInitialPasswordRequestModel)
+    {
+        // Arrange — modern V1 MP JIT shape: MPAD + MPUD + legacy Keys (no AccountKeys).
+        // V2 MP JIT flag ON to ensure the tightened predicate is what gates the V2 branch.
+        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
+        setInitialPasswordRequestModel.AccountKeys = null;
+        setInitialPasswordRequestModel.Keys = new KeysRequestModel
+        {
+            PublicKey = "newPublicKey",
+            EncryptedPrivateKey = "newEncryptedPrivateKey"
+        };
+        user.PublicKey = null;
+        user.PrivateKey = null;
+
+        _featureService.IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration).Returns(true);
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
+                Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+            .Returns(Task.FromResult(IdentityResult.Success));
+
+        // Act
+        await _sut.PostSetPasswordAsync(setInitialPasswordRequestModel);
+
+        // Assert — V1 command invoked, V2 MP JIT command NOT invoked
+        await _setInitialMasterPasswordCommandV1.Received(1)
+            .SetInitialMasterPasswordAsync(
+                Arg.Is<User>(u => u == user),
+                Arg.Is<string>(s => s == setInitialPasswordRequestModel.MasterPasswordAuthentication.MasterPasswordAuthenticationHash),
+                Arg.Is<string>(s => s == setInitialPasswordRequestModel.MasterPasswordUnlock.MasterKeyWrappedUserKey),
+                Arg.Is<string>(s => s == setInitialPasswordRequestModel.OrgIdentifier));
+
+        await _finishSsoJitProvisionMasterPasswordCommand.DidNotReceiveWithAnyArgs()
+            .FinishProvisionAsync(Arg.Any<User>(), Arg.Any<SetInitialMasterPasswordDataModel>());
+    }
+
     private void UpdateSetInitialPasswordRequestModelToV1(SetInitialPasswordRequestModel model)
     {
         model.MasterPasswordAuthentication = null;

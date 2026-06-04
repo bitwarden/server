@@ -264,8 +264,12 @@ public class AccountsController : Controller
                 return;
             }
 
-            // V2 encryption - MP JIT
-            if (model.IsJitMpSetPasswordRequest() &&
+            // V2 encryption - MP JIT.
+            // We require AccountKeys (the new key shape) here, not just "any key material" — otherwise
+            // a modern V1 MP JIT request (MPAD + MPUD + legacy Keys) would be incorrectly routed here
+            // when the flag is on, and `model.ToData().AccountKeys` would be null, breaking the V2 MP
+            // JIT command (which requires AccountKeys per FinishSsoJitProvisionMasterPasswordCommand).
+            if (model.AccountKeys != null &&
                 _featureService.IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration))
             {
                 await _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, model.ToData());
@@ -283,6 +287,16 @@ public class AccountsController : Controller
 
     private async Task SetInitialPasswordV1Async(User user, SetInitialPasswordRequestModel model)
     {
+        // Defensive: V1 cannot consume AccountKeys (the new key shape). If a request carries
+        // AccountKeys we'd silently drop the keypair, so fail loudly. This can only happen if
+        // the V2 MP JIT flag is off (otherwise the V2 branch above would have caught it) — i.e.,
+        // a client/server flag-state mismatch or a non-Angular caller.
+        if (model.AccountKeys != null)
+        {
+            throw new BadRequestException(
+                "Request includes V2 AccountKeys but V2 encryption is not enabled.");
+        }
+
         try
         {
             user = model.ToUser(user);

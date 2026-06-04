@@ -143,12 +143,6 @@ public class SetInitialPasswordRequestModel : IValidatableObject
         return AccountKeys == null && Keys == null;
     }
 
-    // MP JIT users send new key material — either via the new AccountKeys shape or the legacy Keys shape.
-    public bool IsJitMpSetPasswordRequest()
-    {
-        return AccountKeys != null || Keys != null;
-    }
-
     public SetInitialMasterPasswordDataModel ToData()
     {
         return new SetInitialMasterPasswordDataModel
