@@ -480,13 +480,18 @@ public class UpcomingInvoiceHandler(
             {
                 RenewalDate = renewalDate.Value.ToString("MMMM d, yyyy", culture),
                 Seats = seats,
-                PerUserMonthlyPrice = perUserMonthly.ToString("C", culture),
+                PerUserMonthlyPrice = FormatCurrency(perUserMonthly, culture),
                 IsAnnual = targetPlan.IsAnnual,
-                TotalPrice = total.ToString("C", culture),
+                TotalPrice = FormatCurrency(total, culture),
                 DiscountPercent = discountPercent is { } p ? $"{p}%" : null
             }
         });
     }
+
+    private static string FormatCurrency(decimal amount, CultureInfo culture) =>
+        amount == decimal.Truncate(amount)
+            ? amount.ToString("C0", culture)
+            : amount.ToString("C2", culture);
 
     private int ResolveSeatCount(Subscription subscription, Plan sourcePlan, Organization organization)
     {

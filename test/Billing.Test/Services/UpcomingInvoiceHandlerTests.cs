@@ -3833,22 +3833,84 @@ public class UpcomingInvoiceHandlerTests
             .ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>());
         // EnterprisePlan annual SeatPrice is $72.00; BasePrice is $0.00. Asserting the per-user
         // monthly renders as SeatPrice/12 (not $0.00) guards against the BasePrice copy-paste bug.
-        // Annual cohorts are quoted a per-year total: 320 seats x $72 = $23,040.00 gross; less 20% = $18,432.00.
+        // Annual cohorts are quoted a per-year total: 320 seats x $72 = $23,040 gross; less 20% = $18,432.
+        // Whole-dollar amounts render without the trailing .00.
         await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
             mail.ToEmails.Contains("org@example.com") &&
             mail.View.HasDiscount &&
             mail.View.IsAnnual &&
             mail.View.Seats == 320 &&
             mail.View.RenewalDate == "June 12, 2026" &&
-            mail.View.PerUserMonthlyPrice == "$6.00" &&
+            mail.View.PerUserMonthlyPrice == "$6" &&
             mail.View.DiscountPercent == "20%" &&
-            mail.View.TotalPrice == "$18,432.00"));
+            mail.View.TotalPrice == "$18,432"));
         await _mailService.DidNotReceive().SendInvoiceUpcoming(
             Arg.Any<IEnumerable<string>>(),
             Arg.Any<decimal>(),
             Arg.Any<DateTime>(),
             Arg.Any<List<string>>(),
             Arg.Any<bool>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenBusinessTier_AndDiscountedTotalHasCents_RendersTotalWithTwoDecimals()
+    {
+        // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var (invoice, subscription, customer) = BuildBusinessFixture(PlanType.EnterpriseAnnually2020);
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.EnterpriseAnnually2020
+        };
+        var enterprise2020Plan = new Enterprise2020Plan(isAnnual: true);
+        var enterprisePlan = new EnterprisePlan(isAnnual: true);
+        var cohortId = Guid.NewGuid();
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = _organizationId,
+            CohortId = cohortId,
+            ScheduledDate = null
+        };
+        var cohort = new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "enterprise-2020-annual",
+            MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
+            ProactiveDiscountCouponCode = "loyalty-33",
+            IsActive = true
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(customer.Id, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(enterprise2020Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(enterprisePlan);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+        _assignmentRepository.GetByOrganizationIdAsync(_organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(cohort);
+        _priceIncreaseScheduler.ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>())
+            .Returns(true);
+        _stripeAdapter.GetCouponAsync("loyalty-33", Arg.Any<CouponGetOptions>())
+            .Returns(new Coupon { PercentOff = 33 });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — annual per-year total: 320 seats x $72 = $23,040 gross; less 33% = $15,436.80.
+        // The fractional total keeps two decimals, while the whole-dollar per-user monthly ($6) drops them.
+        await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
+            mail.View.HasDiscount &&
+            mail.View.IsAnnual &&
+            mail.View.Seats == 320 &&
+            mail.View.PerUserMonthlyPrice == "$6" &&
+            mail.View.DiscountPercent == "33%" &&
+            mail.View.TotalPrice == "$15,436.80"));
     }
 
     [Fact]
@@ -3899,14 +3961,14 @@ public class UpcomingInvoiceHandlerTests
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert — full price, no discount section; annual per-year total: 320 seats x $72 = $23,040.00.
+        // Assert — full price, no discount section; annual per-year total: 320 seats x $72 = $23,040.
         await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
             mail.ToEmails.Contains("org@example.com") &&
             !mail.View.HasDiscount &&
             mail.View.IsAnnual &&
             mail.View.Seats == 320 &&
-            mail.View.PerUserMonthlyPrice == "$6.00" &&
-            mail.View.TotalPrice == "$23,040.00"));
+            mail.View.PerUserMonthlyPrice == "$6" &&
+            mail.View.TotalPrice == "$23,040"));
         await _stripeAdapter.DidNotReceive().GetCouponAsync(Arg.Any<string>(), Arg.Any<CouponGetOptions>());
     }
 
@@ -4084,12 +4146,12 @@ public class UpcomingInvoiceHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         // Assert — monthly EnterprisePlan SeatPrice is $7.00 (used as-is, NOT /12). Monthly cohorts are quoted a
-        // per-month total, so IsAnnual is false and TotalPrice = $7 x 320 = $2,240.00 (NOT annualized).
+        // per-month total, so IsAnnual is false and TotalPrice = $7 x 320 = $2,240 (NOT annualized).
         await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
             mail.View.Seats == 320 &&
             !mail.View.IsAnnual &&
-            mail.View.PerUserMonthlyPrice == "$7.00" &&
-            mail.View.TotalPrice == "$2,240.00"));
+            mail.View.PerUserMonthlyPrice == "$7" &&
+            mail.View.TotalPrice == "$2,240"));
     }
 
     [Fact]
@@ -4141,15 +4203,15 @@ public class UpcomingInvoiceHandlerTests
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert — annual TeamsPlan SeatPrice is $48.00; per-user monthly is $48/12 = $4.00;
-        // annual per-year total = $48 x 320 = $15,360.00. No coupon, so no discount section.
+        // Assert — annual TeamsPlan SeatPrice is $48.00; per-user monthly is $48/12 = $4;
+        // annual per-year total = $48 x 320 = $15,360. No coupon, so no discount section.
         await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
             mail.ToEmails.Contains("org@example.com") &&
             !mail.View.HasDiscount &&
             mail.View.IsAnnual &&
             mail.View.Seats == 320 &&
-            mail.View.PerUserMonthlyPrice == "$4.00" &&
-            mail.View.TotalPrice == "$15,360.00"));
+            mail.View.PerUserMonthlyPrice == "$4" &&
+            mail.View.TotalPrice == "$15,360"));
     }
 
     [Fact]
@@ -4202,12 +4264,12 @@ public class UpcomingInvoiceHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         // Assert — monthly TeamsPlan SeatPrice is $5.00 (used as-is, NOT /12). Monthly cohorts are quoted a
-        // per-month total, so IsAnnual is false and TotalPrice = $5 x 320 = $1,600.00 (NOT annualized).
+        // per-month total, so IsAnnual is false and TotalPrice = $5 x 320 = $1,600 (NOT annualized).
         await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
             mail.View.Seats == 320 &&
             !mail.View.IsAnnual &&
-            mail.View.PerUserMonthlyPrice == "$5.00" &&
-            mail.View.TotalPrice == "$1,600.00"));
+            mail.View.PerUserMonthlyPrice == "$5" &&
+            mail.View.TotalPrice == "$1,600"));
     }
 
     [Fact]
@@ -4289,8 +4351,8 @@ public class UpcomingInvoiceHandlerTests
         await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
             mail.View.Seats == 320 &&
             mail.View.IsAnnual &&
-            mail.View.PerUserMonthlyPrice == "$6.00" &&
-            mail.View.TotalPrice == "$23,040.00"));
+            mail.View.PerUserMonthlyPrice == "$6" &&
+            mail.View.TotalPrice == "$23,040"));
     }
 
     [Fact]
