@@ -465,13 +465,16 @@ public class UpcomingInvoiceHandler(
         var perUserMonthly = targetPlan.IsAnnual ? seatPrice / 12 : seatPrice;
         var total = seatPrice * seats;
 
-        // The per-user monthly price is shown at the list (undiscounted) rate by design; the email itemizes
-        // the discount on its own line and applies it only to the recurring total below.
-        var discountPercent = await ResolveDiscountPercentAsync(cohort, organization);
-        if (discountPercent is { } percent)
+        var discounts = await ResolveDiscountsAsync(cohort, organization);
+
+        var totalPercentOff = discounts.Where(discount => discount.IsPercentage).Sum(discount => discount.Value);
+        if (totalPercentOff > 0)
         {
-            total = total * (100 - percent) / 100;
+            total = total * (100 - totalPercentOff) / 100;
         }
+
+        var totalAmountOff = discounts.Where(discount => !discount.IsPercentage).Sum(discount => discount.Value);
+        total = Math.Max(0, total - totalAmountOff);
 
         await mailer.SendEmail(new BusinessPlanRenewal2020MigrationMail
         {
@@ -483,7 +486,7 @@ public class UpcomingInvoiceHandler(
                 PerUserMonthlyPrice = FormatCurrency(perUserMonthly, culture),
                 IsAnnual = targetPlan.IsAnnual,
                 TotalPrice = FormatCurrency(total, culture),
-                DiscountPercent = discountPercent is { } p ? $"{p}%" : null
+                DiscountLines = [.. discounts.Select(discount => discount.Display)]
             }
         });
     }
@@ -512,13 +515,15 @@ public class UpcomingInvoiceHandler(
         return (int)(seats ?? 0);
     }
 
-    private async Task<decimal?> ResolveDiscountPercentAsync(
+    private sealed record Discount(bool IsPercentage, decimal Value, string Display);
+
+    private async Task<List<Discount>> ResolveDiscountsAsync(
         OrganizationPlanMigrationCohort cohort,
         Organization organization)
     {
         if (string.IsNullOrEmpty(cohort.ProactiveDiscountCouponCode))
         {
-            return null;
+            return [];
         }
 
         Coupon? coupon;
@@ -534,20 +539,27 @@ public class UpcomingInvoiceHandler(
                 exception,
                 "Could not retrieve proactive discount coupon ({CouponId}) for Organization ({OrganizationId}); sending price-only renewal email which will quote the undiscounted price | Code = {Code}",
                 cohort.ProactiveDiscountCouponCode, organization.Id, exception.StripeError?.Code);
-            return null;
+            return [];
         }
+
+        var culture = new CultureInfo("en-US");
 
         if (coupon?.PercentOff is { } percentOff)
         {
-            return percentOff;
+            return [new Discount(IsPercentage: true, Value: percentOff, Display: $"{percentOff}%")];
         }
 
-        // A coupon with no PercentOff (e.g. an amount-off coupon) is a cohort misconfiguration that will mis-quote
-        // every organization in the cohort at the undiscounted price. Log as an error so it gets corrected.
+        // Stripe reports amount-off coupons in minor units (cents); convert to dollars for display and math.
+        if (coupon?.AmountOff is { } amountOffMinorUnits)
+        {
+            var amountOff = amountOffMinorUnits / 100M;
+            return [new Discount(IsPercentage: false, Value: amountOff, Display: FormatCurrency(amountOff, culture))];
+        }
+
         logger.LogError(
-            "Proactive discount coupon ({CouponId}) for Organization ({OrganizationId}) resolved with no PercentOff (e.g. an amount-off coupon); sending price-only renewal email, which will not reflect any non-percentage discount",
+            "Proactive discount coupon ({CouponId}) for Organization ({OrganizationId}) resolved with neither PercentOff nor AmountOff; sending price-only renewal email, which will not reflect any discount",
             cohort.ProactiveDiscountCouponCode, organization.Id);
-        return null;
+        return [];
     }
 
     private async Task WaitForTestClockToAdvanceAsync(TestClock testClock)

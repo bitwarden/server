@@ -47,7 +47,9 @@
                 <tr>
                   <td style="padding:24px 32px;vertical-align:middle;">
                     <div style="font-size:16px;line-height:28px;font-weight:400;color:#0D43AF;">{{ Seats }} users x {{ PerUserMonthlyPrice }} / month</div>
-                    <div style="font-size:16px;line-height:28px;font-weight:400;color:#0D43AF;">{{ DiscountPercent }} discount</div>
+                    {{#each DiscountLines}}
+                    <div style="font-size:16px;line-height:28px;font-weight:400;color:#0D43AF;">{{ this }} discount</div>
+                    {{/each}}
                     <div style="border-top:1px solid #0D43AF;margin-top:12px;padding-top:12px;">
                       <span style="font-size:22px;line-height:28px;font-weight:600;color:#0D43AF;">{{ TotalPrice }}</span>
                       <span style="font-size:16px;line-height:24px;font-weight:400;color:#0D43AF;">&nbsp;total / {{ TotalPeriod }}</span>

@@ -10,8 +10,8 @@ public class BusinessPlanRenewal2020MigrationMailView : BaseMailView
     public required bool IsAnnual { get; set; }
     public required string TotalPrice { get; set; }
     public string TotalPeriod => IsAnnual ? "year" : "month";
-    public string? DiscountPercent { get; set; }
-    public bool HasDiscount => !string.IsNullOrEmpty(DiscountPercent);
+    public List<string> DiscountLines { get; set; } = [];
+    public bool HasDiscount => DiscountLines.Count > 0;
 }
 
 public class BusinessPlanRenewal2020MigrationMail : BaseMail<BusinessPlanRenewal2020MigrationMailView>

@@ -56,7 +56,7 @@ public class MailerTest
                 PerUserMonthlyPrice = "$7.00",
                 IsAnnual = true,
                 TotalPrice = "$18,432.00",
-                DiscountPercent = "25%"
+                DiscountLines = ["25%"]
             }
         };
 
@@ -67,7 +67,7 @@ public class MailerTest
 
         Assert.NotNull(sentMessage);
         Assert.Equal("Your Bitwarden subscription price is changing", sentMessage.Subject);
-        // Both templates resolve as embedded resources and the {{#if HasDiscount}} block renders.
+        // Both templates resolve as embedded resources and the {{#each DiscountLines}} block renders.
         foreach (var body in new[] { sentMessage.HtmlContent, sentMessage.TextContent })
         {
             Assert.Contains("June 12, 2026", body);
@@ -77,6 +77,77 @@ public class MailerTest
             Assert.Contains("$18,432.00", body);
             // An annual cohort renders the per-year period label.
             Assert.Contains("total / year", body);
+        }
+    }
+
+    [Fact]
+    public async Task SendBusinessPlanRenewal2020MigrationEmail_WithMultipleDiscounts_RendersOneLinePerDiscount()
+    {
+        var mailer = BuildMailer(out var deliveryService);
+
+        var mail = new BusinessPlanRenewal2020MigrationMail
+        {
+            ToEmails = ["org@example.com"],
+            View = new BusinessPlanRenewal2020MigrationMailView
+            {
+                RenewalDate = "June 12, 2026",
+                Seats = 320,
+                PerUserMonthlyPrice = "$6",
+                IsAnnual = true,
+                // 20% + 10% applied additively to $23,040 -> $16,128.
+                TotalPrice = "$16,128",
+                DiscountLines = ["20%", "10%"]
+            }
+        };
+
+        MailMessage? sentMessage = null;
+        await deliveryService.SendEmailAsync(Arg.Do<MailMessage>(message => sentMessage = message));
+
+        await mailer.SendEmail(mail);
+
+        Assert.NotNull(sentMessage);
+        // Each discount renders on its own line in both bodies, and the summed total is quoted.
+        foreach (var body in new[] { sentMessage.HtmlContent, sentMessage.TextContent })
+        {
+            Assert.Contains("20% discount", body);
+            Assert.Contains("10% discount", body);
+            Assert.Contains("$16,128", body);
+        }
+    }
+
+    [Fact]
+    public async Task SendBusinessPlanRenewal2020MigrationEmail_WithMixedDiscounts_RendersPercentageAndAmountLines()
+    {
+        var mailer = BuildMailer(out var deliveryService);
+
+        var mail = new BusinessPlanRenewal2020MigrationMail
+        {
+            ToEmails = ["org@example.com"],
+            View = new BusinessPlanRenewal2020MigrationMailView
+            {
+                RenewalDate = "June 12, 2026",
+                Seats = 320,
+                PerUserMonthlyPrice = "$6",
+                IsAnnual = true,
+                // $23,040 -20% = $18,432, then -$50 fixed = $18,382. The handler formats the fixed amount with
+                // FormatCurrency, which trims .00 from whole-dollar amounts (so "$50", not "$50.00").
+                TotalPrice = "$18,382",
+                DiscountLines = ["20%", "$50"]
+            }
+        };
+
+        MailMessage? sentMessage = null;
+        await deliveryService.SendEmailAsync(Arg.Do<MailMessage>(message => sentMessage = message));
+
+        await mailer.SendEmail(mail);
+
+        Assert.NotNull(sentMessage);
+        // A percentage line and a fixed-amount line both render, and the combined total is quoted.
+        foreach (var body in new[] { sentMessage.HtmlContent, sentMessage.TextContent })
+        {
+            Assert.Contains("20% discount", body);
+            Assert.Contains("$50 discount", body);
+            Assert.Contains("$18,382", body);
         }
     }
 
@@ -95,7 +166,7 @@ public class MailerTest
                 PerUserMonthlyPrice = "$7.00",
                 IsAnnual = false,
                 TotalPrice = "$2,240.00",
-                DiscountPercent = null
+                DiscountLines = []
             }
         };
 
@@ -118,6 +189,42 @@ public class MailerTest
         // ...and the {{#if HasDiscount}} discount line is skipped.
         Assert.DoesNotContain("discount", sentMessage.HtmlContent);
         Assert.DoesNotContain("discount", sentMessage.TextContent);
+    }
+
+    [Fact]
+    public async Task SendBusinessPlanRenewal2020MigrationEmail_WithDiscountOnMonthlyCadence_RendersPerMonthTotal()
+    {
+        var mailer = BuildMailer(out var deliveryService);
+
+        var mail = new BusinessPlanRenewal2020MigrationMail
+        {
+            ToEmails = ["org@example.com"],
+            View = new BusinessPlanRenewal2020MigrationMailView
+            {
+                RenewalDate = "June 12, 2026",
+                Seats = 320,
+                PerUserMonthlyPrice = "$5",
+                IsAnnual = false,
+                // Monthly TeamsPlan total $1,600 less 20% = $1,280, quoted per month.
+                TotalPrice = "$1,280",
+                DiscountLines = ["20%"]
+            }
+        };
+
+        MailMessage? sentMessage = null;
+        await deliveryService.SendEmailAsync(Arg.Do<MailMessage>(message => sentMessage = message));
+
+        await mailer.SendEmail(mail);
+
+        Assert.NotNull(sentMessage);
+        // The discount branch ({{#if HasDiscount}}) must also honor the monthly cadence: the total reads
+        // "total / month", not "total / year", even though a discount line is present.
+        foreach (var body in new[] { sentMessage.HtmlContent, sentMessage.TextContent })
+        {
+            Assert.Contains("20% discount", body);
+            Assert.Contains("total / month", body);
+            Assert.DoesNotContain("total / year", body);
+        }
     }
 
     private static Core.Platform.Mail.Mailer.Mailer BuildMailer(out IMailDeliveryService deliveryService)

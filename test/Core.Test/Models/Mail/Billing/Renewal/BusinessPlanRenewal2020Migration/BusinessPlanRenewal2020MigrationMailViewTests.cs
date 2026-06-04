@@ -5,17 +5,36 @@ namespace Bit.Core.Test.Models.Mail.Billing.Renewal.BusinessPlanRenewal2020Migra
 
 public class BusinessPlanRenewal2020MigrationMailViewTests
 {
-    [Theory]
-    [InlineData("20%", true)]
-    [InlineData("0%", true)]
-    [InlineData(null, false)]
-    [InlineData("", false)]
-    [InlineData(" ", true)]
-    public void HasDiscount_ReflectsWhetherDiscountPercentIsPopulated(string? discountPercent, bool expected)
+    [Fact]
+    public void HasDiscount_IsFalse_WhenNoDiscounts()
     {
-        var view = BuildView(discountPercent: discountPercent);
+        var view = BuildView(discountLines: []);
 
-        Assert.Equal(expected, view.HasDiscount);
+        Assert.False(view.HasDiscount);
+    }
+
+    [Fact]
+    public void HasDiscount_IsTrue_WhenSinglePercentageDiscount()
+    {
+        var view = BuildView(discountLines: ["20%"]);
+
+        Assert.True(view.HasDiscount);
+    }
+
+    [Fact]
+    public void HasDiscount_IsTrue_WhenFixedAmountDiscount()
+    {
+        var view = BuildView(discountLines: ["$50.00"]);
+
+        Assert.True(view.HasDiscount);
+    }
+
+    [Fact]
+    public void HasDiscount_IsTrue_WhenMixedDiscounts()
+    {
+        var view = BuildView(discountLines: ["20%", "$50.00"]);
+
+        Assert.True(view.HasDiscount);
     }
 
     [Theory]
@@ -29,7 +48,7 @@ public class BusinessPlanRenewal2020MigrationMailViewTests
     }
 
     private static BusinessPlanRenewal2020MigrationMailView BuildView(
-        string? discountPercent = null,
+        List<string>? discountLines = null,
         bool isAnnual = true) =>
         new()
         {
@@ -38,6 +57,6 @@ public class BusinessPlanRenewal2020MigrationMailViewTests
             PerUserMonthlyPrice = "$6.00",
             IsAnnual = isAnnual,
             TotalPrice = "$23,040.00",
-            DiscountPercent = discountPercent
+            DiscountLines = discountLines ?? []
         };
 }

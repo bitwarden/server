@@ -3842,7 +3842,8 @@ public class UpcomingInvoiceHandlerTests
             mail.View.Seats == 320 &&
             mail.View.RenewalDate == "June 12, 2026" &&
             mail.View.PerUserMonthlyPrice == "$6" &&
-            mail.View.DiscountPercent == "20%" &&
+            mail.View.DiscountLines.Count == 1 &&
+            mail.View.DiscountLines[0] == "20%" &&
             mail.View.TotalPrice == "$18,432"));
         await _mailService.DidNotReceive().SendInvoiceUpcoming(
             Arg.Any<IEnumerable<string>>(),
@@ -3909,8 +3910,72 @@ public class UpcomingInvoiceHandlerTests
             mail.View.IsAnnual &&
             mail.View.Seats == 320 &&
             mail.View.PerUserMonthlyPrice == "$6" &&
-            mail.View.DiscountPercent == "33%" &&
+            mail.View.DiscountLines.Count == 1 &&
+            mail.View.DiscountLines[0] == "33%" &&
             mail.View.TotalPrice == "$15,436.80"));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenBusinessTier_AndCouponIsAmountOff_SubtractsFixedAmountFromTotal()
+    {
+        // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var (invoice, subscription, customer) = BuildBusinessFixture(PlanType.EnterpriseAnnually2020);
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.EnterpriseAnnually2020
+        };
+        var enterprise2020Plan = new Enterprise2020Plan(isAnnual: true);
+        var enterprisePlan = new EnterprisePlan(isAnnual: true);
+        var cohortId = Guid.NewGuid();
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = _organizationId,
+            CohortId = cohortId,
+            ScheduledDate = null
+        };
+        var cohort = new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "enterprise-2020-annual",
+            MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
+            ProactiveDiscountCouponCode = "fifty-off",
+            IsActive = true
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(customer.Id, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(enterprise2020Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(enterprisePlan);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+        _assignmentRepository.GetByOrganizationIdAsync(_organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(cohort);
+        _priceIncreaseScheduler.ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>())
+            .Returns(true);
+        // Stripe reports amount-off coupons in minor units (cents): $50.00 off = 5000.
+        _stripeAdapter.GetCouponAsync("fifty-off", Arg.Any<CouponGetOptions>())
+            .Returns(new Coupon { AmountOff = 5000 });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — annual per-year total: 320 seats x $72 = $23,040 gross; less the $50 fixed amount = $22,990.
+        // The discount line shows the formatted dollar amount (whole-dollar, so .00 is trimmed), not a percentage.
+        await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
+            mail.View.HasDiscount &&
+            mail.View.IsAnnual &&
+            mail.View.Seats == 320 &&
+            mail.View.PerUserMonthlyPrice == "$6" &&
+            mail.View.DiscountLines.Count == 1 &&
+            mail.View.DiscountLines[0] == "$50" &&
+            mail.View.TotalPrice == "$22,990"));
     }
 
     [Fact]
@@ -4029,7 +4094,7 @@ public class UpcomingInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenBusinessTier_AndCouponHasNoPercentOff_SendsPriceOnlyRenewalEmail_AndWarns()
+    public async Task HandleAsync_WhenBusinessTier_AndCouponHasNeitherPercentNorAmount_SendsPriceOnlyRenewalEmail_AndLogsError()
     {
         // Arrange
         _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
@@ -4056,7 +4121,7 @@ public class UpcomingInvoiceHandlerTests
             Id = cohortId,
             Name = "enterprise-2020-annual",
             MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
-            ProactiveDiscountCouponCode = "amount-off-10",
+            ProactiveDiscountCouponCode = "empty-coupon",
             IsActive = true
         };
 
@@ -4072,15 +4137,15 @@ public class UpcomingInvoiceHandlerTests
         _cohortRepository.GetByIdAsync(cohortId).Returns(cohort);
         _priceIncreaseScheduler.ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>())
             .Returns(true);
-        // An amount-off coupon resolves successfully but exposes no PercentOff.
-        _stripeAdapter.GetCouponAsync("amount-off-10", Arg.Any<CouponGetOptions>())
-            .Returns(new Coupon { PercentOff = null, AmountOff = 1000 });
+        // A coupon that resolves but exposes neither PercentOff nor AmountOff is a cohort misconfiguration.
+        _stripeAdapter.GetCouponAsync("empty-coupon", Arg.Any<CouponGetOptions>())
+            .Returns(new Coupon { PercentOff = null, AmountOff = null });
 
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert — email is sent price-only, and the misconfiguration is logged as an error (an amount-off
-        // coupon mis-quotes every org in the cohort, so it must reach alerting rather than be a warning).
+        // Assert — email is sent price-only, and the misconfiguration is logged as an error (a coupon with no
+        // usable discount mis-quotes every org in the cohort, so it must reach alerting).
         await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
             mail.ToEmails.Contains("org@example.com") &&
             !mail.View.HasDiscount));
@@ -4088,8 +4153,8 @@ public class UpcomingInvoiceHandlerTests
             LogLevel.Error,
             Arg.Any<EventId>(),
             Arg.Is<object>(o =>
-                o.ToString()!.Contains("no PercentOff") &&
-                o.ToString()!.Contains("amount-off-10") &&
+                o.ToString()!.Contains("neither PercentOff nor AmountOff") &&
+                o.ToString()!.Contains("empty-coupon") &&
                 o.ToString()!.Contains(_organizationId.ToString())),
             Arg.Any<Exception?>(),
             Arg.Any<Func<object, Exception?, string>>());

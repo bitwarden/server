@@ -5,9 +5,9 @@ Thank you for being a long-time Bitwarden user. Your account has been on the ori
 This is a notice that your Bitwarden subscription price will increase to the current standard rate at your upcoming renewal on {{RenewalDate}}:
 
 {{Seats}} users x {{PerUserMonthlyPrice}} / month
-{{#if HasDiscount}}
-{{DiscountPercent}} discount
-{{/if}}
+{{#each DiscountLines}}
+{{this}} discount
+{{/each}}
 {{TotalPrice}} total / {{TotalPeriod}}
 
 Bitwarden remains committed to delivering the best value in credential security at a price below every major alternative.
