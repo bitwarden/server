@@ -5,12 +5,15 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
+using static Bit.Core.Billing.Constants.StripeConstants;
+using SubscriptionUpdateOptions = Stripe.SubscriptionUpdateOptions;
 
 namespace Bit.Core.Billing.Organizations.Commands;
 
@@ -44,6 +47,7 @@ public class UpgradeOrganizationPlanVNextCommand(
     IOrganizationService organizationService,
     IPricingClient pricingClient,
     IPriceIncreaseScheduler priceIncreaseScheduler,
+    IStripeAdapter stripeAdapter,
     IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand) : BaseBillingCommand<UpgradeOrganizationPlanVNextCommand>(logger), IUpgradeOrganizationPlanVNextCommand
 {
     protected override Conflict DefaultConflict => new("We had a problem upgrading your plan. Please contact support for assistance.");
@@ -105,6 +109,13 @@ public class UpgradeOrganizationPlanVNextCommand(
         }
 
         await priceIncreaseScheduler.Release(organization.GatewayCustomerId, organization.GatewaySubscriptionId!, organization.Id);
+
+        await stripeAdapter.UpdateSubscriptionAsync(
+            organization.GatewaySubscriptionId!,
+            new SubscriptionUpdateOptions
+            {
+                Metadata = new Dictionary<string, string> { [MetadataKeys.MigrationGraceServiceAccounts] = string.Empty }
+            });
 
         var builder = OrganizationSubscriptionChangeSet.Builder(currentPlan);
 
