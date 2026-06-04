@@ -201,6 +201,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IDeleteAccessRuleCommand, DeleteAccessRuleCommand>();
         services.AddScoped<IAccessApprovalResolver, AccessApprovalResolver>();
         services.AddScoped<IAccessPreCheckQuery, AccessPreCheckQuery>();
+        services.AddScoped<IGetLeasedCipherQuery, GetLeasedCipherQuery>();
         services.AddScoped<IRequestAccessCommand, RequestAccessCommand>();
     }
 
