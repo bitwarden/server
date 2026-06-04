@@ -1,6 +1,4 @@
-﻿#nullable disable
-
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Duende.IdentityModel;
@@ -27,18 +25,18 @@ public interface ICurrentContextBackfillService
 {
     void Apply(
         ICurrentContext currentContext,
-        ValidatedRequest request,
-        ClaimsPrincipal subject = null,
-        CustomValidatorRequestContext validatorContext = null);
+        ValidatedRequest? request,
+        ClaimsPrincipal? subject = null,
+        CustomValidatorRequestContext? validatorContext = null);
 }
 
 public class CurrentContextBackfillService(ILogger<CurrentContextBackfillService> logger) : ICurrentContextBackfillService
 {
     public void Apply(
         ICurrentContext currentContext,
-        ValidatedRequest request,
-        ClaimsPrincipal subject = null,
-        CustomValidatorRequestContext validatorContext = null)
+        ValidatedRequest? request,
+        ClaimsPrincipal? subject = null,
+        CustomValidatorRequestContext? validatorContext = null)
     {
         try
         {
@@ -58,9 +56,9 @@ public class CurrentContextBackfillService(ILogger<CurrentContextBackfillService
 
     private static void ApplyCore(
         ICurrentContext currentContext,
-        ValidatedRequest request,
-        ClaimsPrincipal subject,
-        CustomValidatorRequestContext validatorContext)
+        ValidatedRequest? request,
+        ClaimsPrincipal? subject,
+        CustomValidatorRequestContext? validatorContext)
     {
         // Subject path — populated for grants that carry an existing principal:
         //   refresh_token:      subject is the refresh-token principal; carries `sub` and `device` claims.
@@ -77,7 +75,11 @@ public class CurrentContextBackfillService(ILogger<CurrentContextBackfillService
             {
                 currentContext.UserId = subjectUserId;
             }
-            currentContext.DeviceIdentifier ??= NullIfBlank(subject.FindFirstValue(Claims.Device));
+            var subjectDevice = NullIfBlank(subject.FindFirstValue(Claims.Device));
+            if (subjectDevice is not null)
+            {
+                currentContext.DeviceIdentifier ??= subjectDevice;
+            }
         }
 
         // ValidatorContext.User path — populated by the derived grant validator before
@@ -100,10 +102,14 @@ public class CurrentContextBackfillService(ILogger<CurrentContextBackfillService
         // Empty/whitespace string sources are normalized to null so a future back-fill
         // attempt isn't blocked by a non-null placeholder (e.g., a form body sending
         // `DeviceIdentifier=` with no value).
-        currentContext.DeviceIdentifier ??= NullIfBlank(validatorContext?.Device?.Identifier)
+        var device = NullIfBlank(validatorContext?.Device?.Identifier)
             ?? NullIfBlank(request?.Raw?["DeviceIdentifier"]);
+        if (device is not null)
+        {
+            currentContext.DeviceIdentifier ??= device;
+        }
     }
 
-    private static string NullIfBlank(string value) =>
+    private static string? NullIfBlank(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value;
 }
