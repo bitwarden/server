@@ -45,7 +45,8 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
         IClientVersionValidator clientVersionValidator,
-        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand)
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand,
+        ICurrentContextBackfillService currentContextBackfillService)
         : base(
             userManager,
             userService,
@@ -66,7 +67,8 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             mailService,
             userAccountKeysQuery,
             clientVersionValidator,
-            updateDeviceLastActivityCommand)
+            updateDeviceLastActivityCommand,
+            currentContextBackfillService)
     {
         _userManager = userManager;
         _currentContext = currentContext;
@@ -76,6 +78,16 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
 
     public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
     {
+        // Back-fills DeviceIdentifier from the form body so DEVICE-keyed feature flag
+        // rollouts evaluated anywhere in this method bucket correctly.
+        //
+        // CAUTION: UserId is NOT populated here — the user lookup hasn't run yet.
+        // USER-keyed feature flag evaluations placed in this prelude will bucket as
+        // anonymous. For user-keyed targeting, place the IsEnabled check below the
+        // user lookup, or downstream of base.ValidateAsync (which re-applies the
+        // back-fill with the resolved user).
+        _currentContextBackfillService.Apply(_currentContext, context.Request);
+
         var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
         // We want to keep this device around incase the device is new for the user.
         // Pass through the client version from CurrentContext so a brand-new device row gets

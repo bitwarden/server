@@ -43,6 +43,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IMailService _mailService;
     private readonly IClientVersionValidator _clientVersionValidator;
     protected readonly IUpdateDeviceLastActivityCommand _updateDeviceLastActivityCommand;
+    protected readonly ICurrentContextBackfillService _currentContextBackfillService;
 
     protected ICurrentContext CurrentContext { get; }
     protected IFeatureService _featureService { get; }
@@ -72,7 +73,8 @@ public abstract class BaseRequestValidator<T> where T : class
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
         IClientVersionValidator clientVersionValidator,
-        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand,
+        ICurrentContextBackfillService currentContextBackfillService
     )
     {
         _userManager = userManager;
@@ -95,11 +97,17 @@ public abstract class BaseRequestValidator<T> where T : class
         _accountKeysQuery = userAccountKeysQuery;
         _clientVersionValidator = clientVersionValidator;
         _updateDeviceLastActivityCommand = updateDeviceLastActivityCommand;
+        _currentContextBackfillService = currentContextBackfillService;
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
         CustomValidatorRequestContext validatorContext)
     {
+        // Back-fills CurrentContext with the validator-resolved User/Device so any
+        // downstream feature flag evaluation (including BuildSuccessResultAsync) gets
+        // a reliable LaunchDarkly context. ??= preserves anything middleware populated.
+        _currentContextBackfillService.Apply(CurrentContext, request, validatorContext: validatorContext);
+
         var validators = DetermineValidationOrder(context, request, validatorContext);
         var allValidationSchemesSuccessful = await ProcessValidatorsAsync(validators);
         if (!allValidationSchemesSuccessful)

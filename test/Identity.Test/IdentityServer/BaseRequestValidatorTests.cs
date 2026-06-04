@@ -1566,6 +1566,109 @@ public class BaseRequestValidatorTests
             .UpdateAsync(requestContext.Device, null);
     }
 
+    // CurrentContextMiddleware runs before IdentityServer parses the /connect/token body,
+    // so for grants like password/SSO/webauthn the middleware can't populate DeviceIdentifier
+    // (form-body) or UserId (claims not yet attached to httpContext.User). The validator
+    // must back-fill them from the validatorContext / form body before any feature flag
+    // evaluation so progressive rollouts bucket reliably by device and user.
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_BackfillsCurrentContextFromValidatorContext(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        [AuthFixtures.CustomValidatorRequestContext]
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange — simulate the /connect/token middleware-blind state: UserId and
+        // DeviceIdentifier are null because httpContext.User had no claims and no
+        // Device-Identifier header was sent. NSubstitute returns string.Empty for
+        // unconfigured string properties so set DeviceIdentifier explicitly to null.
+        _currentContext.DeviceIdentifier = null;
+
+        // Short-circuit at client version validation so we don't trigger the 2-second
+        // brute-force delay in BuildErrorResultAsync — back-fill runs at the top of
+        // ValidateAsync regardless of validation outcome.
+        _sut.isValid = true;
+        _clientVersionValidator
+            .Validate(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
+            .Returns(false);
+
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert — CurrentContext was populated from the validator-context user and device,
+        // so any feature flag evaluation downstream gets a properly-keyed LD context.
+        Assert.Equal(requestContext.User.Id, _currentContext.UserId);
+        Assert.Equal(requestContext.Device.Identifier, _currentContext.DeviceIdentifier);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_BackfillsDeviceIdentifierFromRequestRaw_WhenValidatorDeviceIsNull(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        [AuthFixtures.CustomValidatorRequestContext]
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange — Device hasn't been resolved onto the validator context yet, but the
+        // form body carries DeviceIdentifier (the case for grants that flag-check before
+        // DeviceValidator has run, or where Device lookup failed). NSubstitute returns
+        // string.Empty for unconfigured string properties so set DeviceIdentifier to null
+        // explicitly to faithfully simulate the middleware-blind state.
+        _currentContext.DeviceIdentifier = null;
+        requestContext.Device = null;
+        const string formBodyDeviceId = "form-body-device-id";
+        tokenRequest.Raw = new System.Collections.Specialized.NameValueCollection
+        {
+            { "DeviceIdentifier", formBodyDeviceId },
+        };
+
+        _sut.isValid = true;
+        _clientVersionValidator
+            .Validate(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
+            .Returns(false);
+
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert — back-fill chain falls through to request.Raw["DeviceIdentifier"].
+        Assert.Equal(formBodyDeviceId, _currentContext.DeviceIdentifier);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_DoesNotOverwriteCurrentContext_WhenAlreadyPopulated(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        [AuthFixtures.CustomValidatorRequestContext]
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange — middleware managed to populate CurrentContext (e.g., a client that
+        // sends Device-Identifier as an HTTP header). The back-fill must not clobber it.
+        var middlewareUserId = Guid.NewGuid();
+        const string middlewareDeviceId = "middleware-populated-device-id";
+        _currentContext.UserId = middlewareUserId;
+        _currentContext.DeviceIdentifier = middlewareDeviceId;
+
+        _sut.isValid = true;
+        _clientVersionValidator
+            .Validate(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
+            .Returns(false);
+
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert — ??= semantics: middleware-populated values win over validator-context.
+        Assert.Equal(middlewareUserId, _currentContext.UserId);
+        Assert.Equal(middlewareDeviceId, _currentContext.DeviceIdentifier);
+    }
+
     private BaseRequestValidationContextFake CreateContext(
         ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,

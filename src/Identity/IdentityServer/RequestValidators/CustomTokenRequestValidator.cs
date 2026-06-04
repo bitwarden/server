@@ -48,7 +48,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
         IClientVersionValidator clientVersionValidator,
-        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand)
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand,
+        ICurrentContextBackfillService currentContextBackfillService)
         : base(
             userManager,
             userService,
@@ -69,7 +70,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             mailService,
             userAccountKeysQuery,
             clientVersionValidator,
-            updateDeviceLastActivityCommand)
+            updateDeviceLastActivityCommand,
+            currentContextBackfillService)
     {
         _userManager = userManager;
         _updateInstallationCommand = updateInstallationCommand;
@@ -78,6 +80,17 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
     public async Task ValidateAsync(CustomTokenRequestValidationContext context)
     {
         Debug.Assert(context.Result is not null);
+
+        // Back-fills CurrentContext from the refresh-token / authorization-code subject
+        // before any feature flag evaluation. CurrentContextMiddleware runs before
+        // IdentityServer has parsed the token, so DeviceIdentifier and UserId are unset
+        // here without this. For grants that fall through to base.ValidateAsync below,
+        // the back-fill there is a ??= no-op.
+        _currentContextBackfillService.Apply(
+            CurrentContext,
+            context.Result.ValidatedRequest,
+            subject: GetSubject(context));
+
         if (context.Result.ValidatedRequest.GrantType == "refresh_token")
         {
             // Force legacy users to the web for migration
