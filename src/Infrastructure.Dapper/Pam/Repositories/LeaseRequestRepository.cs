@@ -1,0 +1,33 @@
+﻿using System.Data;
+using Bit.Core.Pam.Entities;
+using Bit.Core.Pam.Repositories;
+using Bit.Core.Settings;
+using Bit.Infrastructure.Dapper.Repositories;
+using Dapper;
+using Microsoft.Data.SqlClient;
+
+#nullable enable
+
+namespace Bit.Infrastructure.Dapper.Pam.Repositories;
+
+public class LeaseRequestRepository : Repository<LeaseRequest, Guid>, ILeaseRequestRepository
+{
+    public LeaseRequestRepository(GlobalSettings globalSettings)
+        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
+    { }
+
+    public LeaseRequestRepository(string connectionString, string readOnlyConnectionString)
+        : base(connectionString, readOnlyConnectionString)
+    { }
+
+    public async Task<LeaseRequest?> GetActivePendingByRequesterIdCipherIdAsync(Guid requesterId, Guid cipherId)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<LeaseRequest>(
+            $"[{Schema}].[LeaseRequest_ReadActivePendingByRequesterIdCipherId]",
+            new { RequesterId = requesterId, CipherId = cipherId },
+            commandType: CommandType.StoredProcedure);
+
+        return results.FirstOrDefault();
+    }
+}

@@ -2380,7 +2380,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("Installation", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.PrivilegedAccessManagement.Models.AccessRule", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRule", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -2924,7 +2924,7 @@ namespace Bit.PostgresMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Collection", b =>
                 {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.PrivilegedAccessManagement.Models.AccessRule", null)
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRule", null)
                         .WithMany()
                         .HasForeignKey("AccessRuleId")
                         .OnDelete(DeleteBehavior.Restrict);
@@ -3458,7 +3458,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.PrivilegedAccessManagement.Models.AccessRule", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRule", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
                         .WithMany()

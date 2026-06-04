@@ -40,9 +40,11 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
-using Bit.Core.PrivilegedAccessManagement.OrganizationFeatures.Commands;
-using Bit.Core.PrivilegedAccessManagement.OrganizationFeatures.Commands.Interfaces;
-using Bit.Core.PrivilegedAccessManagement.Services;
+using Bit.Core.Pam.OrganizationFeatures.Commands;
+using Bit.Core.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Core.Pam.OrganizationFeatures.Queries;
+using Bit.Core.Pam.OrganizationFeatures.Queries.Interfaces;
+using Bit.Core.Pam.Services;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
@@ -197,6 +199,9 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<ICreateAccessRuleCommand, CreateAccessRuleCommand>();
         services.AddScoped<IUpdateAccessRuleCommand, UpdateAccessRuleCommand>();
         services.AddScoped<IDeleteAccessRuleCommand, DeleteAccessRuleCommand>();
+        services.AddScoped<IAccessApprovalResolver, AccessApprovalResolver>();
+        services.AddScoped<IAccessPreCheckQuery, AccessPreCheckQuery>();
+        services.AddScoped<IRequestAccessCommand, RequestAccessCommand>();
     }
 
     private static void AddOrganizationGroupCommands(this IServiceCollection services)
