@@ -341,7 +341,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        if (!_orgDeleteTokenDataFactory.TryUnprotect(model.Token, out var data) || !data.IsValid(organization))
+        if (!_orgDeleteTokenDataFactory.TryUnprotect(model.Token, out var data) || !data.Valid || !data.IsValid(organization))
         {
             throw new BadRequestException("Invalid token.");
         }
