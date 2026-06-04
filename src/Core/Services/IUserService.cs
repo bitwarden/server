@@ -34,7 +34,6 @@ public interface IUserService
     // TODO removed with https://bitwarden.atlassian.net/browse/PM-27328
     [Obsolete("Use ISetKeyConnectorKeyCommand instead. This method will be removed in a future version.")]
     Task<IdentityResult> SetKeyConnectorKeyAsync(User user, string key, string orgIdentifier);
-    Task<IdentityResult> ConvertToKeyConnectorAsync(User user, string keyConnectorKeyWrappedUserKey);
     Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType type, Guid orgId, Guid id, string newMasterPassword, string key);
     [Obsolete("Use IReplaceAdminSetTemporaryPasswordCommand instead. To be removed in PM-33141.")]
     Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint);
