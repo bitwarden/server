@@ -18,6 +18,7 @@ using Bit.Core.Auth.UserFeatures.TempPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserApiKey.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Kdf;
@@ -250,24 +251,26 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        // V2 encryption - TDE user with "manage account recovery" permission
-        if (
-            model.HasAuthAndUnlockData() &&
-            model.IsTdeSetPasswordRequest() &&
-            _featureService.IsEnabled(FeatureFlagKeys.V2RegistrationTDEJIT))
+        // Modern-shape request (MPAD + MPUD set). Try V2 encryption paths if the relevant
+        // feature flag is enabled. If the modern-shape request doesn't match a V2 branch
+        // (e.g., V2 flag off, or modern client doing V1 MP JIT), fall through to V1.
+        if (model.HasAuthAndUnlockData())
         {
-            await _tdeSetPasswordCommand.SetMasterPasswordAsync(user, model.ToData());
-            return;
-        }
+            // V2 encryption - TDE user with "manage account recovery" permission
+            if (model.IsTdeSetPasswordRequest() &&
+                _featureService.IsEnabled(FeatureFlagKeys.V2RegistrationTDEJIT))
+            {
+                await _tdeSetPasswordCommand.SetMasterPasswordAsync(user, model.ToData());
+                return;
+            }
 
-        // V2 encryption - MP JIT
-        if (
-            model.HasAuthAndUnlockData() &&
-            model.IsJitMpSetPasswordRequest() &&
-            _featureService.IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration))
-        {
-            await _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, model.ToData());
-            return;
+            // V2 encryption - MP JIT
+            if (model.IsJitMpSetPasswordRequest() &&
+                _featureService.IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration))
+            {
+                await _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, model.ToData());
+                return;
+            }
         }
 
         // V1 encryption — handles both modern clients (sending MPAD/MPUD + legacy Keys) and
@@ -275,6 +278,11 @@ public class AccountsController : Controller
         // TODO: removal requires that BOTH flags have been removed:
         //  - https://bitwarden.atlassian.net/browse/PM-27327 (MP)
         //  - https://bitwarden.atlassian.net/browse/PM-27329 (TDE)
+        await SetInitialPasswordV1Async(user, model);
+    }
+
+    private async Task SetInitialPasswordV1Async(User user, SetInitialPasswordRequestModel model)
+    {
         try
         {
             user = model.ToUser(user);
