@@ -53,4 +53,21 @@ public class LeaseRepository : Repository<Lease, Guid>, ILeaseRepository
             },
             commandType: CommandType.StoredProcedure);
     }
+
+    public async Task RevokeAsync(Lease lease, LeaseDecision auditDecision, DateTime now)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.ExecuteAsync(
+            $"[{Schema}].[Lease_Revoke]",
+            new
+            {
+                LeaseId = lease.Id,
+                LeaseRequestId = lease.LeaseRequestId,
+                RevokedBy = auditDecision.ApproverId,
+                LeaseDecisionId = auditDecision.Id,
+                Reason = auditDecision.Comment,
+                Now = now,
+            },
+            commandType: CommandType.StoredProcedure);
+    }
 }

@@ -106,6 +106,41 @@ public class LeaseRepositoryTests
         Assert.Equal("audit", pending.Reason);
     }
 
+    [DatabaseTheory, DatabaseData]
+    public async Task RevokeAsync_RevokesLeaseAndRecordsAuditDecision(
+        IOrganizationRepository organizationRepository,
+        ILeaseRepository leaseRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+        var cipherId = Guid.NewGuid();
+        var requesterId = Guid.NewGuid();
+        var revokerId = Guid.NewGuid();
+
+        var (request, decision, lease) = BuildAutoApproved(
+            organization.Id, cipherId, requesterId, now.AddMinutes(-5), now.AddHours(1));
+        await leaseRepository.CreateAutoApprovedAsync(request, decision, lease, now);
+
+        var auditDecision = new LeaseDecision
+        {
+            Id = CoreHelpers.GenerateComb(),
+            LeaseRequestId = lease.LeaseRequestId,
+            DeciderKind = LeaseDecisionKind.Human,
+            ApproverId = revokerId,
+            Decision = LeaseDecisionVerdict.Deny,
+            Comment = "policy change",
+            CreationDate = now,
+        };
+
+        await leaseRepository.RevokeAsync(lease, auditDecision, now);
+
+        var persisted = await leaseRepository.GetByIdAsync(lease.Id);
+        Assert.NotNull(persisted);
+        Assert.Equal(LeaseStatus.Revoked, persisted!.Status);
+        Assert.Equal(revokerId, persisted.RevokedBy);
+        Assert.NotNull(persisted.RevokedDate);
+    }
+
     private static (LeaseRequest, LeaseDecision, Lease) BuildAutoApproved(
         Guid organizationId, Guid cipherId, Guid requesterId, DateTime notBefore, DateTime notAfter)
     {

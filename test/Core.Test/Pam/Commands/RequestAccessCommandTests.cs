@@ -124,6 +124,22 @@ public class RequestAccessCommandTests
         Assert.Equal("audit", result.Request.Reason);
         await sutProvider.GetDependency<ILeaseRepository>().DidNotReceiveWithAnyArgs()
             .CreateAutoApprovedAsync(default!, default!, default!, default);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
+            .NotifyCollectionApproversAsync(collectionId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RequestAccessAsync_Automatic_DoesNotNotifyApprovers(Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false);
+
+        await sutProvider.Sut.RequestAccessAsync(userId, cipherId,
+            new AccessRequestSubmission { DurationSeconds = 3600, Reason = "deploy" });
+
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
     }
 
     [Theory, BitAutoData]
