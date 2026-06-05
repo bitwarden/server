@@ -1,9 +1,18 @@
-﻿using Stripe;
+﻿using System.Globalization;
+using Bit.Core.Billing.Constants;
+using Stripe;
 
 namespace Bit.Core.Billing.Extensions;
 
 public static class SubscriptionExtensions
 {
+    public static int GetMigrationGraceServiceAccounts(this Subscription subscription) =>
+        subscription.Metadata.TryGetValue(StripeConstants.MetadataKeys.MigrationGraceServiceAccounts, out var raw)
+        && int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var grace)
+        && grace > 0
+            ? grace
+            : 0;
+
     /*
      * For the time being, this is the simplest migration approach from v45 to v48 as
      * we do not support multi-cadence subscriptions. Each subscription item should be on the
