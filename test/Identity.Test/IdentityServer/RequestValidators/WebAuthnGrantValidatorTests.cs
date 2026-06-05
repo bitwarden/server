@@ -3,10 +3,8 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Tokens;
-using Bit.Identity.IdentityServer;
 using Bit.Identity.IdentityServer.RequestValidators;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -49,25 +47,6 @@ public class WebAuthnGrantValidatorTests
 
         // Assert
         Assert.Equal("invalid_grant", context.Result.Error);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_InvokesBackfillServiceAtPrelude(
-        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        SutProvider<WebAuthnGrantValidator> sutProvider)
-    {
-        // Locks in the prelude call site that ensures device-keyed feature flag rollouts
-        // bucket reliably for webauthn grant requests. CurrentContextMiddleware can't see
-        // the form-body DeviceIdentifier at /connect/token time, so the back-fill at the
-        // top of ValidateAsync is the only mechanism populating it for flag eval downstream.
-        tokenRequest.Raw = new NameValueCollection();
-        var context = new ExtensionGrantValidationContext { Request = tokenRequest };
-
-        await sutProvider.Sut.ValidateAsync(context);
-
-        sutProvider.GetDependency<ICurrentContextBackfillService>()
-            .Received(1)
-            .Apply(Arg.Any<ICurrentContext>(), tokenRequest);
     }
 
     [Theory, BitAutoData]

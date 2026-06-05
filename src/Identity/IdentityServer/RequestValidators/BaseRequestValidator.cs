@@ -43,7 +43,6 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IMailService _mailService;
     private readonly IClientVersionValidator _clientVersionValidator;
     protected readonly IUpdateDeviceLastActivityCommand _updateDeviceLastActivityCommand;
-    protected readonly ICurrentContextBackfillService _currentContextBackfillService;
 
     protected ICurrentContext CurrentContext { get; }
     protected IFeatureService _featureService { get; }
@@ -73,8 +72,7 @@ public abstract class BaseRequestValidator<T> where T : class
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
         IClientVersionValidator clientVersionValidator,
-        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand,
-        ICurrentContextBackfillService currentContextBackfillService
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand
     )
     {
         _userManager = userManager;
@@ -97,17 +95,19 @@ public abstract class BaseRequestValidator<T> where T : class
         _accountKeysQuery = userAccountKeysQuery;
         _clientVersionValidator = clientVersionValidator;
         _updateDeviceLastActivityCommand = updateDeviceLastActivityCommand;
-        _currentContextBackfillService = currentContextBackfillService;
     }
 
+    // NOTE: Feature flags with progressive rollout (device-keyed or user-keyed) cannot be
+    // evaluated from inside this validator without first populating CurrentContext.UserId /
+    // CurrentContext.DeviceIdentifier. CurrentContextMiddleware only sees /connect/token
+    // headers, which do not carry either value. Prefer flag-gating in BuildSuccessResultAsync
+    // (where validation is complete and User/Device entities are available) and populate
+    // CurrentContext inline immediately before the flag check. Do not populate CurrentContext
+    // from raw form-body input before the grant-specific validator finishes — pre-validation
+    // client values would become visible to any downstream reader in the same request.
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
         CustomValidatorRequestContext validatorContext)
     {
-        // Back-fills CurrentContext with the validator-resolved User/Device so any
-        // downstream feature flag evaluation (including BuildSuccessResultAsync) gets
-        // a reliable LaunchDarkly context. ??= preserves anything middleware populated.
-        _currentContextBackfillService.Apply(CurrentContext, request, validatorContext: validatorContext);
-
         var validators = DetermineValidationOrder(context, request, validatorContext);
         var allValidationSchemesSuccessful = await ProcessValidatorsAsync(validators);
         if (!allValidationSchemesSuccessful)
@@ -449,6 +449,12 @@ public abstract class BaseRequestValidator<T> where T : class
         var customResponse = await BuildCustomResponse(user, context, device, sendRememberToken);
 
         await ResetFailedAuthDetailsAsync(user);
+
+        // Back-fill CurrentContext before the flag eval so device-keyed LD targeting buckets
+        // correctly. user.Id and device.Identifier are post-validation Bitwarden entities
+        // (resolved by the user lookup and DeviceValidator) — not raw client input.
+        CurrentContext.UserId ??= user.Id;
+        CurrentContext.DeviceIdentifier ??= device?.Identifier;
 
         // TODO: PM-34091 - remove feature flag check when cleaning up
         if (device != null && _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate))

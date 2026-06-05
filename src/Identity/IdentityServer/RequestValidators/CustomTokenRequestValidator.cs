@@ -48,8 +48,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
         IClientVersionValidator clientVersionValidator,
-        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand,
-        ICurrentContextBackfillService currentContextBackfillService)
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand)
         : base(
             userManager,
             userService,
@@ -70,26 +69,23 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             mailService,
             userAccountKeysQuery,
             clientVersionValidator,
-            updateDeviceLastActivityCommand,
-            currentContextBackfillService)
+            updateDeviceLastActivityCommand)
     {
         _userManager = userManager;
         _updateInstallationCommand = updateInstallationCommand;
     }
 
+    // NOTE: Feature flags with progressive rollout (device-keyed or user-keyed) cannot be
+    // evaluated from inside this validator without first populating CurrentContext.UserId /
+    // CurrentContext.DeviceIdentifier. CurrentContextMiddleware only sees /connect/token
+    // headers, which do not carry either value. For refresh, populate CurrentContext inline
+    // immediately before the flag check from the server-signed Subject claims (see
+    // TryUpdateDeviceLastActivityForRefreshAsync below). Do not populate CurrentContext
+    // from raw form-body input before validation — pre-validation client values would become
+    // visible to any downstream reader in the same request.
     public async Task ValidateAsync(CustomTokenRequestValidationContext context)
     {
         Debug.Assert(context.Result is not null);
-
-        // Back-fills CurrentContext from the refresh-token / authorization-code subject
-        // before any feature flag evaluation. CurrentContextMiddleware runs before
-        // IdentityServer has parsed the token, so DeviceIdentifier and UserId are unset
-        // here without this. For grants that fall through to base.ValidateAsync below,
-        // the back-fill there is a ??= no-op.
-        _currentContextBackfillService.Apply(
-            CurrentContext,
-            context.Result.ValidatedRequest,
-            subject: GetSubject(context));
 
         if (context.Result.ValidatedRequest.GrantType == "refresh_token")
         {
@@ -101,11 +97,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
                 return;
             }
 
-            // TODO: PM-34091 - remove feature flag check when cleaning up
-            if (_featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate))
-            {
-                await TryUpdateDeviceLastActivityForRefreshAsync(context);
-            }
+            await TryUpdateDeviceLastActivityForRefreshAsync(context);
         }
 
         string[] allowedGrantTypes = ["authorization_code", "client_credentials"];
@@ -222,9 +214,32 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         try
         {
             var subject = context.Result.ValidatedRequest.Subject;
-            var identifier = subject?.FindFirstValue(Claims.Device);
-            var userIdString = subject?.GetSubjectId();
-            if (string.IsNullOrEmpty(identifier) || !Guid.TryParse(userIdString, out var userId))
+            var rawIdentifier = subject?.FindFirstValue(Claims.Device);
+            // Defensive: the `device` claim is always populated from a non-empty server-known
+            // string at issuance (see BaseRequestValidator.BuildSubjectClaims). The normalizer
+            // guards an invariant rather than a known failure mode.
+            var identifier = string.IsNullOrWhiteSpace(rawIdentifier) ? null : rawIdentifier;
+            var userIdString = subject?.FindFirstValue(JwtClaimTypes.Subject);
+            Guid.TryParse(userIdString, out var userId);
+
+            // Back-fill before the flag eval so device-keyed LD targeting buckets correctly.
+            // Both values come from the server-signed refresh-token Subject claims.
+            if (userId != Guid.Empty)
+            {
+                CurrentContext.UserId ??= userId;
+            }
+            if (identifier is not null)
+            {
+                CurrentContext.DeviceIdentifier ??= identifier;
+            }
+
+            // TODO: PM-34091 - remove feature flag check when cleaning up
+            if (!_featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate))
+            {
+                return;
+            }
+
+            if (identifier is null || userId == Guid.Empty)
             {
                 return;
             }

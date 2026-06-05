@@ -18,7 +18,6 @@ using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Options;
 using NSubstitute;
@@ -76,8 +75,7 @@ public class CustomTokenRequestValidatorTests
             Substitute.For<IMailService>(),
             Substitute.For<IUserAccountKeysQuery>(),
             Substitute.For<IClientVersionValidator>(),
-            _updateDeviceLastActivityCommand,
-            new CurrentContextBackfillService(NullLogger<CurrentContextBackfillService>.Instance));
+            _updateDeviceLastActivityCommand);
     }
 
     private CustomTokenRequestValidationContext CreateRefreshTokenContext(ClaimsPrincipal subject)
@@ -282,8 +280,7 @@ public class CustomTokenRequestValidatorTests
             Substitute.For<IMailService>(),
             Substitute.For<IUserAccountKeysQuery>(),
             Substitute.For<IClientVersionValidator>(),
-            updateCmd,
-            new CurrentContextBackfillService(NullLogger<CurrentContextBackfillService>.Instance));
+            updateCmd);
 
         var subject = new ClaimsPrincipal(new ClaimsIdentity(
         [
@@ -391,5 +388,41 @@ public class CustomTokenRequestValidatorTests
         // Assert — ??= semantics: middleware-populated values win.
         Assert.Equal(middlewareUserId, _currentContext.UserId);
         Assert.Equal(middlewareDeviceId, _currentContext.DeviceIdentifier);
+    }
+
+    // Defensive normalization: a whitespace-only `device` claim should not be back-filled
+    // and should not trigger a bump. The claim is server-signed at issuance from a non-empty
+    // string, so this guards an invariant rather than a known failure mode — but if a token
+    // ever surfaces with a blank device claim, we don't want to leak whitespace into
+    // CurrentContext.DeviceIdentifier or call the bump command with a blank identifier.
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task ValidateAsync_RefreshToken_WhitespaceDeviceClaim_DoesNotBackfillOrBump(string deviceClaimValue)
+    {
+        // Arrange
+        _currentContext.DeviceIdentifier = null;
+        var userId = Guid.NewGuid();
+        var subject = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(JwtClaimTypes.Subject, userId.ToString()),
+            new Claim(Claims.Device, deviceClaimValue),
+        ], "test"));
+        var context = CreateRefreshTokenContext(subject);
+
+        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
+        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert: refresh succeeds, UserId is back-filled, but DeviceIdentifier is NOT
+        // populated with the whitespace string, and the bump is skipped.
+        Assert.False(context.Result.IsError);
+        Assert.Equal(userId, _currentContext.UserId);
+        Assert.Null(_currentContext.DeviceIdentifier);
+        await _updateDeviceLastActivityCommand
+            .DidNotReceive()
+            .UpdateByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<string>());
     }
 }

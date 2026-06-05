@@ -51,8 +51,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
         IClientVersionValidator clientVersionValidator,
-        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand,
-        ICurrentContextBackfillService currentContextBackfillService)
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand)
         : base(
             userManager,
             userService,
@@ -73,8 +72,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             mailService,
             userAccountKeysQuery,
             clientVersionValidator,
-            updateDeviceLastActivityCommand,
-            currentContextBackfillService)
+            updateDeviceLastActivityCommand)
     {
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
         _assertWebAuthnLoginCredentialCommand = assertWebAuthnLoginCredentialCommand;
@@ -85,16 +83,6 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
 
     public async Task ValidateAsync(ExtensionGrantValidationContext context)
     {
-        // Back-fills DeviceIdentifier from the form body so DEVICE-keyed feature flag
-        // rollouts evaluated anywhere in this method bucket correctly.
-        //
-        // CAUTION: UserId is NOT populated here — the user is resolved from the WebAuthn
-        // assertion further down. USER-keyed feature flag evaluations placed in this
-        // prelude will bucket as anonymous. For user-keyed targeting, place the
-        // IsEnabled check below the assertion, or downstream of base.ValidateAsync
-        // (which re-applies the back-fill with the resolved user).
-        _currentContextBackfillService.Apply(CurrentContext, context.Request);
-
         var rawToken = context.Request.Raw.Get("token");
         var rawDeviceResponse = context.Request.Raw.Get("deviceResponse");
         if (string.IsNullOrWhiteSpace(rawToken) || string.IsNullOrWhiteSpace(rawDeviceResponse))

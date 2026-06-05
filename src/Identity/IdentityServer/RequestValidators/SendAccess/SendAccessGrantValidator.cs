@@ -23,11 +23,6 @@ public class SendAccessGrantValidator(
         { SendAccessConstants.SendIdGuidValidatorResults.InvalidSendId, $"{SendAccessConstants.TokenRequest.SendId} is invalid." }
     };
 
-    // NOTE: This grant has no Bitwarden user or device context — Send access is
-    // anonymous (or authenticated against the Send itself). CurrentContextBackfillService
-    // does not apply here. Progressive feature-flag rollouts inside this validator
-    // would bucket as anonymous in LaunchDarkly unless a Send-specific context kind
-    // (e.g., send_id, authentication method) is introduced separately.
     public async Task ValidateAsync(ExtensionGrantValidationContext context)
     {
         var (sendIdGuid, result) = GetRequestSendId(context);

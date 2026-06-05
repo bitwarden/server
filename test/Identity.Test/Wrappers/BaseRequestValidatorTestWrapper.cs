@@ -14,7 +14,6 @@ using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Bit.Identity.Test.Wrappers;
 
@@ -69,8 +68,7 @@ IBaseRequestValidatorTestWrapper
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
         IClientVersionValidator clientVersionValidator,
-        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand,
-        ICurrentContextBackfillService currentContextBackfillService = null) :
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand) :
          base(
             userManager,
             userService,
@@ -91,10 +89,7 @@ IBaseRequestValidatorTestWrapper
             mailService,
             userAccountKeysQuery,
             clientVersionValidator,
-            updateDeviceLastActivityCommand,
-            // Default to a real instance so integration tests can observe the actual
-            // back-fill behavior on the wrapped CurrentContext.
-            currentContextBackfillService ?? new CurrentContextBackfillService(NullLogger<CurrentContextBackfillService>.Instance))
+            updateDeviceLastActivityCommand)
     {
     }
 
