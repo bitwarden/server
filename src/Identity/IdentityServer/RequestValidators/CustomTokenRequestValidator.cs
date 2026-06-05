@@ -222,8 +222,10 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             var userIdString = subject?.FindFirstValue(JwtClaimTypes.Subject);
             Guid.TryParse(userIdString, out var userId);
 
-            // Back-fill before the flag eval so device-keyed LD targeting buckets correctly.
-            // Both values come from the server-signed refresh-token Subject claims.
+            // Populate CurrentContext for the LD bucketing decision below. Both values come
+            // from the server-signed refresh-token Subject claims.
+            // TODO: PM-34091 - delete when cleaning up the feature flag; the bump call reads
+            // userId / identifier directly.
             if (userId != Guid.Empty)
             {
                 CurrentContext.UserId ??= userId;

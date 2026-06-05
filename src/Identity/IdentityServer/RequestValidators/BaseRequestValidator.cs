@@ -450,9 +450,10 @@ public abstract class BaseRequestValidator<T> where T : class
 
         await ResetFailedAuthDetailsAsync(user);
 
-        // Back-fill CurrentContext before the flag eval so device-keyed LD targeting buckets
-        // correctly. user.Id and device.Identifier are post-validation Bitwarden entities
-        // (resolved by the user lookup and DeviceValidator) — not raw client input.
+        // Populate CurrentContext for the LD bucketing decision below. user.Id and
+        // device.Identifier are post-validation Bitwarden entities — not raw client input.
+        // TODO: PM-34091 - delete when cleaning up the feature flag; the bump call reads
+        // user.Id / device.Identifier directly.
         CurrentContext.UserId ??= user.Id;
         CurrentContext.DeviceIdentifier ??= device?.Identifier;
 
