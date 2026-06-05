@@ -93,6 +93,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         user.Key = model.MasterPasswordUnlockData.MasterKeyWrappedUserKey;
         user.MasterPassword = _passwordHasher.HashPassword(user, model.MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash);
         user.MasterPasswordHint = model.MasterPasswordHint;
+        user.LastPasswordChangeDate = DateTime.UtcNow;
 
         await _userRepository.UpdateUserKeyAndEncryptedDataV2Async(user, saveEncryptedDataActions);
 
