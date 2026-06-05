@@ -37,4 +37,16 @@ public class ProviderInvoiceItemRepository(
 
         return results.ToArray();
     }
+
+    public async Task<ICollection<ProviderInvoiceItem>> GetByProviderIdAndInvoiceId(Guid providerId, string invoiceId)
+    {
+        var sqlConnection = new SqlConnection(ConnectionString);
+
+        var results = await sqlConnection.QueryAsync<ProviderInvoiceItem>(
+            "[dbo].[ProviderInvoiceItem_ReadByProviderIdAndInvoiceId]",
+            new { ProviderId = providerId, InvoiceId = invoiceId },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToArray();
+    }
 }
