@@ -73,7 +73,7 @@ public class SetInitialPasswordRequestModel : IValidatableObject
     {
         if (HasAuthAndUnlockData())
         {
-            // V2 registration - validate KDF equality, salt equality, and KDF settings
+            // Validate KDF equality, salt equality, and KDF settings on the new-shape MPAD/MPUD fields
             foreach (var validationResult in KdfSettingsValidator.ValidateAuthenticationAndUnlockData(
                          MasterPasswordAuthentication!.ToData(), MasterPasswordUnlock!.ToData()))
             {
@@ -83,7 +83,7 @@ public class SetInitialPasswordRequestModel : IValidatableObject
             yield break;
         }
 
-        // V1 registration
+        // Legacy-shape validation (older clients without MPAD/MPUD)
         // TODO: removal requires that BOTH flags have been removed:
         //  - https://bitwarden.atlassian.net/browse/PM-27327 (MP)
         //  - https://bitwarden.atlassian.net/browse/PM-27329 (TDE)
