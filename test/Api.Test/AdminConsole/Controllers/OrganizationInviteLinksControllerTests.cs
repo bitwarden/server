@@ -1,6 +1,7 @@
 ﻿using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
+using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
@@ -259,6 +260,51 @@ public class OrganizationInviteLinksControllerTests
             .Returns(new CommandResult<OrganizationInviteLinkStatus>(new InviteLinkNotAvailable()));
 
         var result = await sutProvider.Sut.GetStatus(model);
+
+        Assert.IsType<BadRequest<ErrorResponseModel>>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPolicies_WithValidInput_ReturnsOkWithList(
+        GetOrganizationInviteLinkPoliciesRequestModel model,
+        List<Policy> policies,
+        SutProvider<OrganizationInviteLinksController> sutProvider)
+    {
+        sutProvider.GetDependency<IGetOrganizationInviteLinkPoliciesQuery>()
+            .GetPoliciesAsync(model.Code)
+            .Returns(new CommandResult<ICollection<Policy>>(policies));
+
+        var result = await sutProvider.Sut.GetPolicies(model);
+
+        var okResult = Assert.IsType<Ok<ListResponseModel<PolicyResponseModel>>>(result);
+        Assert.NotNull(okResult.Value);
+        Assert.Equal(policies.Count, okResult.Value.Data.Count());
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPolicies_WithNotFoundError_ReturnsNotFound(
+        GetOrganizationInviteLinkPoliciesRequestModel model,
+        SutProvider<OrganizationInviteLinksController> sutProvider)
+    {
+        sutProvider.GetDependency<IGetOrganizationInviteLinkPoliciesQuery>()
+            .GetPoliciesAsync(model.Code)
+            .Returns(new CommandResult<ICollection<Policy>>(new InviteLinkNotFound()));
+
+        var result = await sutProvider.Sut.GetPolicies(model);
+
+        Assert.IsType<NotFound<ErrorResponseModel>>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPolicies_WithNotAvailableError_ReturnsBadRequest(
+        GetOrganizationInviteLinkPoliciesRequestModel model,
+        SutProvider<OrganizationInviteLinksController> sutProvider)
+    {
+        sutProvider.GetDependency<IGetOrganizationInviteLinkPoliciesQuery>()
+            .GetPoliciesAsync(model.Code)
+            .Returns(new CommandResult<ICollection<Policy>>(new InviteLinkNotAvailable()));
+
+        var result = await sutProvider.Sut.GetPolicies(model);
 
         Assert.IsType<BadRequest<ErrorResponseModel>>(result);
     }
