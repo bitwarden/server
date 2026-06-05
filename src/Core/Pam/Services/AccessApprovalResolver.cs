@@ -47,41 +47,40 @@ public class AccessApprovalResolver : IAccessApprovalResolver
         AccessApprovalResolution? automatic = null;
         foreach (var collection in governed)
         {
-            var rule = await _accessRuleRepository.GetByIdAsync(collection.AccessRuleId!.Value);
-            if (rule is null)
+            var accessRule = await _accessRuleRepository.GetByIdAsync(collection.AccessRuleId!.Value);
+            if (accessRule is null)
             {
                 continue;
             }
 
-            if (RequiresHumanApproval(rule.Rule))
+            var rule = Parse(accessRule.Rule);
+            if (ContainsHumanApproval(rule))
             {
                 // Most restrictive wins — return as soon as a human-approval rule is found.
-                return new AccessApprovalResolution(collection.OrganizationId, collection.Id, true);
+                return new AccessApprovalResolution(collection.OrganizationId, collection.Id, true, rule);
             }
 
-            automatic ??= new AccessApprovalResolution(collection.OrganizationId, collection.Id, false);
+            automatic ??= new AccessApprovalResolution(collection.OrganizationId, collection.Id, false, rule);
         }
 
         return automatic;
     }
 
     /// <summary>
-    /// True when the rule tree contains a human-approval node. A malformed or unparseable rule fails safe to true so
-    /// access is never silently auto-approved on a rule the server could not understand.
+    /// Parses the stored rule JSON into a <see cref="Rule"/>. A malformed or unparseable rule fails safe to a
+    /// <see cref="HumanApprovalRule"/> so access is never silently auto-approved on a rule the server could not
+    /// understand; the human-approval path then routes it to an approver rather than issuing an automatic lease.
     /// </summary>
-    private static bool RequiresHumanApproval(string ruleJson)
+    private static Rule Parse(string ruleJson)
     {
-        Rule? rule;
         try
         {
-            rule = JsonSerializer.Deserialize<Rule>(ruleJson, _jsonOptions);
+            return JsonSerializer.Deserialize<Rule>(ruleJson, _jsonOptions) ?? new HumanApprovalRule();
         }
         catch (JsonException)
         {
-            return true;
+            return new HumanApprovalRule();
         }
-
-        return rule is null || ContainsHumanApproval(rule);
     }
 
     private static bool ContainsHumanApproval(Rule rule) => rule switch

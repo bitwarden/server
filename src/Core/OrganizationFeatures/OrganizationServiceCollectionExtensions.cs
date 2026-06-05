@@ -43,6 +43,7 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.Pam.Engine;
 using Bit.Core.Pam.OrganizationFeatures.Commands;
 using Bit.Core.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Core.Pam.OrganizationFeatures.Queries;
@@ -209,6 +210,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IUpdateAccessRuleCommand, UpdateAccessRuleCommand>();
         services.AddScoped<IDeleteAccessRuleCommand, DeleteAccessRuleCommand>();
         services.AddScoped<IAccessApprovalResolver, AccessApprovalResolver>();
+        services.AddSingleton<IAccessPolicyEngine, AccessPolicyEngine>();
         services.AddScoped<IAccessPreCheckQuery, AccessPreCheckQuery>();
         services.AddScoped<IGetLeasedCipherQuery, GetLeasedCipherQuery>();
         services.AddScoped<IRequestAccessCommand, RequestAccessCommand>();

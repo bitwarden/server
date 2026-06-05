@@ -1,4 +1,7 @@
-﻿using Bit.Core.Exceptions;
+﻿using System.Net;
+using Bit.Core.Context;
+using Bit.Core.Exceptions;
+using Bit.Core.Pam.Engine;
 using Bit.Core.Pam.Entities;
 using Bit.Core.Pam.Enums;
 using Bit.Core.Pam.Models;
@@ -19,6 +22,8 @@ public class RequestAccessCommand : IRequestAccessCommand
 
     private readonly ICipherRepository _cipherRepository;
     private readonly IAccessApprovalResolver _resolver;
+    private readonly IAccessPolicyEngine _policyEngine;
+    private readonly ICurrentContext _currentContext;
     private readonly ILeaseRepository _leaseRepository;
     private readonly ILeaseRequestRepository _leaseRequestRepository;
     private readonly IApproverInboxNotifier _approverInboxNotifier;
@@ -27,6 +32,8 @@ public class RequestAccessCommand : IRequestAccessCommand
     public RequestAccessCommand(
         ICipherRepository cipherRepository,
         IAccessApprovalResolver resolver,
+        IAccessPolicyEngine policyEngine,
+        ICurrentContext currentContext,
         ILeaseRepository leaseRepository,
         ILeaseRequestRepository leaseRequestRepository,
         IApproverInboxNotifier approverInboxNotifier,
@@ -34,6 +41,8 @@ public class RequestAccessCommand : IRequestAccessCommand
     {
         _cipherRepository = cipherRepository;
         _resolver = resolver;
+        _policyEngine = policyEngine;
+        _currentContext = currentContext;
         _leaseRepository = leaseRepository;
         _leaseRequestRepository = leaseRequestRepository;
         _approverInboxNotifier = approverInboxNotifier;
@@ -87,6 +96,15 @@ public class RequestAccessCommand : IRequestAccessCommand
         if (durationSeconds > MaxDurationSeconds)
         {
             throw new BadRequestException($"The requested duration exceeds the maximum of {MaxDurationSeconds} seconds.");
+        }
+
+        // The cipher must satisfy its access rule's conditions (source IP, time of day, ...) before an automatic
+        // lease is issued. The resolver only routes a rule here when it carries no human-approval gate, so the
+        // engine never asks for approval on this path; any non-allow outcome is a denial we surface to the caller.
+        var policyDecision = _policyEngine.Evaluate(resolution.Rule, BuildSignals(now));
+        if (policyDecision.Kind != DecisionKind.Allow)
+        {
+            throw new BadRequestException(DenyMessage(policyDecision));
         }
 
         var notAfter = now.AddSeconds(durationSeconds);
@@ -183,4 +201,17 @@ public class RequestAccessCommand : IRequestAccessCommand
 
         return AccessRequestResult.Human(created);
     }
+
+    private AccessPolicySignals BuildSignals(DateTime now) => new()
+    {
+        IpAddress = IPAddress.TryParse(_currentContext.IpAddress, out var ip) ? ip : null,
+        Timestamp = new DateTimeOffset(now, TimeSpan.Zero),
+    };
+
+    private static string DenyMessage(AccessDecision decision) => decision.Reason switch
+    {
+        DenyReason.NotWithinIpRange => "Access to this item is not permitted from your current network.",
+        DenyReason.NotWithinTimeWindow => "Access to this item is not permitted at this time.",
+        _ => "Access to this item is not permitted right now.",
+    };
 }

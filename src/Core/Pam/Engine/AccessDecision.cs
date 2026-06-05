@@ -10,10 +10,9 @@ public enum DecisionKind
 public enum DenyReason
 {
     None = 0,
-    NoLease,
-    InvalidLease,
     NotWithinIpRange,
     NotWithinTimeWindow,
+    UnsupportedRule,
 }
 
 public sealed record AccessDecision
