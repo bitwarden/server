@@ -193,6 +193,22 @@ public class AdminConsoleJsonContextTests
         Assert.Equal(fixture, reserialised);
     }
 
+    /// <summary>
+    /// Regression test: policy data written via <c>PolicyDataValidator.ValidateAndSerialize</c>
+    /// uses <c>JsonSerializer.Serialize</c> with no naming policy, producing PascalCase keys
+    /// (e.g. <c>"AutoEnrollEnabled": true</c>). The context must deserialize those correctly.
+    /// </summary>
+    [Fact]
+    public void Deserialize_ResetPasswordDataModel_HandlesPascalCaseKeys()
+    {
+        const string fixture = """{"AutoEnrollEnabled":true}""";
+
+        var obj = JsonSerializer.Deserialize(fixture, AdminConsoleJsonContext.Default.ResetPasswordDataModel);
+
+        Assert.NotNull(obj);
+        Assert.True(obj.AutoEnrollEnabled);
+    }
+
     private static readonly JsonSerializerOptions _camelCaseOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

@@ -4,7 +4,9 @@ using Bit.Core.Models.Data;
 
 namespace Bit.Core.AdminConsole.Utilities;
 
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+[JsonSourceGenerationOptions(
+    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+    PropertyNameCaseInsensitive = true)]
 [JsonSerializable(typeof(Permissions))]
 [JsonSerializable(typeof(MasterPasswordPolicyData))]
 [JsonSerializable(typeof(SendOptionsPolicyData))]
