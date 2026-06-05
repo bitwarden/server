@@ -131,8 +131,15 @@ public class RotateUserAccountKeysCommandTests
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
             .Returns(true);
 
+        var before = DateTime.UtcNow;
         var result = await sutProvider.Sut.PasswordChangeAndRotateUserAccountKeysAsync(user, model);
+        var after = DateTime.UtcNow;
+
         Assert.Equal(IdentityResult.Success, result);
+        Assert.NotNull(user.LastPasswordChangeDate);
+        Assert.InRange(user.LastPasswordChangeDate.Value, before, after);
+        Assert.NotNull(user.LastKeyRotationDate);
+        Assert.InRange(user.LastKeyRotationDate.Value, before, after);
     }
 
     [Theory, BitAutoData]
