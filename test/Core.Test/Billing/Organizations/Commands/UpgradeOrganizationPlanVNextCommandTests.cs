@@ -5,6 +5,7 @@ using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Services;
@@ -14,6 +15,7 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Stripe;
 using Xunit;
+using static Bit.Core.Billing.Constants.StripeConstants;
 
 namespace Bit.Core.Test.Billing.Organizations.Commands;
 
@@ -23,6 +25,7 @@ public class UpgradeOrganizationPlanVNextCommandTests
     private readonly IOrganizationService _organizationService = Substitute.For<IOrganizationService>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IPriceIncreaseScheduler _priceIncreaseScheduler = Substitute.For<IPriceIncreaseScheduler>();
+    private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand = Substitute.For<IUpdateOrganizationSubscriptionCommand>();
     private readonly UpgradeOrganizationPlanVNextCommand _command;
 
@@ -34,6 +37,7 @@ public class UpgradeOrganizationPlanVNextCommandTests
             _organizationService,
             _pricingClient,
             _priceIncreaseScheduler,
+            _stripeAdapter,
             _updateOrganizationSubscriptionCommand);
     }
 
@@ -367,6 +371,48 @@ public class UpgradeOrganizationPlanVNextCommandTests
             organization.GatewayCustomerId!,
             organization.GatewaySubscriptionId!,
             organization.Id);
+    }
+
+    // PM-37510 (T11): a voluntary paid upgrade forfeits SM service-account grace by clearing the
+    // metadata key (empty string removes it in Stripe). Subsequent billing math then reads grace 0.
+    [Fact]
+    public async Task Run_PaidUpgrade_ForfeitsGraceMetadata()
+    {
+        var organization = CreateOrganization(PlanType.TeamsAnnually2020);
+        var currentPlan = MockPlans.Get(PlanType.TeamsAnnually2020);
+        var targetPlan = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        SetupSubscriptionCommandSuccess();
+
+        var result = await _command.Run(organization, targetPlan, null);
+
+        Assert.True(result.IsT0);
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            organization.GatewaySubscriptionId!,
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.Metadata[MetadataKeys.MigrationGraceServiceAccounts] == string.Empty));
+    }
+
+    [Fact]
+    public async Task Run_PaidUpgrade_CommandFailure_DoesNotForfeitGraceMetadata()
+    {
+        var organization = CreateOrganization(PlanType.TeamsAnnually);
+        var currentPlan = MockPlans.Get(PlanType.TeamsAnnually);
+        var targetPlan = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+
+        BillingCommandResult<Subscription> failureResult = new BadRequest("Stripe error");
+        _updateOrganizationSubscriptionCommand
+            .Run(organization, Arg.Any<OrganizationSubscriptionChangeSet>())
+            .Returns(failureResult);
+
+        var result = await _command.Run(organization, targetPlan, null);
+
+        Assert.True(result.IsT1);
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Fact]

@@ -2,7 +2,9 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
@@ -15,6 +17,7 @@ using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
+using Stripe;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 
@@ -31,6 +34,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     private readonly IEventService _eventService;
     private readonly IFeatureService _featureService;
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand;
+    private readonly IStripeAdapter _stripeAdapter;
 
     public UpdateSecretsManagerSubscriptionCommand(
         IOrganizationUserRepository organizationUserRepository,
@@ -43,7 +47,8 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         IApplicationCacheService applicationCacheService,
         IEventService eventService,
         IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IStripeAdapter stripeAdapter)
     {
         _organizationUserRepository = organizationUserRepository;
         _paymentService = paymentService;
@@ -56,6 +61,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         _eventService = eventService;
         _updateOrganizationSubscriptionCommand = updateOrganizationSubscriptionCommand;
         _featureService = featureService;
+        _stripeAdapter = stripeAdapter;
     }
 
     public async Task UpdateSubscriptionAsync(SecretsManagerSubscriptionUpdate update)
@@ -71,30 +77,58 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     {
         if (_featureService.IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand))
         {
-            var builder = OrganizationSubscriptionChangeSet.Builder(update.Plan);
-
-            if (update.SmSeatsChanged)
+            if (update.SmSeatsChanged || update.SmServiceAccountsChanged)
             {
-                builder.UpdateSecretsManagerSeats(update.SmSeatsExcludingBase);
-            }
-
-            if (update.SmServiceAccountsChanged)
-            {
-                if (update.Organization.SmServiceAccounts > update.Plan.SecretsManager.BaseServiceAccount)
+                Subscription subscription;
+                try
                 {
-                    builder.UpdateServiceAccounts(update.SmServiceAccountsExcludingBase);
+                    subscription = await _stripeAdapter.GetSubscriptionAsync(
+                        update.Organization.GatewaySubscriptionId,
+                        new SubscriptionGetOptions { Expand = ["customer", "test_clock"] });
                 }
-                else
+                catch (StripeException stripeException) when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.ResourceMissing)
                 {
-                    builder.AddServiceAccounts(update.SmServiceAccountsExcludingBase);
+                    _logger.LogError(
+                        "Subscription ({SubscriptionId}) for organization ({OrganizationId}) was not found",
+                        update.Organization.GatewaySubscriptionId, update.Organization.Id);
+                    throw new BadRequestException("We couldn't find your subscription.");
                 }
-            }
 
-            var changeSet = builder.Build();
-            if (changeSet.Changes.Any())
-            {
-                var result = await _updateOrganizationSubscriptionCommand.Run(update.Organization, changeSet);
-                result.GetValueOrThrow();
+                update.ServiceAccountGrace = subscription.GetMigrationGraceServiceAccounts();
+
+                var builder = OrganizationSubscriptionChangeSet.Builder(update.Plan);
+
+                if (update.SmSeatsChanged)
+                {
+                    builder.UpdateSecretsManagerSeats(update.SmSeatsExcludingBase);
+                }
+
+                if (update.SmServiceAccountsChanged)
+                {
+                    // The free ceiling is the plan's base allotment plus any migration grace. At or
+                    // below the ceiling there is no additional service-account line item to update, so
+                    // the change is an Add; above the ceiling the line item exists and the change is an
+                    // Update (Update with quantity 0 deletes it).
+                    var serviceAccountCeiling = update.Plan.SecretsManager.BaseServiceAccount + update.ServiceAccountGrace;
+
+                    if (update.Organization.SmServiceAccounts > serviceAccountCeiling)
+                    {
+                        builder.UpdateServiceAccounts(update.SmServiceAccountsExcludingBase);
+                    }
+                    else if (update.SmServiceAccountsExcludingBase > 0)
+                    {
+                        // Guard against AddServiceAccounts(0): adding a zero-quantity line item when
+                        // none exists is invalid. A zero excluding-base quantity means nothing to bill.
+                        builder.AddServiceAccounts(update.SmServiceAccountsExcludingBase);
+                    }
+                }
+
+                var changeSet = builder.Build();
+                if (changeSet.Changes.Any())
+                {
+                    var result = await _updateOrganizationSubscriptionCommand.Run(update.Organization, changeSet, subscription);
+                    result.GetValueOrThrow();
+                }
             }
         }
         else

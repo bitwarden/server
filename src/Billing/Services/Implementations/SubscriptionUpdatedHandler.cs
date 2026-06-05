@@ -1,4 +1,5 @@
-﻿using Bit.Core;
+﻿using System.Globalization;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
@@ -646,6 +647,38 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
             organization.ChangePlan(targetPlan);
             await _organizationRepository.ReplaceAsync(organization);
+
+            var sourceProvidedServiceAccounts = sourcePlan.SecretsManager?.BaseServiceAccount ?? 0;
+            var targetProvidedServiceAccounts = targetPlan.SecretsManager?.BaseServiceAccount ?? 0;
+            var grace = Math.Max(0, sourceProvidedServiceAccounts - targetProvidedServiceAccounts);
+
+            if (grace > 0)
+            {
+                var metadata = new Dictionary<string, string>(subscription.Metadata)
+                {
+                    [MetadataKeys.MigrationGraceServiceAccounts] = grace.ToString(CultureInfo.InvariantCulture)
+                };
+
+                try
+                {
+                    await _stripeAdapter.UpdateSubscriptionAsync(subscription.Id,
+                        new SubscriptionUpdateOptions { Metadata = metadata });
+                }
+                catch (Exception graceException)
+                {
+                    // Surface as a BillingException so the generic catch below does not swallow it; the
+                    // webhook returns 500 and Stripe retries. Because MigratedDate is not yet stamped,
+                    // the replay re-runs this method: re-ChangePlan is a structural no-op and re-writing
+                    // the same metadata key/value is idempotent.
+                    _logger.LogError(
+                        graceException,
+                        "Business migration applied to organization ({OrganizationId}) but failed to write SM grace metadata; Stripe retry will re-apply",
+                        organizationId);
+                    throw new BillingException(
+                        message: "Partial business migration write: organization updated but grace metadata write failed.",
+                        innerException: graceException);
+                }
+            }
 
             try
             {
