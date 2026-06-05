@@ -277,8 +277,9 @@ public class AccountsController : Controller
             }
         }
 
-        // V1 encryption — handles both modern clients (sending MPAD/MPUD + legacy Keys) and
-        // legacy clients (sending only legacy fields). The model's ToUser() handles the fallback.
+        // V1 encryption (MP and TDE) — handles both modern clients (sending MPAD + MPUD + legacy Keys/null)
+        // and legacy clients (sending only legacy fields). The model's ToUser() handles the fallback.
+        //
         // TODO: removal requires that BOTH flags have been removed:
         //  - https://bitwarden.atlassian.net/browse/PM-27327 (MP)
         //  - https://bitwarden.atlassian.net/browse/PM-27329 (TDE)
@@ -289,7 +290,7 @@ public class AccountsController : Controller
     {
         // Defensive: V1 cannot consume AccountKeys (the new key shape). If a request carries
         // AccountKeys we'd silently drop the keypair, so fail loudly. This can only happen if
-        // the V2 MP JIT flag is off (otherwise the V2 branch above would have caught it) — i.e.,
+        // the V2 MP JIT flag is off (otherwise the V2 branch above would have handled it) — i.e.,
         // a client/server flag-state mismatch or a non-Angular caller.
         if (model.AccountKeys != null)
         {
