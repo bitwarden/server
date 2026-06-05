@@ -142,9 +142,9 @@ public class SetInitialPasswordRequestModel : IValidatableObject
     }
 
     /// <summary>
-    /// True when the request comes from a TDE user (TDE users don't send a keypair because
-    /// their keypair already exists). Checks both AccountKeys (new) and Keys (legacy) so the
-    /// predicate is correct for the transitional period where clients may send either key shape.
+    /// True when the request does NOT contain a keypair. TDE users don't send a keypair on the
+    /// request because they already have one. Checks both AccountKeys (new) and Keys (legacy) so
+    /// the predicate is correct for the transitional period where clients may send either key shape.
     /// </summary>
     public bool IsTdeSetPasswordRequest()
     {
