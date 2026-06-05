@@ -2,6 +2,7 @@
 using Bit.Admin.Utilities;
 using Bit.Core;
 using Bit.Core.Billing.Organizations.PlanMigration.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Bit.Admin.Billing.Models.OrganizationPlanMigrationCohortAssignments;
 
@@ -16,5 +17,6 @@ public class BulkAssignmentUploadModel
     /// Per-line CSV-content validation errors, rendered in the page's red error panel.
     /// Empty on first load and on a successful upload.
     /// </summary>
+    [BindNever]
     public IReadOnlyList<CohortBulkAssignmentError> Errors { get; set; } = [];
 }
