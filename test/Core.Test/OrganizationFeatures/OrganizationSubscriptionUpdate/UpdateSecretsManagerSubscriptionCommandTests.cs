@@ -20,7 +20,10 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
+using Customer = Stripe.Customer;
+using StripeConstants = Bit.Core.Billing.Constants.StripeConstants;
 using Subscription = Stripe.Subscription;
+using SubscriptionGetOptions = Stripe.SubscriptionGetOptions;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscriptionUpdate;
 
@@ -808,9 +811,13 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
             .Returns(true);
 
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(new Subscription { Customer = new Customer(), Metadata = new Dictionary<string, string>() });
+
         BillingCommandResult<Subscription> successResult = new Subscription();
         sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>()
-            .Run(organization, Arg.Any<OrganizationSubscriptionChangeSet>())
+            .Run(organization, Arg.Any<OrganizationSubscriptionChangeSet>(), Arg.Any<Subscription>())
             .Returns(successResult);
 
         await sutProvider.Sut.UpdateSubscriptionAsync(update);
@@ -818,7 +825,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().Received(1)
             .Run(organization, Arg.Is<OrganizationSubscriptionChangeSet>(cs =>
                 cs.Changes.Count == 2 &&
-                !cs.ChargeImmediately));
+                !cs.ChargeImmediately), Arg.Any<Subscription>());
         await sutProvider.GetDependency<IStripePaymentService>().DidNotReceiveWithAnyArgs()
             .AdjustSmSeatsAsync(default, default, default);
         await sutProvider.GetDependency<IStripePaymentService>().DidNotReceiveWithAnyArgs()
@@ -851,9 +858,13 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
             .Returns(true);
 
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(new Subscription { Customer = new Customer(), Metadata = new Dictionary<string, string>() });
+
         BillingCommandResult<Subscription> successResult = new Subscription();
         sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>()
-            .Run(organization, Arg.Any<OrganizationSubscriptionChangeSet>())
+            .Run(organization, Arg.Any<OrganizationSubscriptionChangeSet>(), Arg.Any<Subscription>())
             .Returns(successResult);
 
         await sutProvider.Sut.UpdateSubscriptionAsync(update);
@@ -861,11 +872,201 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().Received(1)
             .Run(organization, Arg.Is<OrganizationSubscriptionChangeSet>(cs =>
                 cs.Changes.Count == 2 &&
-                !cs.ChargeImmediately));
+                !cs.ChargeImmediately), Arg.Any<Subscription>());
         await sutProvider.GetDependency<IStripePaymentService>().DidNotReceiveWithAnyArgs()
             .AdjustSmSeatsAsync(default, default, default);
         await sutProvider.GetDependency<IStripePaymentService>().DidNotReceiveWithAnyArgs()
             .AdjustServiceAccountsAsync(default, default, default);
+    }
+
+    private static Subscription SubscriptionWithGrace(int grace) => new()
+    {
+        Customer = new Customer(),
+        Metadata = new Dictionary<string, string>
+        {
+            [StripeConstants.MetadataKeys.MigrationGraceServiceAccounts] = grace.ToString()
+        }
+    };
+
+    // PM-37510 (T5): a migrated Enterprise org (base 50 + grace 150 => 200 free) increasing to 220
+    // accounts is billed for 20 — the excess above the free ceiling.
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateSubscriptionAsync_WithFeatureFlag_WithGrace_AboveCeiling_UpdatesExcessQuantity(
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var plan = MockPlans.Get(PlanType.EnterpriseAnnually); // BaseServiceAccount = 50
+        organization.PlanType = plan.Type;
+        organization.Seats = 400;
+        organization.SmSeats = 10;
+        organization.MaxAutoscaleSmSeats = 20;
+        organization.SmServiceAccounts = 210;
+        organization.MaxAutoscaleSmServiceAccounts = 400;
+
+        var update = new SecretsManagerSubscriptionUpdate(organization, plan, false)
+        {
+            SmServiceAccounts = 220,
+            MaxAutoscaleSmServiceAccounts = 400
+        };
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
+            .Returns(true);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(SubscriptionWithGrace(150));
+
+        BillingCommandResult<Subscription> successResult = new Subscription();
+        sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>()
+            .Run(organization, Arg.Any<OrganizationSubscriptionChangeSet>(), Arg.Any<Subscription>())
+            .Returns(successResult);
+
+        await sutProvider.Sut.UpdateSubscriptionAsync(update);
+
+        Assert.Equal(150, update.ServiceAccountGrace);
+        Assert.Equal(20, update.SmServiceAccountsExcludingBase);
+
+        await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().Received(1)
+            .Run(organization, Arg.Is<OrganizationSubscriptionChangeSet>(cs =>
+                cs.Changes.Count == 1 &&
+                cs.Changes.Single().IsT3 &&
+                cs.Changes.Single().AsT3.Quantity == 20), Arg.Any<Subscription>());
+    }
+
+    // PM-37510 (T6): at the free ceiling (200), the excess is 0 — the existing line item is updated
+    // to quantity 0 (delete), never an AddItem(0).
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateSubscriptionAsync_WithFeatureFlag_WithGrace_AtCeiling_UpdatesToZero(
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var plan = MockPlans.Get(PlanType.EnterpriseAnnually);
+        organization.PlanType = plan.Type;
+        organization.Seats = 400;
+        organization.SmSeats = 10;
+        organization.MaxAutoscaleSmSeats = 20;
+        organization.SmServiceAccounts = 210; // above ceiling => existing line item present
+        organization.MaxAutoscaleSmServiceAccounts = 400;
+
+        var update = new SecretsManagerSubscriptionUpdate(organization, plan, false)
+        {
+            SmServiceAccounts = 200, // back down to the ceiling
+            MaxAutoscaleSmServiceAccounts = 400
+        };
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
+            .Returns(true);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(SubscriptionWithGrace(150));
+
+        BillingCommandResult<Subscription> successResult = new Subscription();
+        sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>()
+            .Run(organization, Arg.Any<OrganizationSubscriptionChangeSet>(), Arg.Any<Subscription>())
+            .Returns(successResult);
+
+        await sutProvider.Sut.UpdateSubscriptionAsync(update);
+
+        Assert.Equal(0, update.SmServiceAccountsExcludingBase);
+
+        // The org count (210) is still above the ceiling (200), so an Update (quantity 0 => delete) is
+        // emitted, not an Add.
+        await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().Received(1)
+            .Run(organization, Arg.Is<OrganizationSubscriptionChangeSet>(cs =>
+                cs.Changes.Count == 1 &&
+                cs.Changes.Single().IsT3 &&
+                cs.Changes.Single().AsT3.Quantity == 0), Arg.Any<Subscription>());
+    }
+
+    // PM-37510 (T6): just above the ceiling (201 with base 50 + grace 150) bills exactly 1, and an
+    // org sitting at the ceiling that adds its first billable account uses Add (never Add(0)).
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateSubscriptionAsync_WithFeatureFlag_WithGrace_FirstAccountAboveCeiling_AddsQuantityOne(
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var plan = MockPlans.Get(PlanType.EnterpriseAnnually);
+        organization.PlanType = plan.Type;
+        organization.Seats = 400;
+        organization.SmSeats = 10;
+        organization.MaxAutoscaleSmSeats = 20;
+        organization.SmServiceAccounts = 200; // at the ceiling => no existing additional line item
+        organization.MaxAutoscaleSmServiceAccounts = 400;
+
+        var update = new SecretsManagerSubscriptionUpdate(organization, plan, true)
+        {
+            SmServiceAccounts = 201,
+            MaxAutoscaleSmServiceAccounts = 400
+        };
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
+            .Returns(true);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(SubscriptionWithGrace(150));
+
+        BillingCommandResult<Subscription> successResult = new Subscription();
+        sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>()
+            .Run(organization, Arg.Any<OrganizationSubscriptionChangeSet>(), Arg.Any<Subscription>())
+            .Returns(successResult);
+
+        await sutProvider.Sut.UpdateSubscriptionAsync(update);
+
+        Assert.Equal(1, update.SmServiceAccountsExcludingBase);
+
+        await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().Received(1)
+            .Run(organization, Arg.Is<OrganizationSubscriptionChangeSet>(cs =>
+                cs.Changes.Count == 1 &&
+                cs.Changes.Single().IsT0 &&
+                cs.Changes.Single().AsT0.Quantity == 1), Arg.Any<Subscription>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateSubscriptionAsync_WithFeatureFlag_SubscriptionDeletedInStripe_ThrowsBadRequestException(
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var plan = MockPlans.Get(PlanType.EnterpriseAnnually);
+        organization.PlanType = plan.Type;
+        organization.Seats = 400;
+        organization.SmSeats = 10;
+        organization.MaxAutoscaleSmSeats = 20;
+        organization.SmServiceAccounts = 210;
+        organization.MaxAutoscaleSmServiceAccounts = 400;
+
+        var update = new SecretsManagerSubscriptionUpdate(organization, plan, false)
+        {
+            SmServiceAccounts = 220,
+            MaxAutoscaleSmServiceAccounts = 400
+        };
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
+            .Returns(true);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns<Subscription>(_ => throw new Stripe.StripeException
+            {
+                StripeError = new Stripe.StripeError { Code = StripeConstants.ErrorCodes.ResourceMissing }
+            });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateSubscriptionAsync(update));
+        Assert.Contains("We couldn't find your subscription.", exception.Message);
+
+        await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().DidNotReceiveWithAnyArgs()
+            .Run(default, default, default);
+        await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
     }
 
     [Theory]
@@ -897,7 +1098,10 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         await sutProvider.Sut.UpdateSubscriptionAsync(update);
 
         await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().DidNotReceiveWithAnyArgs()
-            .Run(default, default);
+            .Run(default, default, default);
+        // No billable change, so the subscription is never fetched.
+        await sutProvider.GetDependency<IStripeAdapter>().DidNotReceiveWithAnyArgs()
+            .GetSubscriptionAsync(default, default);
         await sutProvider.GetDependency<IStripePaymentService>().DidNotReceiveWithAnyArgs()
             .AdjustSmSeatsAsync(default, default, default);
         await sutProvider.GetDependency<IStripePaymentService>().DidNotReceiveWithAnyArgs()
@@ -943,7 +1147,10 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         await sutProvider.GetDependency<IStripePaymentService>().Received(1)
             .AdjustServiceAccountsAsync(organization, plan, update.SmServiceAccountsExcludingBase);
         await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().DidNotReceiveWithAnyArgs()
-            .Run(default, default);
+            .Run(default, default, default);
+        // PM-37510 (T9): the legacy FF-off path never reads grace from Stripe.
+        await sutProvider.GetDependency<IStripeAdapter>().DidNotReceiveWithAnyArgs()
+            .GetSubscriptionAsync(default, default);
     }
 
     private static async Task VerifyDependencyNotCalledAsync(SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)

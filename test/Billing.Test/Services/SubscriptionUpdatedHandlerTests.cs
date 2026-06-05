@@ -3090,6 +3090,443 @@ public class SubscriptionUpdatedHandlerTests
             Arg.Is<OrganizationPlanMigrationCohortAssignment>(a => a.Id == assignmentId && a.MigratedDate.HasValue));
     }
 
+    // PM-37510 (T2): migrating Enterprise 2020 (base 200) to current (base 50) writes a grace of 150
+    // onto the subscription metadata, merged with the existing metadata, with no item/quantity change.
+    [Fact]
+    public async Task HandleAsync_BusinessMigration_EnterpriseAnnual2020ToCurrent_WritesGraceMetadata()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var enterprise2020Annual = new Enterprise2020Plan(true);
+        var enterpriseAnnual = new EnterprisePlan(true);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_grace_ea",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.EnterpriseAnnually2020,
+            Plan = enterprise2020Annual.Name,
+            Seats = 200,
+            SmServiceAccounts = 200
+        };
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            CohortId = cohortId
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(enterprise2020Annual);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(enterpriseAnnual);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "Enterprise2020Annual",
+            MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
+            IsActive = true
+        });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — grace of 150 written, merged with existing metadata, no item change.
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            subscription.Id,
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.Metadata[MetadataKeys.MigrationGraceServiceAccounts] == "150" &&
+                options.Metadata["organizationId"] == organizationId.ToString() &&
+                options.Items == null));
+
+        Assert.NotNull(assignment.MigratedDate);
+    }
+
+    // PM-37510 (T3): grace is entitlement-based (200 -> 50 => 150), independent of the org's actual
+    // SmServiceAccounts. A 250-account org still gets grace 150, and the handler writes only metadata —
+    // it never forces a billed quantity (the scheduler's 1:1 price mapping already carried it forward).
+    [Fact]
+    public async Task HandleAsync_BusinessMigration_OrgAboveBaseline_GraceIsEntitlementBased_NoQuantityForced()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var enterprise2020Annual = new Enterprise2020Plan(true);
+        var enterpriseAnnual = new EnterprisePlan(true);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_grace_250",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.EnterpriseAnnually2020,
+            Plan = enterprise2020Annual.Name,
+            Seats = 200,
+            SmServiceAccounts = 250
+        };
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            CohortId = cohortId
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(enterprise2020Annual);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(enterpriseAnnual);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "Enterprise2020Annual",
+            MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
+            IsActive = true
+        });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — grace is still the entitlement constant (150), not derived from 250; no items forced.
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            subscription.Id,
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.Metadata[MetadataKeys.MigrationGraceServiceAccounts] == "150" &&
+                options.Items == null));
+    }
+
+    // PM-37510 (T10): if the grace metadata write fails, MigratedDate must NOT be stamped so Stripe
+    // retries. This also proves the grace write happens before the MigratedDate stamp.
+    [Fact]
+    public async Task HandleAsync_BusinessMigration_GraceWriteFails_DoesNotStampMigratedDate()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var enterprise2020Annual = new Enterprise2020Plan(true);
+        var enterpriseAnnual = new EnterprisePlan(true);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_grace_fail",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.EnterpriseAnnually2020,
+            Plan = enterprise2020Annual.Name,
+            Seats = 200,
+            SmServiceAccounts = 200
+        };
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            CohortId = cohortId
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(enterprise2020Annual);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(enterpriseAnnual);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "Enterprise2020Annual",
+            MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
+            IsActive = true
+        });
+
+        _stripeAdapter.UpdateSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionUpdateOptions>())
+            .Throws(new StripeException("boom"));
+
+        // Act — the grace write fails. It is surfaced as a BillingException, which the method's
+        // BillingException catch rethrows so the webhook 500s and Stripe retries (rather than the
+        // generic catch swallowing it).
+        await Assert.ThrowsAsync<BillingException>(() => _sut.HandleAsync(parsedEvent));
+
+        // Assert — the assignment is left unstamped (grace write happens before the MigratedDate stamp),
+        // so the Stripe replay re-runs idempotently.
+        Assert.Null(assignment.MigratedDate);
+        await _cohortAssignmentRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(default);
+    }
+
+    // PM-37510 (T4): reduction-aware. When the target SM baseline is not smaller than the source
+    // baseline, grace is 0 and no metadata write occurs. No current real migration path is
+    // reduction-neutral, so the target plan here is a local double whose SM baseline matches the
+    // source (200) while keeping a distinct PasswordManager price for the schedule-item matching.
+    [Fact]
+    public async Task HandleAsync_BusinessMigration_TargetBaselineNotSmaller_DoesNotWriteGrace()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var enterprise2020Annual = new Enterprise2020Plan(true); // source SM base 200
+        var neutralTarget = new NeutralBaselineEnterprisePlan();  // target SM base 200, distinct PM price
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_no_grace",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = neutralTarget.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = neutralTarget.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.EnterpriseAnnually2020,
+            Plan = enterprise2020Annual.Name,
+            Seats = 200,
+            SmServiceAccounts = 200
+        };
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            CohortId = cohortId
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(enterprise2020Annual);
+        // Target plan resolves to one whose SM baseline equals the source (no reduction => grace 0).
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(neutralTarget);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "Enterprise2020Annual",
+            MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
+            IsActive = true
+        });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — no grace metadata write; migration still completes.
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            subscription.Id,
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.Metadata != null &&
+                options.Metadata.ContainsKey(MetadataKeys.MigrationGraceServiceAccounts)));
+
+        Assert.NotNull(assignment.MigratedDate);
+    }
+
+    // Target-plan double for the reduction-neutral case: SM base 200 (== Enterprise 2020 source) but a
+    // distinct PasswordManager seat price so the handler's source/target schedule-item matching works.
+    private sealed record NeutralBaselineEnterprisePlan : Bit.Core.Models.StaticStore.Plan
+    {
+        public NeutralBaselineEnterprisePlan()
+        {
+            var enterprise = new EnterprisePlan(true);
+            Type = enterprise.Type;
+            ProductTier = enterprise.ProductTier;
+            Name = enterprise.Name;
+            IsAnnual = true;
+            PasswordManager = new PasswordManagerFeatures();
+            SecretsManager = new SecretsManagerFeatures();
+        }
+
+        private sealed record PasswordManagerFeatures : PasswordManagerPlanFeatures
+        {
+            public PasswordManagerFeatures()
+            {
+                BaseSeats = 0;
+                StripeSeatPlanId = "neutral-enterprise-seat-annually";
+                StripeStoragePlanId = "storage-gb-annually";
+            }
+        }
+
+        private sealed record SecretsManagerFeatures : SecretsManagerPlanFeatures
+        {
+            public SecretsManagerFeatures()
+            {
+                BaseSeats = 0;
+                BaseServiceAccount = 200; // equal to Enterprise 2020 => no reduction => grace 0
+                StripeSeatPlanId = "neutral-secrets-manager-seat-annually";
+                StripeServiceAccountPlanId = "neutral-secrets-manager-service-account-annually";
+            }
+        }
+    }
+
     [Fact]
     public async Task HandleAsync_BusinessMigration_EnterpriseMonthly2020ToCurrent_AppliesAndMarksMigrated()
     {
