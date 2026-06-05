@@ -235,6 +235,7 @@ public class CustomTokenRequestValidatorTests
             .UpdateByIdentifierAndUserIdAsync(deviceIdentifier, userId, null);
     }
 
+    // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Fact]
     public async Task TryUpdateDeviceLastActivityForRefreshAsync_PassesClientVersionFromContext()
     {
@@ -332,6 +333,8 @@ public class CustomTokenRequestValidatorTests
     // The validator must back-fill them from the refresh-token subject before any feature
     // flag evaluation, so progressive (percentage/targeted) rollouts at /connect/token
     // bucket reliably by device and user.
+    // TODO: PM-34091 - delete this test and the next when cleaning up the feature flag;
+    // they assert against the ??= back-fill that disappears alongside the IsEnabled check.
     [Fact]
     public async Task ValidateAsync_RefreshToken_BackfillsCurrentContextFromSubjectClaims()
     {
@@ -395,6 +398,10 @@ public class CustomTokenRequestValidatorTests
     // string, so this guards an invariant rather than a known failure mode — but if a token
     // ever surfaces with a blank device claim, we don't want to leak whitespace into
     // CurrentContext.DeviceIdentifier or call the bump command with a blank identifier.
+    // TODO: PM-34091 - when cleaning up the feature flag, drop the CurrentContext
+    // back-fill assertions (UserId / DeviceIdentifier) and rename to drop "Backfill".
+    // The bump-skip assertion still holds — the whitespace normalization on `identifier`
+    // remains and continues to gate the unconditional bump.
     [Theory]
     [InlineData("")]
     [InlineData("   ")]

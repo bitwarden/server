@@ -1481,6 +1481,7 @@ public class BaseRequestValidatorTests
             .UpdateAsync(requestContext.Device, null);
     }
 
+    // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_UpdateDeviceLastActivity_Succeeds_PassesClientVersionFromContext(
@@ -1524,6 +1525,7 @@ public class BaseRequestValidatorTests
             .UpdateAsync(requestContext.Device, "2026.5.1");
     }
 
+    // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_UpdateDeviceLastActivity_NullClientVersion_PassesNull(
@@ -1572,6 +1574,8 @@ public class BaseRequestValidatorTests
     // BuildSuccessResultAsync back-fills CurrentContext from the post-validation User and
     // Device entities so the DevicesLastActivityDate flag eval immediately below buckets
     // by device. These tests lock in that the back-fill happens at the right place.
+    // TODO: PM-34091 - delete these two tests when cleaning up the feature flag; they
+    // assert against the ??= back-fill that disappears alongside the IsEnabled check.
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_Success_BackfillsCurrentContextFromUserAndDevice(

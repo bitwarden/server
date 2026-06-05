@@ -29,6 +29,9 @@ public class DevicesLastActivityDateBumpTests
         EncryptedPrivateKey = "encrypted-private-key",
     };
 
+    // TODO: PM-34091 - when cleaning up the feature flag, drop the SubstituteService
+    // <IFeatureService> setup and rename to drop "FlagEnabled". The end-to-end assertion
+    // (LastActivityDate populated after a successful /connect/token) still holds.
     [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
     public async Task TokenEndpoint_PasswordGrant_FlagEnabled_BumpsDeviceLastActivityDate(
         RegisterFinishRequestModel requestModel)
@@ -60,6 +63,9 @@ public class DevicesLastActivityDateBumpTests
         Assert.NotNull(device.LastActivityDate);
     }
 
+    // TODO: PM-34091 - when cleaning up the feature flag, drop the SubstituteService
+    // <IFeatureService> setup and rename to drop "FlagEnabled". The end-to-end assertion
+    // (LastActivityDate remains populated after a refresh) still holds.
     [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
     public async Task TokenEndpoint_RefreshGrant_FlagEnabled_LastActivityDateRemainsSet(
         RegisterFinishRequestModel requestModel)
