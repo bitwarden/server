@@ -29,8 +29,10 @@ public interface ILeaseRequestRepository
     Task<ICollection<InboxLeaseRequestDetails>> GetManyInboxHistoryByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime since);
 
     /// <summary>
-    /// Atomically transitions a pending request to <paramref name="status"/> (setting its resolved date) and records
-    /// the approver's human <paramref name="decision"/>. Both entities must already have their ids assigned.
+    /// Atomically transitions a pending request to <paramref name="status"/> (setting its resolved date), records the
+    /// approver's human <paramref name="decision"/>, and — on approval — creates the active <paramref name="lease"/>
+    /// that authorizes access, spanning the request's approved window. Pass <paramref name="lease"/> as null when
+    /// denying. Every supplied entity must already have its id assigned.
     /// </summary>
-    Task ResolveWithDecisionAsync(LeaseRequest request, LeaseDecision decision, LeaseRequestStatus status, DateTime now);
+    Task ResolveWithDecisionAsync(LeaseRequest request, LeaseDecision decision, LeaseRequestStatus status, Lease? lease, DateTime now);
 }

@@ -64,7 +64,7 @@ public class DecideLeaseRequestCommandTests
             () => sutProvider.Sut.DecideAsync(userId, request.Id, Approve()));
         Assert.Contains("your own request", ex.Message);
         await sutProvider.GetDependency<ILeaseRequestRepository>().DidNotReceiveWithAnyArgs()
-            .ResolveWithDecisionAsync(default!, default!, default, default);
+            .ResolveWithDecisionAsync(default!, default!, default, default, default);
     }
 
     [Theory, BitAutoData]
@@ -88,6 +88,17 @@ public class DecideLeaseRequestCommandTests
                 d.Decision == LeaseDecisionVerdict.Approve &&
                 d.Comment == "looks good"),
             LeaseRequestStatus.Approved,
+            // Approval mints an active lease spanning the request's approved window.
+            Arg.Is<Lease>(l =>
+                l.LeaseRequestId == request.Id &&
+                l.OrganizationId == request.OrganizationId &&
+                l.CollectionId == request.CollectionId &&
+                l.CipherId == request.CipherId &&
+                l.RequesterId == request.RequesterId &&
+                l.Status == LeaseStatus.Active &&
+                l.NotBefore == request.NotBefore &&
+                l.NotAfter == request.NotAfter &&
+                l.Id != default),
             _now);
         await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
             .NotifyCollectionApproversAsync(request.CollectionId);
@@ -107,6 +118,8 @@ public class DecideLeaseRequestCommandTests
             request,
             Arg.Is<LeaseDecision>(d => d.Decision == LeaseDecisionVerdict.Deny),
             LeaseRequestStatus.Denied,
+            // A denial creates no lease.
+            null,
             _now);
     }
 

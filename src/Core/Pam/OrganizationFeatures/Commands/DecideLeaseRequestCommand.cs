@@ -50,9 +50,8 @@ public class DecideLeaseRequestCommand : IDecideLeaseRequestCommand
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        var status = submission.Verdict == LeaseDecisionVerdict.Approve
-            ? LeaseRequestStatus.Approved
-            : LeaseRequestStatus.Denied;
+        var approved = submission.Verdict == LeaseDecisionVerdict.Approve;
+        var status = approved ? LeaseRequestStatus.Approved : LeaseRequestStatus.Denied;
 
         var decision = new LeaseDecision
         {
@@ -65,7 +64,28 @@ public class DecideLeaseRequestCommand : IDecideLeaseRequestCommand
         };
         decision.SetNewId();
 
-        await _leaseRequestRepository.ResolveWithDecisionAsync(request, decision, status, now);
+        // Approval mints the active lease that actually authorizes access, spanning the request's approved window.
+        // Without it the requester would be Approved but hold no lease, so pre-check and the cipher read would both
+        // deny them. A denial creates no lease.
+        Lease? lease = null;
+        if (approved)
+        {
+            lease = new Lease
+            {
+                LeaseRequestId = request.Id,
+                OrganizationId = request.OrganizationId,
+                CollectionId = request.CollectionId,
+                CipherId = request.CipherId,
+                RequesterId = request.RequesterId,
+                Status = LeaseStatus.Active,
+                NotBefore = request.NotBefore,
+                NotAfter = request.NotAfter,
+                CreationDate = now,
+            };
+            lease.SetNewId();
+        }
+
+        await _leaseRequestRepository.ResolveWithDecisionAsync(request, decision, status, lease, now);
 
         // The request just left the pending queue; tell every approver of this collection to re-fetch.
         await _approverInboxNotifier.NotifyCollectionApproversAsync(request.CollectionId);

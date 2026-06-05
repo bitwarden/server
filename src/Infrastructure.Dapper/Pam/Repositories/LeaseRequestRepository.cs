@@ -67,7 +67,7 @@ public class LeaseRequestRepository : Repository<LeaseRequest, Guid>, ILeaseRequ
         return results.ToList();
     }
 
-    public async Task ResolveWithDecisionAsync(LeaseRequest request, LeaseDecision decision, LeaseRequestStatus status, DateTime now)
+    public async Task ResolveWithDecisionAsync(LeaseRequest request, LeaseDecision decision, LeaseRequestStatus status, Lease? lease, DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
@@ -80,6 +80,7 @@ public class LeaseRequestRepository : Repository<LeaseRequest, Guid>, ILeaseRequ
                 ApproverId = decision.ApproverId,
                 Decision = decision.Decision,
                 decision.Comment,
+                LeaseId = lease?.Id,
                 Now = now,
             },
             commandType: CommandType.StoredProcedure);
