@@ -4,6 +4,7 @@ using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Xunit;
 
@@ -55,10 +56,21 @@ public class CohortBulkAssignmentRepositoryTests
 
     [DatabaseTheory, DatabaseData]
     public async Task SyncManyAsync_InsertsUpdatesAndUnassigns(
+        Database database,
         IOrganizationRepository organizationRepository,
         IOrganizationPlanMigrationCohortRepository cohortRepository,
         IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository)
     {
+        // Bulk sync is a SqlServer/Dapper-only (OPENJSON MERGE) operation; EF providers
+        // intentionally throw. Assert that contract on EF, run the real sync on SqlServer.
+        if (database.Type != SupportedDatabaseProviders.SqlServer || database.UseEf)
+        {
+            await Assert.ThrowsAsync<NotSupportedException>(() =>
+                assignmentRepository.SyncManyAsync(
+                    [new ResolvedCohortBulkAssignmentRow(Guid.NewGuid(), null)]));
+            return;
+        }
+
         var orgToInsert = await CreateOrgAsync(organizationRepository);
         var orgToMove = await CreateOrgAsync(organizationRepository);
         var orgToUnassign = await CreateOrgAsync(organizationRepository);
