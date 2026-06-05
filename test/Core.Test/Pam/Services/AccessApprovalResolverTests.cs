@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Pam.Entities;
+using Bit.Core.Pam.Models.Rules;
 using Bit.Core.Pam.Repositories;
 using Bit.Core.Pam.Services;
 using Bit.Core.Repositories;
@@ -47,6 +48,7 @@ public class AccessApprovalResolverTests
         Assert.True(result!.RequiresHumanApproval);
         Assert.Equal(collection.Id, result.CollectionId);
         Assert.Equal(collection.OrganizationId, result.OrganizationId);
+        Assert.IsType<HumanApprovalRule>(result.Rule);
     }
 
     [Theory, BitAutoData]
@@ -60,6 +62,8 @@ public class AccessApprovalResolverTests
 
         Assert.NotNull(result);
         Assert.False(result!.RequiresHumanApproval);
+        var ip = Assert.IsType<IpAllowlistRule>(result.Rule);
+        Assert.Equal("10.0.0.0/8", Assert.Single(ip.Cidrs));
     }
 
     [Theory, BitAutoData]
@@ -73,6 +77,7 @@ public class AccessApprovalResolverTests
 
         Assert.NotNull(result);
         Assert.True(result!.RequiresHumanApproval);
+        Assert.IsType<AllOfRule>(result.Rule);
     }
 
     [Theory, BitAutoData]
@@ -86,6 +91,8 @@ public class AccessApprovalResolverTests
 
         Assert.NotNull(result);
         Assert.True(result!.RequiresHumanApproval);
+        // An unparseable rule fails safe to human approval rather than surfacing a rule the engine cannot evaluate.
+        Assert.IsType<HumanApprovalRule>(result.Rule);
     }
 
     private static void SetupReachableCollections(

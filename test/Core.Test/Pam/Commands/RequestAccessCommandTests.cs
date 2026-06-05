@@ -1,7 +1,9 @@
 ﻿using Bit.Core.Exceptions;
+using Bit.Core.Pam.Engine;
 using Bit.Core.Pam.Entities;
 using Bit.Core.Pam.Enums;
 using Bit.Core.Pam.Models;
+using Bit.Core.Pam.Models.Rules;
 using Bit.Core.Pam.OrganizationFeatures.Commands;
 using Bit.Core.Pam.Repositories;
 using Bit.Core.Pam.Services;
@@ -49,6 +51,7 @@ public class RequestAccessCommandTests
         var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
         SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false);
+        SetupPolicyDecision(sutProvider, AccessDecision.Allow);
 
         var result = await sutProvider.Sut.RequestAccessAsync(userId, cipherId,
             new AccessRequestSubmission { DurationSeconds = 3600, Reason = "deploy" });
@@ -99,6 +102,23 @@ public class RequestAccessCommandTests
             () => sutProvider.Sut.RequestAccessAsync(userId, cipherId,
                 new AccessRequestSubmission { DurationSeconds = RequestAccessCommand.MaxDurationSeconds + 1 }));
         Assert.Contains("maximum", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RequestAccessAsync_AutomaticPolicyDenied_ThrowsBadRequestAndIssuesNoLease(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false);
+        SetupPolicyDecision(sutProvider, AccessDecision.Deny(DenyReason.NotWithinIpRange));
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RequestAccessAsync(userId, cipherId, new AccessRequestSubmission { DurationSeconds = 3600 }));
+        Assert.Contains("network", ex.Message);
+        // A rule the caller fails to satisfy must not produce a lease.
+        await sutProvider.GetDependency<ILeaseRepository>().DidNotReceiveWithAnyArgs()
+            .CreateAutoApprovedAsync(default!, default!, default!, default);
     }
 
     [Theory, BitAutoData]
@@ -229,8 +249,16 @@ public class RequestAccessCommandTests
     private static void SetupResolution(SutProvider<RequestAccessCommand> sutProvider, Guid userId, Guid cipherId,
         Guid orgId, Guid collectionId, bool requiresHuman)
     {
+        var rule = requiresHuman ? new HumanApprovalRule() : (Rule)new IpAllowlistRule { Cidrs = ["10.0.0.0/8"] };
         sutProvider.GetDependency<IAccessApprovalResolver>()
             .ResolveAsync(userId, cipherId)
-            .Returns(new AccessApprovalResolution(orgId, collectionId, requiresHuman));
+            .Returns(new AccessApprovalResolution(orgId, collectionId, requiresHuman, rule));
+    }
+
+    private static void SetupPolicyDecision(SutProvider<RequestAccessCommand> sutProvider, AccessDecision decision)
+    {
+        sutProvider.GetDependency<IAccessPolicyEngine>()
+            .Evaluate(Arg.Any<Rule>(), Arg.Any<AccessPolicySignals>())
+            .Returns(decision);
     }
 }

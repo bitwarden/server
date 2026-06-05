@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Core.Pam.Enums;
 using Bit.Core.Pam.Models;
+using Bit.Core.Pam.Models.Rules;
 using Bit.Core.Pam.OrganizationFeatures.Queries;
 using Bit.Core.Pam.Services;
 using Bit.Core.Vault.Models.Data;
@@ -33,7 +34,7 @@ public class AccessPreCheckQueryTests
         SetupCipher(sutProvider, userId, cipherId);
         sutProvider.GetDependency<IAccessApprovalResolver>()
             .ResolveAsync(userId, cipherId)
-            .Returns(new AccessApprovalResolution(orgId, collectionId, RequiresHumanApproval: true));
+            .Returns(new AccessApprovalResolution(orgId, collectionId, RequiresHumanApproval: true, new HumanApprovalRule()));
 
         var result = await sutProvider.Sut.PreCheckAsync(userId, cipherId);
 
@@ -47,7 +48,7 @@ public class AccessPreCheckQueryTests
         SetupCipher(sutProvider, userId, cipherId);
         sutProvider.GetDependency<IAccessApprovalResolver>()
             .ResolveAsync(userId, cipherId)
-            .Returns(new AccessApprovalResolution(orgId, collectionId, RequiresHumanApproval: false));
+            .Returns(new AccessApprovalResolution(orgId, collectionId, RequiresHumanApproval: false, new IpAllowlistRule { Cidrs = ["10.0.0.0/8"] }));
 
         var result = await sutProvider.Sut.PreCheckAsync(userId, cipherId);
 
