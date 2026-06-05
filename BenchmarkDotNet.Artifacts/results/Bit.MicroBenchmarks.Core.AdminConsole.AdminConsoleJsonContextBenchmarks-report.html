@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>Bit.MicroBenchmarks.Core.AdminConsole.AdminConsoleJsonContextBenchmarks-20260605-152632</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.15.3, macOS 26.4.1 (25E253) [Darwin 25.4.0]
+Apple M4 Max, 1 CPU, 14 logical and 14 physical cores
+.NET SDK 10.0.107
+  [Host]     : .NET 10.0.7 (10.0.7, 10.0.726.21808), Arm64 RyuJIT armv8.0-a
+  DefaultJob : .NET 10.0.7 (10.0.7, 10.0.726.21808), Arm64 RyuJIT armv8.0-a
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                                            </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>Reflection_Serialize_ResetPasswordDataModel</td><td>46.90 ns</td><td>0.382 ns</td><td>0.319 ns</td><td>1.00</td><td>0.01</td><td>0.0095</td><td>80 B</td><td>1.00</td>
+</tr><tr><td>SourceGen_Serialize_ResetPasswordDataModel</td><td>38.94 ns</td><td>0.431 ns</td><td>0.404 ns</td><td>0.83</td><td>0.01</td><td>0.0095</td><td>80 B</td><td>1.00</td>
+</tr><tr><td>Reflection_Serialize_Permissions</td><td>155.95 ns</td><td>1.316 ns</td><td>1.099 ns</td><td>3.33</td><td>0.03</td><td>0.0696</td><td>584 B</td><td>7.30</td>
+</tr><tr><td>SourceGen_Serialize_Permissions</td><td>138.89 ns</td><td>2.701 ns</td><td>3.111 ns</td><td>2.96</td><td>0.07</td><td>0.0696</td><td>584 B</td><td>7.30</td>
+</tr><tr><td>Reflection_Deserialize_ResetPasswordDataModel_CamelCase</td><td>70.92 ns</td><td>0.982 ns</td><td>0.871 ns</td><td>1.51</td><td>0.02</td><td>0.0029</td><td>24 B</td><td>0.30</td>
+</tr><tr><td>SourceGen_Deserialize_ResetPasswordDataModel_CamelCase</td><td>70.26 ns</td><td>1.059 ns</td><td>0.991 ns</td><td>1.50</td><td>0.02</td><td>0.0029</td><td>24 B</td><td>0.30</td>
+</tr><tr><td>Reflection_Deserialize_ResetPasswordDataModel_PascalCase</td><td>69.24 ns</td><td>0.808 ns</td><td>0.755 ns</td><td>1.48</td><td>0.02</td><td>0.0029</td><td>24 B</td><td>0.30</td>
+</tr><tr><td>SourceGen_Deserialize_ResetPasswordDataModel_PascalCase</td><td>68.73 ns</td><td>0.806 ns</td><td>0.714 ns</td><td>1.47</td><td>0.02</td><td>0.0029</td><td>24 B</td><td>0.30</td>
+</tr><tr><td>Reflection_Deserialize_Permissions</td><td>292.72 ns</td><td>2.261 ns</td><td>2.115 ns</td><td>6.24</td><td>0.06</td><td>0.0038</td><td>32 B</td><td>0.40</td>
+</tr><tr><td>SourceGen_Deserialize_Permissions</td><td>517.13 ns</td><td>3.360 ns</td><td>2.806 ns</td><td>11.03</td><td>0.09</td><td>0.0038</td><td>32 B</td><td>0.40</td>
+</tr></tbody></table>
+</body>
+</html>

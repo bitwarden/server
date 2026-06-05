@@ -27,6 +27,8 @@ public record PolicyUpdate
     {
         if (string.IsNullOrWhiteSpace(Data))
             return new T();
+        if (ResetPasswordJsonContext.Default.GetTypeInfo(typeof(T)) is JsonTypeInfo<T> ciTypeInfo)
+            return JsonSerializer.Deserialize(Data, ciTypeInfo) ?? new T();
         if (AdminConsoleJsonContext.Default.GetTypeInfo(typeof(T)) is JsonTypeInfo<T> typeInfo)
             return JsonSerializer.Deserialize(Data, typeInfo) ?? new T();
         return CoreHelpers.LoadClassFromJsonData<T>(Data);

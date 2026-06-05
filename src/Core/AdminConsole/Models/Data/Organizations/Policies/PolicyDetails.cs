@@ -38,6 +38,8 @@ public class PolicyDetails
     {
         if (string.IsNullOrWhiteSpace(PolicyData))
             return new T();
+        if (ResetPasswordJsonContext.Default.GetTypeInfo(typeof(T)) is JsonTypeInfo<T> ciTypeInfo)
+            return JsonSerializer.Deserialize(PolicyData, ciTypeInfo) ?? new T();
         if (AdminConsoleJsonContext.Default.GetTypeInfo(typeof(T)) is JsonTypeInfo<T> typeInfo)
             return JsonSerializer.Deserialize(PolicyData, typeInfo) ?? new T();
         return CoreHelpers.LoadClassFromJsonData<T>(PolicyData);

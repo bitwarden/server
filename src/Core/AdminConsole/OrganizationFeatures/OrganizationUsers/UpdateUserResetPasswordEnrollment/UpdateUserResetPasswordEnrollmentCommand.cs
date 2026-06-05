@@ -1,7 +1,6 @@
-﻿using System.Text.Json;
-using Bit.Core.AdminConsole.Enums;
+﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -57,10 +56,9 @@ public class UpdateUserResetPasswordEnrollmentCommand : IUpdateUserResetPassword
         // Block the user from withdrawal if auto enrollment is enabled
         if (resetPasswordKey == null && resetPasswordPolicy.Data != null)
         {
-            var data = JsonSerializer.Deserialize(resetPasswordPolicy.Data,
-                AdminConsoleJsonContext.Default.ResetPasswordDataModel);
+            var data = resetPasswordPolicy.GetDataModel<ResetPasswordDataModel>();
 
-            if (data?.AutoEnrollEnabled ?? false)
+            if (data.AutoEnrollEnabled)
             {
                 throw new BadRequestException(
                     "Due to an Enterprise Policy, you are not allowed to withdraw from account recovery.");

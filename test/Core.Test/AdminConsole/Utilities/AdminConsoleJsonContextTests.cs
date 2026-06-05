@@ -196,14 +196,27 @@ public class AdminConsoleJsonContextTests
     /// <summary>
     /// Regression test: policy data written via <c>PolicyDataValidator.ValidateAndSerialize</c>
     /// uses <c>JsonSerializer.Serialize</c> with no naming policy, producing PascalCase keys
-    /// (e.g. <c>"AutoEnrollEnabled": true</c>). The context must deserialize those correctly.
+    /// (e.g. <c>"AutoEnrollEnabled": true</c>). <see cref="ResetPasswordJsonContext"/> is the
+    /// dedicated context for reading that data, while <see cref="AdminConsoleJsonContext"/> handles
+    /// serialization and case-sensitive deserialization only.
     /// </summary>
     [Fact]
-    public void Deserialize_ResetPasswordDataModel_HandlesPascalCaseKeys()
+    public void ResetPasswordJsonContext_Deserialize_HandlesPascalCaseKeys()
     {
         const string fixture = """{"AutoEnrollEnabled":true}""";
 
-        var obj = JsonSerializer.Deserialize(fixture, AdminConsoleJsonContext.Default.ResetPasswordDataModel);
+        var obj = JsonSerializer.Deserialize(fixture, ResetPasswordJsonContext.Default.ResetPasswordDataModel);
+
+        Assert.NotNull(obj);
+        Assert.True(obj.AutoEnrollEnabled);
+    }
+
+    [Fact]
+    public void ResetPasswordJsonContext_Deserialize_HandlesCamelCaseKeys()
+    {
+        const string fixture = """{"autoEnrollEnabled":true}""";
+
+        var obj = JsonSerializer.Deserialize(fixture, ResetPasswordJsonContext.Default.ResetPasswordDataModel);
 
         Assert.NotNull(obj);
         Assert.True(obj.AutoEnrollEnabled);
