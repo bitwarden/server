@@ -89,6 +89,11 @@ public class SendValidationService : ISendValidationService
     public static bool SendAllEmailsHaveAllowedDomains(string? emailsString, string? domainsString)
     {
         var domains = (domainsString ?? "").Split(",", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        // If we have no domains then any email is fine
+        if (domains.Length == 0)
+        {
+            return true;
+        }
         var emails = (emailsString ?? "").Split(",", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
         return emails.All(email => domains.Any(domain =>
         {
