@@ -93,6 +93,19 @@ public class LoginViewDto
 
     [JsonPropertyName("fido2Credentials")]
     public List<Fido2CredentialViewDto>? Fido2Credentials { get; set; }
+
+    [JsonPropertyName("passwordHistory")]
+    public List<PasswordHistoryViewDto>? PasswordHistory { get; set; }
+}
+
+public class PasswordHistoryViewDto
+{
+    [EncryptProperty]
+    [JsonPropertyName("password")]
+    public required string Password { get; set; }
+
+    [JsonPropertyName("lastUsedDate")]
+    public DateTime LastUsedDate { get; set; } = DateTime.UtcNow;
 }
 
 public class Fido2CredentialViewDto

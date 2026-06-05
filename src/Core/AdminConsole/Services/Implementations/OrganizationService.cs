@@ -1,16 +1,11 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.Models.Business;
-using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -47,7 +42,6 @@ public class OrganizationService : IOrganizationService
     private readonly IEventService _eventService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IStripePaymentService _paymentService;
-    private readonly IPolicyQuery _policyQuery;
     private readonly ISsoUserRepository _ssoUserRepository;
     private readonly IGlobalSettings _globalSettings;
     private readonly ICurrentContext _currentContext;
@@ -73,7 +67,6 @@ public class OrganizationService : IOrganizationService
         IEventService eventService,
         IApplicationCacheService applicationCacheService,
         IStripePaymentService paymentService,
-        IPolicyQuery policyQuery,
         ISsoUserRepository ssoUserRepository,
         IGlobalSettings globalSettings,
         ICurrentContext currentContext,
@@ -98,7 +91,6 @@ public class OrganizationService : IOrganizationService
         _eventService = eventService;
         _applicationCacheService = applicationCacheService;
         _paymentService = paymentService;
-        _policyQuery = policyQuery;
         _ssoUserRepository = ssoUserRepository;
         _globalSettings = globalSettings;
         _currentContext = currentContext;
@@ -394,35 +386,6 @@ public class OrganizationService : IOrganizationService
                     },
                 });
         }
-    }
-
-    public async Task<Organization> UpdateCollectionManagementSettingsAsync(Guid organizationId, OrganizationCollectionManagementSettings settings)
-    {
-        var existingOrganization = await _organizationRepository.GetByIdAsync(organizationId);
-        if (existingOrganization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        // Create logging actions based on what will change
-        var loggingActions = CreateCollectionManagementLoggingActions(existingOrganization, settings);
-
-        existingOrganization.LimitCollectionCreation = settings.LimitCollectionCreation;
-        existingOrganization.LimitCollectionDeletion = settings.LimitCollectionDeletion;
-        existingOrganization.LimitItemDeletion = settings.LimitItemDeletion;
-        existingOrganization.AllowAdminAccessToAllCollectionItems = settings.AllowAdminAccessToAllCollectionItems;
-        existingOrganization.RevisionDate = DateTime.UtcNow;
-
-        await ReplaceAndUpdateCacheAsync(existingOrganization);
-
-        if (loggingActions.Any())
-        {
-            await Task.WhenAll(loggingActions.Select(action => action()));
-        }
-
-        await _pushNotificationService.PushSyncOrganizationCollectionManagementSettingsAsync(existingOrganization);
-
-        return existingOrganization;
     }
 
     public async Task UpdateTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type)
@@ -836,54 +799,6 @@ public class OrganizationService : IOrganizationService
     }
 
 
-    public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey,
-        Guid? callingUserId)
-    {
-        // Org User must be the same as the calling user and the organization ID associated with the user must match passed org ID
-        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
-        if (!callingUserId.HasValue || orgUser == null || orgUser.UserId != callingUserId.Value ||
-            orgUser.OrganizationId != organizationId)
-        {
-            throw new BadRequestException("User not valid.");
-        }
-
-        // Make sure the organization has the ability to use password reset
-        var org = await _organizationRepository.GetByIdAsync(organizationId);
-        if (org == null || !org.UseResetPassword)
-        {
-            throw new BadRequestException("Organization does not allow password reset enrollment.");
-        }
-
-        // Make sure the organization has the policy enabled
-        // Todo: Cannot use PolicyRequirements until PM-34092 is complete
-        var resetPasswordPolicy = await _policyQuery.RunAsync(organizationId, PolicyType.ResetPassword);
-        if (!resetPasswordPolicy.Enabled)
-        {
-            throw new BadRequestException("Organization does not have the password reset policy enabled.");
-        }
-
-        // Block the user from withdrawal if auto enrollment is enabled
-        if (resetPasswordKey == null && resetPasswordPolicy.Data != null)
-        {
-            var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data,
-                JsonHelpers.IgnoreCase);
-
-            if (data?.AutoEnrollEnabled ?? false)
-            {
-                throw new BadRequestException(
-                    "Due to an Enterprise Policy, you are not allowed to withdraw from account recovery.");
-            }
-        }
-
-        orgUser.ResetPasswordKey = resetPasswordKey;
-        await _organizationUserRepository.ReplaceAsync(orgUser);
-        await _eventService.LogOrganizationUserEventAsync(orgUser,
-            resetPasswordKey != null
-                ? EventType.OrganizationUser_ResetPassword_Enroll
-                : EventType.OrganizationUser_ResetPassword_Withdraw);
-    }
-
-
     public async Task DeleteSsoUserAsync(Guid userId, Guid? organizationId)
     {
         await _ssoUserRepository.DeleteAsync(userId, organizationId);
@@ -1157,63 +1072,5 @@ public class OrganizationService : IOrganizationService
         }
 
         return true;
-    }
-
-    public static OrganizationUserStatusType GetPriorActiveOrganizationUserStatusType(OrganizationUser organizationUser)
-    {
-        // Determine status to revert back to
-        var status = OrganizationUserStatusType.Invited;
-        if (organizationUser.UserId.HasValue && string.IsNullOrWhiteSpace(organizationUser.Email))
-        {
-            // Has UserId & Email is null, then Accepted
-            status = OrganizationUserStatusType.Accepted;
-            if (!string.IsNullOrWhiteSpace(organizationUser.Key))
-            {
-                // We have an org key for this user, user was confirmed
-                status = OrganizationUserStatusType.Confirmed;
-            }
-        }
-
-        return status;
-    }
-
-    private List<Func<Task>> CreateCollectionManagementLoggingActions(
-        Organization existingOrganization, OrganizationCollectionManagementSettings settings)
-    {
-        var loggingActions = new List<Func<Task>>();
-
-        if (existingOrganization.LimitCollectionCreation != settings.LimitCollectionCreation)
-        {
-            var eventType = settings.LimitCollectionCreation
-                ? EventType.Organization_CollectionManagement_LimitCollectionCreationEnabled
-                : EventType.Organization_CollectionManagement_LimitCollectionCreationDisabled;
-            loggingActions.Add(() => _eventService.LogOrganizationEventAsync(existingOrganization, eventType));
-        }
-
-        if (existingOrganization.LimitCollectionDeletion != settings.LimitCollectionDeletion)
-        {
-            var eventType = settings.LimitCollectionDeletion
-                ? EventType.Organization_CollectionManagement_LimitCollectionDeletionEnabled
-                : EventType.Organization_CollectionManagement_LimitCollectionDeletionDisabled;
-            loggingActions.Add(() => _eventService.LogOrganizationEventAsync(existingOrganization, eventType));
-        }
-
-        if (existingOrganization.LimitItemDeletion != settings.LimitItemDeletion)
-        {
-            var eventType = settings.LimitItemDeletion
-                ? EventType.Organization_CollectionManagement_LimitItemDeletionEnabled
-                : EventType.Organization_CollectionManagement_LimitItemDeletionDisabled;
-            loggingActions.Add(() => _eventService.LogOrganizationEventAsync(existingOrganization, eventType));
-        }
-
-        if (existingOrganization.AllowAdminAccessToAllCollectionItems != settings.AllowAdminAccessToAllCollectionItems)
-        {
-            var eventType = settings.AllowAdminAccessToAllCollectionItems
-                ? EventType.Organization_CollectionManagement_AllowAdminAccessToAllCollectionItemsEnabled
-                : EventType.Organization_CollectionManagement_AllowAdminAccessToAllCollectionItemsDisabled;
-            loggingActions.Add(() => _eventService.LogOrganizationEventAsync(existingOrganization, eventType));
-        }
-
-        return loggingActions;
     }
 }

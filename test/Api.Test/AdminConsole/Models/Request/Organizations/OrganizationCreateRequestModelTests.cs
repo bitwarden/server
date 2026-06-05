@@ -72,6 +72,116 @@ public class OrganizationCreateRequestModelTests
         Assert.Contains(results, r => r.MemberNames.Contains(nameof(OrganizationKeysRequestModel.EncryptedPrivateKey)));
     }
 
+    [Fact]
+    public void Validate_TrialLength_BelowRange_FailsValidation()
+    {
+        var model = new OrganizationCreateRequestModel
+        {
+            Name = "Test Org",
+            BillingEmail = "test@example.com",
+            Key = "test-key",
+            UseSecretsManager = false,
+            Keys = new OrganizationKeysRequestModel
+            {
+                PublicKey = "test-public-key",
+                EncryptedPrivateKey = "test-encrypted-private-key"
+            },
+            TrialLength = -1
+        };
+
+        var results = ValidateModel(model);
+
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(OrganizationCreateRequestModel.TrialLength)));
+    }
+
+    [Fact]
+    public void Validate_TrialLength_AboveRange_FailsValidation()
+    {
+        var model = new OrganizationCreateRequestModel
+        {
+            Name = "Test Org",
+            BillingEmail = "test@example.com",
+            Key = "test-key",
+            UseSecretsManager = false,
+            Keys = new OrganizationKeysRequestModel
+            {
+                PublicKey = "test-public-key",
+                EncryptedPrivateKey = "test-encrypted-private-key"
+            },
+            TrialLength = 31
+        };
+
+        var results = ValidateModel(model);
+
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(OrganizationCreateRequestModel.TrialLength)));
+    }
+
+    [Fact]
+    public void Validate_TrialLength_WithinRange_PassesValidation()
+    {
+        var model = new OrganizationCreateRequestModel
+        {
+            Name = "Test Org",
+            BillingEmail = "test@example.com",
+            Key = "test-key",
+            UseSecretsManager = false,
+            Keys = new OrganizationKeysRequestModel
+            {
+                PublicKey = "test-public-key",
+                EncryptedPrivateKey = "test-encrypted-private-key"
+            },
+            TrialLength = 14
+        };
+
+        var results = ValidateModel(model);
+
+        Assert.DoesNotContain(results, r => r.MemberNames.Contains(nameof(OrganizationCreateRequestModel.TrialLength)));
+    }
+
+    [Fact]
+    public void Validate_TrialLength_Null_PassesValidation()
+    {
+        var model = new OrganizationCreateRequestModel
+        {
+            Name = "Test Org",
+            BillingEmail = "test@example.com",
+            Key = "test-key",
+            UseSecretsManager = false,
+            Keys = new OrganizationKeysRequestModel
+            {
+                PublicKey = "test-public-key",
+                EncryptedPrivateKey = "test-encrypted-private-key"
+            },
+            TrialLength = null
+        };
+
+        var results = ValidateModel(model);
+
+        Assert.DoesNotContain(results, r => r.MemberNames.Contains(nameof(OrganizationCreateRequestModel.TrialLength)));
+    }
+
+    [Fact]
+    public void ToOrganizationSignup_TrialLength_IsMapped()
+    {
+        var model = new OrganizationCreateRequestModel
+        {
+            Name = "Test Org",
+            BillingEmail = "test@example.com",
+            Key = "test-key",
+            UseSecretsManager = false,
+            Keys = new OrganizationKeysRequestModel
+            {
+                PublicKey = "test-public-key",
+                EncryptedPrivateKey = "test-encrypted-private-key"
+            },
+            TrialLength = 14
+        };
+
+        var signup = model.ToOrganizationSignup(new Bit.Core.Entities.User());
+
+        Assert.Equal(14, signup.TrialLength);
+    }
+
     private static List<ValidationResult> ValidateModel(object model)
     {
         var context = new ValidationContext(model);

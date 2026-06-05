@@ -18,7 +18,6 @@ using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Premium.Queries;
-using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -68,7 +67,6 @@ public class UserService : UserManager<User>, IUserService
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IDistributedCache _distributedCache;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
-    private readonly IPricingClient _pricingClient;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
     private readonly ISubscriberService _subscriberService;
     private readonly ISendFileStorageService _sendFileStorageService;
@@ -103,7 +101,6 @@ public class UserService : UserManager<User>, IUserService
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IDistributedCache distributedCache,
         IPolicyRequirementQuery policyRequirementQuery,
-        IPricingClient pricingClient,
         IHasPremiumAccessQuery hasPremiumAccessQuery,
         ISubscriberService subscriberService,
         ISendFileStorageService sendFileStorageService)
@@ -142,7 +139,6 @@ public class UserService : UserManager<User>, IUserService
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _distributedCache = distributedCache;
         _policyRequirementQuery = policyRequirementQuery;
-        _pricingClient = pricingClient;
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
         _subscriberService = subscriberService;
         _sendFileStorageService = sendFileStorageService;
@@ -501,6 +497,7 @@ public class UserService : UserManager<User>, IUserService
         });
     }
 
+    [Obsolete("Use ISelfServicePasswordChangeCommand instead. To be removed in PM-33141.")]
     public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint,
         string key)
     {
@@ -551,29 +548,6 @@ public class UserService : UserManager<User>, IUserService
         await _eventService.LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
 
         await _acceptOrgUserCommand.AcceptOrgUserByOrgSsoIdAsync(orgIdentifier, user, this);
-
-        return IdentityResult.Success;
-    }
-
-    public async Task<IdentityResult> ConvertToKeyConnectorAsync(User user, string keyConnectorKeyWrappedUserKey = null)
-    {
-        var identityResult = CheckCanUseKeyConnector(user);
-        if (identityResult != null)
-        {
-            return identityResult;
-        }
-
-        user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
-        user.MasterPassword = null;
-        user.UsesKeyConnector = true;
-
-        if (!string.IsNullOrWhiteSpace(keyConnectorKeyWrappedUserKey))
-        {
-            user.Key = keyConnectorKeyWrappedUserKey;
-        }
-
-        await _userRepository.ReplaceAsync(user);
-        await _eventService.LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
 
         return IdentityResult.Success;
     }
@@ -677,6 +651,7 @@ public class UserService : UserManager<User>, IUserService
         return IdentityResult.Success;
     }
 
+    [Obsolete("Use IReplaceAdminSetTemporaryPasswordCommand instead. To be removed in PM-33141.")]
     public async Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint)
     {
         if (!user.ForcePasswordReset)
@@ -823,33 +798,6 @@ public class UserService : UserManager<User>, IUserService
         await SaveUserAsync(user);
     }
 
-    // TODO: Remove with deletion of pm-29594-update-individual-subscription-page
-    public async Task<string> AdjustStorageAsync(User user, short storageAdjustmentGb)
-    {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
-
-        if (!user.Premium)
-        {
-            throw new BadRequestException("Not a premium user.");
-        }
-
-        var premiumPlan = await _pricingClient.GetAvailablePremiumPlan();
-
-        var baseStorageGb = (short)premiumPlan.Storage.Provided;
-        var secret = await BillingHelpers.AdjustStorageAsync(
-            _paymentService,
-            null,
-            _featureService,
-            user,
-            storageAdjustmentGb,
-            premiumPlan.Storage.StripePriceId,
-            baseStorageGb);
-        await SaveUserAsync(user);
-        return secret;
-    }
     //TODO: Remove with the deletion of PM32645_DeferPriceMigrationToRenewal feature flag
     public async Task CancelPremiumAsync(User user, bool? endOfPeriod = null)
     {
@@ -860,12 +808,6 @@ public class UserService : UserManager<User>, IUserService
             eop = false;
         }
         await _paymentService.CancelSubscriptionAsync(user, eop);
-    }
-
-    // TODO: Remove with deletion of pm-29594-update-individual-subscription-page
-    public async Task ReinstatePremiumAsync(User user)
-    {
-        await _paymentService.ReinstateSubscriptionAsync(user);
     }
 
     public async Task EnablePremiumAsync(Guid userId, DateTime? expirationDate)
@@ -1047,6 +989,7 @@ public class UserService : UserManager<User>, IUserService
         return user.Key == null && user.MasterPassword != null && user.PrivateKey != null;
     }
 
+    [Obsolete("Use MasterPasswordService.PrepareSetInitialMasterPasswordAsync or PrepareUpdateExistingMasterPasswordAsync instead. To be removed in PM-33141.")]
     private async Task<IdentityResult> ValidatePasswordInternal(User user, string password)
     {
         var errors = new List<IdentityError>();
@@ -1126,6 +1069,8 @@ public class UserService : UserManager<User>, IUserService
         await Task.WhenAll(revokeOrgUserTasks);
     }
 
+    // TODO: Remove this method when the PM37165_RotateUserApiKeyCommand feature flag is cleaned up.
+    [Obsolete("Use IRotateUserApiKeyCommand instead. This method will be removed once the PM37165_RotateUserApiKeyCommand feature flag is removed.")]
     public async Task RotateApiKeyAsync(User user)
     {
         user.ApiKey = CoreHelpers.SecureRandomString(30);

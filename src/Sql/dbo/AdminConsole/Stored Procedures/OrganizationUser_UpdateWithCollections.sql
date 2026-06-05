@@ -1,0 +1,117 @@
+﻿CREATE PROCEDURE [dbo].[OrganizationUser_UpdateWithCollections]
+    @Id UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @UserId UNIQUEIDENTIFIER,
+    @Email NVARCHAR(256),
+    @Key VARCHAR(MAX),
+    @Status SMALLINT,
+    @Type TINYINT,
+    @ExternalId NVARCHAR(300),
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7),
+    @Permissions NVARCHAR(MAX),
+    @ResetPasswordKey VARCHAR(MAX),
+    @Collections AS [dbo].[CollectionAccessSelectionType] READONLY,
+    @AccessSecretsManager BIT = 0,
+    @RevocationReason TINYINT = NULL,
+    @StatusNew SMALLINT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    EXEC [dbo].[OrganizationUser_Update] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @ExternalId, @CreationDate, @RevisionDate, @Permissions, @ResetPasswordKey, @AccessSecretsManager, @RevocationReason, @StatusNew
+
+    -- Bump RevisionDate on all affected collections
+    ;WITH [AffectedCollectionsCTE] AS (
+        SELECT
+            [Id]
+        FROM
+            @Collections
+
+        UNION
+
+        SELECT
+            CU.[CollectionId]
+        FROM
+            [dbo].[CollectionUser] CU
+        WHERE
+            CU.[OrganizationUserId] = @Id
+    )
+    UPDATE
+        C
+    SET
+        C.[RevisionDate] = @RevisionDate
+    FROM
+        [dbo].[Collection] C
+    WHERE
+        C.[OrganizationId] = @OrganizationId
+        AND C.[Id] IN (SELECT [Id] FROM [AffectedCollectionsCTE])
+
+    -- Update
+    UPDATE
+        [Target]
+    SET
+        [Target].[ReadOnly] = [Source].[ReadOnly],
+        [Target].[HidePasswords] = [Source].[HidePasswords],
+        [Target].[Manage] = [Source].[Manage]
+    FROM
+        [dbo].[CollectionUser] AS [Target]
+    INNER JOIN
+        @Collections AS [Source] ON [Source].[Id] = [Target].[CollectionId]
+    WHERE
+        [Target].[OrganizationUserId] = @Id
+        AND (
+            [Target].[ReadOnly] != [Source].[ReadOnly]
+            OR [Target].[HidePasswords] != [Source].[HidePasswords]
+            OR [Target].[Manage] != [Source].[Manage]
+        )
+
+    -- Insert
+    INSERT INTO [dbo].[CollectionUser]
+    (
+        [CollectionId],
+        [OrganizationUserId],
+        [ReadOnly],
+        [HidePasswords],
+        [Manage]
+    )
+    SELECT
+        [Source].[Id],
+        @Id,
+        [Source].[ReadOnly],
+        [Source].[HidePasswords],
+        [Source].[Manage]
+    FROM
+        @Collections AS [Source]
+    INNER JOIN
+        [dbo].[Collection] C ON C.[Id] = [Source].[Id] AND C.[OrganizationId] = @OrganizationId
+    WHERE
+        NOT EXISTS (
+            SELECT
+                1
+            FROM
+                [dbo].[CollectionUser]
+            WHERE
+                [CollectionId] = [Source].[Id]
+                AND [OrganizationUserId] = @Id
+        )
+
+    -- Delete
+    DELETE
+        CU
+    FROM
+        [dbo].[CollectionUser] CU
+    INNER JOIN
+        [dbo].[Collection] C ON C.[Id] = CU.[CollectionId]
+    WHERE
+        CU.[OrganizationUserId] = @Id
+        AND C.[Type] != 1  -- Don't delete default collections
+        AND NOT EXISTS (
+            SELECT
+                1
+            FROM
+                @Collections
+            WHERE
+                [Id] = CU.[CollectionId]
+        )
+END

@@ -16,10 +16,39 @@ namespace Bit.Api.AdminConsole.Controllers;
 public class OrganizationInviteLinksController(
     ICreateOrganizationInviteLinkCommand createOrganizationInviteLinkCommand,
     IGetOrganizationInviteLinkQuery getOrganizationInviteLinkQuery,
+    IGetOrganizationInviteLinkStatusQuery getOrganizationInviteLinkStatusQuery,
     IUpdateOrganizationInviteLinkCommand updateOrganizationInviteLinkCommand,
-    IDeleteOrganizationInviteLinkCommand deleteOrganizationInviteLinkCommand)
+    IDeleteOrganizationInviteLinkCommand deleteOrganizationInviteLinkCommand,
+    IRefreshOrganizationInviteLinkCommand refreshOrganizationInviteLinkCommand,
+    IValidateOrganizationInviteLinkEmailDomainQuery validateOrganizationInviteLinkEmailDomainQuery)
     : BaseAdminConsoleController
 {
+    [AllowAnonymous]
+    [HttpPost("/organizations/invite-link/status")]
+    public async Task<IResult> GetStatus([FromBody] GetOrganizationInviteLinkStatusRequestModel model)
+    {
+        var result = await getOrganizationInviteLinkStatusQuery.GetStatusAsync(model.Code);
+
+        return Handle(result, status =>
+            TypedResults.Ok(new OrganizationInviteLinkStatusResponseModel(
+                status.OrganizationName,
+                status.SeatsAvailable,
+                status.Sso is null
+                    ? null
+                    : new OrganizationInviteLinkSsoResponseModel(status.Sso.OrgSsoId, status.Sso.Required))));
+    }
+
+    [AllowAnonymous]
+    [HttpPost("/organizations/invite-link/validate-email-domain")]
+    public async Task<IResult> ValidateEmailDomain(
+        [FromBody] OrganizationInviteLinkValidateEmailDomainRequestModel model)
+    {
+        var result = await validateOrganizationInviteLinkEmailDomainQuery.ValidateAsync(model.Code, model.Email);
+
+        return Handle(result, isAllowed =>
+            TypedResults.Ok(new OrganizationInviteLinkValidateEmailDomainResponseModel(isAllowed)));
+    }
+
     [HttpGet("")]
     [Authorize<ManageUsersRequirement>]
     public async Task<IResult> Get(Guid orgId)
@@ -60,5 +89,16 @@ public class OrganizationInviteLinksController(
     {
         var result = await deleteOrganizationInviteLinkCommand.DeleteAsync(orgId);
         return Handle(result);
+    }
+
+    [HttpPost("refresh")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<IResult> Refresh(Guid orgId, [FromBody] RefreshOrganizationInviteLinkRequestModel model)
+    {
+        var result = await refreshOrganizationInviteLinkCommand.RefreshAsync(
+            model.ToCommandRequest(orgId));
+
+        return Handle(result, link =>
+            TypedResults.Ok(new OrganizationInviteLinkResponseModel(link)));
     }
 }
