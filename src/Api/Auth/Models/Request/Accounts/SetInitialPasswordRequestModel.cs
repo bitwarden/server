@@ -71,6 +71,13 @@ public class SetInitialPasswordRequestModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
+        if (AccountKeys != null && Keys != null)
+        {
+            yield return new ValidationResult(
+                $"Cannot specify both {nameof(AccountKeys)} and {nameof(Keys)}. Provide exactly one keypair.",
+                [nameof(AccountKeys), nameof(Keys)]);
+        }
+
         if (HasAuthAndUnlockData())
         {
             // Validate KDF equality, salt equality, and KDF settings on the new-shape MPAD/MPUD fields
