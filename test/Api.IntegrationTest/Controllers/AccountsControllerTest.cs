@@ -1017,6 +1017,8 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     [BitAutoData]
     public async Task PostSetPasswordAsync_V2_MasterPasswordDecryption_Success(string organizationSsoIdentifier)
     {
+        _featureService.IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration).Returns(true);
+
         // Arrange - Create organization and user
         var ownerEmail = $"owner-{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(ownerEmail);
@@ -1130,6 +1132,8 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     [BitAutoData]
     public async Task PostSetPasswordAsync_V2_TDEDecryption_Success(string organizationSsoIdentifier)
     {
+        _featureService.IsEnabled(FeatureFlagKeys.V2RegistrationTDEJIT).Returns(true);
+
         // Arrange - Create organization with TDE
         var ownerEmail = $"owner-{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(ownerEmail);
