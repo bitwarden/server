@@ -21,6 +21,11 @@ public class OrganizationVaultOptions
     public required string Domain { get; init; }
 
     /// <summary>
+    /// Claimed (verified) domains to seed for the organization. Each becomes a verified <see cref="Bit.Core.Entities.OrganizationDomain"/> row.
+    /// </summary>
+    public IReadOnlyList<string> ClaimedDomains { get; init; } = [];
+
+    /// <summary>
     /// Number of member users to create.
     /// </summary>
     public required int Users { get; init; }
@@ -110,4 +115,10 @@ public class OrganizationVaultOptions
     /// Use 600,000 for production-realistic e2e testing.
     /// </summary>
     public int KdfIterations { get; init; } = 5_000;
+
+    /// <summary>
+    /// Optional overrides for collection management settings applied on top of the organization's initial values.
+    /// Null means "leave all collection management settings unchanged from <see cref="Bit.Seeder.Factories.OrganizationSeeder.Create"/>".
+    /// </summary>
+    public OrganizationOverrides? Overrides { get; init; }
 }

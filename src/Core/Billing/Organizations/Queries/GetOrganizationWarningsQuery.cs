@@ -10,12 +10,14 @@ using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Context;
+using Bit.Core.Services;
 using Stripe;
 using Stripe.Tax;
 
 namespace Bit.Core.Billing.Organizations.Queries;
 
 using static StripeConstants;
+using CountryAbbreviations = Bit.Core.Constants.CountryAbbreviations;
 using FreeTrialWarning = OrganizationWarnings.FreeTrialWarning;
 using InactiveSubscriptionWarning = OrganizationWarnings.InactiveSubscriptionWarning;
 using ResellerRenewalWarning = OrganizationWarnings.ResellerRenewalWarning;
@@ -29,6 +31,7 @@ public interface IGetOrganizationWarningsQuery
 
 public class GetOrganizationWarningsQuery(
     ICurrentContext currentContext,
+    IFeatureService featureService,
     IHasPaymentMethodQuery hasPaymentMethodQuery,
     IProviderRepository providerRepository,
     IStripeAdapter stripeAdapter,
@@ -54,7 +57,7 @@ public class GetOrganizationWarningsQuery(
 
         warnings.InactiveSubscription = await GetInactiveSubscriptionWarningAsync(organization, provider, subscription);
 
-        warnings.ResellerRenewal = await GetResellerRenewalWarningAsync(provider, subscription);
+        warnings.ResellerRenewal = await GetResellerRenewalWarningAsync(organization, provider, subscription);
 
         warnings.TaxId = await GetTaxIdWarningAsync(organization, subscription.Customer, provider);
 
@@ -99,6 +102,11 @@ public class GetOrganizationWarningsQuery(
         Provider? provider,
         Subscription subscription)
     {
+        if (organization.ExemptFromBillingAutomation)
+        {
+            return null;
+        }
+
         // If the organization is enabled or the subscription is active, don't return a warning.
         if (organization.Enabled || subscription is not
             {
@@ -139,9 +147,15 @@ public class GetOrganizationWarningsQuery(
     }
 
     private async Task<ResellerRenewalWarning?> GetResellerRenewalWarningAsync(
+        Organization organization,
         Provider? provider,
         Subscription subscription)
     {
+        if (organization.ExemptFromBillingAutomation)
+        {
+            return null;
+        }
+
         if (provider is not
             {
                 Type: ProviderType.Reseller
@@ -230,9 +244,24 @@ public class GetOrganizationWarningsQuery(
         Customer customer,
         Provider? provider)
     {
-        if (TaxHelpers.IsDirectTaxCountry(customer.Address?.Country))
+        if (featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
         {
-            return null;
+            if (customer.TaxExempt != TaxExempt.None)
+            {
+                return null;
+            }
+
+            if (customer.Address?.Country == CountryAbbreviations.UnitedStates)
+            {
+                return null;
+            }
+        }
+        else
+        {
+            if (TaxHelpers.IsDirectTaxCountry(customer.Address?.Country))
+            {
+                return null;
+            }
         }
 
         var productTier = organization.PlanType.GetProductTier();

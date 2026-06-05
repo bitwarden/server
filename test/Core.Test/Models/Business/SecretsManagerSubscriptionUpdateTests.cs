@@ -68,4 +68,112 @@ public class SecretsManagerSubscriptionUpdateTests
         // Assert
         Assert.Null(ex);
     }
+
+    // PM-37510: the SmServiceAccountsExcludingBase clamp prevents a negative billed quantity when the
+    // service-account count is at or below the (base + grace) ceiling.
+
+    [Theory]
+    [BitAutoData]
+    public void SmServiceAccountsExcludingBase_AtBaseline_WithNoGrace_ReturnsZero(Organization organization)
+    {
+        // Arrange
+        var plan = MockPlans.Get(PlanType.EnterpriseAnnually); // BaseServiceAccount = 50
+        organization.PlanType = plan.Type;
+
+        var sut = new SecretsManagerSubscriptionUpdate(organization, plan, false)
+        {
+            SmServiceAccounts = plan.SecretsManager.BaseServiceAccount
+        };
+
+        // Act / Assert
+        Assert.Equal(0, sut.SmServiceAccountsExcludingBase);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void SmServiceAccountsExcludingBase_BelowBaseline_WithNoGrace_ClampsToZero(Organization organization)
+    {
+        // Arrange — regression for the new Math.Max(0, ...) clamp. Without it this would be negative.
+        var plan = MockPlans.Get(PlanType.EnterpriseAnnually); // BaseServiceAccount = 50
+        organization.PlanType = plan.Type;
+
+        var sut = new SecretsManagerSubscriptionUpdate(organization, plan, false)
+        {
+            SmServiceAccounts = plan.SecretsManager.BaseServiceAccount - 10
+        };
+
+        // Act / Assert
+        Assert.Equal(0, sut.SmServiceAccountsExcludingBase);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void SmServiceAccountsExcludingBase_AtBaselinePlusGrace_ReturnsZero(Organization organization)
+    {
+        // Arrange — migrated Enterprise org: base 50, grace 150 => free ceiling of 200.
+        var plan = MockPlans.Get(PlanType.EnterpriseAnnually);
+        organization.PlanType = plan.Type;
+
+        var sut = new SecretsManagerSubscriptionUpdate(organization, plan, false)
+        {
+            ServiceAccountGrace = 150,
+            SmServiceAccounts = plan.SecretsManager.BaseServiceAccount + 150
+        };
+
+        // Act / Assert
+        Assert.Equal(0, sut.SmServiceAccountsExcludingBase);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void SmServiceAccountsExcludingBase_BelowBaselinePlusGrace_ReturnsZero(Organization organization)
+    {
+        // Arrange
+        var plan = MockPlans.Get(PlanType.EnterpriseAnnually);
+        organization.PlanType = plan.Type;
+
+        var sut = new SecretsManagerSubscriptionUpdate(organization, plan, false)
+        {
+            ServiceAccountGrace = 150,
+            SmServiceAccounts = plan.SecretsManager.BaseServiceAccount + 100
+        };
+
+        // Act / Assert
+        Assert.Equal(0, sut.SmServiceAccountsExcludingBase);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void SmServiceAccountsExcludingBase_AboveBaselinePlusGrace_ReturnsExcess(Organization organization)
+    {
+        // Arrange — 220 accounts, base 50, grace 150 => bill for 20.
+        var plan = MockPlans.Get(PlanType.EnterpriseAnnually);
+        organization.PlanType = plan.Type;
+
+        var sut = new SecretsManagerSubscriptionUpdate(organization, plan, false)
+        {
+            ServiceAccountGrace = 150,
+            SmServiceAccounts = 220
+        };
+
+        // Act / Assert
+        Assert.Equal(20, sut.SmServiceAccountsExcludingBase);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void SmServiceAccountsExcludingBase_AboveBaseline_WithNoGrace_ReturnsExcess(Organization organization)
+    {
+        // Arrange — ServiceAccountGrace defaults to 0, preserving the original (clamped) behavior.
+        var plan = MockPlans.Get(PlanType.EnterpriseAnnually);
+        organization.PlanType = plan.Type;
+
+        var sut = new SecretsManagerSubscriptionUpdate(organization, plan, false)
+        {
+            SmServiceAccounts = 70
+        };
+
+        // Act / Assert
+        Assert.Equal(20, sut.SmServiceAccountsExcludingBase);
+    }
 }

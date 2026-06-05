@@ -2,7 +2,6 @@
 using System.Text.Json;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
@@ -43,7 +42,6 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         GlobalSettings globalSettings,
         ISsoConfigRepository ssoConfigRepository,
         IUserRepository userRepository,
-        IPolicyService policyService,
         IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
         IFeatureService featureService,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
@@ -53,7 +51,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
         IClientVersionValidator clientVersionValidator,
-        IBumpDeviceLastActivityDateCommand bumpDeviceLastActivityDateCommand)
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand)
         : base(
             userManager,
             userService,
@@ -66,7 +64,6 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             currentContext,
             globalSettings,
             userRepository,
-            policyService,
             featureService,
             ssoConfigRepository,
             userDecryptionOptionsBuilder,
@@ -75,7 +72,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             mailService,
             userAccountKeysQuery,
             clientVersionValidator,
-            bumpDeviceLastActivityDateCommand)
+            updateDeviceLastActivityCommand)
     {
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
         _assertWebAuthnLoginCredentialCommand = assertWebAuthnLoginCredentialCommand;

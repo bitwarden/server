@@ -13,8 +13,10 @@ public interface IGlobalSettings
     bool EnableCloudCommunication { get; set; }
     string LicenseDirectory { get; set; }
     string LicenseCertificatePassword { get; set; }
+    string LicenseCertificatePath { get; set; }
     int OrganizationInviteExpirationHours { get; set; }
     bool DisableUserRegistration { get; set; }
+    bool SuppressOnboardingInterstitials { get; set; }
     bool EnableNewDeviceVerification { get; set; }
     IInstallationSettings Installation { get; set; }
     IFileStorageSettings Attachment { get; set; }

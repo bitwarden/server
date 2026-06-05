@@ -41,23 +41,21 @@ public class OrganizationExportController : Controller
     {
         var canExportAll = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(organizationId),
             VaultExportOperations.ExportWholeVault);
-        var canExportManaged = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(organizationId),
-            VaultExportOperations.ExportManagedCollections);
 
         if (canExportAll.Succeeded)
         {
-            var allOrganizationCiphers =
-                await _organizationCiphersQuery.GetAllOrganizationCiphersExcludingDefaultUserCollections(
-                    organizationId);
+            var ciphersTask = _organizationCiphersQuery
+                .GetAllOrganizationCiphersExcludingDefaultUserCollections(organizationId);
+            var collectionsTask = _collectionRepository
+                .GetManySharedCollectionsByOrganizationIdAsync(organizationId);
+            await Task.WhenAll(ciphersTask, collectionsTask);
 
-            var allCollections = await _collectionRepository
-                .GetManySharedCollectionsByOrganizationIdAsync(
-                    organizationId);
-
-
-            return Ok(new OrganizationExportResponseModel(allOrganizationCiphers, allCollections,
+            return Ok(new OrganizationExportResponseModel(ciphersTask.Result, collectionsTask.Result,
                 _globalSettings));
         }
+
+        var canExportManaged = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(organizationId),
+            VaultExportOperations.ExportManagedCollections);
 
         if (canExportManaged.Succeeded)
         {

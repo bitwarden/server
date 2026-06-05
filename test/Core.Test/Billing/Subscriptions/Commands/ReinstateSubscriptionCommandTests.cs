@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Pricing;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Entities;
@@ -29,7 +30,7 @@ public class ReinstateSubscriptionCommandTests
     {
         var user = new User { GatewaySubscriptionId = "sub_1" };
 
-        _stripeAdapter.GetSubscriptionAsync("sub_1")
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>())
             .Returns(new Subscription { Status = SubscriptionStatus.Active, CancelAt = null });
 
         var result = await _command.Run(user);
@@ -39,11 +40,11 @@ public class ReinstateSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task Run_FlagOff_FallsThroughToStandardReinstate_NoScheduleCheck()
+    public async Task Run_PM32645_DeferPriceMigrationToRenewalFlagOff_FallsThroughToStandardReinstate_NoScheduleCheck()
     {
         var user = new User { GatewaySubscriptionId = "sub_1" };
 
-        _stripeAdapter.GetSubscriptionAsync("sub_1")
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>())
             .Returns(new Subscription
             {
                 Id = "sub_1",
@@ -55,7 +56,7 @@ public class ReinstateSubscriptionCommandTests
 
         var result = await _command.Run(user);
 
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         await _stripeAdapter.DidNotReceiveWithAnyArgs()
             .ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>());
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync("sub_1",
@@ -63,11 +64,11 @@ public class ReinstateSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task Run_FlagOn_NoSchedule_FallsThroughToStandardReinstate()
+    public async Task Run_PM32645_DeferPriceMigrationToRenewalFlagOn_NoSchedule_FallsThroughToStandardReinstate()
     {
         var user = new User { GatewaySubscriptionId = "sub_1" };
 
-        _stripeAdapter.GetSubscriptionAsync("sub_1")
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>())
             .Returns(new Subscription
             {
                 Id = "sub_1",
@@ -82,7 +83,7 @@ public class ReinstateSubscriptionCommandTests
 
         var result = await _command.Run(user);
 
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         await _stripeAdapter.DidNotReceiveWithAnyArgs()
             .UpdateSubscriptionScheduleAsync(Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync("sub_1",
@@ -90,11 +91,11 @@ public class ReinstateSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task Run_FlagOn_NoSchedule_CancelledDuringDeferredPriceIncrease_RecreatesScheduleAndClearsFlag()
+    public async Task Run_PM32645_DeferPriceMigrationToRenewalFlagOn_NoSchedule_CancelledDuringDeferredPriceIncrease_RecreatesScheduleAndClearsFlag()
     {
         var user = new User { GatewaySubscriptionId = "sub_1" };
 
-        _stripeAdapter.GetSubscriptionAsync("sub_1")
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>())
             .Returns(new Subscription
             {
                 Id = "sub_1",
@@ -113,12 +114,63 @@ public class ReinstateSubscriptionCommandTests
 
         var result = await _command.Run(user);
 
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync("sub_1",
             Arg.Is<SubscriptionUpdateOptions>(o =>
                 o.CancelAtPeriodEnd == false &&
                 o.Metadata[MetadataKeys.CancelledDuringDeferredPriceIncrease] == ""));
-        await _priceIncreaseScheduler.Received(1).Schedule(Arg.Any<Subscription>());
+        await _priceIncreaseScheduler.Received(1).ScheduleForSubscription(Arg.Any<Subscription>());
     }
 
+    [Fact]
+    public async Task Run_BusinessPlanPriceMigrationFlagOn_CancelledDuringDeferredPriceIncrease_RecreatesScheduleAndClearsFlag()
+    {
+        var organizationId = Guid.NewGuid();
+        var organization = new Organization { Id = organizationId, GatewaySubscriptionId = "sub_1" };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>())
+            .Returns(new Subscription
+            {
+                Id = "sub_1",
+                Status = SubscriptionStatus.Active,
+                CancelAt = DateTime.UtcNow.AddDays(30),
+                CustomerId = "cus_1",
+                Metadata = new Dictionary<string, string>
+                {
+                    ["organizationId"] = organizationId.ToString(),
+                    [MetadataKeys.CancelledDuringDeferredPriceIncrease] = "true"
+                },
+                Items = new StripeList<SubscriptionItem> { Data = [] }
+            });
+
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(false);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.Success);
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync("sub_1",
+            Arg.Is<SubscriptionUpdateOptions>(o =>
+                o.CancelAtPeriodEnd == false &&
+                o.Metadata[MetadataKeys.CancelledDuringDeferredPriceIncrease] == ""));
+        await _priceIncreaseScheduler.Received(1).ScheduleForSubscription(Arg.Any<Subscription>());
+    }
+
+    [Fact]
+    public async Task Run_FetchesSubscriptionWithRequiredExpansions()
+    {
+        var user = new User { GatewaySubscriptionId = "sub_1" };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>())
+            .Returns(new Subscription { Status = SubscriptionStatus.Active, CancelAt = null });
+
+        await _command.Run(user);
+
+        await _stripeAdapter.Received(1).GetSubscriptionAsync(
+            "sub_1",
+            Arg.Is<SubscriptionGetOptions>(o =>
+                o.Expand != null &&
+                o.Expand.Contains("discounts") &&
+                o.Expand.Contains("customer.discount")));
+    }
 }

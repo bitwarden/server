@@ -22,11 +22,15 @@ public class AdminRecoverAccountValidator(
             return Invalid(request, new NoActionRequestedError());
         }
 
-        // If resetting master password, hash and key are required
-        if (request.ResetMasterPassword &&
-            (string.IsNullOrEmpty(request.NewMasterPasswordHash) || string.IsNullOrEmpty(request.Key)))
+        if (request.ResetMasterPassword)
         {
-            return Invalid(request, new MissingPasswordFieldsError());
+            var hasHashAndKey = !string.IsNullOrEmpty(request.NewMasterPasswordHash) && !string.IsNullOrEmpty(request.Key);
+            var hasUnlockAndAuthenticationData = request.AuthenticationData is not null && request.UnlockData is not null;
+
+            if (!hasHashAndKey && !hasUnlockAndAuthenticationData)
+            {
+                return Invalid(request, new MissingPasswordFieldsError());
+            }
         }
 
         // If resetting 2FA, feature flag must be enabled
@@ -49,11 +53,12 @@ public class AdminRecoverAccountValidator(
             return Invalid(request, new PolicyNotEnabledError());
         }
 
-        // Org User must be confirmed or revoked and have a ResetPasswordKey
+        // Org User must be confirmed, accepted, or revoked and have a ResetPasswordKey
         var orgUser = request.OrganizationUser;
         if (orgUser == null ||
             (orgUser.Status != OrganizationUserStatusType.Confirmed &&
-             orgUser.Status != OrganizationUserStatusType.Revoked) ||
+             orgUser.Status != OrganizationUserStatusType.Revoked &&
+             orgUser.Status != OrganizationUserStatusType.Accepted) ||
             orgUser.OrganizationId != request.OrgId ||
             !orgUser.IsEnrolledInAccountRecovery() ||
             !orgUser.UserId.HasValue)

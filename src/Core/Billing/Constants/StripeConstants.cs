@@ -14,14 +14,23 @@ public static class StripeConstants
 
     public static class BillingReasons
     {
+        public const string AutomaticPendingInvoiceItemInvoice = "automatic_pending_invoice_item_invoice";
         public const string SubscriptionCreate = "subscription_create";
         public const string SubscriptionCycle = "subscription_cycle";
+        public const string SubscriptionUpdate = "subscription_update";
     }
 
     public static class CollectionMethod
     {
         public const string ChargeAutomatically = "charge_automatically";
         public const string SendInvoice = "send_invoice";
+    }
+
+    public static class CouponDurations
+    {
+        public const string Once = "once";
+        public const string Repeating = "repeating";
+        public const string Forever = "forever";
     }
 
     public static class CouponIDs
@@ -82,6 +91,7 @@ public static class StripeConstants
     {
         public const string BraintreeCustomerId = "btCustomerId";
         public const string BraintreeTransactionId = "btTransactionId";
+        public const string CancellationOrigin = "cancellation_origin";
         public const string InvoiceApproved = "invoice_approved";
         public const string OrganizationId = "organizationId";
         public const string PayPalTransactionId = "btPayPalTransactionId";
@@ -94,6 +104,15 @@ public static class StripeConstants
         public const string OriginatingAppVersion = "originatingAppVersion";
         public const string TrialInitiationPath = "trialInitiationPath";
         public const string CancelledDuringDeferredPriceIncrease = "cancelled_during_deferred_price_increase";
+        public const string MigrationCohortId = "migration_cohort_id";
+        public const string MigrationCohortName = "migration_cohort_name";
+        public const string MigrationGraceServiceAccounts = "migration_grace_service_accounts";
+        public const string CancellingUserId = "cancellingUserId";
+    }
+
+    public static class CancellationOrigins
+    {
+        public const string UnpaidSubscription = "unpaid_subscription";
     }
 
     public static class PaymentBehavior
@@ -233,6 +252,8 @@ public static class StripeConstants
         {
             public const string Ios = "ios";
             public const string Android = "android";
+            public const string Browser = "browser";
+            public const string Desktop = "desktop";
         }
     }
 
