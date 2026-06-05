@@ -203,6 +203,12 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IAccessPreCheckQuery, AccessPreCheckQuery>();
         services.AddScoped<IGetLeasedCipherQuery, GetLeasedCipherQuery>();
         services.AddScoped<IRequestAccessCommand, RequestAccessCommand>();
+        services.AddScoped<IApproverCollectionAccessQuery, ApproverCollectionAccessQuery>();
+        services.AddScoped<IApproverInboxNotifier, ApproverInboxNotifier>();
+        services.AddScoped<IGetInboxRequestsQuery, GetInboxRequestsQuery>();
+        services.AddScoped<IGetInboxHistoryQuery, GetInboxHistoryQuery>();
+        services.AddScoped<IDecideLeaseRequestCommand, DecideLeaseRequestCommand>();
+        services.AddScoped<IRevokeLeaseCommand, RevokeLeaseCommand>();
     }
 
     private static void AddOrganizationGroupCommands(this IServiceCollection services)

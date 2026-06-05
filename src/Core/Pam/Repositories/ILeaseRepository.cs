@@ -17,4 +17,11 @@ public interface ILeaseRepository
     /// This is the only way a <see cref="Lease"/> is created, so the request, decision, and lease never diverge.
     /// </summary>
     Task CreateAutoApprovedAsync(LeaseRequest request, LeaseDecision decision, Lease lease, DateTime now);
+
+    /// <summary>
+    /// Atomically revokes an active lease (setting its revoked date and revoker) and records the revocation reason as
+    /// a human <paramref name="auditDecision"/> against the lease's originating request. The decision must already
+    /// have its id assigned.
+    /// </summary>
+    Task RevokeAsync(Lease lease, LeaseDecision auditDecision, DateTime now);
 }

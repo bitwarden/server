@@ -21,6 +21,7 @@ public class RequestAccessCommand : IRequestAccessCommand
     private readonly IAccessApprovalResolver _resolver;
     private readonly ILeaseRepository _leaseRepository;
     private readonly ILeaseRequestRepository _leaseRequestRepository;
+    private readonly IApproverInboxNotifier _approverInboxNotifier;
     private readonly TimeProvider _timeProvider;
 
     public RequestAccessCommand(
@@ -28,12 +29,14 @@ public class RequestAccessCommand : IRequestAccessCommand
         IAccessApprovalResolver resolver,
         ILeaseRepository leaseRepository,
         ILeaseRequestRepository leaseRequestRepository,
+        IApproverInboxNotifier approverInboxNotifier,
         TimeProvider timeProvider)
     {
         _cipherRepository = cipherRepository;
         _resolver = resolver;
         _leaseRepository = leaseRepository;
         _leaseRequestRepository = leaseRequestRepository;
+        _approverInboxNotifier = approverInboxNotifier;
         _timeProvider = timeProvider;
     }
 
@@ -174,6 +177,10 @@ public class RequestAccessCommand : IRequestAccessCommand
         };
 
         var created = await _leaseRequestRepository.CreateAsync(request);
+
+        // A new request just entered the pending queue; tell every approver of this collection to re-fetch.
+        await _approverInboxNotifier.NotifyCollectionApproversAsync(created.CollectionId);
+
         return AccessRequestResult.Human(created);
     }
 }

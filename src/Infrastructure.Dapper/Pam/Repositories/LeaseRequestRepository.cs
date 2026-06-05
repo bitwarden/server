@@ -1,5 +1,7 @@
 ﻿using System.Data;
 using Bit.Core.Pam.Entities;
+using Bit.Core.Pam.Enums;
+using Bit.Core.Pam.Models;
 using Bit.Core.Pam.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
@@ -29,5 +31,57 @@ public class LeaseRequestRepository : Repository<LeaseRequest, Guid>, ILeaseRequ
             commandType: CommandType.StoredProcedure);
 
         return results.FirstOrDefault();
+    }
+
+    public async Task<ICollection<InboxLeaseRequestDetails>> GetManyInboxPendingByCollectionIdsAsync(IEnumerable<Guid> collectionIds)
+    {
+        var ids = collectionIds.ToList();
+        if (ids.Count == 0)
+        {
+            return new List<InboxLeaseRequestDetails>();
+        }
+
+        await using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<InboxLeaseRequestDetails>(
+            $"[{Schema}].[LeaseRequest_ReadInboxPendingByCollectionIds]",
+            new { CollectionIds = ids.ToGuidIdArrayTVP() },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToList();
+    }
+
+    public async Task<ICollection<InboxLeaseRequestDetails>> GetManyInboxHistoryByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime since)
+    {
+        var ids = collectionIds.ToList();
+        if (ids.Count == 0)
+        {
+            return new List<InboxLeaseRequestDetails>();
+        }
+
+        await using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<InboxLeaseRequestDetails>(
+            $"[{Schema}].[LeaseRequest_ReadInboxHistoryByCollectionIds]",
+            new { CollectionIds = ids.ToGuidIdArrayTVP(), Since = since },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToList();
+    }
+
+    public async Task ResolveWithDecisionAsync(LeaseRequest request, LeaseDecision decision, LeaseRequestStatus status, DateTime now)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.ExecuteAsync(
+            $"[{Schema}].[LeaseRequest_ResolveWithDecision]",
+            new
+            {
+                LeaseRequestId = request.Id,
+                Status = status,
+                LeaseDecisionId = decision.Id,
+                ApproverId = decision.ApproverId,
+                Decision = decision.Decision,
+                decision.Comment,
+                Now = now,
+            },
+            commandType: CommandType.StoredProcedure);
     }
 }

@@ -429,6 +429,22 @@ public interface IPushNotificationService
             },
             ExcludeCurrentContext = false,
         });
+
+    Task PushRefreshApproverInboxAsync(Guid userId)
+        => PushAsync(new PushNotification<UserPushNotification>
+        {
+            Type = PushType.RefreshApproverInbox,
+            Target = NotificationTarget.User,
+            TargetId = userId,
+            Payload = new UserPushNotification
+            {
+                UserId = userId,
+#pragma warning disable BWP0001 // Type or member is obsolete
+                Date = TimeProvider.GetUtcNow().UtcDateTime,
+#pragma warning restore BWP0001 // Type or member is obsolete
+            },
+            ExcludeCurrentContext = false,
+        });
     #endregion
 
     Task PushCipherAsync(Cipher cipher, PushType pushType, IEnumerable<Guid>? collectionIds);
