@@ -12,11 +12,6 @@
         Max file size 25 MB.
     </p>
 
-    @if (!ViewData.ModelState.IsValid)
-    {
-        <div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
-    }
-
     @if (Model.Errors.Count > 0)
     {
         <div class="alert alert-danger" role="alert">
