@@ -23,7 +23,7 @@ namespace Bit.Core.AdminConsole.Utilities;
 ///   </item>
 /// </list>
 /// Isolating <c>PropertyNameCaseInsensitive = true</c> to this context avoids applying that overhead
-/// to <see cref="Permissions"/> and other types that are always written with consistent camelCase,
+/// to <c>Permissions</c> and other types that are always written with consistent camelCase,
 /// where the case-insensitive lookup would impose a measurable deserialization regression.
 /// </summary>
 [JsonSourceGenerationOptions(
