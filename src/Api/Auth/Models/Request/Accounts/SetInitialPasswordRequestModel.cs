@@ -138,7 +138,6 @@ public class SetInitialPasswordRequestModel : IValidatableObject
     /// </summary>
     public bool HasAuthAndUnlockData()
     {
-        // AccountKeys can be null for TDE users, so we don't check that here
         return MasterPasswordAuthentication != null && MasterPasswordUnlock != null;
     }
 
