@@ -89,7 +89,7 @@ RUN . /etc/build-env \
 ###############################################
 #                  App stage                  #
 ###############################################
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-azurelinux3.0-distroless-extra AS app
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-bookworm-slim AS app
 
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
@@ -100,16 +100,17 @@ ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://+:5000
 EXPOSE 5000
 
-# Set up health check wrapper
-# Get the executable and copy it to any path you want
-COPY --from=ghcr.io/alexaka1/distroless-dotnet-healthchecks:1@sha256:d2a71a595020f13a9283f5e1f93c5f92bc2385c1d9b36e128a00d35863995aba / /healthcheck
-# Setup your healthcheck endpoints via environment variable in Dockerfile, or at runtime via `docker run -e DISTROLESS_HEALTHCHECKS_URIS__0="http://localhost/healthz" -e DISTROLESS_HEALTHCHECKS_URIS__1="http://localhost/some/other/endpoint"`
-ENV DISTROLESS_HEALTHCHECKS_URI="http://localhost:5000/alive"
-# Setup the healthcheck using the EXEC array syntax
-HEALTHCHECK CMD ["/healthcheck/Distroless.HealthChecks"]
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    gosu \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy app from the build stage
 WORKDIR /app
 COPY --from=build /app/out /app
+COPY ./util/SeederApi/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-ENTRYPOINT ["/app/SeederApi"]
+HEALTHCHECK CMD curl -f http://localhost:5000/alive || exit 1
+
+ENTRYPOINT ["/entrypoint.sh"]
