@@ -270,6 +270,11 @@ public class OrganizationInviteLinksControllerTests
         List<Policy> policies,
         SutProvider<OrganizationInviteLinksController> sutProvider)
     {
+        foreach (var policy in policies)
+        {
+            policy.Data = null;
+        }
+
         sutProvider.GetDependency<IGetOrganizationInviteLinkPoliciesQuery>()
             .GetPoliciesAsync(model.Code)
             .Returns(new CommandResult<ICollection<Policy>>(policies));
