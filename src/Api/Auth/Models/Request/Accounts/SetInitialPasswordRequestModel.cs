@@ -141,9 +141,11 @@ public class SetInitialPasswordRequestModel : IValidatableObject
         return MasterPasswordAuthentication != null && MasterPasswordUnlock != null;
     }
 
-    // TDE users don't send any key material (their keypair already exists).
-    // Checks both AccountKeys (new) and Keys (legacy) so the predicate is correct for
-    // the transitional period where clients may send either key shape.
+    /// <summary>
+    /// True when the request comes from a TDE user (TDE users don't send a keypair because
+    /// their keypair already exists). Checks both AccountKeys (new) and Keys (legacy) so the
+    /// predicate is correct for the transitional period where clients may send either key shape.
+    /// </summary>
     public bool IsTdeSetPasswordRequest()
     {
         return AccountKeys == null && Keys == null;
