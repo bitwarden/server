@@ -265,7 +265,7 @@ public class AccountsController : Controller
             }
 
             // V2 encryption - MP JIT.
-            // We require AccountKeys (the new key shape) here, not just "any key material" — otherwise
+            // We require AccountKeys (the new key shape) here, not legacy Keys — otherwise
             // a modern V1 MP JIT request (MPAD + MPUD + legacy Keys) would be incorrectly routed here
             // when the flag is on, and `model.ToData().AccountKeys` would be null, breaking the V2 MP
             // JIT command (which requires AccountKeys per FinishSsoJitProvisionMasterPasswordCommand).
