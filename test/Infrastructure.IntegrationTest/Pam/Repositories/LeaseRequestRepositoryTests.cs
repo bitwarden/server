@@ -81,18 +81,30 @@ public class LeaseRequestRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task ResolveWithDecisionAsync_ResolvesRequestAndRecordsHumanDecision(
+    public async Task ResolveWithDecisionAsync_Approve_ResolvesRequestRecordsDecisionAndMintsActiveLease(
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
-        ILeaseRequestRepository leaseRequestRepository)
+        ILeaseRequestRepository leaseRequestRepository,
+        ILeaseRepository leaseRepository)
     {
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var collection = await collectionRepository.CreateTestCollectionAsync(organization);
         var now = DateTime.UtcNow;
         var approverId = Guid.NewGuid();
 
-        var request = await leaseRequestRepository.CreateAsync(BuildRequest(
-            organization.Id, collection.Id, Guid.NewGuid(), LeaseRequestStatus.Pending, now));
+        // Window straddles now so the minted lease is immediately active and findable by the requester.
+        var request = await leaseRequestRepository.CreateAsync(new LeaseRequest
+        {
+            OrganizationId = organization.Id,
+            CollectionId = collection.Id,
+            CipherId = Guid.NewGuid(),
+            RequesterId = Guid.NewGuid(),
+            NotBefore = now.AddHours(-1),
+            NotAfter = now.AddHours(1),
+            Reason = "audit",
+            Status = LeaseRequestStatus.Pending,
+            CreationDate = now,
+        });
 
         var decision = new LeaseDecision
         {
@@ -105,7 +117,21 @@ public class LeaseRequestRepositoryTests
             CreationDate = now,
         };
 
-        await leaseRequestRepository.ResolveWithDecisionAsync(request, decision, LeaseRequestStatus.Approved, now);
+        var lease = new Lease
+        {
+            Id = CoreHelpers.GenerateComb(),
+            LeaseRequestId = request.Id,
+            OrganizationId = request.OrganizationId,
+            CollectionId = request.CollectionId,
+            CipherId = request.CipherId,
+            RequesterId = request.RequesterId,
+            Status = LeaseStatus.Active,
+            NotBefore = request.NotBefore,
+            NotAfter = request.NotAfter,
+            CreationDate = now,
+        };
+
+        await leaseRequestRepository.ResolveWithDecisionAsync(request, decision, LeaseRequestStatus.Approved, lease, now);
 
         var persisted = await leaseRequestRepository.GetByIdAsync(request.Id);
         Assert.NotNull(persisted);
@@ -118,6 +144,57 @@ public class LeaseRequestRepositoryTests
         var row = Assert.Single(history);
         Assert.Equal(approverId, row.ResolverId);
         Assert.Equal("approved for audit", row.ResolverComment);
+
+        // The approval minted an active lease spanning the request's window, so the requester now holds access.
+        var active = await leaseRepository.GetActiveByRequesterIdCipherIdAsync(request.RequesterId, request.CipherId, now);
+        Assert.NotNull(active);
+        Assert.Equal(lease.Id, active!.Id);
+        Assert.Equal(LeaseStatus.Active, active.Status);
+        Assert.Equal(request.Id, active.LeaseRequestId);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task ResolveWithDecisionAsync_Deny_ResolvesWithoutLease(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        ILeaseRequestRepository leaseRequestRepository,
+        ILeaseRepository leaseRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var now = DateTime.UtcNow;
+
+        var request = await leaseRequestRepository.CreateAsync(new LeaseRequest
+        {
+            OrganizationId = organization.Id,
+            CollectionId = collection.Id,
+            CipherId = Guid.NewGuid(),
+            RequesterId = Guid.NewGuid(),
+            NotBefore = now.AddHours(-1),
+            NotAfter = now.AddHours(1),
+            Reason = "audit",
+            Status = LeaseRequestStatus.Pending,
+            CreationDate = now,
+        });
+
+        var decision = new LeaseDecision
+        {
+            Id = CoreHelpers.GenerateComb(),
+            LeaseRequestId = request.Id,
+            DeciderKind = LeaseDecisionKind.Human,
+            ApproverId = Guid.NewGuid(),
+            Decision = LeaseDecisionVerdict.Deny,
+            CreationDate = now,
+        };
+
+        await leaseRequestRepository.ResolveWithDecisionAsync(request, decision, LeaseRequestStatus.Denied, null, now);
+
+        var persisted = await leaseRequestRepository.GetByIdAsync(request.Id);
+        Assert.Equal(LeaseRequestStatus.Denied, persisted!.Status);
+
+        // A denial grants nothing: no active lease exists for the requester.
+        var active = await leaseRepository.GetActiveByRequesterIdCipherIdAsync(request.RequesterId, request.CipherId, now);
+        Assert.Null(active);
     }
 
     private static LeaseRequest BuildRequest(

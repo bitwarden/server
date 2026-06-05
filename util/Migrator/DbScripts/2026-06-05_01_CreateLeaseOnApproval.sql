@@ -1,4 +1,10 @@
-CREATE PROCEDURE [dbo].[LeaseRequest_ResolveWithDecision]
+-- PAM Credential Leasing: when an approver approves a human request, mint the active lease that authorizes access.
+-- Previously [LeaseRequest_ResolveWithDecision] only flipped the request to Approved and recorded the decision, so the
+-- human path never produced a [Lease] and the approved requester could not read the credential. This adds an optional
+-- @LeaseId; when supplied (approvals only), the lease is created in the same transaction with the request's approved
+-- window, mirroring [Lease_CreateAutoApproved] on the automatic path.
+
+CREATE OR ALTER PROCEDURE [dbo].[LeaseRequest_ResolveWithDecision]
     @LeaseRequestId UNIQUEIDENTIFIER,
     @Status TINYINT,
     @LeaseDecisionId UNIQUEIDENTIFIER,
@@ -51,3 +57,4 @@ BEGIN
 
     COMMIT TRANSACTION LeaseRequest_ResolveWithDecision
 END
+GO
