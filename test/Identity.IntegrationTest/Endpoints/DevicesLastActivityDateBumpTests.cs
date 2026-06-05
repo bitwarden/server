@@ -10,6 +10,7 @@ using Xunit;
 
 namespace Bit.Identity.IntegrationTest.Endpoints;
 
+// TODO: PM-34091 - when cleaning up the feature flag, refactor this summary.
 /// <summary>
 /// End-to-end verification that the <see cref="FeatureFlagKeys.DevicesLastActivityDate"/>
 /// feature flag correctly gates the device <c>LastActivityDate</c> bump on real
