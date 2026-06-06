@@ -47,7 +47,7 @@ public class DevicesLastActivityDateBumpTests
         // LD would have bucketed by device. Returns true so the bump still fires.
         requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
         var localFactory = new IdentityApplicationFactory();
-        var snapshots = ProbeCurrentContextAtFlagEval(localFactory);
+        var snapshots = SubstituteFeatureServiceWithProbe(localFactory);
 
         var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
 
@@ -88,7 +88,7 @@ public class DevicesLastActivityDateBumpTests
         // token — a different code path from the login bump in BuildSuccessResultAsync.
         requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
         var localFactory = new IdentityApplicationFactory();
-        var snapshots = ProbeCurrentContextAtFlagEval(localFactory);
+        var snapshots = SubstituteFeatureServiceWithProbe(localFactory);
 
         var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
         var (_, refreshToken) = await localFactory.TokenFromPasswordAsync(
@@ -148,7 +148,7 @@ public class DevicesLastActivityDateBumpTests
     /// via <see cref="IHttpContextAccessor"/> — which is the only way to see the state that
     /// the real LD client would have seen if it were resolving the flag value.
     /// </summary>
-    private static ConcurrentQueue<ContextSnapshot> ProbeCurrentContextAtFlagEval(
+    private static ConcurrentQueue<ContextSnapshot> SubstituteFeatureServiceWithProbe(
         IdentityApplicationFactory factory)
     {
         var snapshots = new ConcurrentQueue<ContextSnapshot>();
