@@ -23,16 +23,16 @@ public class SetInitialPasswordRequestModel : IValidatableObject
     [Obsolete("Use AccountKeys instead")]
     public KeysRequestModel? Keys { get; set; }
 
-    [Obsolete("Use MasterPasswordAuthentication instead")]
+    [Obsolete("Use MasterPasswordUnlock instead")]
     public KdfType? Kdf { get; set; }
 
-    [Obsolete("Use MasterPasswordAuthentication instead")]
+    [Obsolete("Use MasterPasswordUnlock instead")]
     public int? KdfIterations { get; set; }
 
-    [Obsolete("Use MasterPasswordAuthentication instead")]
+    [Obsolete("Use MasterPasswordUnlock instead")]
     public int? KdfMemory { get; set; }
 
-    [Obsolete("Use MasterPasswordAuthentication instead")]
+    [Obsolete("Use MasterPasswordUnlock instead")]
     public int? KdfParallelism { get; set; }
 
     public MasterPasswordAuthenticationDataRequestModel? MasterPasswordAuthentication { get; set; }
@@ -45,18 +45,18 @@ public class SetInitialPasswordRequestModel : IValidatableObject
     [Required]
     public required string OrgIdentifier { get; set; }
 
-    // Reads KDF/key from MasterPasswordAuthentication/MasterPasswordUnlock when present (modern clients),
-    // and falls back to the top-level legacy properties when not (older clients).
+    // Reads KDF/key/salt from MasterPasswordUnlock when present (modern clients), and falls
+    // back to the top-level legacy properties when not (older clients).
     // TODO: removal requires that BOTH flags have been removed:
     //  - https://bitwarden.atlassian.net/browse/PM-27327 (MP)
     //  - https://bitwarden.atlassian.net/browse/PM-27329 (TDE)
     public User ToUser(User existingUser)
     {
         existingUser.MasterPasswordHint = MasterPasswordHint;
-        existingUser.Kdf = MasterPasswordAuthentication?.Kdf.KdfType ?? Kdf!.Value;
-        existingUser.KdfIterations = MasterPasswordAuthentication?.Kdf.Iterations ?? KdfIterations!.Value;
-        existingUser.KdfMemory = MasterPasswordAuthentication?.Kdf.Memory ?? KdfMemory;
-        existingUser.KdfParallelism = MasterPasswordAuthentication?.Kdf.Parallelism ?? KdfParallelism;
+        existingUser.Kdf = MasterPasswordUnlock?.Kdf.KdfType ?? Kdf!.Value;
+        existingUser.KdfIterations = MasterPasswordUnlock?.Kdf.Iterations ?? KdfIterations!.Value;
+        existingUser.KdfMemory = MasterPasswordUnlock?.Kdf.Memory ?? KdfMemory;
+        existingUser.KdfParallelism = MasterPasswordUnlock?.Kdf.Parallelism ?? KdfParallelism;
         existingUser.Key = MasterPasswordUnlock?.MasterKeyWrappedUserKey ?? Key;
 
         // MasterPasswordSalt column must never be null/empty after a successful password-set
