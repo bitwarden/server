@@ -348,6 +348,45 @@ public class SetInitialPasswordRequestModelTests
 
     #endregion
 
+    #region Validation Tests (Cross-Shape)
+
+    // A request must send either AccountKeys (new shape) or Keys (legacy), or neither. It must not send both.
+    // This rule fires regardless of whether the request uses the modern (MPAD/MPUD) or legacy (top-level fields)
+    // shape — it's a request shape coherence check that runs before either shape-specific validation block.
+    [Theory]
+    [BitAutoData]
+    public void Validate_WithBothAccountKeysAndLegacyKeys_ReturnsValidationError(string orgIdentifier)
+    {
+        // Arrange — model with both key shapes populated (a request no real client constructs,
+        // but defensively rejected to avoid silently dropping one of the keypairs downstream).
+        var model = new SetInitialPasswordRequestModel
+        {
+            OrgIdentifier = orgIdentifier,
+            AccountKeys = new AccountKeysRequestModel
+            {
+                UserKeyEncryptedAccountPrivateKey = "privateKey",
+                AccountPublicKey = "publicKey"
+            },
+            Keys = new KeysRequestModel
+            {
+                PublicKey = "publicKey",
+                EncryptedPrivateKey = "encryptedPrivateKey"
+            }
+        };
+
+        // Act
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        // Assert — yields a ValidationResult naming both fields as the offending members
+        Assert.Contains(results, r =>
+            r.ErrorMessage != null &&
+            r.ErrorMessage.Contains("Cannot specify both") &&
+            r.MemberNames.Contains(nameof(SetInitialPasswordRequestModel.AccountKeys)) &&
+            r.MemberNames.Contains(nameof(SetInitialPasswordRequestModel.Keys)));
+    }
+
+    #endregion
+
     #region HasAuthAndUnlockData Tests
 
     [Theory]
