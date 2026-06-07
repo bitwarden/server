@@ -1021,7 +1021,7 @@ public class AccountsControllerTests : IDisposable
         SetInitialPasswordRequestModel setInitialPasswordRequestModel)
     {
         // Arrange — modern MP JIT client: sends MPAD + MPUD + legacy Keys (no AccountKeys, no V2 flag).
-        // ToUser() should map KDF from MPAD and the wrapped user key from MPUD; legacy Keys?.ToUser sets the keypair.
+        // ToUser() should map KDF, wrapped user key, and salt from MPUD; legacy Keys?.ToUser sets the keypair.
         UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
         setInitialPasswordRequestModel.AccountKeys = null;
         setInitialPasswordRequestModel.Keys = new KeysRequestModel
@@ -1051,10 +1051,10 @@ public class AccountsControllerTests : IDisposable
                 Arg.Is<string>(s => s == setInitialPasswordRequestModel.MasterPasswordUnlock.MasterKeyWrappedUserKey),
                 Arg.Is<string>(s => s == setInitialPasswordRequestModel.OrgIdentifier));
 
-        // KDF mapped from MPAD
+        // KDF mapped from MPUD
         Assert.Equal(setInitialPasswordRequestModel.MasterPasswordHint, user.MasterPasswordHint);
-        Assert.Equal(setInitialPasswordRequestModel.MasterPasswordAuthentication.Kdf.KdfType, user.Kdf);
-        Assert.Equal(setInitialPasswordRequestModel.MasterPasswordAuthentication.Kdf.Iterations, user.KdfIterations);
+        Assert.Equal(setInitialPasswordRequestModel.MasterPasswordUnlock.Kdf.KdfType, user.Kdf);
+        Assert.Equal(setInitialPasswordRequestModel.MasterPasswordUnlock.Kdf.Iterations, user.KdfIterations);
 
         // Public/private keys mapped from legacy Keys
         Assert.Equal("newPublicKey", user.PublicKey);
@@ -1125,8 +1125,9 @@ public class AccountsControllerTests : IDisposable
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
 
         // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => _sut.PostSetPasswordAsync(setInitialPasswordRequestModel));
+        Assert.Contains("V2 encryption is not enabled", exception.Message);
 
         // V1 command must NOT be invoked when the defensive guard rejects the request
         await _setInitialMasterPasswordCommandV1.DidNotReceiveWithAnyArgs()
