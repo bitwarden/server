@@ -3,6 +3,8 @@
 
 using System.Text;
 using Bit.Billing.Models;
+using Bit.Billing.Services;
+using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -28,6 +30,8 @@ public class PayPalController : Controller
     private readonly IUserRepository _userRepository;
     private readonly IProviderRepository _providerRepository;
     private readonly IPremiumUserBillingService _premiumUserBillingService;
+    private readonly IPayPalIPNClient _payPalIPNClient;
+    private readonly IFeatureService _featureService;
 
     public PayPalController(
         IOptions<BillingSettings> billingSettings,
@@ -38,7 +42,9 @@ public class PayPalController : Controller
         ITransactionRepository transactionRepository,
         IUserRepository userRepository,
         IProviderRepository providerRepository,
-        IPremiumUserBillingService premiumUserBillingService)
+        IPremiumUserBillingService premiumUserBillingService,
+        IPayPalIPNClient payPalIPNClient,
+        IFeatureService featureService)
     {
         _billingSettings = billingSettings?.Value;
         _logger = logger;
@@ -49,6 +55,8 @@ public class PayPalController : Controller
         _userRepository = userRepository;
         _providerRepository = providerRepository;
         _premiumUserBillingService = premiumUserBillingService;
+        _payPalIPNClient = payPalIPNClient;
+        _featureService = featureService;
     }
 
     [HttpPost("ipn")]
@@ -139,6 +147,30 @@ public class PayPalController : Controller
                 transactionModel.MerchantCurrency);
 
             return Ok();
+        }
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.PM36079_PayPalIpnVerification))
+        {
+            var verificationResult = await _payPalIPNClient.VerifyIPN(transactionModel.TransactionId, requestContent);
+
+            switch (verificationResult)
+            {
+                case PayPalIPNVerificationResult.Invalid:
+                    _logger.LogError(
+                        "PayPal IPN ({Id}): Verification returned INVALID; skipping processing",
+                        transactionModel.TransactionId);
+                    return Ok();
+                case PayPalIPNVerificationResult.Unverified:
+                    // Fail open: a transient verification failure must not drop a legitimate payment. The request is
+                    // still gated by the webhook key and the network ACL, so log and continue processing.
+                    _logger.LogWarning(
+                        "PayPal IPN ({Id}): Verification could not be completed; processing without postback confirmation",
+                        transactionModel.TransactionId);
+                    break;
+                case PayPalIPNVerificationResult.Verified:
+                default:
+                    break;
+            }
         }
 
         switch (transactionModel.PaymentStatus)

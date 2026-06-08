@@ -2,5 +2,5 @@
 
 public interface IPayPalIPNClient
 {
-    Task<bool> VerifyIPN(string transactionId, string formData);
+    Task<PayPalIPNVerificationResult> VerifyIPN(string transactionId, string formData);
 }

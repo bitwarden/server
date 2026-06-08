@@ -11,7 +11,7 @@ namespace Bit.Billing.Test.Services;
 
 public class PayPalIPNClientTests
 {
-    private readonly Uri _endpoint = new("https://www.sandbox.paypal.com/cgi-bin/webscr");
+    private readonly Uri _endpoint = new("https://ipnpb.sandbox.paypal.com/cgi-bin/webscr");
     private readonly MockHttpMessageHandler _mockHttpMessageHandler = new();
 
     private readonly IOptions<BillingSettings> _billingSettings = Substitute.For<IOptions<BillingSettings>>();
@@ -37,7 +37,7 @@ public class PayPalIPNClientTests
         => await Assert.ThrowsAsync<ArgumentNullException>(() => _payPalIPNClient.VerifyIPN(string.Empty, null));
 
     [Fact]
-    public async Task VerifyIPN_Unauthorized_ReturnsFalse()
+    public async Task VerifyIPN_Unauthorized_ReturnsUnverified()
     {
         const string formData = "form=data";
 
@@ -46,14 +46,14 @@ public class PayPalIPNClientTests
             .WithFormData(new Dictionary<string, string> { { "cmd", "_notify-validate" }, { "form", "data" } })
             .Respond(HttpStatusCode.Unauthorized);
 
-        var verified = await _payPalIPNClient.VerifyIPN(string.Empty, formData);
+        var result = await _payPalIPNClient.VerifyIPN(string.Empty, formData);
 
-        Assert.False(verified);
+        Assert.Equal(PayPalIPNVerificationResult.Unverified, result);
         Assert.Equal(1, _mockHttpMessageHandler.GetMatchCount(request));
     }
 
     [Fact]
-    public async Task VerifyIPN_OK_Invalid_ReturnsFalse()
+    public async Task VerifyIPN_OK_Invalid_ReturnsInvalid()
     {
         const string formData = "form=data";
 
@@ -62,14 +62,14 @@ public class PayPalIPNClientTests
             .WithFormData(new Dictionary<string, string> { { "cmd", "_notify-validate" }, { "form", "data" } })
             .Respond("application/text", "INVALID");
 
-        var verified = await _payPalIPNClient.VerifyIPN(string.Empty, formData);
+        var result = await _payPalIPNClient.VerifyIPN(string.Empty, formData);
 
-        Assert.False(verified);
+        Assert.Equal(PayPalIPNVerificationResult.Invalid, result);
         Assert.Equal(1, _mockHttpMessageHandler.GetMatchCount(request));
     }
 
     [Fact]
-    public async Task VerifyIPN_OK_Verified_ReturnsTrue()
+    public async Task VerifyIPN_OK_Verified_ReturnsVerified()
     {
         const string formData = "form=data";
 
@@ -78,9 +78,23 @@ public class PayPalIPNClientTests
             .WithFormData(new Dictionary<string, string> { { "cmd", "_notify-validate" }, { "form", "data" } })
             .Respond("application/text", "VERIFIED");
 
-        var verified = await _payPalIPNClient.VerifyIPN(string.Empty, formData);
+        var result = await _payPalIPNClient.VerifyIPN(string.Empty, formData);
 
-        Assert.True(verified);
+        Assert.Equal(PayPalIPNVerificationResult.Verified, result);
         Assert.Equal(1, _mockHttpMessageHandler.GetMatchCount(request));
+    }
+
+    [Fact]
+    public async Task VerifyIPN_RequestThrows_ReturnsUnverified()
+    {
+        const string formData = "form=data";
+
+        _mockHttpMessageHandler
+            .When(HttpMethod.Post, _endpoint.ToString())
+            .Throw(new HttpRequestException("Simulated network failure"));
+
+        var result = await _payPalIPNClient.VerifyIPN(string.Empty, formData);
+
+        Assert.Equal(PayPalIPNVerificationResult.Unverified, result);
     }
 }
