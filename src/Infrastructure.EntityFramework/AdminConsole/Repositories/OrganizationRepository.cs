@@ -288,8 +288,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             var orgEntity = await dbContext.FindAsync<Organization>(organization.Id);
             dbContext.Remove(orgEntity);
 
-            await organizationDeleteTransaction.CommitAsync();
             await dbContext.SaveChangesAsync();
+            await organizationDeleteTransaction.CommitAsync();
         }
     }
 

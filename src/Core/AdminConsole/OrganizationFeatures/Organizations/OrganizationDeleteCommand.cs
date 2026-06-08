@@ -17,6 +17,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
 {
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationEventCleanupRepository _organizationEventCleanupRepository;
     private readonly IStripePaymentService _paymentService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ICipherService _cipherService;
@@ -28,6 +29,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
     public OrganizationDeleteCommand(
         IApplicationCacheService applicationCacheService,
         IOrganizationRepository organizationRepository,
+        IOrganizationEventCleanupRepository organizationEventCleanupRepository,
         IStripePaymentService paymentService,
         ISsoConfigRepository ssoConfigRepository,
         ICipherService cipherService,
@@ -38,6 +40,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
     {
         _applicationCacheService = applicationCacheService;
         _organizationRepository = organizationRepository;
+        _organizationEventCleanupRepository = organizationEventCleanupRepository;
         _paymentService = paymentService;
         _ssoConfigRepository = ssoConfigRepository;
         _cipherService = cipherService;
@@ -77,6 +80,10 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
         await _sendFileStorageService.DeleteFilesForOrganizationAsync(organization.Id);
         await _cipherService.DeleteAttachmentsForOrganizationAsync(organization.Id);
         await _organizationRepository.DeleteAsync(organization);
+        await _organizationEventCleanupRepository.CreateAsync(new OrganizationEventCleanup
+        {
+            OrganizationId = organization.Id,
+        });
         await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
     }
 

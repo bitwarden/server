@@ -6,6 +6,8 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -30,11 +32,14 @@ public class OrganizationDeleteCommandTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
         var cipherService = sutProvider.GetDependency<ICipherService>();
+        var cleanupRepository = sutProvider.GetDependency<IOrganizationEventCleanupRepository>();
 
         await sutProvider.Sut.DeleteAsync(organization);
 
         await cipherService.Received(1).DeleteAttachmentsForOrganizationAsync(organization.Id);
         await organizationRepository.Received(1).DeleteAsync(organization);
+        await cleanupRepository.Received(1).CreateAsync(
+            Arg.Is<OrganizationEventCleanup>(c => c.OrganizationId == organization.Id));
         await applicationCacheService.Received(1).DeleteOrganizationAbilityAsync(organization.Id);
     }
 
