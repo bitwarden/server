@@ -449,4 +449,50 @@ public class SendControlsSyncPolicyEventTests
             .Received(1)
             .UpdateManyDisabledAsync(Arg.Is<List<Guid>>(l => l.Count == 3 && l.Contains(nonCompliantSend1.Id) && l.Contains(nonCompliantSend2.Id) && l.Contains(nonCompliantSend3.Id)), true);
     }
+
+    [Theory, BitAutoData]
+    public async Task ExecutePostUpsertSideEffectAsync_DeletionDateUpdatesSendDeletionDates(
+        [PolicyUpdate(PolicyType.SendControls, enabled: true)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.SendControls, enabled: true)] Policy postUpsertedPolicy,
+        [Policy(PolicyType.DisableSend, enabled: false)] Policy existingDisableSendPolicy,
+        [Policy(PolicyType.SendOptions, enabled: false)] Policy existingSendOptionsPolicy,
+        SutProvider<SendControlsSyncPolicyEvent> sutProvider)
+    {
+        postUpsertedPolicy.OrganizationId = policyUpdate.OrganizationId;
+        existingDisableSendPolicy.OrganizationId = policyUpdate.OrganizationId;
+        existingSendOptionsPolicy.OrganizationId = policyUpdate.OrganizationId;
+        postUpsertedPolicy.SetDataModel(new SendControlsPolicyData { DeletionDays = 48 });
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.DisableSend)
+            .Returns(existingDisableSendPolicy);
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
+            .Returns(existingSendOptionsPolicy);
+
+        var send1 = new Send
+        {
+            Id = Guid.NewGuid(),
+            CreationDate = DateTime.UtcNow
+        };
+        var send2 = new Send
+        {
+            Id = Guid.NewGuid(),
+            CreationDate = DateTime.UtcNow
+        };
+        var sendIds = new List<Guid>([ send1.Id, send2.Id ]);
+        sutProvider.GetDependency<ISendRepository>()
+            .GetIdsByOrganizationIdAsync(policyUpdate.OrganizationId)
+            .Returns(sendIds);
+        sutProvider.GetDependency<ISendRepository>()
+            .GetManyByIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([ send1, send2 ]);
+
+        await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(
+            new SavePolicyModel(policyUpdate), postUpsertedPolicy, null);
+        
+        await sutProvider.GetDependency<ISendRepository>()
+            .Received(1)
+            .UpdateManyDeletionDatesByIdsAsync(Arg.Is<Guid[]>(l => l.Count() == 2), 48);
+    }
 }
