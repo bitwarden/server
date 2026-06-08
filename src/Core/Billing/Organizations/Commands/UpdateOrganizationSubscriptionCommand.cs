@@ -30,13 +30,19 @@ public interface IUpdateOrganizationSubscriptionCommand
     /// </summary>
     /// <param name="organization">The organization whose subscription will be updated.</param>
     /// <param name="changeSet">The set of changes to apply to the subscription.</param>
+    /// <param name="subscription">
+    /// An optional pre-fetched subscription. When supplied and it carries the required expansions
+    /// (an expanded <see cref="Subscription.Customer"/>), it is reused to avoid a redundant Stripe
+    /// call; otherwise the subscription is re-fetched.
+    /// </param>
     /// <returns>
     /// A <see cref="BillingCommandResult{T}"/> containing the updated <see cref="Subscription"/>
     /// on success, or an error result if validation or the Stripe operation fails.
     /// </returns>
     Task<BillingCommandResult<Subscription>> Run(
         Organization organization,
-        OrganizationSubscriptionChangeSet changeSet);
+        OrganizationSubscriptionChangeSet changeSet,
+        Subscription? subscription = null);
 }
 
 public class UpdateOrganizationSubscriptionCommand(
@@ -61,9 +67,10 @@ public class UpdateOrganizationSubscriptionCommand(
 
     public Task<BillingCommandResult<Subscription>> Run(
         Organization organization,
-        OrganizationSubscriptionChangeSet changeSet) => HandleAsync<Subscription>(async () =>
+        OrganizationSubscriptionChangeSet changeSet,
+        Subscription? subscription = null) => HandleAsync<Subscription>(async () =>
     {
-        var subscription = await FetchSubscriptionAsync(organization);
+        subscription = HasRequiredExpansions(subscription) ? subscription : await FetchSubscriptionAsync(organization);
 
         if (subscription is null)
         {
@@ -204,6 +211,11 @@ public class UpdateOrganizationSubscriptionCommand(
 
         return updatedSubscription;
     });
+
+    // PM-37510: the command body dereferences subscription.Customer for tax reconciliation, so a
+    // reused subscription is only safe when Customer is expanded. test_clock is optional here.
+    private static bool HasRequiredExpansions(Subscription? subscription) =>
+        subscription is { Customer: not null };
 
     private async Task<Subscription?> FetchSubscriptionAsync(Organization organization)
     {
