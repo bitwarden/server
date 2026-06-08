@@ -78,8 +78,10 @@ BEGIN
         A.[OrganizationId]
     FROM
         @Source S
-    INNER JOIN [dbo].[OrganizationPlanMigrationCohortAssignmentView] A ON A.[OrganizationId] = S.[OrganizationId]
-    INNER JOIN [dbo].[OrganizationPlanMigrationCohortView] C ON C.[Id] = A.[CohortId]
+    INNER JOIN
+        [dbo].[OrganizationPlanMigrationCohortAssignmentView] A ON A.[OrganizationId] = S.[OrganizationId]
+    INNER JOIN
+        [dbo].[OrganizationPlanMigrationCohortView] C ON C.[Id] = A.[CohortId]
     WHERE
         (C.[MigrationPathId] IS NOT NULL AND A.[ScheduledDate] IS NOT NULL)
         OR
@@ -93,8 +95,10 @@ BEGIN
         @Skipped = COUNT(1)
     FROM
         @Source S
-    INNER JOIN [dbo].[OrganizationPlanMigrationCohortAssignmentView] A ON A.[OrganizationId] = S.[OrganizationId]
-    INNER JOIN @Locked L ON L.[OrganizationId] = S.[OrganizationId]
+    INNER JOIN
+        [dbo].[OrganizationPlanMigrationCohortAssignmentView] A ON A.[OrganizationId] = S.[OrganizationId]
+    INNER JOIN
+        @Locked L ON L.[OrganizationId] = S.[OrganizationId]
     WHERE
         S.[CohortId] IS NULL
         OR S.[CohortId] <> A.[CohortId]
