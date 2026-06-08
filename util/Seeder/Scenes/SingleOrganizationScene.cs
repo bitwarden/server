@@ -30,7 +30,7 @@ public class SingleOrganizationScene(
     public class Request
     {
         [Required]
-        public required Guid UserId { get; set; }
+        public required Guid OwnerUserId { get; set; }
         [Required]
         public required PlanType PlanType { get; set; }
         [Required]
@@ -43,13 +43,13 @@ public class SingleOrganizationScene(
 
     public async Task<SceneResult<SingleOrganizationSceneResult>> SeedAsync(Request request)
     {
-        var user = await userRepository.GetByIdAsync(request.UserId)
-            ?? throw new InvalidOperationException($"User {request.UserId} not found.");
+        var user = await userRepository.GetByIdAsync(request.OwnerUserId)
+            ?? throw new InvalidOperationException($"User {request.OwnerUserId} not found.");
 
         if (string.IsNullOrEmpty(user.PublicKey))
         {
             throw new InvalidOperationException(
-                $"User {request.UserId} has no public key; cannot encrypt the organization key for the owner.");
+                $"User {request.OwnerUserId} has no public key; cannot encrypt the organization key for the owner.");
         }
 
         var orgKeys = RustSdkService.GenerateOrganizationKeys();
