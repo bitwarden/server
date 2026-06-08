@@ -17,8 +17,6 @@ public class ProviderOrganizationOrganizationDetailsReadByProviderIdQuery : IQue
         var query = from po in dbContext.ProviderOrganizations
                     join o in dbContext.Organizations
                         on po.OrganizationId equals o.Id
-                    join ou in dbContext.OrganizationUsers
-                        on po.OrganizationId equals ou.OrganizationId
                     where po.ProviderId == _providerId
                     select new { po, o };
         return query.Select(x => new ProviderOrganizationOrganizationDetails()
