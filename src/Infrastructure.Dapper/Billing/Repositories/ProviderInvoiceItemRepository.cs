@@ -43,7 +43,7 @@ public class ProviderInvoiceItemRepository(
         await using var sqlConnection = new SqlConnection(ConnectionString);
 
         var results = await sqlConnection.QueryAsync<ProviderInvoiceItem>(
-            "[dbo].[ProviderInvoiceItem_ReadByProviderIdAndInvoiceId]",
+            "[dbo].[ProviderInvoiceItem_ReadByProviderIdInvoiceId]",
             new { ProviderId = providerId, InvoiceId = invoiceId },
             commandType: CommandType.StoredProcedure);
 

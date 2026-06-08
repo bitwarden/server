@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[ProviderInvoiceItem_ReadByProviderIdAndInvoiceId]
+CREATE PROCEDURE [dbo].[ProviderInvoiceItem_ReadByProviderIdInvoiceId]
     @ProviderId UNIQUEIDENTIFIER,
     @InvoiceId VARCHAR (50)
 AS
