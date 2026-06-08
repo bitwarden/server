@@ -28,8 +28,9 @@ BEGIN
             [CohortId]       UNIQUEIDENTIFIER '$.CohortId'
         )
 
-    -- Locked orgs: existing assignment is scheduled to migrate (migration cohort) or has had a
-    -- churn discount applied (non-migration cohort). These orgs are protected from change.
+    -- Locked orgs: existing assignment is scheduled to migrate or has already migrated (migration
+    -- cohort), or has had a churn discount applied (non-migration cohort). These orgs are
+    -- protected from change.
     DECLARE @Locked TABLE ([OrganizationId] UNIQUEIDENTIFIER PRIMARY KEY)
 
     INSERT INTO @Locked ([OrganizationId])
@@ -42,7 +43,7 @@ BEGIN
     INNER JOIN
         [dbo].[OrganizationPlanMigrationCohortView] C ON C.[Id] = A.[CohortId]
     WHERE
-        (C.[MigrationPathId] IS NOT NULL AND A.[ScheduledDate] IS NOT NULL)
+        (C.[MigrationPathId] IS NOT NULL AND (A.[ScheduledDate] IS NOT NULL OR A.[MigratedDate] IS NOT NULL))
         OR
         (C.[MigrationPathId] IS NULL AND A.[ChurnDiscountAppliedDate] IS NOT NULL)
 
