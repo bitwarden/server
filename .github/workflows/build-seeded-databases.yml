@@ -7,18 +7,22 @@ on:
       - .github/workflows/build-seeded-databases.yml
       - util/SeederUtility/**
       - util/Seeder/**
+  schedule:
+    # Rebuild all presets x databases weekly (Sunday 02:00 UTC)
+    - cron: "0 2 * * 0"
   workflow_dispatch:
     inputs:
       preset:
-        description: "Preset name to build"
+        description: "Preset name to build (empty = curated default list, all = every preset)"
         required: false
         type: string
       database:
-        description: "Database type to build"
+        description: "Database type to build (all = default matrix)"
         required: false
+        default: all
         type: choice
         options:
-          - ""
+          - all
           - postgres
           - mysql
           - mariadb
@@ -26,6 +30,12 @@ on:
 
 env:
   _AZ_REGISTRY: bitwardenprod.azurecr.io
+  # Curated preset list built on cron and bare dispatch. Dispatch with
+  # preset=all to build every preset instead.
+  _DEFAULT_PRESETS: '["qa.dunder-mifflin-enterprise-full"]'
+
+permissions:
+  contents: read
 
 jobs:
   setup:
@@ -36,33 +46,41 @@ jobs:
       databases: ${{ steps.matrix.outputs.databases }}
     steps:
       - name: Check out repo
+        if: inputs.preset == 'all'
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v4.1.0
+        if: inputs.preset == 'all'
+        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
         with:
           cache: true
           cache-dependency-path: "**/*.csproj"
 
-      - name: Restore and build SeederUtility
-        run: |
-          dotnet restore util/SeederUtility/SeederUtility.csproj
-          dotnet build util/SeederUtility/SeederUtility.csproj --no-restore
+      - name: Build SeederUtility
+        if: inputs.preset == 'all'
+        run: dotnet build util/SeederUtility/SeederUtility.csproj
 
       - name: Determine matrix
         id: matrix
-        working-directory: util/SeederUtility
+        env:
+          INPUT_PRESET: ${{ inputs.preset }}
+          INPUT_DATABASE: ${{ inputs.database }}
         run: |
-          if [[ -n "${{ inputs.preset }}" ]]; then
-            presets='["${{ inputs.preset }}"]'
+          if [[ "${INPUT_PRESET}" == "all" ]]; then
+            presets=$(dotnet run --project util/SeederUtility --no-build -- preset --list --output json \
+              | jq -c '[.organization[], .individual[]]')
+          elif [[ -n "${INPUT_PRESET}" ]]; then
+            presets="[\"${INPUT_PRESET}\"]"
           else
-            presets='["qa.dunder-mifflin-enterprise-full"]'
+            presets="${_DEFAULT_PRESETS}"
           fi
 
-          if [[ -n "${{ inputs.database }}" ]]; then
-            databases='["${{ inputs.database }}"]'
+          if [[ -n "${INPUT_DATABASE}" && "${INPUT_DATABASE}" != "all" ]]; then
+            databases="[\"${INPUT_DATABASE}\"]"
           else
-            databases='["postgres","mysql","mssql"]'
+            databases='["postgres","mysql","mariadb","mssql"]'
           fi
 
           echo "presets=${presets}" >> "$GITHUB_OUTPUT"
@@ -83,9 +101,11 @@ jobs:
     steps:
       - name: Check out repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v4.1.0
+        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
         with:
           cache: true
           cache-dependency-path: "**/*.csproj"
@@ -104,21 +124,25 @@ jobs:
           PUSH: "false"
           REGISTRY: ${{ env._AZ_REGISTRY }}
           GIT_SHA: ${{ github.sha }}
+          MATRIX_PRESET: ${{ matrix.preset }}
+          MATRIX_DATABASE: ${{ matrix.database }}
         run: |
           GIT_SHA="${GIT_SHA:0:7}" \
           bash util/SeederUtility/scripts/build-seeded-image.sh \
-            "${{ matrix.preset }}" \
-            "${{ matrix.database }}"
+            "${MATRIX_PRESET}" \
+            "${MATRIX_DATABASE}"
 
       - name: Save image as tarball
+        env:
+          MATRIX_PRESET: ${{ matrix.preset }}
+          MATRIX_DATABASE: ${{ matrix.database }}
         run: |
-          TAG="${{ matrix.preset }}"
-          TAG="${TAG//./-}"
-          DB="${{ matrix.database }}"
+          TAG="${MATRIX_PRESET//./-}"
+          DB="${MATRIX_DATABASE}"
           SHA_SHORT="${GITHUB_SHA:0:7}"
           docker save \
-            "${{ env._AZ_REGISTRY }}/shot/seeded-${DB}:${TAG}" \
-            "${{ env._AZ_REGISTRY }}/shot/seeded-${DB}:${TAG}-${SHA_SHORT}" \
+            "${_AZ_REGISTRY}/shot/seeded-${DB}:${TAG}" \
+            "${_AZ_REGISTRY}/shot/seeded-${DB}:${TAG}-${SHA_SHORT}" \
             -o "seeded-${DB}-${TAG}-${SHA_SHORT}.tar"
 
       - name: Upload image artifact
@@ -131,11 +155,14 @@ jobs:
 
       - name: Job summary
         if: always()
+        env:
+          MATRIX_PRESET: ${{ matrix.preset }}
+          MATRIX_DATABASE: ${{ matrix.database }}
+          GIT_SHA: ${{ github.sha }}
         run: |
-          TAG="${{ matrix.preset }}"
-          TAG="${TAG//./-}"
-          DB="${{ matrix.database }}"
-          SHA="${{ github.sha }}"
-          echo "### ${DB} / ${{ matrix.preset }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Built (not pushed): \`${{ env._AZ_REGISTRY }}/shot/seeded-${DB}:${TAG}-${SHA:0:7}\`" \
+          TAG="${MATRIX_PRESET//./-}"
+          DB="${MATRIX_DATABASE}"
+          SHA_SHORT="${GIT_SHA:0:7}"
+          echo "### ${DB} / ${MATRIX_PRESET}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Built (not pushed): \`${_AZ_REGISTRY}/shot/seeded-${DB}:${TAG}-${SHA_SHORT}\`" \
             >> "$GITHUB_STEP_SUMMARY"

@@ -15,7 +15,7 @@ Builds pre-seeded database Docker images from seeder presets, ready for ephemera
 PUSH=true ./build-seeded-image.sh qa.dunder-mifflin-enterprise-full postgres
 
 # List all available presets
-dotnet run --project ../. -- preset --list --json
+dotnet run --project ../. -- preset --list --output json
 ```
 
 ## Supported Database Types
@@ -23,9 +23,12 @@ dotnet run --project ../. -- preset --list --json
 | Type | Base Image | Seed Method |
 |------|-----------|-------------|
 | `postgres` | `postgres:14` | `pg_dump` → init SQL script |
+| `mysql` | `mysql:8.0` | `mysqldump` → init SQL script |
 | `mariadb` | `mariadb:12` | `mysqldump` → init SQL script |
 | `mssql` | `mcr.microsoft.com/mssql/server:2022-CU22-ubuntu-22.04` | MDF/LDF file copy → `CREATE DATABASE ... FOR ATTACH` |
 | `sqlite` | `busybox:stable` | Direct `.db` file copy |
+
+`mysql` and `mariadb` share the same migrations project and seeded data; they differ only in the engine the dump is produced from and restored into.
 
 ### MSSQL Notes
 
@@ -83,8 +86,8 @@ For CI, set the `DP_KEY_XML` environment variable with the XML content and the s
 
 The workflow at `.github/workflows/build-seeded-databases.yml` supports:
 
-- **Manual dispatch**: Build a single preset + database type, or leave empty to build all
-- **Cron**: Every Sunday at 2am UTC, rebuilds all presets × all database types
+- **Manual dispatch**: Build a single preset + database type. Leave `preset` empty for the curated default list, or set it to `all` to build every preset. Leave `database` as `all` to build the full database matrix.
+- **Cron**: Every Sunday at 2am UTC, rebuilds the curated default preset list (`_DEFAULT_PRESETS`) × all database types
 
 The workflow uses a matrix strategy (`preset × database`) with `fail-fast: false`.
 
