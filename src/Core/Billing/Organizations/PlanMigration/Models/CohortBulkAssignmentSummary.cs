@@ -1,4 +1,4 @@
-namespace Bit.Core.Billing.Organizations.PlanMigration.Models;
+﻿namespace Bit.Core.Billing.Organizations.PlanMigration.Models;
 
 /// <summary>
 /// The diff counts shown after a commit. Inserted/Updated/Unassigned and Skipped are mapped
