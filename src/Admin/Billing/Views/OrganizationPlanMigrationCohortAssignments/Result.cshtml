@@ -6,24 +6,30 @@
 <div class="mx-auto" style="max-width: 768px;">
     <h1>Bulk assignment applied</h1>
 
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Inserted</th>
-                <th>Updated</th>
-                <th>Unassigned</th>
-                <th>Plan mismatch</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td class="text-success">@Model.Summary.Inserted</td>
-                <td>@Model.Summary.Updated</td>
-                <td>@Model.Summary.Unassigned</td>
-                <td class="@(Model.Summary.PlanMismatch > 0 ? "text-warning" : "")">@Model.Summary.PlanMismatch</td>
-            </tr>
-        </tbody>
-    </table>
+    <div class="row mb-4">
+        <div class="col">
+            <div class="text-muted small">Inserted</div>
+            <div class="fs-2 fw-bold text-success">@Model.Summary.Inserted.ToString("N0")</div>
+        </div>
+        <div class="col">
+            <div class="text-muted small">Updated</div>
+            <div class="fs-2 fw-bold">@Model.Summary.Updated.ToString("N0")</div>
+        </div>
+        <div class="col">
+            <div class="text-muted small">Unassigned</div>
+            <div class="fs-2 fw-bold">@Model.Summary.Unassigned.ToString("N0")</div>
+        </div>
+        <div class="col">
+            <div class="text-muted small">
+                Plan mismatch
+                @if (Model.Summary.PlanMismatch > 0)
+                {
+                    <i class="fa fa-warning text-warning"></i>
+                }
+            </div>
+            <div class="fs-2 fw-bold @(Model.Summary.PlanMismatch > 0 ? "text-warning" : "")">@Model.Summary.PlanMismatch.ToString("N0")</div>
+        </div>
+    </div>
 
     @if (Model.Summary.PlanMismatch > 0)
     {
