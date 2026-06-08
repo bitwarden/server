@@ -113,10 +113,7 @@ public class AcceptOrganizationInviteLinkCommand(
             return userLinkedOrganizationUser;
         }
 
-        var invitedOrganizationUser = await organizationUserRepository.GetByOrganizationEmailAsync(organization.Id, user.Email);
-        return invitedOrganizationUser?.Status == OrganizationUserStatusType.Invited
-            ? invitedOrganizationUser
-            : null;
+        return await organizationUserRepository.GetByOrganizationEmailAsync(organization.Id, user.Email);
     }
 
     private static Error? ValidateExistingMembershipStatus(OrganizationUser? existingOrganizationUser) =>

@@ -156,6 +156,34 @@ public class AcceptOrganizationInviteLinkCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task AcceptAsync_WithRevokedEmailInvite_ReturnsOrganizationAccessRevoked(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser revokedEmailInvite,
+        SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
+    {
+        SetupHappyPath(organization, inviteLink, user, sutProvider);
+        revokedEmailInvite.Status = OrganizationUserStatusType.Revoked;
+        revokedEmailInvite.Email = user.Email;
+        revokedEmailInvite.UserId = null;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationEmailAsync(organization.Id, user.Email)
+            .Returns(revokedEmailInvite);
+
+        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user };
+
+        var result = await sutProvider.Sut.AcceptAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<OrganizationAccessRevoked>(result.AsError);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(Arg.Any<OrganizationUser>());
+    }
+
+    [Theory, BitAutoData]
     public async Task AcceptAsync_WithExistingAcceptedOrganizationUser_ReturnsAlreadyOrganizationMember(
         Organization organization,
         OrganizationInviteLink inviteLink,
