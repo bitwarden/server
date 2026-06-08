@@ -152,6 +152,7 @@ public class CohortBulkAssignmentRepositoryTests
         var orgChurn = await CreateOrgAsync(organizationRepository);       // locked: churn + discount applied
         var orgLockedNoop = await CreateOrgAsync(organizationRepository);  // locked, but CSV row is a no-op
         var orgUnlocked = await CreateOrgAsync(organizationRepository);    // not locked: control
+        var orgMigrated = await CreateOrgAsync(organizationRepository);    // locked: migrated (no scheduled date)
 
         // orgScheduled: scheduled migration row → locked.
         await assignmentRepository.CreateAsync(new OrganizationPlanMigrationCohortAssignment
@@ -180,6 +181,14 @@ public class CohortBulkAssignmentRepositoryTests
             OrganizationId = orgUnlocked.Id,
             CohortId = migrationCohort.Id,
         });
+        // orgMigrated: migrated with no scheduled date → locked via the MigratedDate arm
+        // (the case the old SQL predicate missed).
+        await assignmentRepository.CreateAsync(new OrganizationPlanMigrationCohortAssignment
+        {
+            OrganizationId = orgMigrated.Id,
+            CohortId = migrationCohort.Id,
+            MigratedDate = DateTime.UtcNow,
+        });
 
         var rows = new[]
         {
@@ -187,12 +196,13 @@ public class CohortBulkAssignmentRepositoryTests
             new ResolvedCohortBulkAssignmentRow(orgChurn.Id, null),                     // unassign → SKIP
             new ResolvedCohortBulkAssignmentRow(orgLockedNoop.Id, migrationCohort.Id),  // no-op → NOT counted
             new ResolvedCohortBulkAssignmentRow(orgUnlocked.Id, destinationCohort.Id),  // reassign → UPDATE
+            new ResolvedCohortBulkAssignmentRow(orgMigrated.Id, destinationCohort.Id),  // reassign (migrated) → SKIP
         };
 
         var result = await assignmentRepository.SyncManyAsync(rows);
 
-        // Only the two locked rows that would have changed are counted; the no-op is not.
-        Assert.Equal(2, result.Skipped);
+        // Only the three locked rows that would have changed are counted; the no-op is not.
+        Assert.Equal(3, result.Skipped);
         Assert.Equal(0, result.Inserted);
         Assert.Equal(1, result.Updated);
         Assert.Equal(0, result.Unassigned);
@@ -214,6 +224,11 @@ public class CohortBulkAssignmentRepositoryTests
         var unlocked = await assignmentRepository.GetByOrganizationIdAsync(orgUnlocked.Id);
         Assert.NotNull(unlocked);
         Assert.Equal(destinationCohort.Id, unlocked!.CohortId);
+
+        // The migrated org (MigratedDate-only) is locked and untouched.
+        var migrated = await assignmentRepository.GetByOrganizationIdAsync(orgMigrated.Id);
+        Assert.NotNull(migrated);
+        Assert.Equal(migrationCohort.Id, migrated!.CohortId);
     }
 
     private static async Task<Organization> CreateOrgAsync(IOrganizationRepository repo) =>
