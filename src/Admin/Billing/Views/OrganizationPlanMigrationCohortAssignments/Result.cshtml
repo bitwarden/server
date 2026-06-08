@@ -29,6 +29,16 @@
             </div>
             <div class="fs-2 fw-bold @(Model.Summary.PlanMismatch > 0 ? "text-warning" : "")">@Model.Summary.PlanMismatch.ToString("N0")</div>
         </div>
+        <div class="col">
+            <div class="text-muted small">
+                Skipped
+                @if (Model.Summary.Skipped > 0)
+                {
+                    <i class="fa fa-lock text-muted"></i>
+                }
+            </div>
+            <div class="fs-2 fw-bold">@Model.Summary.Skipped.ToString("N0")</div>
+        </div>
     </div>
 
     @if (Model.Summary.PlanMismatch > 0)
