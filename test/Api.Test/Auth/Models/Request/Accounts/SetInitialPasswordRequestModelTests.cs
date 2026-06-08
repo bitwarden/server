@@ -509,7 +509,7 @@ public class SetInitialPasswordRequestModelTests
     [BitAutoData]
     public void IsTdeSetPasswordRequest_WithBothAccountKeysAndKeysNull_ReturnsTrue(string orgIdentifier)
     {
-        // Arrange — TDE user sends no key material at all (they already have a keypair)
+        // Arrange — TDE user sends no keypair at all (they already have a keypair)
         var model = new SetInitialPasswordRequestModel
         {
             OrgIdentifier = orgIdentifier,
