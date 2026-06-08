@@ -33,6 +33,17 @@ public class LeaseRequestRepository : Repository<LeaseRequest, Guid>, ILeaseRequ
         return results.FirstOrDefault();
     }
 
+    public async Task<ICollection<InboxLeaseRequestDetails>> GetManyByRequesterIdAsync(Guid requesterId)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<InboxLeaseRequestDetails>(
+            $"[{Schema}].[LeaseRequest_ReadManyByRequesterId]",
+            new { RequesterId = requesterId },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToList();
+    }
+
     public async Task<ICollection<InboxLeaseRequestDetails>> GetManyInboxPendingByCollectionIdsAsync(IEnumerable<Guid> collectionIds)
     {
         var ids = collectionIds.ToList();

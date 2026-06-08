@@ -211,6 +211,9 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IGetInboxHistoryQuery, GetInboxHistoryQuery>();
         services.AddScoped<IDecideLeaseRequestCommand, DecideLeaseRequestCommand>();
         services.AddScoped<IRevokeLeaseCommand, RevokeLeaseCommand>();
+        services.AddScoped<IGetCipherLeaseStateQuery, GetCipherLeaseStateQuery>();
+        services.AddScoped<IListMyAccessRequestsQuery, ListMyAccessRequestsQuery>();
+        services.AddScoped<IListMyActiveLeasesQuery, ListMyActiveLeasesQuery>();
     }
 
     private static void AddOrganizationGroupCommands(this IServiceCollection services)

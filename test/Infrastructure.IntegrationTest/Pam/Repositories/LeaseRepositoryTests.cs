@@ -107,6 +107,36 @@ public class LeaseRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
+    public async Task GetManyActiveByRequesterIdAsync_ReturnsOnlyActiveLeasesInWindow(
+        IOrganizationRepository organizationRepository,
+        ILeaseRepository leaseRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+        var requesterId = Guid.NewGuid();
+
+        // Active, in-window lease for the requester.
+        var (activeReq, activeDec, activeLease) = BuildAutoApproved(
+            organization.Id, Guid.NewGuid(), requesterId, now.AddMinutes(-5), now.AddHours(1));
+        await leaseRepository.CreateAutoApprovedAsync(activeReq, activeDec, activeLease, now);
+
+        // Expired lease for the same requester — must be excluded.
+        var (expiredReq, expiredDec, expiredLease) = BuildAutoApproved(
+            organization.Id, Guid.NewGuid(), requesterId, now.AddHours(-2), now.AddHours(-1));
+        await leaseRepository.CreateAutoApprovedAsync(expiredReq, expiredDec, expiredLease, now.AddHours(-2));
+
+        // Active lease for a different requester — must be excluded.
+        var (otherReq, otherDec, otherLease) = BuildAutoApproved(
+            organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddMinutes(-5), now.AddHours(1));
+        await leaseRepository.CreateAutoApprovedAsync(otherReq, otherDec, otherLease, now);
+
+        var result = await leaseRepository.GetManyActiveByRequesterIdAsync(requesterId, now);
+
+        Assert.Single(result);
+        Assert.Equal(activeLease.Id, result.First().Id);
+    }
+
+    [DatabaseTheory, DatabaseData]
     public async Task RevokeAsync_RevokesLeaseAndRecordsAuditDecision(
         IOrganizationRepository organizationRepository,
         ILeaseRepository leaseRepository)

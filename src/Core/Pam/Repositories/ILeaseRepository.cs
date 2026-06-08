@@ -12,6 +12,12 @@ public interface ILeaseRepository
     Task<Lease?> GetActiveByRequesterIdCipherIdAsync(Guid requesterId, Guid cipherId, DateTime now);
 
     /// <summary>
+    /// Returns the caller's currently-active leases (status Active, window containing <paramref name="now"/>, not
+    /// revoked) across every organization they belong to. Returns an empty collection when none are active.
+    /// </summary>
+    Task<ICollection<Lease>> GetManyActiveByRequesterIdAsync(Guid requesterId, DateTime now);
+
+    /// <summary>
     /// Atomically creates an auto-approved <see cref="LeaseRequest"/>, its policy <see cref="LeaseDecision"/>, and an
     /// active <see cref="Lease"/> in a single transaction. The three entities must already have their ids assigned.
     /// This is the only way a <see cref="Lease"/> is created, so the request, decision, and lease never diverge.

@@ -197,6 +197,34 @@ public class LeaseRequestRepositoryTests
         Assert.Null(active);
     }
 
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyByRequesterIdAsync_ReturnsOwnRequestsRegardlessOfStatus(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        ILeaseRequestRepository leaseRequestRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var now = DateTime.UtcNow;
+        var requesterId = Guid.NewGuid();
+
+        var pending = await leaseRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, requesterId, LeaseRequestStatus.Pending, now));
+        var denied = await leaseRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, requesterId, LeaseRequestStatus.Denied, now.AddMinutes(-1)));
+        // A different user's request on the same collection must not appear.
+        await leaseRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, Guid.NewGuid(), LeaseRequestStatus.Pending, now));
+
+        var mine = await leaseRequestRepository.GetManyByRequesterIdAsync(requesterId);
+
+        Assert.Equal(2, mine.Count);
+        Assert.Contains(mine, r => r.Id == pending.Id);
+        Assert.Contains(mine, r => r.Id == denied.Id);
+        // Caller-scoped self-read omits the display-name joins.
+        Assert.All(mine, r => Assert.Null(r.CollectionName));
+    }
+
     private static LeaseRequest BuildRequest(
         Guid organizationId, Guid collectionId, Guid requesterId, LeaseRequestStatus status, DateTime creationDate)
         => new()
