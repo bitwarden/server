@@ -750,8 +750,8 @@ public class SetInitialPasswordRequestModelTests
     public void ToUser_WithBothNewAndLegacyFieldsSet_PrefersNewData()
     {
         // Arrange — defensive: if a request somehow includes both new and legacy KDF/key fields,
-        // ToUser should source from MPAD/MPUD, not the legacy top-level properties.
-        // Uses Argon2id in MPAD so Memory/Parallelism are populated (not null) on the new shape;
+        // ToUser should source from MPUD, not the legacy top-level properties.
+        // Uses Argon2id on the new shape so Memory/Parallelism are populated (not null);
         // verifies the new values win for every non-nullable field.
         var existingUser = new User { Email = "user@example.com" };
         var model = new SetInitialPasswordRequestModel
@@ -796,7 +796,7 @@ public class SetInitialPasswordRequestModelTests
         // Act
         var result = model.ToUser(existingUser);
 
-        // Assert — values came from MPAD/MPUD, not legacy fields
+        // Assert — values came from MPUD, not legacy fields
         Assert.Equal(KdfType.Argon2id, result.Kdf);
         Assert.Equal(3, result.KdfIterations);
         Assert.Equal(64, result.KdfMemory);
