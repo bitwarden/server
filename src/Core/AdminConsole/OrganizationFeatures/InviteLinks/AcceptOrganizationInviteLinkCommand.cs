@@ -215,6 +215,8 @@ public class AcceptOrganizationInviteLinkCommand(
             await mailService.SendOrganizationAcceptedEmailAsync(organization, user.Email, adminEmails);
         }
 
+        // Notifies admin clients to confirm this member per the organization's Automatic User Confirmation policy
+        // Link-level auto-confirm is not yet implemented.
         await pushAutoConfirmNotificationCommand.PushAsync(user.Id, organization.Id);
     }
 
