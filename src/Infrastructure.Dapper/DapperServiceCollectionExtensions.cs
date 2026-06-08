@@ -82,6 +82,7 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IUserSignatureKeyPairRepository, UserSignatureKeyPairRepository>();
         services.AddSingleton<IOrganizationReportRepository, OrganizationReportRepository>();
         services.AddSingleton<IOrganizationApplicationRepository, OrganizationApplicationRepository>();
+        services.AddSingleton<IOrganizationEventCleanupRepository, OrganizationEventCleanupRepository>();
         services.AddSingleton<IOrganizationMemberBaseDetailRepository, OrganizationMemberBaseDetailRepository>();
 
         if (selfHosted)
