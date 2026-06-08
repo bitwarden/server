@@ -117,6 +117,105 @@ public class CohortBulkAssignmentRepositoryTests
         Assert.Null(await assignmentRepository.GetByOrganizationIdAsync(orgToUnassign.Id));
     }
 
+    [DatabaseTheory, DatabaseData]
+    public async Task SyncManyAsync_SkipsLockedAssignments_AndCountsOnlyChangedSkips(
+        Database database,
+        IOrganizationRepository organizationRepository,
+        IOrganizationPlanMigrationCohortRepository cohortRepository,
+        IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository)
+    {
+        // Bulk sync is SqlServer/Dapper-only; EF providers throw. Skip the behavioral
+        // assertions on every provider except real SqlServer.
+        if (database.Type != SupportedDatabaseProviders.SqlServer || database.UseEf)
+        {
+            return;
+        }
+
+        // A migration cohort (MigrationPathId != null) and a churn cohort (MigrationPathId == null).
+        var migrationCohort = await cohortRepository.CreateAsync(new OrganizationPlanMigrationCohort
+        {
+            Name = $"Migration {Guid.NewGuid()}",
+            MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
+        });
+        var churnCohort = await cohortRepository.CreateAsync(new OrganizationPlanMigrationCohort
+        {
+            Name = $"Churn {Guid.NewGuid()}",
+            MigrationPathId = null,
+        });
+        var destinationCohort = await cohortRepository.CreateAsync(new OrganizationPlanMigrationCohort
+        {
+            Name = $"Destination {Guid.NewGuid()}",
+            MigrationPathId = MigrationPathId.Enterprise2020MonthlyToCurrent,
+        });
+
+        var orgScheduled = await CreateOrgAsync(organizationRepository);   // locked: migration + scheduled
+        var orgChurn = await CreateOrgAsync(organizationRepository);       // locked: churn + discount applied
+        var orgLockedNoop = await CreateOrgAsync(organizationRepository);  // locked, but CSV row is a no-op
+        var orgUnlocked = await CreateOrgAsync(organizationRepository);    // not locked: control
+
+        // orgScheduled: scheduled migration row → locked.
+        await assignmentRepository.CreateAsync(new OrganizationPlanMigrationCohortAssignment
+        {
+            OrganizationId = orgScheduled.Id,
+            CohortId = migrationCohort.Id,
+            ScheduledDate = DateTime.UtcNow,
+        });
+        // orgChurn: churn discount applied → locked.
+        await assignmentRepository.CreateAsync(new OrganizationPlanMigrationCohortAssignment
+        {
+            OrganizationId = orgChurn.Id,
+            CohortId = churnCohort.Id,
+            ChurnDiscountAppliedDate = DateTime.UtcNow,
+        });
+        // orgLockedNoop: locked (scheduled migration) and the CSV keeps it on the same cohort.
+        await assignmentRepository.CreateAsync(new OrganizationPlanMigrationCohortAssignment
+        {
+            OrganizationId = orgLockedNoop.Id,
+            CohortId = migrationCohort.Id,
+            ScheduledDate = DateTime.UtcNow,
+        });
+        // orgUnlocked: no lifecycle dates → free to move.
+        await assignmentRepository.CreateAsync(new OrganizationPlanMigrationCohortAssignment
+        {
+            OrganizationId = orgUnlocked.Id,
+            CohortId = migrationCohort.Id,
+        });
+
+        var rows = new[]
+        {
+            new ResolvedCohortBulkAssignmentRow(orgScheduled.Id, destinationCohort.Id), // reassign → SKIP
+            new ResolvedCohortBulkAssignmentRow(orgChurn.Id, null),                     // unassign → SKIP
+            new ResolvedCohortBulkAssignmentRow(orgLockedNoop.Id, migrationCohort.Id),  // no-op → NOT counted
+            new ResolvedCohortBulkAssignmentRow(orgUnlocked.Id, destinationCohort.Id),  // reassign → UPDATE
+        };
+
+        var result = await assignmentRepository.SyncManyAsync(rows);
+
+        // Only the two locked rows that would have changed are counted; the no-op is not.
+        Assert.Equal(2, result.Skipped);
+        Assert.Equal(0, result.Inserted);
+        Assert.Equal(1, result.Updated);
+        Assert.Equal(0, result.Unassigned);
+
+        // Locked orgs are untouched.
+        var scheduled = await assignmentRepository.GetByOrganizationIdAsync(orgScheduled.Id);
+        Assert.NotNull(scheduled);
+        Assert.Equal(migrationCohort.Id, scheduled!.CohortId);
+
+        var churn = await assignmentRepository.GetByOrganizationIdAsync(orgChurn.Id);
+        Assert.NotNull(churn);
+        Assert.Equal(churnCohort.Id, churn!.CohortId);
+
+        var noop = await assignmentRepository.GetByOrganizationIdAsync(orgLockedNoop.Id);
+        Assert.NotNull(noop);
+        Assert.Equal(migrationCohort.Id, noop!.CohortId);
+
+        // The unlocked org moved as normal.
+        var unlocked = await assignmentRepository.GetByOrganizationIdAsync(orgUnlocked.Id);
+        Assert.NotNull(unlocked);
+        Assert.Equal(destinationCohort.Id, unlocked!.CohortId);
+    }
+
     private static async Task<Organization> CreateOrgAsync(IOrganizationRepository repo) =>
         await repo.CreateAsync(new Organization
         {
