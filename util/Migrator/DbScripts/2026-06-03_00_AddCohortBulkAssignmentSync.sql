@@ -51,7 +51,12 @@ BEGIN
         [CohortId]       UNIQUEIDENTIFIER NULL
     )
 
-    INSERT INTO @Source ([Id], [OrganizationId], [CohortId])
+    INSERT INTO @Source
+    (
+        [Id],
+        [OrganizationId],
+        [CohortId]
+    )
     SELECT
         [Id],
         [OrganizationId],
