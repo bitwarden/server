@@ -16,6 +16,12 @@ public interface ILeaseRequestRepository
     Task<LeaseRequest?> GetActivePendingByRequesterIdCipherIdAsync(Guid requesterId, Guid cipherId);
 
     /// <summary>
+    /// Returns the caller's own lease requests across every organization they belong to, regardless of status, most
+    /// recent first and capped server-side. Display-name fields are not populated for this caller-scoped surface.
+    /// </summary>
+    Task<ICollection<InboxLeaseRequestDetails>> GetManyByRequesterIdAsync(Guid requesterId);
+
+    /// <summary>
     /// Returns the pending approver-inbox rows for the given collections, joined with their denormalized display
     /// fields. An empty <paramref name="collectionIds"/> yields an empty result.
     /// </summary>

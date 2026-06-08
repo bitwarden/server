@@ -20,6 +20,7 @@ namespace Bit.Api.Pam.Controllers;
 public class CipherLeaseController(
     IUserService userService,
     IAccessPreCheckQuery preCheckQuery,
+    IGetCipherLeaseStateQuery cipherLeaseStateQuery,
     IRequestAccessCommand requestAccessCommand,
     IGetLeasedCipherQuery getLeasedCipherQuery,
     IApplicationCacheService applicationCacheService,
@@ -37,6 +38,18 @@ public class CipherLeaseController(
         var userId = userService.GetProperUserId(User)!.Value;
         var result = await preCheckQuery.PreCheckAsync(userId, id);
         return new AccessPreCheckResponseModel(id, result);
+    }
+
+    /// <summary>
+    /// Returns a single snapshot of the caller's lease state for this cipher — their active lease and pending request,
+    /// if any — powering the cipher-view banner and the vault-row badge. Side-effect free.
+    /// </summary>
+    [HttpGet("state")]
+    public async Task<CipherLeaseStateResponseModel> State(Guid id)
+    {
+        var userId = userService.GetProperUserId(User)!.Value;
+        var result = await cipherLeaseStateQuery.GetStateAsync(userId, id);
+        return new CipherLeaseStateResponseModel(result);
     }
 
     /// <summary>

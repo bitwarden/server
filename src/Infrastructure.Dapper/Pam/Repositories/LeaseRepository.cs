@@ -31,6 +31,17 @@ public class LeaseRepository : Repository<Lease, Guid>, ILeaseRepository
         return results.FirstOrDefault();
     }
 
+    public async Task<ICollection<Lease>> GetManyActiveByRequesterIdAsync(Guid requesterId, DateTime now)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<Lease>(
+            $"[{Schema}].[Lease_ReadManyActiveByRequesterId]",
+            new { RequesterId = requesterId, Now = now },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToList();
+    }
+
     public async Task CreateAutoApprovedAsync(LeaseRequest request, LeaseDecision decision, Lease lease, DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);

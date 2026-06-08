@@ -22,6 +22,26 @@ namespace Bit.Api.Test.Pam.Controllers;
 public class CipherLeaseControllerTests
 {
     [Theory, BitAutoData]
+    public async Task State_ReturnsSnapshotFromQuery(
+        Guid id, Guid userId, Bit.Core.Pam.Entities.Lease activeLease, SutProvider<CipherLeaseController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
+            .Returns(userId);
+        sutProvider.GetDependency<IGetCipherLeaseStateQuery>()
+            .GetStateAsync(userId, id)
+            .Returns(new Bit.Core.Pam.Models.CipherLeaseStateResult(id, activeLease, null));
+
+        var result = await sutProvider.Sut.State(id);
+
+        Assert.Equal(id, result.CipherId);
+        Assert.NotNull(result.Lease.ActiveLease);
+        Assert.Equal(activeLease.Id, result.Lease.ActiveLease!.Id);
+        Assert.Null(result.Lease.PendingRequest);
+        Assert.Null(result.Lease.ApprovedTicket); // always null in v0 — no redemption flow
+    }
+
+    [Theory, BitAutoData]
     public async Task GetCipher_NoLeasedCipher_ThrowsNotFound(
         Guid id, User user, SutProvider<CipherLeaseController> sutProvider)
     {
