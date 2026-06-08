@@ -67,7 +67,6 @@ public class TwoFactorAuthenticationPolicyEventHandler : IOnPolicyPreUpdateEvent
 
         var currentActiveRevocableOrganizationUsers =
             (await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId))
-            // Active members only. Excludes Invited, Revoked, and Staged (Staged is not subject to policy enforcement).
             .Where(ou => ou.Status is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed &&
                          ou.Type != OrganizationUserType.Owner &&
                          ou.Type != OrganizationUserType.Admin &&

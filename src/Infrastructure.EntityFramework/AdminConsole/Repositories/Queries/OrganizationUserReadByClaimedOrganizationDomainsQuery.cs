@@ -17,7 +17,6 @@ public class OrganizationUserReadByClaimedOrganizationDomainsQuery : IQuery<Orga
         var query = from ou in dbContext.OrganizationUsers
                     join u in dbContext.Users on ou.UserId equals u.Id
                     where ou.OrganizationId == _organizationId
-                          // Non-invited members linked to a user. Excludes Invited and Staged.
                           && (ou.Status == OrganizationUserStatusType.Accepted ||
                               ou.Status == OrganizationUserStatusType.Confirmed ||
                               ou.Status == OrganizationUserStatusType.Revoked)

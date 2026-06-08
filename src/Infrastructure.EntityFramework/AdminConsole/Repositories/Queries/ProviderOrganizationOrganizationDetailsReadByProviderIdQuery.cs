@@ -30,7 +30,6 @@ public class ProviderOrganizationOrganizationDetailsReadByProviderIdQuery : IQue
             CreationDate = x.po.CreationDate,
             RevisionDate = x.po.RevisionDate,
             UserCount = x.o.OrganizationUsers.Count(ou => ou.Status == Core.Enums.OrganizationUserStatusType.Confirmed),
-            // Seat-occupying statuses. Excludes Revoked and Staged, neither of which consumes a seat.
             OccupiedSeats = x.o.OrganizationUsers.Count(ou =>
                 ou.Status == Core.Enums.OrganizationUserStatusType.Invited ||
                 ou.Status == Core.Enums.OrganizationUserStatusType.Accepted ||

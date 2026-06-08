@@ -191,7 +191,6 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
                                          && p.Type == policyType
                                          && o.Enabled
                                          && o.UsePolicies
-                                         // Non-invited members linked to a user. Excludes Invited and Staged (Staged is not subject to policy).
                                          && (ou.Status == OrganizationUserStatusType.Accepted ||
                                              ou.Status == OrganizationUserStatusType.Confirmed ||
                                              ou.Status == OrganizationUserStatusType.Revoked)
@@ -273,7 +272,6 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
 
         // Get organization users (both confirmed/accepted and invited)
         var orgUsersQuery = dbContext.OrganizationUsers
-            // Non-invited members are matched by UserId; invited members by email. Excludes Staged (not subject to policy).
             .Where(ou => (((ou.Status == OrganizationUserStatusType.Accepted ||
                             ou.Status == OrganizationUserStatusType.Confirmed ||
                             ou.Status == OrganizationUserStatusType.Revoked) && ou.UserId == userId) ||

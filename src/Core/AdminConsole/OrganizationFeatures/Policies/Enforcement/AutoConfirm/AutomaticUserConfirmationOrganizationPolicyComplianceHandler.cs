@@ -35,7 +35,6 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceHandler(
         AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest request,
         ICollection<OrganizationUserUserDetails> organizationUsers)
     {
-        // Non-invited members linked to a user. Excludes Invited and Staged (neither is a "real" joined membership).
         var userIds = organizationUsers
             .Where(u => u.UserId is not null &&
                         u.Status is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed or OrganizationUserStatusType.Revoked)
@@ -43,7 +42,6 @@ public class AutomaticUserConfirmationOrganizationPolicyComplianceHandler(
 
         var hasNonCompliantUser = (await organizationUserRepository.GetManyByManyUsersAsync(userIds))
             .Any(uo => uo.OrganizationId != request.OrganizationId
-                       // A membership in another org. Excludes Invited and Staged, neither of which is a "real" joined membership.
                        && uo.Status is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed or OrganizationUserStatusType.Revoked);
 
         return hasNonCompliantUser ? new UserNotCompliantWithSingleOrganization() : null;

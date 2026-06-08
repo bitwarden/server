@@ -14,7 +14,6 @@ public class OrganizationUserReadOccupiedSmSeatCountByOrganizationIdQuery : IQue
 
     public IQueryable<OrganizationUser> Run(DatabaseContext dbContext)
     {
-        // Seat-occupying statuses. Excludes Revoked and Staged, neither of which consumes a seat.
         var query = from ou in dbContext.OrganizationUsers
                     where ou.OrganizationId == _organizationId
                           && (ou.Status == OrganizationUserStatusType.Invited ||

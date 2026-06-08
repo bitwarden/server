@@ -151,7 +151,6 @@ public class VerifyOrganizationDomainCommand(
 
         var domainUserEmails = orgUserUsers
             .Where(ou => ou.Email.ToLower().EndsWith($"@{domain.DomainName.ToLower()}") &&
-                         // Active members only. Excludes Invited, Revoked, and Staged (staged users are not emailed).
                          ou.Status is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed)
             .Select(ou => ou.Email);
 

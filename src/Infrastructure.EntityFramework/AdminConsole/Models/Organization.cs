@@ -46,7 +46,6 @@ public class OrganizationMapperProfile : Profile
         CreateProjection<Organization, SelfHostedOrganizationDetails>()
             .ForMember(sd => sd.CollectionCount, opt => opt.MapFrom(o => o.Collections.Count))
             .ForMember(sd => sd.GroupCount, opt => opt.MapFrom(o => o.Groups.Count))
-            // Seat-occupying statuses. Excludes Revoked and Staged, neither of which consumes a seat.
             .ForMember(sd => sd.OccupiedSeatCount, opt => opt.MapFrom(o => o.OrganizationUsers.Count(ou =>
                 ou.Status == OrganizationUserStatusType.Invited ||
                 ou.Status == OrganizationUserStatusType.Accepted ||
