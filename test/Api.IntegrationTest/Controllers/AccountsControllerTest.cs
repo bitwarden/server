@@ -992,6 +992,10 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Null(updatedUser.KdfMemory);
         Assert.Null(updatedUser.KdfParallelism);
 
+        // MasterPasswordSalt column must never be null/empty after a successful set-password.
+        // Legacy V1 path falls back to the email-derived V1 salt.
+        Assert.Equal(userEmail, updatedUser.MasterPasswordSalt);
+
         // Verify timestamps are updated
         Assert.Equal(DateTime.UtcNow, updatedUser.RevisionDate, TimeSpan.FromMinutes(1));
         Assert.Equal(DateTime.UtcNow, updatedUser.AccountRevisionDate, TimeSpan.FromMinutes(1));
@@ -1094,6 +1098,10 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(600_000, updatedUser.KdfIterations);
         Assert.Null(updatedUser.KdfMemory);
         Assert.Null(updatedUser.KdfParallelism);
+
+        // MasterPasswordSalt column must never be null/empty after a successful set-password.
+        // V2 MP JIT path persists the MPUD-provided salt (the helper sends userEmail as the salt value).
+        Assert.Equal(userEmail, updatedUser.MasterPasswordSalt);
 
         // Verify timestamps are updated
         Assert.Equal(DateTime.UtcNow, updatedUser.RevisionDate, TimeSpan.FromMinutes(1));
@@ -1235,6 +1243,10 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(600_000, updatedUser.KdfIterations);
         Assert.Null(updatedUser.KdfMemory);
         Assert.Null(updatedUser.KdfParallelism);
+
+        // MasterPasswordSalt column must never be null/empty after a successful set-password.
+        // V2 TDE path persists the MPUD-provided salt (the helper sends userEmail as the salt value).
+        Assert.Equal(userEmail, updatedUser.MasterPasswordSalt);
 
         // Verify timestamps are updated
         Assert.Equal(DateTime.UtcNow, updatedUser.RevisionDate, TimeSpan.FromMinutes(1));
