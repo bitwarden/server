@@ -194,4 +194,67 @@ public class GetManyByOrganizationWithClaimedDomainsAsyncTests
         var claimedUser = Assert.Single(result);
         Assert.Equal(confirmedOrgUser.Id, claimedUser.Id);
     }
+
+    /// <summary>
+    /// Staged users are provisioned but not invited, so they are not a "real" membership and must not be
+    /// surfaced as claimed/managed members of the organization's verified domain.
+    /// </summary>
+    [Theory, DatabaseData]
+    public async Task WithVerifiedDomain_ExcludesStagedUsers(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationDomainRepository organizationDomainRepository)
+    {
+        var id = Guid.NewGuid();
+        var domainName = $"{id}.example.com";
+
+        var stagedUser = await userRepository.CreateAsync(new User
+        {
+            Name = "Staged User",
+            Email = $"staged+{id}@{domainName}",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = 1,
+            KdfMemory = 2,
+            KdfParallelism = 3
+        });
+
+        var confirmedUser = await userRepository.CreateAsync(new User
+        {
+            Name = "Confirmed User",
+            Email = $"confirmed+{id}@{domainName}",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = 1,
+            KdfMemory = 2,
+            KdfParallelism = 3
+        });
+
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+
+        var organizationDomain = new OrganizationDomain
+        {
+            OrganizationId = organization.Id,
+            DomainName = domainName,
+            Txt = "btw+12345",
+        };
+        organizationDomain.SetVerifiedDate();
+        organizationDomain.SetNextRunDate(12);
+        organizationDomain.SetJobRunCount();
+        await organizationDomainRepository.CreateAsync(organizationDomain);
+
+        // Staged member (linked to a user whose email matches the verified domain) must be excluded.
+        await organizationUserRepository.CreateStagedTestOrganizationUserAsync(organization, stagedUser);
+        // Confirmed member on the same domain is the positive control and must be returned.
+        var confirmedOrgUser = await organizationUserRepository.CreateConfirmedTestOrganizationUserAsync(organization, confirmedUser);
+
+        var result = await organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync(organization.Id);
+
+        Assert.NotNull(result);
+        var claimedUser = Assert.Single(result);
+        Assert.Equal(confirmedOrgUser.Id, claimedUser.Id);
+    }
 }
