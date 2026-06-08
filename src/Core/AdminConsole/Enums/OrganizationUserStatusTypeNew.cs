@@ -14,8 +14,5 @@ public enum OrganizationUserStatusTypeNew : short
     Invited = 0,
     Accepted = 1,
     Confirmed = 2,
-    /// <summary>
-    /// The OrganizationUser has been provisioned but not yet invited. See <see cref="Bit.Core.Enums.OrganizationUserStatusType.Staged"/>.
-    /// </summary>
     Staged = 3,
 }
