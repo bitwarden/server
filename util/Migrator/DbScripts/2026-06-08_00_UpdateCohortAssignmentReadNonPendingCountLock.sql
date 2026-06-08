@@ -1,4 +1,6 @@
-CREATE PROCEDURE [dbo].[OrganizationPlanMigrationCohortAssignment_ReadNonPendingCountByCohortId]
+-- PM-36963: align _ReadNonPendingCountByCohortId lock predicate with IsLocked() by adding the MigratedDate arm.
+
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationPlanMigrationCohortAssignment_ReadNonPendingCountByCohortId]
     @CohortId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -18,3 +20,4 @@ BEGIN
             (C.[MigrationPathId] IS NULL AND A.[ChurnDiscountAppliedDate] IS NOT NULL)
         )
 END
+GO
