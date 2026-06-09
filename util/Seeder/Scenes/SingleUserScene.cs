@@ -1,9 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Security.Cryptography;
-using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -70,7 +68,7 @@ public class SingleUserScene(
         {
             try
             {
-                await WriteLicenseAsync(user, licenseService);
+                await SelfHostLicenseService.WriteLicenseAsync(licenseService, user);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or CryptographicException)
             {
@@ -93,25 +91,4 @@ public class SingleUserScene(
             mangleMap: manglerService.GetMangleMap());
     }
 
-    private async Task WriteLicenseAsync(User user, ILicensingService ls)
-    {
-        var token = await ls.CreateUserTokenAsync(user, null!);
-        if (string.IsNullOrWhiteSpace(token)) return;
-
-        var license = new UserLicense
-        {
-            LicenseType = LicenseType.User,
-            Id = user.Id,
-            Email = user.Email,
-            Name = user.Name,
-            Premium = user.Premium,
-            MaxStorageGb = user.MaxStorageGb,
-            Issued = DateTime.UtcNow,
-            Expires = user.PremiumExpirationDate?.AddDays(7),
-            Version = 1,
-            Token = token,
-        };
-
-        await ls.WriteUserLicenseAsync(user, license);
-    }
 }

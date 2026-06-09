@@ -185,11 +185,11 @@ public class RecipeBuilderValidationTests
 
         Assert.Equal(2, steps.Count);
         // First step must be the user creation step; second must be the license step.
-        // If this order is reversed, WritePremiumUserLicenseStep reads a null context.Owner.
+        // If this order is reversed, GenerateSelfHostUserLicenseStep reads a null context.Owner.
         var inner0 = ((OrderedStep)steps[0]).Inner;
         var inner1 = ((OrderedStep)steps[1]).Inner;
         Assert.IsType<CreateIndividualUserStep>(inner0);
-        Assert.IsType<WritePremiumUserLicenseStep>(inner1);
+        Assert.IsType<GenerateSelfHostUserLicenseStep>(inner1);
     }
 
     private static readonly ISeedReader _stubReader = new StubSeedReader(hasOwner: false);

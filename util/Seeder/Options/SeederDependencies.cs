@@ -26,12 +26,12 @@ public sealed record SeederDependencies(
 
     /// <summary>
     /// Optional licensing service. When non-null and LicenseDirectory is configured,
-    /// WritePremiumUserLicenseStep writes the user license file for self-hosted validation.
+    /// GenerateSelfHostUserLicenseStep writes the user license file for self-hosted validation.
     /// </summary>
     public ILicensingService? LicensingService { get; init; }
 
     /// <summary>
-    /// Optional global settings. Used by WritePremiumUserLicenseStep to resolve LicenseDirectory.
+    /// Optional global settings. Used by GenerateSelfHostUserLicenseStep to resolve LicenseDirectory.
     /// </summary>
     public GlobalSettings? GlobalSettings { get; init; }
 }
