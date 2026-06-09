@@ -1,14 +1,11 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
-using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -26,10 +23,8 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IMailService _mailService;
     private readonly IUserRepository _userRepository;
-    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
-    private readonly IPolicyRequirementQuery _policyRequirementQuery;
-    private readonly IAutomaticUserConfirmationPolicyEnforcementHandler _automaticUserConfirmationPolicyEnforcementHandler;
+    private readonly IAcceptOrganizationMembershipValidator _acceptOrganizationMembershipValidator;
     private readonly IPushAutoConfirmNotificationCommand _pushAutoConfirmNotificationCommand;
     private readonly IDeleteEmergencyAccessCommand _deleteEmergencyAccessCommand;
 
@@ -38,10 +33,8 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         IOrganizationRepository organizationRepository,
         IMailService mailService,
         IUserRepository userRepository,
-        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
-        IPolicyRequirementQuery policyRequirementQuery,
-        IAutomaticUserConfirmationPolicyEnforcementHandler automaticUserConfirmationPolicyEnforcementHandler,
+        IAcceptOrganizationMembershipValidator acceptOrganizationMembershipValidator,
         IPushAutoConfirmNotificationCommand pushAutoConfirmNotificationCommand,
         IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand)
     {
@@ -49,10 +42,8 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         _organizationRepository = organizationRepository;
         _mailService = mailService;
         _userRepository = userRepository;
-        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
-        _policyRequirementQuery = policyRequirementQuery;
-        _automaticUserConfirmationPolicyEnforcementHandler = automaticUserConfirmationPolicyEnforcementHandler;
+        _acceptOrganizationMembershipValidator = acceptOrganizationMembershipValidator;
         _pushAutoConfirmNotificationCommand = pushAutoConfirmNotificationCommand;
         _deleteEmergencyAccessCommand = deleteEmergencyAccessCommand;
     }
@@ -166,12 +157,11 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
 
         var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
 
-        await HandleAutomaticUserConfirmationPolicyAsync(orgUser, allOrgUsers, user);
-
-        await ValidateSingleOrganizationPolicyAsync(orgUser, allOrgUsers, user);
-
-        // Enforce Two Factor Authentication Policy of organization user is trying to join
-        await ValidateTwoFactorAuthenticationPolicyAsync(user, orgUser.OrganizationId);
+        var membershipValidationResult = await ValidateMembershipAsync(orgUser, user, allOrgUsers);
+        if (membershipValidationResult.RequiresEmergencyAccessDeletion)
+        {
+            await _deleteEmergencyAccessCommand.DeleteAllByUserIdAsync(user.Id);
+        }
 
         orgUser.Status = OrganizationUserStatusType.Accepted;
         orgUser.UserId = user.Id;
@@ -193,69 +183,30 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         return orgUser;
     }
 
-    private async Task ValidateSingleOrganizationPolicyAsync(OrganizationUser orgUser, ICollection<OrganizationUser> allOrgUsers, User user)
+    private async Task<AcceptOrganizationMembershipValidationResult> ValidateMembershipAsync(
+        OrganizationUser orgUser, User user, ICollection<OrganizationUser> allOrgUsers)
     {
-        var singleOrgRequirement = await _policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(user.Id);
-        var error = singleOrgRequirement.CanJoinOrganization(orgUser.OrganizationId, allOrgUsers);
-        if (error is not null)
+        var request = new AcceptOrganizationMembershipValidationRequest
         {
-            var singleOrgErrorMessage = error switch
+            OrganizationId = orgUser.OrganizationId,
+            User = user,
+            AllOrganizationMemberships = allOrgUsers,
+            ExistingMembership = orgUser,
+        };
+
+        var result = await _acceptOrganizationMembershipValidator.ValidateAsync(request);
+        if (result.IsError)
+        {
+            var message = result.AsError switch
             {
                 UserIsAMemberOfAnotherOrganization => "You cannot accept this invite until you leave or remove all other organizations.",
                 UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => "You cannot accept this invite because you are in another organization which forbids it.",
-                _ => error.Message
+                _ => result.AsError.Message
             };
-
-            throw new BadRequestException(singleOrgErrorMessage);
-        }
-    }
-
-    private async Task ValidateTwoFactorAuthenticationPolicyAsync(User user, Guid organizationId)
-    {
-        if (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
-        {
-            // If the user has two-step login enabled, we skip checking the 2FA policy
-            return;
+            throw new BadRequestException(message);
         }
 
-        var twoFactorPolicyRequirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
-        if (twoFactorPolicyRequirement.IsTwoFactorRequiredForOrganization(organizationId))
-        {
-            throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
-        }
-    }
-
-    private async Task HandleAutomaticUserConfirmationPolicyAsync(OrganizationUser orgUser,
-        ICollection<OrganizationUser> allOrgUsers,
-        User user)
-    {
-        var policyRequirement = await _policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(
-            user.Id);
-
-        // Ensure that the user is not already in the list of organization users
-        if (!allOrgUsers.Any(x => x.OrganizationId == orgUser.OrganizationId && x.UserId == user.Id))
-        {
-            allOrgUsers.Add(orgUser);
-        }
-
-        var error = (await _automaticUserConfirmationPolicyEnforcementHandler.IsCompliantAsync(
-                new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser.OrganizationId,
-                    allOrgUsers,
-                    user),
-                policyRequirement))
-            .Match(
-                error => error.Message,
-                _ => string.Empty
-            );
-
-        if (!string.IsNullOrEmpty(error))
-        {
-            throw new BadRequestException(error);
-        }
-
-        if (policyRequirement.IsEnabled(orgUser.OrganizationId))
-        {
-            await _deleteEmergencyAccessCommand.DeleteAllByUserIdAsync(user.Id);
-        }
+        return result.Request;
     }
 }
+
