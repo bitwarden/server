@@ -33,7 +33,7 @@ public class SingleUserScene(
     IUserRepository userRepository,
     IManglerService manglerService,
     IGlobalSettings globalSettings,
-    ILicensingService? licenseService) : IScene<SingleUserScene.Request, SingleUserSceneResult>
+    ILicensingService? licenseService = null) : IScene<SingleUserScene.Request, SingleUserSceneResult>
 {
     public class Request
     {
