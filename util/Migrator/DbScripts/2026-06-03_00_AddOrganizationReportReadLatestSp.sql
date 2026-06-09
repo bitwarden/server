@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationReport_GetLatestByOrganizationId]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_ReadLatestByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -10,7 +10,11 @@ BEGIN
         [dbo].[OrganizationReportView]
     WHERE
         [OrganizationId] = @OrganizationId
-        AND [ReportData] <> ''
+        AND (
+            JSON_VALUE([ReportFile], '$.Validated') = 'true'
+            OR [ReportData] <> ''
+        )
     ORDER BY
         [RevisionDate] DESC
 END
+GO
