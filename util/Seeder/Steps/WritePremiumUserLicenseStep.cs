@@ -19,7 +19,6 @@ internal sealed class WritePremiumUserLicenseStep(
     {
         if (licenseService is null)
         {
-
             return;
         }
 
@@ -61,9 +60,7 @@ internal sealed class WritePremiumUserLicenseStep(
 
             licenseService.WriteUserLicenseAsync(user, license).GetAwaiter().GetResult();
         }
-        catch
-        {
-            // Premium license file could not be written; user still seeded with Premium=true.
-        }
+        catch (InvalidOperationException) { }
+        catch (System.Security.Cryptography.CryptographicException) { }
     }
 }

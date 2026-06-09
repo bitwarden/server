@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Security.Cryptography;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -32,7 +33,7 @@ public class SingleUserScene(
     IUserRepository userRepository,
     IManglerService manglerService,
     IGlobalSettings globalSettings,
-    ILicensingService licenseService) : IScene<SingleUserScene.Request, SingleUserSceneResult>
+    ILicensingService? licenseService) : IScene<SingleUserScene.Request, SingleUserSceneResult>
 {
     public class Request
     {
@@ -65,16 +66,16 @@ public class SingleUserScene(
         // Best-effort license write. Self-hosted instances hold only the public licensing
         // certificate, so token signing throws there (by design — see LicensingService.SignLicense).
         // Don't let that failure abort the seed; the user is already persisted.
-        if (request.Premium && CoreHelpers.SettingHasValue(globalSettings.LicenseDirectory))
+        if (request.Premium && licenseService is not null && CoreHelpers.SettingHasValue(globalSettings.LicenseDirectory))
         {
             try
             {
-                await WriteLicenseAsync(user);
+                await WriteLicenseAsync(user, licenseService);
             }
-            catch
-            {
-                // Premium license file could not be written; user still seeded with Premium=true.
-            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+            catch (InvalidOperationException) { }
+            catch (CryptographicException) { }
         }
 
         return new SceneResult<SingleUserSceneResult>(
@@ -92,9 +93,9 @@ public class SingleUserScene(
             mangleMap: manglerService.GetMangleMap());
     }
 
-    private async Task WriteLicenseAsync(User user)
+    private async Task WriteLicenseAsync(User user, ILicensingService ls)
     {
-        var token = await licenseService.CreateUserTokenAsync(user, null!);
+        var token = await ls.CreateUserTokenAsync(user, null!);
         if (string.IsNullOrWhiteSpace(token)) return;
 
         var license = new UserLicense
@@ -111,6 +112,6 @@ public class SingleUserScene(
             Token = token,
         };
 
-        await licenseService.WriteUserLicenseAsync(user, license);
+        await ls.WriteUserLicenseAsync(user, license);
     }
 }

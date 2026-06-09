@@ -53,7 +53,7 @@ internal sealed class SeederServiceScope : IDisposable
         {
             return _scope.ServiceProvider.GetService<ILicensingService>();
         }
-        catch
+        catch (InvalidOperationException)
         {
             return null;
         }
