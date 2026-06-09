@@ -63,11 +63,7 @@ public class UpcomingInvoiceHandler(
                     [
                         "subscriptions",
                         "subscriptions.data.customer",
-                        // `discounts.coupon` and `customer.discount.coupon` are expanded so subscription-level and
-                        // customer-level coupons resolve inline without a second round-trip; without them the
-                        // nested Coupon arrives unexpanded and the discount is silently dropped from the email.
                         "subscriptions.data.discounts.coupon",
-                        "subscriptions.data.customer.discount.coupon",
                         "subscriptions.data.test_clock",
                         "tax",
                         "tax_ids"
@@ -618,20 +614,6 @@ public class UpcomingInvoiceHandler(
             }
 
             AddIfNew(coupon, coupon.Id);
-        }
-
-        if (subscription.Customer?.Discount is { } customerDiscount)
-        {
-            if (customerDiscount.Coupon is { } customerCoupon)
-            {
-                AddIfNew(customerCoupon, customerCoupon.Id);
-            }
-            else
-            {
-                logger.LogError(
-                    "Customer ({CustomerId}) discount for Organization ({OrganizationId}) has no expanded Coupon; 'customer.discount.coupon' is likely no longer expanded and the renewal email may omit a discount",
-                    subscription.CustomerId, organization.Id);
-            }
         }
 
         try

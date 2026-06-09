@@ -5186,19 +5186,49 @@ public class UpcomingInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenBusinessTier_AndCustomerLevelDiscount_ItemizesCustomerDiscount()
+    public async Task HandleAsync_WhenBusinessTier_AndCustomerLevelDiscountMirroredOntoPhase_ItemizesIt()
     {
-        // Arrange — no cohort coupon, no subscription discount, no schedule; the only discount is on the customer
-        // (subscription.Customer.Discount). Stripe applies it to the invoice but does not carry it on
-        // subscription.Discounts or a schedule phase, so it must be read from the customer to appear in the email.
+        // Arrange — a customer-level discount. The scheduler mirrors customer-level discounts onto the
+        // post-renewal phase (PriceIncreaseScheduler.ResolvePhase2ForBusinessAsync), so the email picks it up via
+        // the schedule-phase source. We do NOT expand the customer discount directly: that path
+        // (subscriptions.data.customer.discount.coupon) exceeds Stripe's 4-level expansion limit and 400s the
+        // whole webhook.
         _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
         var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var now = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
         var (invoice, subscription, customer) = BuildBusinessFixture(
-            PlanType.EnterpriseAnnually2020,
-            customerDiscount: new Discount { Coupon = new Coupon { Id = "cust-10", PercentOff = 10 } });
+            PlanType.EnterpriseAnnually2020, frozenTime: now);
         var (organization, enterprise2020Plan, enterprisePlan, assignment, cohort, cohortId) =
             BuildBusinessMigrationContext(coupon: null);
 
+        StubBusinessMigration(parsedEvent, invoice, subscription, customer, organization, enterprise2020Plan,
+            enterprisePlan, assignment, cohort, cohortId);
+        StubActiveScheduleWithPhases(subscription, now, futurePhaseCouponId: "cust-10");
+        _stripeAdapter.GetCouponAsync("cust-10", Arg.Any<CouponGetOptions>())
+            .Returns(new Coupon { Id = "cust-10", PercentOff = 10 });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — the mirrored customer-level 10% is itemized: $23,040 x 0.90 = $20,736.
+        await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
+            mail.View.HasDiscount &&
+            mail.View.DiscountLines.Count == 1 &&
+            mail.View.DiscountLines[0] == "10%" &&
+            mail.View.TotalPrice == "$20,736"));
+    }
+
+    [Fact]
+    public async Task HandleAsync_DoesNotRequestCustomerDiscountExpansionDeeperThanStripeAllows()
+    {
+        // Regression guard for the webhook-500: expanding the customer discount as
+        // subscriptions.data.customer.discount[.coupon] is 5 levels deep and exceeds Stripe's 4-level limit,
+        // which 400s GetCustomerAsync and fails every invoice.upcoming. Pin that we never request it.
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var (invoice, subscription, customer) = BuildBusinessFixture(PlanType.EnterpriseAnnually2020);
+        var (organization, enterprise2020Plan, enterprisePlan, assignment, cohort, cohortId) =
+            BuildBusinessMigrationContext(coupon: null);
         StubBusinessMigration(parsedEvent, invoice, subscription, customer, organization, enterprise2020Plan,
             enterprisePlan, assignment, cohort, cohortId);
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
@@ -5207,14 +5237,11 @@ public class UpcomingInvoiceHandlerTests
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert — the customer-level 10% is itemized: $23,040 x 0.90 = $20,736.
-        await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
-            mail.View.HasDiscount &&
-            mail.View.DiscountLines.Count == 1 &&
-            mail.View.DiscountLines[0] == "10%" &&
-            mail.View.TotalPrice == "$20,736"));
-        // The customer coupon is expanded inline (customer.discount.coupon), so no fetch by id is needed.
-        await _stripeAdapter.DidNotReceive().GetCouponAsync(Arg.Any<string>(), Arg.Any<CouponGetOptions>());
+        // Assert — the customer fetch's Expand list contains no path 5+ levels deep.
+        await _stripeAdapter.Received().GetCustomerAsync(
+            Arg.Any<string>(),
+            Arg.Is<CustomerGetOptions>(o =>
+                o.Expand != null && o.Expand.All(e => e.Split('.').Length <= 4)));
     }
 
     [Fact]
@@ -5378,8 +5405,7 @@ public class UpcomingInvoiceHandlerTests
     private (Invoice invoice, Subscription subscription, Customer customer) BuildBusinessFixture(
         PlanType planType,
         List<Discount>? subscriptionDiscounts = null,
-        DateTime? frozenTime = null,
-        Discount? customerDiscount = null)
+        DateTime? frozenTime = null)
     {
         var customerId = $"cus_{planType}";
         var subscriptionId = $"sub_{planType}";
@@ -5413,9 +5439,7 @@ public class UpcomingInvoiceHandlerTests
                 ]
             },
             AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
-            // Customer-level discounts live on the customer (expanded via customer.discount.coupon), not on
-            // subscription.Discounts, so the fixture seeds them on the subscription's Customer directly.
-            Customer = new Customer { Id = customerId, Discount = customerDiscount },
+            Customer = new Customer { Id = customerId },
             Metadata = new Dictionary<string, string>(),
             LatestInvoiceId = "inv_latest",
             // Subscription-level discounts are expanded in HandleAsync, so the fixture seeds them directly.
