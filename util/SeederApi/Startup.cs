@@ -1,4 +1,9 @@
 ﻿using System.Globalization;
+using Bit.Core.Billing.Licenses.Extensions;
+using Bit.Core.Billing.Services;
+using Bit.Core.Platform.Push;
+using Bit.Core.Platform.Push.Internal;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.SeederApi.Extensions;
 using Bit.SeederApi.Utilities;
@@ -36,6 +41,15 @@ public class Startup
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
         services.AddScoped<IPasswordHasher<Core.Entities.User>, PasswordHasher<Core.Entities.User>>();
+
+        // License infrastructure — needed to write premium license files for self-hosted validation.
+        // SingleUserScene takes ILicensingService as a required dependency, so this is always
+        // registered here. SeederApi refuses to run in production (see Configure), so the
+        // self-hosted Installation Id requirement enforced by AddPush is acceptable.
+        services.AddLicenseServices();
+        services.TryAddSingleton<IMailService, NoopMailService>();
+        services.TryAddSingleton<IPushNotificationService, MultiServicePushNotificationService>();
+        services.TryAddSingleton<ILicensingService, LicensingService>();
 
         services.AddSeederApiServices();
         services.AddScenes();

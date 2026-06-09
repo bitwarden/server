@@ -1,6 +1,11 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Billing.Models.Business;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
@@ -25,7 +30,9 @@ public struct SingleUserSceneResult
 public class SingleUserScene(
     IPasswordHasher<User> passwordHasher,
     IUserRepository userRepository,
-    IManglerService manglerService) : IScene<SingleUserScene.Request, SingleUserSceneResult>
+    IManglerService manglerService,
+    IGlobalSettings globalSettings,
+    ILicensingService licenseService) : IScene<SingleUserScene.Request, SingleUserSceneResult>
 {
     public class Request
     {
@@ -39,16 +46,36 @@ public class SingleUserScene(
 
     public async Task<SceneResult<SingleUserSceneResult>> SeedAsync(Request request)
     {
-        // Pass service to factory - factory will call Mangle()
         var (user, keys) = UserSeeder.Create(
             request.Email,
             passwordHasher,
             manglerService,
-            emailVerified: request.EmailVerified,
+            emailVerified: request.EmailVerified || request.Premium,
             premium: request.Premium,
+            maxStorageGb: request.Premium ? (short)1 : null,
             password: request.Password);
 
+        if (request.Premium)
+        {
+            user.PremiumExpirationDate = DateTime.UtcNow.AddYears(1);
+        }
+
         await userRepository.CreateAsync(user);
+
+        // Best-effort license write. Self-hosted instances hold only the public licensing
+        // certificate, so token signing throws there (by design — see LicensingService.SignLicense).
+        // Don't let that failure abort the seed; the user is already persisted.
+        if (request.Premium && CoreHelpers.SettingHasValue(globalSettings.LicenseDirectory))
+        {
+            try
+            {
+                await WriteLicenseAsync(user);
+            }
+            catch
+            {
+                // Premium license file could not be written; user still seeded with Premium=true.
+            }
+        }
 
         return new SceneResult<SingleUserSceneResult>(
             result: new SingleUserSceneResult
@@ -63,5 +90,27 @@ public class SingleUserScene(
                 DecryptedKeyB64 = keys.Key
             },
             mangleMap: manglerService.GetMangleMap());
+    }
+
+    private async Task WriteLicenseAsync(User user)
+    {
+        var token = await licenseService.CreateUserTokenAsync(user, null!);
+        if (string.IsNullOrWhiteSpace(token)) return;
+
+        var license = new UserLicense
+        {
+            LicenseType = LicenseType.User,
+            Id = user.Id,
+            Email = user.Email,
+            Name = user.Name,
+            Premium = user.Premium,
+            MaxStorageGb = user.MaxStorageGb,
+            Issued = DateTime.UtcNow,
+            Expires = user.PremiumExpirationDate?.AddDays(7),
+            Version = 1,
+            Token = token,
+        };
+
+        await licenseService.WriteUserLicenseAsync(user, license);
     }
 }

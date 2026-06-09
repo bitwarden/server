@@ -1,5 +1,7 @@
 ﻿using AutoMapper;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
+using Bit.Core.Settings;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder.Pipeline;
 using Bit.Seeder.Services;
@@ -21,4 +23,15 @@ public sealed record SeederDependencies(
     /// Set via <c>with</c> expression from UI-facing callers (e.g., CLI).
     /// </summary>
     public IProgress<SeederProgressEvent>? Progress { get; init; }
+
+    /// <summary>
+    /// Optional licensing service. When non-null and LicenseDirectory is configured,
+    /// WritePremiumUserLicenseStep writes the user license file for self-hosted validation.
+    /// </summary>
+    public ILicensingService? LicensingService { get; init; }
+
+    /// <summary>
+    /// Optional global settings. Used by WritePremiumUserLicenseStep to resolve LicenseDirectory.
+    /// </summary>
+    public GlobalSettings? GlobalSettings { get; init; }
 }

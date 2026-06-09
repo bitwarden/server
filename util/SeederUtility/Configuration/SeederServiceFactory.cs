@@ -1,5 +1,7 @@
 ﻿using AutoMapper;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
+using Bit.Core.Settings;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder.Options;
 using Bit.Seeder.Services;
@@ -36,7 +38,26 @@ internal sealed class SeederServiceScope : IDisposable
     internal IManglerService Mangler { get; }
 
     internal SeederDependencies ToDependencies()
-        => new(Db, Mapper, PasswordHasher, Mangler);
+        => new(Db, Mapper, PasswordHasher, Mangler)
+        {
+            LicensingService = TryResolveLicensingService(),
+            GlobalSettings = _scope.ServiceProvider.GetService<GlobalSettings>()
+        };
+
+    // LicensingService validates its certificate and (when self-hosted) requires a license directory
+    // in its constructor, throwing if either is missing. Treat construction failure as "no licensing"
+    // so a misconfigured environment still seeds non-premium data instead of crashing.
+    private ILicensingService? TryResolveLicensingService()
+    {
+        try
+        {
+            return _scope.ServiceProvider.GetService<ILicensingService>();
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
     private readonly ServiceProvider _provider;
 
