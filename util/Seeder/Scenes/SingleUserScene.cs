@@ -72,10 +72,10 @@ public class SingleUserScene(
             {
                 await WriteLicenseAsync(user, licenseService);
             }
-            catch (IOException) { }
-            catch (UnauthorizedAccessException) { }
-            catch (InvalidOperationException) { }
-            catch (CryptographicException) { }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or CryptographicException)
+            {
+                Console.WriteLine($"[SingleUserScene] Non-fatal license write failure for user '{user.Id}': {ex}");
+            }
         }
 
         return new SceneResult<SingleUserSceneResult>(
