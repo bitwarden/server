@@ -32,12 +32,23 @@ public static class SsoRedirectUrlBuilder
     /// <param name="email">The invited org user's email, pre-filled into the login form.</param>
     /// <param name="organizationDisplayName">The organization display name, surfaced in the toast.</param>
     /// <param name="errorCode">A constant from <see cref="ErrorCodes"/>.</param>
+    /// <param name="autoSubmit">When true, the client auto-progresses past the email-entry step
+    /// to the master-password entry step (saves a click on a flow where the redirect already
+    /// supplied the email). Emitted as <c>&amp;autoSubmit=true</c> only when true.</param>
     public static string BuildLoginRedirectUrl(
-        string vaultWithHashUrl, string email, string organizationDisplayName, string errorCode)
+        string vaultWithHashUrl,
+        string email,
+        string organizationDisplayName,
+        string errorCode,
+        bool autoSubmit = false)
     {
         var qs = $"email={Uri.EscapeDataString(email)}"
                + $"&organizationName={Uri.EscapeDataString(organizationDisplayName)}"
                + $"&error={errorCode}";
+        if (autoSubmit)
+        {
+            qs += "&autoSubmit=true";
+        }
         return $"{vaultWithHashUrl}/login?{qs}";
     }
 }

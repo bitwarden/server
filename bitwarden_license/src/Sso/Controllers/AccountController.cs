@@ -317,7 +317,8 @@ public class AccountController : Controller
                     _globalSettings.BaseServiceUri.VaultWithHash,
                     ex.UserEmail,
                     ex.OrganizationDisplayName,
-                    SsoRedirectUrlBuilder.ErrorCodes.InviteAcceptanceRequired);
+                    SsoRedirectUrlBuilder.ErrorCodes.InviteAcceptanceRequired,
+                    autoSubmit: true);
 
                 return Redirect(redirectUrl);
             }

@@ -118,6 +118,31 @@ public class SsoRedirectUrlBuilderTests
     }
 
     [Fact]
+    public void BuildLoginRedirectUrl_AutoSubmitDefault_OmitsAutoSubmitParam()
+    {
+        var url = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
+            VaultWithHash,
+            email: "user@example.com",
+            organizationDisplayName: "Acme",
+            errorCode: InviteAcceptanceRequired);
+
+        Assert.DoesNotContain("autoSubmit", url);
+    }
+
+    [Fact]
+    public void BuildLoginRedirectUrl_AutoSubmitTrue_AppendsAutoSubmitParam()
+    {
+        var url = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
+            VaultWithHash,
+            email: "user@example.com",
+            organizationDisplayName: "Acme",
+            errorCode: InviteAcceptanceRequired,
+            autoSubmit: true);
+
+        Assert.EndsWith("&autoSubmit=true", url);
+    }
+
+    [Fact]
     public void ErrorCodes_InviteAcceptanceRequired_HasStableValue()
     {
         // This value is a cross-language contract with the web client's

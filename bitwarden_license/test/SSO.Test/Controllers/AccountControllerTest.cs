@@ -279,7 +279,8 @@ public class AccountControllerTest
             "https://vault.bitwarden.com/#/login" +
             $"?email={Uri.EscapeDataString(email)}" +
             $"&organizationName={Uri.EscapeDataString(organization.Name)}" +
-            "&error=ssoOrgInviteAcceptanceRequired",
+            "&error=ssoOrgInviteAcceptanceRequired" +
+            "&autoSubmit=true",
             redirect.Url);
 
         // External auth cookie is cleared so retry attempts start fresh.
