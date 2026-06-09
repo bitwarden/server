@@ -60,7 +60,13 @@ internal sealed class WritePremiumUserLicenseStep(
 
             licenseService.WriteUserLicenseAsync(user, license).GetAwaiter().GetResult();
         }
-        catch (InvalidOperationException) { }
-        catch (System.Security.Cryptography.CryptographicException) { }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine($"[WritePremiumUserLicenseStep] Skipping premium user license write due to invalid operation: {ex.Message}");
+        }
+        catch (System.Security.Cryptography.CryptographicException ex)
+        {
+            Console.WriteLine($"[WritePremiumUserLicenseStep] Skipping premium user license write due to cryptographic error: {ex.Message}");
+        }
     }
 }
