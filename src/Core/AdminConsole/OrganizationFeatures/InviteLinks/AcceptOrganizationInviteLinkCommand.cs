@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities;
@@ -26,6 +27,7 @@ public class AcceptOrganizationInviteLinkCommand(
     IOrganizationRepository organizationRepository,
     IOrganizationUserRepository organizationUserRepository,
     IPolicyRequirementQuery policyRequirementQuery,
+    IAutomaticUserConfirmationPolicyEnforcementHandler automaticUserConfirmationPolicyEnforcementHandler,
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
     IOrganizationService organizationService,
     IStripePaymentService stripePaymentService,
@@ -71,6 +73,15 @@ public class AcceptOrganizationInviteLinkCommand(
         }
 
         var allOrganizationMemberships = await organizationUserRepository.GetManyByUserAsync(user.Id);
+
+        var autoConfirmRequirement = await policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
+        var autoConfirmError = await ValidateAutomaticUserConfirmationPolicyAsync(
+            organization, user, allOrganizationMemberships, existingOrganizationUser, autoConfirmRequirement);
+        if (autoConfirmError is not null)
+        {
+            return autoConfirmError;
+        }
+
         var singleOrganizationPolicyError = await ValidateSingleOrganizationPolicyAsync(organization.Id, user.Id, allOrganizationMemberships);
         if (singleOrganizationPolicyError is not null)
         {
@@ -90,9 +101,11 @@ public class AcceptOrganizationInviteLinkCommand(
             return new ResetPasswordKeyRequired();
         }
 
+        var deleteEmergencyAccess = autoConfirmRequirement.IsEnabled(organization.Id);
+
         var acceptResult = existingOrganizationUser is not null
-            ? await AcceptExistingInviteAsync(organization, existingOrganizationUser, user)
-            : await CreateNewMembershipAsync(organization, user);
+            ? await AcceptExistingInviteAsync(organization, existingOrganizationUser, user, deleteEmergencyAccess)
+            : await CreateNewMembershipAsync(organization, user, deleteEmergencyAccess);
         if (acceptResult.IsError)
         {
             return acceptResult;
@@ -127,7 +140,7 @@ public class AcceptOrganizationInviteLinkCommand(
         };
 
     private async Task<CommandResult<OrganizationUser>> AcceptExistingInviteAsync(
-        Organization organization, OrganizationUser existingOrganizationUser, User user)
+        Organization organization, OrganizationUser existingOrganizationUser, User user, bool deleteEmergencyAccess)
     {
         var freeAdminError = await ValidateFreeOrganizationAdminLimitAsync(organization, existingOrganizationUser, user);
         if (freeAdminError is not null)
@@ -139,12 +152,18 @@ public class AcceptOrganizationInviteLinkCommand(
         existingOrganizationUser.UserId = user.Id;
         existingOrganizationUser.Email = null;
 
+        if (deleteEmergencyAccess)
+        {
+            await deleteEmergencyAccessCommand.DeleteAllByUserIdAsync(user.Id);
+        }
+
         await organizationUserRepository.ReplaceAsync(existingOrganizationUser);
 
         return existingOrganizationUser;
     }
 
-    private async Task<CommandResult<OrganizationUser>> CreateNewMembershipAsync(Organization organization, User user)
+    private async Task<CommandResult<OrganizationUser>> CreateNewMembershipAsync(
+        Organization organization, User user, bool deleteEmergencyAccess)
     {
         var occupiedSeatCount = (await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)).Total;
         if (!OrganizationSeatAvailability.HasAvailableSeats(organization, occupiedSeatCount))
@@ -168,6 +187,12 @@ public class AcceptOrganizationInviteLinkCommand(
             AccessSecretsManager = accessSecretsManager,
         };
         newOrganizationUser.SetNewId();
+
+        if (deleteEmergencyAccess)
+        {
+            await deleteEmergencyAccessCommand.DeleteAllByUserIdAsync(user.Id);
+        }
+
         await organizationUserRepository.CreateAsync(newOrganizationUser);
 
         return newOrganizationUser;
@@ -207,16 +232,7 @@ public class AcceptOrganizationInviteLinkCommand(
                 organization.Id, user.Id, resetPasswordKey, user.Id);
         }
 
-        // The Automatic User Confirmation policy requires members to have no emergency access contacts.
-        // Delete them now, before the user may be auto-confirmed, mirroring AcceptOrgUserCommand.
-        var autoConfirmRequirement = await policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
-        if (autoConfirmRequirement.IsEnabled(organization.Id))
-        {
-            await deleteEmergencyAccessCommand.DeleteAllByUserIdAsync(user.Id);
-        }
-
         // Triggers the Automatic User Confirmation policy on connected admin clients.
-        // TODO: Revisit when invite-link-level auto-confirm is introduced (milestone 3).
         await pushAutoConfirmNotificationCommand.PushAsync(user.Id, organization.Id);
 
         var admins = await organizationUserRepository.GetManyByMinimumRoleAsync(organization.Id, OrganizationUserType.Admin);
@@ -225,6 +241,29 @@ public class AcceptOrganizationInviteLinkCommand(
         {
             await mailService.SendOrganizationAcceptedEmailAsync(organization, user.Email, adminEmails);
         }
+    }
+
+    private async Task<Error?> ValidateAutomaticUserConfirmationPolicyAsync(
+        Organization organization, User user,
+        ICollection<OrganizationUser> allOrganizationMemberships,
+        OrganizationUser? existingOrganizationUser,
+        AutomaticUserConfirmationPolicyRequirement autoConfirmRequirement)
+    {
+        if (!allOrganizationMemberships.Any(x => x.OrganizationId == organization.Id
+                && (x.UserId == user.Id || string.Equals(x.Email, user.Email, StringComparison.OrdinalIgnoreCase))))
+        {
+            // The handler requires the target org membership to be present; stub it for new members.
+            allOrganizationMemberships.Add(existingOrganizationUser
+                ?? new OrganizationUser { OrganizationId = organization.Id, UserId = user.Id });
+        }
+
+        var request = new AutomaticUserConfirmationPolicyEnforcementRequest(
+            organization.Id, allOrganizationMemberships, user);
+
+        var validationResult = await automaticUserConfirmationPolicyEnforcementHandler
+            .IsCompliantAsync(request, autoConfirmRequirement);
+
+        return validationResult.Match<Error?>(error => error, _ => null);
     }
 
     private async Task<Error?> ValidateSingleOrganizationPolicyAsync(
