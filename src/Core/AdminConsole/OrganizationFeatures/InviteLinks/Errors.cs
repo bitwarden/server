@@ -23,9 +23,6 @@ public record OrganizationAccessRevoked()
 public record AlreadyOrganizationMember()
     : BadRequestError("You are already a member of this organization.");
 
-public record TwoFactorRequiredToJoin()
-    : BadRequestError("You cannot join this organization until you enable two-step login on your user account.");
-
 public record ResetPasswordKeyRequired()
     : BadRequestError("Master Password reset is required, but not provided.");
 
@@ -37,3 +34,6 @@ public record SeatAddFailed()
 
 public record OnlyOneFreeOrganizationAdminAllowed()
     : BadRequestError("You can only be an admin of one free organization.");
+
+public record ProviderUsersCannotAcceptInviteLink()
+    : BadRequestError("Provider users cannot join organizations via invite link.");

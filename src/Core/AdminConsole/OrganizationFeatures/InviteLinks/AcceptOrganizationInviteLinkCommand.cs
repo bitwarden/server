@@ -1,16 +1,15 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
-using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -26,9 +25,9 @@ public class AcceptOrganizationInviteLinkCommand(
     IOrganizationInviteLinkRepository organizationInviteLinkRepository,
     IOrganizationRepository organizationRepository,
     IOrganizationUserRepository organizationUserRepository,
+    IProviderUserRepository providerUserRepository,
     IPolicyRequirementQuery policyRequirementQuery,
-    IAutomaticUserConfirmationPolicyEnforcementHandler automaticUserConfirmationPolicyEnforcementHandler,
-    ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+    IAcceptOrganizationMembershipValidator acceptOrganizationMembershipValidator,
     IOrganizationService organizationService,
     IStripePaymentService stripePaymentService,
     IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand,
@@ -64,6 +63,12 @@ public class AcceptOrganizationInviteLinkCommand(
             return new EmailDomainNotAllowed();
         }
 
+        // Provider users cannot accept invite links
+        if ((await providerUserRepository.GetManyByUserAsync(user.Id)).Count != 0)
+        {
+            return new ProviderUsersCannotAcceptInviteLink();
+        }
+
         var existingOrganizationUser = await ResolveExistingOrganizationUserAsync(organization, user);
 
         var membershipStatusError = ValidateExistingMembershipStatus(existingOrganizationUser);
@@ -74,24 +79,18 @@ public class AcceptOrganizationInviteLinkCommand(
 
         var allOrganizationMemberships = await organizationUserRepository.GetManyByUserAsync(user.Id);
 
-        var autoConfirmRequirement = await policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
-        var autoConfirmError = await ValidateAutomaticUserConfirmationPolicyAsync(
-            organization, user, allOrganizationMemberships, existingOrganizationUser, autoConfirmRequirement);
-        if (autoConfirmError is not null)
+        var membershipValidationRequest = new AcceptOrganizationMembershipValidationRequest
         {
-            return autoConfirmError;
-        }
-
-        var singleOrganizationPolicyError = await ValidateSingleOrganizationPolicyAsync(organization.Id, user.Id, allOrganizationMemberships);
-        if (singleOrganizationPolicyError is not null)
+            OrganizationId = organization.Id,
+            User = user,
+            AllOrganizationMemberships = allOrganizationMemberships,
+            ExistingMembership = existingOrganizationUser,
+        };
+        var membershipValidationResult = await acceptOrganizationMembershipValidator
+            .ValidateAsync(membershipValidationRequest);
+        if (membershipValidationResult.IsError)
         {
-            return singleOrganizationPolicyError;
-        }
-
-        var twoFactorAuthenticationPolicyError = await ValidateTwoFactorAuthenticationPolicyAsync(user, organization.Id);
-        if (twoFactorAuthenticationPolicyError is not null)
-        {
-            return twoFactorAuthenticationPolicyError;
+            return membershipValidationResult.AsError;
         }
 
         var resetPasswordRequirement = await policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id);
@@ -101,7 +100,7 @@ public class AcceptOrganizationInviteLinkCommand(
             return new ResetPasswordKeyRequired();
         }
 
-        var deleteEmergencyAccess = autoConfirmRequirement.IsEnabled(organization.Id);
+        var deleteEmergencyAccess = membershipValidationResult.Request.RequiresEmergencyAccessDeletion;
 
         var acceptResult = existingOrganizationUser is not null
             ? await AcceptExistingInviteAsync(organization, existingOrganizationUser, user, deleteEmergencyAccess)
@@ -241,51 +240,6 @@ public class AcceptOrganizationInviteLinkCommand(
         {
             await mailService.SendOrganizationAcceptedEmailAsync(organization, user.Email, adminEmails);
         }
-    }
-
-    private async Task<Error?> ValidateAutomaticUserConfirmationPolicyAsync(
-        Organization organization, User user,
-        ICollection<OrganizationUser> allOrganizationMemberships,
-        OrganizationUser? existingOrganizationUser,
-        AutomaticUserConfirmationPolicyRequirement autoConfirmRequirement)
-    {
-        if (!allOrganizationMemberships.Any(x => x.OrganizationId == organization.Id
-                && (x.UserId == user.Id || string.Equals(x.Email, user.Email, StringComparison.OrdinalIgnoreCase))))
-        {
-            // The handler requires the target org membership to be present; stub it for new members.
-            allOrganizationMemberships.Add(existingOrganizationUser
-                ?? new OrganizationUser { OrganizationId = organization.Id, UserId = user.Id });
-        }
-
-        var request = new AutomaticUserConfirmationPolicyEnforcementRequest(
-            organization.Id, allOrganizationMemberships, user);
-
-        var validationResult = await automaticUserConfirmationPolicyEnforcementHandler
-            .IsCompliantAsync(request, autoConfirmRequirement);
-
-        return validationResult.Match<Error?>(error => error, _ => null);
-    }
-
-    private async Task<Error?> ValidateSingleOrganizationPolicyAsync(
-        Guid organizationId, Guid userId, ICollection<OrganizationUser> allOrgUsers)
-    {
-        var singleOrgRequirement =
-            await policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(userId);
-        return singleOrgRequirement.CanJoinOrganization(organizationId, allOrgUsers);
-    }
-
-    private async Task<Error?> ValidateTwoFactorAuthenticationPolicyAsync(User user, Guid organizationId)
-    {
-        if (await twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
-        {
-            return null;
-        }
-
-        var twoFactorRequirement =
-            await policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
-        return twoFactorRequirement.IsTwoFactorRequiredForOrganization(organizationId)
-            ? new TwoFactorRequiredToJoin()
-            : null;
     }
 
     // An email invite can carry an Admin/Owner role. Enforce the "one admin of a Free org"
