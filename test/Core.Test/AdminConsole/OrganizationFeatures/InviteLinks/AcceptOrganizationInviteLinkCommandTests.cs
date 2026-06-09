@@ -467,7 +467,7 @@ public class AcceptOrganizationInviteLinkCommandTests
     [Theory]
     [BitAutoData(typeof(BadRequestException))]
     [BitAutoData(typeof(GatewayException))]
-    public async Task AcceptAsync_WithAutoAddSeatsBusinessFailure_ReturnsSeatAddFailed(
+    public async Task AcceptAsync_WithAutoAddSeats_BusinessFailure_ReturnsSeatAddFailed(
         Type exceptionType,
         Organization organization,
         OrganizationInviteLink inviteLink,
@@ -500,7 +500,7 @@ public class AcceptOrganizationInviteLinkCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task AcceptAsync_WithAutoAddSeatsUnhandledException_Propagates(
+    public async Task AcceptAsync_WithAutoAddSeats_UnhandledException_Propagates(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
@@ -632,7 +632,7 @@ public class AcceptOrganizationInviteLinkCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task AcceptAsync_WithAutoConfirmPolicyEnabled_DeletesEmergencyAccess(
+    public async Task AcceptAsync_WithAutoConfirmPolicy_Enabled_DeletesEmergencyAccess(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
@@ -651,7 +651,7 @@ public class AcceptOrganizationInviteLinkCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task AcceptAsync_WithAutoConfirmPolicyDisabled_DoesNotDeleteEmergencyAccess(
+    public async Task AcceptAsync_WithAutoConfirmPolicy_Disabled_DoesNotDeleteEmergencyAccess(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
@@ -669,7 +669,7 @@ public class AcceptOrganizationInviteLinkCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task AcceptAsync_WithAutoConfirmPolicy_AndProviderUser_BlocksEaDeleteAndPersist(
+    public async Task AcceptAsync_WithAutoConfirmPolicy_AndProviderUser_ReturnsError(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
@@ -699,7 +699,7 @@ public class AcceptOrganizationInviteLinkCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task AcceptAsync_WithAutoConfirmPolicy_AndMultiOrgUser_BlocksEaDeleteAndPersist(
+    public async Task AcceptAsync_WithAutoConfirmPolicy_AndMultiOrgUser_ReturnsError(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
@@ -729,7 +729,7 @@ public class AcceptOrganizationInviteLinkCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task AcceptAsync_WithAutoConfirmPolicy_EaDeleteThrows_PropagatesWithoutPersisting(
+    public async Task AcceptAsync_WithAutoConfirmPolicy_EaDeleteThrows_ThrowsWithoutPersisting(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
