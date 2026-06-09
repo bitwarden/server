@@ -32,14 +32,14 @@ public class OrganizationDeleteCommandTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
         var cipherService = sutProvider.GetDependency<ICipherService>();
-        var cleanupRepository = sutProvider.GetDependency<IOrganizationEventCleanupRepository>();
+        var cleanupRepository = sutProvider.GetDependency<IOrganizationDeleteTaskRepository>();
 
         await sutProvider.Sut.DeleteAsync(organization);
 
         await cipherService.Received(1).DeleteAttachmentsForOrganizationAsync(organization.Id);
         await organizationRepository.Received(1).DeleteAsync(organization);
         await cleanupRepository.Received(1).CreateAsync(
-            Arg.Is<OrganizationEventCleanup>(c => c.OrganizationId == organization.Id));
+            Arg.Is<OrganizationDeleteTask>(c => c.OrganizationId == organization.Id));
         await applicationCacheService.Received(1).DeleteOrganizationAbilityAsync(organization.Id);
     }
 

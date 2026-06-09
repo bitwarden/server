@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationEventCleanup_UpdateError]
+CREATE PROCEDURE [dbo].[OrganizationDeleteTask_UpdateError]
     @Id UNIQUEIDENTIFIER,
     @Message NVARCHAR(MAX),
     @Now DATETIME2(7)
@@ -7,7 +7,7 @@ BEGIN
     SET NOCOUNT ON
 
     UPDATE
-        [dbo].[OrganizationEventCleanup]
+        [dbo].[OrganizationDeleteTask]
     SET
         [FailureCount] = [FailureCount] + 1,
         [LastError] = @Message,

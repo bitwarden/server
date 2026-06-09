@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationEventCleanup_UpdateProgress]
+CREATE PROCEDURE [dbo].[OrganizationDeleteTask_UpdateProgress]
     @Id UNIQUEIDENTIFIER,
     @Delta BIGINT,
     @Now DATETIME2(7)
@@ -7,9 +7,9 @@ BEGIN
     SET NOCOUNT ON
 
     UPDATE
-        [dbo].[OrganizationEventCleanup]
+        [dbo].[OrganizationDeleteTask]
     SET
-        [EventsDeletedCount] = [EventsDeletedCount] + @Delta,
+        [ItemsDeletedCount] = [ItemsDeletedCount] + @Delta,
         [RevisionDate] = @Now
     WHERE
         [Id] = @Id

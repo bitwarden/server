@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using Bit.Core;
+using Bit.Core.Dirt.Repositories;
 using Bit.Core.Jobs;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -12,12 +13,12 @@ public class CleanUpOrganizationEventsJob : BaseJob
 {
     private static readonly TimeSpan _runBudget = TimeSpan.FromMinutes(4);
 
-    private readonly IOrganizationEventCleanupRepository _cleanupRepository;
+    private readonly IOrganizationDeleteTaskRepository _cleanupRepository;
     private readonly IEventRepository _eventRepository;
     private readonly IFeatureService _featureService;
 
     public CleanUpOrganizationEventsJob(
-        IOrganizationEventCleanupRepository cleanupRepository,
+        IOrganizationDeleteTaskRepository cleanupRepository,
         IEventRepository eventRepository,
         IFeatureService featureService,
         ILogger<CleanUpOrganizationEventsJob> logger)

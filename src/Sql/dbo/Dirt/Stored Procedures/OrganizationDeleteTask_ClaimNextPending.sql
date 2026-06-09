@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationEventCleanup_ClaimNextPending]
+CREATE PROCEDURE [dbo].[OrganizationDeleteTask_ClaimNextPending]
     @Now DATETIME2(7),
     @StaleLeaseThreshold DATETIME2(7),
     @MaxFailureCount INT
@@ -10,15 +10,16 @@ BEGIN
         SELECT TOP 1
             [Id],
             [OrganizationId],
+            [TaskType],
             [CreationDate],
             [RevisionDate],
             [StartDate],
             [CompletedDate],
-            [EventsDeletedCount],
+            [ItemsDeletedCount],
             [FailureCount],
             [LastError]
         FROM
-            [dbo].[OrganizationEventCleanup] WITH (UPDLOCK, READPAST)
+            [dbo].[OrganizationDeleteTask] WITH (UPDLOCK, READPAST)
         WHERE
             [CompletedDate] IS NULL
             AND ([StartDate] IS NULL OR [RevisionDate] < @StaleLeaseThreshold)
@@ -33,11 +34,12 @@ BEGIN
     OUTPUT
         inserted.[Id],
         inserted.[OrganizationId],
+        inserted.[TaskType],
         inserted.[CreationDate],
         inserted.[RevisionDate],
         inserted.[StartDate],
         inserted.[CompletedDate],
-        inserted.[EventsDeletedCount],
+        inserted.[ItemsDeletedCount],
         inserted.[FailureCount],
         inserted.[LastError]
 END

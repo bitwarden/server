@@ -1,5 +1,7 @@
 ﻿using Bit.Admin.Jobs;
 using Bit.Core;
+using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -11,7 +13,7 @@ namespace Admin.Test.Jobs;
 
 public class CleanUpOrganizationEventsJobTests
 {
-    private readonly IOrganizationEventCleanupRepository _cleanupRepository;
+    private readonly IOrganizationDeleteTaskRepository _cleanupRepository;
     private readonly IEventRepository _eventRepository;
     private readonly IFeatureService _featureService;
     private readonly ILogger<CleanUpOrganizationEventsJob> _logger;
@@ -19,7 +21,7 @@ public class CleanUpOrganizationEventsJobTests
 
     public CleanUpOrganizationEventsJobTests()
     {
-        _cleanupRepository = Substitute.For<IOrganizationEventCleanupRepository>();
+        _cleanupRepository = Substitute.For<IOrganizationDeleteTaskRepository>();
         _eventRepository = Substitute.For<IEventRepository>();
         _featureService = Substitute.For<IFeatureService>();
         _logger = Substitute.For<ILogger<CleanUpOrganizationEventsJob>>();
@@ -47,7 +49,7 @@ public class CleanUpOrganizationEventsJobTests
     [Fact]
     public async Task Execute_NoPendingCleanup_ReturnsEarly()
     {
-        _cleanupRepository.ClaimNextPendingAsync().Returns((OrganizationEventCleanup?)null);
+        _cleanupRepository.ClaimNextPendingAsync().Returns((OrganizationDeleteTask?)null);
         var context = CreateContext();
 
         await _sut.Execute(context);
@@ -131,7 +133,7 @@ public class CleanUpOrganizationEventsJobTests
         await _cleanupRepository.Received(1).UpdateErrorAsync(pending.Id, expectedTruncated);
     }
 
-    private static OrganizationEventCleanup CreatePending() => new()
+    private static OrganizationDeleteTask CreatePending() => new()
     {
         Id = Guid.NewGuid(),
         OrganizationId = Guid.NewGuid(),

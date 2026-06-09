@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationEventCleanup_UpdateCompleted]
+CREATE PROCEDURE [dbo].[OrganizationDeleteTask_UpdateCompleted]
     @Id UNIQUEIDENTIFIER,
     @Now DATETIME2(7)
 AS
@@ -6,7 +6,7 @@ BEGIN
     SET NOCOUNT ON
 
     UPDATE
-        [dbo].[OrganizationEventCleanup]
+        [dbo].[OrganizationDeleteTask]
     SET
         [CompletedDate] = @Now,
         [RevisionDate] = @Now

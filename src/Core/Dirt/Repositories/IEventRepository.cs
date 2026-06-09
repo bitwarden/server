@@ -32,4 +32,10 @@ public interface IEventRepository
     Task CreateManyAsync(IEnumerable<IEvent> e);
     Task<PagedResult<IEvent>> GetManyByOrganizationServiceAccountAsync(Guid organizationId, Guid serviceAccountId,
         DateTime startDate, DateTime endDate, PageOptions pageOptions);
+
+    /// <summary>
+    /// Deletes all events for the given organization and returns the number deleted.
+    /// Used to purge orphaned event logs when an organization is deleted (GDPR).
+    /// </summary>
+    Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId);
 }

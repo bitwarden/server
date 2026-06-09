@@ -1,58 +1,62 @@
--- OrganizationEventCleanup
+-- OrganizationDeleteTask
 
 -- Table
-IF OBJECT_ID('[dbo].[OrganizationEventCleanup]') IS NULL
+IF OBJECT_ID('[dbo].[OrganizationDeleteTask]') IS NULL
 BEGIN
-    CREATE TABLE [dbo].[OrganizationEventCleanup] (
+    CREATE TABLE [dbo].[OrganizationDeleteTask] (
         [Id]                 UNIQUEIDENTIFIER NOT NULL,
         [OrganizationId]     UNIQUEIDENTIFIER NOT NULL,
-        [CreationDate]       DATETIME2 (7)    NOT NULL,
-        [RevisionDate]       DATETIME2 (7)    NULL,
-        [StartDate]          DATETIME2 (7)    NULL,
-        [CompletedDate]      DATETIME2 (7)    NULL,
-        [EventsDeletedCount] BIGINT           NOT NULL CONSTRAINT [DF_OrganizationEventCleanup_EventsDeletedCount] DEFAULT (0),
-        [FailureCount]       INT              NOT NULL CONSTRAINT [DF_OrganizationEventCleanup_FailureCount] DEFAULT (0),
+        [TaskType]           TINYINT          NOT NULL CONSTRAINT [DF_OrganizationDeleteTask_TaskType] DEFAULT (0),
+        [CreationDate]       DATETIME2(7)     NOT NULL,
+        [RevisionDate]       DATETIME2(7)     NULL,
+        [StartDate]          DATETIME2(7)     NULL,
+        [CompletedDate]      DATETIME2(7)    NULL,
+        [ItemsDeletedCount]  BIGINT           NOT NULL CONSTRAINT [DF_OrganizationDeleteTask_ItemsDeletedCount] DEFAULT (0),
+        [FailureCount]       INT              NOT NULL CONSTRAINT [DF_OrganizationDeleteTask_FailureCount] DEFAULT (0),
         [LastError]          NVARCHAR(MAX)    NULL,
-        CONSTRAINT [PK_OrganizationEventCleanup] PRIMARY KEY CLUSTERED ([Id] ASC)
+        CONSTRAINT [PK_OrganizationDeleteTask] PRIMARY KEY CLUSTERED ([Id] ASC)
     );
 END
 GO
 
 -- Index
-IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_OrganizationEventCleanup_CompletedDate_CreationDate')
+IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_OrganizationDeleteTask_CompletedDate_CreationDate')
 BEGIN
-    CREATE NONCLUSTERED INDEX [IX_OrganizationEventCleanup_CompletedDate_CreationDate]
-        ON [dbo].[OrganizationEventCleanup]([CompletedDate] ASC, [CreationDate] ASC);
+    CREATE NONCLUSTERED INDEX [IX_OrganizationDeleteTask_CompletedDate_CreationDate]
+        ON [dbo].[OrganizationDeleteTask]([CompletedDate] ASC, [CreationDate] ASC);
 END
 GO
 
 
 -- Stored Procedures: Create
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationEventCleanup_Create]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationDeleteTask_Create]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
+    @TaskType TINYINT,
     @CreationDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
 
-    INSERT INTO [dbo].[OrganizationEventCleanup]
+    INSERT INTO [dbo].[OrganizationDeleteTask]
     (
         [Id],
         [OrganizationId],
+        [TaskType],
         [CreationDate]
     )
     VALUES
     (
         @Id,
         @OrganizationId,
+        @TaskType,
         @CreationDate
     )
 END
 GO
 
 -- Stored Procedures: ClaimNextPending
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationEventCleanup_ClaimNextPending]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationDeleteTask_ClaimNextPending]
     @Now DATETIME2(7),
     @StaleLeaseThreshold DATETIME2(7),
     @MaxFailureCount INT
@@ -64,15 +68,16 @@ BEGIN
         SELECT TOP 1
             [Id],
             [OrganizationId],
+            [TaskType],
             [CreationDate],
             [RevisionDate],
             [StartDate],
             [CompletedDate],
-            [EventsDeletedCount],
+            [ItemsDeletedCount],
             [FailureCount],
             [LastError]
         FROM
-            [dbo].[OrganizationEventCleanup] WITH (UPDLOCK, READPAST)
+            [dbo].[OrganizationDeleteTask] WITH (UPDLOCK, READPAST)
         WHERE
             [CompletedDate] IS NULL
             AND ([StartDate] IS NULL OR [RevisionDate] < @StaleLeaseThreshold)
@@ -87,18 +92,19 @@ BEGIN
     OUTPUT
         inserted.[Id],
         inserted.[OrganizationId],
+        inserted.[TaskType],
         inserted.[CreationDate],
         inserted.[RevisionDate],
         inserted.[StartDate],
         inserted.[CompletedDate],
-        inserted.[EventsDeletedCount],
+        inserted.[ItemsDeletedCount],
         inserted.[FailureCount],
         inserted.[LastError]
 END
 GO
 
 -- Stored Procedures: UpdateProgress
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationEventCleanup_UpdateProgress]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationDeleteTask_UpdateProgress]
     @Id UNIQUEIDENTIFIER,
     @Delta BIGINT,
     @Now DATETIME2(7)
@@ -107,9 +113,9 @@ BEGIN
     SET NOCOUNT ON
 
     UPDATE
-        [dbo].[OrganizationEventCleanup]
+        [dbo].[OrganizationDeleteTask]
     SET
-        [EventsDeletedCount] = [EventsDeletedCount] + @Delta,
+        [ItemsDeletedCount] = [ItemsDeletedCount] + @Delta,
         [RevisionDate] = @Now
     WHERE
         [Id] = @Id
@@ -117,7 +123,7 @@ END
 GO
 
 -- Stored Procedures: UpdateError
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationEventCleanup_UpdateError]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationDeleteTask_UpdateError]
     @Id UNIQUEIDENTIFIER,
     @Message NVARCHAR(MAX),
     @Now DATETIME2(7)
@@ -126,7 +132,7 @@ BEGIN
     SET NOCOUNT ON
 
     UPDATE
-        [dbo].[OrganizationEventCleanup]
+        [dbo].[OrganizationDeleteTask]
     SET
         [FailureCount] = [FailureCount] + 1,
         [LastError] = @Message,
@@ -137,7 +143,7 @@ END
 GO
 
 -- Stored Procedures: UpdateCompleted
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationEventCleanup_UpdateCompleted]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationDeleteTask_UpdateCompleted]
     @Id UNIQUEIDENTIFIER,
     @Now DATETIME2(7)
 AS
@@ -145,7 +151,7 @@ BEGIN
     SET NOCOUNT ON
 
     UPDATE
-        [dbo].[OrganizationEventCleanup]
+        [dbo].[OrganizationDeleteTask]
     SET
         [CompletedDate] = @Now,
         [RevisionDate] = @Now

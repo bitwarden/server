@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Settings;
@@ -8,31 +8,31 @@ using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Dirt.Repositories;
 
-public class OrganizationEventCleanupRepository : BaseRepository, IOrganizationEventCleanupRepository
+public class OrganizationDeleteTaskRepository : BaseRepository, IOrganizationDeleteTaskRepository
 {
     private const int LeaseDurationMinutes = 10;
     private const int MaxFailureCount = 5;
 
-    public OrganizationEventCleanupRepository(GlobalSettings globalSettings)
+    public OrganizationDeleteTaskRepository(GlobalSettings globalSettings)
         : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     { }
 
-    public async Task CreateAsync(OrganizationEventCleanup cleanup)
+    public async Task CreateAsync(OrganizationDeleteTask task)
     {
-        cleanup.SetNewId();
+        task.SetNewId();
         using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
-            "[dbo].[OrganizationEventCleanup_Create]",
-            new { cleanup.Id, cleanup.OrganizationId, cleanup.CreationDate },
+            "[dbo].[OrganizationDeleteTask_Create]",
+            new { task.Id, task.OrganizationId, task.TaskType, task.CreationDate },
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task<OrganizationEventCleanup?> ClaimNextPendingAsync()
+    public async Task<OrganizationDeleteTask?> ClaimNextPendingAsync()
     {
         var now = DateTime.UtcNow;
         using var connection = new SqlConnection(ConnectionString);
-        return await connection.QuerySingleOrDefaultAsync<OrganizationEventCleanup>(
-            "[dbo].[OrganizationEventCleanup_ClaimNextPending]",
+        return await connection.QuerySingleOrDefaultAsync<OrganizationDeleteTask>(
+            "[dbo].[OrganizationDeleteTask_ClaimNextPending]",
             new { Now = now, StaleLeaseThreshold = now.AddMinutes(-LeaseDurationMinutes), MaxFailureCount },
             commandType: CommandType.StoredProcedure);
     }
@@ -41,7 +41,7 @@ public class OrganizationEventCleanupRepository : BaseRepository, IOrganizationE
     {
         using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
-            "[dbo].[OrganizationEventCleanup_UpdateProgress]",
+            "[dbo].[OrganizationDeleteTask_UpdateProgress]",
             new { Id = id, Delta = delta, Now = DateTime.UtcNow },
             commandType: CommandType.StoredProcedure);
     }
@@ -50,7 +50,7 @@ public class OrganizationEventCleanupRepository : BaseRepository, IOrganizationE
     {
         using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
-            "[dbo].[OrganizationEventCleanup_UpdateError]",
+            "[dbo].[OrganizationDeleteTask_UpdateError]",
             new { Id = id, Message = message, Now = DateTime.UtcNow },
             commandType: CommandType.StoredProcedure);
     }
@@ -59,7 +59,7 @@ public class OrganizationEventCleanupRepository : BaseRepository, IOrganizationE
     {
         using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
-            "[dbo].[OrganizationEventCleanup_UpdateCompleted]",
+            "[dbo].[OrganizationDeleteTask_UpdateCompleted]",
             new { Id = id, Now = DateTime.UtcNow },
             commandType: CommandType.StoredProcedure);
     }
