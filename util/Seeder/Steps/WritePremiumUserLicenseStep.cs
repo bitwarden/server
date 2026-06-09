@@ -68,5 +68,13 @@ internal sealed class WritePremiumUserLicenseStep(
         {
             Console.WriteLine($"[WritePremiumUserLicenseStep] Skipping premium user license write due to cryptographic error: {ex.Message}");
         }
+        catch (IOException ex)
+        {
+            Console.WriteLine($"[WritePremiumUserLicenseStep] Skipping premium user license write due to I/O error: {ex.Message}");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Console.WriteLine($"[WritePremiumUserLicenseStep] Skipping premium user license write due to access error: {ex.Message}");
+        }
     }
 }
