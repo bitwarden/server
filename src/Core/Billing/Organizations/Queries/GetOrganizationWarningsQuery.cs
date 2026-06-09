@@ -342,6 +342,28 @@ public class GetOrganizationWarningsQuery(
             return null;
         }
 
+        var assignment = await assignmentRepository.GetByOrganizationIdAsync(organization.Id);
+
+        if (assignment == null)
+        {
+            return null;
+        }
+
+        var cohort = await cohortRepository.GetByIdAsync(assignment.CohortId);
+
+        // A null MigrationPathId is a churn-only cohort, which never schedules a price increase.
+        if (cohort?.MigrationPathId == null)
+        {
+            return null;
+        }
+
+        var migrationPath = MigrationPaths.FromId(cohort.MigrationPathId.Value);
+
+        if (migrationPath == null)
+        {
+            return null;
+        }
+
         var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
             new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
 
@@ -363,28 +385,6 @@ public class GetOrganizationWarningsQuery(
             .MinBy(phase => phase.StartDate);
 
         if (upcomingPhase == null)
-        {
-            return null;
-        }
-
-        var assignment = await assignmentRepository.GetByOrganizationIdAsync(organization.Id);
-
-        if (assignment == null)
-        {
-            return null;
-        }
-
-        var cohort = await cohortRepository.GetByIdAsync(assignment.CohortId);
-
-        // A null MigrationPathId is a churn-only cohort, which never schedules a price increase.
-        if (cohort?.MigrationPathId == null)
-        {
-            return null;
-        }
-
-        var migrationPath = MigrationPaths.FromId(cohort.MigrationPathId.Value);
-
-        if (migrationPath == null)
         {
             return null;
         }

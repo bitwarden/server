@@ -1325,8 +1325,6 @@ public class GetOrganizationWarningsQueryTests
         var response = await sutProvider.Sut.Run(organization);
 
         Assert.Null(response.ScheduledPriceIncrease);
-        await sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
-            .DidNotReceive().GetByOrganizationIdAsync(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData]
@@ -1366,6 +1364,8 @@ public class GetOrganizationWarningsQueryTests
         var response = await sutProvider.Sut.Run(organization);
 
         Assert.Null(response.ScheduledPriceIncrease);
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .DidNotReceive().ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>());
     }
 
     [Theory]
