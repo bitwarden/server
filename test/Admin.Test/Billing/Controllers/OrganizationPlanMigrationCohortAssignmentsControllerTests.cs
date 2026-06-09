@@ -19,11 +19,8 @@ namespace Admin.Test.Billing.Controllers;
 [SutProviderCustomize]
 public class OrganizationPlanMigrationCohortAssignmentsControllerTests
 {
-    private static IFormFile CsvFile(string content)
-    {
-        var bytes = Encoding.UTF8.GetBytes(content);
-        return new FormFile(new MemoryStream(bytes), 0, bytes.Length, "File", "cohorts.csv");
-    }
+    private static IFormFile CsvFile(Stream stream) =>
+        new FormFile(stream, 0, stream.Length, "File", "cohorts.csv");
 
     private static void EnableFlag(SutProvider<OrganizationPlanMigrationCohortAssignmentsController> sut) =>
         sut.GetDependency<IFeatureService>()
@@ -58,7 +55,8 @@ public class OrganizationPlanMigrationCohortAssignmentsControllerTests
             .Run(Arg.Any<IFormFile>())
             .Returns(commandResult);
 
-        var model = new BulkAssignmentUploadModel { File = CsvFile("OrganizationId,CohortName\n") };
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes("OrganizationId,CohortName\n"));
+        var model = new BulkAssignmentUploadModel { File = CsvFile(stream) };
         var result = await sutProvider.Sut.Upload(model);
 
         var view = Assert.IsType<ViewResult>(result);
@@ -83,7 +81,8 @@ public class OrganizationPlanMigrationCohortAssignmentsControllerTests
             .Run(Arg.Any<IFormFile>())
             .Returns(commandResult);
 
-        var model = new BulkAssignmentUploadModel { File = CsvFile("OrganizationId,CohortName\n") };
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes("OrganizationId,CohortName\n"));
+        var model = new BulkAssignmentUploadModel { File = CsvFile(stream) };
         var result = await sutProvider.Sut.Upload(model);
 
         var view = Assert.IsType<ViewResult>(result);
@@ -104,7 +103,8 @@ public class OrganizationPlanMigrationCohortAssignmentsControllerTests
             .Run(Arg.Any<IFormFile>())
             .Returns(commandResult);
 
-        var model = new BulkAssignmentUploadModel { File = CsvFile("OrganizationId,CohortName\n") };
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes("OrganizationId,CohortName\n"));
+        var model = new BulkAssignmentUploadModel { File = CsvFile(stream) };
         var result = await sutProvider.Sut.Upload(model);
 
         var view = Assert.IsType<ViewResult>(result);

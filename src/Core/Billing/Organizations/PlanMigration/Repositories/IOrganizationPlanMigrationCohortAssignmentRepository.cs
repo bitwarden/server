@@ -12,7 +12,7 @@ public interface IOrganizationPlanMigrationCohortAssignmentRepository
     /// <summary>
     /// Returns the number of assignments in the given cohort that have left the Pending state.
     /// For Migration cohorts (MigrationPathId IS NOT NULL), this counts assignments with a
-    /// ScheduledDate set (covers both Scheduled and Migrated). For Churn-only cohorts
+    /// ScheduledDate or MigratedDate set (covers both Scheduled and already-Migrated). For Churn-only cohorts
     /// (MigrationPathId IS NULL), this counts assignments with a ChurnDiscountAppliedDate set
     /// (redeemed save-offers). A non-zero count means the cohort has historical activity:
     /// deletion is refused and the migration path is locked against further edits.

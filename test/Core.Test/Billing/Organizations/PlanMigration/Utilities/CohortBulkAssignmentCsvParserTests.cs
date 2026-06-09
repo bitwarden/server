@@ -7,20 +7,18 @@ namespace Bit.Core.Test.Billing.Organizations.PlanMigration.Utilities;
 
 public class CohortBulkAssignmentCsvParserTests
 {
-    private static IFormFile Csv(string content)
-    {
-        var bytes = Encoding.UTF8.GetBytes(content);
-        return new FormFile(new MemoryStream(bytes), 0, bytes.Length, "File", "cohorts.csv");
-    }
+    private static IFormFile Csv(Stream stream) =>
+        new FormFile(stream, 0, stream.Length, "File", "cohorts.csv");
 
     private readonly CohortBulkAssignmentCsvParser _sut = new();
 
     [Fact]
     public void Parse_ValidRows_ReturnsRowsNoErrors()
     {
-        var result = _sut.Parse(Csv(
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(
             "OrganizationId,CohortName\n" +
             "11111111-1111-1111-1111-111111111111,A1 (a)\n"));
+        var result = _sut.Parse(Csv(stream));
 
         Assert.Empty(result.Errors);
         var row = Assert.Single(result.Rows);
@@ -32,9 +30,10 @@ public class CohortBulkAssignmentCsvParserTests
     [Fact]
     public void Parse_EmptyCohortCell_IsSentinelNotError()
     {
-        var result = _sut.Parse(Csv(
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(
             "OrganizationId,CohortName\n" +
             "11111111-1111-1111-1111-111111111111,\n"));
+        var result = _sut.Parse(Csv(stream));
 
         Assert.Empty(result.Errors);
         var row = Assert.Single(result.Rows);
@@ -44,9 +43,10 @@ public class CohortBulkAssignmentCsvParserTests
     [Fact]
     public void Parse_MissingColumn_IsMalformedError()
     {
-        var result = _sut.Parse(Csv(
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(
             "OrganizationId,CohortName\n" +
             "11111111-1111-1111-1111-111111111111\n"));
+        var result = _sut.Parse(Csv(stream));
 
         Assert.Empty(result.Rows);
         var error = Assert.Single(result.Errors);
