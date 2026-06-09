@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Services;
@@ -31,6 +32,7 @@ public class AcceptOrganizationInviteLinkCommand(
     IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand,
     IMailService mailService,
     IPushAutoConfirmNotificationCommand pushAutoConfirmNotificationCommand,
+    IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand,
     ILogger<AcceptOrganizationInviteLinkCommand> logger)
     : IAcceptOrganizationInviteLinkCommand
 {
@@ -205,16 +207,24 @@ public class AcceptOrganizationInviteLinkCommand(
                 organization.Id, user.Id, resetPasswordKey, user.Id);
         }
 
+        // The Automatic User Confirmation policy requires members to have no emergency access contacts.
+        // Delete them now, before the user may be auto-confirmed, mirroring AcceptOrgUserCommand.
+        var autoConfirmRequirement = await policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
+        if (autoConfirmRequirement.IsEnabled(organization.Id))
+        {
+            await deleteEmergencyAccessCommand.DeleteAllByUserIdAsync(user.Id);
+        }
+
+        // Triggers the Automatic User Confirmation policy on connected admin clients.
+        // TODO: Revisit when invite-link-level auto-confirm is introduced (milestone 3).
+        await pushAutoConfirmNotificationCommand.PushAsync(user.Id, organization.Id);
+
         var admins = await organizationUserRepository.GetManyByMinimumRoleAsync(organization.Id, OrganizationUserType.Admin);
         var adminEmails = admins.Select(a => a.Email).Distinct().ToList();
         if (adminEmails.Count > 0)
         {
             await mailService.SendOrganizationAcceptedEmailAsync(organization, user.Email, adminEmails);
         }
-
-        // Notifies admin clients to confirm this member per the organization's Automatic User Confirmation policy
-        // Link-level auto-confirm is not yet implemented.
-        await pushAutoConfirmNotificationCommand.PushAsync(user.Id, organization.Id);
     }
 
     private async Task<Error?> ValidateSingleOrganizationPolicyAsync(

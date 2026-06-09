@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserRes
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Services;
@@ -709,6 +710,10 @@ public class AcceptOrganizationInviteLinkCommandTests
             .GetAsync<ResetPasswordPolicyRequirement>(user.Id)
             .Returns(new ResetPasswordPolicyRequirement([]));
 
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+
         sutProvider.GetDependency<IStripePaymentService>()
             .HasSecretsManagerStandalone(org)
             .Returns(false);
@@ -716,5 +721,53 @@ public class AcceptOrganizationInviteLinkCommandTests
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyByMinimumRoleAsync(org.Id, OrganizationUserType.Admin)
             .Returns(new List<OrganizationUserUserDetails>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task AcceptAsync_WithAutoConfirmPolicyEnabled_DeletesEmergencyAccess(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
+    {
+        SetupHappyPath(organization, inviteLink, user, sutProvider);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement(
+            [
+                new PolicyDetails
+                {
+                    OrganizationId = organization.Id,
+                    PolicyType = PolicyType.AutomaticUserConfirmation,
+                    OrganizationUserStatus = OrganizationUserStatusType.Accepted
+                }
+            ]));
+
+        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user };
+        var result = await sutProvider.Sut.AcceptAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
+            .Received(1)
+            .DeleteAllByUserIdAsync(user.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AcceptAsync_WithAutoConfirmPolicyDisabled_DoesNotDeleteEmergencyAccess(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
+    {
+        SetupHappyPath(organization, inviteLink, user, sutProvider);
+
+        var request = new AcceptOrganizationInviteLinkRequest { Code = inviteLink.Code, User = user };
+        var result = await sutProvider.Sut.AcceptAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAllByUserIdAsync(Arg.Any<Guid>());
     }
 }
