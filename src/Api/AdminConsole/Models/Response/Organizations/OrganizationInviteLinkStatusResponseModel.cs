@@ -6,15 +6,18 @@ public class OrganizationInviteLinkStatusResponseModel : ResponseModel
 {
     public string OrganizationName { get; set; } = null!;
     public bool SeatsAvailable { get; set; }
+    public bool LinkConfirmEnabled { get; set; }
     public OrganizationInviteLinkSsoResponseModel? Sso { get; set; }
 
     public OrganizationInviteLinkStatusResponseModel(
         string organizationName,
         bool seatsAvailable,
+        bool linkConfirmEnabled,
         OrganizationInviteLinkSsoResponseModel? sso) : base("inviteLinkStatus")
     {
         OrganizationName = organizationName;
         SeatsAvailable = seatsAvailable;
+        LinkConfirmEnabled = linkConfirmEnabled;
         Sso = sso;
     }
 }
