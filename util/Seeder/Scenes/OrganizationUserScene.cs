@@ -41,8 +41,11 @@ public class OrganizationUserScene(
 
     public async Task<SceneResult<OrganizationUserSceneResult>> SeedAsync(Request request)
     {
-        var user = await userRepository.GetByIdAsync(request.UserId)
-                   ?? throw new InvalidOperationException($"User {request.UserId} not found.");
+        var user = await userRepository.GetByIdAsync(request.UserId);
+        if (user == null)
+        {
+            throw new Exception($"User with ID {request.UserId} not found.");
+        }
 
         var requiresKey = request.OrganizationUserStatusType is OrganizationUserStatusType.Confirmed
             or OrganizationUserStatusType.Revoked;
@@ -53,8 +56,11 @@ public class OrganizationUserScene(
                 $"User {request.UserId} has no public key; cannot encrypt the organization key for the member.");
         }
 
-        var organization = await organizationRepository.GetByIdAsync(request.OrganizationId)
-                           ?? throw new InvalidOperationException($"Organization {request.OrganizationId} not found.");
+        var organization = await organizationRepository.GetByIdAsync(request.OrganizationId);
+        if (organization == null)
+        {
+            throw new InvalidOperationException($"Organization {request.OrganizationId} not found.");
+        }
 
         var encryptedOrgKey = requiresKey
             ? RustSdkService.GenerateUserOrganizationKey(user.PublicKey!, request.OrganizationKeyB64)

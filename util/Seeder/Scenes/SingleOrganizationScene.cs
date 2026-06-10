@@ -44,8 +44,11 @@ public class SingleOrganizationScene(
 
     public async Task<SceneResult<SingleOrganizationSceneResult>> SeedAsync(Request request)
     {
-        var user = await userRepository.GetByIdAsync(request.OwnerUserId)
-            ?? throw new InvalidOperationException($"User {request.OwnerUserId} not found.");
+        var user = await userRepository.GetByIdAsync(request.OwnerUserId);
+        if (user == null)
+        {
+            throw new Exception($"User with ID {request.OwnerUserId} not found.");
+        }
 
         if (string.IsNullOrEmpty(user.PublicKey))
         {

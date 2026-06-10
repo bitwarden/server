@@ -50,8 +50,11 @@ public class OrganizationCollectionScene(
 
     public async Task<SceneResult<Result>> SeedAsync(Request request)
     {
-        var organization = await organizationRepository.GetByIdAsync(request.OrganizationId)
-                           ?? throw new InvalidOperationException($"Organization {request.OrganizationId} not found.");
+        var organization = await organizationRepository.GetByIdAsync(request.OrganizationId);
+        if (organization == null)
+        {
+            throw new InvalidOperationException($"Organization {request.OrganizationId} not found.");
+        }
 
         var collection = CollectionSeeder.Create(organization.Id, request.OrganizationKeyB64, request.Name);
 
@@ -68,12 +71,12 @@ public class OrganizationCollectionScene(
             mangleMap: manglerService.GetMangleMap());
     }
 
-    private static List<CollectionAccessSelection>? MapAccessSelections(IEnumerable<AccessSelectionRequest>? selections)
+    private static IEnumerable<CollectionAccessSelection>? MapAccessSelections(IEnumerable<AccessSelectionRequest>? selections)
         => selections?.Select(s => new CollectionAccessSelection
         {
             Id = s.Id,
             ReadOnly = s.ReadOnly,
             HidePasswords = s.HidePasswords,
             Manage = s.Manage
-        }).ToList();
+        });
 }

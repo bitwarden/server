@@ -59,8 +59,11 @@ public class OrganizationLoginCipherScene(
 
     public async Task<SceneResult<Result>> SeedAsync(Request request)
     {
-        var organization = await organizationRepository.GetByIdAsync(request.OrganizationId)
-                           ?? throw new InvalidOperationException($"Organization {request.OrganizationId} not found.");
+        var organization = await organizationRepository.GetByIdAsync(request.OrganizationId);
+        if (organization == null)
+        {
+            throw new InvalidOperationException($"Organization {request.OrganizationId} not found.");
+        }
 
         var cipher = LoginCipherSeeder.Create(new CipherSeed
         {
