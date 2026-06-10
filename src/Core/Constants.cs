@@ -316,6 +316,11 @@ public static partial class FeatureFlagKeys
     public static Dictionary<string, string> GetLocalOverrideFlagValues()
     {
         // place overriding values when needed locally (offline), or return null
-        return null;
+        return new Dictionary<string, string>
+        {
+            // PAM is enabled by default for dev/demo purposes only.
+            // This MUST be set to false (or removed) before going to production.
+            { Pam, "true" },
+        };
     }
 }
