@@ -23,6 +23,7 @@ BEGIN
         LR.[CreationDate],
         LR.[ResolvedDate],
         PL.[Id] AS [ProducedLeaseId],
+        PL.[Status] AS [ProducedLeaseStatus],
         RES.[ApproverId] AS [ApproverId],
         RES.[Comment] AS [ApproverComment],
         JSON_VALUE(C.[Data], '$.Name') AS [CipherName],
@@ -35,7 +36,7 @@ BEGIN
     LEFT JOIN [dbo].[Collection] COL ON COL.[Id] = LR.[CollectionId]
     LEFT JOIN [dbo].[User] U ON U.[Id] = LR.[RequesterId]
     OUTER APPLY (
-        SELECT TOP 1 L.[Id]
+        SELECT TOP 1 L.[Id], L.[Status]
         FROM [dbo].[AccessLease] L
         WHERE L.[AccessRequestId] = LR.[Id]
         ORDER BY L.[CreationDate] DESC

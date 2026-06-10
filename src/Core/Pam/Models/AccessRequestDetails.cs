@@ -29,6 +29,13 @@ public class AccessRequestDetails
     /// <summary>The lease this request produced once activated, or null if it has not produced a lease.</summary>
     public Guid? ProducedLeaseId { get; set; }
 
+    /// <summary>
+    /// The produced lease's current status (Active/Expired/Revoked), or null when the request has not produced a
+    /// lease. Lets the inbox distinguish a still-live lease from one that has ended, so an ended lease is not offered
+    /// for revocation.
+    /// </summary>
+    public AccessLeaseStatus? ProducedLeaseStatus { get; set; }
+
     /// <summary>The human approver who resolved the request, or null (e.g. still pending or auto-resolved).</summary>
     public Guid? ApproverId { get; set; }
 

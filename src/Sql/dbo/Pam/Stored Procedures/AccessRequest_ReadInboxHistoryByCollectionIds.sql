@@ -7,7 +7,8 @@ BEGIN
 
     -- The approver history: resolved requests (anything no longer Pending) created on or after @Since, for the
     -- supplied (caller-manageable) collections. Same projection as the pending inbox. History rows that produced a
-    -- lease carry ProducedLeaseId so the client can target the Revoke action at the lease.
+    -- lease carry ProducedLeaseId so the client can target the Revoke action at the lease, plus ProducedLeaseStatus
+    -- so the client can tell a still-live lease from one that has ended (and not offer Revoke on an ended lease).
     SELECT
         LR.[Id],
         LR.[ExtensionOfLeaseId],
@@ -22,6 +23,7 @@ BEGIN
         LR.[CreationDate],
         LR.[ResolvedDate],
         PL.[Id] AS [ProducedLeaseId],
+        PL.[Status] AS [ProducedLeaseStatus],
         RES.[ApproverId] AS [ApproverId],
         RES.[Comment] AS [ApproverComment],
         JSON_VALUE(C.[Data], '$.Name') AS [CipherName],
@@ -34,7 +36,7 @@ BEGIN
     LEFT JOIN [dbo].[Collection] COL ON COL.[Id] = LR.[CollectionId]
     LEFT JOIN [dbo].[User] U ON U.[Id] = LR.[RequesterId]
     OUTER APPLY (
-        SELECT TOP 1 L.[Id]
+        SELECT TOP 1 L.[Id], L.[Status]
         FROM [dbo].[AccessLease] L
         WHERE L.[AccessRequestId] = LR.[Id]
         ORDER BY L.[CreationDate] DESC
