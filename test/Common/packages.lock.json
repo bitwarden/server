@@ -449,8 +449,8 @@
       },
       "Microsoft.Azure.Cosmos": {
         "type": "Transitive",
-        "resolved": "3.52.0",
-        "contentHash": "NEjNpaO19gvJrXowqHFcYPSpro5+TNjHO/JpU4VXP37by2aU2RVnmgpZsWL1GUl5wCPZ4VIOUsP1lrHpfW8ADQ==",
+        "resolved": "3.61.0",
+        "contentHash": "o0lhN2nrkC2xidy0lhjnojwqgp/N6GOXAr34xQrU5Scs8MmNG9cwG6MtRJSVTWQYW3gm9Ava3pmVbuuTVQyuYg==",
         "dependencies": {
           "Azure.Core": "1.44.1",
           "Microsoft.Bcl.AsyncInterfaces": "6.0.0",
@@ -1321,7 +1321,7 @@
           "MailKit": "[4.16.0, 4.16.0]",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[10.0.8, 10.0.8]",
           "Microsoft.AspNetCore.DataProtection": "[10.0.8, 10.0.8]",
-          "Microsoft.Azure.Cosmos": "[3.52.0, 3.52.0]",
+          "Microsoft.Azure.Cosmos": "[3.61.0, 3.61.0]",
           "Microsoft.Azure.NotificationHubs": "[4.2.0, 4.2.0]",
           "Microsoft.Bot.Builder": "[4.23.0, 4.23.0]",
           "Microsoft.Bot.Builder.Integration.AspNet.Core": "[4.23.0, 4.23.0]",
