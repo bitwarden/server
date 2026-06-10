@@ -434,8 +434,8 @@
       },
       "Microsoft.AspNetCore.Authentication.JwtBearer": {
         "type": "Transitive",
-        "resolved": "10.0.7",
-        "contentHash": "g8klpd7OFJfJOq1EJKcBO8C8I8Dp0QUWoKDPUvvJYe+xunVyBHq6YxfF2CAc6+rkniV25iaWl+6RK87c25n4lA==",
+        "resolved": "10.0.8",
+        "contentHash": "oGnE+X/SN6jdqao9WOkOIfyZ5+a0AtluJWy1Mxndq+kcWG6sx5k6l6tucu8/wJ7o9fHfLgVCzm/c4v/KVgVk6w==",
         "dependencies": {
           "Microsoft.IdentityModel.Protocols.OpenIdConnect": "8.0.1"
         }
@@ -712,8 +712,8 @@
       },
       "Microsoft.Extensions.Identity.Stores": {
         "type": "Transitive",
-        "resolved": "10.0.7",
-        "contentHash": "zDsolTKiYBP29zxszqNMpecPDkuJtq0JCh4rqXZryGQV+azGDBpCZ7DyUpKk2Pp8Ea3pKaXttZZJRy7c3ay+UA=="
+        "resolved": "10.0.8",
+        "contentHash": "xVbg4qLWyjKSJVxtL56PQPlHu/URpWPKufhfOj61+tkCmNs6DIgnGxG8BAO/fAfacoBDDYg+p1zBjFzzj/EQog=="
       },
       "Microsoft.Extensions.Logging": {
         "type": "Transitive",
@@ -1311,7 +1311,7 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.18.1, )",
           "AutoFixture.Xunit2": "[4.18.1, )",
-          "Core": "[2026.5.0, )",
+          "Core": "[2026.6.0, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[2.2.1, 2.2.1]",
           "Microsoft.Extensions.TimeProvider.Testing": "[10.6.0, 10.6.0]",
           "Microsoft.NET.Test.Sdk": "[18.0.1, )",
@@ -1341,7 +1341,7 @@
           "Handlebars.Net": "[2.1.6, 2.1.6]",
           "LaunchDarkly.ServerSdk": "[8.11.0, 8.11.0]",
           "MailKit": "[4.16.0, 4.16.0]",
-          "Microsoft.AspNetCore.Authentication.JwtBearer": "[10.0.7, 10.0.7]",
+          "Microsoft.AspNetCore.Authentication.JwtBearer": "[10.0.8, 10.0.8]",
           "Microsoft.AspNetCore.DataProtection": "[10.0.8, 10.0.8]",
           "Microsoft.Azure.Cosmos": "[3.52.0, 3.52.0]",
           "Microsoft.Azure.NotificationHubs": "[4.2.0, 4.2.0]",
@@ -1354,7 +1354,7 @@
           "Microsoft.Extensions.Caching.StackExchangeRedis": "[10.0.8, 10.0.8]",
           "Microsoft.Extensions.Configuration.EnvironmentVariables": "[10.0.8, 10.0.8]",
           "Microsoft.Extensions.Configuration.UserSecrets": "[10.0.8, 10.0.8]",
-          "Microsoft.Extensions.Identity.Stores": "[10.0.7, 10.0.7]",
+          "Microsoft.Extensions.Identity.Stores": "[10.0.8, 10.0.8]",
           "Newtonsoft.Json": "[13.0.3, 13.0.3]",
           "OneOf": "[3.0.271, 3.0.271]",
           "Otp.NET": "[1.4.0, 1.4.0]",
@@ -1374,7 +1374,7 @@
       "identity": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.5.0, )",
+          "Core": "[2026.6.0, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.15.3, )",
           "OpenTelemetry.Extensions.Hosting": "[1.15.3, )",
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.15.0, )",
@@ -1382,13 +1382,13 @@
           "OpenTelemetry.Instrumentation.Http": "[1.15.0, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.15.0, )",
           "OpenTelemetry.Instrumentation.SqlClient": "[1.12.0-beta.3, )",
-          "SharedWeb": "[2026.5.0, )"
+          "SharedWeb": "[2026.6.0, )"
         }
       },
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.5.0, )",
+          "Core": "[2026.6.0, )",
           "Dapper": "[2.1.66, 2.1.66]"
         }
       },
@@ -1396,7 +1396,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper": "[14.0.0, 14.0.0]",
-          "Core": "[2026.5.0, )",
+          "Core": "[2026.6.0, )",
           "Microsoft.EntityFrameworkCore.Relational": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.SqlServer": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.Sqlite": "[8.0.8, 8.0.8]",
@@ -1409,17 +1409,17 @@
       "integrationtestcommon": {
         "type": "Project",
         "dependencies": {
-          "Common": "[2026.5.0, )",
-          "Identity": "[2026.5.0, )",
+          "Common": "[2026.6.0, )",
+          "Identity": "[2026.6.0, )",
           "Microsoft.AspNetCore.Mvc.Testing": "[10.0.8, 10.0.8]",
-          "Migrator": "[2026.5.0, )",
-          "Seeder": "[2026.5.0, )"
+          "Migrator": "[2026.6.0, )",
+          "Seeder": "[2026.6.0, )"
         }
       },
       "migrator": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.5.0, )",
+          "Core": "[2026.6.0, )",
           "Microsoft.Extensions.Logging": "[10.0.8, 10.0.8]",
           "dbup-sqlserver": "[7.2.0, 7.2.0]"
         }
@@ -1431,18 +1431,18 @@
         "type": "Project",
         "dependencies": {
           "Bogus": "[35.6.5, 35.6.5]",
-          "Core": "[2026.5.0, )",
-          "Infrastructure.EntityFramework": "[2026.5.0, )",
-          "RustSdk": "[2026.5.0, )",
-          "SharedWeb": "[2026.5.0, )"
+          "Core": "[2026.6.0, )",
+          "Infrastructure.EntityFramework": "[2026.6.0, )",
+          "RustSdk": "[2026.6.0, )",
+          "SharedWeb": "[2026.6.0, )"
         }
       },
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.5.0, )",
-          "Infrastructure.Dapper": "[2026.5.0, )",
-          "Infrastructure.EntityFramework": "[2026.5.0, )",
+          "Core": "[2026.6.0, )",
+          "Infrastructure.Dapper": "[2026.6.0, )",
+          "Infrastructure.EntityFramework": "[2026.6.0, )",
           "Microsoft.Bot.Builder.Integration.AspNet.Core": "[4.23.0, 4.23.0]",
           "Swashbuckle.AspNetCore.SwaggerGen": "[10.1.7, 10.1.7]"
         }
@@ -1450,7 +1450,7 @@
       "sso": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.5.0, )",
+          "Core": "[2026.6.0, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.15.3, )",
           "OpenTelemetry.Extensions.Hosting": "[1.15.3, )",
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.15.0, )",
@@ -1458,7 +1458,7 @@
           "OpenTelemetry.Instrumentation.Http": "[1.15.0, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.15.0, )",
           "OpenTelemetry.Instrumentation.SqlClient": "[1.12.0-beta.3, )",
-          "SharedWeb": "[2026.5.0, )",
+          "SharedWeb": "[2026.6.0, )",
           "Sustainsys.Saml2.AspNetCore2": "[2.11.0, 2.11.0]"
         }
       }
