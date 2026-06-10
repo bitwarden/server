@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Pam.Engine;
 using Bit.Core.Pam.Entities;
 using Bit.Core.Pam.Models;
-using Bit.Core.Pam.Models.Rules;
+using Bit.Core.Pam.Models.Conditions;
 using Bit.Core.Pam.OrganizationFeatures.Queries;
 using Bit.Core.Pam.Repositories;
 using Bit.Core.Pam.Services;
@@ -24,9 +24,9 @@ public class GetLeasedCipherQueryTests
     public async Task GetLeasedCipherAsync_NoActiveLease_ReturnsNull(Guid userId, Guid cipherId)
     {
         var sutProvider = Setup();
-        sutProvider.GetDependency<ILeaseRepository>()
+        sutProvider.GetDependency<IAccessLeaseRepository>()
             .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, _now)
-            .Returns((Lease?)null);
+            .Returns((AccessLease?)null);
 
         var result = await sutProvider.Sut.GetLeasedCipherAsync(userId, cipherId);
 
@@ -39,10 +39,10 @@ public class GetLeasedCipherQueryTests
 
     [Theory, BitAutoData]
     public async Task GetLeasedCipherAsync_ActiveLeaseButCipherNotAccessible_ReturnsNull(
-        Guid userId, Guid cipherId, Lease lease)
+        Guid userId, Guid cipherId, AccessLease lease)
     {
         var sutProvider = Setup();
-        sutProvider.GetDependency<ILeaseRepository>()
+        sutProvider.GetDependency<IAccessLeaseRepository>()
             .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, _now)
             .Returns(lease);
         sutProvider.GetDependency<ICipherRepository>()
@@ -56,11 +56,11 @@ public class GetLeasedCipherQueryTests
 
     [Theory, BitAutoData]
     public async Task GetLeasedCipherAsync_ActiveLeaseAndAccessible_ReturnsCipher(
-        Guid userId, Guid cipherId, Lease lease)
+        Guid userId, Guid cipherId, AccessLease lease)
     {
         var sutProvider = Setup();
         var cipher = new CipherDetails { Id = cipherId, Data = "2.iv|ct|mac" };
-        sutProvider.GetDependency<ILeaseRepository>()
+        sutProvider.GetDependency<IAccessLeaseRepository>()
             .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, _now)
             .Returns(lease);
         sutProvider.GetDependency<ICipherRepository>()
@@ -73,42 +73,42 @@ public class GetLeasedCipherQueryTests
         Assert.Equal(cipherId, result!.Id);
         Assert.Equal("2.iv|ct|mac", result.Data);
         // The active-lease lookup uses the TimeProvider's now.
-        await sutProvider.GetDependency<ILeaseRepository>().Received(1)
+        await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1)
             .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, _now);
     }
 
     [Theory, BitAutoData]
-    public async Task GetLeasedCipherAsync_PolicyDenied_WithholdsDataAndReturnsNull(
-        Guid userId, Guid cipherId, Lease lease, Guid orgId, Guid collectionId)
+    public async Task GetLeasedCipherAsync_ConditionsDeny_WithholdsDataAndReturnsNull(
+        Guid userId, Guid cipherId, AccessLease lease, Guid orgId, Guid collectionId)
     {
         var sutProvider = Setup();
-        sutProvider.GetDependency<ILeaseRepository>()
+        sutProvider.GetDependency<IAccessLeaseRepository>()
             .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, _now)
             .Returns(lease);
         SetupResolution(sutProvider, userId, cipherId, orgId, collectionId);
-        SetupPolicyDecision(sutProvider, AccessDecision.Deny(DenyReason.NotWithinIpRange));
+        SetupEvaluation(sutProvider, AccessEvaluation.Deny(DenyReason.NotWithinIpRange));
 
         var result = await sutProvider.Sut.GetLeasedCipherAsync(userId, cipherId);
 
         Assert.Null(result);
-        // A denied policy must withhold the data: the cipher is never read.
+        // A denied evaluation must withhold the data: the cipher is never read.
         await sutProvider.GetDependency<ICipherRepository>()
             .DidNotReceiveWithAnyArgs()
             .GetByIdAsync(default, default);
     }
 
     [Theory, BitAutoData]
-    public async Task GetLeasedCipherAsync_PolicyAllowed_ReturnsCipher(
-        Guid userId, Guid cipherId, Lease lease, Guid orgId, Guid collectionId)
+    public async Task GetLeasedCipherAsync_ConditionsAllow_ReturnsCipher(
+        Guid userId, Guid cipherId, AccessLease lease, Guid orgId, Guid collectionId)
     {
         var sutProvider = Setup();
         var cipher = new CipherDetails { Id = cipherId };
-        sutProvider.GetDependency<ILeaseRepository>()
+        sutProvider.GetDependency<IAccessLeaseRepository>()
             .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, _now)
             .Returns(lease);
         sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId, userId).Returns(cipher);
         SetupResolution(sutProvider, userId, cipherId, orgId, collectionId);
-        SetupPolicyDecision(sutProvider, AccessDecision.Allow);
+        SetupEvaluation(sutProvider, AccessEvaluation.Allow);
 
         var result = await sutProvider.Sut.GetLeasedCipherAsync(userId, cipherId);
 
@@ -116,18 +116,18 @@ public class GetLeasedCipherQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetLeasedCipherAsync_PolicyRequiresApproval_StillReturnsCipher(
-        Guid userId, Guid cipherId, Lease lease, Guid orgId, Guid collectionId)
+    public async Task GetLeasedCipherAsync_ConditionsRequireApproval_StillReturnsCipher(
+        Guid userId, Guid cipherId, AccessLease lease, Guid orgId, Guid collectionId)
     {
         var sutProvider = Setup();
         var cipher = new CipherDetails { Id = cipherId };
-        sutProvider.GetDependency<ILeaseRepository>()
+        sutProvider.GetDependency<IAccessLeaseRepository>()
             .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, _now)
             .Returns(lease);
         sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId, userId).Returns(cipher);
         SetupResolution(sutProvider, userId, cipherId, orgId, collectionId);
         // Holding the lease is proof approval was already granted, so a deferred-approval outcome must not re-gate.
-        SetupPolicyDecision(sutProvider, AccessDecision.RequiresApproval);
+        SetupEvaluation(sutProvider, AccessEvaluation.RequiresApproval);
 
         var result = await sutProvider.Sut.GetLeasedCipherAsync(userId, cipherId);
 
@@ -144,15 +144,15 @@ public class GetLeasedCipherQueryTests
     private static void SetupResolution(SutProvider<GetLeasedCipherQuery> sutProvider, Guid userId, Guid cipherId,
         Guid orgId, Guid collectionId)
     {
-        sutProvider.GetDependency<IAccessApprovalResolver>()
+        sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(userId, cipherId)
-            .Returns(new AccessApprovalResolution(orgId, collectionId, false, new IpAllowlistRule { Cidrs = ["10.0.0.0/8"] }));
+            .Returns(new GoverningRule(orgId, collectionId, false, new IpAllowlistCondition { Cidrs = ["10.0.0.0/8"] }));
     }
 
-    private static void SetupPolicyDecision(SutProvider<GetLeasedCipherQuery> sutProvider, AccessDecision decision)
+    private static void SetupEvaluation(SutProvider<GetLeasedCipherQuery> sutProvider, AccessEvaluation decision)
     {
-        sutProvider.GetDependency<IAccessPolicyEngine>()
-            .Evaluate(Arg.Any<Rule>(), Arg.Any<AccessPolicySignals>())
+        sutProvider.GetDependency<IAccessRuleEngine>()
+            .Evaluate(Arg.Any<AccessCondition>(), Arg.Any<AccessSignals>())
             .Returns(decision);
     }
 }

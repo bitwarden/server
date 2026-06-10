@@ -5,23 +5,15 @@ CREATE PROCEDURE [dbo].[AccessRequest_ResolveWithDecision]
     @ApproverId UNIQUEIDENTIFIER,
     @Verdict TINYINT,
     @Comment NVARCHAR(MAX) = NULL,
+    @AccessLeaseId UNIQUEIDENTIFIER = NULL,
     @Now DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
-    -- XACT_ABORT rolls the transaction back as a unit if either write fails. Without it a constraint violation aborts
-    -- only the offending statement, execution falls through to the COMMIT, and the other half is persisted alone.
-    SET XACT_ABORT ON
 
     -- Atomically resolve a pending request and record the human approver's decision. The caller has already verified
     -- (and the application enforces) that the request is still Pending; the WHERE guard keeps the write idempotent
-    -- under a race so a second approver can't move an already-resolved request. The decision is recorded only when the
-    -- transition actually happened (@@ROWCOUNT > 0), so a losing approver's verdict is never appended to a request
-    -- they did not resolve -- which would leave the decision log contradicting the request's status.
-    --
-    -- Approval does not mint the lease: the requester activates the approved request later via
-    -- [AccessLease_CreateFromApprovedRequest]. The automatic path ([AccessRequest_CreateAutoApproved]) records the
-    -- approved request the same way and likewise leaves the lease to be minted at activation.
+    -- under a race so a second approver can't move an already-resolved request.
     BEGIN TRANSACTION AccessRequest_Resolve
 
     UPDATE [dbo].[AccessRequest]
@@ -29,18 +21,32 @@ BEGIN
         [ResolvedDate] = @Now
     WHERE [Id] = @AccessRequestId AND [Status] = 0 -- Pending
 
-    IF @@ROWCOUNT > 0
+    INSERT INTO [dbo].[AccessDecision]
+    (
+        [Id], [AccessRequestId], [DeciderKind], [ApproverId], [ConditionKind],
+        [Verdict], [Comment], [EvaluationContext], [CreationDate]
+    )
+    VALUES
+    (
+        @AccessDecisionId, @AccessRequestId, 1 /* Human */, @ApproverId, NULL,
+        @Verdict, @Comment, NULL, @Now
+    )
+
+    -- An approval mints the active lease that authorizes access, mirroring [AccessLease_CreateAutoApproved] on the automatic
+    -- path. @AccessLeaseId is supplied only when approving; the lease window is the request's approved window, so the lease
+    -- is found by [AccessLease_ReadActiveByRequesterIdCipherId] once @Now falls inside it.
+    IF @AccessLeaseId IS NOT NULL
     BEGIN
-        INSERT INTO [dbo].[AccessDecision]
+        INSERT INTO [dbo].[AccessLease]
         (
-            [Id], [AccessRequestId], [DeciderKind], [ApproverId], [ConditionKind],
-            [Verdict], [Comment], [EvaluationContext], [CreationDate]
+            [Id], [AccessRequestId], [OrganizationId], [CollectionId], [CipherId], [RequesterId],
+            [Status], [NotBefore], [NotAfter], [RevokedDate], [RevokedBy], [CreationDate]
         )
-        VALUES
-        (
-            @AccessDecisionId, @AccessRequestId, 1 /* Human */, @ApproverId, NULL,
-            @Verdict, @Comment, NULL, @Now
-        )
+        SELECT
+            @AccessLeaseId, [Id], [OrganizationId], [CollectionId], [CipherId], [RequesterId],
+            0 /* Active */, [NotBefore], [NotAfter], NULL, NULL, @Now
+        FROM [dbo].[AccessRequest]
+        WHERE [Id] = @AccessRequestId
     END
 
     COMMIT TRANSACTION AccessRequest_Resolve

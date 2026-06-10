@@ -15,7 +15,7 @@ public class AccessRuleDetails : AccessRule
         OrganizationId = rule.OrganizationId,
         Name = rule.Name,
         Description = rule.Description,
-        Rule = rule.Rule,
+        Conditions = rule.Conditions,
         CreationDate = rule.CreationDate,
         RevisionDate = rule.RevisionDate,
         CollectionIds = collectionIds,

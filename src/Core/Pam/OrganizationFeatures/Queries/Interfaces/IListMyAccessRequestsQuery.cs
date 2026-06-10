@@ -8,5 +8,5 @@ public interface IListMyAccessRequestsQuery
     /// Returns the caller's own lease requests across every organization they belong to, regardless of status. Returns
     /// an empty collection when they have none.
     /// </summary>
-    Task<ICollection<InboxLeaseRequestDetails>> GetMineAsync(Guid userId);
+    Task<ICollection<AccessRequestDetails>> GetMineAsync(Guid userId);
 }

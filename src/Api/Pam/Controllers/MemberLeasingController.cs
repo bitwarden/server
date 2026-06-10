@@ -19,7 +19,7 @@ namespace Bit.Api.Pam.Controllers;
 public class MemberLeasingController(
     IUserService userService,
     IListMyAccessRequestsQuery listMyAccessRequestsQuery,
-    IListMyActiveLeasesQuery listMyActiveLeasesQuery)
+    IListMyActiveAccessLeasesQuery listMyActiveAccessLeasesQuery)
     : Controller
 {
     /// <summary>
@@ -27,21 +27,21 @@ public class MemberLeasingController(
     /// array. The client re-sorts and splits into pending/recent.
     /// </summary>
     [HttpGet("requests/mine")]
-    public async Task<IEnumerable<InboxAccessRequestResponseModel>> GetMyRequests()
+    public async Task<IEnumerable<AccessRequestDetailsResponseModel>> GetMyRequests()
     {
         var userId = userService.GetProperUserId(User)!.Value;
         var requests = await listMyAccessRequestsQuery.GetMineAsync(userId);
-        return requests.Select(r => new InboxAccessRequestResponseModel(r));
+        return requests.Select(r => new AccessRequestDetailsResponseModel(r));
     }
 
     /// <summary>
     /// Returns the caller's currently-active leases across all their organizations as a plain array.
     /// </summary>
     [HttpGet("leases/mine/active")]
-    public async Task<IEnumerable<MemberLeaseResponseModel>> GetMyActiveLeases()
+    public async Task<IEnumerable<AccessLeaseResponseModel>> GetMyActiveLeases()
     {
         var userId = userService.GetProperUserId(User)!.Value;
-        var leases = await listMyActiveLeasesQuery.GetMineActiveAsync(userId);
-        return leases.Select(l => new MemberLeaseResponseModel(l));
+        var leases = await listMyActiveAccessLeasesQuery.GetMineActiveAsync(userId);
+        return leases.Select(l => new AccessLeaseResponseModel(l));
     }
 }

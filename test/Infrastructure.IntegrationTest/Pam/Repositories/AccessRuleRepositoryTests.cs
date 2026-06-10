@@ -22,7 +22,7 @@ public class AccessRuleRepositoryTests
         {
             OrganizationId = organization.Id,
             Name = "Test Rule",
-            Rule = """{"kind":"human_approval"}""",
+            Conditions = """{"kind":"human_approval"}""",
         });
 
         var collection = new Collection

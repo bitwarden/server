@@ -3,7 +3,7 @@ CREATE PROCEDURE [dbo].[AccessRule_Update]
     @OrganizationId UNIQUEIDENTIFIER,
     @Name NVARCHAR(256),
     @Description NVARCHAR(MAX) = NULL,
-    @Rule NVARCHAR(MAX),
+    @Conditions NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -16,7 +16,7 @@ BEGIN
         [OrganizationId] = @OrganizationId,
         [Name] = @Name,
         [Description] = @Description,
-        [Rule] = @Rule,
+        [Conditions] = @Conditions,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate
     WHERE

@@ -10,8 +10,7 @@ CREATE PROCEDURE [dbo].[AccessRequest_Create]
     @Reason NVARCHAR(MAX) = NULL,
     @Status TINYINT,
     @CreationDate DATETIME2(7),
-    @ResolvedDate DATETIME2(7) = NULL,
-    @RuleId UNIQUEIDENTIFIER = NULL
+    @ResolvedDate DATETIME2(7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -29,8 +28,7 @@ BEGIN
         [Reason],
         [Status],
         [CreationDate],
-        [ResolvedDate],
-        [RuleId]
+        [ResolvedDate]
     )
     VALUES
     (
@@ -45,7 +43,6 @@ BEGIN
         @Reason,
         @Status,
         @CreationDate,
-        @ResolvedDate,
-        @RuleId
+        @ResolvedDate
     )
 END

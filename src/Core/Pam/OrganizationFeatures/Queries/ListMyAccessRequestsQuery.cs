@@ -6,13 +6,13 @@ namespace Bit.Core.Pam.OrganizationFeatures.Queries;
 
 public class ListMyAccessRequestsQuery : IListMyAccessRequestsQuery
 {
-    private readonly ILeaseRequestRepository _leaseRequestRepository;
+    private readonly IAccessRequestRepository _accessRequestRepository;
 
-    public ListMyAccessRequestsQuery(ILeaseRequestRepository leaseRequestRepository)
+    public ListMyAccessRequestsQuery(IAccessRequestRepository accessRequestRepository)
     {
-        _leaseRequestRepository = leaseRequestRepository;
+        _accessRequestRepository = accessRequestRepository;
     }
 
-    public Task<ICollection<InboxLeaseRequestDetails>> GetMineAsync(Guid userId) =>
-        _leaseRequestRepository.GetManyByRequesterIdAsync(userId);
+    public Task<ICollection<AccessRequestDetails>> GetMineAsync(Guid userId) =>
+        _accessRequestRepository.GetManyByRequesterIdAsync(userId);
 }

@@ -8,7 +8,7 @@ public class AccessRuleValidatorTests
     private readonly AccessRuleValidator _sut = new();
 
     [Fact]
-    public void Validate_NullRule_IsValid()
+    public void Validate_NullConditions_IsValid()
     {
         var result = _sut.Validate(null);
 
@@ -18,9 +18,9 @@ public class AccessRuleValidatorTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void Validate_EmptyOrWhitespaceRule_IsInvalid(string ruleJson)
+    public void Validate_EmptyOrWhitespaceConditions_IsInvalid(string conditionsJson)
     {
-        var result = _sut.Validate(ruleJson);
+        var result = _sut.Validate(conditionsJson);
 
         Assert.False(result.IsValid);
     }
@@ -53,9 +53,9 @@ public class AccessRuleValidatorTests
     [Theory]
     [InlineData("""{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]}""")]
     [InlineData("""{"kind":"ip_allowlist","cidrs":["10.0.0.0/8","192.168.0.0/16","2001:db8::/32"]}""")]
-    public void Validate_IpAllowlist_ValidCidrs_IsValid(string ruleJson)
+    public void Validate_IpAllowlist_ValidCidrs_IsValid(string conditionsJson)
     {
-        var result = _sut.Validate(ruleJson);
+        var result = _sut.Validate(conditionsJson);
 
         Assert.True(result.IsValid);
     }
@@ -64,9 +64,9 @@ public class AccessRuleValidatorTests
     [InlineData("""{"kind":"ip_allowlist","cidrs":[]}""", "at least one CIDR")]
     [InlineData("""{"kind":"ip_allowlist","cidrs":["not-a-cidr"]}""", "Invalid CIDR")]
     [InlineData("""{"kind":"ip_allowlist","cidrs":["10.0.0.0/99"]}""", "Invalid CIDR")]
-    public void Validate_IpAllowlist_InvalidCidrs_IsInvalid(string ruleJson, string expectedMessageFragment)
+    public void Validate_IpAllowlist_InvalidCidrs_IsInvalid(string conditionsJson, string expectedMessageFragment)
     {
-        var result = _sut.Validate(ruleJson);
+        var result = _sut.Validate(conditionsJson);
 
         Assert.False(result.IsValid);
         Assert.Contains(expectedMessageFragment, result.Error);
@@ -95,9 +95,9 @@ public class AccessRuleValidatorTests
     [InlineData("""{"kind":"time_of_day","tz":"UTC","windows":[{"days":["funday"],"from":"09:00","to":"17:00"}]}""", "day")]
     [InlineData("""{"kind":"time_of_day","tz":"UTC","windows":[{"days":["mon"],"from":"9am","to":"5pm"}]}""", "Expected HH:mm")]
     [InlineData("""{"kind":"time_of_day","tz":"UTC","windows":[{"days":["mon"],"from":"25:00","to":"26:00"}]}""", "Expected HH:mm")]
-    public void Validate_TimeOfDay_Invalid_IsInvalid(string ruleJson, string expectedMessageFragment)
+    public void Validate_TimeOfDay_Invalid_IsInvalid(string conditionsJson, string expectedMessageFragment)
     {
-        var result = _sut.Validate(ruleJson);
+        var result = _sut.Validate(conditionsJson);
 
         Assert.False(result.IsValid);
         Assert.Contains(expectedMessageFragment, result.Error);
@@ -109,7 +109,7 @@ public class AccessRuleValidatorTests
         var result = _sut.Validate("""
             {
               "kind": "all_of",
-              "rules": [
+              "conditions": [
                 { "kind": "human_approval" },
                 { "kind": "ip_allowlist", "cidrs": ["10.0.0.0/8"] }
               ]
@@ -122,7 +122,7 @@ public class AccessRuleValidatorTests
     [Fact]
     public void Validate_AllOf_EmptyChildren_IsInvalid()
     {
-        var result = _sut.Validate("""{"kind":"all_of","rules":[]}""");
+        var result = _sut.Validate("""{"kind":"all_of","conditions":[]}""");
 
         Assert.False(result.IsValid);
         Assert.Contains("at least one child", result.Error);
@@ -135,13 +135,13 @@ public class AccessRuleValidatorTests
         var result = _sut.Validate("""
             {
               "kind": "all_of",
-              "rules": [{
+              "conditions": [{
                 "kind": "all_of",
-                "rules": [{
+                "conditions": [{
                   "kind": "all_of",
-                  "rules": [{
+                  "conditions": [{
                     "kind": "all_of",
-                    "rules": [{ "kind": "human_approval" }]
+                    "conditions": [{ "kind": "human_approval" }]
                   }]
                 }]
               }]
@@ -155,8 +155,8 @@ public class AccessRuleValidatorTests
     [Fact]
     public void Validate_AllOf_ExceedsMaxChildren_IsInvalid()
     {
-        var rules = string.Join(",", Enumerable.Repeat("""{"kind":"human_approval"}""", 11));
-        var result = _sut.Validate($$"""{"kind":"all_of","rules":[{{rules}}]}""");
+        var conditions = string.Join(",", Enumerable.Repeat("""{"kind":"human_approval"}""", 11));
+        var result = _sut.Validate($$"""{"kind":"all_of","conditions":[{{conditions}}]}""");
 
         Assert.False(result.IsValid);
         Assert.Contains("more than", result.Error);
@@ -168,7 +168,7 @@ public class AccessRuleValidatorTests
         var result = _sut.Validate("""
             {
               "kind": "all_of",
-              "rules": [
+              "conditions": [
                 { "kind": "human_approval" },
                 { "kind": "ip_allowlist", "cidrs": ["bogus"] }
               ]

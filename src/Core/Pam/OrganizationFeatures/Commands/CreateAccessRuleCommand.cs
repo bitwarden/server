@@ -35,7 +35,7 @@ public class CreateAccessRuleCommand : ICreateAccessRuleCommand
             throw new BadRequestException("Name is required.");
         }
 
-        var validation = _validator.Validate(rule.Rule);
+        var validation = _validator.Validate(rule.Conditions);
         if (!validation.IsValid)
         {
             throw new BadRequestException(validation.Error!);

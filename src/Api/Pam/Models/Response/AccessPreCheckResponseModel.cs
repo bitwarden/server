@@ -10,16 +10,19 @@ public class AccessPreCheckResponseModel : ResponseModel
         : base("accessPreCheck")
     {
         CipherId = cipherId;
-        Outcome = result.HasActiveLease
-            ? "active"
-            : result.Outcome == AccessApprovalOutcome.Human ? "human" : "automatic";
+        ApprovalMode = result.ApprovalMode == AccessApprovalMode.Human ? "human" : "automatic";
+        HasActiveLease = result.HasActiveLease;
     }
 
     public Guid CipherId { get; }
 
     /// <summary>
-    /// <c>"active"</c> when the caller already holds an active lease (reveal the credential, no request needed),
     /// <c>"automatic"</c> when a request would be approved immediately, <c>"human"</c> when it needs an approver.
     /// </summary>
-    public string Outcome { get; }
+    public string ApprovalMode { get; }
+
+    /// <summary>
+    /// True when the caller already holds an active lease: reveal the credential, no request needed.
+    /// </summary>
+    public bool HasActiveLease { get; }
 }

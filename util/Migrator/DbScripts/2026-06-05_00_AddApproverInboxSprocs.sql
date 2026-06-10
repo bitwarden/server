@@ -2,7 +2,7 @@
 -- PAM Approver Inbox: read procedures for the pending/history queues, the resolve-with-decision and lease-revoke
 -- mutations, and Collection_ReadManagingUserIds (the collection managers resolved for the RefreshApproverInbox push).
 
-CREATE OR ALTER PROCEDURE [dbo].[LeaseRequest_ReadInboxPendingByCollectionIds]
+CREATE OR ALTER PROCEDURE [dbo].[AccessRequest_ReadInboxPendingByCollectionIds]
     @CollectionIds [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
@@ -10,7 +10,7 @@ BEGIN
 
     SELECT
         LR.[Id],
-        LR.[LeaseId] AS [ExtensionOfLeaseId],
+        LR.[ExtensionOfLeaseId],
         LR.[OrganizationId],
         LR.[CollectionId],
         LR.[CipherId],
@@ -22,34 +22,34 @@ BEGIN
         LR.[CreationDate],
         LR.[ResolvedDate],
         PL.[Id] AS [ProducedLeaseId],
-        RES.[ApproverId] AS [ResolverId],
-        RES.[Comment] AS [ResolverComment],
+        RES.[ApproverId] AS [ApproverId],
+        RES.[Comment] AS [ApproverComment],
         JSON_VALUE(C.[Data], '$.Name') AS [CipherName],
         COL.[Name] AS [CollectionName],
         U.[Name] AS [RequesterName],
         U.[Email] AS [RequesterEmail]
-    FROM [dbo].[LeaseRequest] LR
+    FROM [dbo].[AccessRequest] LR
     INNER JOIN @CollectionIds CI ON CI.[Id] = LR.[CollectionId]
     LEFT JOIN [dbo].[Cipher] C ON C.[Id] = LR.[CipherId]
     LEFT JOIN [dbo].[Collection] COL ON COL.[Id] = LR.[CollectionId]
     LEFT JOIN [dbo].[User] U ON U.[Id] = LR.[RequesterId]
     OUTER APPLY (
         SELECT TOP 1 L.[Id]
-        FROM [dbo].[Lease] L
-        WHERE L.[LeaseRequestId] = LR.[Id]
+        FROM [dbo].[AccessLease] L
+        WHERE L.[AccessRequestId] = LR.[Id]
         ORDER BY L.[CreationDate] DESC
     ) PL
     OUTER APPLY (
         SELECT TOP 1 LD.[ApproverId], LD.[Comment]
-        FROM [dbo].[LeaseDecision] LD
-        WHERE LD.[LeaseRequestId] = LR.[Id] AND LD.[DeciderKind] = 1 -- Human
+        FROM [dbo].[AccessDecision] LD
+        WHERE LD.[AccessRequestId] = LR.[Id] AND LD.[DeciderKind] = 1 -- Human
         ORDER BY LD.[CreationDate] ASC
     ) RES
     WHERE LR.[Status] = 0 -- Pending
 END
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[LeaseRequest_ReadInboxHistoryByCollectionIds]
+CREATE OR ALTER PROCEDURE [dbo].[AccessRequest_ReadInboxHistoryByCollectionIds]
     @CollectionIds [dbo].[GuidIdArray] READONLY,
     @Since DATETIME2(7)
 AS
@@ -58,7 +58,7 @@ BEGIN
 
     SELECT
         LR.[Id],
-        LR.[LeaseId] AS [ExtensionOfLeaseId],
+        LR.[ExtensionOfLeaseId],
         LR.[OrganizationId],
         LR.[CollectionId],
         LR.[CipherId],
@@ -70,27 +70,27 @@ BEGIN
         LR.[CreationDate],
         LR.[ResolvedDate],
         PL.[Id] AS [ProducedLeaseId],
-        RES.[ApproverId] AS [ResolverId],
-        RES.[Comment] AS [ResolverComment],
+        RES.[ApproverId] AS [ApproverId],
+        RES.[Comment] AS [ApproverComment],
         JSON_VALUE(C.[Data], '$.Name') AS [CipherName],
         COL.[Name] AS [CollectionName],
         U.[Name] AS [RequesterName],
         U.[Email] AS [RequesterEmail]
-    FROM [dbo].[LeaseRequest] LR
+    FROM [dbo].[AccessRequest] LR
     INNER JOIN @CollectionIds CI ON CI.[Id] = LR.[CollectionId]
     LEFT JOIN [dbo].[Cipher] C ON C.[Id] = LR.[CipherId]
     LEFT JOIN [dbo].[Collection] COL ON COL.[Id] = LR.[CollectionId]
     LEFT JOIN [dbo].[User] U ON U.[Id] = LR.[RequesterId]
     OUTER APPLY (
         SELECT TOP 1 L.[Id]
-        FROM [dbo].[Lease] L
-        WHERE L.[LeaseRequestId] = LR.[Id]
+        FROM [dbo].[AccessLease] L
+        WHERE L.[AccessRequestId] = LR.[Id]
         ORDER BY L.[CreationDate] DESC
     ) PL
     OUTER APPLY (
         SELECT TOP 1 LD.[ApproverId], LD.[Comment]
-        FROM [dbo].[LeaseDecision] LD
-        WHERE LD.[LeaseRequestId] = LR.[Id] AND LD.[DeciderKind] = 1 -- Human
+        FROM [dbo].[AccessDecision] LD
+        WHERE LD.[AccessRequestId] = LR.[Id] AND LD.[DeciderKind] = 1 -- Human
         ORDER BY LD.[CreationDate] ASC
     ) RES
     WHERE LR.[Status] <> 0 -- not Pending
@@ -98,71 +98,71 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[LeaseRequest_ResolveWithDecision]
-    @LeaseRequestId UNIQUEIDENTIFIER,
+CREATE OR ALTER PROCEDURE [dbo].[AccessRequest_ResolveWithDecision]
+    @AccessRequestId UNIQUEIDENTIFIER,
     @Status TINYINT,
-    @LeaseDecisionId UNIQUEIDENTIFIER,
+    @AccessDecisionId UNIQUEIDENTIFIER,
     @ApproverId UNIQUEIDENTIFIER,
-    @Decision TINYINT,
+    @Verdict TINYINT,
     @Comment NVARCHAR(MAX) = NULL,
     @Now DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
 
-    BEGIN TRANSACTION LeaseRequest_ResolveWithDecision
+    BEGIN TRANSACTION AccessRequest_Resolve
 
-    UPDATE [dbo].[LeaseRequest]
+    UPDATE [dbo].[AccessRequest]
     SET [Status] = @Status,
         [ResolvedDate] = @Now
-    WHERE [Id] = @LeaseRequestId AND [Status] = 0 -- Pending
+    WHERE [Id] = @AccessRequestId AND [Status] = 0 -- Pending
 
-    INSERT INTO [dbo].[LeaseDecision]
+    INSERT INTO [dbo].[AccessDecision]
     (
-        [Id], [LeaseRequestId], [DeciderKind], [ApproverId], [PolicyKind],
-        [Decision], [Comment], [EvaluationContext], [CreationDate]
+        [Id], [AccessRequestId], [DeciderKind], [ApproverId], [ConditionKind],
+        [Verdict], [Comment], [EvaluationContext], [CreationDate]
     )
     VALUES
     (
-        @LeaseDecisionId, @LeaseRequestId, 1 /* Human */, @ApproverId, NULL,
-        @Decision, @Comment, NULL, @Now
+        @AccessDecisionId, @AccessRequestId, 1 /* Human */, @ApproverId, NULL,
+        @Verdict, @Comment, NULL, @Now
     )
 
-    COMMIT TRANSACTION LeaseRequest_ResolveWithDecision
+    COMMIT TRANSACTION AccessRequest_Resolve
 END
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[Lease_Revoke]
-    @LeaseId UNIQUEIDENTIFIER,
-    @LeaseRequestId UNIQUEIDENTIFIER,
+CREATE OR ALTER PROCEDURE [dbo].[AccessLease_Revoke]
+    @AccessLeaseId UNIQUEIDENTIFIER,
+    @AccessRequestId UNIQUEIDENTIFIER,
     @RevokedBy UNIQUEIDENTIFIER,
-    @LeaseDecisionId UNIQUEIDENTIFIER,
+    @AccessDecisionId UNIQUEIDENTIFIER,
     @Reason NVARCHAR(MAX) = NULL,
     @Now DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
 
-    BEGIN TRANSACTION Lease_Revoke
+    BEGIN TRANSACTION AccessLease_Revoke
 
-    UPDATE [dbo].[Lease]
+    UPDATE [dbo].[AccessLease]
     SET [Status] = 2 /* Revoked */,
         [RevokedDate] = @Now,
         [RevokedBy] = @RevokedBy
-    WHERE [Id] = @LeaseId AND [Status] = 0 -- Active
+    WHERE [Id] = @AccessLeaseId AND [Status] = 0 -- Active
 
-    INSERT INTO [dbo].[LeaseDecision]
+    INSERT INTO [dbo].[AccessDecision]
     (
-        [Id], [LeaseRequestId], [DeciderKind], [ApproverId], [PolicyKind],
-        [Decision], [Comment], [EvaluationContext], [CreationDate]
+        [Id], [AccessRequestId], [DeciderKind], [ApproverId], [ConditionKind],
+        [Verdict], [Comment], [EvaluationContext], [CreationDate]
     )
     VALUES
     (
-        @LeaseDecisionId, @LeaseRequestId, 1 /* Human */, @RevokedBy, NULL,
+        @AccessDecisionId, @AccessRequestId, 1 /* Human */, @RevokedBy, NULL,
         1 /* Deny */, @Reason, NULL, @Now
     )
 
-    COMMIT TRANSACTION Lease_Revoke
+    COMMIT TRANSACTION AccessLease_Revoke
 END
 GO
 

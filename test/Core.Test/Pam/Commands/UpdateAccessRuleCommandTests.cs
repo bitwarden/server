@@ -27,12 +27,12 @@ public class UpdateAccessRuleCommandTests
         existing.CollectionIds = [];
         update.Name = "renamed";
         update.Description = "new description";
-        update.Rule = """{"kind":"human_approval"}""";
+        update.Conditions = """{"kind":"human_approval"}""";
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetDetailsByIdAsync(existing.Id)
             .Returns(existing);
         sutProvider.GetDependency<IAccessRuleValidator>()
-            .Validate(update.Rule)
+            .Validate(update.Conditions)
             .Returns(AccessRuleValidationResult.Valid);
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetManyByOrganizationIdAsync(orgId)
@@ -42,7 +42,7 @@ public class UpdateAccessRuleCommandTests
 
         Assert.Equal("renamed", result.Name);
         Assert.Equal("new description", result.Description);
-        Assert.Equal(update.Rule, result.Rule);
+        Assert.Equal(update.Conditions, result.Conditions);
         Assert.Equal(_now, result.RevisionDate);
         await sutProvider.GetDependency<IAccessRuleRepository>().Received(1)
             .ReplaceAsync(Arg.Is<AccessRule>(r =>
@@ -56,7 +56,7 @@ public class UpdateAccessRuleCommandTests
         var sutProvider = SetupSutProvider();
         var orgId = existing.OrganizationId;
         update.Name = "renamed";
-        update.Rule = """{"kind":"human_approval"}""";
+        update.Conditions = """{"kind":"human_approval"}""";
         keep.OrganizationId = orgId;
         keep.AccessRuleId = existing.Id;   // already governed by this rule
         add.OrganizationId = orgId;
@@ -68,7 +68,7 @@ public class UpdateAccessRuleCommandTests
             .GetDetailsByIdAsync(existing.Id)
             .Returns(existing);
         sutProvider.GetDependency<IAccessRuleValidator>()
-            .Validate(update.Rule)
+            .Validate(update.Conditions)
             .Returns(AccessRuleValidationResult.Valid);
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetManyByOrganizationIdAsync(orgId)
@@ -92,14 +92,14 @@ public class UpdateAccessRuleCommandTests
         var sutProvider = SetupSutProvider();
         var orgId = existing.OrganizationId;
         update.Name = "renamed";
-        update.Rule = """{"kind":"human_approval"}""";
+        update.Conditions = """{"kind":"human_approval"}""";
         var currentId = Guid.NewGuid();
         existing.CollectionIds = [currentId];
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetDetailsByIdAsync(existing.Id)
             .Returns(existing);
         sutProvider.GetDependency<IAccessRuleValidator>()
-            .Validate(update.Rule)
+            .Validate(update.Conditions)
             .Returns(AccessRuleValidationResult.Valid);
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetManyByOrganizationIdAsync(orgId)
@@ -121,14 +121,14 @@ public class UpdateAccessRuleCommandTests
         var sutProvider = SetupSutProvider();
         var orgId = existing.OrganizationId;
         update.Name = "renamed";
-        update.Rule = """{"kind":"human_approval"}""";
+        update.Conditions = """{"kind":"human_approval"}""";
         collection.OrganizationId = orgId;
         collection.AccessRuleId = Guid.NewGuid();   // a different rule
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetDetailsByIdAsync(existing.Id)
             .Returns(existing);
         sutProvider.GetDependency<IAccessRuleValidator>()
-            .Validate(update.Rule)
+            .Validate(update.Conditions)
             .Returns(AccessRuleValidationResult.Valid);
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetManyByOrganizationIdAsync(orgId)
@@ -174,12 +174,12 @@ public class UpdateAccessRuleCommandTests
         var sutProvider = SetupSutProvider();
         var orgId = existing.OrganizationId;
         update.Name = "ok";
-        update.Rule = """{"kind":"bogus"}""";
+        update.Conditions = """{"kind":"bogus"}""";
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetDetailsByIdAsync(existing.Id)
             .Returns(existing);
         sutProvider.GetDependency<IAccessRuleValidator>()
-            .Validate(update.Rule)
+            .Validate(update.Conditions)
             .Returns(AccessRuleValidationResult.Invalid("nope"));
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(

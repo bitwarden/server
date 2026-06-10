@@ -1,27 +1,37 @@
 ﻿using Bit.Core.Models.Api;
-using Bit.Core.Pam.Enums;
+using Bit.Core.Pam.Entities;
 using Bit.Core.Pam.Models;
 
 namespace Bit.Api.Pam.Models.Response;
 
 public class AccessRequestResponseModel : ResponseModel
 {
-    public AccessRequestResponseModel(AccessRequestResult result)
+    public AccessRequestResponseModel(AccessRequest request)
         : base("accessRequest")
     {
-        ArgumentNullException.ThrowIfNull(result);
+        ArgumentNullException.ThrowIfNull(request);
 
-        Outcome = result.Outcome == AccessApprovalOutcome.Human ? "human" : "automatic";
-        Lease = result.Lease is null ? null : new LeaseResponseModel(result.Lease);
-        Request = result.Request is null ? null : new LeaseRequestResponseModel(result.Request);
+        Id = request.Id;
+        CipherId = request.CipherId;
+        CollectionId = request.CollectionId;
+        OrganizationId = request.OrganizationId;
+        Status = AccessRequestStatusNames.From(request.Status, hasLease: false);
+        NotBefore = request.NotBefore;
+        NotAfter = request.NotAfter;
+        Reason = request.Reason;
+        CreationDate = request.CreationDate;
     }
 
-    /// <summary>
-    /// <c>"automatic"</c> when a <see cref="Lease"/> was issued immediately, <c>"human"</c> when a pending
-    /// <see cref="Request"/> was created.
-    /// </summary>
-    public string Outcome { get; }
+    public Guid Id { get; }
+    public Guid CipherId { get; }
+    public Guid CollectionId { get; }
+    public Guid OrganizationId { get; }
 
-    public LeaseResponseModel? Lease { get; }
-    public LeaseRequestResponseModel? Request { get; }
+    /// <summary><c>pending | approved | activated | denied | cancelled | expired</c>.</summary>
+    public string Status { get; }
+
+    public DateTime NotBefore { get; }
+    public DateTime NotAfter { get; }
+    public string? Reason { get; }
+    public DateTime CreationDate { get; }
 }

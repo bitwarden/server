@@ -27,7 +27,7 @@ public partial class AddAccessRule : Migration
                     .Annotation("MySql:CharSet", "utf8mb4"),
                 Description = table.Column<string>(type: "longtext", nullable: true)
                     .Annotation("MySql:CharSet", "utf8mb4"),
-                Rule = table.Column<string>(type: "longtext", nullable: false)
+                Conditions = table.Column<string>(type: "longtext", nullable: false)
                     .Annotation("MySql:CharSet", "utf8mb4"),
                 CreationDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                 RevisionDate = table.Column<DateTime>(type: "datetime(6)", nullable: false)

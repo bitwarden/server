@@ -2,7 +2,7 @@
 using Bit.Core.Pam.Entities;
 using Bit.Core.Pam.Enums;
 using Bit.Core.Pam.Models;
-using Bit.Core.Pam.Models.Rules;
+using Bit.Core.Pam.Models.Conditions;
 using Bit.Core.Pam.OrganizationFeatures.Queries;
 using Bit.Core.Pam.Repositories;
 using Bit.Core.Pam.Services;
@@ -30,17 +30,17 @@ public class AccessPreCheckQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task PreCheckAsync_HumanApprovalRule_ReturnsHuman(
+    public async Task PreCheckAsync_HumanApprovalCondition_ReturnsHuman(
         SutProvider<AccessPreCheckQuery> sutProvider, Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
     {
         SetupCipher(sutProvider, userId, cipherId);
-        sutProvider.GetDependency<IAccessApprovalResolver>()
+        sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(userId, cipherId)
-            .Returns(new AccessApprovalResolution(orgId, collectionId, RequiresHumanApproval: true, new HumanApprovalRule()));
+            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: true, new HumanApprovalCondition()));
 
         var result = await sutProvider.Sut.PreCheckAsync(userId, cipherId);
 
-        Assert.Equal(AccessApprovalOutcome.Human, result.Outcome);
+        Assert.Equal(AccessApprovalMode.Human, result.ApprovalMode);
     }
 
     [Theory, BitAutoData]
@@ -48,21 +48,21 @@ public class AccessPreCheckQueryTests
         SutProvider<AccessPreCheckQuery> sutProvider, Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
     {
         SetupCipher(sutProvider, userId, cipherId);
-        sutProvider.GetDependency<IAccessApprovalResolver>()
+        sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(userId, cipherId)
-            .Returns(new AccessApprovalResolution(orgId, collectionId, RequiresHumanApproval: false, new IpAllowlistRule { Cidrs = ["10.0.0.0/8"] }));
+            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: false, new IpAllowlistCondition { Cidrs = ["10.0.0.0/8"] }));
 
         var result = await sutProvider.Sut.PreCheckAsync(userId, cipherId);
 
-        Assert.Equal(AccessApprovalOutcome.Automatic, result.Outcome);
+        Assert.Equal(AccessApprovalMode.Automatic, result.ApprovalMode);
     }
 
     [Theory, BitAutoData]
     public async Task PreCheckAsync_ExistingActiveLease_ReturnsHasActiveLease(
-        SutProvider<AccessPreCheckQuery> sutProvider, Guid userId, Guid cipherId, Lease activeLease)
+        SutProvider<AccessPreCheckQuery> sutProvider, Guid userId, Guid cipherId, AccessLease activeLease)
     {
         SetupCipher(sutProvider, userId, cipherId);
-        sutProvider.GetDependency<ILeaseRepository>()
+        sutProvider.GetDependency<IAccessLeaseRepository>()
             .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, Arg.Any<DateTime>())
             .Returns(activeLease);
 
@@ -70,7 +70,7 @@ public class AccessPreCheckQueryTests
 
         Assert.True(result.HasActiveLease);
         // The approval path is irrelevant once a lease is held, so the rule resolver is never consulted.
-        await sutProvider.GetDependency<IAccessApprovalResolver>().DidNotReceiveWithAnyArgs().ResolveAsync(default, default);
+        await sutProvider.GetDependency<IGoverningRuleResolver>().DidNotReceiveWithAnyArgs().ResolveAsync(default, default);
     }
 
     [Theory, BitAutoData]
@@ -78,13 +78,13 @@ public class AccessPreCheckQueryTests
         SutProvider<AccessPreCheckQuery> sutProvider, Guid userId, Guid cipherId)
     {
         SetupCipher(sutProvider, userId, cipherId);
-        sutProvider.GetDependency<IAccessApprovalResolver>()
+        sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(userId, cipherId)
-            .Returns((AccessApprovalResolution?)null);
+            .Returns((GoverningRule?)null);
 
         var result = await sutProvider.Sut.PreCheckAsync(userId, cipherId);
 
-        Assert.Equal(AccessApprovalOutcome.Automatic, result.Outcome);
+        Assert.Equal(AccessApprovalMode.Automatic, result.ApprovalMode);
     }
 
     private static void SetupCipher(SutProvider<AccessPreCheckQuery> sutProvider, Guid userId, Guid cipherId)

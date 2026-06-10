@@ -13,7 +13,7 @@ public class AccessRuleRequestModel
     public string? Description { get; set; }
 
     [Required]
-    public object Rule { get; set; } = null!;
+    public object Conditions { get; set; } = null!;
 
     /// <summary>
     /// The complete set of collections this rule governs. The rule's associations are replaced to match
@@ -27,13 +27,13 @@ public class AccessRuleRequestModel
         OrganizationId = organizationId,
         Name = Name,
         Description = Description,
-        Rule = SerializeRule(Rule),
+        Conditions = SerializeConditions(Conditions),
     };
 
-    private static string SerializeRule(object rule) => rule switch
+    private static string SerializeConditions(object conditions) => conditions switch
     {
         JsonElement je when je.ValueKind == JsonValueKind.Null => string.Empty,
         JsonElement je => je.GetRawText(),
-        _ => JsonSerializer.Serialize(rule),
+        _ => JsonSerializer.Serialize(conditions),
     };
 }

@@ -12,24 +12,24 @@ namespace Bit.Core.Pam.OrganizationFeatures.Queries;
 public class GetLeasedCipherQuery : IGetLeasedCipherQuery
 {
     private readonly ICipherRepository _cipherRepository;
-    private readonly ILeaseRepository _leaseRepository;
-    private readonly IAccessApprovalResolver _resolver;
-    private readonly IAccessPolicyEngine _policyEngine;
+    private readonly IAccessLeaseRepository _accessLeaseRepository;
+    private readonly IGoverningRuleResolver _resolver;
+    private readonly IAccessRuleEngine _ruleEngine;
     private readonly ICurrentContext _currentContext;
     private readonly TimeProvider _timeProvider;
 
     public GetLeasedCipherQuery(
         ICipherRepository cipherRepository,
-        ILeaseRepository leaseRepository,
-        IAccessApprovalResolver resolver,
-        IAccessPolicyEngine policyEngine,
+        IAccessLeaseRepository accessLeaseRepository,
+        IGoverningRuleResolver resolver,
+        IAccessRuleEngine ruleEngine,
         ICurrentContext currentContext,
         TimeProvider timeProvider)
     {
         _cipherRepository = cipherRepository;
-        _leaseRepository = leaseRepository;
+        _accessLeaseRepository = accessLeaseRepository;
         _resolver = resolver;
-        _policyEngine = policyEngine;
+        _ruleEngine = ruleEngine;
         _currentContext = currentContext;
         _timeProvider = timeProvider;
     }
@@ -39,7 +39,7 @@ public class GetLeasedCipherQuery : IGetLeasedCipherQuery
         var now = _timeProvider.GetUtcNow();
 
         // Without an active lease whose window contains now, the caller is not entitled to the full data right now.
-        var lease = await _leaseRepository.GetActiveByRequesterIdCipherIdAsync(userId, cipherId, now.UtcDateTime);
+        var lease = await _accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(userId, cipherId, now.UtcDateTime);
         if (lease is null)
         {
             return null;
@@ -48,16 +48,16 @@ public class GetLeasedCipherQuery : IGetLeasedCipherQuery
         // A lease grants a window, but the access rule's environmental conditions (source IP, time of day) must
         // still hold at the moment the data is handed over. Approval is not re-checked here: holding the lease is
         // proof it was already granted, so only an outright denial withholds the data.
-        var resolution = await _resolver.ResolveAsync(userId, cipherId);
-        if (resolution is not null)
+        var governingRule = await _resolver.ResolveAsync(userId, cipherId);
+        if (governingRule is not null)
         {
-            var signals = new AccessPolicySignals
+            var signals = new AccessSignals
             {
                 IpAddress = IPAddress.TryParse(_currentContext.IpAddress, out var ip) ? ip : null,
                 Timestamp = now,
             };
 
-            if (_policyEngine.Evaluate(resolution.Rule, signals).Kind == DecisionKind.Deny)
+            if (_ruleEngine.Evaluate(governingRule.Condition, signals).Outcome == AccessEvaluationOutcome.Deny)
             {
                 return null;
             }

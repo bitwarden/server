@@ -6,7 +6,7 @@ BEGIN
         [OrganizationId]    UNIQUEIDENTIFIER    NOT NULL,
         [Name]              NVARCHAR(256)       NOT NULL,
         [Description]       NVARCHAR(MAX)       NULL,
-        [Rule]            NVARCHAR(MAX)       NOT NULL,
+        [Conditions]        NVARCHAR(MAX)       NOT NULL,
         [CreationDate]      DATETIME2(7)        NOT NULL,
         [RevisionDate]      DATETIME2(7)        NOT NULL,
         CONSTRAINT [PK_AccessRule] PRIMARY KEY CLUSTERED ([Id] ASC),
@@ -95,7 +95,7 @@ CREATE OR ALTER PROCEDURE [dbo].[AccessRule_Create]
     @OrganizationId UNIQUEIDENTIFIER,
     @Name NVARCHAR(256),
     @Description NVARCHAR(MAX) = NULL,
-    @Rule NVARCHAR(MAX),
+    @Conditions NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -108,7 +108,7 @@ BEGIN
         [OrganizationId],
         [Name],
         [Description],
-        [Rule],
+        [Conditions],
         [CreationDate],
         [RevisionDate]
     )
@@ -118,7 +118,7 @@ BEGIN
         @OrganizationId,
         @Name,
         @Description,
-        @Rule,
+        @Conditions,
         @CreationDate,
         @RevisionDate
     )
@@ -130,7 +130,7 @@ CREATE OR ALTER PROCEDURE [dbo].[AccessRule_Update]
     @OrganizationId UNIQUEIDENTIFIER,
     @Name NVARCHAR(256),
     @Description NVARCHAR(MAX) = NULL,
-    @Rule NVARCHAR(MAX),
+    @Conditions NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -143,7 +143,7 @@ BEGIN
         [OrganizationId] = @OrganizationId,
         [Name] = @Name,
         [Description] = @Description,
-        [Rule] = @Rule,
+        [Conditions] = @Conditions,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate
     WHERE

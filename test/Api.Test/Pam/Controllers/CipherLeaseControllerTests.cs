@@ -23,22 +23,22 @@ public class CipherLeaseControllerTests
 {
     [Theory, BitAutoData]
     public async Task State_ReturnsSnapshotFromQuery(
-        Guid id, Guid userId, Bit.Core.Pam.Entities.Lease activeLease, SutProvider<CipherLeaseController> sutProvider)
+        Guid id, Guid userId, Bit.Core.Pam.Entities.AccessLease activeLease, SutProvider<CipherLeaseController> sutProvider)
     {
         sutProvider.GetDependency<IUserService>()
             .GetProperUserId(Arg.Any<ClaimsPrincipal>())
             .Returns(userId);
-        sutProvider.GetDependency<IGetCipherLeaseStateQuery>()
+        sutProvider.GetDependency<IGetCipherAccessStateQuery>()
             .GetStateAsync(userId, id)
-            .Returns(new Bit.Core.Pam.Models.CipherLeaseStateResult(id, activeLease, null));
+            .Returns(new Bit.Core.Pam.Models.CipherAccessState(id, activeLease, null));
 
         var result = await sutProvider.Sut.State(id);
 
         Assert.Equal(id, result.CipherId);
-        Assert.NotNull(result.Lease.ActiveLease);
-        Assert.Equal(activeLease.Id, result.Lease.ActiveLease!.Id);
-        Assert.Null(result.Lease.PendingRequest);
-        Assert.Null(result.Lease.ApprovedTicket); // always null in v0 — no redemption flow
+        Assert.NotNull(result.ActiveLease);
+        Assert.Equal(activeLease.Id, result.ActiveLease!.Id);
+        Assert.Null(result.PendingRequest);
+        Assert.Null(result.ApprovedRequest); // always null in v0 — no activation flow
     }
 
     [Theory, BitAutoData]

@@ -1,0 +1,33 @@
+﻿using Bit.Core.Pam.Entities;
+
+namespace Bit.Core.Pam.Repositories;
+
+public interface IAccessLeaseRepository
+{
+    Task<AccessLease?> GetByIdAsync(Guid id);
+
+    /// <summary>
+    /// Returns the caller's active lease for the cipher whose window contains <paramref name="now"/>, or null.
+    /// </summary>
+    Task<AccessLease?> GetActiveByRequesterIdCipherIdAsync(Guid requesterId, Guid cipherId, DateTime now);
+
+    /// <summary>
+    /// Returns the caller's currently-active leases (status Active, window containing <paramref name="now"/>, not
+    /// revoked) across every organization they belong to. Returns an empty collection when none are active.
+    /// </summary>
+    Task<ICollection<AccessLease>> GetManyActiveByRequesterIdAsync(Guid requesterId, DateTime now);
+
+    /// <summary>
+    /// Atomically creates an auto-approved <see cref="AccessRequest"/>, its automatic <see cref="AccessDecision"/>, and an
+    /// active <see cref="AccessLease"/> in a single transaction. The three entities must already have their ids assigned.
+    /// This is the only way a <see cref="AccessLease"/> is created, so the request, decision, and lease never diverge.
+    /// </summary>
+    Task CreateAutoApprovedAsync(AccessRequest request, AccessDecision decision, AccessLease lease, DateTime now);
+
+    /// <summary>
+    /// Atomically revokes an active lease (setting its revoked date and revoker) and records the revocation reason as
+    /// a human <paramref name="auditDecision"/> against the lease's originating request. The decision must already
+    /// have its id assigned.
+    /// </summary>
+    Task RevokeAsync(AccessLease lease, AccessDecision auditDecision, DateTime now);
+}

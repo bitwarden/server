@@ -15,7 +15,7 @@ public class AccessRuleResponseModel : ResponseModel
         OrganizationId = rule.OrganizationId;
         Name = rule.Name;
         Description = rule.Description;
-        Rule = TryParseRule(rule.Rule);
+        Conditions = TryParseConditions(rule.Conditions);
         CreationDate = rule.CreationDate;
         RevisionDate = rule.RevisionDate;
         Collections = rule.CollectionIds.ToList();
@@ -25,20 +25,20 @@ public class AccessRuleResponseModel : ResponseModel
     public Guid OrganizationId { get; }
     public string Name { get; }
     public string? Description { get; }
-    public JsonElement? Rule { get; }
+    public JsonElement? Conditions { get; }
     public DateTime CreationDate { get; }
     public DateTime RevisionDate { get; }
     public IEnumerable<Guid> Collections { get; }
 
-    private static JsonElement? TryParseRule(string? ruleJson)
+    private static JsonElement? TryParseConditions(string? conditionsJson)
     {
-        if (string.IsNullOrEmpty(ruleJson))
+        if (string.IsNullOrEmpty(conditionsJson))
         {
             return null;
         }
         try
         {
-            return JsonDocument.Parse(ruleJson).RootElement;
+            return JsonDocument.Parse(conditionsJson).RootElement;
         }
         catch (JsonException)
         {

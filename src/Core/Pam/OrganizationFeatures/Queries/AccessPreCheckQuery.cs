@@ -11,19 +11,19 @@ namespace Bit.Core.Pam.OrganizationFeatures.Queries;
 public class AccessPreCheckQuery : IAccessPreCheckQuery
 {
     private readonly ICipherRepository _cipherRepository;
-    private readonly IAccessApprovalResolver _resolver;
-    private readonly ILeaseRepository _leaseRepository;
+    private readonly IGoverningRuleResolver _resolver;
+    private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly TimeProvider _timeProvider;
 
     public AccessPreCheckQuery(
         ICipherRepository cipherRepository,
-        IAccessApprovalResolver resolver,
-        ILeaseRepository leaseRepository,
+        IGoverningRuleResolver resolver,
+        IAccessLeaseRepository accessLeaseRepository,
         TimeProvider timeProvider)
     {
         _cipherRepository = cipherRepository;
         _resolver = resolver;
-        _leaseRepository = leaseRepository;
+        _accessLeaseRepository = accessLeaseRepository;
         _timeProvider = timeProvider;
     }
 
@@ -39,17 +39,17 @@ public class AccessPreCheckQuery : IAccessPreCheckQuery
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         // A caller who already holds an active lease should be sent straight to the credential, not prompted to make
-        // a request that RequestAccessCommand would reject. This mirrors the active-lease guard there.
-        if (await _leaseRepository.GetActiveByRequesterIdCipherIdAsync(userId, cipherId, now) is not null)
+        // a request that SubmitAccessRequestCommand would reject. This mirrors the active-lease guard there.
+        if (await _accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(userId, cipherId, now) is not null)
         {
-            return new AccessPreCheckResult(AccessApprovalOutcome.Automatic, HasActiveLease: true);
+            return new AccessPreCheckResult(AccessApprovalMode.Automatic, HasActiveLease: true);
         }
 
-        var resolution = await _resolver.ResolveAsync(userId, cipherId);
-        var outcome = resolution?.RequiresHumanApproval == true
-            ? AccessApprovalOutcome.Human
-            : AccessApprovalOutcome.Automatic;
+        var governingRule = await _resolver.ResolveAsync(userId, cipherId);
+        var approvalMode = governingRule?.RequiresHumanApproval == true
+            ? AccessApprovalMode.Human
+            : AccessApprovalMode.Automatic;
 
-        return new AccessPreCheckResult(outcome);
+        return new AccessPreCheckResult(approvalMode);
     }
 }
