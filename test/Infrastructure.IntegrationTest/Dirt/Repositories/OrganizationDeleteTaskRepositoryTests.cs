@@ -4,7 +4,10 @@ using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Dirt.Repositories;
@@ -109,9 +112,9 @@ public class OrganizationDeleteTaskRepositoryTests
         Assert.True(claimed == null || claimed.Id != task.Id);
     }
 
-    [Theory, DatabaseData(OnlyOn = [SupportedDatabaseProviders.SqlServer])]
+    [Theory, DatabaseData]
     public async Task DeleteAndCreateDeleteTaskAsync_DeletesOrganizationAndEnqueuesTask(
-        IOrganizationRepository organizationRepository, Database database)
+        IOrganizationRepository organizationRepository, Database database, IServiceProvider services)
     {
         var organization = await organizationRepository.CreateAsync(new Organization
         {
@@ -126,15 +129,15 @@ public class OrganizationDeleteTaskRepositoryTests
 
         // The organization is gone and the cleanup task was enqueued in the same transaction.
         Assert.Null(await organizationRepository.GetByIdAsync(organization.Id));
-        var task = await QueryRowByOrganizationIdAsync(database.ConnectionString, organization.Id);
+        var task = await GetTaskByOrganizationIdAsync(services, database, organization.Id);
         Assert.NotNull(task);
         Assert.Equal(OrganizationDeleteTaskType.EventsCleanup, task.TaskType);
         Assert.Null(task.CompletedDate);
     }
 
-    [Theory, DatabaseData(OnlyOn = [SupportedDatabaseProviders.SqlServer])]
+    [Theory, DatabaseData]
     public async Task DeleteAsync_DoesNotEnqueueDeleteTask(
-        IOrganizationRepository organizationRepository, Database database)
+        IOrganizationRepository organizationRepository, Database database, IServiceProvider services)
     {
         var organization = await organizationRepository.CreateAsync(new Organization
         {
@@ -148,7 +151,27 @@ public class OrganizationDeleteTaskRepositoryTests
 
         // The plain delete path (e.g. signup rollback) must not enqueue a cleanup task.
         Assert.Null(await organizationRepository.GetByIdAsync(organization.Id));
-        Assert.Null(await QueryRowByOrganizationIdAsync(database.ConnectionString, organization.Id));
+        Assert.Null(await GetTaskByOrganizationIdAsync(services, database, organization.Id));
+    }
+
+    /// <summary>
+    /// Reads the cleanup-task row for an organization across providers: raw SQL against the
+    /// Dapper/SqlServer pair, the EF <see cref="DatabaseContext"/> everywhere else (there is
+    /// no read-by-organization repository method, by design).
+    /// </summary>
+    private static async Task<OrganizationDeleteTask?> GetTaskByOrganizationIdAsync(
+        IServiceProvider services, Database database, Guid organizationId)
+    {
+        if (database.Type == SupportedDatabaseProviders.SqlServer && !database.UseEf)
+        {
+            return await QueryRowByOrganizationIdAsync(database.ConnectionString, organizationId);
+        }
+
+        using var scope = services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+        return await dbContext.OrganizationDeleteTasks
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.OrganizationId == organizationId);
     }
 
     private static async Task<OrganizationDeleteTask> QueryRowAsync(string connectionString, Guid id)
