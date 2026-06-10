@@ -1,4 +1,4 @@
-using Bit.Core.Models.Api;
+﻿using Bit.Core.Models.Api;
 using Bit.Core.Pam.Models;
 
 namespace Bit.Api.Pam.Models.Response;
@@ -30,6 +30,9 @@ public class AccessRequestDetailsResponseModel : ResponseModel
         ApproverId = details.ApproverId;
         ApproverComment = details.ApproverComment;
         ProducedLeaseId = details.ProducedLeaseId;
+        ProducedLeaseStatus = details.ProducedLeaseStatus.HasValue
+            ? AccessLeaseStatusNames.From(details.ProducedLeaseStatus.Value)
+            : null;
         ExtensionOfLeaseId = details.ExtensionOfLeaseId;
         CipherName = details.CipherName;
         CollectionName = details.CollectionName;
@@ -67,6 +70,12 @@ public class AccessRequestDetailsResponseModel : ResponseModel
 
     /// <summary>Set once an approved request has produced a lease.</summary>
     public Guid? ProducedLeaseId { get; }
+
+    /// <summary>
+    /// The produced lease's status (<c>active | expired | revoked</c>), or null when no lease exists. The inbox uses
+    /// this to keep an ended lease out of the "active" group so it is not offered for revocation.
+    /// </summary>
+    public string? ProducedLeaseStatus { get; }
 
     /// <summary>The parent lease if this is an extension request.</summary>
     public Guid? ExtensionOfLeaseId { get; }

@@ -81,6 +81,62 @@ public class AccessRequestRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
+    public async Task GetManyInboxHistoryByCollectionIdsAsync_SurfacesProducedLeaseStatus(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var now = DateTime.UtcNow;
+
+        var approved = BuildRequest(organization.Id, collection.Id, Guid.NewGuid(), AccessRequestStatus.Approved, now);
+        approved.NotBefore = now.AddHours(-1);
+        approved.NotAfter = now.AddHours(1);
+        approved = await accessRequestRepository.CreateAsync(approved);
+
+        var lease = new AccessLease
+        {
+            Id = CoreHelpers.GenerateComb(),
+            AccessRequestId = approved.Id,
+            OrganizationId = approved.OrganizationId,
+            CollectionId = approved.CollectionId,
+            CipherId = approved.CipherId,
+            RequesterId = approved.RequesterId,
+            Status = AccessLeaseStatus.Active,
+            NotBefore = approved.NotBefore,
+            NotAfter = approved.NotAfter,
+            CreationDate = now,
+        };
+        Assert.True(await accessLeaseRepository.CreateFromApprovedRequestAsync(lease, now));
+
+        // While the lease is active the inbox sees its Active status, so the client offers Revoke.
+        var active = Assert.Single(await accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
+            [collection.Id], now.AddDays(-1)));
+        Assert.Equal(lease.Id, active.ProducedLeaseId);
+        Assert.Equal(AccessLeaseStatus.Active, active.ProducedLeaseStatus);
+
+        // After the lease ends the inbox sees the Revoked status (the window is unchanged), so the client can keep
+        // the row out of the Active group and stop offering a Revoke that the server would now reject.
+        var auditDecision = new AccessDecision
+        {
+            Id = CoreHelpers.GenerateComb(),
+            AccessRequestId = approved.Id,
+            DeciderKind = AccessDeciderKind.Human,
+            ApproverId = Guid.NewGuid(),
+            Verdict = AccessDecisionVerdict.Deny,
+            CreationDate = now,
+        };
+        await accessLeaseRepository.RevokeAsync(lease, auditDecision, now);
+
+        var revoked = Assert.Single(await accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
+            [collection.Id], now.AddDays(-1)));
+        Assert.Equal(lease.Id, revoked.ProducedLeaseId);
+        Assert.Equal(AccessLeaseStatus.Revoked, revoked.ProducedLeaseStatus);
+    }
+
+    [DatabaseTheory, DatabaseData]
     public async Task ResolveWithDecisionAsync_Approve_ResolvesRequestAndRecordsDecisionWithoutMintingLease(
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
@@ -133,6 +189,7 @@ public class AccessRequestRepositoryTests
         // Approval records the verdict only: no lease exists until the requester activates the approved request,
         // so the requester does not yet hold access and the inbox row carries no produced lease.
         Assert.Null(row.ProducedLeaseId);
+        Assert.Null(row.ProducedLeaseStatus);
         Assert.Null(await accessLeaseRepository.GetByAccessRequestIdAsync(request.Id));
         Assert.Null(await accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(
             request.RequesterId, request.CipherId, now));
