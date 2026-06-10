@@ -10,7 +10,7 @@ public class OrganizationDeleteTask : ITableObject<Guid>
     public Guid OrganizationId { get; set; }
     public OrganizationDeleteTaskType TaskType { get; set; }
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
-    public DateTime? RevisionDate { get; set; }
+    public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
     public DateTime? StartDate { get; set; }
     public DateTime? CompletedDate { get; set; }
     public long ItemsDeletedCount { get; set; }

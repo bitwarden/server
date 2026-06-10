@@ -108,37 +108,56 @@ public class EventRepository : IEventRepository
         // bounds work per call so the background job can interleave other orgs.
         const int batchSize = 100;
         const int maxBatchesPerCall = 18_000;
+        // Bound concurrent transaction submissions so a large organization doesn't
+        // fan out thousands of simultaneous requests and get throttled.
+        const int maxConcurrentBatches = 8;
 
         var partitionKey = $"OrganizationId={organizationId}";
         var filter = $"PartitionKey eq '{partitionKey}'";
         var select = new[] { "PartitionKey", "RowKey" };
 
-        var pending = new List<TableTransactionAction>(batchSize);
-        var batchTasks = new List<Task>(maxBatchesPerCall);
-        // totalDeleted is counted optimistically before transactions complete; if Task.WhenAll
-        // throws the count may be inflated, but the outer cleanup loop will retry harmlessly.
+        using var throttle = new SemaphoreSlim(maxConcurrentBatches);
+        var batchTasks = new List<Task>();
+        // Counted only after each transaction succeeds, so a partial failure does not
+        // inflate the reported progress.
         var totalDeleted = 0;
+        var batchCount = 0;
 
+        async Task SubmitBatchAsync(List<TableTransactionAction> batch)
+        {
+            try
+            {
+                await _tableClient.SubmitTransactionAsync(batch);
+                Interlocked.Add(ref totalDeleted, batch.Count);
+            }
+            finally
+            {
+                throttle.Release();
+            }
+        }
+
+        var pending = new List<TableTransactionAction>(batchSize);
         await foreach (var entity in _tableClient.QueryAsync<TableEntity>(filter, select: select))
         {
             pending.Add(new TableTransactionAction(TableTransactionActionType.Delete, entity, ETag.All));
 
             if (pending.Count == batchSize)
             {
-                var batch = pending.ToList();
-                pending.Clear();
-                totalDeleted += batch.Count;
-                batchTasks.Add(_tableClient.SubmitTransactionAsync(batch));
+                await throttle.WaitAsync();
+                batchTasks.Add(SubmitBatchAsync(pending));
+                pending = new List<TableTransactionAction>(batchSize);
 
-                if (batchTasks.Count >= maxBatchesPerCall)
+                if (++batchCount >= maxBatchesPerCall)
+                {
                     break;
+                }
             }
         }
 
         if (pending.Count > 0)
         {
-            totalDeleted += pending.Count;
-            batchTasks.Add(_tableClient.SubmitTransactionAsync(pending));
+            await throttle.WaitAsync();
+            batchTasks.Add(SubmitBatchAsync(pending));
         }
 
         await Task.WhenAll(batchTasks);

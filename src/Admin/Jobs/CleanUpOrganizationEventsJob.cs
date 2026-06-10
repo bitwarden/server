@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using Azure;
 using Bit.Core;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Jobs;
@@ -81,9 +82,16 @@ public class CleanUpOrganizationEventsJob : BaseJob
         }
         catch (Exception ex)
         {
-            var message = ex.Message.Length > 4000 ? ex.Message[..4000] : ex.Message;
-            await _cleanupRepository.UpdateErrorAsync(pending.Id, message);
+            // Store a sanitized error, never ex.Message: Azure SDK messages can embed
+            // row-key identifiers (e.g. UserId=..., CipherId=...) that must not be persisted.
+            await _cleanupRepository.UpdateErrorAsync(pending.Id, BuildSanitizedError(ex));
             throw;
         }
     }
+
+    private static string BuildSanitizedError(Exception ex) => ex switch
+    {
+        RequestFailedException rfe => $"{nameof(RequestFailedException)} (Status: {rfe.Status}, ErrorCode: {rfe.ErrorCode})",
+        _ => ex.GetType().FullName ?? ex.GetType().Name,
+    };
 }

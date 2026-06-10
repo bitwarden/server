@@ -8,9 +8,9 @@ BEGIN
         [OrganizationId]     UNIQUEIDENTIFIER NOT NULL,
         [TaskType]           TINYINT          NOT NULL CONSTRAINT [DF_OrganizationDeleteTask_TaskType] DEFAULT (0),
         [CreationDate]       DATETIME2(7)     NOT NULL,
-        [RevisionDate]       DATETIME2(7)     NULL,
+        [RevisionDate]       DATETIME2(7)     NOT NULL,
         [StartDate]          DATETIME2(7)     NULL,
-        [CompletedDate]      DATETIME2(7)    NULL,
+        [CompletedDate]      DATETIME2(7)     NULL,
         [ItemsDeletedCount]  BIGINT           NOT NULL CONSTRAINT [DF_OrganizationDeleteTask_ItemsDeletedCount] DEFAULT (0),
         [FailureCount]       INT              NOT NULL CONSTRAINT [DF_OrganizationDeleteTask_FailureCount] DEFAULT (0),
         [LastError]          NVARCHAR(MAX)    NULL,
@@ -43,13 +43,15 @@ BEGIN
         [Id],
         [OrganizationId],
         [TaskType],
-        [CreationDate]
+        [CreationDate],
+        [RevisionDate]
     )
     VALUES
     (
         @Id,
         @OrganizationId,
         @TaskType,
+        @CreationDate,
         @CreationDate
     )
 END

@@ -1,4 +1,7 @@
-﻿CREATE PROCEDURE [dbo].[Organization_DeleteById]
+-- Add optional OrganizationDeleteTask enqueue to Organization_DeleteById so the
+-- delete and the cleanup-task insert commit atomically. Params default to NULL,
+-- preserving existing behavior for callers that do not enqueue a task.
+CREATE OR ALTER PROCEDURE [dbo].[Organization_DeleteById]
     @Id UNIQUEIDENTIFIER,
     @OrganizationDeleteTaskId UNIQUEIDENTIFIER = NULL,
     @OrganizationDeleteTaskType TINYINT = NULL,
@@ -193,3 +196,4 @@ BEGIN
 
     COMMIT TRANSACTION Organization_DeleteById
 END
+GO

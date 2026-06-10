@@ -1,6 +1,9 @@
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Enums;
+using Bit.Core.Repositories;
 using Microsoft.Data.SqlClient;
 using Xunit;
 
@@ -24,7 +27,8 @@ public class OrganizationDeleteTaskRepositoryTests
         Assert.NotNull(claimed);
         Assert.Equal(task.Id, claimed.Id);
         Assert.NotNull(claimed.StartDate);
-        Assert.NotNull(claimed.RevisionDate);
+        // ClaimNextPending advances RevisionDate to "now", past the CreationDate set on insert
+        Assert.True(claimed.RevisionDate > task.CreationDate);
         Assert.Null(claimed.CompletedDate);
     }
 
@@ -105,6 +109,48 @@ public class OrganizationDeleteTaskRepositoryTests
         Assert.True(claimed == null || claimed.Id != task.Id);
     }
 
+    [Theory, DatabaseData(OnlyOn = [SupportedDatabaseProviders.SqlServer])]
+    public async Task DeleteAndCreateDeleteTaskAsync_DeletesOrganizationAndEnqueuesTask(
+        IOrganizationRepository organizationRepository, Database database)
+    {
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            BillingEmail = "test@example.com",
+            Plan = "Test",
+            PrivateKey = "privatekey",
+        });
+
+        await organizationRepository.DeleteAndCreateDeleteTaskAsync(
+            organization, OrganizationDeleteTaskType.EventsCleanup);
+
+        // The organization is gone and the cleanup task was enqueued in the same transaction.
+        Assert.Null(await organizationRepository.GetByIdAsync(organization.Id));
+        var task = await QueryRowByOrganizationIdAsync(database.ConnectionString, organization.Id);
+        Assert.NotNull(task);
+        Assert.Equal(OrganizationDeleteTaskType.EventsCleanup, task.TaskType);
+        Assert.Null(task.CompletedDate);
+    }
+
+    [Theory, DatabaseData(OnlyOn = [SupportedDatabaseProviders.SqlServer])]
+    public async Task DeleteAsync_DoesNotEnqueueDeleteTask(
+        IOrganizationRepository organizationRepository, Database database)
+    {
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            BillingEmail = "test@example.com",
+            Plan = "Test",
+            PrivateKey = "privatekey",
+        });
+
+        await organizationRepository.DeleteAsync(organization);
+
+        // The plain delete path (e.g. signup rollback) must not enqueue a cleanup task.
+        Assert.Null(await organizationRepository.GetByIdAsync(organization.Id));
+        Assert.Null(await QueryRowByOrganizationIdAsync(database.ConnectionString, organization.Id));
+    }
+
     private static async Task<OrganizationDeleteTask> QueryRowAsync(string connectionString, Guid id)
     {
         await using var connection = new SqlConnection(connectionString);
@@ -125,7 +171,39 @@ public class OrganizationDeleteTaskRepositoryTests
             OrganizationId = reader.GetGuid(1),
             TaskType = (Bit.Core.Dirt.Enums.OrganizationDeleteTaskType)reader.GetByte(2),
             CreationDate = reader.GetDateTime(3),
-            RevisionDate = reader.IsDBNull(4) ? null : reader.GetDateTime(4),
+            RevisionDate = reader.GetDateTime(4),
+            StartDate = reader.IsDBNull(5) ? null : reader.GetDateTime(5),
+            CompletedDate = reader.IsDBNull(6) ? null : reader.GetDateTime(6),
+            ItemsDeletedCount = reader.GetInt64(7),
+            FailureCount = reader.GetInt32(8),
+            LastError = reader.IsDBNull(9) ? null : reader.GetString(9),
+        };
+    }
+
+    private static async Task<OrganizationDeleteTask?> QueryRowByOrganizationIdAsync(string connectionString, Guid organizationId)
+    {
+        await using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync();
+        await using var cmd = connection.CreateCommand();
+        cmd.CommandText = """
+            SELECT [Id], [OrganizationId], [TaskType], [CreationDate], [RevisionDate], [StartDate],
+                   [CompletedDate], [ItemsDeletedCount], [FailureCount], [LastError]
+            FROM [dbo].[OrganizationDeleteTask]
+            WHERE [OrganizationId] = @OrganizationId
+            """;
+        cmd.Parameters.AddWithValue("@OrganizationId", organizationId);
+        await using var reader = await cmd.ExecuteReaderAsync();
+        if (!await reader.ReadAsync())
+        {
+            return null;
+        }
+        return new OrganizationDeleteTask
+        {
+            Id = reader.GetGuid(0),
+            OrganizationId = reader.GetGuid(1),
+            TaskType = (OrganizationDeleteTaskType)reader.GetByte(2),
+            CreationDate = reader.GetDateTime(3),
+            RevisionDate = reader.GetDateTime(4),
             StartDate = reader.IsDBNull(5) ? null : reader.GetDateTime(5),
             CompletedDate = reader.IsDBNull(6) ? null : reader.GetDateTime(6),
             ItemsDeletedCount = reader.GetInt64(7),

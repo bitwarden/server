@@ -7,6 +7,7 @@ using AutoMapper.QueryableExtensions;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -219,7 +220,15 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         await OrganizationUpdateStorage(id);
     }
 
-    public override async Task DeleteAsync(Core.AdminConsole.Entities.Organization organization)
+    public override Task DeleteAsync(Core.AdminConsole.Entities.Organization organization)
+        => DeleteInternalAsync(organization, null);
+
+    public Task DeleteAndCreateDeleteTaskAsync(Core.AdminConsole.Entities.Organization organization,
+        OrganizationDeleteTaskType taskType)
+        => DeleteInternalAsync(organization, taskType);
+
+    private async Task DeleteInternalAsync(Core.AdminConsole.Entities.Organization organization,
+        OrganizationDeleteTaskType? deleteTaskType)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -287,6 +296,19 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 
             var orgEntity = await dbContext.FindAsync<Organization>(organization.Id);
             dbContext.Remove(orgEntity);
+
+            // Atomically enqueue the cleanup task within the same transaction as the
+            // deletion, so durable downstream cleanup is never lost if the delete commits.
+            if (deleteTaskType.HasValue)
+            {
+                var deleteTask = new Dirt.Models.OrganizationDeleteTask
+                {
+                    OrganizationId = organization.Id,
+                    TaskType = deleteTaskType.Value,
+                };
+                deleteTask.SetNewId();
+                await dbContext.OrganizationDeleteTasks.AddAsync(deleteTask);
+            }
 
             await dbContext.SaveChangesAsync();
             await organizationDeleteTransaction.CommitAsync();

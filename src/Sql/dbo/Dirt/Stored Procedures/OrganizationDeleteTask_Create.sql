@@ -12,13 +12,15 @@ BEGIN
         [Id],
         [OrganizationId],
         [TaskType],
-        [CreationDate]
+        [CreationDate],
+        [RevisionDate]
     )
     VALUES
     (
         @Id,
         @OrganizationId,
         @TaskType,
+        @CreationDate,
         @CreationDate
     )
 END

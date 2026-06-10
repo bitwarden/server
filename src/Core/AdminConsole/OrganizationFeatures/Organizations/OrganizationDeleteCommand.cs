@@ -4,9 +4,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Services;
-using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Enums;
-using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -20,7 +18,6 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
 {
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationDeleteTaskRepository _organizationDeleteTaskRepository;
     private readonly IStripePaymentService _paymentService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ICipherService _cipherService;
@@ -32,7 +29,6 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
     public OrganizationDeleteCommand(
         IApplicationCacheService applicationCacheService,
         IOrganizationRepository organizationRepository,
-        IOrganizationDeleteTaskRepository organizationDeleteTaskRepository,
         IStripePaymentService paymentService,
         ISsoConfigRepository ssoConfigRepository,
         ICipherService cipherService,
@@ -43,7 +39,6 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
     {
         _applicationCacheService = applicationCacheService;
         _organizationRepository = organizationRepository;
-        _organizationDeleteTaskRepository = organizationDeleteTaskRepository;
         _paymentService = paymentService;
         _ssoConfigRepository = ssoConfigRepository;
         _cipherService = cipherService;
@@ -82,12 +77,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
 
         await _sendFileStorageService.DeleteFilesForOrganizationAsync(organization.Id);
         await _cipherService.DeleteAttachmentsForOrganizationAsync(organization.Id);
-        await _organizationRepository.DeleteAsync(organization);
-        await _organizationDeleteTaskRepository.CreateAsync(new OrganizationDeleteTask
-        {
-            OrganizationId = organization.Id,
-            TaskType = OrganizationDeleteTaskType.EventsCleanup,
-        });
+        await _organizationRepository.DeleteAndCreateDeleteTaskAsync(organization, OrganizationDeleteTaskType.EventsCleanup);
         await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
     }
 

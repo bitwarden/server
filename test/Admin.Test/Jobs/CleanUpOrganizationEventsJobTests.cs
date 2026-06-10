@@ -112,25 +112,28 @@ public class CleanUpOrganizationEventsJobTests
         // BaseJob.Execute swallows exceptions after logging; we verify via substitute calls.
         await _sut.Execute(context);
 
-        await _cleanupRepository.Received(1).UpdateErrorAsync(pending.Id, "boom");
+        // The exception type is recorded, never the message.
+        await _cleanupRepository.Received(1).UpdateErrorAsync(pending.Id, typeof(InvalidOperationException).FullName!);
         await _cleanupRepository.DidNotReceive().UpdateCompletedAsync(pending.Id);
     }
 
     [Fact]
-    public async Task Execute_DeleteThrowsWithLongMessage_TruncatesErrorTo4000Chars()
+    public async Task Execute_DeleteThrows_DoesNotLeakRowKeyIdentifiersInError()
     {
         var pending = CreatePending();
         _cleanupRepository.ClaimNextPendingAsync().Returns(pending);
-        var longMessage = new string('x', 5000);
-        var expectedTruncated = longMessage[..4000];
+        // Azure SDK messages can embed row-key identifiers; these must never be persisted.
+        var leakyMessage = "The specified entity already exists. UserId=abc123, CipherId=def456";
         _eventRepository
             .DeleteManyByOrganizationIdAsync(pending.OrganizationId)
-            .Throws(new InvalidOperationException(longMessage));
+            .Throws(new InvalidOperationException(leakyMessage));
         var context = CreateContext();
 
         await _sut.Execute(context);
 
-        await _cleanupRepository.Received(1).UpdateErrorAsync(pending.Id, expectedTruncated);
+        await _cleanupRepository.Received(1).UpdateErrorAsync(
+            pending.Id,
+            Arg.Is<string>(error => !error.Contains("UserId") && !error.Contains("CipherId")));
     }
 
     private static OrganizationDeleteTask CreatePending() => new()
