@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 
 namespace Bit.Core.Test.Billing.Mocks.Plans;
 
