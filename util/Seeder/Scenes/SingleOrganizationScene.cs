@@ -15,6 +15,7 @@ public struct SingleOrganizationSceneResult
     public Guid OrganizationId { get; init; }
     public Guid OrganizationUserId { get; init; }
     public string ApiKey { get; init; }
+    public string OrganizationKeyB64 { get; init; }
 }
 
 /// <summary>
@@ -90,7 +91,8 @@ public class SingleOrganizationScene(
             {
                 OrganizationId = organization.Id,
                 OrganizationUserId = organizationUser.Id,
-                ApiKey = apiKey.ApiKey
+                ApiKey = apiKey.ApiKey,
+                OrganizationKeyB64 = orgKeys.Key
             },
             mangleMap: manglerService.GetMangleMap());
     }
