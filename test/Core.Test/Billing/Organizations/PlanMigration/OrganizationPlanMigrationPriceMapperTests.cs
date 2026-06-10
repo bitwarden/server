@@ -31,6 +31,22 @@ public class OrganizationPlanMigrationPriceMapperTests
         Assert.Equal(target.SecretsManager.StripeServiceAccountPlanId, result);
     }
 
+    // PM-37511: the Teams Annual SM add-on maps source -> target StripeServiceAccountPlanId via the same
+    // mapper, so the line item swaps to the target price with quantity unchanged and no grace. The 2020
+    // and current annual SA price ids differ, so this asserts a real swap, not a pass-through.
+    [Fact]
+    public void MapOrNull_TeamsAnnualSmServiceAccount_ReturnsTargetSmServiceAccount()
+    {
+        var source = MockPlans.Get(PlanType.TeamsAnnually2020);
+        var target = MockPlans.Get(PlanType.TeamsAnnually);
+
+        var result = OrganizationPlanMigrationPriceMapper.MapOrNull(
+            source.SecretsManager.StripeServiceAccountPlanId, source, target);
+
+        Assert.Equal(target.SecretsManager.StripeServiceAccountPlanId, result);
+        Assert.NotEqual(source.SecretsManager.StripeServiceAccountPlanId, result);
+    }
+
     [Fact]
     public void MapOrNull_UnknownPriceId_ReturnsNull()
     {
