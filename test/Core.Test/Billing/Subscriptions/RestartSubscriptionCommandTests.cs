@@ -595,6 +595,65 @@ public class RestartSubscriptionCommandTests
             org.Enabled == true));
     }
 
+    // PM-37510 (T7): restart copies the canceled subscription's SM service-account quantity verbatim
+    // (already grace-reduced when it was billed) and carries the whole metadata over, so the grace key
+    // survives onto the new subscription. No quantity recompute occurs.
+    [Fact]
+    public async Task Run_Organization_WithSecretsManager_PreservesServiceAccountQuantityAndGraceMetadata()
+    {
+        var organizationId = Guid.NewGuid();
+        var currentPeriodEnd = DateTime.UtcNow.AddMonths(1);
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.EnterpriseMonthly
+        };
+
+        var plan = MockPlans.Get(PlanType.EnterpriseMonthly);
+
+        var existingSubscription = new Subscription
+        {
+            Status = SubscriptionStatus.Canceled,
+            CustomerId = "cus_grace",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { Price = new Price { Id = plan.PasswordManager.StripeSeatPlanId }, Quantity = 15 },
+                    new SubscriptionItem { Price = new Price { Id = plan.SecretsManager.StripeSeatPlanId }, Quantity = 10 },
+                    new SubscriptionItem { Price = new Price { Id = plan.SecretsManager.StripeServiceAccountPlanId }, Quantity = 20 }
+                ]
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                ["organizationId"] = organizationId.ToString(),
+                [MetadataKeys.MigrationGraceServiceAccounts] = "150"
+            }
+        };
+
+        var newSubscription = new Subscription
+        {
+            Id = "sub_grace_new",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd }]
+            }
+        };
+
+        _subscriberService.GetSubscription(organization).Returns(existingSubscription);
+        _pricingClient.ListPlans().Returns([plan]);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(options =>
+            options.Items.Any(item =>
+                item.Price == plan.SecretsManager.StripeServiceAccountPlanId && item.Quantity == 20) &&
+            options.Metadata[MetadataKeys.MigrationGraceServiceAccounts] == "150"));
+    }
+
     private record DisabledEnterprisePlan2023 : Bit.Core.Models.StaticStore.Plan
     {
         public DisabledEnterprisePlan2023(bool isAnnual)

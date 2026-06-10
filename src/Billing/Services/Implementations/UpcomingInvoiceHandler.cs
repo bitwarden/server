@@ -14,6 +14,7 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
+using Bit.Core.Models.Mail.Billing.Renewal.BusinessPlanRenewal2020Migration;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2019Renewal;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2020Renewal;
 using Bit.Core.Models.Mail.Billing.Renewal.Premium;
@@ -223,9 +224,12 @@ public class UpcomingInvoiceHandler(
     /// Dispatches subscription-alignment work based on the organization's product tier.
     /// </summary>
     /// <returns>
-    /// True if a tier-specific alignment ran and sent a cohort-specific renewal email
-    /// (the standard upcoming-invoice email is skipped). False if no alignment ran (the
-    /// caller falls through to the standard upcoming-invoice email path).
+    /// True if a tier-specific alignment took ownership of this organization's renewal communication,
+    /// so the caller must skip the standard upcoming-invoice email. The tier-specific path may still
+    /// decide not to send (or fail to send) its own cohort-specific email — for example when the cohort
+    /// or migration path is missing, the renewal date is indeterminate, or the email send fails after the
+    /// migration was already scheduled — so True does not guarantee an email was sent. False if no
+    /// alignment ran, in which case the caller falls through to the standard upcoming-invoice email path.
     /// </returns>
     private Task<bool> AlignOrganizationSubscriptionConcernsAsync(
         Organization organization,
@@ -349,6 +353,7 @@ public class UpcomingInvoiceHandler(
         Event @event,
         Subscription subscription)
     {
+        Guid cohortId;
         try
         {
             if (!featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
@@ -374,12 +379,33 @@ public class UpcomingInvoiceHandler(
                 return false;
             }
 
-            var cohort = await cohortRepository.GetByIdAsync(assignment.CohortId);
+            cohortId = assignment.CohortId;
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(
+                exception,
+                "Failed to schedule business price migration for Organization ({OrganizationID}) while processing '{EventType}' event ({EventID})",
+                organization.Id,
+                @event.Type,
+                @event.Id);
+            return false;
+        }
+
+        /*
+         * The price migration is now committed at Stripe. From here on we must return true so the caller
+         * suppresses the standard upcoming-invoice email (which would quote the pre-migration price). A
+         * failure building or sending the cohort renewal email is logged but must not flip us back into the
+         * standard-email path, otherwise a migrated organization would receive the wrong email.
+         */
+        try
+        {
+            var cohort = await cohortRepository.GetByIdAsync(cohortId);
             if (cohort?.MigrationPathId is null)
             {
                 logger.LogWarning(
                     "Cohort ({CohortId}) missing or has no MigrationPathId; skipping renewal email for Organization ({OrganizationId})",
-                    assignment.CohortId, organization.Id);
+                    cohortId, organization.Id);
                 return true;
             }
 
@@ -395,31 +421,145 @@ public class UpcomingInvoiceHandler(
             var sourcePlan = await pricingClient.GetPlanOrThrow(migrationPath.FromPlan);
             var targetPlan = await pricingClient.GetPlanOrThrow(migrationPath.ToPlan);
 
-            await SendBusinessRenewalEmailAsync(organization, sourcePlan, targetPlan, cohort);
-            return true;
+            await SendBusinessRenewalEmailAsync(organization, subscription, sourcePlan, targetPlan, cohort);
         }
         catch (Exception exception)
         {
             logger.LogError(
                 exception,
-                "Failed to schedule business price migration for Organization ({OrganizationID}) while processing '{EventType}' event ({EventID})",
+                "Business price migration was scheduled for Organization ({OrganizationID}), but the renewal notification email failed while processing '{EventType}' event ({EventID}); manual notification may be required",
                 organization.Id,
                 @event.Type,
                 @event.Id);
-            return false;
         }
+
+        return true;
     }
 
-    private Task SendBusinessRenewalEmailAsync(
+    private async Task SendBusinessRenewalEmailAsync(
         Organization organization,
+        Subscription subscription,
         Plan sourcePlan,
         Plan targetPlan,
         OrganizationPlanMigrationCohort cohort)
     {
-        logger.LogInformation(
-            "Business renewal email is not yet wired up; skipping send for Organization ({OrganizationId}) cohort {CohortName} ({Source} → {Target}).",
-            organization.Id, cohort.Name, sourcePlan.Type, targetPlan.Type);
-        return Task.CompletedTask;
+        var renewalDate = subscription.GetCurrentPeriodEnd();
+        if (renewalDate is null)
+        {
+            // The migration is already committed by the time we reach here, so an indeterminate renewal date
+            // leaves the organization with no renewal email and the standard email suppressed — the same
+            // outcome as a post-schedule send failure. Log at the same severity so it reaches alerting.
+            logger.LogError(
+                "Business price migration was scheduled for Organization ({OrganizationId}), but the renewal date on subscription ({SubscriptionId}) was indeterminate, so no renewal email was sent; manual notification may be required",
+                organization.Id, subscription.Id);
+            return;
+        }
+
+        var culture = new CultureInfo("en-US");
+        var seats = ResolveSeatCount(subscription, sourcePlan, organization);
+
+        // SeatPrice is a per-year figure on annual plans and a per-month figure on monthly plans. The per-user
+        // monthly line always shows a monthly rate (annual ÷ 12); the recurring total is quoted in the plan's own
+        // billing period — per year for annual cohorts, per month for monthly cohorts.
+        var seatPrice = targetPlan.PasswordManager.SeatPrice;
+        var perUserMonthly = targetPlan.IsAnnual ? seatPrice / 12 : seatPrice;
+        var total = seatPrice * seats;
+
+        var discounts = await ResolveDiscountsAsync(cohort, organization);
+
+        var totalPercentOff = discounts.Where(discount => discount.IsPercentage).Sum(discount => discount.Value);
+        if (totalPercentOff > 0)
+        {
+            total = total * (100 - totalPercentOff) / 100;
+        }
+
+        var totalAmountOff = discounts.Where(discount => !discount.IsPercentage).Sum(discount => discount.Value);
+        total = Math.Max(0, total - totalAmountOff);
+
+        await mailer.SendEmail(new BusinessPlanRenewal2020MigrationMail
+        {
+            ToEmails = [organization.BillingEmail],
+            View = new BusinessPlanRenewal2020MigrationMailView
+            {
+                RenewalDate = renewalDate.Value.ToString("MMMM d, yyyy", culture),
+                Seats = seats,
+                PerUserMonthlyPrice = FormatCurrency(perUserMonthly, culture),
+                IsAnnual = targetPlan.IsAnnual,
+                TotalPrice = FormatCurrency(total, culture),
+                DiscountLines = [.. discounts.Select(discount => discount.Display)]
+            }
+        });
+    }
+
+    private static string FormatCurrency(decimal amount, CultureInfo culture) =>
+        amount == decimal.Truncate(amount)
+            ? amount.ToString("C0", culture)
+            : amount.ToString("C2", culture);
+
+    private int ResolveSeatCount(Subscription subscription, Plan sourcePlan, Organization organization)
+    {
+        var seatItem = subscription.Items.Data
+            .FirstOrDefault(item => item.Price?.Id == sourcePlan.PasswordManager.StripeSeatPlanId);
+
+        var seats = seatItem?.Quantity ?? organization.Seats;
+        if (seats is null)
+        {
+            // Neither the subscription's seat line item nor the organization had a seat count. This should not
+            // happen for a paid business organization; surface it because the renewal email would otherwise
+            // quote 0 seats and a $0.00 total.
+            logger.LogWarning(
+                "Could not resolve a seat count for Organization ({OrganizationId}) subscription ({SubscriptionId}); defaulting to 0 for the renewal email",
+                organization.Id, subscription.Id);
+        }
+
+        return (int)(seats ?? 0);
+    }
+
+    private sealed record Discount(bool IsPercentage, decimal Value, string Display);
+
+    private async Task<List<Discount>> ResolveDiscountsAsync(
+        OrganizationPlanMigrationCohort cohort,
+        Organization organization)
+    {
+        if (string.IsNullOrEmpty(cohort.ProactiveDiscountCouponCode))
+        {
+            return [];
+        }
+
+        Coupon? coupon;
+        try
+        {
+            coupon = await stripeAdapter.GetCouponAsync(cohort.ProactiveDiscountCouponCode);
+        }
+        catch (StripeException exception)
+        {
+            // The cohort has a discount configured but Stripe could not return it, so the email will quote the
+            // undiscounted (higher) price. Log as an error so a customer being mis-quoted reaches alerting.
+            logger.LogError(
+                exception,
+                "Could not retrieve proactive discount coupon ({CouponId}) for Organization ({OrganizationId}); sending price-only renewal email which will quote the undiscounted price | Code = {Code}",
+                cohort.ProactiveDiscountCouponCode, organization.Id, exception.StripeError?.Code);
+            return [];
+        }
+
+        var culture = new CultureInfo("en-US");
+
+        if (coupon?.PercentOff is { } percentOff)
+        {
+            return [new Discount(IsPercentage: true, Value: percentOff, Display: $"{percentOff}%")];
+        }
+
+        // Stripe reports amount-off coupons in minor units (cents); convert to dollars for display and math.
+        if (coupon?.AmountOff is { } amountOffMinorUnits)
+        {
+            var amountOff = amountOffMinorUnits / 100M;
+            return [new Discount(IsPercentage: false, Value: amountOff, Display: FormatCurrency(amountOff, culture))];
+        }
+
+        logger.LogError(
+            "Proactive discount coupon ({CouponId}) for Organization ({OrganizationId}) resolved with neither PercentOff nor AmountOff; sending price-only renewal email, which will not reflect any discount",
+            cohort.ProactiveDiscountCouponCode, organization.Id);
+        return [];
     }
 
     private async Task WaitForTestClockToAdvanceAsync(TestClock testClock)
