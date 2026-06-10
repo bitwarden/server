@@ -30,7 +30,7 @@ public class CipherLeaseControllerTests
             .Returns(userId);
         sutProvider.GetDependency<IGetCipherAccessStateQuery>()
             .GetStateAsync(userId, id)
-            .Returns(new Bit.Core.Pam.Models.CipherAccessState(id, activeLease, null));
+            .Returns(new Bit.Core.Pam.Models.CipherAccessState(id, activeLease, null, null));
 
         var result = await sutProvider.Sut.State(id);
 
@@ -38,7 +38,7 @@ public class CipherLeaseControllerTests
         Assert.NotNull(result.ActiveLease);
         Assert.Equal(activeLease.Id, result.ActiveLease!.Id);
         Assert.Null(result.PendingRequest);
-        Assert.Null(result.ApprovedRequest); // always null in v0 — no activation flow
+        Assert.Null(result.ApprovedRequest);
     }
 
     [Theory, BitAutoData]

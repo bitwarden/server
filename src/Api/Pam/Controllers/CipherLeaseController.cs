@@ -41,8 +41,9 @@ public class CipherLeaseController(
     }
 
     /// <summary>
-    /// Returns a single snapshot of the caller's lease state for this cipher — their active lease and pending request,
-    /// if any — powering the cipher-view banner and the vault-row badge. Side-effect free.
+    /// Returns a single snapshot of the caller's lease state for this cipher — their active lease, pending request,
+    /// and approved-but-not-yet-activated request, if any — powering the cipher-view banner and the vault-row badge.
+    /// Side-effect free.
     /// </summary>
     [HttpGet("state")]
     public async Task<CipherAccessStateResponseModel> State(Guid id)

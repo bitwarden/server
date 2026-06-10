@@ -7,6 +7,11 @@ public interface IAccessLeaseRepository
     Task<AccessLease?> GetByIdAsync(Guid id);
 
     /// <summary>
+    /// Returns the lease the request produced (whatever its status), or null if the request has not been activated.
+    /// </summary>
+    Task<AccessLease?> GetByAccessRequestIdAsync(Guid accessRequestId);
+
+    /// <summary>
     /// Returns the caller's active lease for the cipher whose window contains <paramref name="now"/>, or null.
     /// </summary>
     Task<AccessLease?> GetActiveByRequesterIdCipherIdAsync(Guid requesterId, Guid cipherId, DateTime now);
@@ -20,9 +25,17 @@ public interface IAccessLeaseRepository
     /// <summary>
     /// Atomically creates an auto-approved <see cref="AccessRequest"/>, its automatic <see cref="AccessDecision"/>, and an
     /// active <see cref="AccessLease"/> in a single transaction. The three entities must already have their ids assigned.
-    /// This is the only way a <see cref="AccessLease"/> is created, so the request, decision, and lease never diverge.
+    /// The automatic path's request, decision, and lease never diverge because they are written together here.
     /// </summary>
     Task CreateAutoApprovedAsync(AccessRequest request, AccessDecision decision, AccessLease lease, DateTime now);
+
+    /// <summary>
+    /// Race-safely mints the active lease for an approved human request, copying the request's window. The insert
+    /// re-checks ownership, Approved status, an open window, and that the request has not already produced a lease;
+    /// returns false when any precondition no longer holds (e.g. a concurrent activation won). The lease must
+    /// already have its id assigned.
+    /// </summary>
+    Task<bool> CreateFromApprovedRequestAsync(AccessLease lease, DateTime now);
 
     /// <summary>
     /// Atomically revokes an active lease (setting its revoked date and revoker) and records the revocation reason as

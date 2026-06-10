@@ -33,6 +33,17 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
         return results.FirstOrDefault();
     }
 
+    public async Task<AccessRequest?> GetActiveApprovedByRequesterIdCipherIdAsync(Guid requesterId, Guid cipherId, DateTime now)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<AccessRequest>(
+            $"[{Schema}].[AccessRequest_ReadActiveApprovedByRequesterIdCipherId]",
+            new { RequesterId = requesterId, CipherId = cipherId, Now = now },
+            commandType: CommandType.StoredProcedure);
+
+        return results.FirstOrDefault();
+    }
+
     public async Task<ICollection<AccessRequestDetails>> GetManyByRequesterIdAsync(Guid requesterId)
     {
         await using var connection = new SqlConnection(ConnectionString);
@@ -78,7 +89,7 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
         return results.ToList();
     }
 
-    public async Task ResolveWithDecisionAsync(AccessRequest request, AccessDecision decision, AccessRequestStatus status, AccessLease? lease, DateTime now)
+    public async Task ResolveWithDecisionAsync(AccessRequest request, AccessDecision decision, AccessRequestStatus status, DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
@@ -91,7 +102,6 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
                 ApproverId = decision.ApproverId,
                 Verdict = decision.Verdict,
                 decision.Comment,
-                AccessLeaseId = lease?.Id,
                 Now = now,
             },
             commandType: CommandType.StoredProcedure);

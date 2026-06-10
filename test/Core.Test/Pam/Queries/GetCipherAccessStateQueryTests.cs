@@ -102,6 +102,54 @@ public class GetCipherAccessStateQueryTests
     }
 
     [Theory, BitAutoData]
+    public async Task GetStateAsync_ApprovedRequest_MapsToDetails(
+        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId, AccessRequest approved)
+    {
+        SetupCipher(sutProvider, userId, cipherId);
+        approved.CipherId = cipherId;
+        approved.RequesterId = userId;
+        approved.Status = AccessRequestStatus.Approved;
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .GetActiveApprovedByRequesterIdCipherIdAsync(userId, cipherId, Arg.Any<DateTime>())
+            .Returns(approved);
+
+        var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
+
+        Assert.Null(result.ActiveLease);
+        Assert.Null(result.PendingRequest);
+        Assert.NotNull(result.ApprovedRequest);
+        Assert.Equal(approved.Id, result.ApprovedRequest!.Id);
+        Assert.Equal(AccessRequestStatus.Approved, result.ApprovedRequest.Status);
+        Assert.Equal(approved.NotBefore, result.ApprovedRequest.NotBefore);
+        Assert.Equal(approved.NotAfter, result.ApprovedRequest.NotAfter);
+        // The approved read excludes activated rows, so no lease id; the caller-scoped snapshot carries no approver
+        // identity or display-name fields.
+        Assert.Null(result.ApprovedRequest.ProducedLeaseId);
+        Assert.Null(result.ApprovedRequest.ApproverId);
+        Assert.Null(result.ApprovedRequest.CipherName);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetStateAsync_ApprovedHeldButRuleRemoved_StillReturnsSnapshot(
+        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId, AccessRequest approved)
+    {
+        SetupCipher(sutProvider, userId, cipherId);
+        approved.Status = AccessRequestStatus.Approved;
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .GetActiveApprovedByRequesterIdCipherIdAsync(userId, cipherId, Arg.Any<DateTime>())
+            .Returns(approved);
+        // Access rule since removed: resolver returns null, but the startable approval must not be hidden.
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolveAsync(userId, cipherId)
+            .Returns((GoverningRule?)null);
+
+        var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
+
+        Assert.NotNull(result.ApprovedRequest);
+        Assert.Equal(approved.Id, result.ApprovedRequest!.Id);
+    }
+
+    [Theory, BitAutoData]
     public async Task GetStateAsync_GatedButEmpty_ReturnsEmptySnapshot(
         SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
     {
@@ -115,6 +163,7 @@ public class GetCipherAccessStateQueryTests
         Assert.Equal(cipherId, result.CipherId);
         Assert.Null(result.ActiveLease);
         Assert.Null(result.PendingRequest);
+        Assert.Null(result.ApprovedRequest);
     }
 
     private static void SetupCipher(SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId)

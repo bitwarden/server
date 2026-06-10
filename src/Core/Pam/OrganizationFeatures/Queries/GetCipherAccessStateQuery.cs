@@ -42,19 +42,27 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var activeLease = await _accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(userId, cipherId, now);
         var pending = await _accessRequestRepository.GetActivePendingByRequesterIdCipherIdAsync(userId, cipherId);
+        var approved = await _accessRequestRepository.GetActiveApprovedByRequesterIdCipherIdAsync(userId, cipherId, now);
 
         // 404 when the cipher isn't leasing-gated and there's nothing to report. We still return a snapshot when the
-        // caller holds a lease or a pending request even if the rule was since removed, so their state isn't hidden.
-        if (activeLease is null && pending is null && await _resolver.ResolveAsync(userId, cipherId) is null)
+        // caller holds a lease, a pending request, or a startable approval even if the rule was since removed, so
+        // their state isn't hidden.
+        if (activeLease is null && pending is null && approved is null
+            && await _resolver.ResolveAsync(userId, cipherId) is null)
         {
             throw new NotFoundException();
         }
 
-        return new CipherAccessState(cipherId, activeLease, pending is null ? null : ToDetails(pending));
+        return new CipherAccessState(
+            cipherId,
+            activeLease,
+            pending is null ? null : ToDetails(pending),
+            approved is null ? null : ToDetails(approved));
     }
 
-    // A pending request has produced no lease and has no resolver yet; the inbox display-name fields aren't needed for
-    // this caller-scoped snapshot, so they stay null.
+    // Neither a pending nor an approved-unactivated request has produced a lease (the approved read excludes
+    // activated rows), and the approver identity/comment and inbox display-name fields aren't needed for this
+    // caller-scoped snapshot, so they stay null.
     private static AccessRequestDetails ToDetails(AccessRequest request) => new()
     {
         Id = request.Id,

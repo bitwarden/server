@@ -1,8 +1,9 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Bit.Api.Pam.Controllers;
 using Bit.Core.Pam.Entities;
 using Bit.Core.Pam.Enums;
 using Bit.Core.Pam.Models;
+using Bit.Core.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Core.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -24,7 +25,7 @@ public class MemberLeasingControllerTests
         row.Status = AccessRequestStatus.Pending;
         sutProvider.GetDependency<IListMyAccessRequestsQuery>().GetMineAsync(userId).Returns([row]);
 
-        var result = (await sutProvider.Sut.GetMyRequests()).ToList();
+        var result = (await sutProvider.Sut.GetMyRequests()).Data.ToList();
 
         Assert.Single(result);
         Assert.Equal(row.Id, result[0].Id);
@@ -39,7 +40,7 @@ public class MemberLeasingControllerTests
         lease.Status = AccessLeaseStatus.Active;
         sutProvider.GetDependency<IListMyActiveAccessLeasesQuery>().GetMineActiveAsync(userId).Returns([lease]);
 
-        var result = (await sutProvider.Sut.GetMyActiveLeases()).ToList();
+        var result = (await sutProvider.Sut.GetMyActiveLeases()).Data.ToList();
 
         Assert.Single(result);
         Assert.Equal(lease.Id, result[0].Id);
@@ -55,7 +56,23 @@ public class MemberLeasingControllerTests
 
         var result = await sutProvider.Sut.GetMyRequests();
 
-        Assert.Empty(result);
+        Assert.Empty(result.Data);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Activate_ReturnsMintedLease(
+        Guid userId, Guid requestId, AccessLease lease, SutProvider<MemberLeasingController> sutProvider)
+    {
+        SetupUser(sutProvider, userId);
+        lease.Status = AccessLeaseStatus.Active;
+        sutProvider.GetDependency<IActivateAccessRequestCommand>()
+            .ActivateAsync(userId, requestId)
+            .Returns(lease);
+
+        var result = await sutProvider.Sut.Activate(requestId);
+
+        Assert.Equal(lease.Id, result.Id);
+        Assert.Equal(AccessLeaseStatusNames.Active, result.Status);
     }
 
     private static void SetupUser(SutProvider<MemberLeasingController> sutProvider, Guid userId)

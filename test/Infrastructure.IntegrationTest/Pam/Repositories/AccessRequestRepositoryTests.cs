@@ -81,7 +81,7 @@ public class AccessRequestRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task ResolveWithDecisionAsync_Approve_ResolvesRequestRecordsDecisionAndMintsActiveLease(
+    public async Task ResolveWithDecisionAsync_Approve_ResolvesRequestAndRecordsDecisionWithoutMintingLease(
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
         IAccessRequestRepository accessRequestRepository,
@@ -92,7 +92,6 @@ public class AccessRequestRepositoryTests
         var now = DateTime.UtcNow;
         var approverId = Guid.NewGuid();
 
-        // Window straddles now so the minted lease is immediately active and findable by the requester.
         var request = await accessRequestRepository.CreateAsync(new AccessRequest
         {
             OrganizationId = organization.Id,
@@ -117,21 +116,7 @@ public class AccessRequestRepositoryTests
             CreationDate = now,
         };
 
-        var lease = new AccessLease
-        {
-            Id = CoreHelpers.GenerateComb(),
-            AccessRequestId = request.Id,
-            OrganizationId = request.OrganizationId,
-            CollectionId = request.CollectionId,
-            CipherId = request.CipherId,
-            RequesterId = request.RequesterId,
-            Status = AccessLeaseStatus.Active,
-            NotBefore = request.NotBefore,
-            NotAfter = request.NotAfter,
-            CreationDate = now,
-        };
-
-        await accessRequestRepository.ResolveWithDecisionAsync(request, decision, AccessRequestStatus.Approved, lease, now);
+        await accessRequestRepository.ResolveWithDecisionAsync(request, decision, AccessRequestStatus.Approved, now);
 
         var persisted = await accessRequestRepository.GetByIdAsync(request.Id);
         Assert.NotNull(persisted);
@@ -145,12 +130,18 @@ public class AccessRequestRepositoryTests
         Assert.Equal(approverId, row.ApproverId);
         Assert.Equal("approved for audit", row.ApproverComment);
 
-        // The approval minted an active lease spanning the request's window, so the requester now holds access.
-        var active = await accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(request.RequesterId, request.CipherId, now);
-        Assert.NotNull(active);
-        Assert.Equal(lease.Id, active!.Id);
-        Assert.Equal(AccessLeaseStatus.Active, active.Status);
-        Assert.Equal(request.Id, active.AccessRequestId);
+        // Approval records the verdict only: no lease exists until the requester activates the approved request,
+        // so the requester does not yet hold access and the inbox row carries no produced lease.
+        Assert.Null(row.ProducedLeaseId);
+        Assert.Null(await accessLeaseRepository.GetByAccessRequestIdAsync(request.Id));
+        Assert.Null(await accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(
+            request.RequesterId, request.CipherId, now));
+
+        // The approved request is now the requester's startable approval for this cipher.
+        var approved = await accessRequestRepository.GetActiveApprovedByRequesterIdCipherIdAsync(
+            request.RequesterId, request.CipherId, now);
+        Assert.NotNull(approved);
+        Assert.Equal(request.Id, approved!.Id);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -187,7 +178,7 @@ public class AccessRequestRepositoryTests
             CreationDate = now,
         };
 
-        await accessRequestRepository.ResolveWithDecisionAsync(request, decision, AccessRequestStatus.Denied, null, now);
+        await accessRequestRepository.ResolveWithDecisionAsync(request, decision, AccessRequestStatus.Denied, now);
 
         var persisted = await accessRequestRepository.GetByIdAsync(request.Id);
         Assert.Equal(AccessRequestStatus.Denied, persisted!.Status);
@@ -195,6 +186,76 @@ public class AccessRequestRepositoryTests
         // A denial grants nothing: no active lease exists for the requester.
         var active = await accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(request.RequesterId, request.CipherId, now);
         Assert.Null(active);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetActiveApprovedByRequesterIdCipherIdAsync_ReturnsStartableApprovalsOnly(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var now = DateTime.UtcNow;
+        var requesterId = Guid.NewGuid();
+
+        // Approved with an open window: the startable approval the query must return.
+        var openWindow = BuildRequest(organization.Id, collection.Id, requesterId, AccessRequestStatus.Approved, now);
+        openWindow.NotBefore = now.AddHours(-1);
+        openWindow.NotAfter = now.AddHours(1);
+        var startable = await accessRequestRepository.CreateAsync(openWindow);
+
+        var found = await accessRequestRepository.GetActiveApprovedByRequesterIdCipherIdAsync(
+            requesterId, startable.CipherId, now);
+        Assert.NotNull(found);
+        Assert.Equal(startable.Id, found!.Id);
+
+        // Approved with a future window is included — the client shows the upcoming window.
+        var future = await accessRequestRepository.CreateAsync(
+            BuildRequest(organization.Id, collection.Id, requesterId, AccessRequestStatus.Approved, now));
+        Assert.NotNull(await accessRequestRepository.GetActiveApprovedByRequesterIdCipherIdAsync(
+            requesterId, future.CipherId, now));
+
+        // Approved with a lapsed window is excluded — it can never be activated.
+        var lapsed = BuildRequest(organization.Id, collection.Id, requesterId, AccessRequestStatus.Approved, now);
+        lapsed.NotBefore = now.AddHours(-2);
+        lapsed.NotAfter = now.AddHours(-1);
+        lapsed = await accessRequestRepository.CreateAsync(lapsed);
+        Assert.Null(await accessRequestRepository.GetActiveApprovedByRequesterIdCipherIdAsync(
+            requesterId, lapsed.CipherId, now));
+
+        // Pending and denied requests are not approvals.
+        var pending = await accessRequestRepository.CreateAsync(
+            BuildRequest(organization.Id, collection.Id, requesterId, AccessRequestStatus.Pending, now));
+        Assert.Null(await accessRequestRepository.GetActiveApprovedByRequesterIdCipherIdAsync(
+            requesterId, pending.CipherId, now));
+        var denied = await accessRequestRepository.CreateAsync(
+            BuildRequest(organization.Id, collection.Id, requesterId, AccessRequestStatus.Denied, now));
+        Assert.Null(await accessRequestRepository.GetActiveApprovedByRequesterIdCipherIdAsync(
+            requesterId, denied.CipherId, now));
+
+        // Another user's approval for the same cipher is not the caller's.
+        Assert.Null(await accessRequestRepository.GetActiveApprovedByRequesterIdCipherIdAsync(
+            Guid.NewGuid(), startable.CipherId, now));
+
+        // Once the approval produces a lease it is activated, not approved, and leaves this read.
+        var lease = new AccessLease
+        {
+            Id = CoreHelpers.GenerateComb(),
+            AccessRequestId = startable.Id,
+            OrganizationId = startable.OrganizationId,
+            CollectionId = startable.CollectionId,
+            CipherId = startable.CipherId,
+            RequesterId = startable.RequesterId,
+            Status = AccessLeaseStatus.Active,
+            NotBefore = startable.NotBefore,
+            NotAfter = startable.NotAfter,
+            CreationDate = now,
+        };
+        Assert.True(await accessLeaseRepository.CreateFromApprovedRequestAsync(lease, now));
+        Assert.Null(await accessRequestRepository.GetActiveApprovedByRequesterIdCipherIdAsync(
+            requesterId, startable.CipherId, now));
     }
 
     [DatabaseTheory, DatabaseData]
