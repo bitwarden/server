@@ -64,7 +64,40 @@ public class DecideAccessRequestCommandTests
             () => sutProvider.Sut.DecideAsync(userId, request.Id, Approve()));
         Assert.Contains("your own request", ex.Message);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
-            .ResolveWithDecisionAsync(default!, default!, default, default, default);
+            .ResolveWithDecisionAsync(default!, default!, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DecideAsync_Approve_WindowAlreadyEnded_ThrowsBadRequest(Guid userId, AccessRequest request)
+    {
+        var sutProvider = Setup();
+        request.Status = AccessRequestStatus.Pending;
+        request.NotBefore = _now.AddHours(-2);
+        request.NotAfter = _now.AddHours(-1);
+        SetupManageableRequest(sutProvider, userId, request);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.DecideAsync(userId, request.Id, Approve()));
+        Assert.Contains("already ended", ex.Message);
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .ResolveWithDecisionAsync(default!, default!, default, default);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DecideAsync_Deny_WindowAlreadyEnded_Succeeds(Guid userId, AccessRequest request)
+    {
+        var sutProvider = Setup();
+        request.Status = AccessRequestStatus.Pending;
+        request.NotBefore = _now.AddHours(-2);
+        request.NotAfter = _now.AddHours(-1);
+        SetupManageableRequest(sutProvider, userId, request);
+
+        // A lapsed window only blocks approval (it could never be activated); denial still closes the request out.
+        var result = await sutProvider.Sut.DecideAsync(userId, request.Id, Deny());
+
+        Assert.Equal(AccessRequestStatus.Denied, result.Status);
     }
 
     [Theory, BitAutoData]
@@ -72,6 +105,7 @@ public class DecideAccessRequestCommandTests
     {
         var sutProvider = Setup();
         request.Status = AccessRequestStatus.Pending;
+        SetOpenWindow(request);
         SetupManageableRequest(sutProvider, userId, request);
 
         var result = await sutProvider.Sut.DecideAsync(userId, request.Id, Approve("looks good"));
@@ -80,6 +114,7 @@ public class DecideAccessRequestCommandTests
         Assert.Equal(_now, result.ResolvedDate);
         Assert.Equal(userId, result.ApproverId);
         Assert.Equal("looks good", result.ApproverComment);
+        // Approval records the verdict only; no lease is minted until the requester activates the approved request.
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).ResolveWithDecisionAsync(
             request,
             Arg.Is<AccessDecision>(d =>
@@ -88,17 +123,6 @@ public class DecideAccessRequestCommandTests
                 d.Verdict == AccessDecisionVerdict.Approve &&
                 d.Comment == "looks good"),
             AccessRequestStatus.Approved,
-            // Approval mints an active lease spanning the request's approved window.
-            Arg.Is<AccessLease>(l =>
-                l.AccessRequestId == request.Id &&
-                l.OrganizationId == request.OrganizationId &&
-                l.CollectionId == request.CollectionId &&
-                l.CipherId == request.CipherId &&
-                l.RequesterId == request.RequesterId &&
-                l.Status == AccessLeaseStatus.Active &&
-                l.NotBefore == request.NotBefore &&
-                l.NotAfter == request.NotAfter &&
-                l.Id != default),
             _now);
         await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
             .NotifyCollectionApproversAsync(request.CollectionId);
@@ -109,6 +133,7 @@ public class DecideAccessRequestCommandTests
     {
         var sutProvider = Setup();
         request.Status = AccessRequestStatus.Pending;
+        SetOpenWindow(request);
         SetupManageableRequest(sutProvider, userId, request);
 
         var result = await sutProvider.Sut.DecideAsync(userId, request.Id, Deny());
@@ -118,8 +143,6 @@ public class DecideAccessRequestCommandTests
             request,
             Arg.Is<AccessDecision>(d => d.Verdict == AccessDecisionVerdict.Deny),
             AccessRequestStatus.Denied,
-            // A denial creates no lease.
-            null,
             _now);
     }
 
@@ -141,5 +164,13 @@ public class DecideAccessRequestCommandTests
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .CanManageCollectionAsync(userId, request.CollectionId).Returns(true);
+    }
+
+    // BitAutoData generates arbitrary dates; pin a window containing _now so the lapsed-window approve guard
+    // doesn't trip in tests that aren't about it.
+    private static void SetOpenWindow(AccessRequest request)
+    {
+        request.NotBefore = _now.AddMinutes(-5);
+        request.NotAfter = _now.AddHours(1);
     }
 }

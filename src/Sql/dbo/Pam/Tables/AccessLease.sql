@@ -24,3 +24,9 @@ GO
 CREATE NONCLUSTERED INDEX [IX_AccessLease_NotAfter_Status]
     ON [dbo].[AccessLease] ([NotAfter] ASC, [Status] ASC);
 GO
+
+-- A request produces at most one lease, ever: activating an approved request and the automatic path each insert
+-- exactly one. Unique to backstop racing activations that pass the application-level checks simultaneously.
+CREATE UNIQUE NONCLUSTERED INDEX [IX_AccessLease_AccessRequestId]
+    ON [dbo].[AccessLease] ([AccessRequestId] ASC);
+GO

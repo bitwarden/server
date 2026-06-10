@@ -6,7 +6,7 @@ namespace Bit.Api.Pam.Models.Response;
 /// <summary>
 /// An access request with its denormalized display fields (cipher/collection names, requester identity), serving the
 /// approver inbox, the caller's own request list, and the cipher access-state snapshot. Fields without a backing
-/// store in v1 (<see cref="RuleId"/>, <see cref="ExpiredAt"/>, <see cref="ActivationDeadline"/>) are always null.
+/// store in v1 (<see cref="RuleId"/>, <see cref="ExpiredAt"/>) are always null.
 /// </summary>
 public class AccessRequestDetailsResponseModel : ResponseModel
 {
@@ -71,7 +71,11 @@ public class AccessRequestDetailsResponseModel : ResponseModel
     /// <summary>The parent lease if this is an extension request.</summary>
     public Guid? ExtensionOfLeaseId { get; }
 
-    /// <summary>Only meaningful for approved on-demand requests. Belongs to the out-of-scope activation flow.</summary>
+    /// <summary>
+    /// Always null in v0: human requests are window-bound, so <see cref="RequestedNotAfter"/> itself bounds when an
+    /// approved request can be activated. A separate deadline only becomes meaningful with on-demand (duration-only)
+    /// human requests, which don't exist yet.
+    /// </summary>
     public DateTime? ActivationDeadline => null;
 
     /// <summary>The cipher's client-encrypted name. The only cipher attribute exposed by the inbox.</summary>

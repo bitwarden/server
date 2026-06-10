@@ -53,6 +53,13 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
         var approved = submission.Verdict == AccessDecisionVerdict.Approve;
         var status = approved ? AccessRequestStatus.Approved : AccessRequestStatus.Denied;
 
+        // An approval the requester can never activate (the requested window already ended) would only mint a dead
+        // "approved" state, so reject it. Denial is still allowed so the audit trail can close the request out.
+        if (approved && request.NotAfter <= now)
+        {
+            throw new BadRequestException("The requested access window has already ended.");
+        }
+
         var decision = new AccessDecision
         {
             AccessRequestId = request.Id,
@@ -64,28 +71,10 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
         };
         decision.SetNewId();
 
-        // Approval mints the active lease that actually authorizes access, spanning the request's approved window.
-        // Without it the requester would be Approved but hold no lease, so pre-check and the cipher read would both
-        // deny them. A denial creates no lease.
-        AccessLease? lease = null;
-        if (approved)
-        {
-            lease = new AccessLease
-            {
-                AccessRequestId = request.Id,
-                OrganizationId = request.OrganizationId,
-                CollectionId = request.CollectionId,
-                CipherId = request.CipherId,
-                RequesterId = request.RequesterId,
-                Status = AccessLeaseStatus.Active,
-                NotBefore = request.NotBefore,
-                NotAfter = request.NotAfter,
-                CreationDate = now,
-            };
-            lease.SetNewId();
-        }
-
-        await _accessRequestRepository.ResolveWithDecisionAsync(request, decision, status, lease, now);
+        // Approval records the verdict only. The lease that actually authorizes access is minted when the requester
+        // activates the approved request (ActivateAccessRequestCommand) — until then they hold a startable approval,
+        // not access. The automatic path still mints instantly at submit, where the requester is present and asking.
+        await _accessRequestRepository.ResolveWithDecisionAsync(request, decision, status, now);
 
         // The request just left the pending queue; tell every approver of this collection to re-fetch.
         await _approverInboxNotifier.NotifyCollectionApproversAsync(request.CollectionId);

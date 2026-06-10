@@ -233,6 +233,26 @@ public class SubmitAccessRequestCommandTests
         Assert.Contains("already have a pending request", ex.Message);
     }
 
+    [Theory, BitAutoData]
+    public async Task SubmitAsync_ExistingApprovedUnactivatedRequest_ThrowsBadRequest(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId, AccessRequest approved)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: true);
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .GetActiveApprovedByRequesterIdCipherIdAsync(userId, cipherId, _now)
+            .Returns(approved);
+
+        // An approved-but-not-yet-activated request already grants startable access; a second request would stack.
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SubmitAsync(userId, cipherId,
+                new AccessRequestSubmission { Start = _now.AddHours(1), End = _now.AddHours(2), Reason = "x" }));
+        Assert.Contains("already have an approved request", ex.Message);
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .CreateAsync(default!);
+    }
+
     private static SutProvider<SubmitAccessRequestCommand> Setup()
     {
         var sutProvider = new SutProvider<SubmitAccessRequestCommand>().WithFakeTimeProvider().Create();

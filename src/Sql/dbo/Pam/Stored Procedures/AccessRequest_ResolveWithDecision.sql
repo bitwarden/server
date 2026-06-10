@@ -5,7 +5,6 @@ CREATE PROCEDURE [dbo].[AccessRequest_ResolveWithDecision]
     @ApproverId UNIQUEIDENTIFIER,
     @Verdict TINYINT,
     @Comment NVARCHAR(MAX) = NULL,
-    @AccessLeaseId UNIQUEIDENTIFIER = NULL,
     @Now DATETIME2(7)
 AS
 BEGIN
@@ -14,6 +13,10 @@ BEGIN
     -- Atomically resolve a pending request and record the human approver's decision. The caller has already verified
     -- (and the application enforces) that the request is still Pending; the WHERE guard keeps the write idempotent
     -- under a race so a second approver can't move an already-resolved request.
+    --
+    -- Approval does not mint the lease: the requester activates the approved request later via
+    -- [AccessLease_CreateFromApprovedRequest]. The automatic path still mints instantly via
+    -- [AccessLease_CreateAutoApproved], where the requester is online and asking for access now.
     BEGIN TRANSACTION AccessRequest_Resolve
 
     UPDATE [dbo].[AccessRequest]
@@ -31,23 +34,6 @@ BEGIN
         @AccessDecisionId, @AccessRequestId, 1 /* Human */, @ApproverId, NULL,
         @Verdict, @Comment, NULL, @Now
     )
-
-    -- An approval mints the active lease that authorizes access, mirroring [AccessLease_CreateAutoApproved] on the automatic
-    -- path. @AccessLeaseId is supplied only when approving; the lease window is the request's approved window, so the lease
-    -- is found by [AccessLease_ReadActiveByRequesterIdCipherId] once @Now falls inside it.
-    IF @AccessLeaseId IS NOT NULL
-    BEGIN
-        INSERT INTO [dbo].[AccessLease]
-        (
-            [Id], [AccessRequestId], [OrganizationId], [CollectionId], [CipherId], [RequesterId],
-            [Status], [NotBefore], [NotAfter], [RevokedDate], [RevokedBy], [CreationDate]
-        )
-        SELECT
-            @AccessLeaseId, [Id], [OrganizationId], [CollectionId], [CipherId], [RequesterId],
-            0 /* Active */, [NotBefore], [NotAfter], NULL, NULL, @Now
-        FROM [dbo].[AccessRequest]
-        WHERE [Id] = @AccessRequestId
-    END
 
     COMMIT TRANSACTION AccessRequest_Resolve
 END

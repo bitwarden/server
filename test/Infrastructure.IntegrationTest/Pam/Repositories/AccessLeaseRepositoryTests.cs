@@ -171,6 +171,133 @@ public class LeaseRepositoryTests
         Assert.NotNull(persisted.RevokedDate);
     }
 
+    [DatabaseTheory, DatabaseData]
+    public async Task CreateFromApprovedRequestAsync_ApprovedOpenWindow_MintsActiveLease(
+        IOrganizationRepository organizationRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+        var request = await CreateApprovedRequestAsync(
+            accessRequestRepository, organization.Id, now.AddHours(-1), now.AddHours(1));
+
+        // Activation has not happened yet, so the request has produced nothing.
+        Assert.Null(await accessLeaseRepository.GetByAccessRequestIdAsync(request.Id));
+
+        var lease = BuildLeaseFor(request, now);
+        Assert.True(await accessLeaseRepository.CreateFromApprovedRequestAsync(lease, now));
+
+        var produced = await accessLeaseRepository.GetByAccessRequestIdAsync(request.Id);
+        Assert.NotNull(produced);
+        Assert.Equal(lease.Id, produced!.Id);
+        Assert.Equal(AccessLeaseStatus.Active, produced.Status);
+        // The minted lease spans the request's approved window exactly — compare against the persisted request,
+        // since the in-memory entity keeps tick precision the driver's datetime parameters do not.
+        var persistedRequest = await accessRequestRepository.GetByIdAsync(request.Id);
+        Assert.Equal(persistedRequest!.NotBefore, produced.NotBefore);
+        Assert.Equal(persistedRequest.NotAfter, produced.NotAfter);
+
+        // The requester now holds access through the standard active-lease read.
+        var active = await accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(
+            request.RequesterId, request.CipherId, now);
+        Assert.NotNull(active);
+        Assert.Equal(lease.Id, active!.Id);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task CreateFromApprovedRequestAsync_SecondActivation_ReturnsFalseAndKeepsFirstLease(
+        IOrganizationRepository organizationRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+        var request = await CreateApprovedRequestAsync(
+            accessRequestRepository, organization.Id, now.AddHours(-1), now.AddHours(1));
+
+        var first = BuildLeaseFor(request, now);
+        Assert.True(await accessLeaseRepository.CreateFromApprovedRequestAsync(first, now));
+
+        // A request authorizes access at most once: the second insert is refused by the guard (and would be by the
+        // unique index even if the guard raced).
+        var second = BuildLeaseFor(request, now);
+        Assert.False(await accessLeaseRepository.CreateFromApprovedRequestAsync(second, now));
+
+        var produced = await accessLeaseRepository.GetByAccessRequestIdAsync(request.Id);
+        Assert.Equal(first.Id, produced!.Id);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task CreateFromApprovedRequestAsync_PreconditionNoLongerHolds_ReturnsFalse(
+        IOrganizationRepository organizationRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+
+        // Still pending: not an approval.
+        var pending = await CreateApprovedRequestAsync(
+            accessRequestRepository, organization.Id, now.AddHours(-1), now.AddHours(1), AccessRequestStatus.Pending);
+        Assert.False(await accessLeaseRepository.CreateFromApprovedRequestAsync(BuildLeaseFor(pending, now), now));
+
+        // Someone else's request: the requester filter refuses it.
+        var approved = await CreateApprovedRequestAsync(
+            accessRequestRepository, organization.Id, now.AddHours(-1), now.AddHours(1));
+        var foreign = BuildLeaseFor(approved, now);
+        foreign.RequesterId = Guid.NewGuid();
+        Assert.False(await accessLeaseRepository.CreateFromApprovedRequestAsync(foreign, now));
+
+        // Window not started yet.
+        var future = await CreateApprovedRequestAsync(
+            accessRequestRepository, organization.Id, now.AddHours(1), now.AddHours(2));
+        Assert.False(await accessLeaseRepository.CreateFromApprovedRequestAsync(BuildLeaseFor(future, now), now));
+
+        // Window already ended.
+        var lapsed = await CreateApprovedRequestAsync(
+            accessRequestRepository, organization.Id, now.AddHours(-2), now.AddHours(-1));
+        Assert.False(await accessLeaseRepository.CreateFromApprovedRequestAsync(BuildLeaseFor(lapsed, now), now));
+
+        // None of the refused activations left a lease behind.
+        foreach (var requestId in new[] { pending.Id, approved.Id, future.Id, lapsed.Id })
+        {
+            Assert.Null(await accessLeaseRepository.GetByAccessRequestIdAsync(requestId));
+        }
+    }
+
+    private static async Task<AccessRequest> CreateApprovedRequestAsync(
+        IAccessRequestRepository accessRequestRepository, Guid organizationId, DateTime notBefore, DateTime notAfter,
+        AccessRequestStatus status = AccessRequestStatus.Approved)
+        => await accessRequestRepository.CreateAsync(new AccessRequest
+        {
+            OrganizationId = organizationId,
+            CollectionId = Guid.NewGuid(),
+            CipherId = Guid.NewGuid(),
+            RequesterId = Guid.NewGuid(),
+            NotBefore = notBefore,
+            NotAfter = notAfter,
+            Reason = "audit",
+            Status = status,
+            CreationDate = DateTime.UtcNow,
+            ResolvedDate = status == AccessRequestStatus.Pending ? null : DateTime.UtcNow,
+        });
+
+    private static AccessLease BuildLeaseFor(AccessRequest request, DateTime now)
+        => new()
+        {
+            Id = CoreHelpers.GenerateComb(),
+            AccessRequestId = request.Id,
+            OrganizationId = request.OrganizationId,
+            CollectionId = request.CollectionId,
+            CipherId = request.CipherId,
+            RequesterId = request.RequesterId,
+            Status = AccessLeaseStatus.Active,
+            NotBefore = request.NotBefore,
+            NotAfter = request.NotAfter,
+            CreationDate = now,
+        };
+
     private static (AccessRequest, AccessDecision, AccessLease) BuildAutoApproved(
         Guid organizationId, Guid cipherId, Guid requesterId, DateTime notBefore, DateTime notAfter)
     {

@@ -75,6 +75,13 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
             throw new BadRequestException("You already have a pending request for this item.");
         }
 
+        // An approved-but-not-yet-activated request already grants startable access; a second request would let the
+        // caller stack grants. Lapsed approvals don't match here, so they correctly don't block a fresh request.
+        if (await _accessRequestRepository.GetActiveApprovedByRequesterIdCipherIdAsync(userId, cipherId, now) is not null)
+        {
+            throw new BadRequestException("You already have an approved request for this item.");
+        }
+
         return governingRule.RequiresHumanApproval
             ? await RequestHumanApprovalAsync(userId, cipherId, governingRule, submission)
             : await IssueAutomaticLeaseAsync(userId, cipherId, governingRule, submission, now);

@@ -26,7 +26,7 @@ public class AccessRequestDetails
     public DateTime CreationDate { get; set; }
     public DateTime? ResolvedDate { get; set; }
 
-    /// <summary>The lease this request birthed once redeemed, or null if it has not produced a lease.</summary>
+    /// <summary>The lease this request produced once activated, or null if it has not produced a lease.</summary>
     public Guid? ProducedLeaseId { get; set; }
 
     /// <summary>The human approver who resolved the request, or null (e.g. still pending or auto-resolved).</summary>
