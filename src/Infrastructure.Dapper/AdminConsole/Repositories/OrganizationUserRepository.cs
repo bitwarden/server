@@ -765,25 +765,19 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
     }
 
     /// <inheritdoc />
-    public DatabaseTransactionAction SetStatusToAcceptedForPublicKeyPairRegeneration(IEnumerable<OrganizationUser> organizationUsers)
+    public DatabaseTransactionAction UpdateStatusAndKeyById(Guid id,
+        OrganizationUserStatusType status, string? key, DateTime revisionDate)
     {
         return async (connection, transaction) =>
         {
-            var ids = organizationUsers.Select(ou => ou.Id).ToList();
-            if (ids.Count == 0)
-            {
-                return;
-            }
-
-            var utcNow = DateTime.UtcNow;
-
             await connection.ExecuteAsync(
-                "[dbo].[OrganizationUser_UpdateManySetStatus]",
+                "[dbo].[OrganizationUser_UpdateStatusAndKeyById]",
                 new
                 {
-                    OrganizationUserIds = ids.ToGuidIdArrayTVP(),
-                    Status = (short)OrganizationUserStatusType.Accepted,
-                    RevisionDate = utcNow
+                    Id = id,
+                    Status = (short)status,
+                    Key = key,
+                    RevisionDate = revisionDate
                 },
                 transaction: transaction,
                 commandType: CommandType.StoredProcedure);
@@ -791,19 +785,19 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
     }
 
     /// <inheritdoc />
-    public DatabaseTransactionAction RemoveForPublicKeyPairRegeneration(IEnumerable<OrganizationUser> organizationUsers)
+    public DatabaseTransactionAction DeleteManyByIds(IEnumerable<Guid> ids)
     {
         return async (connection, transaction) =>
         {
-            var ids = organizationUsers.Select(ou => ou.Id).ToList();
-            if (ids.Count == 0)
+            var idsList = ids.ToList();
+            if (idsList.Count == 0)
             {
                 return;
             }
 
             await connection.ExecuteAsync(
                 "[dbo].[OrganizationUser_DeleteByIds]",
-                new { Ids = ids.ToGuidIdArrayTVP() },
+                new { Ids = idsList.ToGuidIdArrayTVP() },
                 transaction: transaction,
                 commandType: CommandType.StoredProcedure);
         };

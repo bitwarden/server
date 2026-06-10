@@ -178,27 +178,20 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
     }
 
     /// <inheritdoc />
-    public DatabaseTransactionAction SetStatusToAcceptedForPublicKeyPairRegeneration(
-        IEnumerable<Core.Auth.Entities.EmergencyAccess> emergencyAccesses)
+    public DatabaseTransactionAction UpdateStatusAndKeyEncryptedById(Guid id,
+        EmergencyAccessStatusType status, string? keyEncrypted, DateTime revisionDate)
     {
         return async (connection, transaction) =>
         {
-            var ids = emergencyAccesses.Select(ea => ea.Id).ToList();
-            if (ids.Count == 0)
-            {
-                return;
-            }
-
             using var scope = ServiceScopeFactory.CreateScope();
             var dbContext = GetTransactionalDatabaseContext(scope, connection, transaction);
-            var utcNow = DateTime.UtcNow;
 
             await GetDbSet(dbContext)
-                .Where(ea => ids.Contains(ea.Id))
+                .Where(ea => ea.Id == id)
                 .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(ea => ea.Status, EmergencyAccessStatusType.Accepted)
-                    .SetProperty(ea => ea.KeyEncrypted, (string?)null)
-                    .SetProperty(ea => ea.RevisionDate, utcNow));
+                    .SetProperty(ea => ea.Status, status)
+                    .SetProperty(ea => ea.KeyEncrypted, keyEncrypted)
+                    .SetProperty(ea => ea.RevisionDate, revisionDate));
         };
     }
 

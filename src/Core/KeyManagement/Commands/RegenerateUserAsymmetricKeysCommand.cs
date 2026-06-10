@@ -70,25 +70,26 @@ public class RegenerateUserAsymmetricKeysCommand : IRegenerateUserAsymmetricKeys
             userAsymmetricKeys.UserId, inOrganizations, hasDesignatedEmergencyAccess, _currentContext.DeviceType);
 
         var updateDataActions = new List<DatabaseTransactionAction>();
+        var utcNow = DateTime.UtcNow;
 
         var eaToReset = designatedEmergencyAccess
             .Where(ea => ea.Status is EmergencyAccessStatusType.Confirmed
                 or EmergencyAccessStatusType.RecoveryInitiated
                 or EmergencyAccessStatusType.RecoveryApproved)
             .ToList();
-        if (eaToReset.Count > 0)
+        foreach (var ea in eaToReset)
         {
-            updateDataActions.Add(
-                _emergencyAccessRepository.SetStatusToAcceptedForPublicKeyPairRegeneration(eaToReset));
+            updateDataActions.Add(_emergencyAccessRepository.UpdateStatusAndKeyEncryptedById(
+                ea.Id, EmergencyAccessStatusType.Accepted, null, utcNow));
         }
 
         var orgUsersToReset = usersOrganizationAccounts
             .Where(ou => ou.Status == OrganizationUserStatusType.Confirmed)
             .ToList();
-        if (orgUsersToReset.Count > 0)
+        foreach (var orgUser in orgUsersToReset)
         {
-            updateDataActions.Add(
-                _organizationUserRepository.SetStatusToAcceptedForPublicKeyPairRegeneration(orgUsersToReset));
+            updateDataActions.Add(_organizationUserRepository.UpdateStatusAndKeyById(
+                orgUser.Id, OrganizationUserStatusType.Accepted, null, utcNow));
         }
 
         var orgUsersToRemove = usersOrganizationAccounts
@@ -97,7 +98,7 @@ public class RegenerateUserAsymmetricKeysCommand : IRegenerateUserAsymmetricKeys
         if (orgUsersToRemove.Count > 0)
         {
             updateDataActions.Add(
-                _organizationUserRepository.RemoveForPublicKeyPairRegeneration(orgUsersToRemove));
+                _organizationUserRepository.DeleteManyByIds(orgUsersToRemove.Select(ou => ou.Id)));
         }
 
         await _userAsymmetricKeysRepository.RegenerateUserAsymmetricKeysAsync(

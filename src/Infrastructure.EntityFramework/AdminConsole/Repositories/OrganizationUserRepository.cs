@@ -1031,38 +1031,30 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
     }
 
     /// <inheritdoc />
-    public DatabaseTransactionAction SetStatusToAcceptedForPublicKeyPairRegeneration(
-        IEnumerable<Core.Entities.OrganizationUser> organizationUsers)
+    public DatabaseTransactionAction UpdateStatusAndKeyById(Guid id,
+        OrganizationUserStatusType status, string? key, DateTime revisionDate)
     {
         return async (connection, transaction) =>
         {
-            var ids = organizationUsers.Select(ou => ou.Id).ToList();
-            if (ids.Count == 0)
-            {
-                return;
-            }
-
             using var scope = ServiceScopeFactory.CreateScope();
             var dbContext = GetTransactionalDatabaseContext(scope, connection, transaction);
-            var utcNow = DateTime.UtcNow;
 
             await dbContext.OrganizationUsers
-                .Where(ou => ids.Contains(ou.Id))
+                .Where(ou => ou.Id == id)
                 .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(ou => ou.Status, OrganizationUserStatusType.Accepted)
-                    .SetProperty(ou => ou.Key, (string?)null)
-                    .SetProperty(ou => ou.RevisionDate, utcNow));
+                    .SetProperty(ou => ou.Status, status)
+                    .SetProperty(ou => ou.Key, key)
+                    .SetProperty(ou => ou.RevisionDate, revisionDate));
         };
     }
 
     /// <inheritdoc />
-    public DatabaseTransactionAction RemoveForPublicKeyPairRegeneration(
-        IEnumerable<Core.Entities.OrganizationUser> organizationUsers)
+    public DatabaseTransactionAction DeleteManyByIds(IEnumerable<Guid> ids)
     {
         return async (connection, transaction) =>
         {
-            var ids = organizationUsers.Select(ou => ou.Id).ToList();
-            if (ids.Count == 0)
+            var idsList = ids.ToList();
+            if (idsList.Count == 0)
             {
                 return;
             }
@@ -1070,7 +1062,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             using var scope = ServiceScopeFactory.CreateScope();
             var dbContext = GetTransactionalDatabaseContext(scope, connection, transaction);
 
-            await DeleteManyOrganizationUsersAndRelatedDataAsync(dbContext, ids);
+            await DeleteManyOrganizationUsersAndRelatedDataAsync(dbContext, idsList);
         };
     }
 

@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.KeyManagement.UserKey;
 
@@ -44,11 +45,15 @@ public interface IEmergencyAccessRepository : IRepository<EmergencyAccess, Guid>
         IEnumerable<EmergencyAccess> emergencyAccessKeys);
 
     /// <summary>
-    /// Returns a delegate that sets emergency access records to Accepted status and clears KeyEncrypted.
-    /// Used during key regeneration when the grantee's public key changes.
+    /// Returns a delegate that updates the status, encrypted key, and revision date of the given
+    /// emergency access record.
     /// </summary>
-    /// <param name="emergencyAccesses">Emergency access records to update</param>
-    DatabaseTransactionAction SetStatusToAcceptedForPublicKeyPairRegeneration(IEnumerable<EmergencyAccess> emergencyAccesses);
+    /// <param name="id">Id of the emergency access record to update</param>
+    /// <param name="status">The status to set</param>
+    /// <param name="keyEncrypted">The encrypted key to set</param>
+    /// <param name="revisionDate">The revision date to set</param>
+    DatabaseTransactionAction UpdateStatusAndKeyEncryptedById(Guid id,
+        EmergencyAccessStatusType status, string? keyEncrypted, DateTime revisionDate);
 
     /// <summary>
     /// Deletes multiple emergency access records by their IDs

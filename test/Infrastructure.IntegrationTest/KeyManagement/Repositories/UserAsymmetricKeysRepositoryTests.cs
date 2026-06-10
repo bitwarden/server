@@ -66,7 +66,8 @@ public class UserAsymmetricKeysRepositoryTests
 
         var updateActions = new[]
         {
-            emergencyAccessRepository.SetStatusToAcceptedForPublicKeyPairRegeneration([ea])
+            emergencyAccessRepository.UpdateStatusAndKeyEncryptedById(
+                ea.Id, EmergencyAccessStatusType.Accepted, null, DateTime.UtcNow)
         };
 
         await userAsymmetricKeysRepository.RegenerateUserAsymmetricKeysAsync(newKeys, updateActions);
@@ -99,7 +100,8 @@ public class UserAsymmetricKeysRepositoryTests
 
         var updateActions = new[]
         {
-            organizationUserRepository.SetStatusToAcceptedForPublicKeyPairRegeneration([orgUser])
+            organizationUserRepository.UpdateStatusAndKeyById(
+                orgUser.Id, OrganizationUserStatusType.Accepted, null, DateTime.UtcNow)
         };
 
         await userAsymmetricKeysRepository.RegenerateUserAsymmetricKeysAsync(newKeys, updateActions);
@@ -130,7 +132,7 @@ public class UserAsymmetricKeysRepositoryTests
 
         var updateActions = new[]
         {
-            organizationUserRepository.RemoveForPublicKeyPairRegeneration([orgUser])
+            organizationUserRepository.DeleteManyByIds([orgUser.Id])
         };
 
         await userAsymmetricKeysRepository.RegenerateUserAsymmetricKeysAsync(newKeys, updateActions);
@@ -181,9 +183,11 @@ public class UserAsymmetricKeysRepositoryTests
 
         var updateActions = new[]
         {
-            emergencyAccessRepository.SetStatusToAcceptedForPublicKeyPairRegeneration([ea]),
-            organizationUserRepository.SetStatusToAcceptedForPublicKeyPairRegeneration([confirmedOrgUser]),
-            organizationUserRepository.RemoveForPublicKeyPairRegeneration([revokedOrgUser]),
+            emergencyAccessRepository.UpdateStatusAndKeyEncryptedById(
+                ea.Id, EmergencyAccessStatusType.Accepted, null, DateTime.UtcNow),
+            organizationUserRepository.UpdateStatusAndKeyById(
+                confirmedOrgUser.Id, OrganizationUserStatusType.Accepted, null, DateTime.UtcNow),
+            organizationUserRepository.DeleteManyByIds([revokedOrgUser.Id]),
         };
 
         await userAsymmetricKeysRepository.RegenerateUserAsymmetricKeysAsync(newKeys, updateActions);

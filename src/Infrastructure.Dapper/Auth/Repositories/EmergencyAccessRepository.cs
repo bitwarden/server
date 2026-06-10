@@ -179,25 +179,19 @@ public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEme
     }
 
     /// <inheritdoc />
-    public DatabaseTransactionAction SetStatusToAcceptedForPublicKeyPairRegeneration(IEnumerable<EmergencyAccess> emergencyAccesses)
+    public DatabaseTransactionAction UpdateStatusAndKeyEncryptedById(Guid id,
+        EmergencyAccessStatusType status, string? keyEncrypted, DateTime revisionDate)
     {
         return async (connection, transaction) =>
         {
-            var ids = emergencyAccesses.Select(ea => ea.Id).ToList();
-            if (ids.Count == 0)
-            {
-                return;
-            }
-
-            var utcNow = DateTime.UtcNow;
-
             await connection.ExecuteAsync(
-                "[dbo].[EmergencyAccess_UpdateManySetStatus]",
+                "[dbo].[EmergencyAccess_UpdateStatusAndKeyEncryptedById]",
                 new
                 {
-                    Ids = ids.ToGuidIdArrayTVP(),
-                    Status = (byte)EmergencyAccessStatusType.Accepted,
-                    RevisionDate = utcNow
+                    Id = id,
+                    Status = (byte)status,
+                    KeyEncrypted = keyEncrypted,
+                    RevisionDate = revisionDate
                 },
                 transaction: transaction,
                 commandType: CommandType.StoredProcedure);
