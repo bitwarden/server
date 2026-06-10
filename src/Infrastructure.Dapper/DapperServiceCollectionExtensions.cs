@@ -56,8 +56,8 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IOrganizationUserRepository, OrganizationUserRepository>();
         services.AddSingleton<IOrganizationInviteLinkRepository, OrganizationInviteLinkRepository>();
         services.AddSingleton<IAccessRuleRepository, Pam.Repositories.AccessRuleRepository>();
-        services.AddSingleton<ILeaseRequestRepository, Pam.Repositories.LeaseRequestRepository>();
-        services.AddSingleton<ILeaseRepository, Pam.Repositories.LeaseRepository>();
+        services.AddSingleton<IAccessRequestRepository, Pam.Repositories.AccessRequestRepository>();
+        services.AddSingleton<IAccessLeaseRepository, Pam.Repositories.AccessLeaseRepository>();
         services.AddSingleton<IPlayItemRepository, PlayItemRepository>();
         services.AddSingleton<IPolicyRepository, PolicyRepository>();
         services.AddSingleton<IProviderOrganizationRepository, ProviderOrganizationRepository>();

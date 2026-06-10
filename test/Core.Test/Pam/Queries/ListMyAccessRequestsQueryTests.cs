@@ -13,9 +13,9 @@ public class ListMyAccessRequestsQueryTests
 {
     [Theory, BitAutoData]
     public async Task GetMineAsync_ReturnsRequesterRows(
-        SutProvider<ListMyAccessRequestsQuery> sutProvider, Guid userId, InboxLeaseRequestDetails row)
+        SutProvider<ListMyAccessRequestsQuery> sutProvider, Guid userId, AccessRequestDetails row)
     {
-        sutProvider.GetDependency<ILeaseRequestRepository>()
+        sutProvider.GetDependency<IAccessRequestRepository>()
             .GetManyByRequesterIdAsync(userId)
             .Returns([row]);
 
@@ -29,7 +29,7 @@ public class ListMyAccessRequestsQueryTests
     public async Task GetMineAsync_NoRequests_ReturnsEmpty(
         SutProvider<ListMyAccessRequestsQuery> sutProvider, Guid userId)
     {
-        sutProvider.GetDependency<ILeaseRequestRepository>()
+        sutProvider.GetDependency<IAccessRequestRepository>()
             .GetManyByRequesterIdAsync(userId)
             .Returns([]);
 

@@ -2385,7 +2385,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Rule")
+                    b.Property<string>("Conditions")
                         .IsRequired()
                         .HasColumnType("TEXT");
 

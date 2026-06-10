@@ -21,11 +21,11 @@ public class ApproverInboxControllerTests
 {
     [Theory, BitAutoData]
     public async Task GetRequests_ReturnsMappedPendingRows(
-        Guid userId, InboxLeaseRequestDetails row, SutProvider<ApproverInboxController> sutProvider)
+        Guid userId, AccessRequestDetails row, SutProvider<ApproverInboxController> sutProvider)
     {
         SetupUser(sutProvider, userId);
-        row.Status = LeaseRequestStatus.Pending;
-        sutProvider.GetDependency<IGetInboxRequestsQuery>().GetPendingAsync(userId).Returns([row]);
+        row.Status = AccessRequestStatus.Pending;
+        sutProvider.GetDependency<IListInboxRequestsQuery>().GetPendingAsync(userId).Returns([row]);
 
         var result = await sutProvider.Sut.GetRequests();
 
@@ -35,11 +35,11 @@ public class ApproverInboxControllerTests
 
     [Theory, BitAutoData]
     public async Task GetHistory_ReturnsMappedHistoryRows(
-        Guid userId, InboxLeaseRequestDetails row, SutProvider<ApproverInboxController> sutProvider)
+        Guid userId, AccessRequestDetails row, SutProvider<ApproverInboxController> sutProvider)
     {
         SetupUser(sutProvider, userId);
-        row.Status = LeaseRequestStatus.Approved;
-        sutProvider.GetDependency<IGetInboxHistoryQuery>().GetHistoryAsync(userId).Returns([row]);
+        row.Status = AccessRequestStatus.Approved;
+        sutProvider.GetDependency<IListInboxHistoryQuery>().GetHistoryAsync(userId).Returns([row]);
 
         var result = await sutProvider.Sut.GetHistory();
 
@@ -48,19 +48,19 @@ public class ApproverInboxControllerTests
 
     [Theory, BitAutoData]
     public async Task Decide_ReturnsUpdatedRow(
-        Guid userId, Guid requestId, InboxLeaseRequestDetails updated, SutProvider<ApproverInboxController> sutProvider)
+        Guid userId, Guid requestId, AccessRequestDetails updated, SutProvider<ApproverInboxController> sutProvider)
     {
         SetupUser(sutProvider, userId);
-        updated.Status = LeaseRequestStatus.Approved;
+        updated.Status = AccessRequestStatus.Approved;
         updated.ProducedLeaseId = null;
-        sutProvider.GetDependency<IDecideLeaseRequestCommand>()
-            .DecideAsync(userId, requestId, Arg.Any<LeaseDecisionSubmission>())
+        sutProvider.GetDependency<IDecideAccessRequestCommand>()
+            .DecideAsync(userId, requestId, Arg.Any<AccessDecisionSubmission>())
             .Returns(updated);
 
-        var result = await sutProvider.Sut.Decide(requestId, new LeaseDecisionRequestModel { Decision = "approve" });
+        var result = await sutProvider.Sut.Decide(requestId, new AccessDecisionRequestModel { Verdict = "approve" });
 
         Assert.Equal(updated.Id, result.Id);
-        Assert.Equal(InboxRequestStatus.Approved, result.Status);
+        Assert.Equal(AccessRequestStatusNames.Approved, result.Status);
     }
 
     [Theory, BitAutoData]
@@ -70,7 +70,7 @@ public class ApproverInboxControllerTests
         SetupUser(sutProvider, userId);
 
         await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.Decide(requestId, new LeaseDecisionRequestModel { Decision = "maybe" }));
+            () => sutProvider.Sut.Decide(requestId, new AccessDecisionRequestModel { Verdict = "maybe" }));
     }
 
     [Theory, BitAutoData]
@@ -79,10 +79,10 @@ public class ApproverInboxControllerTests
     {
         SetupUser(sutProvider, userId);
 
-        var result = await sutProvider.Sut.Revoke(leaseId, new LeaseRevokeRequestModel { Reason = "policy" });
+        var result = await sutProvider.Sut.Revoke(leaseId, new AccessLeaseRevokeRequestModel { Reason = "policy" });
 
         Assert.IsType<NoContentResult>(result);
-        await sutProvider.GetDependency<IRevokeLeaseCommand>().Received(1).RevokeAsync(userId, leaseId, "policy");
+        await sutProvider.GetDependency<IRevokeAccessLeaseCommand>().Received(1).RevokeAsync(userId, leaseId, "policy");
     }
 
     private static void SetupUser(SutProvider<ApproverInboxController> sutProvider, Guid userId)

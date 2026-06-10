@@ -2402,7 +2402,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("Rule")
+                    b.Property<string>("Conditions")
                         .IsRequired()
                         .HasColumnType("text");
 

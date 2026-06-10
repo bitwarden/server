@@ -3,7 +3,7 @@ CREATE TABLE [dbo].[AccessRule] (
     [OrganizationId]    UNIQUEIDENTIFIER    NOT NULL,
     [Name]              NVARCHAR(256)       NOT NULL,
     [Description]       NVARCHAR(MAX)       NULL,
-    [Rule]              NVARCHAR(MAX)       NOT NULL,
+    [Conditions]        NVARCHAR(MAX)       NOT NULL,
     [CreationDate]      DATETIME2(7)        NOT NULL,
     [RevisionDate]      DATETIME2(7)        NOT NULL,
     CONSTRAINT [PK_AccessRule] PRIMARY KEY CLUSTERED ([Id] ASC),

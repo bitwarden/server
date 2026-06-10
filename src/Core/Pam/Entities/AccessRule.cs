@@ -19,9 +19,10 @@ public class AccessRule : ITableObject<Guid>
     public string? Description { get; set; }
 
     /// <summary>
-    /// JSON rule document. Validated by <c>AccessRuleValidator</c> before being persisted.
+    /// JSON conditions document (an <c>AccessCondition</c> tree). Validated by <c>AccessRuleValidator</c> before
+    /// being persisted.
     /// </summary>
-    public string Rule { get; set; } = null!;
+    public string Conditions { get; set; } = null!;
 
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;

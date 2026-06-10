@@ -20,8 +20,8 @@ namespace Bit.Api.Pam.Controllers;
 public class CipherLeaseController(
     IUserService userService,
     IAccessPreCheckQuery preCheckQuery,
-    IGetCipherLeaseStateQuery cipherLeaseStateQuery,
-    IRequestAccessCommand requestAccessCommand,
+    IGetCipherAccessStateQuery cipherAccessStateQuery,
+    ISubmitAccessRequestCommand submitAccessRequestCommand,
     IGetLeasedCipherQuery getLeasedCipherQuery,
     IApplicationCacheService applicationCacheService,
     ICollectionCipherRepository collectionCipherRepository,
@@ -45,11 +45,11 @@ public class CipherLeaseController(
     /// if any — powering the cipher-view banner and the vault-row badge. Side-effect free.
     /// </summary>
     [HttpGet("state")]
-    public async Task<CipherLeaseStateResponseModel> State(Guid id)
+    public async Task<CipherAccessStateResponseModel> State(Guid id)
     {
         var userId = userService.GetProperUserId(User)!.Value;
-        var result = await cipherLeaseStateQuery.GetStateAsync(userId, id);
-        return new CipherLeaseStateResponseModel(result);
+        var result = await cipherAccessStateQuery.GetStateAsync(userId, id);
+        return new CipherAccessStateResponseModel(result);
     }
 
     /// <summary>
@@ -57,11 +57,11 @@ public class CipherLeaseController(
     /// creates a pending request for an approver.
     /// </summary>
     [HttpPost("")]
-    public async Task<AccessRequestResponseModel> Post(Guid id, [FromBody] AccessRequestModel model)
+    public async Task<AccessRequestResultResponseModel> Post(Guid id, [FromBody] AccessRequestCreateRequestModel model)
     {
         var userId = userService.GetProperUserId(User)!.Value;
-        var result = await requestAccessCommand.RequestAccessAsync(userId, id, model.ToSubmission());
-        return new AccessRequestResponseModel(result);
+        var result = await submitAccessRequestCommand.SubmitAsync(userId, id, model.ToSubmission());
+        return new AccessRequestResultResponseModel(result);
     }
 
     /// <summary>

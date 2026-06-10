@@ -16,10 +16,10 @@ namespace Bit.Api.Pam.Controllers;
 [RequireFeature(FeatureFlagKeys.Pam)]
 public class ApproverInboxController(
     IUserService userService,
-    IGetInboxRequestsQuery getInboxRequestsQuery,
-    IGetInboxHistoryQuery getInboxHistoryQuery,
-    IDecideLeaseRequestCommand decideLeaseRequestCommand,
-    IRevokeLeaseCommand revokeLeaseCommand)
+    IListInboxRequestsQuery listInboxRequestsQuery,
+    IListInboxHistoryQuery listInboxHistoryQuery,
+    IDecideAccessRequestCommand decideAccessRequestCommand,
+    IRevokeAccessLeaseCommand revokeAccessLeaseCommand)
     : Controller
 {
     /// <summary>
@@ -27,24 +27,24 @@ public class ApproverInboxController(
     /// awaiting a decision.
     /// </summary>
     [HttpGet("inbox/requests")]
-    public async Task<ListResponseModel<InboxAccessRequestResponseModel>> GetRequests()
+    public async Task<ListResponseModel<AccessRequestDetailsResponseModel>> GetRequests()
     {
         var userId = userService.GetProperUserId(User)!.Value;
-        var requests = await getInboxRequestsQuery.GetPendingAsync(userId);
-        return new ListResponseModel<InboxAccessRequestResponseModel>(
-            requests.Select(r => new InboxAccessRequestResponseModel(r)));
+        var requests = await listInboxRequestsQuery.GetPendingAsync(userId);
+        return new ListResponseModel<AccessRequestDetailsResponseModel>(
+            requests.Select(r => new AccessRequestDetailsResponseModel(r)));
     }
 
     /// <summary>
     /// Returns the caller's resolved approver queue (decision history and lease outcomes) within the retention window.
     /// </summary>
     [HttpGet("inbox/history")]
-    public async Task<ListResponseModel<InboxAccessRequestResponseModel>> GetHistory()
+    public async Task<ListResponseModel<AccessRequestDetailsResponseModel>> GetHistory()
     {
         var userId = userService.GetProperUserId(User)!.Value;
-        var history = await getInboxHistoryQuery.GetHistoryAsync(userId);
-        return new ListResponseModel<InboxAccessRequestResponseModel>(
-            history.Select(r => new InboxAccessRequestResponseModel(r)));
+        var history = await listInboxHistoryQuery.GetHistoryAsync(userId);
+        return new ListResponseModel<AccessRequestDetailsResponseModel>(
+            history.Select(r => new AccessRequestDetailsResponseModel(r)));
     }
 
     /// <summary>
@@ -52,21 +52,21 @@ public class ApproverInboxController(
     /// not decide their own request.
     /// </summary>
     [HttpPost("requests/{id:guid}/decision")]
-    public async Task<InboxAccessRequestResponseModel> Decide(Guid id, [FromBody] LeaseDecisionRequestModel model)
+    public async Task<AccessRequestDetailsResponseModel> Decide(Guid id, [FromBody] AccessDecisionRequestModel model)
     {
         var userId = userService.GetProperUserId(User)!.Value;
-        var result = await decideLeaseRequestCommand.DecideAsync(userId, id, model.ToSubmission());
-        return new InboxAccessRequestResponseModel(result);
+        var result = await decideAccessRequestCommand.DecideAsync(userId, id, model.ToSubmission());
+        return new AccessRequestDetailsResponseModel(result);
     }
 
     /// <summary>
     /// Revokes an active lease early. The caller must be able to Manage the lease's collection.
     /// </summary>
     [HttpPost("leases/{id:guid}/revoke")]
-    public async Task<IActionResult> Revoke(Guid id, [FromBody] LeaseRevokeRequestModel model)
+    public async Task<IActionResult> Revoke(Guid id, [FromBody] AccessLeaseRevokeRequestModel model)
     {
         var userId = userService.GetProperUserId(User)!.Value;
-        await revokeLeaseCommand.RevokeAsync(userId, id, model.Reason);
+        await revokeAccessLeaseCommand.RevokeAsync(userId, id, model.Reason);
         return NoContent();
     }
 }

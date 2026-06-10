@@ -24,7 +24,7 @@ public partial class AddAccessRule : Migration
                 OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
                 Name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
                 Description = table.Column<string>(type: "text", nullable: true),
-                Rule = table.Column<string>(type: "text", nullable: false),
+                Conditions = table.Column<string>(type: "text", nullable: false),
                 CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                 RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },

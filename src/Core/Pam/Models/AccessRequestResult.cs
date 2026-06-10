@@ -4,18 +4,18 @@ using Bit.Core.Pam.Enums;
 namespace Bit.Core.Pam.Models;
 
 /// <summary>
-/// The result of submitting an access request. On the <see cref="AccessApprovalOutcome.Automatic"/> path a
-/// <see cref="Lease"/> is issued immediately; on the <see cref="AccessApprovalOutcome.Human"/> path a pending
-/// <see cref="LeaseRequest"/> is created to await an approver.
+/// The result of submitting an access request. On the <see cref="AccessApprovalMode.Automatic"/> path an
+/// <see cref="AccessLease"/> is issued immediately; on the <see cref="AccessApprovalMode.Human"/> path a pending
+/// <see cref="AccessRequest"/> is created to await an approver.
 /// </summary>
 public sealed record AccessRequestResult(
-    AccessApprovalOutcome Outcome,
-    Lease? Lease = null,
-    LeaseRequest? Request = null)
+    AccessApprovalMode ApprovalMode,
+    AccessLease? Lease = null,
+    AccessRequest? Request = null)
 {
-    public static AccessRequestResult Automatic(Lease lease) =>
-        new(AccessApprovalOutcome.Automatic, Lease: lease);
+    public static AccessRequestResult Automatic(AccessLease lease) =>
+        new(AccessApprovalMode.Automatic, Lease: lease);
 
-    public static AccessRequestResult Human(LeaseRequest request) =>
-        new(AccessApprovalOutcome.Human, Request: request);
+    public static AccessRequestResult Human(AccessRequest request) =>
+        new(AccessApprovalMode.Human, Request: request);
 }

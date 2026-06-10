@@ -41,7 +41,7 @@ public class UpdateAccessRuleCommand : IUpdateAccessRuleCommand
             throw new NotFoundException();
         }
 
-        var validation = _validator.Validate(update.Rule);
+        var validation = _validator.Validate(update.Conditions);
         if (!validation.IsValid)
         {
             throw new BadRequestException(validation.Error!);
@@ -63,7 +63,7 @@ public class UpdateAccessRuleCommand : IUpdateAccessRuleCommand
             OrganizationId = existing.OrganizationId,
             Name = update.Name,
             Description = update.Description,
-            Rule = update.Rule,
+            Conditions = update.Conditions,
             CreationDate = existing.CreationDate,
             RevisionDate = _timeProvider.GetUtcNow().UtcDateTime,
         };

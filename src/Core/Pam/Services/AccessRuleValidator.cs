@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Bit.Core.Pam.Models.Rules;
+using Bit.Core.Pam.Models.Conditions;
 
 namespace Bit.Core.Pam.Services;
 
@@ -22,56 +22,56 @@ public sealed partial class AccessRuleValidator : IAccessRuleValidator
     [GeneratedRegex(@"^([01][0-9]|2[0-3]):[0-5][0-9]$")]
     private static partial Regex TimeOfDayRegex();
 
-    public AccessRuleValidationResult Validate(string? ruleJson)
+    public AccessRuleValidationResult Validate(string? conditionsJson)
     {
-        if (ruleJson is null)
+        if (conditionsJson is null)
         {
             return AccessRuleValidationResult.Valid;
         }
 
-        if (string.IsNullOrWhiteSpace(ruleJson))
+        if (string.IsNullOrWhiteSpace(conditionsJson))
         {
-            return AccessRuleValidationResult.Invalid("Rule JSON cannot be empty.");
+            return AccessRuleValidationResult.Invalid("Conditions JSON cannot be empty.");
         }
 
-        Rule? rule;
+        AccessCondition? condition;
         try
         {
-            rule = JsonSerializer.Deserialize<Rule>(ruleJson, JsonOptions);
+            condition = JsonSerializer.Deserialize<AccessCondition>(conditionsJson, JsonOptions);
         }
         catch (JsonException ex)
         {
-            return AccessRuleValidationResult.Invalid($"Rule JSON is malformed: {ex.Message}");
+            return AccessRuleValidationResult.Invalid($"Conditions JSON is malformed: {ex.Message}");
         }
 
-        if (rule is null)
+        if (condition is null)
         {
-            return AccessRuleValidationResult.Invalid("Rule must be an object.");
+            return AccessRuleValidationResult.Invalid("Conditions must be an object.");
         }
 
-        return ValidateRule(rule, depth: 0);
+        return ValidateCondition(condition, depth: 0);
     }
 
-    private static AccessRuleValidationResult ValidateRule(Rule rule, int depth)
+    private static AccessRuleValidationResult ValidateCondition(AccessCondition condition, int depth)
     {
-        return rule switch
+        return condition switch
         {
-            HumanApprovalRule => AccessRuleValidationResult.Valid,
-            IpAllowlistRule ip => ValidateIpAllowlist(ip),
-            TimeOfDayRule tod => ValidateTimeOfDay(tod),
-            AllOfRule all => ValidateAllOf(all, depth),
-            _ => AccessRuleValidationResult.Invalid($"Unsupported rule kind: {rule.GetType().Name}."),
+            HumanApprovalCondition => AccessRuleValidationResult.Valid,
+            IpAllowlistCondition ip => ValidateIpAllowlist(ip),
+            TimeOfDayCondition tod => ValidateTimeOfDay(tod),
+            AllOfCondition all => ValidateAllOf(all, depth),
+            _ => AccessRuleValidationResult.Invalid($"Unsupported condition kind: {condition.GetType().Name}."),
         };
     }
 
-    private static AccessRuleValidationResult ValidateIpAllowlist(IpAllowlistRule rule)
+    private static AccessRuleValidationResult ValidateIpAllowlist(IpAllowlistCondition condition)
     {
-        if (rule.Cidrs.Count == 0)
+        if (condition.Cidrs.Count == 0)
         {
             return AccessRuleValidationResult.Invalid("ip_allowlist requires at least one CIDR.");
         }
 
-        foreach (var cidr in rule.Cidrs)
+        foreach (var cidr in condition.Cidrs)
         {
             if (string.IsNullOrWhiteSpace(cidr) || !IPNetwork.TryParse(cidr, out _))
             {
@@ -82,32 +82,32 @@ public sealed partial class AccessRuleValidator : IAccessRuleValidator
         return AccessRuleValidationResult.Valid;
     }
 
-    private static AccessRuleValidationResult ValidateTimeOfDay(TimeOfDayRule rule)
+    private static AccessRuleValidationResult ValidateTimeOfDay(TimeOfDayCondition condition)
     {
-        if (string.IsNullOrWhiteSpace(rule.Tz))
+        if (string.IsNullOrWhiteSpace(condition.Tz))
         {
             return AccessRuleValidationResult.Invalid("time_of_day requires a tz.");
         }
 
         try
         {
-            TimeZoneInfo.FindSystemTimeZoneById(rule.Tz);
+            TimeZoneInfo.FindSystemTimeZoneById(condition.Tz);
         }
         catch (TimeZoneNotFoundException)
         {
-            return AccessRuleValidationResult.Invalid($"Unknown timezone: '{rule.Tz}'.");
+            return AccessRuleValidationResult.Invalid($"Unknown timezone: '{condition.Tz}'.");
         }
         catch (InvalidTimeZoneException)
         {
-            return AccessRuleValidationResult.Invalid($"Invalid timezone: '{rule.Tz}'.");
+            return AccessRuleValidationResult.Invalid($"Invalid timezone: '{condition.Tz}'.");
         }
 
-        if (rule.Windows.Count == 0)
+        if (condition.Windows.Count == 0)
         {
             return AccessRuleValidationResult.Invalid("time_of_day requires at least one window.");
         }
 
-        foreach (var window in rule.Windows)
+        foreach (var window in condition.Windows)
         {
             if (window.Days.Count == 0)
             {
@@ -136,26 +136,26 @@ public sealed partial class AccessRuleValidator : IAccessRuleValidator
         return AccessRuleValidationResult.Valid;
     }
 
-    private static AccessRuleValidationResult ValidateAllOf(AllOfRule rule, int depth)
+    private static AccessRuleValidationResult ValidateAllOf(AllOfCondition condition, int depth)
     {
         if (depth >= MaxCompositeDepth)
         {
             return AccessRuleValidationResult.Invalid($"all_of nesting exceeds maximum depth of {MaxCompositeDepth}.");
         }
 
-        if (rule.Rules.Count == 0)
+        if (condition.Conditions.Count == 0)
         {
-            return AccessRuleValidationResult.Invalid("all_of requires at least one child rule.");
+            return AccessRuleValidationResult.Invalid("all_of requires at least one child condition.");
         }
 
-        if (rule.Rules.Count > MaxCompositeChildren)
+        if (condition.Conditions.Count > MaxCompositeChildren)
         {
-            return AccessRuleValidationResult.Invalid($"all_of cannot contain more than {MaxCompositeChildren} child rules.");
+            return AccessRuleValidationResult.Invalid($"all_of cannot contain more than {MaxCompositeChildren} child conditions.");
         }
 
-        foreach (var child in rule.Rules)
+        foreach (var child in condition.Conditions)
         {
-            var childResult = ValidateRule(child, depth + 1);
+            var childResult = ValidateCondition(child, depth + 1);
             if (!childResult.IsValid)
             {
                 return childResult;

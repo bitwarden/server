@@ -23,9 +23,9 @@ public class CreateAccessRuleCommandTests
     {
         var sutProvider = SetupSutProvider();
         rule.Name = "VPN + business hours";
-        rule.Rule = """{"kind":"human_approval"}""";
+        rule.Conditions = """{"kind":"human_approval"}""";
         sutProvider.GetDependency<IAccessRuleValidator>()
-            .Validate(rule.Rule)
+            .Validate(rule.Conditions)
             .Returns(AccessRuleValidationResult.Valid);
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetManyByOrganizationIdAsync(rule.OrganizationId)
@@ -47,14 +47,14 @@ public class CreateAccessRuleCommandTests
     {
         var sutProvider = SetupSutProvider();
         rule.Name = "VPN + business hours";
-        rule.Rule = """{"kind":"human_approval"}""";
+        rule.Conditions = """{"kind":"human_approval"}""";
         collectionA.OrganizationId = rule.OrganizationId;
         collectionA.AccessRuleId = null;
         collectionB.OrganizationId = rule.OrganizationId;
         collectionB.AccessRuleId = null;
         var collectionIds = new[] { collectionA.Id, collectionB.Id };
         sutProvider.GetDependency<IAccessRuleValidator>()
-            .Validate(rule.Rule)
+            .Validate(rule.Conditions)
             .Returns(AccessRuleValidationResult.Valid);
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetManyByOrganizationIdAsync(rule.OrganizationId)
@@ -79,10 +79,10 @@ public class CreateAccessRuleCommandTests
     {
         var sutProvider = SetupSutProvider();
         rule.Name = "test";
-        rule.Rule = """{"kind":"human_approval"}""";
+        rule.Conditions = """{"kind":"human_approval"}""";
         collection.OrganizationId = Guid.NewGuid();
         sutProvider.GetDependency<IAccessRuleValidator>()
-            .Validate(rule.Rule)
+            .Validate(rule.Conditions)
             .Returns(AccessRuleValidationResult.Valid);
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetManyByOrganizationIdAsync(rule.OrganizationId)
@@ -102,11 +102,11 @@ public class CreateAccessRuleCommandTests
     {
         var sutProvider = SetupSutProvider();
         rule.Name = "test";
-        rule.Rule = """{"kind":"human_approval"}""";
+        rule.Conditions = """{"kind":"human_approval"}""";
         collection.OrganizationId = rule.OrganizationId;
         collection.AccessRuleId = Guid.NewGuid();
         sutProvider.GetDependency<IAccessRuleValidator>()
-            .Validate(rule.Rule)
+            .Validate(rule.Conditions)
             .Returns(AccessRuleValidationResult.Valid);
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetManyByOrganizationIdAsync(rule.OrganizationId)
@@ -126,9 +126,9 @@ public class CreateAccessRuleCommandTests
     {
         var sutProvider = SetupSutProvider();
         rule.Name = "test";
-        rule.Rule = """{"kind":"human_approval"}""";
+        rule.Conditions = """{"kind":"human_approval"}""";
         sutProvider.GetDependency<IAccessRuleValidator>()
-            .Validate(rule.Rule)
+            .Validate(rule.Conditions)
             .Returns(AccessRuleValidationResult.Valid);
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetManyByOrganizationIdAsync(rule.OrganizationId)
@@ -159,9 +159,9 @@ public class CreateAccessRuleCommandTests
     {
         var sutProvider = SetupSutProvider();
         rule.Name = "test";
-        rule.Rule = """{"kind":"bogus"}""";
+        rule.Conditions = """{"kind":"bogus"}""";
         sutProvider.GetDependency<IAccessRuleValidator>()
-            .Validate(rule.Rule)
+            .Validate(rule.Conditions)
             .Returns(AccessRuleValidationResult.Invalid("Unsupported rule kind"));
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(rule, []));
@@ -174,11 +174,11 @@ public class CreateAccessRuleCommandTests
     {
         var sutProvider = SetupSutProvider();
         rule.Name = "duplicate";
-        rule.Rule = """{"kind":"human_approval"}""";
+        rule.Conditions = """{"kind":"human_approval"}""";
         existing.OrganizationId = rule.OrganizationId;
         existing.Name = "Duplicate";   // case-insensitive collision
         sutProvider.GetDependency<IAccessRuleValidator>()
-            .Validate(rule.Rule)
+            .Validate(rule.Conditions)
             .Returns(AccessRuleValidationResult.Valid);
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetManyByOrganizationIdAsync(rule.OrganizationId)

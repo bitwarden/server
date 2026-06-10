@@ -18,32 +18,32 @@ public class MemberLeasingControllerTests
 {
     [Theory, BitAutoData]
     public async Task GetMyRequests_ReturnsMappedRows(
-        Guid userId, InboxLeaseRequestDetails row, SutProvider<MemberLeasingController> sutProvider)
+        Guid userId, AccessRequestDetails row, SutProvider<MemberLeasingController> sutProvider)
     {
         SetupUser(sutProvider, userId);
-        row.Status = LeaseRequestStatus.Pending;
+        row.Status = AccessRequestStatus.Pending;
         sutProvider.GetDependency<IListMyAccessRequestsQuery>().GetMineAsync(userId).Returns([row]);
 
         var result = (await sutProvider.Sut.GetMyRequests()).ToList();
 
         Assert.Single(result);
         Assert.Equal(row.Id, result[0].Id);
-        Assert.Equal(InboxRequestStatus.Pending, result[0].Status);
+        Assert.Equal(AccessRequestStatusNames.Pending, result[0].Status);
     }
 
     [Theory, BitAutoData]
     public async Task GetMyActiveLeases_ReturnsMappedLeases(
-        Guid userId, Lease lease, SutProvider<MemberLeasingController> sutProvider)
+        Guid userId, AccessLease lease, SutProvider<MemberLeasingController> sutProvider)
     {
         SetupUser(sutProvider, userId);
-        lease.Status = LeaseStatus.Active;
-        sutProvider.GetDependency<IListMyActiveLeasesQuery>().GetMineActiveAsync(userId).Returns([lease]);
+        lease.Status = AccessLeaseStatus.Active;
+        sutProvider.GetDependency<IListMyActiveAccessLeasesQuery>().GetMineActiveAsync(userId).Returns([lease]);
 
         var result = (await sutProvider.Sut.GetMyActiveLeases()).ToList();
 
         Assert.Single(result);
         Assert.Equal(lease.Id, result[0].Id);
-        Assert.Equal(LeaseStatusName.Active, result[0].Status);
+        Assert.Equal(AccessLeaseStatusNames.Active, result[0].Status);
     }
 
     [Theory, BitAutoData]

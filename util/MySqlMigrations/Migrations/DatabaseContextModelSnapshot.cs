@@ -2396,7 +2396,7 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<string>("Rule")
+                    b.Property<string>("Conditions")
                         .IsRequired()
                         .HasColumnType("longtext");
 

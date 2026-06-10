@@ -73,7 +73,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationSponsorshipCommands(globalSettings);
         services.AddOrganizationApiKeyCommandsQueries();
         services.AddOrganizationCollectionCommands();
-        services.AddAccessRuleCommands();
+        services.AddPamServices();
         services.AddOrganizationGroupCommands();
         services.AddOrganizationInviteLinkCommandsQueries();
         services.AddOrganizationDomainCommandsQueries();
@@ -194,26 +194,26 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IBulkAddCollectionAccessCommand, BulkAddCollectionAccessCommand>();
     }
 
-    public static void AddAccessRuleCommands(this IServiceCollection services)
+    public static void AddPamServices(this IServiceCollection services)
     {
         services.AddSingleton<IAccessRuleValidator, AccessRuleValidator>();
         services.AddScoped<ICreateAccessRuleCommand, CreateAccessRuleCommand>();
         services.AddScoped<IUpdateAccessRuleCommand, UpdateAccessRuleCommand>();
         services.AddScoped<IDeleteAccessRuleCommand, DeleteAccessRuleCommand>();
-        services.AddScoped<IAccessApprovalResolver, AccessApprovalResolver>();
-        services.AddSingleton<IAccessPolicyEngine, AccessPolicyEngine>();
+        services.AddScoped<IGoverningRuleResolver, GoverningRuleResolver>();
+        services.AddSingleton<IAccessRuleEngine, AccessRuleEngine>();
         services.AddScoped<IAccessPreCheckQuery, AccessPreCheckQuery>();
         services.AddScoped<IGetLeasedCipherQuery, GetLeasedCipherQuery>();
-        services.AddScoped<IRequestAccessCommand, RequestAccessCommand>();
+        services.AddScoped<ISubmitAccessRequestCommand, SubmitAccessRequestCommand>();
         services.AddScoped<IApproverCollectionAccessQuery, ApproverCollectionAccessQuery>();
         services.AddScoped<IApproverInboxNotifier, ApproverInboxNotifier>();
-        services.AddScoped<IGetInboxRequestsQuery, GetInboxRequestsQuery>();
-        services.AddScoped<IGetInboxHistoryQuery, GetInboxHistoryQuery>();
-        services.AddScoped<IDecideLeaseRequestCommand, DecideLeaseRequestCommand>();
-        services.AddScoped<IRevokeLeaseCommand, RevokeLeaseCommand>();
-        services.AddScoped<IGetCipherLeaseStateQuery, GetCipherLeaseStateQuery>();
+        services.AddScoped<IListInboxRequestsQuery, ListInboxRequestsQuery>();
+        services.AddScoped<IListInboxHistoryQuery, ListInboxHistoryQuery>();
+        services.AddScoped<IDecideAccessRequestCommand, DecideAccessRequestCommand>();
+        services.AddScoped<IRevokeAccessLeaseCommand, RevokeAccessLeaseCommand>();
+        services.AddScoped<IGetCipherAccessStateQuery, GetCipherAccessStateQuery>();
         services.AddScoped<IListMyAccessRequestsQuery, ListMyAccessRequestsQuery>();
-        services.AddScoped<IListMyActiveLeasesQuery, ListMyActiveLeasesQuery>();
+        services.AddScoped<IListMyActiveAccessLeasesQuery, ListMyActiveAccessLeasesQuery>();
     }
 
     private static void AddOrganizationGroupCommands(this IServiceCollection services)

@@ -3,10 +3,10 @@
 public interface IAccessRuleValidator
 {
     /// <summary>
-    /// Validates a raw JSON rule. A null or empty rule is treated as "no rule
+    /// Validates a raw JSON conditions document. A null or empty document is treated as "no conditions
     /// configured" and considered valid; callers decide how to treat that semantically.
     /// </summary>
-    AccessRuleValidationResult Validate(string? ruleJson);
+    AccessRuleValidationResult Validate(string? conditionsJson);
 }
 
 public sealed record AccessRuleValidationResult(bool IsValid, string? Error)

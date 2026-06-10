@@ -1,0 +1,126 @@
+﻿using Bit.Core.Exceptions;
+using Bit.Core.Pam.Entities;
+using Bit.Core.Pam.Enums;
+using Bit.Core.Pam.Models;
+using Bit.Core.Pam.Models.Conditions;
+using Bit.Core.Pam.OrganizationFeatures.Queries;
+using Bit.Core.Pam.Repositories;
+using Bit.Core.Pam.Services;
+using Bit.Core.Vault.Models.Data;
+using Bit.Core.Vault.Repositories;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
+using NSubstitute;
+using Xunit;
+
+namespace Bit.Core.Test.Pam.Queries;
+
+[SutProviderCustomize]
+public class GetCipherAccessStateQueryTests
+{
+    [Theory, BitAutoData]
+    public async Task GetStateAsync_CipherNotAccessible_ThrowsNotFound(
+        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId)
+    {
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId, userId)
+            .Returns((CipherDetails?)null);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetStateAsync(userId, cipherId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetStateAsync_NotGatedAndNothingHeld_ThrowsNotFound(
+        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId)
+    {
+        SetupCipher(sutProvider, userId, cipherId);
+        // No active lease, no pending request, and the resolver finds no governing rule.
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolveAsync(userId, cipherId)
+            .Returns((GoverningRule?)null);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetStateAsync(userId, cipherId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetStateAsync_ActiveLease_ReturnsSnapshotWithLease(
+        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId, AccessLease activeLease)
+    {
+        SetupCipher(sutProvider, userId, cipherId);
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, Arg.Any<DateTime>())
+            .Returns(activeLease);
+
+        var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
+
+        Assert.Equal(cipherId, result.CipherId);
+        Assert.Same(activeLease, result.ActiveLease);
+        Assert.Null(result.PendingRequest);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetStateAsync_LeaseHeldButRuleRemoved_StillReturnsSnapshot(
+        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId, AccessLease activeLease)
+    {
+        SetupCipher(sutProvider, userId, cipherId);
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, Arg.Any<DateTime>())
+            .Returns(activeLease);
+        // Access rule since removed: resolver returns null, but the held lease must not be hidden.
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolveAsync(userId, cipherId)
+            .Returns((GoverningRule?)null);
+
+        var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
+
+        Assert.Same(activeLease, result.ActiveLease);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetStateAsync_PendingRequest_MapsToDetails(
+        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId, AccessRequest pending)
+    {
+        SetupCipher(sutProvider, userId, cipherId);
+        pending.CipherId = cipherId;
+        pending.RequesterId = userId;
+        pending.Status = AccessRequestStatus.Pending;
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .GetActivePendingByRequesterIdCipherIdAsync(userId, cipherId)
+            .Returns(pending);
+
+        var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
+
+        Assert.Null(result.ActiveLease);
+        Assert.NotNull(result.PendingRequest);
+        Assert.Equal(pending.Id, result.PendingRequest!.Id);
+        Assert.Equal(pending.ExtensionOfLeaseId, result.PendingRequest.ExtensionOfLeaseId);
+        Assert.Equal(AccessRequestStatus.Pending, result.PendingRequest.Status);
+        // Pending has produced no lease and has no resolver yet; display-name fields are not populated.
+        Assert.Null(result.PendingRequest.ProducedLeaseId);
+        Assert.Null(result.PendingRequest.ApproverId);
+        Assert.Null(result.PendingRequest.CipherName);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetStateAsync_GatedButEmpty_ReturnsEmptySnapshot(
+        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        SetupCipher(sutProvider, userId, cipherId);
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolveAsync(userId, cipherId)
+            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: true, new HumanApprovalCondition()));
+
+        var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
+
+        Assert.Equal(cipherId, result.CipherId);
+        Assert.Null(result.ActiveLease);
+        Assert.Null(result.PendingRequest);
+    }
+
+    private static void SetupCipher(SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId)
+    {
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId, userId)
+            .Returns(new CipherDetails { Id = cipherId });
+    }
+}
