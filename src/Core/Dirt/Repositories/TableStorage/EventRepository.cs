@@ -137,30 +137,42 @@ public class EventRepository : IEventRepository
         }
 
         var pending = new List<TableTransactionAction>(batchSize);
-        await foreach (var entity in _tableClient.QueryAsync<TableEntity>(filter, select: select))
+        try
         {
-            pending.Add(new TableTransactionAction(TableTransactionActionType.Delete, entity, ETag.All));
+            await foreach (var entity in _tableClient.QueryAsync<TableEntity>(filter, select: select))
+            {
+                pending.Add(new TableTransactionAction(TableTransactionActionType.Delete, entity, ETag.All));
 
-            if (pending.Count == batchSize)
+                if (pending.Count == batchSize)
+                {
+                    await throttle.WaitAsync();
+                    batchTasks.Add(SubmitBatchAsync(pending));
+                    pending = new List<TableTransactionAction>(batchSize);
+
+                    if (++batchCount >= maxBatchesPerCall)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            if (pending.Count > 0)
             {
                 await throttle.WaitAsync();
                 batchTasks.Add(SubmitBatchAsync(pending));
-                pending = new List<TableTransactionAction>(batchSize);
-
-                if (++batchCount >= maxBatchesPerCall)
-                {
-                    break;
-                }
             }
-        }
 
-        if (pending.Count > 0)
+            await Task.WhenAll(batchTasks);
+        }
+        catch
         {
-            await throttle.WaitAsync();
-            batchTasks.Add(SubmitBatchAsync(pending));
+            // If enumeration (or a batch) fails, observe any in-flight submissions before
+            // the throttle is disposed so they don't release a disposed semaphore; the
+            // original exception is the one worth surfacing.
+            await Task.WhenAll(batchTasks).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+            throw;
         }
 
-        await Task.WhenAll(batchTasks);
         return totalDeleted;
     }
 
