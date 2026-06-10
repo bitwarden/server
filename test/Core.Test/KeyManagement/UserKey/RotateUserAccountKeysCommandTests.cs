@@ -127,6 +127,8 @@ public class RotateUserAccountKeysCommandTests
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
         SetV1ExistingUser(user, signatureRepository);
         SetV1ModelUser(model.BaseData);
+        user.LastPasswordChangeDate = DateTime.UtcNow.AddDays(-1);
+        user.LastKeyRotationDate = DateTime.UtcNow.AddDays(-1);
 
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
             .Returns(true);
@@ -154,9 +156,16 @@ public class RotateUserAccountKeysCommandTests
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
             .Returns(true);
 
+        var before = DateTime.UtcNow;
         var result = await sutProvider.Sut.PasswordChangeAndRotateUserAccountKeysAsync(user, model);
+        var after = DateTime.UtcNow;
+
         Assert.Equal(IdentityResult.Success, result);
         Assert.Equal(user.SecurityState, model.BaseData.AccountKeys.SecurityStateData!.SecurityState);
+        Assert.NotNull(user.LastPasswordChangeDate);
+        Assert.InRange(user.LastPasswordChangeDate.Value, before, after);
+        Assert.NotNull(user.LastKeyRotationDate);
+        Assert.InRange(user.LastKeyRotationDate.Value, before, after);
     }
 
 
