@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Seeder.Scenes;
+namespace Bit.Seeder.Scenes.LoginCipherScene;
 
 /// <summary>
 /// Shared request fields for seeding a login cipher, regardless of owner (user or organization).

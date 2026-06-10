@@ -3,6 +3,7 @@ using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
+using Bit.Seeder.Scenes.LoginCipherScene;
 using Bit.Seeder.Services;
 
 namespace Bit.Seeder.Scenes;
