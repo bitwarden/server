@@ -2,6 +2,7 @@
 using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
+using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.Utilities;
@@ -20,7 +21,8 @@ public class OrganizationInviteLinksController(
     IUpdateOrganizationInviteLinkCommand updateOrganizationInviteLinkCommand,
     IDeleteOrganizationInviteLinkCommand deleteOrganizationInviteLinkCommand,
     IRefreshOrganizationInviteLinkCommand refreshOrganizationInviteLinkCommand,
-    IValidateOrganizationInviteLinkEmailDomainQuery validateOrganizationInviteLinkEmailDomainQuery)
+    IValidateOrganizationInviteLinkEmailDomainQuery validateOrganizationInviteLinkEmailDomainQuery,
+    IGetOrganizationInviteLinkPoliciesQuery getOrganizationInviteLinkPoliciesQuery)
     : BaseAdminConsoleController
 {
     [AllowAnonymous]
@@ -36,6 +38,16 @@ public class OrganizationInviteLinksController(
                 status.Sso is null
                     ? null
                     : new OrganizationInviteLinkSsoResponseModel(status.Sso.OrgSsoId, status.Sso.Required))));
+    }
+
+    [AllowAnonymous]
+    [HttpPost("/organizations/invite-link/policies")]
+    public async Task<IResult> GetPolicies([FromBody] GetOrganizationInviteLinkPoliciesRequestModel model)
+    {
+        var result = await getOrganizationInviteLinkPoliciesQuery.GetPoliciesAsync(model.Code);
+        return Handle(result, policies =>
+            TypedResults.Ok(new ListResponseModel<PolicyResponseModel>(
+                policies.Select(p => new PolicyResponseModel(p)))));
     }
 
     [AllowAnonymous]
