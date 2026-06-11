@@ -1,4 +1,6 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Enums;
@@ -19,6 +21,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
+using OneOf;
 using Xunit;
 
 namespace Bit.Core.Test.KeyManagement.UserKey;
@@ -591,6 +594,87 @@ public class RotateUserAccountKeysCommandTests
         // Assert - Standard logout push, not KeyRotation reason
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
             .PushLogOutAsync(user.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PasswordChangeAndRotateUserAccountKeysAsync_DelegatesToMasterPasswordService(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, PasswordChangeAndRotateUserAccountKeysData model)
+    {
+        // Arrange
+        SetTestKdfAndSaltForUserAndModel(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV1ExistingUser(user, signatureRepository);
+        SetV1ModelUser(model.BaseData);
+
+        sutProvider.GetDependency<IUserService>()
+            .CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+        sutProvider.GetDependency<IMasterPasswordService>()
+            .PrepareUpdateExistingMasterPasswordAsync(user, Arg.Any<UpdateExistingPasswordData>())
+            .Returns(OneOf<User, IdentityError[]>.FromT0(user));
+
+        // Act
+        var result = await sutProvider.Sut.PasswordChangeAndRotateUserAccountKeysAsync(user, model);
+
+        // Assert - delegation occurred with correct data shape
+        Assert.Equal(IdentityResult.Success, result);
+        await sutProvider.GetDependency<IMasterPasswordService>().Received(1)
+            .PrepareUpdateExistingMasterPasswordAsync(user, Arg.Is<UpdateExistingPasswordData>(d =>
+                d.MasterPasswordAuthentication == model.MasterPasswordAuthenticationData &&
+                d.MasterPasswordUnlock == model.MasterPasswordUnlockData &&
+                d.MasterPasswordHint == model.MasterPasswordHint &&
+                d.ValidatePassword == true &&
+                d.RefreshStamp == false));
+    }
+
+    [Theory, BitAutoData]
+    public async Task PasswordChangeAndRotateUserAccountKeysAsync_MasterPasswordServiceFails_ReturnsFailedAndSkipsPersist(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, PasswordChangeAndRotateUserAccountKeysData model)
+    {
+        // Arrange
+        SetTestKdfAndSaltForUserAndModel(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV1ExistingUser(user, signatureRepository);
+        SetV1ModelUser(model.BaseData);
+
+        sutProvider.GetDependency<IUserService>()
+            .CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+
+        var serviceError = new IdentityError { Code = "SomeError", Description = "Service rejected" };
+        sutProvider.GetDependency<IMasterPasswordService>()
+            .PrepareUpdateExistingMasterPasswordAsync(user, Arg.Any<UpdateExistingPasswordData>())
+            .Returns(OneOf<User, IdentityError[]>.FromT1(new[] { serviceError }));
+
+        // Act
+        var result = await sutProvider.Sut.PasswordChangeAndRotateUserAccountKeysAsync(user, model);
+
+        // Assert - failure surfaced and side effects skipped
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Errors, e => e.Code == "SomeError");
+        await sutProvider.GetDependency<IUserRepository>().DidNotReceive()
+            .UpdateUserKeyAndEncryptedDataV2Async(Arg.Any<User>(), Arg.Any<IEnumerable<UpdateEncryptedDataForKeyRotation>>());
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
+            .PushLogOutAsync(Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<PushNotificationLogOutReason?>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task PasswordChangeAndRotateUserAccountKeysAsync_WrongOldPassword_DoesNotCallMasterPasswordService(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, PasswordChangeAndRotateUserAccountKeysData model)
+    {
+        // Arrange
+        user.Email = model.MasterPasswordUnlockData.Salt;
+        sutProvider.GetDependency<IUserService>()
+            .CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(false);
+
+        // Act
+        var result = await sutProvider.Sut.PasswordChangeAndRotateUserAccountKeysAsync(user, model);
+
+        // Assert - rejection short-circuits before the MP service
+        Assert.False(result.Succeeded);
+        await sutProvider.GetDependency<IMasterPasswordService>().DidNotReceive()
+            .PrepareUpdateExistingMasterPasswordAsync(Arg.Any<User>(), Arg.Any<UpdateExistingPasswordData>());
     }
 
     [Theory]
