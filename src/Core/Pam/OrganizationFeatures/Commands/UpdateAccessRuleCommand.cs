@@ -65,6 +65,8 @@ public class UpdateAccessRuleCommand : IUpdateAccessRuleCommand
             Description = update.Description,
             Conditions = update.Conditions,
             SingleActiveLease = update.SingleActiveLease,
+            DefaultLeaseDurationSeconds = update.DefaultLeaseDurationSeconds,
+            MaxLeaseDurationSeconds = update.MaxLeaseDurationSeconds,
             CreationDate = existing.CreationDate,
             RevisionDate = _timeProvider.GetUtcNow().UtcDateTime,
         };

@@ -5,6 +5,8 @@ CREATE PROCEDURE [dbo].[AccessRule_Update]
     @Description NVARCHAR(MAX) = NULL,
     @Conditions NVARCHAR(MAX),
     @SingleActiveLease BIT = 0,
+    @DefaultLeaseDurationSeconds INT = NULL,
+    @MaxLeaseDurationSeconds INT = NULL,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -19,6 +21,8 @@ BEGIN
         [Description] = @Description,
         [Conditions] = @Conditions,
         [SingleActiveLease] = @SingleActiveLease,
+        [DefaultLeaseDurationSeconds] = @DefaultLeaseDurationSeconds,
+        [MaxLeaseDurationSeconds] = @MaxLeaseDurationSeconds,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate
     WHERE

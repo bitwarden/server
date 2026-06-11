@@ -29,6 +29,8 @@ public class UpdateAccessRuleCommandTests
         update.Description = "new description";
         update.Conditions = """{"kind":"human_approval"}""";
         update.SingleActiveLease = true;
+        update.DefaultLeaseDurationSeconds = 3600;
+        update.MaxLeaseDurationSeconds = 28800;
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetDetailsByIdAsync(existing.Id)
             .Returns(existing);
@@ -45,11 +47,14 @@ public class UpdateAccessRuleCommandTests
         Assert.Equal("new description", result.Description);
         Assert.Equal(update.Conditions, result.Conditions);
         Assert.True(result.SingleActiveLease);
+        Assert.Equal(3600, result.DefaultLeaseDurationSeconds);
+        Assert.Equal(28800, result.MaxLeaseDurationSeconds);
         Assert.Equal(_now, result.RevisionDate);
         await sutProvider.GetDependency<IAccessRuleRepository>().Received(1)
             .ReplaceAsync(Arg.Is<AccessRule>(r =>
                 r.Id == existing.Id && r.Name == "renamed" && r.Description == "new description"
-                && r.SingleActiveLease));
+                && r.SingleActiveLease
+                && r.DefaultLeaseDurationSeconds == 3600 && r.MaxLeaseDurationSeconds == 28800));
     }
 
     [Theory, BitAutoData]

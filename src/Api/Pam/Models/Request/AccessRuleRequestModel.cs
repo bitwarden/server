@@ -21,6 +21,18 @@ public class AccessRuleRequestModel
     public bool SingleActiveLease { get; set; }
 
     /// <summary>
+    /// Default lease duration in seconds, used to pre-fill a request opened under this rule. Null means the
+    /// backend default applies.
+    /// </summary>
+    public int? DefaultLeaseDurationSeconds { get; set; }
+
+    /// <summary>
+    /// Hard ceiling on the duration of any single lease granted under this rule, in seconds. Null means no
+    /// per-rule cap.
+    /// </summary>
+    public int? MaxLeaseDurationSeconds { get; set; }
+
+    /// <summary>
     /// The complete set of collections this rule governs. The rule's associations are replaced to match
     /// exactly this set; an empty array clears all associations.
     /// </summary>
@@ -34,6 +46,8 @@ public class AccessRuleRequestModel
         Description = Description,
         Conditions = SerializeConditions(Conditions),
         SingleActiveLease = SingleActiveLease,
+        DefaultLeaseDurationSeconds = DefaultLeaseDurationSeconds,
+        MaxLeaseDurationSeconds = MaxLeaseDurationSeconds,
     };
 
     private static string SerializeConditions(object conditions) => conditions switch
