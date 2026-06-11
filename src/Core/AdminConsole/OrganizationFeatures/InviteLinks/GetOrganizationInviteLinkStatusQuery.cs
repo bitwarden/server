@@ -43,7 +43,11 @@ public class GetOrganizationInviteLinkStatusQuery(
 
         var sso = seatsAvailable ? await GetSsoStatusAsync(organization) : null;
 
-        return new OrganizationInviteLinkStatus(organization.Name, seatsAvailable, sso);
+        // A wrapped organization key on the link means link-confirm is enabled: a joining user is
+        // link-confirmed (Confirm flow). Its absence means Accept only (admin confirms each member).
+        var linkConfirmEnabled = inviteLink.EncryptedOrgKey is not null;
+
+        return new OrganizationInviteLinkStatus(organization.Name, seatsAvailable, linkConfirmEnabled, sso);
     }
 
     private async Task<OrganizationInviteLinkSsoStatus?> GetSsoStatusAsync(Organization organization)
