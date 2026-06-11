@@ -109,7 +109,8 @@ public class AccessRequestRepositoryTests
             NotAfter = approved.NotAfter,
             CreationDate = now,
         };
-        Assert.True(await accessLeaseRepository.CreateFromApprovedRequestAsync(lease, now));
+        Assert.Equal(AccessLeaseMintOutcome.Minted,
+            await accessLeaseRepository.CreateFromApprovedRequestAsync(lease, now, false));
 
         // While the lease is active the inbox sees its Active status, so the client offers Revoke.
         var active = Assert.Single(await accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
@@ -310,7 +311,8 @@ public class AccessRequestRepositoryTests
             NotAfter = startable.NotAfter,
             CreationDate = now,
         };
-        Assert.True(await accessLeaseRepository.CreateFromApprovedRequestAsync(lease, now));
+        Assert.Equal(AccessLeaseMintOutcome.Minted,
+            await accessLeaseRepository.CreateFromApprovedRequestAsync(lease, now, false));
         Assert.Null(await accessRequestRepository.GetActiveApprovedByRequesterIdCipherIdAsync(
             requesterId, startable.CipherId, now));
     }

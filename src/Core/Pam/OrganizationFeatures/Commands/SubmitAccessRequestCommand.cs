@@ -27,6 +27,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IAccessRequestRepository _accessRequestRepository;
     private readonly IApproverInboxNotifier _approverInboxNotifier;
+    private readonly ISingleActiveLeaseEvaluator _singleActiveLeaseEvaluator;
     private readonly TimeProvider _timeProvider;
 
     public SubmitAccessRequestCommand(
@@ -37,6 +38,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         IAccessLeaseRepository accessLeaseRepository,
         IAccessRequestRepository accessRequestRepository,
         IApproverInboxNotifier approverInboxNotifier,
+        ISingleActiveLeaseEvaluator singleActiveLeaseEvaluator,
         TimeProvider timeProvider)
     {
         _cipherRepository = cipherRepository;
@@ -46,6 +48,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         _accessLeaseRepository = accessLeaseRepository;
         _accessRequestRepository = accessRequestRepository;
         _approverInboxNotifier = approverInboxNotifier;
+        _singleActiveLeaseEvaluator = singleActiveLeaseEvaluator;
         _timeProvider = timeProvider;
     }
 
@@ -154,7 +157,17 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         };
         lease.SetNewId();
 
-        await _accessLeaseRepository.CreateAutoApprovedAsync(request, decision, lease, now);
+        // The per-cipher singleton binds only when every path the caller reaches the cipher through is governed by a
+        // singleton rule; an escape path leaves them unconstrained. The mint proc enforces it under a range lock and
+        // rolls back the whole insert on conflict, so nothing is persisted when this throws.
+        var enforceSingleActiveLease = await _singleActiveLeaseEvaluator.AppliesAsync(userId, cipherId);
+
+        var outcome = await _accessLeaseRepository.CreateAutoApprovedAsync(request, decision, lease, now,
+            enforceSingleActiveLease);
+        if (outcome == AccessLeaseMintOutcome.SingleActiveLeaseConflict)
+        {
+            throw new BadRequestException("Another active lease exists for this item. Try again once it ends.");
+        }
 
         return AccessRequestResult.Automatic(lease);
     }

@@ -16,6 +16,7 @@ public class AccessRuleDetails : AccessRule
         Name = rule.Name,
         Description = rule.Description,
         Conditions = rule.Conditions,
+        SingleActiveLease = rule.SingleActiveLease,
         CreationDate = rule.CreationDate,
         RevisionDate = rule.RevisionDate,
         CollectionIds = collectionIds,

@@ -16,6 +16,7 @@ public class AccessRuleResponseModel : ResponseModel
         Name = rule.Name;
         Description = rule.Description;
         Conditions = TryParseConditions(rule.Conditions);
+        SingleActiveLease = rule.SingleActiveLease;
         CreationDate = rule.CreationDate;
         RevisionDate = rule.RevisionDate;
         Collections = rule.CollectionIds.ToList();
@@ -26,6 +27,7 @@ public class AccessRuleResponseModel : ResponseModel
     public string Name { get; }
     public string? Description { get; }
     public JsonElement? Conditions { get; }
+    public bool SingleActiveLease { get; }
     public DateTime CreationDate { get; }
     public DateTime RevisionDate { get; }
     public IEnumerable<Guid> Collections { get; }

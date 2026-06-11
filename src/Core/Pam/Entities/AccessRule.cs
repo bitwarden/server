@@ -24,6 +24,14 @@ public class AccessRule : ITableObject<Guid>
     /// </summary>
     public string Conditions { get; set; } = null!;
 
+    /// <summary>
+    /// When true, the rule asks for a per-cipher singleton: at most one active lease may exist for a given cipher
+    /// across all users. The constraint binds for a member only when every collection through which they reach the
+    /// cipher is governed by a rule with this flag set; any ungated or non-singleton path is an escape that leaves
+    /// the member unconstrained.
+    /// </summary>
+    public bool SingleActiveLease { get; set; }
+
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
 

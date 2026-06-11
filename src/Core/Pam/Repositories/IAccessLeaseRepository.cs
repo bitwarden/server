@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Pam.Entities;
+using Bit.Core.Pam.Enums;
 
 namespace Bit.Core.Pam.Repositories;
 
@@ -25,17 +26,23 @@ public interface IAccessLeaseRepository
     /// <summary>
     /// Atomically creates an auto-approved <see cref="AccessRequest"/>, its automatic <see cref="AccessDecision"/>, and an
     /// active <see cref="AccessLease"/> in a single transaction. The three entities must already have their ids assigned.
-    /// The automatic path's request, decision, and lease never diverge because they are written together here.
+    /// The automatic path's request, decision, and lease never diverge because they are written together here. When
+    /// <paramref name="enforceSingleActiveLease"/> is true the transaction first checks the per-cipher singleton and
+    /// rolls back without persisting anything if another active in-window lease exists for the cipher.
     /// </summary>
-    Task CreateAutoApprovedAsync(AccessRequest request, AccessDecision decision, AccessLease lease, DateTime now);
+    Task<AccessLeaseMintOutcome> CreateAutoApprovedAsync(AccessRequest request, AccessDecision decision,
+        AccessLease lease, DateTime now, bool enforceSingleActiveLease);
 
     /// <summary>
     /// Race-safely mints the active lease for an approved human request, copying the request's window. The insert
     /// re-checks ownership, Approved status, an open window, and that the request has not already produced a lease;
-    /// returns false when any precondition no longer holds (e.g. a concurrent activation won). The lease must
-    /// already have its id assigned.
+    /// returns <see cref="AccessLeaseMintOutcome.PreconditionFailed"/> when any precondition no longer holds (e.g. a
+    /// concurrent activation won). When <paramref name="enforceSingleActiveLease"/> is true and another active
+    /// in-window lease already exists for the cipher, returns <see cref="AccessLeaseMintOutcome.SingleActiveLeaseConflict"/>
+    /// without minting. The lease must already have its id assigned.
     /// </summary>
-    Task<bool> CreateFromApprovedRequestAsync(AccessLease lease, DateTime now);
+    Task<AccessLeaseMintOutcome> CreateFromApprovedRequestAsync(AccessLease lease, DateTime now,
+        bool enforceSingleActiveLease);
 
     /// <summary>
     /// Atomically revokes an active lease (setting its revoked date and revoker) and records the revocation reason as
