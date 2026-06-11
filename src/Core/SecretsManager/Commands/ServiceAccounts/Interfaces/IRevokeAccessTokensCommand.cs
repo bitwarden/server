@@ -4,5 +4,5 @@ namespace Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
 
 public interface IRevokeAccessTokensCommand
 {
-    Task RevokeAsync(ServiceAccount serviceAccount, IEnumerable<Guid> ids);
+    Task<ICollection<ApiKey>> RevokeAsync(ServiceAccount serviceAccount, IEnumerable<Guid> ids);
 }
