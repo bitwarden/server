@@ -46,25 +46,31 @@ public class SubmitAccessRequestCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SubmitAsync_Automatic_IssuesActiveLease(Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    public async Task SubmitAsync_Automatic_CreatesApprovedRequestWithoutMintingLease(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
     {
         var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
         SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false);
         SetupEvaluation(sutProvider, AccessEvaluation.Allow);
-        SetupMintOutcome(sutProvider, AccessLeaseMintOutcome.Minted);
 
         var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
             new AccessRequestSubmission { DurationSeconds = 3600, Reason = "deploy" });
 
+        // The automatic path no longer mints a lease at submit; it produces a startable, already-approved request the
+        // requester activates explicitly. The window spans the requested duration from now.
         Assert.Equal(AccessApprovalMode.Automatic, result.ApprovalMode);
-        Assert.NotNull(result.Lease);
-        Assert.Equal(AccessLeaseStatus.Active, result.Lease!.Status);
-        Assert.Equal(_now, result.Lease.NotBefore);
-        Assert.Equal(_now.AddSeconds(3600), result.Lease.NotAfter);
-        await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1)
-            .CreateAutoApprovedAsync(Arg.Any<AccessRequest>(), Arg.Any<AccessDecision>(), Arg.Any<AccessLease>(), _now,
-                Arg.Any<bool>());
+        Assert.Equal(AccessRequestStatus.Approved, result.Request.Status);
+        Assert.Equal(_now, result.Request.NotBefore);
+        Assert.Equal(_now.AddSeconds(3600), result.Request.NotAfter);
+        Assert.Equal("deploy", result.Request.Reason);
+
+        await sutProvider.GetDependency<IAccessRequestRepository>().Received(1)
+            .CreateAutoApprovedAsync(
+                Arg.Is<AccessRequest>(r => r.Status == AccessRequestStatus.Approved && r.NotBefore == _now
+                    && r.NotAfter == _now.AddSeconds(3600)),
+                Arg.Is<AccessDecision>(d => d.DeciderKind == AccessDeciderKind.Automatic
+                    && d.Verdict == AccessDecisionVerdict.Approve));
     }
 
     [Theory, BitAutoData]
@@ -78,8 +84,8 @@ public class SubmitAccessRequestCommandTests
             () => sutProvider.Sut.SubmitAsync(userId, cipherId,
                 new AccessRequestSubmission { Start = _now, End = _now.AddHours(1) }));
         Assert.Contains("provide a duration", ex.Message);
-        await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
-            .CreateAutoApprovedAsync(default!, default!, default!, default, default);
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .CreateAutoApprovedAsync(default!, default!);
     }
 
     [Theory, BitAutoData]
@@ -118,9 +124,9 @@ public class SubmitAccessRequestCommandTests
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission { DurationSeconds = 3600 }));
         Assert.Contains("network", ex.Message);
-        // A rule the caller fails to satisfy must not produce a lease.
-        await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
-            .CreateAutoApprovedAsync(default!, default!, default!, default, default);
+        // A rule the caller fails to satisfy must not produce an approved request.
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .CreateAutoApprovedAsync(default!, default!);
     }
 
     [Theory, BitAutoData]
@@ -144,8 +150,8 @@ public class SubmitAccessRequestCommandTests
         Assert.Equal(start, result.Request.NotBefore);
         Assert.Equal(end, result.Request.NotAfter);
         Assert.Equal("audit", result.Request.Reason);
-        await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
-            .CreateAutoApprovedAsync(default!, default!, default!, default, default);
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .CreateAutoApprovedAsync(default!, default!);
         await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
             .NotifyCollectionApproversAsync(collectionId);
     }
@@ -157,51 +163,10 @@ public class SubmitAccessRequestCommandTests
         SetupCipher(sutProvider, userId, cipherId);
         SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false);
         SetupEvaluation(sutProvider, AccessEvaluation.Allow);
-        SetupMintOutcome(sutProvider, AccessLeaseMintOutcome.Minted);
 
         await sutProvider.Sut.SubmitAsync(userId, cipherId,
             new AccessRequestSubmission { DurationSeconds = 3600, Reason = "deploy" });
 
-        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
-            .NotifyCollectionApproversAsync(default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SubmitAsync_AutomaticSingleActiveLeaseApplies_PassesEnforceTrue(
-        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
-    {
-        var sutProvider = Setup();
-        SetupCipher(sutProvider, userId, cipherId);
-        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false);
-        SetupEvaluation(sutProvider, AccessEvaluation.Allow);
-        sutProvider.GetDependency<ISingleActiveLeaseEvaluator>().AppliesAsync(userId, cipherId).Returns(true);
-        sutProvider.GetDependency<IAccessLeaseRepository>()
-            .CreateAutoApprovedAsync(Arg.Any<AccessRequest>(), Arg.Any<AccessDecision>(), Arg.Any<AccessLease>(), _now, true)
-            .Returns(AccessLeaseMintOutcome.Minted);
-
-        await sutProvider.Sut.SubmitAsync(userId, cipherId,
-            new AccessRequestSubmission { DurationSeconds = 3600, Reason = "deploy" });
-
-        await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1)
-            .CreateAutoApprovedAsync(Arg.Any<AccessRequest>(), Arg.Any<AccessDecision>(), Arg.Any<AccessLease>(), _now, true);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SubmitAsync_AutomaticSingleActiveLeaseConflict_ThrowsBadRequest(
-        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
-    {
-        var sutProvider = Setup();
-        SetupCipher(sutProvider, userId, cipherId);
-        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false);
-        SetupEvaluation(sutProvider, AccessEvaluation.Allow);
-        sutProvider.GetDependency<ISingleActiveLeaseEvaluator>().AppliesAsync(userId, cipherId).Returns(true);
-        SetupMintOutcome(sutProvider, AccessLeaseMintOutcome.SingleActiveLeaseConflict);
-
-        // The proc rolled back, so nothing is persisted; the caller sees a 400.
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SubmitAsync(userId, cipherId,
-                new AccessRequestSubmission { DurationSeconds = 3600, Reason = "deploy" }));
-        Assert.Contains("Another active lease exists", ex.Message);
         await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
             .NotifyCollectionApproversAsync(default);
     }
@@ -324,13 +289,5 @@ public class SubmitAccessRequestCommandTests
         sutProvider.GetDependency<IAccessRuleEngine>()
             .Evaluate(Arg.Any<AccessCondition>(), Arg.Any<AccessSignals>())
             .Returns(evaluation);
-    }
-
-    private static void SetupMintOutcome(SutProvider<SubmitAccessRequestCommand> sutProvider, AccessLeaseMintOutcome outcome)
-    {
-        sutProvider.GetDependency<IAccessLeaseRepository>()
-            .CreateAutoApprovedAsync(Arg.Any<AccessRequest>(), Arg.Any<AccessDecision>(), Arg.Any<AccessLease>(),
-                Arg.Any<DateTime>(), Arg.Any<bool>())
-            .Returns(outcome);
     }
 }

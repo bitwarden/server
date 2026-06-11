@@ -27,7 +27,6 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IAccessRequestRepository _accessRequestRepository;
     private readonly IApproverInboxNotifier _approverInboxNotifier;
-    private readonly ISingleActiveLeaseEvaluator _singleActiveLeaseEvaluator;
     private readonly TimeProvider _timeProvider;
 
     public SubmitAccessRequestCommand(
@@ -38,7 +37,6 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         IAccessLeaseRepository accessLeaseRepository,
         IAccessRequestRepository accessRequestRepository,
         IApproverInboxNotifier approverInboxNotifier,
-        ISingleActiveLeaseEvaluator singleActiveLeaseEvaluator,
         TimeProvider timeProvider)
     {
         _cipherRepository = cipherRepository;
@@ -48,7 +46,6 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         _accessLeaseRepository = accessLeaseRepository;
         _accessRequestRepository = accessRequestRepository;
         _approverInboxNotifier = approverInboxNotifier;
-        _singleActiveLeaseEvaluator = singleActiveLeaseEvaluator;
         _timeProvider = timeProvider;
     }
 
@@ -87,10 +84,10 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
 
         return governingRule.RequiresHumanApproval
             ? await RequestHumanApprovalAsync(userId, cipherId, governingRule, submission)
-            : await IssueAutomaticLeaseAsync(userId, cipherId, governingRule, submission, now);
+            : await ApproveAutomaticallyAsync(userId, cipherId, governingRule, submission, now);
     }
 
-    private async Task<AccessRequestResult> IssueAutomaticLeaseAsync(
+    private async Task<AccessRequestResult> ApproveAutomaticallyAsync(
         Guid userId, Guid cipherId, GoverningRule governingRule, AccessRequestSubmission submission, DateTime now)
     {
         if (submission.Start.HasValue || submission.End.HasValue)
@@ -108,9 +105,9 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
             throw new BadRequestException($"The requested duration exceeds the maximum of {MaxDurationSeconds} seconds.");
         }
 
-        // The cipher must satisfy its access rule's conditions (source IP, time of day, ...) before an automatic
-        // lease is issued. The resolver only routes a rule here when it carries no human-approval gate, so the
-        // engine never asks for approval on this path; any non-allow outcome is a denial we surface to the caller.
+        // The cipher must satisfy its access rule's conditions (source IP, time of day, ...) before the request is
+        // auto-approved. The resolver only routes a rule here when it carries no human-approval gate, so the engine
+        // never asks for approval on this path; any non-allow outcome is a denial we surface to the caller.
         var evaluation = _ruleEngine.Evaluate(governingRule.Condition, BuildSignals(now));
         if (evaluation.Outcome != AccessEvaluationOutcome.Allow)
         {
@@ -143,33 +140,13 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         };
         decision.SetNewId();
 
-        var lease = new AccessLease
-        {
-            AccessRequestId = request.Id,
-            OrganizationId = governingRule.OrganizationId,
-            CollectionId = governingRule.CollectionId,
-            CipherId = cipherId,
-            RequesterId = userId,
-            Status = AccessLeaseStatus.Active,
-            NotBefore = now,
-            NotAfter = notAfter,
-            CreationDate = now,
-        };
-        lease.SetNewId();
+        // Auto-approval records only the request and its automatic verdict — no lease. The requester explicitly
+        // activates the approved request (ActivateAccessRequestCommand) to start the lease, exactly like the human
+        // path after approval. Deferring the mint means the per-cipher single-active-lease guard runs at activation,
+        // the one place a lease is now minted, rather than here.
+        await _accessRequestRepository.CreateAutoApprovedAsync(request, decision);
 
-        // The per-cipher singleton binds only when every path the caller reaches the cipher through is governed by a
-        // singleton rule; an escape path leaves them unconstrained. The mint proc enforces it under a range lock and
-        // rolls back the whole insert on conflict, so nothing is persisted when this throws.
-        var enforceSingleActiveLease = await _singleActiveLeaseEvaluator.AppliesAsync(userId, cipherId);
-
-        var outcome = await _accessLeaseRepository.CreateAutoApprovedAsync(request, decision, lease, now,
-            enforceSingleActiveLease);
-        if (outcome == AccessLeaseMintOutcome.SingleActiveLeaseConflict)
-        {
-            throw new BadRequestException("Another active lease exists for this item. Try again once it ends.");
-        }
-
-        return AccessRequestResult.Automatic(lease);
+        return AccessRequestResult.Automatic(request);
     }
 
     private async Task<AccessRequestResult> RequestHumanApprovalAsync(

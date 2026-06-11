@@ -11,35 +11,34 @@ namespace Bit.Infrastructure.IntegrationTest.Pam.Repositories;
 public class LeaseRepositoryTests
 {
     [DatabaseTheory, DatabaseData]
-    public async Task CreateAutoApprovedAsync_PersistsApprovedRequestDecisionAndActiveLease(
+    public async Task CreateAutoApprovedAsync_PersistsApprovedRequestAndDecisionWithoutLease(
         IOrganizationRepository organizationRepository,
-        IAccessLeaseRepository accessLeaseRepository,
-        IAccessRequestRepository accessRequestRepository)
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
     {
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var now = DateTime.UtcNow;
         var cipherId = Guid.NewGuid();
         var requesterId = Guid.NewGuid();
 
-        var (request, decision, lease) = BuildAutoApproved(organization.Id, cipherId, requesterId, now, now.AddHours(1));
+        var (request, decision, _) = BuildAutoApproved(organization.Id, cipherId, requesterId, now, now.AddHours(1));
 
-        var outcome = await accessLeaseRepository.CreateAutoApprovedAsync(request, decision, lease, now, false);
-        Assert.Equal(AccessLeaseMintOutcome.Minted, outcome);
+        await accessRequestRepository.CreateAutoApprovedAsync(request, decision);
 
+        // The request is persisted already resolved as Approved...
         var persistedRequest = await accessRequestRepository.GetByIdAsync(request.Id);
         Assert.NotNull(persistedRequest);
         Assert.Equal(AccessRequestStatus.Approved, persistedRequest!.Status);
         Assert.NotNull(persistedRequest.ResolvedDate);
 
-        var persistedLease = await accessLeaseRepository.GetByIdAsync(lease.Id);
-        Assert.NotNull(persistedLease);
-        Assert.Equal(AccessLeaseStatus.Active, persistedLease!.Status);
-        Assert.Equal(request.Id, persistedLease.AccessRequestId);
+        // ...but no lease is minted at submit: the requester activates the approved request to start one.
+        Assert.Null(await accessLeaseRepository.GetByAccessRequestIdAsync(request.Id));
     }
 
     [DatabaseTheory, DatabaseData]
     public async Task GetActiveByRequesterIdCipherIdAsync_WithinWindow_ReturnsLease(
         IOrganizationRepository organizationRepository,
+        IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository)
     {
         var organization = await organizationRepository.CreateTestOrganizationAsync();
@@ -49,7 +48,7 @@ public class LeaseRepositoryTests
 
         var (request, decision, lease) = BuildAutoApproved(
             organization.Id, cipherId, requesterId, now.AddMinutes(-5), now.AddHours(1));
-        await accessLeaseRepository.CreateAutoApprovedAsync(request, decision, lease, now, false);
+        await SeedActiveLeaseAsync(accessRequestRepository, accessLeaseRepository, request, decision, lease, now);
 
         var active = await accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(requesterId, cipherId, now);
 
@@ -60,6 +59,7 @@ public class LeaseRepositoryTests
     [DatabaseTheory, DatabaseData]
     public async Task GetActiveByRequesterIdCipherIdAsync_OutsideWindow_ReturnsNull(
         IOrganizationRepository organizationRepository,
+        IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository)
     {
         var organization = await organizationRepository.CreateTestOrganizationAsync();
@@ -67,10 +67,12 @@ public class LeaseRepositoryTests
         var cipherId = Guid.NewGuid();
         var requesterId = Guid.NewGuid();
 
-        // A lease whose window has already elapsed.
+        // A lease whose window has already elapsed. It is minted while the window was still open (now - 2h), then
+        // read back at now, by which point it has expired.
         var (request, decision, lease) = BuildAutoApproved(
             organization.Id, cipherId, requesterId, now.AddHours(-2), now.AddHours(-1));
-        await accessLeaseRepository.CreateAutoApprovedAsync(request, decision, lease, now.AddHours(-2), false);
+        await SeedActiveLeaseAsync(
+            accessRequestRepository, accessLeaseRepository, request, decision, lease, now.AddHours(-2));
 
         var active = await accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(requesterId, cipherId, now);
 
@@ -110,6 +112,7 @@ public class LeaseRepositoryTests
     [DatabaseTheory, DatabaseData]
     public async Task GetManyActiveByRequesterIdAsync_ReturnsOnlyActiveLeasesInWindow(
         IOrganizationRepository organizationRepository,
+        IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository)
     {
         var organization = await organizationRepository.CreateTestOrganizationAsync();
@@ -119,17 +122,18 @@ public class LeaseRepositoryTests
         // Active, in-window lease for the requester.
         var (activeReq, activeDec, activeLease) = BuildAutoApproved(
             organization.Id, Guid.NewGuid(), requesterId, now.AddMinutes(-5), now.AddHours(1));
-        await accessLeaseRepository.CreateAutoApprovedAsync(activeReq, activeDec, activeLease, now, false);
+        await SeedActiveLeaseAsync(accessRequestRepository, accessLeaseRepository, activeReq, activeDec, activeLease, now);
 
         // Expired lease for the same requester — must be excluded.
         var (expiredReq, expiredDec, expiredLease) = BuildAutoApproved(
             organization.Id, Guid.NewGuid(), requesterId, now.AddHours(-2), now.AddHours(-1));
-        await accessLeaseRepository.CreateAutoApprovedAsync(expiredReq, expiredDec, expiredLease, now.AddHours(-2), false);
+        await SeedActiveLeaseAsync(
+            accessRequestRepository, accessLeaseRepository, expiredReq, expiredDec, expiredLease, now.AddHours(-2));
 
         // Active lease for a different requester — must be excluded.
         var (otherReq, otherDec, otherLease) = BuildAutoApproved(
             organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddMinutes(-5), now.AddHours(1));
-        await accessLeaseRepository.CreateAutoApprovedAsync(otherReq, otherDec, otherLease, now, false);
+        await SeedActiveLeaseAsync(accessRequestRepository, accessLeaseRepository, otherReq, otherDec, otherLease, now);
 
         var result = await accessLeaseRepository.GetManyActiveByRequesterIdAsync(requesterId, now);
 
@@ -140,6 +144,7 @@ public class LeaseRepositoryTests
     [DatabaseTheory, DatabaseData]
     public async Task RevokeAsync_RevokesLeaseAndRecordsAuditDecision(
         IOrganizationRepository organizationRepository,
+        IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository)
     {
         var organization = await organizationRepository.CreateTestOrganizationAsync();
@@ -150,7 +155,7 @@ public class LeaseRepositoryTests
 
         var (request, decision, lease) = BuildAutoApproved(
             organization.Id, cipherId, requesterId, now.AddMinutes(-5), now.AddHours(1));
-        await accessLeaseRepository.CreateAutoApprovedAsync(request, decision, lease, now, false);
+        await SeedActiveLeaseAsync(accessRequestRepository, accessLeaseRepository, request, decision, lease, now);
 
         var auditDecision = new AccessDecision
         {
@@ -318,6 +323,18 @@ public class LeaseRepositoryTests
             CreationDate = DateTime.UtcNow,
             ResolvedDate = status == AccessRequestStatus.Pending ? null : DateTime.UtcNow,
         });
+
+    // Seeds an active lease the way production now does: record the approved request, then mint the lease by
+    // activating it. The mint time sits inside the request's window (it can be in the past), so leases whose windows
+    // have already elapsed by read time can still be seeded for the read-path tests.
+    private static async Task SeedActiveLeaseAsync(
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository,
+        AccessRequest request, AccessDecision decision, AccessLease lease, DateTime mintTime)
+    {
+        await accessRequestRepository.CreateAutoApprovedAsync(request, decision);
+        await accessLeaseRepository.CreateFromApprovedRequestAsync(lease, mintTime, false);
+    }
 
     private static AccessLease BuildLeaseFor(AccessRequest request, DateTime now)
         => new()

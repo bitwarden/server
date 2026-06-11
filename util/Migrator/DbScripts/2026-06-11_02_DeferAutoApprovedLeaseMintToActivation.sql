@@ -1,4 +1,15 @@
-CREATE PROCEDURE [dbo].[AccessRequest_CreateAutoApproved]
+-- PAM Credential Leasing: the automatic (no-approval) path no longer mints a lease at submit. Like the human path,
+-- it now only records the request — already Approved, with its automatic verdict — and the requester activates the
+-- approved request when they actually want access ([AccessLease_CreateFromApprovedRequest]), which is when the active
+-- lease is minted. This makes "start the lease" an explicit caller action on both paths and leaves the per-cipher
+-- single-active-lease guard living on the single remaining mint site (activation).
+--
+-- [AccessRequest_CreateAutoApproved] replaces [AccessLease_CreateAutoApproved]: it writes the request + automatic
+-- decision in one transaction and inserts no lease. The old proc is dropped outright rather than left as a no-longer
+-- called shim. Acceptable here — the feature is an unshipped POC behind the pm-37044-pam-v-0 flag and server +
+-- migration deploy together.
+
+CREATE OR ALTER PROCEDURE [dbo].[AccessRequest_CreateAutoApproved]
     @AccessRequestId UNIQUEIDENTIFIER,
     @AccessDecisionId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -45,3 +56,7 @@ BEGIN
 
     COMMIT TRANSACTION AccessRequest_CreateAutoApproved
 END
+GO
+
+DROP PROCEDURE IF EXISTS [dbo].[AccessLease_CreateAutoApproved]
+GO
