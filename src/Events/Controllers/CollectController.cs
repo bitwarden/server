@@ -60,6 +60,7 @@ public class CollectController : Controller
 
                 case EventType.Organization_ItemOrganization_Accepted:
                 case EventType.Organization_ItemOrganization_Declined:
+                case EventType.OrganizationUser_NotificationBannerActionClicked:
                     if (!eventModel.OrganizationId.HasValue || !_currentContext.UserId.HasValue)
                     {
                         continue;
