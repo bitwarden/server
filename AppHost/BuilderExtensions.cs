@@ -268,14 +268,10 @@ public static class BuilderExtensions
     public static void ConfigureWebFrontend(this IDistributedApplicationBuilder builder,
         IResourceBuilder<ProjectResource> api)
     {
-        var selfHosted = builder.IsSelfHosted();
-        if (!int.TryParse(builder.Required("WebFrontend:Port"), out var port))
+        if (!int.TryParse(builder.Required("WebFrontend:Port"), out var basePort))
             throw new InvalidOperationException("Invalid value for WebFrontend:Port.");
-        if (selfHosted)
-        {
-            port++;
-        }
-        var scriptName = selfHosted ? "build:bit:selfhost:watch" : "build:bit:watch";
+        var port = builder.IsSelfHosted() ? basePort + 1 : basePort;
+        var scriptName = builder.IsSelfHosted() ? "build:bit:selfhost:watch" : "build:bit:watch";
         var url = builder.Required("WebFrontend:Url") + $":{port}";
         builder
             .AddBitwardenNpmApp("web-frontend", "web", api, port: port, scriptName: scriptName)
