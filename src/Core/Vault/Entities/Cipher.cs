@@ -32,6 +32,17 @@ public class Cipher : ITableObject<Guid>, ICloneable
         Id = CoreHelpers.GenerateComb();
     }
 
+    public bool IsDataBlobEncrypted()
+    {
+        if (string.IsNullOrWhiteSpace(Data))
+        {
+            return false;
+        }
+
+        var span = Data.AsSpan().TrimStart();
+        return span.Length > 0 && span[0] != '{';
+    }
+
     public Dictionary<string, CipherAttachment.MetaData> GetAttachments()
     {
         if (string.IsNullOrWhiteSpace(Attachments))

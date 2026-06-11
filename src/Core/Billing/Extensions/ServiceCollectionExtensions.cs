@@ -1,9 +1,12 @@
 ﻿using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.PlanMigration.Commands;
+using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Payment;
+using Bit.Core.Billing.Portal.Commands;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Billing.Pricing;
@@ -31,17 +34,25 @@ public static class ServiceCollectionExtensions
         services.AddLicenseServices();
         services.AddLicenseOperations();
         services.AddPricingClient();
+        services.AddTransient<IPriceIncreaseScheduler, PriceIncreaseScheduler>();
         services.AddPaymentOperations();
         services.AddOrganizationLicenseCommandsQueries();
         services.AddPremiumCommands();
         services.AddPremiumQueries();
         services.AddTransient<IGetOrganizationMetadataQuery, GetOrganizationMetadataQuery>();
         services.AddTransient<IGetOrganizationWarningsQuery, GetOrganizationWarningsQuery>();
+        services.AddTransient<IGetCohortAssignmentStateQuery, GetCohortAssignmentStateQuery>();
         services.AddTransient<IRestartSubscriptionCommand, RestartSubscriptionCommand>();
         services.AddTransient<IPreviewOrganizationTaxCommand, PreviewOrganizationTaxCommand>();
         services.AddTransient<IGetBitwardenSubscriptionQuery, GetBitwardenSubscriptionQuery>();
         services.AddTransient<IReinstateSubscriptionCommand, ReinstateSubscriptionCommand>();
         services.AddTransient<IBraintreeService, BraintreeService>();
+        services.AddTransient<IAddSecretsManagerSubscriptionCommand, AddSecretsManagerSubscriptionCommand>();
+        services.AddTransient<IUpdateOrganizationSubscriptionCommand, UpdateOrganizationSubscriptionCommand>();
+        services.AddTransient<IUpgradeOrganizationPlanVNextCommand, UpgradeOrganizationPlanVNextCommand>();
+        services.AddTransient<ICreateBillingPortalSessionCommand, CreateBillingPortalSessionCommand>();
+        services.AddTransient<IGetChurnMitigationOfferQuery, GetChurnMitigationOfferQuery>();
+        services.AddTransient<IRedeemChurnMitigationOfferCommand, RedeemChurnMitigationOfferCommand>();
     }
 
     private static void AddOrganizationLicenseCommandsQueries(this IServiceCollection services)

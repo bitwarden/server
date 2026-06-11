@@ -20,8 +20,7 @@ public record OrganizationSubscriptionPurchaseRequest : IValidatableObject
 
     public SecretsManagerPurchaseSelections? SecretsManager { get; set; }
 
-    [MaxLength(50)]
-    public string? Coupon { get; set; }
+    public string[]? Coupons { get; set; }
 
     public OrganizationSubscriptionPurchase ToDomain() => new()
     {
@@ -39,7 +38,7 @@ public record OrganizationSubscriptionPurchaseRequest : IValidatableObject
             AdditionalServiceAccounts = SecretsManager.AdditionalServiceAccounts,
             Standalone = SecretsManager.Standalone
         } : null,
-        Coupon = Coupon
+        Coupons = Coupons
     };
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

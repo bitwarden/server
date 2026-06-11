@@ -36,7 +36,8 @@ public class RevokeOrganizationUserCommandTests
         var request = new RevokeOrganizationUsersRequest(
             organizationId,
             [orgUser1.Id, orgUser2.Id],
-            actingUser);
+            actingUser,
+            RevocationReason.Manual);
 
         SetupRepositoryMocks(sutProvider, [orgUser1, orgUser2]);
         SetupValidatorMock(sutProvider, [
@@ -53,8 +54,8 @@ public class RevokeOrganizationUserCommandTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
-            .RevokeManyByIdAsync(Arg.Is<IEnumerable<Guid>>(ids =>
-                ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id)));
+            .RevokeManyAsync(Arg.Is<IEnumerable<Guid>>(ids =>
+                ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id)), RevocationReason.Manual);
 
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
@@ -86,7 +87,8 @@ public class RevokeOrganizationUserCommandTests
         var request = new RevokeOrganizationUsersRequest(
             organizationId,
             [orgUser.Id],
-            actingUser);
+            actingUser,
+            RevocationReason.Manual);
 
         SetupRepositoryMocks(sutProvider, [orgUser]);
         SetupValidatorMock(sutProvider, [ValidationResultHelpers.Valid(orgUser)]);
@@ -118,7 +120,8 @@ public class RevokeOrganizationUserCommandTests
         var request = new RevokeOrganizationUsersRequest(
             organizationId,
             [orgUser1.Id, orgUser2.Id],
-            actingUser);
+            actingUser,
+            RevocationReason.Manual);
 
         SetupRepositoryMocks(sutProvider, [orgUser1, orgUser2]);
         SetupValidatorMock(sutProvider, [
@@ -140,8 +143,8 @@ public class RevokeOrganizationUserCommandTests
         // Only the valid user should be revoked
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
-            .RevokeManyByIdAsync(Arg.Is<IEnumerable<Guid>>(ids =>
-                ids.Count() == 1 && ids.Contains(orgUser2.Id)));
+            .RevokeManyAsync(Arg.Is<IEnumerable<Guid>>(ids =>
+                ids.Count() == 1 && ids.Contains(orgUser2.Id)), RevocationReason.Manual);
     }
 
     [Theory]
@@ -161,7 +164,8 @@ public class RevokeOrganizationUserCommandTests
         var request = new RevokeOrganizationUsersRequest(
             organizationId,
             [orgUser.Id],
-            actingUser);
+            actingUser,
+            RevocationReason.Manual);
 
         SetupRepositoryMocks(sutProvider, [orgUser]);
         SetupValidatorMock(sutProvider, [ValidationResultHelpers.Valid(orgUser)]);
@@ -186,6 +190,40 @@ public class RevokeOrganizationUserCommandTests
                 Arg.Any<object>(),
                 Arg.Any<Exception>(),
                 Arg.Any<Func<object, Exception?, string>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RevokeUsersAsync_FiltersOutUsersFromDifferentOrganization(
+        SutProvider<RevokeOrganizationUserCommand> sutProvider,
+        Guid organizationId,
+        Guid actingUserId,
+        [OrganizationUser()] OrganizationUser orgUser,
+        [OrganizationUser()] OrganizationUser userFromDifferentOrg)
+    {
+        // Arrange
+        orgUser.OrganizationId = organizationId;
+        orgUser.UserId = Guid.NewGuid();
+
+        var actingUser = CreateActingUser(actingUserId, false, null);
+        var request = new RevokeOrganizationUsersRequest(
+            organizationId,
+            [orgUser.Id, userFromDifferentOrg.Id],
+            actingUser,
+            RevocationReason.Manual);
+
+        SetupRepositoryMocks(sutProvider, [orgUser, userFromDifferentOrg]);
+        SetupValidatorMock(sutProvider, [ValidationResultHelpers.Valid(orgUser)]);
+
+        // Act
+        await sutProvider.Sut.RevokeUsersAsync(request);
+
+        // Assert: validator only receives the user from the correct organization
+        await sutProvider.GetDependency<IRevokeOrganizationUserValidator>()
+            .Received(1)
+            .ValidateAsync(Arg.Is<RevokeOrganizationUsersValidationRequest>(r =>
+                r.OrganizationUsersToRevoke.Count == 1 &&
+                r.OrganizationUsersToRevoke.Single().Id == orgUser.Id));
     }
 
     private static IActingUser CreateActingUser(Guid? userId, bool isOwnerOrProvider, EventSystemUser? systemUserType) =>

@@ -21,6 +21,11 @@ public class OrganizationVaultOptions
     public required string Domain { get; init; }
 
     /// <summary>
+    /// Claimed (verified) domains to seed for the organization. Each becomes a verified <see cref="Bit.Core.Entities.OrganizationDomain"/> row.
+    /// </summary>
+    public IReadOnlyList<string> ClaimedDomains { get; init; } = [];
+
+    /// <summary>
     /// Number of member users to create.
     /// </summary>
     public required int Users { get; init; }
@@ -34,6 +39,12 @@ public class OrganizationVaultOptions
     /// Number of groups to create.
     /// </summary>
     public int Groups { get; init; } = 0;
+
+    /// <summary>
+    /// Number of collections to create. When 0 and no <see cref="StructureModel"/> is set,
+    /// falls back to 1 collection if ciphers are requested.
+    /// </summary>
+    public int Collections { get; init; } = 0;
 
     /// <summary>
     /// When true and Users >= 10, creates a realistic mix of user statuses:
@@ -98,4 +109,16 @@ public class OrganizationVaultOptions
     /// Billing plan type for the organization.
     /// </summary>
     public PlanType PlanType { get; init; } = PlanType.EnterpriseAnnually;
+
+    /// <summary>
+    /// KDF iteration count for all seeded users. Defaults to 5,000 for fast seeding.
+    /// Use 600,000 for production-realistic e2e testing.
+    /// </summary>
+    public int KdfIterations { get; init; } = 5_000;
+
+    /// <summary>
+    /// Optional overrides for collection management settings applied on top of the organization's initial values.
+    /// Null means "leave all collection management settings unchanged from <see cref="Bit.Seeder.Factories.OrganizationSeeder.Create"/>".
+    /// </summary>
+    public OrganizationOverrides? Overrides { get; init; }
 }

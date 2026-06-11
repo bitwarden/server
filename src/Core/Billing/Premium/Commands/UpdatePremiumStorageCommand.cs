@@ -37,6 +37,11 @@ public class UpdatePremiumStorageCommand(
     ILogger<UpdatePremiumStorageCommand> logger)
     : BaseBillingCommand<UpdatePremiumStorageCommand>(logger), IUpdatePremiumStorageCommand
 {
+    private readonly ILogger<UpdatePremiumStorageCommand> _logger = logger;
+
+    protected override Conflict DefaultConflict =>
+        new("We had a problem updating your subscription. Please contact support for assistance.");
+
     public Task<BillingCommandResult<None>> Run(User user, short additionalStorageGb) => HandleAsync<None>(async () =>
     {
         if (user is not { Premium: true, GatewaySubscriptionId: not null and not "" })
@@ -53,7 +58,7 @@ public class UpdatePremiumStorageCommand(
         var premiumPlans = await pricingClient.ListPremiumPlans();
         var subscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, new SubscriptionGetOptions
         {
-            Expand = ["customer"]
+            Expand = ["customer", "test_clock"]
         });
 
         // Find the password manager subscription item (seat, not storage) and match it to a plan
@@ -134,16 +139,113 @@ public class UpdatePremiumStorageCommand(
 
         var usingPayPal = subscription.Customer.Metadata.ContainsKey(MetadataKeys.BraintreeCustomerId);
 
-        if (usingPayPal)
+        var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
+            new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
+        var activeSchedule = schedules.Data.FirstOrDefault(s =>
+            s.Status == SubscriptionScheduleStatus.Active && s.SubscriptionId == subscription.Id);
+
+        // An active schedule here means PriceIncreaseScheduler created a schedule to defer a
+        // Premium price migration to renewal. A 2-phase schedule is the standard migration state;
+        // a 1-phase schedule means the subscription was cancelled (end-of-period) while a schedule
+        // was attached (PM-33897). Either way, we update via the schedule to avoid conflicting
+        // with Stripe's schedule ownership of the subscription.
+        if (activeSchedule is { Phases.Count: > 0 })
         {
-            var options = new SubscriptionUpdateOptions
+            if (activeSchedule.Phases.Count > 2)
+            {
+                _logger.LogWarning(
+                    "{Command}: Subscription schedule ({ScheduleId}) has {PhaseCount} phases (expected 1-2), only updating first two",
+                    CommandName, activeSchedule.Id, activeSchedule.Phases.Count);
+            }
+
+            _logger.LogInformation(
+                "{Command}: Active subscription schedule ({ScheduleId}) found for subscription ({SubscriptionId}), updating schedule phases",
+                CommandName, activeSchedule.Id, subscription.Id);
+
+            var phase1 = activeSchedule.Phases[0];
+            var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+
+            // Storage prices are uniform across the Premium migration, so we use the same price
+            // for all active phases. If storage prices ever differ between phases, this would
+            // need plan-aware price resolution (e.g. matching Phase 2's seat price to a plan).
+            var storagePriceId = premiumPlan.Storage.StripePriceId;
+
+            var phases = new List<SubscriptionSchedulePhaseOptions>();
+
+            // Stripe rejects schedule updates that include phases whose end_date is in the past.
+            // A phase ending at exactly `now` has effectively ended (strict > is intentional).
+            if (phase1.EndDate > now)
+            {
+                phases.Add(new SubscriptionSchedulePhaseOptions
+                {
+                    StartDate = phase1.StartDate,
+                    EndDate = phase1.EndDate,
+                    Items = BuildPhaseItemsWithStorage(phase1.Items, storagePriceId, additionalStorageGb),
+                    Discounts = phase1.Discounts?.Select(d =>
+                        new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),
+                    ProrationBehavior = phase1.ProrationBehavior
+                });
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "{Command}: Phase 1 has already ended (EndDate: {EndDate}), updating only active phase(s)",
+                    CommandName, phase1.EndDate);
+            }
+
+            var phase1Ended = phase1.EndDate <= now;
+
+            if (activeSchedule.Phases.Count >= 2)
+            {
+                var phase2 = activeSchedule.Phases[1];
+                phases.Add(new SubscriptionSchedulePhaseOptions
+                {
+                    StartDate = phase2.StartDate,
+                    EndDate = phase2.EndDate,
+                    Items = BuildPhaseItemsWithStorage(phase2.Items, storagePriceId, additionalStorageGb),
+                    // When Phase 2 is already active, its one-time migration discount has been
+                    // applied and consumed. Re-including it would cause Stripe to re-apply it.
+                    Discounts = phase1Ended
+                        ? []
+                        : phase2.Discounts?.Select(d =>
+                            new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),
+                    ProrationBehavior = phase2.ProrationBehavior
+                });
+            }
+
+            if (phases.Count == 0)
+            {
+                _logger.LogWarning(
+                    "{Command}: Schedule ({ScheduleId}) has no updatable phases remaining",
+                    CommandName, activeSchedule.Id);
+                return DefaultConflict;
+            }
+
+            await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
+                new SubscriptionScheduleUpdateOptions
+                {
+                    EndBehavior = activeSchedule.EndBehavior,
+                    Phases = phases,
+                    ProrationBehavior = usingPayPal
+                        ? ProrationBehavior.CreateProrations
+                        : ProrationBehavior.AlwaysInvoice
+                });
+        }
+        else
+        {
+            // CreateProrations for PayPal: pending proration items are picked up by the manual invoice below.
+            // AlwaysInvoice for card: Stripe generates and charges the proration invoice automatically.
+            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
             {
                 Items = subscriptionItemOptions,
-                ProrationBehavior = ProrationBehavior.CreateProrations
-            };
+                ProrationBehavior = usingPayPal
+                    ? ProrationBehavior.CreateProrations
+                    : ProrationBehavior.AlwaysInvoice
+            });
+        }
 
-            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, options);
-
+        if (usingPayPal)
+        {
             var draftInvoice = await stripeAdapter.CreateInvoiceAsync(new InvoiceCreateOptions
             {
                 Customer = subscription.CustomerId,
@@ -157,16 +259,6 @@ public class UpdatePremiumStorageCommand(
 
             await braintreeService.PayInvoice(new UserId(user.Id), finalizedInvoice);
         }
-        else
-        {
-            var options = new SubscriptionUpdateOptions
-            {
-                Items = subscriptionItemOptions,
-                ProrationBehavior = ProrationBehavior.AlwaysInvoice
-            };
-
-            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, options);
-        }
 
         // Update the user's max storage
         user.MaxStorageGb = maxStorageGb;
@@ -174,4 +266,26 @@ public class UpdatePremiumStorageCommand(
 
         return new None();
     });
+
+    private static List<SubscriptionSchedulePhaseItemOptions> BuildPhaseItemsWithStorage(
+        IList<SubscriptionSchedulePhaseItem> phaseItems,
+        string storagePriceId,
+        short additionalStorageGb)
+    {
+        var items = phaseItems
+            .Where(i => i.PriceId != storagePriceId)
+            .Select(i => new SubscriptionSchedulePhaseItemOptions { Price = i.PriceId, Quantity = i.Quantity })
+            .ToList();
+
+        if (additionalStorageGb > 0)
+        {
+            items.Add(new SubscriptionSchedulePhaseItemOptions
+            {
+                Price = storagePriceId,
+                Quantity = additionalStorageGb
+            });
+        }
+
+        return items;
+    }
 }

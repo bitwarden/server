@@ -15,8 +15,9 @@ server {
 }
 
 server {
-  listen 8443 ssl http2;
-  listen [::]:8443 ssl http2;
+  listen 8443 ssl;
+  listen [::]:8443 ssl;
+  http2 on;
   server_name {{{Domain}}};
 
   ssl_certificate {{{CertificatePath}}};
@@ -32,6 +33,9 @@ server {
 
   ssl_protocols {{{SslProtocols}}};
   ssl_ciphers "{{{SslCiphers}}}";
+{{#if SslCurves}}
+  ssl_ecdh_curve {{{SslCurves}}};
+{{/if}}
   # Enables server-side protection from BEAST attacks
   ssl_prefer_server_ciphers on;
 {{#if CaPath}}
@@ -170,4 +174,6 @@ server {
     proxy_pass http://scim:5000/;
   }
 {{/if}}
+
+  include /etc/bitwarden/nginx/extra-locations/*.conf;
 }

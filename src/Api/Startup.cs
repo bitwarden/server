@@ -329,6 +329,20 @@ public class Startup
                                     }
                                 }
                             }
+                        },
+                        {
+                            "send-access-bearer",
+                            new OpenApiSecurityScheme
+                            {
+                                Type = SecuritySchemeType.Http,
+                                Scheme = "bearer",
+                                BearerFormat = "JWT",
+                                Description = "Send access token obtained from /connect/token using the send_access grant.",
+                                Extensions = new Dictionary<string, IOpenApiExtension>
+                                {
+                                    { "x-explicit-bearer-token", new JsonNodeExtension(true) }
+                                }
+                            }
                         }
                     };
 
@@ -336,9 +350,12 @@ public class Startup
                     [
                         new OpenApiSecurityRequirement
                         {
-                            [new OpenApiSecuritySchemeReference("oauth2-client-credentials")] = [ApiScopes.ApiOrganization]
+                            [new OpenApiSecuritySchemeReference("oauth2-client-credentials", swaggerDoc)] = [ApiScopes.ApiOrganization]
                         },
                     ];
+
+                    swaggerDoc.Workspace = new OpenApiWorkspace();
+                    swaggerDoc.RegisterComponents();
                 });
             });
 

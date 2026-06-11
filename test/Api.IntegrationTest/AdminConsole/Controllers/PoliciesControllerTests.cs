@@ -9,10 +9,10 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Test.Common.Helpers;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
@@ -29,12 +29,6 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     public PoliciesControllerTests(ApiApplicationFactory factory)
     {
         _factory = factory;
-        _factory.SubstituteService<Core.Services.IFeatureService>(featureService =>
-        {
-            featureService
-                .IsEnabled("pm-19467-create-default-location")
-                .Returns(true);
-        });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
@@ -57,7 +51,7 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     }
 
     [Fact]
-    public async Task PutVNext_OrganizationDataOwnershipPolicy_Success()
+    public async Task Put_OrganizationDataOwnershipPolicy_Success()
     {
         // Arrange
         const PolicyType policyType = PolicyType.OrganizationDataOwnership;
@@ -82,7 +76,7 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
             _organization.Id, OrganizationUserType.User);
 
         // Act
-        var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}/vnext",
+        var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}",
             JsonContent.Create(request));
 
         // Assert
@@ -139,7 +133,7 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     }
 
     [Fact]
-    public async Task PutVNext_MasterPasswordPolicy_Success()
+    public async Task Put_MasterPasswordPolicy_Success()
     {
         // Arrange
         var policyType = PolicyType.MasterPassword;
@@ -162,7 +156,7 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         };
 
         // Act
-        var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}/vnext",
+        var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}",
             JsonContent.Create(request));
 
         // Assert
@@ -214,13 +208,16 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     {
         // Arrange
         var policyType = PolicyType.MasterPassword;
-        var request = new PolicyRequestModel
+        var request = new SavePolicyRequest
         {
-            Enabled = true,
-            Data = new Dictionary<string, object>
+            Policy = new PolicyRequestModel
             {
-                { "minLength", "not a number" }, // Wrong type - should be int
-                { "requireUpper", true }
+                Enabled = true,
+                Data = new Dictionary<string, object>
+                {
+                    { "minLength", "not a number" }, // Wrong type - should be int
+                    { "requireUpper", true }
+                }
             }
         };
 
@@ -239,12 +236,15 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     {
         // Arrange
         var policyType = PolicyType.SendOptions;
-        var request = new PolicyRequestModel
+        var request = new SavePolicyRequest
         {
-            Enabled = true,
-            Data = new Dictionary<string, object>
+            Policy = new PolicyRequestModel
             {
-                { "disableHideEmail", "not a boolean" } // Wrong type - should be bool
+                Enabled = true,
+                Data = new Dictionary<string, object>
+                {
+                    { "disableHideEmail", "not a boolean" } // Wrong type - should be bool
+                }
             }
         };
 
@@ -261,81 +261,6 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     {
         // Arrange
         var policyType = PolicyType.ResetPassword;
-        var request = new PolicyRequestModel
-        {
-            Enabled = true,
-            Data = new Dictionary<string, object>
-            {
-                { "autoEnrollEnabled", 123 } // Wrong type - should be bool
-            }
-        };
-
-        // Act
-        var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}",
-            JsonContent.Create(request));
-
-        // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task PutVNext_MasterPasswordPolicy_InvalidDataType_ReturnsBadRequest()
-    {
-        // Arrange
-        var policyType = PolicyType.MasterPassword;
-        var request = new SavePolicyRequest
-        {
-            Policy = new PolicyRequestModel
-            {
-                Enabled = true,
-                Data = new Dictionary<string, object>
-                {
-                    { "minComplexity", "not a number" }, // Wrong type - should be int
-                    { "minLength", 12 }
-                }
-            }
-        };
-
-        // Act
-        var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}/vnext",
-            JsonContent.Create(request));
-
-        // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("minComplexity", content); // Verify field name is in error message
-    }
-
-    [Fact]
-    public async Task PutVNext_SendOptionsPolicy_InvalidDataType_ReturnsBadRequest()
-    {
-        // Arrange
-        var policyType = PolicyType.SendOptions;
-        var request = new SavePolicyRequest
-        {
-            Policy = new PolicyRequestModel
-            {
-                Enabled = true,
-                Data = new Dictionary<string, object>
-                {
-                    { "disableHideEmail", "not a boolean" } // Wrong type - should be bool
-                }
-            }
-        };
-
-        // Act
-        var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}/vnext",
-            JsonContent.Create(request));
-
-        // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task PutVNext_ResetPasswordPolicy_InvalidDataType_ReturnsBadRequest()
-    {
-        // Arrange
-        var policyType = PolicyType.ResetPassword;
         var request = new SavePolicyRequest
         {
             Policy = new PolicyRequestModel
@@ -349,7 +274,7 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         };
 
         // Act
-        var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}/vnext",
+        var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}",
             JsonContent.Create(request));
 
         // Assert
@@ -361,10 +286,13 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     {
         // Arrange
         var policyType = PolicyType.SingleOrg;
-        var request = new PolicyRequestModel
+        var request = new SavePolicyRequest
         {
-            Enabled = true,
-            Data = null
+            Policy = new PolicyRequestModel
+            {
+                Enabled = true,
+                Data = null
+            }
         };
 
         // Act
@@ -376,39 +304,19 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     }
 
     [Fact]
-    public async Task PutVNext_PolicyWithNullData_Success()
+    public async Task Put_MasterPasswordPolicy_ExcessiveMinLength_ReturnsBadRequest()
     {
         // Arrange
-        var policyType = PolicyType.TwoFactorAuthentication;
+        var policyType = PolicyType.MasterPassword;
         var request = new SavePolicyRequest
         {
             Policy = new PolicyRequestModel
             {
                 Enabled = true,
-                Data = null
-            },
-            Metadata = null
-        };
-
-        // Act
-        var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}/vnext",
-            JsonContent.Create(request));
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task Put_MasterPasswordPolicy_ExcessiveMinLength_ReturnsBadRequest()
-    {
-        // Arrange
-        var policyType = PolicyType.MasterPassword;
-        var request = new PolicyRequestModel
-        {
-            Enabled = true,
-            Data = new Dictionary<string, object>
-            {
-                { "minLength", 129 }
+                Data = new Dictionary<string, object>
+                {
+                    { "minLength", 129 }
+                }
             }
         };
 
@@ -425,12 +333,15 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     {
         // Arrange
         var policyType = PolicyType.MasterPassword;
-        var request = new PolicyRequestModel
+        var request = new SavePolicyRequest
         {
-            Enabled = true,
-            Data = new Dictionary<string, object>
+            Policy = new PolicyRequestModel
             {
-                { "minComplexity", 5 }
+                Enabled = true,
+                Data = new Dictionary<string, object>
+                {
+                    { "minComplexity", 5 }
+                }
             }
         };
 
@@ -440,6 +351,103 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetMasterPasswordPolicy_Unauthenticated_ReturnsUnauthorized()
+    {
+        // Arrange
+        _client.DefaultRequestHeaders.Authorization = null;
+
+        // Act
+        var response = await _client.GetAsync($"/organizations/{_organization.Id}/policies/master-password");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetMasterPasswordPolicy_AuthenticatedNonMember_ReturnsForbidden()
+    {
+        // Arrange
+        var nonMemberEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(nonMemberEmail);
+        await _loginHelper.LoginAsync(nonMemberEmail);
+
+        // Act
+        var response = await _client.GetAsync($"/organizations/{_organization.Id}/policies/master-password");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetMasterPasswordPolicy_AuthenticatedMember_ReturnsPolicy()
+    {
+        // Arrange - owner is already logged in from InitializeAsync
+        var policyRepository = _factory.GetService<IPolicyRepository>();
+        await policyRepository.CreateAsync(new Policy
+        {
+            OrganizationId = _organization.Id,
+            Type = PolicyType.MasterPassword,
+            Enabled = true
+        });
+
+        // Act
+        var response = await _client.GetAsync($"/organizations/{_organization.Id}/policies/master-password");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var content = await response.Content.ReadFromJsonAsync<PolicyResponseModel>();
+        Assert.NotNull(content);
+        Assert.True(content.Enabled);
+        Assert.Equal(PolicyType.MasterPassword, content.Type);
+        Assert.Equal(_organization.Id, content.OrganizationId);
+    }
+
+    /// <summary>
+    /// An OrganizationUser with Invited status can still have a UserId linked due to the SSO JIT provisioning bug
+    /// (PM-34092). This requirement exists to support that case, so Invited + UserId must succeed.
+    /// </summary>
+    [Fact]
+    public async Task GetMasterPasswordPolicy_InvitedMemberWithLinkedUserId_ReturnsPolicy()
+    {
+        // Arrange
+        var policyRepository = _factory.GetService<IPolicyRepository>();
+        await policyRepository.CreateAsync(new Policy
+        {
+            OrganizationId = _organization.Id,
+            Type = PolicyType.MasterPassword,
+            Enabled = true
+        });
+
+        // Create a user account and add them to the org in Invited status (but with UserId populated)
+        var invitedEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(invitedEmail);
+
+        var userRepository = _factory.GetService<IUserRepository>();
+        var user = await userRepository.GetByEmailAsync(invitedEmail);
+
+        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = _organization.Id,
+            UserId = user!.Id,
+            Type = OrganizationUserType.User,
+            Status = OrganizationUserStatusType.Invited
+        });
+
+        await _loginHelper.LoginAsync(invitedEmail);
+
+        // Act
+        var response = await _client.GetAsync($"/organizations/{_organization.Id}/policies/master-password");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var content = await response.Content.ReadFromJsonAsync<PolicyResponseModel>();
+        Assert.NotNull(content);
+        Assert.True(content.Enabled);
+        Assert.Equal(PolicyType.MasterPassword, content.Type);
     }
 
     [Fact]
@@ -464,10 +472,13 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         // Re-authenticate as the owner of Org A
         await _loginHelper.LoginAsync(_ownerEmail);
 
-        var request = new PolicyRequestModel
+        var request = new SavePolicyRequest
         {
-            Enabled = true,
-            Data = null
+            Policy = new PolicyRequestModel
+            {
+                Enabled = true,
+                Data = null
+            }
         };
 
         // Act - Enable Single Org policy on Org A

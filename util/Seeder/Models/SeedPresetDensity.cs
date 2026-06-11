@@ -14,6 +14,62 @@ internal record SeedPresetDensity
     public SeedPresetPermissions? Permissions { get; init; }
 
     public SeedPresetCipherAssignment? CipherAssignment { get; init; }
+
+    public SeedPresetUserCollections? UserCollections { get; init; }
+
+    public SeedPresetCipherTypes? CipherTypes { get; init; }
+
+    public SeedPresetDensityPersonalCiphers? PersonalCiphers { get; init; }
+
+    public SeedPresetDensityFolders? Folders { get; init; }
+}
+
+/// <summary>
+/// Folder count distribution per user: a named preset shape.
+/// </summary>
+internal record SeedPresetDensityFolders
+{
+    public string? Shape { get; init; }
+}
+
+/// <summary>
+/// Personal cipher count distribution per user: a named preset shape.
+/// </summary>
+internal record SeedPresetDensityPersonalCiphers
+{
+    public string? Shape { get; init; }
+}
+
+/// <summary>
+/// Cipher type distribution: a named preset or custom weights per type.
+/// </summary>
+internal record SeedPresetCipherTypes
+{
+    public string? Preset { get; init; }
+
+    public double? Login { get; init; }
+
+    public double? SecureNote { get; init; }
+
+    public double? Card { get; init; }
+
+    public double? Identity { get; init; }
+
+    public double? SshKey { get; init; }
+}
+
+/// <summary>
+/// How many direct collections each user receives: range, distribution shape, and skew.
+/// </summary>
+internal record SeedPresetUserCollections
+{
+    public int? Min { get; init; }
+
+    public int? Max { get; init; }
+
+    public string? Shape { get; init; }
+
+    public double? Skew { get; init; }
 }
 
 /// <summary>
@@ -62,4 +118,8 @@ internal record SeedPresetCipherAssignment
     public string? Skew { get; init; }
 
     public double? OrphanRate { get; init; }
+
+    public double? MultiCollectionRate { get; init; }
+
+    public int? MaxCollectionsPerCipher { get; init; }
 }

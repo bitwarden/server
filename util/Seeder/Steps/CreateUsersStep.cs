@@ -14,6 +14,8 @@ namespace Bit.Seeder.Steps;
 /// </summary>
 internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false) : IStep
 {
+    private const int RsaPoolSize = 100;
+
     public void Execute(SeederContext context)
     {
         var org = context.RequireOrganization();
@@ -24,35 +26,76 @@ internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false
             ? UserStatusDistributions.Realistic
             : UserStatusDistributions.AllConfirmed;
 
+        var password = context.GetPassword();
+        var kdfIterations = context.GetKdfIterations();
+        var mangler = context.GetMangler();
+        var passwordHasher = context.GetPasswordHasher();
+        var progress = context.GetProgress();
+
+        // Pre-compute mangled emails and statuses (ManglerService is not thread-safe)
+        var mangledEmails = new string[count];
+        var statuses = new OrganizationUserStatusType[count];
+        for (var i = 0; i < count; i++)
+        {
+            mangledEmails[i] = mangler.Mangle($"user{i}@{domain}");
+            statuses[i] = statusDistribution.Select(i, count);
+        }
+
+        var results = new (User User, OrganizationUser OrgUser, UserKeys Keys, bool IsConfirmed)[count];
+
+        progress?.Report(new PhaseStarted(SeederPhases.CreatingUsers, count));
+        var batchSize = Math.Max(1, count / 100);
+
+        Parallel.For(
+            0,
+            count,
+            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+            localInit: () => 0,
+            body: (i, _, localTicked) =>
+            {
+                var userKeys = RustSdkService.GenerateUserKeys(mangledEmails[i], password, kdfIterations, (uint)(i % RsaPoolSize));
+                var (user, _) = UserSeeder.Create(mangledEmails[i], passwordHasher, mangler, keys: userKeys, password: password, kdfIterations: kdfIterations);
+
+                var memberOrgKey = StatusRequiresOrgKey(statuses[i])
+                    ? RustSdkService.GenerateUserOrganizationKey(user.PublicKey!, orgKey)
+                    : null;
+
+                var orgUser = org.CreateOrganizationUserWithKey(
+                    user, OrganizationUserType.User, statuses[i], memberOrgKey);
+
+                results[i] = (user, orgUser, userKeys, statuses[i] == OrganizationUserStatusType.Confirmed);
+
+                localTicked++;
+                if (progress is not null && localTicked >= batchSize)
+                {
+                    progress.Report(new PhaseAdvanced(SeederPhases.CreatingUsers, localTicked));
+                    localTicked = 0;
+                }
+                return localTicked;
+            },
+            localFinally: localTicked =>
+            {
+                if (progress is not null && localTicked > 0)
+                {
+                    progress.Report(new PhaseAdvanced(SeederPhases.CreatingUsers, localTicked));
+                }
+            });
+
         var users = new List<User>(count);
         var organizationUsers = new List<OrganizationUser>(count);
-        var hardenedOrgUserIds = new List<Guid>();
-        var userDigests = new List<EntityRegistry.UserDigest>();
-        var password = context.GetPassword();
+        var hardenedOrgUserIds = new List<Guid>(count);
+        var userDigests = new List<EntityRegistry.UserDigest>(count);
 
         for (var i = 0; i < count; i++)
         {
-            var email = $"user{i}@{domain}";
-            var mangledEmail = context.GetMangler().Mangle(email);
-            var userKeys = RustSdkService.GenerateUserKeys(mangledEmail, password);
-            var (user, _) = UserSeeder.Create(mangledEmail, context.GetPasswordHasher(), context.GetMangler(), keys: userKeys, password: password);
+            var r = results[i];
+            users.Add(r.User);
+            organizationUsers.Add(r.OrgUser);
 
-            var status = statusDistribution.Select(i, count);
-
-            var memberOrgKey = StatusRequiresOrgKey(status)
-                ? RustSdkService.GenerateUserOrganizationKey(user.PublicKey!, orgKey)
-                : null;
-
-            var orgUser = org.CreateOrganizationUserWithKey(
-                user, OrganizationUserType.User, status, memberOrgKey);
-
-            users.Add(user);
-            organizationUsers.Add(orgUser);
-
-            if (status == OrganizationUserStatusType.Confirmed)
+            if (r.IsConfirmed)
             {
-                hardenedOrgUserIds.Add(orgUser.Id);
-                userDigests.Add(new EntityRegistry.UserDigest(user.Id, orgUser.Id, userKeys.Key));
+                hardenedOrgUserIds.Add(r.OrgUser.Id);
+                userDigests.Add(new EntityRegistry.UserDigest(r.User.Id, r.OrgUser.Id, r.Keys.Key));
             }
         }
 
@@ -60,6 +103,8 @@ internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false
         context.OrganizationUsers.AddRange(organizationUsers);
         context.Registry.HardenedOrgUserIds.AddRange(hardenedOrgUserIds);
         context.Registry.UserDigests.AddRange(userDigests);
+
+        progress?.Report(new PhaseCompleted(SeederPhases.CreatingUsers));
     }
 
     private static bool StatusRequiresOrgKey(OrganizationUserStatusType status) =>

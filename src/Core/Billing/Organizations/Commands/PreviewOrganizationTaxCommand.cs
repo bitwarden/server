@@ -8,15 +8,16 @@ using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using OneOf;
 using Stripe;
 
 namespace Bit.Core.Billing.Organizations.Commands;
 
-using static Core.Constants;
 using static StripeConstants;
 
 public interface IPreviewOrganizationTaxCommand
@@ -37,6 +38,7 @@ public interface IPreviewOrganizationTaxCommand
 }
 
 public class PreviewOrganizationTaxCommand(
+    IFeatureService featureService,
     ILogger<PreviewOrganizationTaxCommand> logger,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter,
@@ -126,18 +128,26 @@ public class PreviewOrganizationTaxCommand(
                         }
                     }
 
-                    // Validate coupon and only apply if valid. If invalid, proceed without the discount.
-                    // Only Families plans support user-provided coupons
-                    if (!string.IsNullOrWhiteSpace(purchase.Coupon) && purchase.Tier == ProductTierType.Families)
+                    // Validate all coupons at once. If all are eligible, apply them; otherwise skip gracefully.
+                    // Only Families plans support user-provided coupons.
+                    if (purchase is { Coupons.Length: > 0, Tier: ProductTierType.Families })
                     {
-                        var isValid = await subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
-                            user,
-                            purchase.Coupon.Trim(),
-                            DiscountTierType.Families);
+                        var trimmedCoupons = purchase.Coupons
+                            .Where(c => !string.IsNullOrWhiteSpace(c))
+                            .Select(c => c.Trim())
+                            .ToArray();
 
-                        if (isValid)
+                        if (trimmedCoupons.Length > 0)
                         {
-                            options.Discounts = [new InvoiceDiscountOptions { Coupon = purchase.Coupon.Trim() }];
+                            var allValid = await subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
+                                user, trimmedCoupons, DiscountTierType.Families);
+
+                            if (allValid)
+                            {
+                                options.Discounts = trimmedCoupons
+                                    .Select(c => new InvoiceDiscountOptions { Coupon = c })
+                                    .ToList();
+                            }
                         }
                     }
 
@@ -365,7 +375,7 @@ public class PreviewOrganizationTaxCommand(
         Convert.ToDecimal(invoice.TotalTaxes.Sum(invoiceTotalTax => invoiceTotalTax.Amount)) / 100,
         Convert.ToDecimal(invoice.Total) / 100);
 
-    private static InvoiceCreatePreviewOptions GetBaseOptions(
+    private InvoiceCreatePreviewOptions GetBaseOptions(
         OneOf<Customer, BillingAddress> addressChoice,
         bool businessUse)
     {
@@ -385,11 +395,26 @@ public class PreviewOrganizationTaxCommand(
             CustomerDetails = new InvoiceCustomerDetailsOptions
             {
                 Address = new AddressOptions { Country = country, PostalCode = postalCode },
-                TaxExempt = businessUse && country != CountryAbbreviations.UnitedStates
-                    ? TaxExempt.Reverse
-                    : TaxExempt.None
             }
         };
+
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
+        {
+            switch (businessUse)
+            {
+                case true:
+                    var existingTaxExemptStatus = addressChoice.Match(
+                        customer => customer.TaxExempt,
+                        _ => null!);
+
+                    var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(country, existingTaxExemptStatus);
+                    options.CustomerDetails.TaxExempt = determinedTaxExemptStatus;
+                    break;
+                default:
+                    options.CustomerDetails.TaxExempt = TaxExempt.None;
+                    break;
+            }
+        }
 
         var taxId = addressChoice.Match(
             customer =>

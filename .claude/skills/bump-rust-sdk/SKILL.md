@@ -7,12 +7,14 @@ description: This skill should be used when the user asks to "bump the Rust SDK"
 
 ## Overview
 
-The server's `util/RustSdk/rust/Cargo.toml` pins three crates from the `bitwarden/sdk-internal`
-repository by git rev: `bitwarden-core`, `bitwarden-crypto`, and `bitwarden-vault`. These must
-be periodically bumped to stay aligned with the Bitwarden client applications.
+The server's `util/RustSdk/rust/Cargo.toml` pins `bitwarden-crypto` from the
+`bitwarden/sdk-internal` repository by git rev. This must be periodically bumped to stay
+aligned with the Bitwarden client applications.
 
 The RustSdk is used by the Seeder to produce cryptographically correct Protected Data for
-integration testing. It is NOT part of the production server runtime.
+integration testing. It is NOT part of the production server runtime. The Rust layer provides
+generic field-level encryption (`encrypt_string`, `decrypt_string`, `encrypt_fields`) and
+key generation — the C# Seeder drives which fields to encrypt via `EncryptPropertyAttribute`.
 
 ## Key Challenge: NPM-to-Git-Rev Mapping
 
@@ -60,19 +62,19 @@ Query the GitHub Actions API to find the commit that produced that NPM build. Se
 
 ### Step 3: Analyze Breaking Changes
 
-Compare the current pinned rev against the target rev, focusing on the three crates:
+Compare the current pinned rev against the target rev, focusing on `bitwarden-crypto`:
 
 ```bash
 cd /path/to/sdk-internal
-git log --oneline <old-rev>..<new-rev> -- crates/bitwarden-core crates/bitwarden-crypto crates/bitwarden-vault
+git log --oneline <old-rev>..<new-rev> -- crates/bitwarden-crypto
 ```
 
 Cross-reference each commit against the API surface documented in `references/api-surface.md`.
 
 ### Step 4: Apply Changes
 
-1. Update `Cargo.toml` — bump all three rev pins to the same SHA
-2. Fix any compilation errors from breaking changes (type renames, new struct fields, etc.)
+1. Update `Cargo.toml` — bump the `bitwarden-crypto` rev pin to the new SHA
+2. Fix any compilation errors from breaking changes (type renames, new parameters, etc.)
 3. Add `#[allow(deprecated)]` for any newly-deprecated APIs (with a comment explaining why)
 
 ### Step 5: Build and Verify (Claude)
@@ -119,7 +121,7 @@ Two mechanisms enforce this:
    modified but `api-surface.md` was not updated in the same session.
 
 To regenerate: read all `.rs` files in `util/RustSdk/rust/src/`, extract every `use` statement
-from the three bitwarden crates, and rewrite `references/api-surface.md` to match.
+from `bitwarden_crypto`, and rewrite `references/api-surface.md` to match.
 
 ## Additional Resources
 
@@ -129,13 +131,13 @@ from the three bitwarden crates, and rewrite `references/api-surface.md` to matc
   queries, breaking change analysis checklist, human verification commands, and a worked example
   from the Feb 2026 bump
 - **`references/api-surface.md`** — Complete inventory of types, traits, and functions the RustSdk
-  imports from each crate, used to assess breaking change impact
+  imports from `bitwarden-crypto`, used to assess breaking change impact
 
 ## Files Modified in a Typical Bump
 
-| File                              | Change                                             |
-| --------------------------------- | -------------------------------------------------- |
-| `util/RustSdk/rust/Cargo.toml`    | Rev pin update                                     |
-| `util/RustSdk/rust/src/*.rs`      | Type renames, new struct fields, deprecation fixes |
-| `util/RustSdk/rust/Cargo.lock`    | Auto-regenerated (commit alongside)                |
-| `util/RustSdk/NativeMethods.g.cs` | Should NOT change (verify)                         |
+| File                              | Change                                          |
+| --------------------------------- | ----------------------------------------------- |
+| `util/RustSdk/rust/Cargo.toml`    | `bitwarden-crypto` rev pin update               |
+| `util/RustSdk/rust/src/*.rs`      | Type renames, new parameters, deprecation fixes |
+| `util/RustSdk/rust/Cargo.lock`    | Auto-regenerated (commit alongside)             |
+| `util/RustSdk/NativeMethods.g.cs` | Should NOT change (verify)                      |

@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.Models.Api;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
@@ -41,12 +38,20 @@ public class SendAccessResponseModel : ResponseModel
         switch (send.Type)
         {
             case SendType.File:
-                var fileData = JsonSerializer.Deserialize<SendFileData>(send.Data);
+                var fileData =
+                    JsonSerializer.Deserialize<SendFileData>(send.Data ??
+                                                             throw new NullReferenceException(
+                                                                 "Send Data is required")) ??
+                    throw new JsonException("Failed to deserialize send file data.");
                 sendData = fileData;
                 File = new SendFileModel(fileData);
                 break;
             case SendType.Text:
-                var textData = JsonSerializer.Deserialize<SendTextData>(send.Data);
+                var textData =
+                    JsonSerializer.Deserialize<SendTextData>(send.Data ??
+                                                             throw new NullReferenceException(
+                                                                 "Send Data is required")) ??
+                    throw new JsonException("Failed to deserialize send text data.");
                 sendData = textData;
                 Text = new SendTextModel(textData);
                 break;
@@ -89,12 +94,12 @@ public class SendAccessResponseModel : ResponseModel
     /// File content is downloaded separately using
     /// <see cref="Bit.Api.Tools.Controllers.SendsController.GetSendFileDownloadData" />
     /// </remarks>
-    public SendFileModel File { get; set; }
+    public SendFileModel? File { get; set; }
 
     /// <summary>
     /// Contains text data uploaded with the send.
     /// </summary>
-    public SendTextModel Text { get; set; }
+    public SendTextModel? Text { get; set; }
 
     /// <summary>
     /// The date after which a send cannot be accessed. When this value is
@@ -105,5 +110,5 @@ public class SendAccessResponseModel : ResponseModel
     /// <summary>
     /// Indicates the person that created the send to the accessor.
     /// </summary>
-    public string CreatorIdentifier { get; set; }
+    public string? CreatorIdentifier { get; set; }
 }

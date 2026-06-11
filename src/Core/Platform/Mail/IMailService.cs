@@ -45,7 +45,8 @@ public interface IMailService
         string token,
         ProductTierType productTier,
         IEnumerable<ProductType> products,
-        int trialLength);
+        int trialLength,
+        bool paymentOptional = false);
     Task SendVerifyDeleteEmailAsync(string email, Guid userId, string token);
     Task SendCannotDeleteClaimedAccountEmailAsync(string email);
     Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail);
@@ -112,7 +113,7 @@ public interface IMailService
     Task SendEmergencyAccessRecoveryReminder(EmergencyAccess emergencyAccess, string initiatingName, string email);
     Task SendEmergencyAccessRecoveryTimedOut(EmergencyAccess ea, string initiatingName, string email);
     Task SendEnqueuedMailMessageAsync(IMailQueueMessage queueMessage);
-    Task SendAdminResetPasswordEmailAsync(string email, string? userName, string orgName);
+    Task SendAdminResetPasswordEmailAsync(string email, string? userName, string orgName, bool resetMasterPassword, bool resetTwoFactor);
     Task SendProviderSetupInviteEmailAsync(Provider provider, string token, string email);
     Task SendBusinessUnitConversionInviteAsync(Organization organization, string token, string email);
     Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token, string email);

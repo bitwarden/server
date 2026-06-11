@@ -3,72 +3,58 @@
 > **Auto-generated from actual source files.** Last updated: 2026-02-25
 > Pinned rev: `abba7fdab687753268b63248ec22639dff35d07c`
 
-This documents every type, trait, and function the server's RustSdk imports from the three
-sdk-internal crates. Use this to assess breaking change impact when bumping revs.
+This documents every type, trait, and function the server's RustSdk imports from
+`bitwarden-crypto`. Use this to assess breaking change impact when bumping revs.
 
 **Location:** `util/RustSdk/rust/src/`
 
-## bitwarden-crypto (primary dependency)
+## bitwarden-crypto
 
-### Types Used
+### Types Used — lib.rs (key generation and management)
 
-| Type                      | File              | Usage                                                                                        |
-| ------------------------- | ----------------- | -------------------------------------------------------------------------------------------- |
-| `BitwardenLegacyKeyBytes` | lib.rs, cipher.rs | `BitwardenLegacyKeyBytes::from()` — wraps raw key bytes for `SymmetricCryptoKey::try_from()` |
-| `HashPurpose`             | lib.rs            | `HashPurpose::ServerAuthorization` enum variant                                              |
-| `Kdf`                     | lib.rs            | `Kdf::PBKDF2 { iterations }` enum variant with `NonZeroU32`                                  |
-| `KeyStore`                | cipher.rs         | `KeyStore::<KeyIds>::default()`, `.context_mut()`, `.add_local_symmetric_key()`              |
-| `MasterKey`               | lib.rs            | `MasterKey::derive()`, `.derive_master_key_hash()`, `.make_user_key()`                       |
-| `PrivateKey`              | lib.rs            | `PrivateKey::from_pem()`, `.to_public_key()`, `.to_der()`                                    |
-| `PublicKey`               | lib.rs            | `PublicKey::from_der()`                                                                      |
-| `RsaKeyPair`              | lib.rs            | Struct literal: `RsaKeyPair { private, public }`                                             |
-| `SpkiPublicKeyBytes`      | lib.rs            | `SpkiPublicKeyBytes::from()` — wraps public key DER bytes                                    |
-| `SymmetricCryptoKey`      | lib.rs, cipher.rs | `.make_aes256_cbc_hmac_key()`, `::try_from()`, `.to_base64()`                                |
-| `UnsignedSharedKey`       | lib.rs            | `::encapsulate_key_unsigned()` (deprecated — wrapped with `#[allow(deprecated)]`)            |
-| `UserKey`                 | lib.rs            | `UserKey::new()`, `.make_key_pair()`, `.0` field access                                      |
+| Type                      | Usage                                                                                        |
+| ------------------------- | -------------------------------------------------------------------------------------------- |
+| `BitwardenLegacyKeyBytes` | `BitwardenLegacyKeyBytes::from()` — wraps raw key bytes for `SymmetricCryptoKey::try_from()` |
+| `HashPurpose`             | `HashPurpose::ServerAuthorization` enum variant                                              |
+| `Kdf`                     | `Kdf::PBKDF2 { iterations }` enum variant with `NonZeroU32`                                  |
+| `MasterKey`               | `MasterKey::derive()`, `.derive_master_key_hash()`, `.make_user_key()`                       |
+| `PrivateKey`              | `PrivateKey::from_pem()`, `.to_public_key()`, `.to_der()`                                    |
+| `PublicKey`               | `PublicKey::from_der()`                                                                      |
+| `RsaKeyPair`              | Struct literal: `RsaKeyPair { private, public }`                                             |
+| `SpkiPublicKeyBytes`      | `SpkiPublicKeyBytes::from()` — wraps public key DER bytes                                    |
+| `SymmetricCryptoKey`      | `.make_aes256_cbc_hmac_key()`, `::try_from()`, `.to_base64()`                                |
+| `UnsignedSharedKey`       | `::encapsulate_key_unsigned()` (deprecated — wrapped with `#[allow(deprecated)]`)            |
+| `UserKey`                 | `UserKey::new()`, `.make_key_pair()`, `.0` field access                                      |
+
+### Types Used — cipher.rs (field-level encryption)
+
+| Type                      | Usage                                                                                           |
+| ------------------------- | ----------------------------------------------------------------------------------------------- |
+| `BitwardenLegacyKeyBytes` | `BitwardenLegacyKeyBytes::from()` — wraps raw key bytes for `SymmetricCryptoKey::try_from()`    |
+| `EncString`               | `enc_str.parse::<EncString>()`, `.to_string()` — parsed from and serialized to EncString format |
+| `SymmetricCryptoKey`      | `::try_from()`, `.make_aes256_cbc_hmac_key()`, `.to_base64()` — key construction and testing    |
 
 ### Traits Used
 
-| Trait                  | File              | Methods Called                                                             |
-| ---------------------- | ----------------- | -------------------------------------------------------------------------- |
-| `KeyEncryptable`       | lib.rs, cipher.rs | `.encrypt_with_key(&key)` — encrypts DER bytes and strings                 |
-| `CompositeEncryptable` | cipher.rs         | `.encrypt_composite(&mut ctx, key_id)` — encrypts `CipherView` -> `Cipher` |
-| `Decryptable`          | cipher.rs         | `.decrypt(&mut ctx, key_id)` — decrypts `Cipher` -> `CipherView`           |
+| Trait            | File      | Methods Called                                                       |
+| ---------------- | --------- | -------------------------------------------------------------------- |
+| `KeyEncryptable` | lib.rs    | `.encrypt_with_key(&key)` — encrypts DER bytes and strings           |
+| `KeyEncryptable` | cipher.rs | `.encrypt_with_key(&key)` — encrypts plaintext strings to EncStrings |
+| `KeyDecryptable` | cipher.rs | `.decrypt_with_key(&key)` — decrypts EncString back to plaintext     |
 
-## bitwarden-core (minimal dependency)
+## FFI Functions Exposed
 
-| Type                     | File      | Usage                                        |
-| ------------------------ | --------- | -------------------------------------------- |
-| `key_management::KeyIds` | cipher.rs | Generic type parameter: `KeyStore::<KeyIds>` |
+The Rust layer exposes these functions to C# via csbindgen:
 
-## bitwarden-vault (data model dependency)
-
-### Production Code
-
-| Type         | File      | Usage                                                 |
-| ------------ | --------- | ----------------------------------------------------- |
-| `Cipher`     | cipher.rs | Protected Data container (encrypted), deserialized from JSON via serde |
-| `CipherView` | cipher.rs | Vault Data in Use (decrypted view), serialized to/from JSON via serde  |
-
-### Test-Only Types
-
-| Type                 | File            | Usage                                                                                                                                      |
-| -------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `CipherRepromptType` | cipher.rs tests | `CipherRepromptType::None` enum variant                                                                                                    |
-| `CipherType`         | cipher.rs tests | `CipherType::Login` enum variant                                                                                                           |
-| `LoginView`          | cipher.rs tests | Struct literal with fields: `username`, `password`, `password_revision_date`, `uris`, `totp`, `autofill_on_page_load`, `fido2_credentials` |
-
-### CipherView Fields (used in test struct literal)
-
-The test helper `create_test_cipher_view()` constructs a `CipherView` with these fields:
-
-`id`, `organization_id`, `folder_id`, `collection_ids`, `key`, `name`, `notes`, `type`,
-`login`, `identity`, `card`, `secure_note`, `ssh_key`, `favorite`, `reprompt`,
-`organization_use_totp`, `edit`, `permissions`, `view_password`, `local_data`, `attachments`,
-`attachment_decryption_failures`, `fields`, `password_history`, `creation_date`, `deleted_date`,
-`revision_date`, `archived_date`
-
-Any new required field added to `CipherView` upstream will break this struct literal.
+| Function                         | File      | Purpose                                                   |
+| -------------------------------- | --------- | --------------------------------------------------------- |
+| `generate_user_keys`             | lib.rs    | Derive master key, user key, key pair from email/password |
+| `generate_organization_keys`     | lib.rs    | Generate org symmetric key + RSA key pair                 |
+| `generate_user_organization_key` | lib.rs    | Encapsulate org key with user's public key (unsigned)     |
+| `encrypt_string`                 | cipher.rs | Encrypt a single plaintext string with a symmetric key    |
+| `decrypt_string`                 | cipher.rs | Decrypt an EncString with a symmetric key                 |
+| `encrypt_fields`                 | cipher.rs | Encrypt specified fields in a JSON object by dot-path     |
+| `free_c_string`                  | lib.rs    | Free a C string returned by any of the above functions    |
 
 ## Breaking Change Risk Matrix
 
@@ -77,9 +63,9 @@ When reviewing upstream commits, prioritize checking for changes to:
 **Critical (compilation failure):**
 
 - Any type rename or removal listed above
-- New required fields on `CipherView`, `Cipher`, or `LoginView`
-- Changes to `KeyStore` generic parameters or `context_mut()` method
-- Changes to encryption/decryption trait method signatures
+- Changes to `EncString` parsing or serialization format
+- Changes to `KeyEncryptable` or `KeyDecryptable` trait method signatures
+- Changes to `SymmetricCryptoKey::try_from()` or `BitwardenLegacyKeyBytes`
 
 **High (runtime failure):**
 
@@ -96,21 +82,12 @@ When reviewing upstream commits, prioritize checking for changes to:
 **Low (transparent):**
 
 - Internal implementation changes that don't affect the public API
-- New optional fields on structs (serde defaults to `None` for `Option<T>`)
 - New methods added to existing types (additive, non-breaking)
 
 ## How to Check for Changes
-
-For each crate, check the public API exports:
 
 ```bash
 cd /path/to/sdk-internal
 # bitwarden-crypto public API
 git diff <old>..<new> -- crates/bitwarden-crypto/src/lib.rs crates/bitwarden-crypto/src/keys/mod.rs
-
-# bitwarden-vault Cipher/CipherView changes
-git diff <old>..<new> -- crates/bitwarden-vault/src/cipher/cipher.rs crates/bitwarden-vault/src/cipher/login.rs
-
-# bitwarden-core KeyIds
-git diff <old>..<new> -- crates/bitwarden-core/src/key_management/mod.rs
 ```

@@ -14,8 +14,6 @@ public static class GlobalSettingsFactory
 
     private static GlobalSettings LoadGlobalSettings()
     {
-        Console.WriteLine("Loading global settings...");
-
         var configBuilder = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)

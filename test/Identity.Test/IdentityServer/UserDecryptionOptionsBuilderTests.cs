@@ -335,6 +335,7 @@ public class UserDecryptionOptionsBuilderTests
     public async Task Build_WhenUserHasMasterPassword_ShouldReturnMasterPasswordUnlock(User user)
     {
         user.Email = "test@example.COM";
+        user.MasterPasswordSalt = null;
 
         var result = await _builder.ForUser(user).BuildAsync();
 
@@ -344,7 +345,19 @@ public class UserDecryptionOptionsBuilderTests
         Assert.Equal(user.KdfIterations, result.MasterPasswordUnlock.Kdf.Iterations);
         Assert.Equal(user.KdfMemory, result.MasterPasswordUnlock.Kdf.Memory);
         Assert.Equal(user.KdfParallelism, result.MasterPasswordUnlock.Kdf.Parallelism);
-        Assert.Equal("test@example.com", result.MasterPasswordUnlock.Salt);
+        Assert.Equal(user.GetMasterPasswordSalt(), result.MasterPasswordUnlock.Salt);
         Assert.Equal(user.Key, result.MasterPasswordUnlock.MasterKeyEncryptedUserKey);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Build_WhenUserHasExplicitSalt_ShouldReturnExplicitSalt(User user)
+    {
+        user.MasterPasswordSalt = "explicit-salt-value";
+
+        var result = await _builder.ForUser(user).BuildAsync();
+
+        Assert.True(result.HasMasterPassword);
+        Assert.NotNull(result.MasterPasswordUnlock);
+        Assert.Equal("explicit-salt-value", result.MasterPasswordUnlock.Salt);
     }
 }

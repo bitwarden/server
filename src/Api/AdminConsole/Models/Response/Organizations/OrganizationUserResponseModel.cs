@@ -147,6 +147,7 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         // Prevent reset password when using key connector.
         ResetPasswordEnrolled = ResetPasswordEnrolled && !data.OrgUser.UsesKeyConnector;
         ClaimedByOrganization = data.ClaimedByOrganization;
+        RevocationReason = data.OrgUser.RevocationReason;
     }
 
     public OrganizationUserUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
@@ -168,6 +169,7 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         // Prevent reset password when using key connector.
         ResetPasswordEnrolled = ResetPasswordEnrolled && !organizationUser.UsesKeyConnector;
         ClaimedByOrganization = claimedByOrganization;
+        RevocationReason = organizationUser.RevocationReason;
     }
 
     public string Name { get; set; }
@@ -188,6 +190,11 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
     public bool ClaimedByOrganization { get; set; }
     public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
     public IEnumerable<Guid> Groups { get; set; }
+    /// <summary>
+    /// The reason the user is revoked. Null if the user is not revoked, or was revoked before
+    /// revocation reasons were tracked.
+    /// </summary>
+    public RevocationReason? RevocationReason { get; set; }
 }
 
 public class OrganizationUserResetPasswordDetailsResponseModel : ResponseModel
@@ -205,6 +212,7 @@ public class OrganizationUserResetPasswordDetailsResponseModel : ResponseModel
         KdfIterations = orgUser.KdfIterations;
         KdfMemory = orgUser.KdfMemory;
         KdfParallelism = orgUser.KdfParallelism;
+        MasterPasswordSalt = orgUser.MasterPasswordSalt;
         ResetPasswordKey = orgUser.ResetPasswordKey;
         EncryptedPrivateKey = orgUser.EncryptedPrivateKey;
     }
@@ -214,6 +222,7 @@ public class OrganizationUserResetPasswordDetailsResponseModel : ResponseModel
     public int KdfIterations { get; set; }
     public int? KdfMemory { get; set; }
     public int? KdfParallelism { get; set; }
+    public string MasterPasswordSalt { get; set; }
     public string ResetPasswordKey { get; set; }
     public string EncryptedPrivateKey { get; set; }
 }
@@ -245,3 +254,4 @@ public class OrganizationUserBulkResponseModel : ResponseModel
     public Guid Id { get; set; }
     public string Error { get; set; }
 }
+

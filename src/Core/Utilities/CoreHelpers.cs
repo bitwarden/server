@@ -141,7 +141,7 @@ public static class CoreHelpers
 
     public static X509Certificate2 GetCertificate(string file, string password)
     {
-        return new X509Certificate2(file, password);
+        return LoadCertificateByContentType(File.ReadAllBytes(file), password);
     }
 
     public async static Task<X509Certificate2> GetEmbeddedCertificateAsync(string file, string password)
@@ -151,7 +151,7 @@ public static class CoreHelpers
         using (var ms = new MemoryStream())
         {
             await s.CopyToAsync(ms);
-            return new X509Certificate2(ms.ToArray(), password);
+            return LoadCertificateByContentType(ms.ToArray(), password);
         }
     }
 
@@ -176,7 +176,7 @@ public static class CoreHelpers
 
             using var memStream = new MemoryStream();
             await blobRef.DownloadToAsync(memStream).ConfigureAwait(false);
-            return new X509Certificate2(memStream.ToArray(), password);
+            return LoadCertificateByContentType(memStream.ToArray(), password);
         }
         catch (RequestFailedException ex)
         when (ex.ErrorCode == BlobErrorCode.ContainerNotFound || ex.ErrorCode == BlobErrorCode.BlobNotFound)
@@ -188,6 +188,13 @@ public static class CoreHelpers
             return null;
         }
     }
+
+    private static X509Certificate2 LoadCertificateByContentType(byte[] data, string password) =>
+        X509Certificate2.GetCertContentType(data) switch
+        {
+            X509ContentType.Pkcs12 => X509CertificateLoader.LoadPkcs12(data, password),
+            _ => X509CertificateLoader.LoadCertificate(data),
+        };
 
     public static long ToEpocMilliseconds(DateTime date)
     {
@@ -680,6 +687,11 @@ public static class CoreHelpers
     public static Dictionary<string, object> AdjustIdentityServerConfig(Dictionary<string, object> configDict,
         string publicServiceUri, string internalServiceUri)
     {
+        // Remove metadata for endpoints/features we don't support
+        configDict.Remove("revocation_endpoint_auth_methods_supported");
+        configDict.Remove("introspection_endpoint_auth_methods_supported");
+        configDict.Remove("backchannel_authentication_request_signing_alg_values_supported");
+
         var dictReplace = new Dictionary<string, object>();
         foreach (var item in configDict)
         {

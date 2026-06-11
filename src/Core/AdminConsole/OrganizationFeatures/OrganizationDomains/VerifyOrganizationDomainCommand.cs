@@ -4,8 +4,8 @@
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -24,7 +24,7 @@ public class VerifyOrganizationDomainCommand(
     IEventService eventService,
     IGlobalSettings globalSettings,
     ICurrentContext currentContext,
-    IVNextSavePolicyCommand vNextSavePolicyCommand,
+    ISavePolicyCommand savePolicyCommand,
     IMailService mailService,
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationRepository organizationRepository,
@@ -142,7 +142,7 @@ public class VerifyOrganizationDomainCommand(
         };
 
         var savePolicyModel = new SavePolicyModel(policyUpdate, actingUser);
-        await vNextSavePolicyCommand.SaveAsync(savePolicyModel);
+        await savePolicyCommand.SaveAsync(savePolicyModel);
     }
 
     private async Task SendVerifiedDomainUserEmailAsync(OrganizationDomain domain)

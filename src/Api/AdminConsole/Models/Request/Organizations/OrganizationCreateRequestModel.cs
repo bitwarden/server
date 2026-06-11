@@ -3,8 +3,8 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
-using Bit.Core;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -33,6 +33,7 @@ public class OrganizationCreateRequestModel : IValidatableObject
     [Required]
     public string Key { get; set; }
 
+    [Required]
     public OrganizationKeysRequestModel Keys { get; set; }
     public PaymentMethodType? PaymentMethodType { get; set; }
     public string PaymentToken { get; set; }
@@ -81,6 +82,11 @@ public class OrganizationCreateRequestModel : IValidatableObject
 
     public bool SkipTrial { get; set; }
 
+    [Range(0, 30)]
+    public int? TrialLength { get; set; }
+
+    public string[] Coupons { get; set; }
+
     public virtual OrganizationSignup ToOrganizationSignup(User user)
     {
         var orgSignup = new OrganizationSignup
@@ -114,7 +120,9 @@ public class OrganizationCreateRequestModel : IValidatableObject
             },
             InitiationPath = InitiationPath,
             SkipTrial = SkipTrial,
-            Keys = Keys?.ToPublicKeyEncryptionKeyPairData()
+            TrialLength = TrialLength,
+            Coupons = Coupons,
+            Keys = Keys.ToPublicKeyEncryptionKeyPairData()
         };
 
         return orgSignup;
@@ -139,7 +147,7 @@ public class OrganizationCreateRequestModel : IValidatableObject
                 new string[] { nameof(BillingAddressCountry) });
         }
 
-        if (PlanType != PlanType.Free && BillingAddressCountry == Constants.CountryAbbreviations.UnitedStates &&
+        if (PlanType != PlanType.Free && TaxHelpers.IsDirectTaxCountry(BillingAddressCountry) &&
             string.IsNullOrWhiteSpace(BillingAddressPostalCode))
         {
             yield return new ValidationResult("Zip / postal code is required.",

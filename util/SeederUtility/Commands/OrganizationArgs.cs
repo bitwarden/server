@@ -1,4 +1,5 @@
-﻿using Bit.Seeder.Data.Enums;
+﻿using Bit.Seeder.Data.Distributions;
+using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Options;
 using CommandDotNet;
@@ -20,16 +21,25 @@ public class OrganizationArgs : IArgumentModel
     [Option('d', "domain", Description = "Email domain for users")]
     public string Domain { get; set; } = null!;
 
+    [Option("claimed-domain", Description = "Claimed (verified) domain to seed. Repeat to add multiple, e.g. --claimed-domain acme.example --claimed-domain hr.acme.example")]
+    public List<string>? ClaimedDomains { get; set; }
+
     [Option('c', "ciphers", Description = "Number of ciphers to create (default: 0, no vault data)")]
     public int? Ciphers { get; set; }
 
     [Option('g', "groups", Description = "Number of groups to create (default: 0, no groups)")]
     public int? Groups { get; set; }
 
+    [Option("collections", Description = "Number of collections to create (default: 0). Required for density profiles to be useful.")]
+    public int? Collections { get; set; }
+
+    [Option("density", Description = "Named density profile: balanced, highPerm, highCollection, broad, minimal, groupHeavy, or sparse")]
+    public string? Density { get; set; }
+
     [Option('m', "mix-user-statuses", Description = "Use realistic status mix (85% confirmed, 5% each invited/accepted/revoked). Requires >= 10 users.")]
     public bool MixStatuses { get; set; } = true;
 
-    [Option('o', "org-structure", Description = "Org structure for collections: Traditional, Spotify, or Modern")]
+    [Option('o', "org-structure", Description = "Org structure for collections: Traditional, Spotify, Modern, Government, SchoolDistrict, Healthcare, or Startup")]
     public string? Structure { get; set; }
 
     [Option('r', "region", Description = "Geographic region for names: NorthAmerica, Europe, AsiaPacific, LatinAmerica, MiddleEast, Africa, or Global")]
@@ -43,6 +53,24 @@ public class OrganizationArgs : IArgumentModel
 
     [Option("plan-type", Description = "Billing plan type: free, teams-monthly, teams-annually, enterprise-monthly, enterprise-annually, teams-starter, families-annually. Defaults to enterprise-annually.")]
     public string PlanType { get; set; } = "enterprise-annually";
+
+    [Option("kdf-iterations", Description = "KDF iteration count for all seeded users (default: 5000). Use 600000 for production-realistic e2e testing.")]
+    public int KdfIterations { get; set; } = 5_000;
+
+    [Option("auto-confirm-users", Description = "Automatically confirm invited users without manual approval")]
+    public bool? UseAutomaticUserConfirmation { get; set; }
+
+    [Option("allow-admin-collection-access", Description = "Allow admins/owners to access all collection items")]
+    public bool? AllowAdminAccessToAllCollectionItems { get; set; }
+
+    [Option("limit-item-deletion", Description = "Restrict item deletion to members with Can Manage permission")]
+    public bool? LimitItemDeletion { get; set; }
+
+    [Option("limit-collection-creation", Description = "Restrict collection creation to admins/owners")]
+    public bool? LimitCollectionCreation { get; set; }
+
+    [Option("limit-collection-deletion", Description = "Restrict collection deletion to admins/owners")]
+    public bool? LimitCollectionDeletion { get; set; }
 
     public void Validate()
     {
@@ -66,7 +94,17 @@ public class OrganizationArgs : IArgumentModel
             ParseGeographicRegion(Region);
         }
 
+        if (!string.IsNullOrEmpty(Density))
+        {
+            DensityProfiles.Parse(Density);
+        }
+
         PlanFeatures.Parse(PlanType);
+
+        if (KdfIterations < 5_000)
+        {
+            throw new ArgumentException("KDF iterations must be at least 5,000.");
+        }
     }
 
     public OrganizationVaultOptions ToOptions() => new()
@@ -76,11 +114,23 @@ public class OrganizationArgs : IArgumentModel
         Users = Users,
         Ciphers = Ciphers ?? 0,
         Groups = Groups ?? 0,
+        Collections = Collections ?? 0,
+        ClaimedDomains = ClaimedDomains ?? [],
         RealisticStatusMix = MixStatuses,
         StructureModel = ParseOrgStructure(Structure),
         Region = ParseGeographicRegion(Region),
+        Density = DensityProfiles.Parse(Density),
         Password = Password,
-        PlanType = PlanFeatures.Parse(PlanType)
+        PlanType = PlanFeatures.Parse(PlanType),
+        KdfIterations = KdfIterations,
+        Overrides = new()
+        {
+            UseAutomaticUserConfirmation = UseAutomaticUserConfirmation,
+            AllowAdminAccessToAllCollectionItems = AllowAdminAccessToAllCollectionItems,
+            LimitItemDeletion = LimitItemDeletion,
+            LimitCollectionCreation = LimitCollectionCreation,
+            LimitCollectionDeletion = LimitCollectionDeletion,
+        },
     };
 
     private static OrgStructureModel? ParseOrgStructure(string? structure)
@@ -95,7 +145,12 @@ public class OrganizationArgs : IArgumentModel
             "traditional" => OrgStructureModel.Traditional,
             "spotify" => OrgStructureModel.Spotify,
             "modern" => OrgStructureModel.Modern,
-            _ => throw new ArgumentException($"Unknown structure '{structure}'. Use: Traditional, Spotify, or Modern")
+            "government" => OrgStructureModel.Government,
+            "schooldistrict" => OrgStructureModel.SchoolDistrict,
+            "healthcare" => OrgStructureModel.Healthcare,
+            "startup" => OrgStructureModel.Startup,
+            _ => throw new ArgumentException(
+                $"Unknown structure '{structure}'. Use: Traditional, Spotify, Modern, Government, SchoolDistrict, Healthcare, or Startup")
         };
     }
 

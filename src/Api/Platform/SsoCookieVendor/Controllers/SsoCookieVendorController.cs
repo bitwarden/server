@@ -12,9 +12,10 @@ namespace Bit.Api.Platform.SsoCookieVendor;
 /// </summary>
 [Route("sso-cookie-vendor")]
 [SelfHosted(SelfHostedOnly = true)]
-public class SsoCookieVendorController(IGlobalSettings globalSettings) : Controller
+public class SsoCookieVendorController(IGlobalSettings globalSettings, ILogger<SsoCookieVendorController> logger) : Controller
 {
     private readonly IGlobalSettings _globalSettings = globalSettings;
+    private readonly ILogger<SsoCookieVendorController> _logger = logger;
     private const int _maxShardCount = 20;
     private const int _maxUriLength = 8192;
 
@@ -33,13 +34,15 @@ public class SsoCookieVendorController(IGlobalSettings globalSettings) : Control
         var bootstrap = _globalSettings.Communication?.Bootstrap;
         if (string.IsNullOrEmpty(bootstrap) || !bootstrap.Equals("ssoCookieVendor", StringComparison.OrdinalIgnoreCase))
         {
-            return NotFound();
+            _logger.LogWarning("SSO cookie vendor endpoint reached but bootstrap is not configured.");
+            return ResponseHTML(StatusCodes.Status404NotFound);
         }
 
         var cookieName = _globalSettings.Communication?.SsoCookieVendor?.CookieName;
         if (string.IsNullOrWhiteSpace(cookieName))
         {
-            return StatusCode(500, "SSO cookie vendor is not properly configured");
+            _logger.LogError("SSO cookie vendor is not properly configured: CookieName is missing.");
+            return ResponseHTML(StatusCodes.Status500InternalServerError);
         }
 
         var uri = string.Empty;
@@ -54,16 +57,33 @@ public class SsoCookieVendorController(IGlobalSettings globalSettings) : Control
 
         if (uri == string.Empty)
         {
-            return NotFound("No SSO cookies found");
+            _logger.LogWarning("No SSO cookies found.");
+            return ResponseHTML(StatusCodes.Status404NotFound);
         }
 
         if (uri.Length > _maxUriLength)
         {
-            return BadRequest();
+            _logger.LogError("Generated SSO redirect URI exceeds maximum length of {MaxUriLength}.", _maxUriLength);
+            return ResponseHTML(StatusCodes.Status400BadRequest);
         }
 
         return Redirect(uri);
     }
+
+    private static ContentResult ResponseHTML(int statusCode) => new()
+    {
+        StatusCode = statusCode,
+        ContentType = "text/html",
+        Content = $"""
+            <!DOCTYPE html>
+            <html lang="en">
+            <head><meta charset="utf-8"><title>Error</title></head>
+            <body>
+                <p>Error code {statusCode}. Please return to the Bitwarden app and try again.</p>
+            </body>
+            </html>
+            """
+    };
 
     private bool TryGetCookie(string cookieName, out Dictionary<string, string> cookie)
     {

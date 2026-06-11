@@ -1,19 +1,27 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+﻿using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.Identity;
 using NSubstitute;
+using OneOf;
 using Xunit;
 
 namespace Bit.Core.Test.Auth.UserFeatures.EmergencyAccess;
@@ -51,12 +59,34 @@ public class EmergencyAccessServiceTests
     }
 
     [Theory]
+    // Case 1: grantor and contact email are identical
+    // Case 2: grantor and contact email match case-insensitively
+    [BitAutoData("test@example.com", "test@example.com")]
+    [BitAutoData("test@example.com", "TEST@EXAMPLE.COM")]
+    public async Task InviteAsync_GrantorInvitesSelf_ThrowsBadRequest(
+        string grantorEmail, string contactEmail, SutProvider<EmergencyAccessService> sutProvider, User invitingUser, int waitTime)
+    {
+        invitingUser.Email = grantorEmail;
+        sutProvider.GetDependency<IUserService>().CanAccessPremium(invitingUser).Returns(true);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.InviteAsync(invitingUser, contactEmail, EmergencyAccessType.View, waitTime));
+
+        Assert.Contains("You cannot add yourself as an emergency access contact.", exception.Message);
+        await sutProvider.GetDependency<IEmergencyAccessRepository>()
+                        .DidNotReceiveWithAnyArgs().CreateAsync(default);
+    }
+
+    [Theory]
     [BitAutoData(EmergencyAccessType.Takeover)]
     [BitAutoData(EmergencyAccessType.View)]
     public async Task InviteAsync_ReturnsEmergencyAccessObject(
         EmergencyAccessType accessType, SutProvider<EmergencyAccessService> sutProvider, User invitingUser, string email, int waitTime)
     {
         sutProvider.GetDependency<IUserService>().CanAccessPremium(invitingUser).Returns(true);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(invitingUser.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
         var result = await sutProvider.Sut.InviteAsync(invitingUser, email, accessType, waitTime);
 
@@ -74,6 +104,41 @@ public class EmergencyAccessServiceTests
         await sutProvider.GetDependency<IMailService>()
                          .Received(1)
                          .SendEmergencyAccessInviteEmailAsync(Arg.Any<Core.Auth.Entities.EmergencyAccess>(), Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task InviteAsync_GrantorInAutoConfirmOrg_ThrowsBadRequest(
+        SutProvider<EmergencyAccessService> sutProvider, User invitingUser, string email, int waitTime)
+    {
+        sutProvider.GetDependency<IUserService>().CanAccessPremium(invitingUser).Returns(true);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(invitingUser.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([
+                new PolicyDetails { OrganizationUserStatus = OrganizationUserStatusType.Confirmed }
+            ]));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.InviteAsync(invitingUser, email, EmergencyAccessType.Takeover, waitTime));
+
+        Assert.Contains("You cannot invite emergency contacts because you are a member of an organization that uses Automatic User Confirmation.", exception.Message);
+        await sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .DidNotReceiveWithAnyArgs().CreateAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task InviteAsync_FeatureFlagEnabled_GrantorNotInAutoConfirmOrg_Succeeds(
+        SutProvider<EmergencyAccessService> sutProvider, User invitingUser, string email, int waitTime)
+    {
+        sutProvider.GetDependency<IUserService>().CanAccessPremium(invitingUser).Returns(true);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(invitingUser.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+
+        var result = await sutProvider.Sut.InviteAsync(invitingUser, email, EmergencyAccessType.Takeover, waitTime);
+
+        Assert.NotNull(result);
+        await sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .Received(1).CreateAsync(Arg.Any<Core.Auth.Entities.EmergencyAccess>());
     }
 
     [Theory, BitAutoData]
@@ -253,6 +318,41 @@ public class EmergencyAccessServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task AcceptUserAsync_TokenExpired_ThrowsBadRequest(
+        SutProvider<EmergencyAccessService> sutProvider,
+        User acceptingUser,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
+        string token)
+    {
+        emergencyAccess.Status = EmergencyAccessStatusType.Invited;
+        emergencyAccess.Email = acceptingUser.Email;
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+                .GetByIdAsync(Arg.Any<Guid>())
+                .Returns(emergencyAccess);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<EmergencyAccessInviteTokenable>>()
+            .TryUnprotect(token, out Arg.Any<EmergencyAccessInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                // Tokenable that would pass IsValid(id, email) but is past
+                // its expiration window.
+                callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, -1);
+                return true;
+            });
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<Guid>())
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AcceptUserAsync(emergencyAccess.Id, acceptingUser, token, sutProvider.GetDependency<IUserService>()));
+
+        Assert.Contains("Invalid token.", exception.Message);
+        await sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .DidNotReceiveWithAnyArgs().ReplaceAsync(default);
+    }
+
+    [Theory, BitAutoData]
     public async Task AcceptUserAsync_AcceptedStatus_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
         User acceptingUser,
@@ -272,6 +372,10 @@ public class EmergencyAccessServiceTests
                 callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, 1);
                 return true;
             });
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<Guid>())
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.AcceptUserAsync(emergencyAccess.Id, acceptingUser, token, sutProvider.GetDependency<IUserService>()));
@@ -299,6 +403,10 @@ public class EmergencyAccessServiceTests
                 callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, 1);
                 return true;
             });
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<Guid>())
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.AcceptUserAsync(emergencyAccess.Id, acceptingUser, token, sutProvider.GetDependency<IUserService>()));
@@ -334,6 +442,73 @@ public class EmergencyAccessServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task AcceptUserAsync_GranteeInAutoConfirmOrg_ThrowsBadRequest(
+        SutProvider<EmergencyAccessService> sutProvider,
+        User acceptingUser,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
+        string token)
+    {
+        emergencyAccess.Status = EmergencyAccessStatusType.Invited;
+        emergencyAccess.Email = acceptingUser.Email;
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(emergencyAccess);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<EmergencyAccessInviteTokenable>>()
+            .TryUnprotect(token, out Arg.Any<EmergencyAccessInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, 1);
+                return true;
+            });
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(acceptingUser.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([
+                new PolicyDetails { OrganizationUserStatus = OrganizationUserStatusType.Confirmed }
+            ]));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AcceptUserAsync(emergencyAccess.Id, acceptingUser, token, sutProvider.GetDependency<IUserService>()));
+
+        Assert.Contains("You cannot accept emergency access invitations because you are a member of an organization that uses Automatic User Confirmation.", exception.Message);
+        await sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .DidNotReceiveWithAnyArgs().ReplaceAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AcceptUserAsync_FeatureFlagEnabled_GranteeNotInAutoConfirmOrg_Succeeds(
+        SutProvider<EmergencyAccessService> sutProvider,
+        User acceptingUser,
+        User invitingUser,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
+        string token)
+    {
+        emergencyAccess.Status = EmergencyAccessStatusType.Invited;
+        emergencyAccess.Email = acceptingUser.Email;
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(emergencyAccess);
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(Arg.Any<Guid>())
+            .Returns(invitingUser);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<EmergencyAccessInviteTokenable>>()
+            .TryUnprotect(token, out Arg.Any<EmergencyAccessInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, 1);
+                return true;
+            });
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(acceptingUser.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+
+        await sutProvider.Sut.AcceptUserAsync(emergencyAccess.Id, acceptingUser, token, sutProvider.GetDependency<IUserService>());
+
+        await sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<Core.Auth.Entities.EmergencyAccess>(x => x.Status == EmergencyAccessStatusType.Accepted));
+    }
+
+    [Theory, BitAutoData]
     public async Task AcceptUserAsync_ReplaceEmergencyAccess_SendsEmail_Success(
         SutProvider<EmergencyAccessService> sutProvider,
         User acceptingUser,
@@ -358,6 +533,10 @@ public class EmergencyAccessServiceTests
                 callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, 1);
                 return true;
             });
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(acceptingUser.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
         await sutProvider.Sut.AcceptUserAsync(emergencyAccess.Id, acceptingUser, token, sutProvider.GetDependency<IUserService>());
 
@@ -1531,5 +1710,292 @@ public class EmergencyAccessServiceTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.GetAttachmentDownloadAsync(emergencyAccess.Id, default, default, granteeUser));
+    }
+
+    private static MasterPasswordUnlockData BuildUnlockData() => new()
+    {
+        Kdf = new KdfSettings { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600000 },
+        MasterKeyWrappedUserKey = "wrapped-key",
+        Salt = "salt"
+    };
+
+    private static MasterPasswordAuthenticationData BuildAuthData() => new()
+    {
+        Kdf = new KdfSettings { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600000 },
+        MasterPasswordAuthenticationHash = "auth-hash",
+        Salt = "salt"
+    };
+
+    [Theory, BitAutoData]
+    public async Task FinishRecoveryTakeoverAsync_RequestNotValid_EmergencyAccessIsNull_ThrowsBadRequest(
+        SutProvider<EmergencyAccessService> sutProvider)
+    {
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns((Core.Auth.Entities.EmergencyAccess)null);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.FinishRecoveryTakeoverAsync(default, default, BuildUnlockData(), BuildAuthData()));
+
+        Assert.Contains("Emergency Access not valid.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task FinishRecoveryTakeoverAsync_RequestNotValid_GranteeNotEqualToRequestingUser_ThrowsBadRequest(
+        SutProvider<EmergencyAccessService> sutProvider,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
+        User granteeUser)
+    {
+        emergencyAccess.Status = EmergencyAccessStatusType.RecoveryApproved;
+        emergencyAccess.Type = EmergencyAccessType.Takeover;
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(emergencyAccess);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.FinishRecoveryTakeoverAsync(emergencyAccess.Id, granteeUser, BuildUnlockData(), BuildAuthData()));
+
+        Assert.Contains("Emergency Access not valid.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(EmergencyAccessStatusType.Invited)]
+    [BitAutoData(EmergencyAccessStatusType.Accepted)]
+    [BitAutoData(EmergencyAccessStatusType.Confirmed)]
+    [BitAutoData(EmergencyAccessStatusType.RecoveryInitiated)]
+    public async Task FinishRecoveryTakeoverAsync_RequestNotValid_StatusType_ThrowsBadRequest(
+        EmergencyAccessStatusType statusType,
+        SutProvider<EmergencyAccessService> sutProvider,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
+        User granteeUser)
+    {
+        emergencyAccess.GranteeId = granteeUser.Id;
+        emergencyAccess.Status = statusType;
+        emergencyAccess.Type = EmergencyAccessType.Takeover;
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(emergencyAccess);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.FinishRecoveryTakeoverAsync(emergencyAccess.Id, granteeUser, BuildUnlockData(), BuildAuthData()));
+
+        Assert.Contains("Emergency Access not valid.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task FinishRecoveryTakeoverAsync_RequestNotValid_TypeIsView_ThrowsBadRequest(
+        SutProvider<EmergencyAccessService> sutProvider,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
+        User granteeUser)
+    {
+        emergencyAccess.GranteeId = granteeUser.Id;
+        emergencyAccess.Status = EmergencyAccessStatusType.RecoveryApproved;
+        emergencyAccess.Type = EmergencyAccessType.View;
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(emergencyAccess);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.FinishRecoveryTakeoverAsync(emergencyAccess.Id, granteeUser, BuildUnlockData(), BuildAuthData()));
+
+        Assert.Contains("Emergency Access not valid.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task FinishRecoveryTakeoverAsync_GrantorNotFound_ThrowsBadRequest(
+        SutProvider<EmergencyAccessService> sutProvider,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
+        User granteeUser)
+    {
+        emergencyAccess.GranteeId = granteeUser.Id;
+        emergencyAccess.Status = EmergencyAccessStatusType.RecoveryApproved;
+        emergencyAccess.Type = EmergencyAccessType.Takeover;
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(emergencyAccess);
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(emergencyAccess.GrantorId)
+            .Returns((User)null);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.FinishRecoveryTakeoverAsync(emergencyAccess.Id, granteeUser, BuildUnlockData(), BuildAuthData()));
+
+        Assert.Contains("Grantor not found", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task FinishRecoveryTakeoverAsync_MasterPasswordServiceReturnsErrors_ReturnsFailedIdentityResult(
+        SutProvider<EmergencyAccessService> sutProvider,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
+        User granteeUser,
+        User grantorUser)
+    {
+        emergencyAccess.GranteeId = granteeUser.Id;
+        emergencyAccess.GrantorId = grantorUser.Id;
+        emergencyAccess.Status = EmergencyAccessStatusType.RecoveryApproved;
+        emergencyAccess.Type = EmergencyAccessType.Takeover;
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(emergencyAccess);
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(emergencyAccess.GrantorId)
+            .Returns(grantorUser);
+
+        var identityErrors = new[] { new IdentityError { Code = "TestError", Description = "Test failure" } };
+        sutProvider.GetDependency<IMasterPasswordService>()
+            .PrepareSetInitialOrUpdateExistingMasterPasswordAsync(grantorUser, Arg.Any<SetInitialOrUpdateExistingPasswordData>())
+            .Returns(OneOf<User, IdentityError[]>.FromT1(identityErrors));
+
+        var result = await sutProvider.Sut.FinishRecoveryTakeoverAsync(emergencyAccess.Id, granteeUser, BuildUnlockData(), BuildAuthData());
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Errors, e => e.Code == "TestError");
+        await sutProvider.GetDependency<IUserRepository>().DidNotReceive().ReplaceAsync(Arg.Any<User>());
+        await sutProvider.GetDependency<IRemoveOrganizationUserCommand>().DidNotReceiveWithAnyArgs()
+            .RemoveUserAsync(default, default(Guid));
+    }
+
+    [Theory, BitAutoData]
+    public async Task FinishRecoveryTakeoverAsync_NonOrgUser_Success(
+        SutProvider<EmergencyAccessService> sutProvider,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
+        User granteeUser,
+        User grantorUser)
+    {
+        emergencyAccess.GranteeId = granteeUser.Id;
+        emergencyAccess.GrantorId = grantorUser.Id;
+        emergencyAccess.Status = EmergencyAccessStatusType.RecoveryApproved;
+        emergencyAccess.Type = EmergencyAccessType.Takeover;
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(emergencyAccess);
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(emergencyAccess.GrantorId)
+            .Returns(grantorUser);
+        sutProvider.GetDependency<IMasterPasswordService>()
+            .PrepareSetInitialOrUpdateExistingMasterPasswordAsync(grantorUser, Arg.Any<SetInitialOrUpdateExistingPasswordData>())
+            .Returns(OneOf<User, IdentityError[]>.FromT0(grantorUser));
+
+        var result = await sutProvider.Sut.FinishRecoveryTakeoverAsync(emergencyAccess.Id, granteeUser, BuildUnlockData(), BuildAuthData());
+
+        Assert.True(result.Succeeded);
+        await sutProvider.GetDependency<IUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<User>(u => u.VerifyDevices == false));
+        await sutProvider.GetDependency<IRemoveOrganizationUserCommand>().DidNotReceiveWithAnyArgs()
+            .RemoveUserAsync(default, default(Guid));
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task FinishRecoveryTakeoverAsync_OrgUser_NotOrganizationOwner_RemovedFromOrganization_Success(
+        OrganizationUserType userType,
+        SutProvider<EmergencyAccessService> sutProvider,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
+        User granteeUser,
+        User grantorUser,
+        OrganizationUser organizationUser)
+    {
+        emergencyAccess.GranteeId = granteeUser.Id;
+        emergencyAccess.GrantorId = grantorUser.Id;
+        emergencyAccess.Status = EmergencyAccessStatusType.RecoveryApproved;
+        emergencyAccess.Type = EmergencyAccessType.Takeover;
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(emergencyAccess);
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(emergencyAccess.GrantorId)
+            .Returns(grantorUser);
+        sutProvider.GetDependency<IMasterPasswordService>()
+            .PrepareSetInitialOrUpdateExistingMasterPasswordAsync(grantorUser, Arg.Any<SetInitialOrUpdateExistingPasswordData>())
+            .Returns(OneOf<User, IdentityError[]>.FromT0(grantorUser));
+
+        organizationUser.UserId = grantorUser.Id;
+        organizationUser.Type = userType;
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(grantorUser.Id)
+            .Returns([organizationUser]);
+
+        var result = await sutProvider.Sut.FinishRecoveryTakeoverAsync(emergencyAccess.Id, granteeUser, BuildUnlockData(), BuildAuthData());
+
+        Assert.True(result.Succeeded);
+        await sutProvider.GetDependency<IRemoveOrganizationUserCommand>()
+            .Received(1)
+            .RemoveUserAsync(organizationUser.OrganizationId, organizationUser.UserId.Value);
+    }
+
+    [Theory, BitAutoData]
+    public async Task FinishRecoveryTakeoverAsync_OrgUser_IsOrganizationOwner_NotRemovedFromOrganization_Success(
+        SutProvider<EmergencyAccessService> sutProvider,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
+        User granteeUser,
+        User grantorUser,
+        OrganizationUser organizationUser)
+    {
+        emergencyAccess.GranteeId = granteeUser.Id;
+        emergencyAccess.GrantorId = grantorUser.Id;
+        emergencyAccess.Status = EmergencyAccessStatusType.RecoveryApproved;
+        emergencyAccess.Type = EmergencyAccessType.Takeover;
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(emergencyAccess);
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(emergencyAccess.GrantorId)
+            .Returns(grantorUser);
+        sutProvider.GetDependency<IMasterPasswordService>()
+            .PrepareSetInitialOrUpdateExistingMasterPasswordAsync(grantorUser, Arg.Any<SetInitialOrUpdateExistingPasswordData>())
+            .Returns(OneOf<User, IdentityError[]>.FromT0(grantorUser));
+
+        organizationUser.UserId = grantorUser.Id;
+        organizationUser.Type = OrganizationUserType.Owner;
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(grantorUser.Id)
+            .Returns([organizationUser]);
+
+        var result = await sutProvider.Sut.FinishRecoveryTakeoverAsync(emergencyAccess.Id, granteeUser, BuildUnlockData(), BuildAuthData());
+
+        Assert.True(result.Succeeded);
+        await sutProvider.GetDependency<IRemoveOrganizationUserCommand>()
+            .Received(0)
+            .RemoveUserAsync(organizationUser.OrganizationId, organizationUser.UserId.Value);
+    }
+
+    [Theory, BitAutoData]
+    public async Task FinishRecoveryTakeoverAsync_Disables_NewDeviceVerification_And_TwoFactorProviders_On_The_Grantor(
+        SutProvider<EmergencyAccessService> sutProvider, User granteeUser, User grantor)
+    {
+        grantor.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+        {
+            [TwoFactorProviderType.Email] = new TwoFactorProvider
+            {
+                MetaData = new Dictionary<string, object> { ["Email"] = "asdfasf" },
+                Enabled = true
+            }
+        });
+        var emergencyAccess = new Core.Auth.Entities.EmergencyAccess
+        {
+            GrantorId = grantor.Id,
+            GranteeId = granteeUser.Id,
+            Status = EmergencyAccessStatusType.RecoveryApproved,
+            Type = EmergencyAccessType.Takeover,
+        };
+
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(emergencyAccess);
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(grantor.Id)
+            .Returns(grantor);
+        sutProvider.GetDependency<IMasterPasswordService>()
+            .PrepareSetInitialOrUpdateExistingMasterPasswordAsync(grantor, Arg.Any<SetInitialOrUpdateExistingPasswordData>())
+            .Returns(OneOf<User, IdentityError[]>.FromT0(grantor));
+
+        await sutProvider.Sut.FinishRecoveryTakeoverAsync(Guid.NewGuid(), granteeUser, BuildUnlockData(), BuildAuthData());
+
+        Assert.Empty(grantor.GetTwoFactorProviders());
+        Assert.False(grantor.VerifyDevices);
+        await sutProvider.GetDependency<IUserRepository>().Received().ReplaceAsync(grantor);
     }
 }

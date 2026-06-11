@@ -25,9 +25,19 @@ internal static class SeederContextExtensions
 
     internal static string GetPassword(this SeederContext context) =>
         context.GetSettings().Password ?? Factories.UserSeeder.DefaultPassword;
+
+    internal static int GetKdfIterations(this SeederContext context) =>
+        context.GetSettings().KdfIterations;
+
+    /// <summary>
+    /// Resolves the optional progress reporter. Returns null when no UI is attached.
+    /// Callers should null-check before constructing events to keep the no-reporter path allocation-free.
+    /// </summary>
+    internal static IProgress<SeederProgressEvent>? GetProgress(this SeederContext context) =>
+        context.Services.GetService<IProgress<SeederProgressEvent>>();
 }
 
 /// <summary>
 /// Runtime settings for a seeding operation, registered in DI.
 /// </summary>
-internal sealed record SeederSettings(string? Password = null);
+internal sealed record SeederSettings(string? Password = null, int KdfIterations = 5_000);

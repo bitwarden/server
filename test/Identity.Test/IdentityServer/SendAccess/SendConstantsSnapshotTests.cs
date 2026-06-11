@@ -50,8 +50,6 @@ public class SendConstantsSnapshotTests
         // Assert
         Assert.Equal("email_required", SendAccessConstants.EmailOtpValidatorResults.EmailRequired);
         Assert.Equal("email_and_otp_required", SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired);
-        Assert.Equal("otp_invalid", SendAccessConstants.EmailOtpValidatorResults.EmailOtpInvalid);
-        Assert.Equal("otp_generation_failed", SendAccessConstants.EmailOtpValidatorResults.OtpGenerationFailed);
     }
 
     [Fact]

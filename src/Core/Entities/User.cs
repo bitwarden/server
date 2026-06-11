@@ -3,6 +3,7 @@ using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Utilities;
 using Bit.Core.Utilities;
@@ -90,7 +91,7 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     [MaxLength(30)]
     public string ApiKey { get; set; } = null!;
     public KdfType Kdf { get; set; } = KdfType.PBKDF2_SHA256;
-    public int KdfIterations { get; set; } = AuthConstants.PBKDF2_ITERATIONS.Default;
+    public int KdfIterations { get; set; } = KdfConstants.PBKDF2_ITERATIONS.Default;
     public int? KdfMemory { get; set; }
     public int? KdfParallelism { get; set; }
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
@@ -113,10 +114,11 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public string? V2UpgradeToken { get; set; }
     [MaxLength(256)]
     public string? MasterPasswordSalt { get; set; }
+    public DateTime? LastApiKeyRotationDate { get; set; }
 
     public string GetMasterPasswordSalt()
     {
-        return Email.ToLowerInvariant().Trim();
+        return MasterPasswordSalt ?? Email.ToLowerInvariant().Trim();
     }
 
     public void SetNewId()

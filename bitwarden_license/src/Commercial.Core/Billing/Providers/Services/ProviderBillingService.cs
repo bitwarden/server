@@ -19,6 +19,7 @@ using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -34,15 +35,16 @@ using Subscription = Stripe.Subscription;
 
 namespace Bit.Commercial.Core.Billing.Providers.Services;
 
-using static Constants;
 using static StripeConstants;
 
 public class ProviderBillingService(
     IBraintreeGateway braintreeGateway,
     IEventService eventService,
+    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
+    IPriceIncreaseScheduler priceIncreaseScheduler,
     IPricingClient pricingClient,
     IProviderInvoiceItemRepository providerInvoiceItemRepository,
     IProviderOrganizationRepository providerOrganizationRepository,
@@ -57,6 +59,11 @@ public class ProviderBillingService(
         Organization organization,
         string key)
     {
+        await priceIncreaseScheduler.Release(
+            organization.GatewayCustomerId,
+            organization.GatewaySubscriptionId,
+            organization.Id);
+
         await stripeAdapter.UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             new SubscriptionUpdateOptions { CancelAtPeriodEnd = false });
 
@@ -91,7 +98,7 @@ public class ProviderBillingService(
         organization.MaxCollections = plan.PasswordManager.MaxCollections;
         organization.MaxStorageGb = plan.PasswordManager.BaseStorageGb;
         organization.UsePolicies = plan.HasPolicies;
-        organization.UseMyItems = plan.HasPolicies; // TODO: use the plan property when added (PM-32366)
+        organization.UseMyItems = plan.HasMyItems;
         organization.UseSso = plan.HasSso;
         organization.UseOrganizationDomains = plan.HasOrganizationDomains;
         organization.UseGroups = plan.HasGroups;
@@ -267,9 +274,15 @@ public class ProviderBillingService(
                 ]
         };
 
-        if (providerCustomer.Address is not { Country: CountryAbbreviations.UnitedStates })
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
         {
-            customerCreateOptions.TaxExempt = TaxExempt.Reverse;
+            var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(providerCustomer.Address?.Country, providerCustomer.TaxExempt);
+            customerCreateOptions.TaxExempt = providerCustomer switch
+            {
+                { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus } when
+                    determinedTaxExemptStatus != customerTaxExemptStatus => determinedTaxExemptStatus,
+                _ => providerCustomer.TaxExempt
+            };
         }
 
         var customer = await stripeAdapter.CreateCustomerAsync(customerCreateOptions);
@@ -493,9 +506,13 @@ public class ProviderBillingService(
                     }
                 ]
             },
-            Metadata = new Dictionary<string, string> { { "region", globalSettings.BaseServiceUri.CloudRegion } },
-            TaxExempt = billingAddress.Country != CountryAbbreviations.UnitedStates ? TaxExempt.Reverse : TaxExempt.None
+            Metadata = new Dictionary<string, string> { { "region", globalSettings.BaseServiceUri.CloudRegion } }
         };
+
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
+        {
+            options.TaxExempt = TaxHelpers.DetermineTaxExemptStatus(billingAddress.Country);
+        }
 
         if (billingAddress.TaxId != null)
         {

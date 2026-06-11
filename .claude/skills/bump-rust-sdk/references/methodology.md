@@ -8,9 +8,6 @@
 grep 'rev = ' util/RustSdk/rust/Cargo.toml
 ```
 
-All three crates (`bitwarden-core`, `bitwarden-crypto`, `bitwarden-vault`) must always pin to
-the **same rev**. If they don't, something is wrong.
-
 ### 2. Identify the Target Version from Clients
 
 Determine the latest production release tag from the clients repo:
@@ -62,35 +59,32 @@ This shows when the current pin was made and what commit it corresponds to.
 
 ### 5. Analyze Breaking Changes
 
-List all commits touching the three crates between the old and new revs:
+List all commits touching `bitwarden-crypto` between the old and new revs:
 
 ```bash
 cd /path/to/sdk-internal
-git log --oneline <old-rev>..<new-rev> -- \
-  crates/bitwarden-core crates/bitwarden-crypto crates/bitwarden-vault
+git log --oneline <old-rev>..<new-rev> -- crates/bitwarden-crypto
 ```
 
 For each commit, check for:
 
 - **Type renames** (e.g., `AsymmetricCryptoKey` -> `PrivateKey`)
-- **New required struct fields** (e.g., new `Option<T>` fields on `CipherView`)
 - **Removed or deprecated functions** (look for `#[deprecated]` annotations)
 - **Changed function signatures** (parameter types, return types)
 - **Trait changes** (new required methods, changed generic bounds)
 
-To check the public API diff for a specific crate:
+To check the public API diff:
 
 ```bash
 git diff <old-rev>..<new-rev> -- crates/bitwarden-crypto/src/keys/mod.rs
 git diff <old-rev>..<new-rev> -- crates/bitwarden-crypto/src/lib.rs
-git diff <old-rev>..<new-rev> -- crates/bitwarden-vault/src/cipher/cipher.rs
 ```
 
 Cross-reference findings against `references/api-surface.md` to assess impact.
 
 ### 6. Apply Code Changes
 
-1. **Cargo.toml** — Update all three `rev = "..."` to the new SHA
+1. **Cargo.toml** — Update the `bitwarden-crypto` `rev = "..."` to the new SHA
 2. **Rust source files** — Fix compilation errors from breaking changes
 3. **Deprecation warnings** — Add `#[allow(deprecated)]` with a comment explaining why
 4. Do NOT make unrelated formatting or style changes
@@ -119,8 +113,8 @@ dotnet test test/SeederApi.IntegrationTest/
 cargo fmt --check
 ```
 
-**Key validation:** The `encrypt_decrypt_roundtrip_preserves_plaintext` test proves the new SDK
-version correctly encrypts and decrypts Vault Data. If this passes, the crypto is working.
+**Key validation:** The `encrypt_string_decrypt_string_roundtrip` test proves the new SDK
+version correctly encrypts and decrypts data. If this passes, the crypto is working.
 
 ### 8. Human Verification (HUMAN ONLY — Claude does NOT run these)
 
@@ -183,13 +177,12 @@ This section documents the actual bump performed in Feb 2026 as a reference.
 
 ### Breaking Changes Found
 
-| Change                                                    | Impact                                   | Fix                                        |
-| --------------------------------------------------------- | ---------------------------------------- | ------------------------------------------ |
-| `AsymmetricCryptoKey` renamed to `PrivateKey`             | Import + usage in lib.rs                 | Rename type                                |
-| `AsymmetricPublicCryptoKey` renamed to `PublicKey`        | Import + usage in lib.rs                 | Rename type                                |
-| `CipherView` added `attachment_decryption_failures` field | Test struct literal in cipher.rs         | Add `attachment_decryption_failures: None` |
-| `PrivateKey::to_der()` returns `Pkcs8PrivateKeyBytes`     | Low risk — auto-refs to `KeyEncryptable` | No code change needed                      |
-| `encapsulate_key_unsigned` deprecated                     | Deprecation warning                      | `#[allow(deprecated)]` + comment           |
+| Change                                                | Impact                           | Fix                                      |
+| ----------------------------------------------------- | -------------------------------- | ---------------------------------------- |
+| `AsymmetricCryptoKey` renamed to `PrivateKey`          | Import + usage in lib.rs         | Rename type                              |
+| `AsymmetricPublicCryptoKey` renamed to `PublicKey`     | Import + usage in lib.rs         | Rename type                              |
+| `PrivateKey::to_der()` returns `Pkcs8PrivateKeyBytes` | Low risk — auto-refs             | No code change needed                    |
+| `encapsulate_key_unsigned` deprecated                  | Deprecation warning              | `#[allow(deprecated)]` + comment         |
 
 ### Cargo.lock Review
 
@@ -200,7 +193,7 @@ This section documents the actual bump performed in Feb 2026 as a reference.
 
 ### Results
 
-- 7/7 Rust unit tests passed
-- 65/65 C# integration tests passed
+- All Rust unit tests passed
+- All C# integration tests passed
 - NativeMethods.g.cs unchanged
 - Human verification: login, vault decryption, seeding all confirmed working

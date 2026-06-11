@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Bit.Seeder.Models;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Seeder.Pipeline;
 
@@ -26,7 +27,7 @@ internal sealed class RecipeExecutor
     /// <remarks>
     /// Clears the EntityRegistry at the start to ensure a clean slate for each run.
     /// </remarks>
-    internal ExecutionResult Execute()
+    internal PipelineExecutionResult Execute()
     {
         var steps = _serviceProvider.GetKeyedServices<IStep>(_recipeName)
             .OrderBy(s => s is OrderedStep os ? os.Order : int.MaxValue)
@@ -41,15 +42,31 @@ internal sealed class RecipeExecutor
         }
 
         // Capture counts BEFORE committing (commit clears the lists)
-        var result = new ExecutionResult(
-            context.RequireOrgId(),
+        var result = new PipelineExecutionResult(
+            context.Organization?.Id,
+            context.Owner?.Id,
             context.Owner?.Email,
+            context.Owner?.ApiKey,
+            context.OrganizationApiKey?.ApiKey,
+            context.GetPassword(),
+            context.Owner?.Premium ?? false,
             context.Users.Count,
             context.Groups.Count,
             context.Collections.Count,
-            context.Ciphers.Count);
+            context.Ciphers.Count,
+            context.Folders.Count);
 
-        _committer.Commit(context);
+        var progress = context.GetProgress();
+        progress?.Report(new PhaseStarted(SeederPhases.CommittingToDatabase, null));
+        try
+        {
+            _committer.Commit(context);
+        }
+        finally
+        {
+            progress?.Report(new PhaseCompleted(SeederPhases.CommittingToDatabase));
+        }
+
         return result;
     }
 }

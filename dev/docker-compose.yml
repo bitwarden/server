@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   mssql:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    image: mcr.microsoft.com/mssql/server:2025-latest
     platform: linux/amd64
     environment:
       ACCEPT_EULA: "Y"
@@ -72,7 +72,7 @@ services:
       - ef
 
   mariadb:
-    image: mariadb:10
+    image: mariadb:12
     ports:
       - 4306:3306
     environment:

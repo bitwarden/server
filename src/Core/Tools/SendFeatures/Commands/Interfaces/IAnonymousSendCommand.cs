@@ -17,5 +17,5 @@ public interface IAnonymousSendCommand
     /// <returns>Async Task object with Tuple containing the string of download url and <see cref="SendAccessResult" />
     /// to determine if the user can access send.
     /// </returns>
-    Task<(string, SendAccessResult)> GetSendFileDownloadUrlAsync(Send send, string fileId, string password);
+    Task<(string?, SendAccessResult)> GetSendFileDownloadUrlAsync(Send send, string fileId, string? password);
 }

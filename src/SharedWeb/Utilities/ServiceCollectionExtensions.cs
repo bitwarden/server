@@ -21,12 +21,16 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Services.Implementations;
 using Bit.Core.Auth.UserFeatures;
+using Bit.Core.Auth.UserFeatures.Devices;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess;
 using Bit.Core.Auth.UserFeatures.PasswordValidation;
+using Bit.Core.Billing.Providers.Services;
+using Bit.Core.Billing.Providers.Services.NoopImplementations;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Billing.TrialInitiation;
 using Bit.Core.Dirt.Reports.ReportFeatures;
+using Bit.Core.Dirt.Reports.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.HostedServices;
@@ -164,6 +168,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEventService, EventService>();
         services.AddScoped<IEmergencyAccessService, EmergencyAccessService>();
         services.AddSingleton<IDeviceService, DeviceService>();
+        services.AddDeviceServices();
         services.AddScoped<ISsoConfigService, SsoConfigService>();
         services.AddScoped<IAuthRequestService, AuthRequestService>();
         services.AddScoped<IDuoUniversalTokenService, DuoUniversalTokenService>();
@@ -291,8 +296,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDnsResolverService, DnsResolverService>();
         services.AddOptionality();
         services.AddTokenizers();
-
         services.AddScoped<IApplicationCacheService, FeatureRoutedCacheService>();
+        services.AddOrganizationAbilityCache(globalSettings);
+        services.AddProviderAbilityCache(globalSettings);
 
         if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
             CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
@@ -361,6 +367,19 @@ public static class ServiceCollectionExtensions
         {
             services.AddSingleton<ISendFileStorageService, NoopSendFileStorageService>();
         }
+
+        if (CoreHelpers.SettingHasValue(globalSettings.OrganizationReport.ConnectionString))
+        {
+            services.AddSingleton<IOrganizationReportStorageService, AzureOrganizationReportStorageService>();
+        }
+        else if (CoreHelpers.SettingHasValue(globalSettings.OrganizationReport.BaseDirectory))
+        {
+            services.AddSingleton<IOrganizationReportStorageService, LocalOrganizationReportStorageService>();
+        }
+        else
+        {
+            services.AddSingleton<IOrganizationReportStorageService, NoopOrganizationReportStorageService>();
+        }
     }
 
     public static void AddOosServices(this IServiceCollection services)
@@ -370,6 +389,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISecretRepository, NoopSecretRepository>();
         services.AddScoped<ISecretVersionRepository, NoopSecretVersionRepository>();
         services.AddScoped<IProjectRepository, NoopProjectRepository>();
+        services.AddTransient<IBusinessUnitConverter, NoopBusinessUnitConverter>();
     }
 
     public static void AddNoopServices(this IServiceCollection services)
@@ -475,10 +495,6 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services, IWebHostEnvironment env, GlobalSettings globalSettings)
     {
         var builder = services.AddDataProtection().SetApplicationName("Bitwarden");
-        if (env.IsDevelopment())
-        {
-            return;
-        }
 
         if (globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.DataProtection.Directory))
         {
@@ -495,13 +511,34 @@ public static class ServiceCollectionExtensions
             }
             else if (CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificatePassword))
             {
-                dataProtectionCert = CoreHelpers.GetBlobCertificateAsync(globalSettings.Storage.ConnectionString, "certificates",
-                    "dataprotection.pfx", globalSettings.DataProtection.CertificatePassword)
+                dataProtectionCert = CoreHelpers.GetBlobCertificateAsync(
+                    globalSettings.Storage.ConnectionString,
+                    "certificates",
+                    globalSettings.DataProtection.BlobName,
+                    globalSettings.DataProtection.CertificatePassword)
                     .GetAwaiter().GetResult();
             }
-            builder
-                .PersistKeysToAzureBlobStorage(globalSettings.Storage.ConnectionString, "aspnet-dataprotection", "keys.xml")
-                .ProtectKeysWithCertificate(dataProtectionCert);
+
+            if (!env.IsDevelopment())
+            {
+                builder
+                    .PersistKeysToAzureBlobStorage(globalSettings.Storage.ConnectionString, "aspnet-dataprotection", "keys.xml")
+                    .ProtectKeysWithCertificate(dataProtectionCert);
+
+                if (globalSettings.DataProtection.UnprotectCertificates.Length > 0)
+                {
+                    var unprotectCertificates = Task.WhenAll(globalSettings.DataProtection.UnprotectCertificates
+                        .Select(ci => CoreHelpers.GetBlobCertificateAsync(
+                            globalSettings.Storage.ConnectionString,
+                            "certificates",
+                            ci.FileName,
+                            ci.Password
+                        ))
+                    ).GetAwaiter().GetResult();
+
+                    builder.UnprotectKeysWithAnyCertificate(unprotectCertificates);
+                }
+            }
         }
     }
 
@@ -597,14 +634,14 @@ public static class ServiceCollectionExtensions
             var proxyNetworks = globalSettings.KnownNetworks.Split(',');
             foreach (var proxyNetwork in proxyNetworks)
             {
-                if (Microsoft.AspNetCore.HttpOverrides.IPNetwork.TryParse(proxyNetwork.Trim(), out var ipn))
+                if (System.Net.IPNetwork.TryParse(proxyNetwork.Trim(), out var ipn))
                 {
-                    options.KnownNetworks.Add(ipn);
+                    options.KnownIPNetworks.Add(ipn);
                 }
             }
         }
 
-        if (options.KnownProxies.Count > 1 || options.KnownNetworks.Count > 1)
+        if (options.KnownProxies.Count > 1 || options.KnownIPNetworks.Count > 1)
         {
             options.ForwardLimit = null;
         }

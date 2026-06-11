@@ -212,6 +212,9 @@ bitwarden_license/src/Sso/wwwroot/assets
 .github/test/build.secrets
 **/CoverageOutput/
 .idea/*
+*.lscache
+*.dmp
+*.dump
 **/**.swp
 .mono
 src/Core/MailTemplates/Mjml/out
@@ -234,7 +237,10 @@ bitwarden_license/src/Sso/Sso.zip
 /identity.json
 /api.json
 /api.public.json
-.serena/
 
 # Serena
 .serena/
+
+# Claude Code
+CLAUDE.local.md
+.worktrees/

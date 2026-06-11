@@ -2,6 +2,7 @@
 using System.Text;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Seeder.Options;
 
 namespace Bit.Seeder.Factories;
 
@@ -13,13 +14,6 @@ public static class PlanFeatures
 {
     internal static void Apply(Organization org, PlanType planType)
     {
-        // Org-level admin settings — not plan-gated, safe defaults for seeding
-        org.UseAutomaticUserConfirmation = true;
-        org.AllowAdminAccessToAllCollectionItems = true;
-        org.LimitCollectionCreation = true;
-        org.LimitCollectionDeletion = true;
-        org.LimitItemDeletion = true;
-
         switch (planType)
         {
             case PlanType.Free:
@@ -78,6 +72,24 @@ public static class PlanFeatures
         }
     }
 
+    /// <summary>
+    /// Applies overrides on top of the organization's initial values.
+    /// Only non-null properties are applied; null means "leave the value unchanged from <see cref="OrganizationSeeder.Create"/>".
+    /// </summary>
+    internal static void ApplyOrganizationOverrides(Organization org, OrganizationOverrides? overrides)
+    {
+        if (overrides is null)
+        {
+            return;
+        }
+
+        org.UseAutomaticUserConfirmation = overrides.UseAutomaticUserConfirmation ?? org.UseAutomaticUserConfirmation;
+        org.AllowAdminAccessToAllCollectionItems = overrides.AllowAdminAccessToAllCollectionItems ?? org.AllowAdminAccessToAllCollectionItems;
+        org.LimitItemDeletion = overrides.LimitItemDeletion ?? org.LimitItemDeletion;
+        org.LimitCollectionCreation = overrides.LimitCollectionCreation ?? org.LimitCollectionCreation;
+        org.LimitCollectionDeletion = overrides.LimitCollectionDeletion ?? org.LimitCollectionDeletion;
+    }
+
     public static PlanType Parse(string? planTypeString)
     {
         if (string.IsNullOrEmpty(planTypeString))
@@ -115,6 +127,8 @@ public static class PlanFeatures
             PlanType.TeamsStarter => (10, 10, 10),
             PlanType.EnterpriseMonthly => (1, 185, 17),
             PlanType.EnterpriseAnnually => (1, 12000, 60),
+            // Intentional: PlanType has 20+ variants including legacy plans. Seeder only models
+            // the 7 current plans; all others get reasonable defaults. Not a bug.
             _ => (1, 100, 10)
         };
 
@@ -163,6 +177,7 @@ public static class PlanFeatures
         org.UseRiskInsights = false;
         org.UseAdminSponsoredFamilies = false;
         org.SyncSeats = false;
+        org.UseInviteLinks = false;
     }
 
     private static void ApplyTeamsFeatures(Organization org)
@@ -189,6 +204,7 @@ public static class PlanFeatures
         org.UseRiskInsights = false;
         org.UseAdminSponsoredFamilies = false;
         org.SyncSeats = true;
+        org.UseInviteLinks = false;
     }
 
     private static void ApplyEnterpriseFeatures(Organization org)
@@ -215,5 +231,6 @@ public static class PlanFeatures
         org.UseRiskInsights = true;
         org.UseAdminSponsoredFamilies = true;
         org.SyncSeats = true;
+        org.UseInviteLinks = true;
     }
 }

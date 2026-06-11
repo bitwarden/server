@@ -33,6 +33,7 @@ public class OrganizationUserResetPasswordDetails
         KdfIterations = user.KdfIterations;
         KdfMemory = user.KdfMemory;
         KdfParallelism = user.KdfParallelism;
+        MasterPasswordSalt = user.GetMasterPasswordSalt();
         ResetPasswordKey = orgUser.ResetPasswordKey;
         EncryptedPrivateKey = org.PrivateKey;
     }
@@ -41,6 +42,7 @@ public class OrganizationUserResetPasswordDetails
     public int KdfIterations { get; set; }
     public int? KdfMemory { get; set; }
     public int? KdfParallelism { get; set; }
+    public string MasterPasswordSalt { get; set; }
     public string ResetPasswordKey { get; set; }
     public string EncryptedPrivateKey { get; set; }
 }

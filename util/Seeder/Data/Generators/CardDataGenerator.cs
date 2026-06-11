@@ -7,6 +7,8 @@ namespace Bit.Seeder.Data.Generators;
 
 internal sealed class CardDataGenerator
 {
+    private static readonly ThreadLocal<Faker> _threadFaker = new(() => new Faker());
+
     private readonly int _seed;
     private readonly GeographicRegion _region;
 
@@ -32,7 +34,8 @@ internal sealed class CardDataGenerator
     /// </summary>
     internal CardViewDto GenerateByIndex(int index)
     {
-        var seededFaker = new Faker { Random = new Randomizer(_seed + index) };
+        var seededFaker = _threadFaker.Value!;
+        seededFaker.Random = new Randomizer(_seed + index);
         var brands = _regionalBrands[_region];
         var brand = brands[index % brands.Length];
 
@@ -65,7 +68,7 @@ internal sealed class CardDataGenerator
         // Latin America
         "Elo" => faker.PickRandom("4011", "4312", "4389", "5041", "5066", "5067", "6277", "6362", "6363") + faker.Random.ReplaceNumbers("############"),
 
-        _ => faker.Finance.CreditCardNumber()
+        _ => throw new ArgumentException($"Unknown card brand: '{brand}'", nameof(brand))
     };
 
     private static string GenerateCode(string brand, Faker faker) =>

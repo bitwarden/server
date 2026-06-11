@@ -52,7 +52,11 @@ public sealed class SeederContext(IServiceProvider services)
 
     internal OrganizationUser? OwnerOrgUser { get; set; }
 
+    internal OrganizationApiKey? OrganizationApiKey { get; set; }
+
     internal List<Organization> Organizations { get; } = [];
+
+    internal List<OrganizationDomain> OrganizationDomains { get; } = [];
 
     internal List<User> Users { get; } = [];
 

@@ -1,8 +1,8 @@
-﻿using Bit.Core;
-using Bit.Core.AdminConsole.Repositories;
+﻿using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
@@ -45,8 +45,8 @@ public class UserRepositoryTests
 
         var group1 = await groupRepository.CreateTestGroupAsync(organization, "test-group-1");
         var group2 = await groupRepository.CreateTestGroupAsync(organization, "test-group-2");
-        await groupRepository.UpdateUsersAsync(group1.Id, [orgUser1.Id]);
-        await groupRepository.UpdateUsersAsync(group2.Id, [orgUser3.Id]);
+        await groupRepository.UpdateUsersAsync(group1.Id, [orgUser1.Id], DateTime.UtcNow);
+        await groupRepository.UpdateUsersAsync(group2.Id, [orgUser3.Id], DateTime.UtcNow);
 
         var collection1 = new Collection
         {
@@ -523,9 +523,9 @@ public class UserRepositoryTests
         Assert.Equal(keyConnectorWrappedKey, updatedUser.Key);
         Assert.True(updatedUser.UsesKeyConnector);
         Assert.Equal(KdfType.Argon2id, updatedUser.Kdf);
-        Assert.Equal(AuthConstants.ARGON2_ITERATIONS.Default, updatedUser.KdfIterations);
-        Assert.Equal(AuthConstants.ARGON2_MEMORY.Default, updatedUser.KdfMemory);
-        Assert.Equal(AuthConstants.ARGON2_PARALLELISM.Default, updatedUser.KdfParallelism);
+        Assert.Equal(KdfConstants.ARGON2_ITERATIONS.Default, updatedUser.KdfIterations);
+        Assert.Equal(KdfConstants.ARGON2_MEMORY.Default, updatedUser.KdfMemory);
+        Assert.Equal(KdfConstants.ARGON2_PARALLELISM.Default, updatedUser.KdfParallelism);
         Assert.Equal(DateTime.UtcNow, updatedUser.RevisionDate, TimeSpan.FromMinutes(1));
         Assert.Equal(DateTime.UtcNow, updatedUser.AccountRevisionDate, TimeSpan.FromMinutes(1));
     }
@@ -562,6 +562,49 @@ public class UserRepositoryTests
         Assert.Equal("stamp", createdUser.SecurityStamp);
         Assert.Equal("password_hash", createdUser.MasterPassword);
         Assert.Equal(passwordSalt, createdUser.MasterPasswordSalt);
+    }
+
+    [Theory, DatabaseData]
+    public async Task CreateAsync_DefaultsLastApiKeyRotationDateToNull(
+        IUserRepository userRepository)
+    {
+        var user = new User
+        {
+            Name = "Test User",
+            Email = $"create+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        };
+
+        await userRepository.CreateAsync(user);
+
+        var created = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(created);
+        Assert.Null(created.LastApiKeyRotationDate);
+    }
+
+    [Theory, DatabaseData]
+    public async Task ReplaceAsync_SetsLastApiKeyRotationDate(
+        IUserRepository userRepository)
+    {
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Rotate User",
+            Email = $"rotate+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        Assert.Null(user.LastApiKeyRotationDate);
+
+        var rotatedAt = DateTime.UtcNow;
+        user.LastApiKeyRotationDate = rotatedAt;
+        await userRepository.ReplaceAsync(user);
+
+        var updated = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updated);
+        Assert.NotNull(updated.LastApiKeyRotationDate);
+        Assert.Equal(rotatedAt, updated.LastApiKeyRotationDate.Value, TimeSpan.FromMinutes(1));
     }
 
     /// <summary>
@@ -627,7 +670,7 @@ public class UserRepositoryTests
     /// <summary>
     /// In this test we are testing that the MasterPasswordUnlockData set's the password data correctly.
     /// including setting the masterPasswordSalt.
-    /// <see cref="TdeSetPasswordCommand.SetMasterPasswordAsync"/> and <see cref="SetInitialMasterPasswordCommand.SetInitialMasterPasswordAsync"/> for reference.
+    /// <see cref="TdeSetPasswordCommand.SetMasterPasswordAsync"/> and <see cref="FinishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync"/> for reference.
     /// </summary>
     [Theory, DatabaseData]
     public async Task UpdateMasterPassword_MasterPasswordSaltIsUpdated(
@@ -640,9 +683,9 @@ public class UserRepositoryTests
             Kdf = new KdfSettings
             {
                 KdfType = KdfType.Argon2id,
-                Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
-                Memory = AuthConstants.ARGON2_MEMORY.Default,
-                Parallelism = AuthConstants.ARGON2_PARALLELISM.Default
+                Iterations = KdfConstants.ARGON2_ITERATIONS.Default,
+                Memory = KdfConstants.ARGON2_MEMORY.Default,
+                Parallelism = KdfConstants.ARGON2_PARALLELISM.Default
             },
             MasterKeyWrappedUserKey = "wrapped-user-key",
             // The salt is set to the email in the command handlers, so we can set
@@ -738,6 +781,103 @@ public class UserRepositoryTests
 
         // Assert
         Assert.True(actionWasInvoked);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetKdfInformationByEmailAsync_WithPbkdf2User_ReturnsKdfInformation(
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var email = $"test+{Guid.NewGuid()}@example.com";
+        var salt = "test-salt-value";
+        await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = email,
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            MasterPassword = "password_hash",
+            MasterPasswordSalt = salt,
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+        });
+
+        // Act
+        var result = await userRepository.GetKdfInformationByEmailAsync(email);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(KdfType.PBKDF2_SHA256, result.Kdf);
+        Assert.Equal(KdfConstants.PBKDF2_ITERATIONS.Default, result.KdfIterations);
+        Assert.Null(result.KdfMemory);
+        Assert.Null(result.KdfParallelism);
+        Assert.Equal(salt, result.MasterPasswordSalt);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetKdfInformationByEmailAsync_WithArgon2idUser_ReturnsKdfInformationWithMemoryAndParallelism(
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var email = $"test+{Guid.NewGuid()}@example.com";
+        var salt = "argon2-salt-value";
+        await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = email,
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            MasterPassword = "password_hash",
+            MasterPasswordSalt = salt,
+            Kdf = KdfType.Argon2id,
+            KdfIterations = KdfConstants.ARGON2_ITERATIONS.Default,
+            KdfMemory = KdfConstants.ARGON2_MEMORY.Default,
+            KdfParallelism = KdfConstants.ARGON2_PARALLELISM.Default,
+        });
+
+        // Act
+        var result = await userRepository.GetKdfInformationByEmailAsync(email);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(KdfType.Argon2id, result.Kdf);
+        Assert.Equal(KdfConstants.ARGON2_ITERATIONS.Default, result.KdfIterations);
+        Assert.Equal(KdfConstants.ARGON2_MEMORY.Default, result.KdfMemory);
+        Assert.Equal(KdfConstants.ARGON2_PARALLELISM.Default, result.KdfParallelism);
+        Assert.Equal(salt, result.MasterPasswordSalt);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetKdfInformationByEmailAsync_WithNoMasterPassword_ReturnsNullSalt(
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var email = $"test+{Guid.NewGuid()}@example.com";
+        await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = email,
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        // Act
+        var result = await userRepository.GetKdfInformationByEmailAsync(email);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Null(result.MasterPasswordSalt);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetKdfInformationByEmailAsync_WithNonExistentEmail_ReturnsNull(
+        IUserRepository userRepository)
+    {
+        // Act
+        var result = await userRepository.GetKdfInformationByEmailAsync($"nonexistent+{Guid.NewGuid()}@example.com");
+
+        // Assert
+        Assert.Null(result);
     }
 
     private static async Task RunUpdateUserDataAsync(UpdateUserData task, Database database)

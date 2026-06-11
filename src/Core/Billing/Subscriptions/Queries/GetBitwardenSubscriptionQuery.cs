@@ -107,7 +107,8 @@ public class GetBitwardenSubscriptionQuery(
         var additionalStorageItem = subscription.Items.FirstOrDefault(item =>
             plans.Any(plan => plan.Storage.StripePriceId == item.Price.Id));
 
-        var (cartLevelDiscount, productLevelDiscounts) = GetStripeDiscounts(subscription);
+        var coupons = await GetRelevantCouponsAsync(subscription);
+        var (cartLevelCoupon, productLevelCoupons) = PartitionCouponsByScope(coupons);
 
         var availablePlan = plans.First(plan => plan.Available);
         var onCurrentPricing = passwordManagerSeatsItem.Price.Id == availablePlan.Seat.StripePriceId;
@@ -123,7 +124,9 @@ public class GetBitwardenSubscriptionQuery(
         else
         {
             seatCost = availablePlan.Seat.Price;
-            estimatedTax = await EstimatePremiumTaxAsync(subscription, plans, availablePlan);
+            estimatedTax = await EstimatePremiumTaxAsync(
+                subscription, plans, availablePlan,
+                [.. coupons.Select(c => c.Id)]);
         }
 
         var passwordManagerSeats = new CartItem
@@ -131,7 +134,7 @@ public class GetBitwardenSubscriptionQuery(
             TranslationKey = "premiumMembership",
             Quantity = passwordManagerSeatsItem.Quantity,
             Cost = seatCost,
-            Discount = productLevelDiscounts.FirstOrDefault(discount => discount.AppliesTo(passwordManagerSeatsItem))
+            Discount = productLevelCoupons.FirstOrDefault(coupon => coupon.AppliesTo(passwordManagerSeatsItem))
         };
 
         var additionalStorage = additionalStorageItem != null
@@ -140,7 +143,7 @@ public class GetBitwardenSubscriptionQuery(
                 TranslationKey = "additionalStorageGB",
                 Quantity = additionalStorageItem.Quantity,
                 Cost = GetCost(additionalStorageItem),
-                Discount = productLevelDiscounts.FirstOrDefault(discount => discount.AppliesTo(additionalStorageItem))
+                Discount = productLevelCoupons.FirstOrDefault(coupon => coupon.AppliesTo(additionalStorageItem))
             }
             : null;
 
@@ -152,17 +155,16 @@ public class GetBitwardenSubscriptionQuery(
                 AdditionalStorage = additionalStorage
             },
             Cadence = PlanCadenceType.Annually,
-            Discount = cartLevelDiscount,
+            Discount = cartLevelCoupon,
             EstimatedTax = estimatedTax
         };
     }
 
-    #region Utilities
-
     private async Task<decimal> EstimatePremiumTaxAsync(
         Subscription subscription,
         List<PremiumPlan>? plans = null,
-        PremiumPlan? availablePlan = null)
+        PremiumPlan? availablePlan = null,
+        List<string>? couponIds = null)
     {
         try
         {
@@ -180,7 +182,7 @@ public class GetBitwardenSubscriptionQuery(
 
                 options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
                 {
-                    Items = subscription.Items.Select(item =>
+                    Items = [.. subscription.Items.Select(item =>
                     {
                         var isSeatItem = plans.Any(plan => plan.Seat.StripePriceId == item.Price.Id);
 
@@ -189,8 +191,13 @@ public class GetBitwardenSubscriptionQuery(
                             Price = isSeatItem ? availablePlan.Seat.StripePriceId : item.Price.Id,
                             Quantity = item.Quantity
                         };
-                    }).ToList()
+                    })]
                 };
+
+                if (couponIds is { Count: > 0 })
+                {
+                    options.Discounts = [.. couponIds.Select(id => new InvoiceDiscountOptions { Coupon = id })];
+                }
             }
             else
             {
@@ -213,35 +220,100 @@ public class GetBitwardenSubscriptionQuery(
             item => (item.Price.UnitAmountDecimal ?? 0) / 100M,
             taxes => taxes.Sum(invoiceTotalTax => invoiceTotalTax.Amount) / 100M);
 
-    private static (Discount? CartLevel, List<Discount> ProductLevel) GetStripeDiscounts(
-        Subscription subscription)
+    /// <summary>
+    /// Returns the coupons relevant to the subscription's upcoming invoice. When a subscription
+    /// schedule is attached, Phase 2's discounts are the source of truth (they reflect the
+    /// upcoming-renewal state, including any preserved current discounts plus migration coupons).
+    /// Otherwise the subscription's current discounts are used. Customer-level discounts apply
+    /// independently of the schedule and are always included.
+    /// </summary>
+    private async Task<List<Coupon>> GetRelevantCouponsAsync(Subscription subscription)
     {
-        var discounts = new List<Discount>();
+        var coupons = new List<Coupon>();
 
         if (subscription.Customer.Discount.IsValid())
         {
-            discounts.Add(subscription.Customer.Discount);
+            coupons.Add(subscription.Customer.Discount.Coupon);
         }
 
-        discounts.AddRange(subscription.Discounts.Where(discount => discount.IsValid()));
-
-        var cartLevel = new List<Discount>();
-        var productLevel = new List<Discount>();
-
-        foreach (var discount in discounts)
+        if (!string.IsNullOrEmpty(subscription.ScheduleId))
         {
-            switch (discount)
+            coupons.AddRange(await GetSchedulePhase2CouponsAsync(subscription));
+        }
+        else
+        {
+            coupons.AddRange((subscription.Discounts ?? [])
+                .Where(d => d.IsValid())
+                .Select(d => d.Coupon));
+        }
+
+        return coupons;
+    }
+
+    private static (Coupon? CartLevel, List<Coupon> ProductLevel) PartitionCouponsByScope(
+        IEnumerable<Coupon> coupons)
+    {
+        var cartLevel = new List<Coupon>();
+        var productLevel = new List<Coupon>();
+
+        foreach (var coupon in coupons)
+        {
+            switch (coupon)
             {
-                case { Coupon.AppliesTo.Products: null or { Count: 0 } }:
-                    cartLevel.Add(discount);
+                case { AppliesTo.Products: null or { Count: 0 } }:
+                case { AppliesTo: null }:
+                    cartLevel.Add(coupon);
                     break;
-                case { Coupon.AppliesTo.Products.Count: > 0 }:
-                    productLevel.Add(discount);
+                case { AppliesTo.Products.Count: > 0 }:
+                    productLevel.Add(coupon);
                     break;
             }
         }
 
         return (cartLevel.FirstOrDefault(), productLevel);
+    }
+
+    private async Task<List<Coupon>> GetSchedulePhase2CouponsAsync(Subscription subscription)
+    {
+        try
+        {
+            var schedule = await stripeAdapter.GetSubscriptionScheduleAsync(subscription.ScheduleId,
+                new SubscriptionScheduleGetOptions
+                {
+                    Expand = ["phases.discounts.coupon.applies_to"]
+                });
+
+            if (schedule.Status != SubscriptionScheduleStatus.Active || schedule.Phases.Count < 2)
+            {
+                return [];
+            }
+
+            var phase2 = schedule.Phases[1];
+            var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+
+            if (phase2.StartDate < now)
+            {
+                logger.LogInformation(
+                    "Schedule phase 2 for subscription schedule ({ScheduleID}) has already started, skipping discount display",
+                    subscription.ScheduleId);
+                return [];
+            }
+
+            return phase2.Discounts?
+                .Where(d => d?.Coupon?.Valid == true)
+                .Select(d => d.Coupon)
+                .ToList() ?? [];
+        }
+        catch (StripeException stripeException)
+        {
+            // Rethrow rather than soft-fail. The schedule's coupons feed both the discount display
+            // and the tax-preview's `options.Discounts` list — silently dropping them would inflate
+            // the tax estimate the user sees against the new pricing without any error signal.
+            logger.LogError(stripeException,
+                "Failed to retrieve subscription schedule ({ScheduleID}) for discount resolution",
+                subscription.ScheduleId);
+            throw;
+        }
     }
 
     private async Task<Subscription?> FetchSubscriptionAsync(User user)
@@ -265,6 +337,4 @@ public class GetBitwardenSubscriptionQuery(
             return null;
         }
     }
-
-    #endregion
 }

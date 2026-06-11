@@ -27,6 +27,20 @@
             ]
         },
         {
+            "label": "buildIdentityApiAdminBilling",
+            "hide": true,
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "buildIdentity",
+                "buildAPI",
+                "buildAdmin",
+                "buildBilling"
+            ],
+            "problemMatcher": [
+                "$msCompile"
+            ]
+        },
+        {
             "label": "buildIdentityApiSso",
             "hide": true,
             "dependsOrder": "sequence",
@@ -46,6 +60,7 @@
             "dependsOn": [
                 "buildAdmin",
                 "buildAPI",
+                "buildEvents",
                 "buildEventsProcessor",
                 "buildIdentity",
                 "buildSso",
@@ -61,6 +76,7 @@
             "dependsOn": [
                 "buildAdmin",
                 "buildAPI",
+                "buildEvents",
                 "buildEventsProcessor",
                 "buildIdentity",
                 "buildSso",
@@ -77,6 +93,7 @@
             "dependsOn": [
                 "buildAdmin",
                 "buildAPI",
+                "buildEvents",
                 "buildEventsProcessor",
                 "buildIdentity",
                 "buildSso",
@@ -90,6 +107,7 @@
             "dependsOn": [
                 "buildAdmin",
                 "buildAPI",
+                "buildEvents",
                 "buildEventsProcessor",
                 "buildIdentity",
             ],

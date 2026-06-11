@@ -31,9 +31,9 @@ public class OrganizationSubscriptionUpdateJobTests
             .DidNotReceive()
             .GetOrganizationSubscriptionsToUpdateAsync();
 
-        await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>()
+        await sutProvider.GetDependency<IBulkUpdateOrganizationSubscriptionsCommand>()
             .DidNotReceive()
-            .UpdateOrganizationSubscriptionAsync(Arg.Any<IEnumerable<OrganizationSubscriptionUpdate>>());
+            .BulkUpdateOrganizationSubscriptionsAsync(Arg.Any<IEnumerable<OrganizationSubscriptionUpdate>>());
     }
 
     [Theory]
@@ -53,8 +53,8 @@ public class OrganizationSubscriptionUpdateJobTests
             .Received(1)
             .GetOrganizationSubscriptionsToUpdateAsync();
 
-        await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>()
+        await sutProvider.GetDependency<IBulkUpdateOrganizationSubscriptionsCommand>()
             .Received(1)
-            .UpdateOrganizationSubscriptionAsync(Arg.Any<IEnumerable<OrganizationSubscriptionUpdate>>());
+            .BulkUpdateOrganizationSubscriptionsAsync(Arg.Any<IEnumerable<OrganizationSubscriptionUpdate>>());
     }
 }
