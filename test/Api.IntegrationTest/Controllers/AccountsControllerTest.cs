@@ -9,6 +9,7 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -53,6 +54,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     private readonly IEventRepository _eventRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IStripeSyncService _stripeSyncService;
+    private readonly ITwoFactorEmailService _twoFactorEmailService;
 
     private string _ownerEmail = null!;
 
@@ -62,6 +64,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         _factory.SubstituteService<IPushNotificationService>(_ => { });
         _factory.SubstituteService<IFeatureService>(_ => { });
         _factory.SubstituteService<IStripeSyncService>(_ => { });
+        _factory.SubstituteService<ITwoFactorEmailService>(_ => { });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
         _userRepository = _factory.GetService<IUserRepository>();
@@ -74,6 +77,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         _eventRepository = _factory.GetService<IEventRepository>();
         _organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
         _stripeSyncService = _factory.GetService<IStripeSyncService>();
+        _twoFactorEmailService = _factory.GetService<ITwoFactorEmailService>();
     }
 
     public async Task InitializeAsync()
@@ -240,6 +244,31 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     }
 
     [Theory]
+    [InlineData("authenticationData")]
+    [InlineData("unlockData")]
+    [InlineData("masterPasswordHash")]
+    public async Task PostKdf_MissingRequiredJsonKey_BadRequest(string fieldToOmit)
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var payload = new Dictionary<string, object?>
+        {
+            ["masterPasswordHash"] = _masterPasswordHash,
+            ["authenticationData"] = BuildAuthData(_defaultKdfRequest, _ownerEmail),
+            ["unlockData"] = BuildUnlockData(_defaultKdfRequest, _ownerEmail)
+        };
+        payload.Remove(fieldToOmit);
+
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/kdf");
+        message.Content = JsonContent.Create(payload);
+        var response = await _client.SendAsync(message);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains($"missing required properties including: '{fieldToOmit}'", content);
+    }
+
+    [Theory]
     [InlineData(false, true)]
     [InlineData(true, false)]
     [InlineData(true, true)]
@@ -260,7 +289,14 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("AuthenticationData and UnlockData must be provided.", content);
+        if (authenticationDataNull)
+        {
+            Assert.Contains("The AuthenticationData field is required.", content);
+        }
+        if (unlockDataNull)
+        {
+            Assert.Contains("The UnlockData field is required.", content);
+        }
     }
 
     [Fact]
@@ -1586,6 +1622,55 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         message.Content = JsonContent.Create(new SecretVerificationRequestModel
         {
             MasterPasswordHash = masterPasswordHash
+        });
+        return await _client.SendAsync(message);
+    }
+
+    [Fact]
+    public async Task PostResendNewDeviceOtp_ValidEmailAndSecret_OkAndSendsEmail()
+    {
+        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(user);
+
+        var response = await PostResendNewDeviceOtpAsync(_ownerEmail, _masterPasswordHash);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await _twoFactorEmailService.Received(1)
+            .SendNewDeviceVerificationEmailAsync(Arg.Is<User>(u => u.Id == user.Id));
+    }
+
+    [Fact]
+    public async Task PostResendNewDeviceOtp_WrongSecret_SilentlySucceedsWithoutSendingEmail()
+    {
+        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(user);
+
+        var response = await PostResendNewDeviceOtpAsync(_ownerEmail, "wrong-master-password-hash");
+
+        // Silent 200 to avoid account enumeration via response shape.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await _twoFactorEmailService.DidNotReceive()
+            .SendNewDeviceVerificationEmailAsync(Arg.Is<User>(u => u.Id == user.Id));
+    }
+
+    [Fact]
+    public async Task PostResendNewDeviceOtp_UnknownEmail_SilentlySucceeds()
+    {
+        var response = await PostResendNewDeviceOtpAsync(
+            $"does-not-exist-{Guid.NewGuid()}@bitwarden.com",
+            _masterPasswordHash);
+
+        // Silent 200 to avoid account enumeration via response shape.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    private async Task<HttpResponseMessage> PostResendNewDeviceOtpAsync(string email, string masterPasswordHash)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/resend-new-device-otp");
+        message.Content = JsonContent.Create(new UnauthenticatedSecretVerificationRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
         });
         return await _client.SendAsync(message);
     }

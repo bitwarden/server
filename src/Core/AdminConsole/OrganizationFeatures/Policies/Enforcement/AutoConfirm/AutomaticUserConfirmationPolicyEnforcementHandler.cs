@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
@@ -34,24 +35,37 @@ public class AutomaticUserConfirmationPolicyEnforcementHandler(
             return Invalid(request, new CurrentOrganizationUserIsNotPresentInRequest());
         }
 
-        if (policyRequirement.IsEnabled(request.OrganizationId))
+        var isProviderUser = (await providerUserRepository.GetManyByUserAsync(request.User.Id)).Count != 0;
+        var violation = GetAutoConfirmPolicyViolation(policyRequirement, request.OrganizationId,
+            isProviderUser, request.AllOrganizationUsers.Count);
+
+        return violation is not null ? Invalid(request, violation) : Valid(request);
+    }
+
+    public Error? GetAutoConfirmPolicyViolation(
+        AutomaticUserConfirmationPolicyRequirement policyRequirement,
+        Guid organizationId,
+        bool isProviderUser,
+        int orgMembershipCount)
+    {
+        if (policyRequirement.IsEnabled(organizationId))
         {
-            if ((await providerUserRepository.GetManyByUserAsync(request.User.Id)).Count != 0)
+            if (isProviderUser)
             {
-                return Invalid(request, new ProviderUsersCannotJoin());
+                return new ProviderUsersCannotJoin();
             }
 
-            if (request.AllOrganizationUsers.Count > 1)
+            if (orgMembershipCount > 1)
             {
-                return Invalid(request, new UserCannotBelongToAnotherOrganization());
+                return new UserCannotBelongToAnotherOrganization();
             }
         }
 
-        if (policyRequirement.IsEnabledForOrganizationsOtherThan(currentOrganizationUser.OrganizationId))
+        if (policyRequirement.IsEnabledForOrganizationsOtherThan(organizationId))
         {
-            return Invalid(request, new OtherOrganizationDoesNotAllowOtherMembership());
+            return new OtherOrganizationDoesNotAllowOtherMembership();
         }
 
-        return Valid(request);
+        return null;
     }
 }

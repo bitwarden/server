@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationUser_RestoreMany]
+CREATE PROCEDURE [dbo].[OrganizationUser_UpdateManyRestore]
     @OrganizationUserIds AS [dbo].[GuidIdArray] READONLY,
     @Status SMALLINT
 AS
@@ -9,6 +9,7 @@ BEGIN
         OU
     SET
         OU.[Status] = @Status,
+        OU.[StatusNew] = NULL,
         OU.[RevocationReason] = NULL
     FROM
         [dbo].[OrganizationUser] OU
