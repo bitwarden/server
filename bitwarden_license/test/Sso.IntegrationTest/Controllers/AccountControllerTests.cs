@@ -276,11 +276,13 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     }
 
     /*
-    * Test to verify /Account/ExternalCallback returns error when an existing user
-    * has an org user record with Invited status - they must accept the invite first.
+    * Test to verify /Account/ExternalCallback redirects an existing user with an
+    * Invited org user back to the web vault's /login with context so the client can
+    * surface an actionable toast. Previously this rendered a server error page;
+    * the security gate (refusing SSO completion for invited users) is unchanged.
     */
     [Fact]
-    public async Task ExternalCallback_WithExistingUser_AndInvitedOrgUserStatus_ReturnsError()
+    public async Task ExternalCallback_WithExistingUser_AndInvitedOrgUserStatus_RedirectsToWebVaultLogin()
     {
         // Arrange
         var testData = await new SsoTestDataBuilder()
@@ -292,15 +294,28 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
             })
             .BuildAsync();
 
-        var client = testData.Factory.CreateClient();
+        var client = testData.Factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false // Capture the redirect rather than following to the (non-existent) web vault.
+        });
 
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
 
-        // Assert - Should fail because user must accept invite before using SSO
-        var stringResponse = await response.Content.ReadAsStringAsync();
-        Assert.Contains("you must first log in using your master password", stringResponse);
-        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        // Assert — 302 to the web vault /login with the expected query-string context.
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.NotNull(response.Headers.Location);
+
+        var location = response.Headers.Location!.ToString();
+        Assert.Contains("/login?", location);
+        Assert.Contains("error=ssoOrgInviteAcceptanceRequired", location);
+
+        // The redirect carries the seeded user's email + the seeded organization's display name
+        // (URL-encoded) so the web client can pre-fill /login and render a contextual toast.
+        Assert.Contains($"email={Uri.EscapeDataString(testData.User!.Email)}", location);
+        Assert.Contains(
+            $"organizationName={Uri.EscapeDataString(testData.Organization!.DisplayName())}",
+            location);
     }
 
     /*
