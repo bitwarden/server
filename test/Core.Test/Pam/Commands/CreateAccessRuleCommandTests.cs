@@ -24,6 +24,8 @@ public class CreateAccessRuleCommandTests
         var sutProvider = SetupSutProvider();
         rule.Name = "VPN + business hours";
         rule.Conditions = """{"kind":"human_approval"}""";
+        rule.DefaultLeaseDurationSeconds = 3600;
+        rule.MaxLeaseDurationSeconds = 28800;
         sutProvider.GetDependency<IAccessRuleValidator>()
             .Validate(rule.Conditions)
             .Returns(AccessRuleValidationResult.Valid);
@@ -38,7 +40,11 @@ public class CreateAccessRuleCommandTests
 
         Assert.Equal(_now, result.CreationDate);
         Assert.Equal(_now, result.RevisionDate);
-        await sutProvider.GetDependency<IAccessRuleRepository>().Received(1).CreateAsync(rule);
+        Assert.Equal(3600, result.DefaultLeaseDurationSeconds);
+        Assert.Equal(28800, result.MaxLeaseDurationSeconds);
+        await sutProvider.GetDependency<IAccessRuleRepository>().Received(1)
+            .CreateAsync(Arg.Is<AccessRule>(r =>
+                r.DefaultLeaseDurationSeconds == 3600 && r.MaxLeaseDurationSeconds == 28800));
     }
 
     [Theory, BitAutoData]

@@ -32,6 +32,18 @@ public class AccessRule : ITableObject<Guid>
     /// </summary>
     public bool SingleActiveLease { get; set; }
 
+    /// <summary>
+    /// Default lease duration in seconds, used to pre-fill a request opened under this rule. Null means no
+    /// rule-specific default is stored and the backend default applies.
+    /// </summary>
+    public int? DefaultLeaseDurationSeconds { get; set; }
+
+    /// <summary>
+    /// Hard ceiling on the duration of any single lease granted under this rule, in seconds. Null means no
+    /// per-rule cap (the global maximum still applies).
+    /// </summary>
+    public int? MaxLeaseDurationSeconds { get; set; }
+
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
 

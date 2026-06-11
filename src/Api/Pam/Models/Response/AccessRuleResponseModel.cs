@@ -17,6 +17,8 @@ public class AccessRuleResponseModel : ResponseModel
         Description = rule.Description;
         Conditions = TryParseConditions(rule.Conditions);
         SingleActiveLease = rule.SingleActiveLease;
+        DefaultLeaseDurationSeconds = rule.DefaultLeaseDurationSeconds;
+        MaxLeaseDurationSeconds = rule.MaxLeaseDurationSeconds;
         CreationDate = rule.CreationDate;
         RevisionDate = rule.RevisionDate;
         Collections = rule.CollectionIds.ToList();
@@ -28,6 +30,8 @@ public class AccessRuleResponseModel : ResponseModel
     public string? Description { get; }
     public JsonElement? Conditions { get; }
     public bool SingleActiveLease { get; }
+    public int? DefaultLeaseDurationSeconds { get; }
+    public int? MaxLeaseDurationSeconds { get; }
     public DateTime CreationDate { get; }
     public DateTime RevisionDate { get; }
     public IEnumerable<Guid> Collections { get; }
