@@ -6,10 +6,10 @@ namespace Bit.Core.Pam.Entities;
 
 /// <summary>
 /// A request to lease access to a cipher in a leasing-governed collection. Auto-approved requests are created
-/// already <see cref="AccessRequestStatus.Approved"/> alongside an active <see cref="AccessLease"/>; requests that require
-/// human approval are created <see cref="AccessRequestStatus.Pending"/> and resolved later by an approver. A human
-/// approval does not mint the lease — the requester activates the approved request within its window, and that
-/// activation produces the <see cref="AccessLease"/>.
+/// already <see cref="AccessRequestStatus.Approved"/>; requests that require human approval are created
+/// <see cref="AccessRequestStatus.Pending"/> and resolved later by an approver. Neither approval mints the lease —
+/// the requester activates the approved request within its window, and that activation produces the
+/// <see cref="AccessLease"/>.
 /// </summary>
 public class AccessRequest : ITableObject<Guid>
 {

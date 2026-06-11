@@ -15,8 +15,8 @@ BEGIN
     -- under a race so a second approver can't move an already-resolved request.
     --
     -- Approval does not mint the lease: the requester activates the approved request later via
-    -- [AccessLease_CreateFromApprovedRequest]. The automatic path still mints instantly via
-    -- [AccessLease_CreateAutoApproved], where the requester is online and asking for access now.
+    -- [AccessLease_CreateFromApprovedRequest]. The automatic path ([AccessRequest_CreateAutoApproved]) records the
+    -- approved request the same way and likewise leaves the lease to be minted at activation.
     BEGIN TRANSACTION AccessRequest_Resolve
 
     UPDATE [dbo].[AccessRequest]

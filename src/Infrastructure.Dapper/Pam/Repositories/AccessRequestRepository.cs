@@ -22,6 +22,28 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
         : base(connectionString, readOnlyConnectionString)
     { }
 
+    public async Task CreateAutoApprovedAsync(AccessRequest request, AccessDecision decision)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.ExecuteAsync(
+            $"[{Schema}].[AccessRequest_CreateAutoApproved]",
+            new
+            {
+                AccessRequestId = request.Id,
+                AccessDecisionId = decision.Id,
+                request.OrganizationId,
+                request.CollectionId,
+                request.CipherId,
+                request.RequesterId,
+                request.NotBefore,
+                request.NotAfter,
+                request.Reason,
+                decision.ConditionKind,
+                CreationDate = request.CreationDate,
+            },
+            commandType: CommandType.StoredProcedure);
+    }
+
     public async Task<AccessRequest?> GetActivePendingByRequesterIdCipherIdAsync(Guid requesterId, Guid cipherId)
     {
         await using var connection = new SqlConnection(ConnectionString);

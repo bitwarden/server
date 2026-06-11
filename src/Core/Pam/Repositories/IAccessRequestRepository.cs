@@ -8,6 +8,14 @@ public interface IAccessRequestRepository
 {
     Task<AccessRequest> CreateAsync(AccessRequest request);
 
+    /// <summary>
+    /// Atomically creates an auto-approved <see cref="AccessRequest"/> (status <see cref="AccessRequestStatus.Approved"/>,
+    /// resolved now) and its automatic <see cref="AccessDecision"/> in a single transaction. No lease is minted: the
+    /// requester activates the approved request later via <see cref="IAccessLeaseRepository.CreateFromApprovedRequestAsync"/>,
+    /// just like the human path after approval. Both supplied entities must already have their ids assigned.
+    /// </summary>
+    Task CreateAutoApprovedAsync(AccessRequest request, AccessDecision decision);
+
     Task<AccessRequest?> GetByIdAsync(Guid id);
 
     /// <summary>

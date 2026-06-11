@@ -54,33 +54,6 @@ public class AccessLeaseRepository : Repository<AccessLease, Guid>, IAccessLease
         return results.ToList();
     }
 
-    public async Task<AccessLeaseMintOutcome> CreateAutoApprovedAsync(AccessRequest request, AccessDecision decision,
-        AccessLease lease, DateTime now, bool enforceSingleActiveLease)
-    {
-        await using var connection = new SqlConnection(ConnectionString);
-        var result = await connection.ExecuteScalarAsync<int>(
-            $"[{Schema}].[AccessLease_CreateAutoApproved]",
-            new
-            {
-                AccessRequestId = request.Id,
-                AccessLeaseId = lease.Id,
-                AccessDecisionId = decision.Id,
-                request.OrganizationId,
-                request.CollectionId,
-                request.CipherId,
-                request.RequesterId,
-                request.NotBefore,
-                request.NotAfter,
-                request.Reason,
-                decision.ConditionKind,
-                Now = now,
-                EnforceSingleActiveLease = enforceSingleActiveLease,
-            },
-            commandType: CommandType.StoredProcedure);
-
-        return (AccessLeaseMintOutcome)result;
-    }
-
     public async Task<AccessLeaseMintOutcome> CreateFromApprovedRequestAsync(AccessLease lease, DateTime now,
         bool enforceSingleActiveLease)
     {
