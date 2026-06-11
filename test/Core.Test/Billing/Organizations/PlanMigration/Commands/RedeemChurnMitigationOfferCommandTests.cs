@@ -583,6 +583,7 @@ public class RedeemChurnMitigationOfferCommandTests
         _getOfferQuery.Run(Arg.Any<Organization>()).Returns(new ChurnMitigationOfferResult(
             CouponId: ChurnCouponCode,
             PercentOff: 15m,
+            AmountOff: null,
             Duration: "once",
             DurationInMonths: null,
             Name: "Churn 15% off"));
