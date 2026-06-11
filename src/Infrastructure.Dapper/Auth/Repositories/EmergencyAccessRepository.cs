@@ -185,7 +185,7 @@ public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEme
         return async (connection, transaction) =>
         {
             await connection.ExecuteAsync(
-                "[dbo].[EmergencyAccess_UpdateStatusAndKeyEncryptedById]",
+                "[dbo].[EmergencyAccess_UpdateStatusKeyEncryptedById]",
                 new
                 {
                     Id = id,

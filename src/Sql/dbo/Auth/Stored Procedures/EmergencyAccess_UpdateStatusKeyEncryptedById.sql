@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[EmergencyAccess_UpdateStatusAndKeyEncryptedById]
+CREATE PROCEDURE [dbo].[EmergencyAccess_UpdateStatusKeyEncryptedById]
     @Id UNIQUEIDENTIFIER,
     @Status TINYINT,
     @KeyEncrypted VARCHAR(MAX),

@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationUser_UpdateStatusAndKeyById]
+CREATE PROCEDURE [dbo].[OrganizationUser_UpdateStatusKeyById]
     @Id UNIQUEIDENTIFIER,
     @Status SMALLINT,
     @Key VARCHAR(MAX),

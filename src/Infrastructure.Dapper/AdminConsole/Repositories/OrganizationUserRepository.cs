@@ -771,7 +771,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         return async (connection, transaction) =>
         {
             await connection.ExecuteAsync(
-                "[dbo].[OrganizationUser_UpdateStatusAndKeyById]",
+                "[dbo].[OrganizationUser_UpdateStatusKeyById]",
                 new
                 {
                     Id = id,

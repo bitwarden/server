@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[EmergencyAccess_UpdateStatusAndKeyEncryptedById]
+CREATE OR ALTER PROCEDURE [dbo].[EmergencyAccess_UpdateStatusKeyEncryptedById]
     @Id UNIQUEIDENTIFIER,
     @Status TINYINT,
     @KeyEncrypted VARCHAR(MAX),
@@ -18,7 +18,7 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_UpdateStatusAndKeyById]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_UpdateStatusKeyById]
     @Id UNIQUEIDENTIFIER,
     @Status SMALLINT,
     @Key VARCHAR(MAX),
