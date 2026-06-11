@@ -425,7 +425,7 @@ public class AcceptOrganizationInviteLinkCommandTests
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        SetupAutoConfirmPolicy(organization, user, sutProvider);
+        SetupAutoConfirmPolicy(sutProvider);
         organization.Seats = 2;
         organization.MaxAutoscaleSeats = 2;
 
@@ -514,6 +514,7 @@ public class AcceptOrganizationInviteLinkCommandTests
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
+        SetupAutoConfirmPolicy(sutProvider);
 
         var adminDetails = new OrganizationUserUserDetails { Email = "admin@example.com" };
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -729,8 +730,6 @@ public class AcceptOrganizationInviteLinkCommandTests
     }
 
     private static void SetupAutoConfirmPolicy(
-        Organization organization,
-        User user,
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
     {
         sutProvider.GetDependency<IAcceptOrganizationMembershipValidator>()
@@ -738,7 +737,7 @@ public class AcceptOrganizationInviteLinkCommandTests
             .Returns(Task.FromResult(
                 Valid(new AcceptOrganizationMembershipValidationResult
                 {
-                    RequiresEmergencyAccessDeletion = true
+                    AutoConfirmPolicyEnabled = true
                 })));
     }
 

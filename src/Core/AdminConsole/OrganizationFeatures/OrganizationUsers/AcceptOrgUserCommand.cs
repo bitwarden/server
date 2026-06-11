@@ -158,7 +158,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
 
         var membershipValidationResult = await ValidateMembershipAsync(orgUser, user, allOrgUsers);
-        if (membershipValidationResult.RequiresEmergencyAccessDeletion)
+        if (membershipValidationResult.AutoConfirmPolicyEnabled)
         {
             await _deleteEmergencyAccessCommand.DeleteAllByUserIdAsync(user.Id);
         }
@@ -178,7 +178,10 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
             await _mailService.SendOrganizationAcceptedEmailAsync(organization, user.Email, adminEmails);
         }
 
-        await _pushAutoConfirmNotificationCommand.PushAsync(user.Id, orgUser.OrganizationId);
+        if (membershipValidationResult.AutoConfirmPolicyEnabled)
+        {
+            await _pushAutoConfirmNotificationCommand.PushAsync(user.Id, orgUser.OrganizationId);
+        }
 
         return orgUser;
     }

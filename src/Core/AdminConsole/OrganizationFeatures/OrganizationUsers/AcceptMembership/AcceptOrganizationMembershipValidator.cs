@@ -56,7 +56,7 @@ public class AcceptOrganizationMembershipValidator(
 
         return Valid(new AcceptOrganizationMembershipValidationResult
         {
-            RequiresEmergencyAccessDeletion = autoConfirmRequirement.IsEnabled(request.OrganizationId)
+            AutoConfirmPolicyEnabled = autoConfirmRequirement.IsEnabled(request.OrganizationId)
         });
     }
 

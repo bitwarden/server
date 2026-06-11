@@ -42,6 +42,14 @@ public class AcceptOrgUserCommandTests
         // Arrange
         SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
 
+        sutProvider.GetDependency<IAcceptOrganizationMembershipValidator>()
+            .ValidateAsync(Arg.Any<AcceptOrganizationMembershipValidationRequest>())
+            .Returns(Task.FromResult(
+                Valid(new AcceptOrganizationMembershipValidationResult
+                {
+                    AutoConfirmPolicyEnabled = true
+                })));
+
         // Act
         var resultOrgUser = await sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService);
 
@@ -59,6 +67,10 @@ public class AcceptOrgUserCommandTests
             Arg.Is<string>(e => e == user.Email),
             Arg.Is<IEnumerable<string>>(a => a.Contains(adminUserDetails.Email))
         );
+
+        await sutProvider.GetDependency<IPushAutoConfirmNotificationCommand>()
+            .Received(1)
+            .PushAsync(user.Id, orgUser.OrganizationId);
     }
 
     [Theory]
@@ -648,7 +660,7 @@ public class AcceptOrgUserCommandTests
             .Returns(Task.FromResult(
                 Valid(new AcceptOrganizationMembershipValidationResult
                 {
-                    RequiresEmergencyAccessDeletion = true
+                    AutoConfirmPolicyEnabled = true
                 })));
 
         // Act
@@ -669,7 +681,7 @@ public class AcceptOrgUserCommandTests
         // Arrange
         SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
 
-        // RequiresEmergencyAccessDeletion defaults to false in SetupCommonAcceptOrgUserMocks
+        // AutoConfirmPolicyEnabled defaults to false in SetupCommonAcceptOrgUserMocks
 
         // Act
         await sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService);
@@ -696,22 +708,6 @@ public class AcceptOrgUserCommandTests
         Assert.Equal(user.Id, resultOrgUser.UserId);
 
 
-    }
-
-
-    [Theory]
-    [BitAutoData]
-    public async Task AcceptOrgUser_Always_SendsPushNotification(
-        SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
-    {
-        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
-
-        await sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService);
-
-        await sutProvider.GetDependency<IPushAutoConfirmNotificationCommand>()
-            .Received(1)
-            .PushAsync(user.Id, orgUser.OrganizationId);
     }
 
 

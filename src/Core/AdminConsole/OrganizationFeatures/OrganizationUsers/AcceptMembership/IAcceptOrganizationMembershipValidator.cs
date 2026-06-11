@@ -21,8 +21,8 @@ public interface IAcceptOrganizationMembershipValidator
     /// <param name="request">The request containing the user, organization, and existing membership data.</param>
     /// <returns>
     /// A <see cref="ValidationResult{TRequest}"/> that is valid if the user may join, with
-    /// <see cref="AcceptOrganizationMembershipValidationResult.RequiresEmergencyAccessDeletion"/> indicating
-    /// whether the caller must delete the user's emergency access records before persisting the membership.
+    /// <see cref="AcceptOrganizationMembershipValidationResult.AutoConfirmPolicyEnabled"/> indicating
+    /// whether the Automatic User Confirmation policy is enabled for the joining organization.
     /// </returns>
     Task<ValidationResult<AcceptOrganizationMembershipValidationResult>> ValidateAsync(
         AcceptOrganizationMembershipValidationRequest request);

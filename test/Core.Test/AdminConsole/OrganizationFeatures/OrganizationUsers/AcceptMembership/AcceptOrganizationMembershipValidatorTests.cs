@@ -153,7 +153,7 @@ public class AcceptOrganizationMembershipValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_WhenAutoConfirmEnabled_SetsRequiresEmergencyAccessDeletionTrue(
+    public async Task ValidateAsync_WhenAutoConfirmEnabled_SetsAutoConfirmPolicyEnabledTrue(
         User user,
         Guid organizationId,
         SutProvider<AcceptOrganizationMembershipValidator> sutProvider)
@@ -177,11 +177,11 @@ public class AcceptOrganizationMembershipValidatorTests
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         Assert.True(result.IsValid);
-        Assert.True(result.Request.RequiresEmergencyAccessDeletion);
+        Assert.True(result.Request.AutoConfirmPolicyEnabled);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_WhenAutoConfirmNotEnabled_SetsRequiresEmergencyAccessDeletionFalse(
+    public async Task ValidateAsync_WhenAutoConfirmNotEnabled_SetsAutoConfirmPolicyEnabledFalse(
         User user,
         Guid organizationId,
         SutProvider<AcceptOrganizationMembershipValidator> sutProvider)
@@ -198,7 +198,7 @@ public class AcceptOrganizationMembershipValidatorTests
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         Assert.True(result.IsValid);
-        Assert.False(result.Request.RequiresEmergencyAccessDeletion);
+        Assert.False(result.Request.AutoConfirmPolicyEnabled);
     }
 
     [Theory, BitAutoData]

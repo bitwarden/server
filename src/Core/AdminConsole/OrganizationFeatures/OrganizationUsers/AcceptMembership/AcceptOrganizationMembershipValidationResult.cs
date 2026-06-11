@@ -2,5 +2,5 @@
 
 public record AcceptOrganizationMembershipValidationResult
 {
-    public bool RequiresEmergencyAccessDeletion { get; init; }
+    public bool AutoConfirmPolicyEnabled { get; init; }
 }
