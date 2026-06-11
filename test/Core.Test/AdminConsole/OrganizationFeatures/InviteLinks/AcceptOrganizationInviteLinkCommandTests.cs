@@ -425,7 +425,7 @@ public class AcceptOrganizationInviteLinkCommandTests
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        SetupAutoConfirmPolicy(sutProvider);
+        SetupAutoConfirmPolicy(organization, user, sutProvider);
         organization.Seats = 2;
         organization.MaxAutoscaleSeats = 2;
 
@@ -514,7 +514,7 @@ public class AcceptOrganizationInviteLinkCommandTests
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        SetupAutoConfirmPolicy(sutProvider);
+        SetupAutoConfirmPolicy(organization, user, sutProvider);
 
         var adminDetails = new OrganizationUserUserDetails { Email = "admin@example.com" };
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -730,10 +730,13 @@ public class AcceptOrganizationInviteLinkCommandTests
     }
 
     private static void SetupAutoConfirmPolicy(
+        Organization organization,
+        User user,
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
     {
         sutProvider.GetDependency<IAcceptOrganizationMembershipValidator>()
-            .ValidateAsync(Arg.Any<AcceptOrganizationMembershipValidationRequest>())
+            .ValidateAsync(Arg.Is<AcceptOrganizationMembershipValidationRequest>(r =>
+                r.OrganizationId == organization.Id && r.User == user))
             .Returns(Task.FromResult(
                 Valid(new AcceptOrganizationMembershipValidationResult
                 {
@@ -794,7 +797,8 @@ public class AcceptOrganizationInviteLinkCommandTests
 
         // Membership validator returns valid (no restrictions) by default
         sutProvider.GetDependency<IAcceptOrganizationMembershipValidator>()
-            .ValidateAsync(Arg.Any<AcceptOrganizationMembershipValidationRequest>())
+            .ValidateAsync(Arg.Is<AcceptOrganizationMembershipValidationRequest>(r =>
+                r.OrganizationId == org.Id && r.User == user))
             .Returns(Task.FromResult(
                 Valid(new AcceptOrganizationMembershipValidationResult())));
 

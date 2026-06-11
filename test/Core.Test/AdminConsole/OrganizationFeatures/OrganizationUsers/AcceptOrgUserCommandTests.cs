@@ -762,7 +762,8 @@ public class AcceptOrgUserCommandTests
 
         // Membership validator returns valid (no restrictions) by default
         sutProvider.GetDependency<IAcceptOrganizationMembershipValidator>()
-            .ValidateAsync(Arg.Any<AcceptOrganizationMembershipValidationRequest>())
+            .ValidateAsync(Arg.Is<AcceptOrganizationMembershipValidationRequest>(r =>
+                r.OrganizationId == org.Id && r.User == user))
             .Returns(Task.FromResult(
                 Valid(new AcceptOrganizationMembershipValidationResult())));
     }
