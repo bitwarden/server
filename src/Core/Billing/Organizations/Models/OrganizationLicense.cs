@@ -437,6 +437,7 @@ public class OrganizationLicense : ILicense
         var useDisableSmAdsForUsers = claimsPrincipal.GetValue<bool>(nameof(UseDisableSmAdsForUsers));
         var useMyItems = claimsPrincipal.GetValue<bool>(nameof(UseMyItems));
         var useInviteLinks = claimsPrincipal.GetValue<bool>(nameof(UseInviteLinks));
+        var useRiskInsights = claimsPrincipal.GetValue<bool>(nameof(UseRiskInsights));
 
         var claimedPlanType = claimsPrincipal.GetValue<PlanType>(nameof(PlanType));
 
@@ -483,7 +484,11 @@ public class OrganizationLicense : ILicense
                (!claimsPrincipal.HasClaim(c => c.Type == nameof(UseMyItems))
                    || useMyItems == organization.UseMyItems) &&
                (!claimsPrincipal.HasClaim(c => c.Type == nameof(UseInviteLinks))
-                   || useInviteLinks == organization.UseInviteLinks);
+                   || useInviteLinks == organization.UseInviteLinks) &&
+               // UseRiskInsights follows the same conditional HasClaim pattern (PM-33980):
+               // pre-existing self-host licenses lack this claim and must still validate.
+               (!claimsPrincipal.HasClaim(c => c.Type == nameof(UseRiskInsights))
+                   || useRiskInsights == organization.UseRiskInsights);
 
     }
 
