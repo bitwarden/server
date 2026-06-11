@@ -212,6 +212,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IListInboxHistoryQuery, ListInboxHistoryQuery>();
         services.AddScoped<IDecideAccessRequestCommand, DecideAccessRequestCommand>();
         services.AddScoped<IActivateAccessRequestCommand, ActivateAccessRequestCommand>();
+        services.AddScoped<ICancelAccessRequestCommand, CancelAccessRequestCommand>();
         services.AddScoped<IRevokeAccessLeaseCommand, RevokeAccessLeaseCommand>();
         services.AddScoped<IGetCipherAccessStateQuery, GetCipherAccessStateQuery>();
         services.AddScoped<IListMyAccessRequestsQuery, ListMyAccessRequestsQuery>();

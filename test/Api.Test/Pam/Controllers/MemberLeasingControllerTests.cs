@@ -8,6 +8,7 @@ using Bit.Core.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 using Xunit;
 
@@ -73,6 +74,18 @@ public class MemberLeasingControllerTests
 
         Assert.Equal(lease.Id, result.Id);
         Assert.Equal(AccessLeaseStatusNames.Active, result.Status);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelRequest_CancelsCallersRequest_ReturnsNoContent(
+        Guid userId, Guid requestId, SutProvider<MemberLeasingController> sutProvider)
+    {
+        SetupUser(sutProvider, userId);
+
+        var result = await sutProvider.Sut.CancelRequest(requestId);
+
+        Assert.IsType<NoContentResult>(result);
+        await sutProvider.GetDependency<ICancelAccessRequestCommand>().Received(1).CancelAsync(userId, requestId);
     }
 
     private static void SetupUser(SutProvider<MemberLeasingController> sutProvider, Guid userId)

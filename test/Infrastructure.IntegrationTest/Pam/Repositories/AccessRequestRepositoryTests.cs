@@ -345,6 +345,49 @@ public class AccessRequestRepositoryTests
         Assert.All(mine, r => Assert.Null(r.CollectionName));
     }
 
+    [DatabaseTheory, DatabaseData]
+    public async Task CancelAsync_PendingRequest_TransitionsToCancelledAndStampsResolvedDate(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRequestRepository accessRequestRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var now = DateTime.UtcNow;
+
+        var request = await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, Guid.NewGuid(), AccessRequestStatus.Pending, now));
+
+        var resolvedAt = now.AddMinutes(5);
+        await accessRequestRepository.CancelAsync(request.Id, resolvedAt);
+
+        var persisted = await accessRequestRepository.GetByIdAsync(request.Id);
+        Assert.NotNull(persisted);
+        Assert.Equal(AccessRequestStatus.Cancelled, persisted!.Status);
+        Assert.NotNull(persisted.ResolvedDate);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task CancelAsync_AlreadyResolvedRequest_LeavesItUntouched(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRequestRepository accessRequestRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var now = DateTime.UtcNow;
+
+        // The proc only acts on Pending rows, so a request that already left Pending (e.g. approved) is never
+        // clobbered into Cancelled by a stray/raced cancel.
+        var approved = await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, Guid.NewGuid(), AccessRequestStatus.Approved, now));
+
+        await accessRequestRepository.CancelAsync(approved.Id, now.AddMinutes(5));
+
+        var persisted = await accessRequestRepository.GetByIdAsync(approved.Id);
+        Assert.Equal(AccessRequestStatus.Approved, persisted!.Status);
+    }
+
     private static AccessRequest BuildRequest(
         Guid organizationId, Guid collectionId, Guid requesterId, AccessRequestStatus status, DateTime creationDate)
         => new()

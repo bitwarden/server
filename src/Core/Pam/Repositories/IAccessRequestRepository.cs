@@ -56,4 +56,13 @@ public interface IAccessRequestRepository
     /// entities must already have their ids assigned.
     /// </summary>
     Task ResolveWithDecisionAsync(AccessRequest request, AccessDecision decision, AccessRequestStatus status, DateTime now);
+
+    /// <summary>
+    /// Withdraws the requester's own pending request: transitions it to <see cref="AccessRequestStatus.Cancelled"/>
+    /// and stamps <paramref name="now"/> as its resolved date. No <see cref="AccessDecision"/> is written — a
+    /// cancellation is the requester acting on their own request, not an approver verdict. The caller enforces
+    /// ownership and the pending precondition; the write is guarded so a request that has already left
+    /// <see cref="AccessRequestStatus.Pending"/> is left untouched (race-safe / idempotent).
+    /// </summary>
+    Task CancelAsync(Guid id, DateTime now);
 }
