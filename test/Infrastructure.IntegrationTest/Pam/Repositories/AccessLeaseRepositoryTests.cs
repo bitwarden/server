@@ -23,7 +23,8 @@ public class LeaseRepositoryTests
 
         var (request, decision, lease) = BuildAutoApproved(organization.Id, cipherId, requesterId, now, now.AddHours(1));
 
-        await accessLeaseRepository.CreateAutoApprovedAsync(request, decision, lease, now);
+        var outcome = await accessLeaseRepository.CreateAutoApprovedAsync(request, decision, lease, now, false);
+        Assert.Equal(AccessLeaseMintOutcome.Minted, outcome);
 
         var persistedRequest = await accessRequestRepository.GetByIdAsync(request.Id);
         Assert.NotNull(persistedRequest);
@@ -48,7 +49,7 @@ public class LeaseRepositoryTests
 
         var (request, decision, lease) = BuildAutoApproved(
             organization.Id, cipherId, requesterId, now.AddMinutes(-5), now.AddHours(1));
-        await accessLeaseRepository.CreateAutoApprovedAsync(request, decision, lease, now);
+        await accessLeaseRepository.CreateAutoApprovedAsync(request, decision, lease, now, false);
 
         var active = await accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(requesterId, cipherId, now);
 
@@ -69,7 +70,7 @@ public class LeaseRepositoryTests
         // A lease whose window has already elapsed.
         var (request, decision, lease) = BuildAutoApproved(
             organization.Id, cipherId, requesterId, now.AddHours(-2), now.AddHours(-1));
-        await accessLeaseRepository.CreateAutoApprovedAsync(request, decision, lease, now.AddHours(-2));
+        await accessLeaseRepository.CreateAutoApprovedAsync(request, decision, lease, now.AddHours(-2), false);
 
         var active = await accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(requesterId, cipherId, now);
 
@@ -118,17 +119,17 @@ public class LeaseRepositoryTests
         // Active, in-window lease for the requester.
         var (activeReq, activeDec, activeLease) = BuildAutoApproved(
             organization.Id, Guid.NewGuid(), requesterId, now.AddMinutes(-5), now.AddHours(1));
-        await accessLeaseRepository.CreateAutoApprovedAsync(activeReq, activeDec, activeLease, now);
+        await accessLeaseRepository.CreateAutoApprovedAsync(activeReq, activeDec, activeLease, now, false);
 
         // Expired lease for the same requester — must be excluded.
         var (expiredReq, expiredDec, expiredLease) = BuildAutoApproved(
             organization.Id, Guid.NewGuid(), requesterId, now.AddHours(-2), now.AddHours(-1));
-        await accessLeaseRepository.CreateAutoApprovedAsync(expiredReq, expiredDec, expiredLease, now.AddHours(-2));
+        await accessLeaseRepository.CreateAutoApprovedAsync(expiredReq, expiredDec, expiredLease, now.AddHours(-2), false);
 
         // Active lease for a different requester — must be excluded.
         var (otherReq, otherDec, otherLease) = BuildAutoApproved(
             organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddMinutes(-5), now.AddHours(1));
-        await accessLeaseRepository.CreateAutoApprovedAsync(otherReq, otherDec, otherLease, now);
+        await accessLeaseRepository.CreateAutoApprovedAsync(otherReq, otherDec, otherLease, now, false);
 
         var result = await accessLeaseRepository.GetManyActiveByRequesterIdAsync(requesterId, now);
 
@@ -149,7 +150,7 @@ public class LeaseRepositoryTests
 
         var (request, decision, lease) = BuildAutoApproved(
             organization.Id, cipherId, requesterId, now.AddMinutes(-5), now.AddHours(1));
-        await accessLeaseRepository.CreateAutoApprovedAsync(request, decision, lease, now);
+        await accessLeaseRepository.CreateAutoApprovedAsync(request, decision, lease, now, false);
 
         var auditDecision = new AccessDecision
         {
@@ -186,7 +187,8 @@ public class LeaseRepositoryTests
         Assert.Null(await accessLeaseRepository.GetByAccessRequestIdAsync(request.Id));
 
         var lease = BuildLeaseFor(request, now);
-        Assert.True(await accessLeaseRepository.CreateFromApprovedRequestAsync(lease, now));
+        Assert.Equal(AccessLeaseMintOutcome.Minted,
+            await accessLeaseRepository.CreateFromApprovedRequestAsync(lease, now, false));
 
         var produced = await accessLeaseRepository.GetByAccessRequestIdAsync(request.Id);
         Assert.NotNull(produced);
@@ -206,7 +208,7 @@ public class LeaseRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task CreateFromApprovedRequestAsync_SecondActivation_ReturnsFalseAndKeepsFirstLease(
+    public async Task CreateFromApprovedRequestAsync_SecondActivation_PreconditionFailedAndKeepsFirstLease(
         IOrganizationRepository organizationRepository,
         IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository)
@@ -217,19 +219,21 @@ public class LeaseRepositoryTests
             accessRequestRepository, organization.Id, now.AddHours(-1), now.AddHours(1));
 
         var first = BuildLeaseFor(request, now);
-        Assert.True(await accessLeaseRepository.CreateFromApprovedRequestAsync(first, now));
+        Assert.Equal(AccessLeaseMintOutcome.Minted,
+            await accessLeaseRepository.CreateFromApprovedRequestAsync(first, now, false));
 
         // A request authorizes access at most once: the second insert is refused by the guard (and would be by the
         // unique index even if the guard raced).
         var second = BuildLeaseFor(request, now);
-        Assert.False(await accessLeaseRepository.CreateFromApprovedRequestAsync(second, now));
+        Assert.Equal(AccessLeaseMintOutcome.PreconditionFailed,
+            await accessLeaseRepository.CreateFromApprovedRequestAsync(second, now, false));
 
         var produced = await accessLeaseRepository.GetByAccessRequestIdAsync(request.Id);
         Assert.Equal(first.Id, produced!.Id);
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task CreateFromApprovedRequestAsync_PreconditionNoLongerHolds_ReturnsFalse(
+    public async Task CreateFromApprovedRequestAsync_PreconditionNoLongerHolds_PreconditionFailed(
         IOrganizationRepository organizationRepository,
         IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository)
@@ -240,24 +244,28 @@ public class LeaseRepositoryTests
         // Still pending: not an approval.
         var pending = await CreateApprovedRequestAsync(
             accessRequestRepository, organization.Id, now.AddHours(-1), now.AddHours(1), AccessRequestStatus.Pending);
-        Assert.False(await accessLeaseRepository.CreateFromApprovedRequestAsync(BuildLeaseFor(pending, now), now));
+        Assert.Equal(AccessLeaseMintOutcome.PreconditionFailed,
+            await accessLeaseRepository.CreateFromApprovedRequestAsync(BuildLeaseFor(pending, now), now, false));
 
         // Someone else's request: the requester filter refuses it.
         var approved = await CreateApprovedRequestAsync(
             accessRequestRepository, organization.Id, now.AddHours(-1), now.AddHours(1));
         var foreign = BuildLeaseFor(approved, now);
         foreign.RequesterId = Guid.NewGuid();
-        Assert.False(await accessLeaseRepository.CreateFromApprovedRequestAsync(foreign, now));
+        Assert.Equal(AccessLeaseMintOutcome.PreconditionFailed,
+            await accessLeaseRepository.CreateFromApprovedRequestAsync(foreign, now, false));
 
         // Window not started yet.
         var future = await CreateApprovedRequestAsync(
             accessRequestRepository, organization.Id, now.AddHours(1), now.AddHours(2));
-        Assert.False(await accessLeaseRepository.CreateFromApprovedRequestAsync(BuildLeaseFor(future, now), now));
+        Assert.Equal(AccessLeaseMintOutcome.PreconditionFailed,
+            await accessLeaseRepository.CreateFromApprovedRequestAsync(BuildLeaseFor(future, now), now, false));
 
         // Window already ended.
         var lapsed = await CreateApprovedRequestAsync(
             accessRequestRepository, organization.Id, now.AddHours(-2), now.AddHours(-1));
-        Assert.False(await accessLeaseRepository.CreateFromApprovedRequestAsync(BuildLeaseFor(lapsed, now), now));
+        Assert.Equal(AccessLeaseMintOutcome.PreconditionFailed,
+            await accessLeaseRepository.CreateFromApprovedRequestAsync(BuildLeaseFor(lapsed, now), now, false));
 
         // None of the refused activations left a lease behind.
         foreach (var requestId in new[] { pending.Id, approved.Id, future.Id, lapsed.Id })
@@ -266,14 +274,42 @@ public class LeaseRepositoryTests
         }
     }
 
+    [DatabaseTheory, DatabaseData]
+    public async Task CreateFromApprovedRequestAsync_EnforceSingleActiveLease_SecondCipherActivationConflicts(
+        IOrganizationRepository organizationRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+        var cipherId = Guid.NewGuid();
+
+        // Two different users each hold an approved request for the SAME cipher. With enforcement on, only one of them
+        // may mint an active lease — contention is purely per-cipher across all users.
+        var first = await CreateApprovedRequestAsync(
+            accessRequestRepository, organization.Id, now.AddHours(-1), now.AddHours(1), cipherId: cipherId);
+        var second = await CreateApprovedRequestAsync(
+            accessRequestRepository, organization.Id, now.AddHours(-1), now.AddHours(1), cipherId: cipherId);
+
+        Assert.Equal(AccessLeaseMintOutcome.Minted,
+            await accessLeaseRepository.CreateFromApprovedRequestAsync(BuildLeaseFor(first, now), now, true));
+
+        // The cipher already has an active in-window lease, so the second activation is refused as a conflict.
+        Assert.Equal(AccessLeaseMintOutcome.SingleActiveLeaseConflict,
+            await accessLeaseRepository.CreateFromApprovedRequestAsync(BuildLeaseFor(second, now), now, true));
+
+        // The conflict left no lease behind for the second request.
+        Assert.Null(await accessLeaseRepository.GetByAccessRequestIdAsync(second.Id));
+    }
+
     private static async Task<AccessRequest> CreateApprovedRequestAsync(
         IAccessRequestRepository accessRequestRepository, Guid organizationId, DateTime notBefore, DateTime notAfter,
-        AccessRequestStatus status = AccessRequestStatus.Approved)
+        AccessRequestStatus status = AccessRequestStatus.Approved, Guid? cipherId = null)
         => await accessRequestRepository.CreateAsync(new AccessRequest
         {
             OrganizationId = organizationId,
             CollectionId = Guid.NewGuid(),
-            CipherId = Guid.NewGuid(),
+            CipherId = cipherId ?? Guid.NewGuid(),
             RequesterId = Guid.NewGuid(),
             NotBefore = notBefore,
             NotAfter = notAfter,

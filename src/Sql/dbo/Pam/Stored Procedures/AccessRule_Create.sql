@@ -4,6 +4,7 @@ CREATE PROCEDURE [dbo].[AccessRule_Create]
     @Name NVARCHAR(256),
     @Description NVARCHAR(MAX) = NULL,
     @Conditions NVARCHAR(MAX),
+    @SingleActiveLease BIT = 0,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -17,6 +18,7 @@ BEGIN
         [Name],
         [Description],
         [Conditions],
+        [SingleActiveLease],
         [CreationDate],
         [RevisionDate]
     )
@@ -27,6 +29,7 @@ BEGIN
         @Name,
         @Description,
         @Conditions,
+        @SingleActiveLease,
         @CreationDate,
         @RevisionDate
     )

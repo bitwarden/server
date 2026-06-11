@@ -201,6 +201,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IUpdateAccessRuleCommand, UpdateAccessRuleCommand>();
         services.AddScoped<IDeleteAccessRuleCommand, DeleteAccessRuleCommand>();
         services.AddScoped<IGoverningRuleResolver, GoverningRuleResolver>();
+        services.AddScoped<ISingleActiveLeaseEvaluator, SingleActiveLeaseEvaluator>();
         services.AddSingleton<IAccessRuleEngine, AccessRuleEngine>();
         services.AddScoped<IAccessPreCheckQuery, AccessPreCheckQuery>();
         services.AddScoped<IGetLeasedCipherQuery, GetLeasedCipherQuery>();

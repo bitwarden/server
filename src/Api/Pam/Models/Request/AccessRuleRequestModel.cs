@@ -16,6 +16,11 @@ public class AccessRuleRequestModel
     public object Conditions { get; set; } = null!;
 
     /// <summary>
+    /// When true, the rule enforces a per-cipher singleton (at most one active lease per cipher across all users).
+    /// </summary>
+    public bool SingleActiveLease { get; set; }
+
+    /// <summary>
     /// The complete set of collections this rule governs. The rule's associations are replaced to match
     /// exactly this set; an empty array clears all associations.
     /// </summary>
@@ -28,6 +33,7 @@ public class AccessRuleRequestModel
         Name = Name,
         Description = Description,
         Conditions = SerializeConditions(Conditions),
+        SingleActiveLease = SingleActiveLease,
     };
 
     private static string SerializeConditions(object conditions) => conditions switch

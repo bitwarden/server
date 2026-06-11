@@ -12,17 +12,20 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
     private readonly IAccessRequestRepository _accessRequestRepository;
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IApproverInboxNotifier _approverInboxNotifier;
+    private readonly ISingleActiveLeaseEvaluator _singleActiveLeaseEvaluator;
     private readonly TimeProvider _timeProvider;
 
     public ActivateAccessRequestCommand(
         IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository,
         IApproverInboxNotifier approverInboxNotifier,
+        ISingleActiveLeaseEvaluator singleActiveLeaseEvaluator,
         TimeProvider timeProvider)
     {
         _accessRequestRepository = accessRequestRepository;
         _accessLeaseRepository = accessLeaseRepository;
         _approverInboxNotifier = approverInboxNotifier;
+        _singleActiveLeaseEvaluator = singleActiveLeaseEvaluator;
         _timeProvider = timeProvider;
     }
 
@@ -84,7 +87,18 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         };
         lease.SetNewId();
 
-        if (!await _accessLeaseRepository.CreateFromApprovedRequestAsync(lease, now))
+        // The per-cipher singleton binds only when every path the caller reaches the cipher through is governed by a
+        // singleton rule; an escape path leaves them unconstrained. The mint proc enforces it under a range lock.
+        var enforceSingleActiveLease = await _singleActiveLeaseEvaluator.AppliesAsync(userId, request.CipherId);
+
+        var outcome = await _accessLeaseRepository.CreateFromApprovedRequestAsync(lease, now, enforceSingleActiveLease);
+
+        if (outcome == AccessLeaseMintOutcome.SingleActiveLeaseConflict)
+        {
+            throw new ConflictException("Another active lease exists for this item. Try again once it ends.");
+        }
+
+        if (outcome == AccessLeaseMintOutcome.PreconditionFailed)
         {
             // Lost a race: the guarded insert re-checks every precondition, so a miss means another activation won
             // or the request changed underneath us. If the winner's lease is live, activation still succeeded from

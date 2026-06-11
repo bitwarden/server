@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using Bit.Core.Pam.Entities;
+using Bit.Core.Pam.Enums;
 using Bit.Core.Pam.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
@@ -53,10 +54,11 @@ public class AccessLeaseRepository : Repository<AccessLease, Guid>, IAccessLease
         return results.ToList();
     }
 
-    public async Task CreateAutoApprovedAsync(AccessRequest request, AccessDecision decision, AccessLease lease, DateTime now)
+    public async Task<AccessLeaseMintOutcome> CreateAutoApprovedAsync(AccessRequest request, AccessDecision decision,
+        AccessLease lease, DateTime now, bool enforceSingleActiveLease)
     {
         await using var connection = new SqlConnection(ConnectionString);
-        await connection.ExecuteAsync(
+        var result = await connection.ExecuteScalarAsync<int>(
             $"[{Schema}].[AccessLease_CreateAutoApproved]",
             new
             {
@@ -72,16 +74,20 @@ public class AccessLeaseRepository : Repository<AccessLease, Guid>, IAccessLease
                 request.Reason,
                 decision.ConditionKind,
                 Now = now,
+                EnforceSingleActiveLease = enforceSingleActiveLease,
             },
             commandType: CommandType.StoredProcedure);
+
+        return (AccessLeaseMintOutcome)result;
     }
 
-    public async Task<bool> CreateFromApprovedRequestAsync(AccessLease lease, DateTime now)
+    public async Task<AccessLeaseMintOutcome> CreateFromApprovedRequestAsync(AccessLease lease, DateTime now,
+        bool enforceSingleActiveLease)
     {
         await using var connection = new SqlConnection(ConnectionString);
         try
         {
-            var rows = await connection.ExecuteScalarAsync<int>(
+            var result = await connection.ExecuteScalarAsync<int>(
                 $"[{Schema}].[AccessLease_CreateFromApprovedRequest]",
                 new
                 {
@@ -89,16 +95,17 @@ public class AccessLeaseRepository : Repository<AccessLease, Guid>, IAccessLease
                     lease.AccessRequestId,
                     lease.RequesterId,
                     Now = now,
+                    EnforceSingleActiveLease = enforceSingleActiveLease,
                 },
                 commandType: CommandType.StoredProcedure);
 
-            return rows == 1;
+            return (AccessLeaseMintOutcome)result;
         }
         catch (SqlException e) when (e.Number is 2601 or 2627)
         {
             // Unique-index backstop ([IX_AccessLease_AccessRequestId]): a concurrent activation won the race after
             // our NOT EXISTS guard passed. Same outcome as the guard catching it — the caller re-reads the winner.
-            return false;
+            return AccessLeaseMintOutcome.PreconditionFailed;
         }
     }
 

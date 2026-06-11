@@ -50,7 +50,7 @@ public class ActivateAccessRequestCommandTests
         await Assert.ThrowsAsync<ConflictException>(
             () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
         await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
-            .CreateFromApprovedRequestAsync(default!, default);
+            .CreateFromApprovedRequestAsync(default!, default, default);
     }
 
     [Theory, BitAutoData]
@@ -67,7 +67,7 @@ public class ActivateAccessRequestCommandTests
 
         Assert.Same(existing, result);
         await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
-            .CreateFromApprovedRequestAsync(default!, default);
+            .CreateFromApprovedRequestAsync(default!, default, default);
         await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
             .NotifyCollectionApproversAsync(default);
     }
@@ -134,7 +134,8 @@ public class ActivateAccessRequestCommandTests
         var sutProvider = Setup();
         SetupApprovedRequest(sutProvider, request);
         sutProvider.GetDependency<IAccessLeaseRepository>()
-            .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now).Returns(true);
+            .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, Arg.Any<bool>())
+            .Returns(AccessLeaseMintOutcome.Minted);
 
         var result = await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id);
 
@@ -150,7 +151,7 @@ public class ActivateAccessRequestCommandTests
         Assert.Equal(_now, result.CreationDate);
         Assert.NotEqual(default, result.Id);
         await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1)
-            .CreateFromApprovedRequestAsync(result, _now);
+            .CreateFromApprovedRequestAsync(result, _now, Arg.Any<bool>());
         await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
             .NotifyCollectionApproversAsync(request.CollectionId);
     }
@@ -163,7 +164,8 @@ public class ActivateAccessRequestCommandTests
         winner.Status = AccessLeaseStatus.Active;
         winner.NotAfter = _now.AddMinutes(30);
         sutProvider.GetDependency<IAccessLeaseRepository>()
-            .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now).Returns(false);
+            .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, Arg.Any<bool>())
+            .Returns(AccessLeaseMintOutcome.PreconditionFailed);
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByAccessRequestIdAsync(request.Id)
             .Returns((AccessLease?)null, winner);
 
@@ -180,12 +182,68 @@ public class ActivateAccessRequestCommandTests
         var sutProvider = Setup();
         SetupApprovedRequest(sutProvider, request);
         sutProvider.GetDependency<IAccessLeaseRepository>()
-            .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now).Returns(false);
+            .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, Arg.Any<bool>())
+            .Returns(AccessLeaseMintOutcome.PreconditionFailed);
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByAccessRequestIdAsync(request.Id)
             .Returns((AccessLease?)null);
 
         await Assert.ThrowsAsync<ConflictException>(
             () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ActivateAsync_SingleActiveLeaseApplies_PassesEnforceTrue_AndMints(AccessRequest request)
+    {
+        var sutProvider = Setup();
+        SetupApprovedRequest(sutProvider, request);
+        // The constraint binds for this caller and cipher: enforcement must be passed through to the mint.
+        sutProvider.GetDependency<ISingleActiveLeaseEvaluator>().AppliesAsync(request.RequesterId, request.CipherId)
+            .Returns(true);
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, true)
+            .Returns(AccessLeaseMintOutcome.Minted);
+
+        var result = await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id);
+
+        Assert.Equal(AccessLeaseStatus.Active, result.Status);
+        await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1)
+            .CreateFromApprovedRequestAsync(result, _now, true);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ActivateAsync_SingleActiveLeaseConflict_ThrowsConflict(AccessRequest request)
+    {
+        var sutProvider = Setup();
+        SetupApprovedRequest(sutProvider, request);
+        sutProvider.GetDependency<ISingleActiveLeaseEvaluator>().AppliesAsync(request.RequesterId, request.CipherId)
+            .Returns(true);
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, true)
+            .Returns(AccessLeaseMintOutcome.SingleActiveLeaseConflict);
+
+        var ex = await Assert.ThrowsAsync<ConflictException>(
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id));
+        Assert.Contains("Another active lease exists", ex.Message);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ActivateAsync_EscapePathExists_PassesEnforceFalse(AccessRequest request)
+    {
+        var sutProvider = Setup();
+        SetupApprovedRequest(sutProvider, request);
+        // An escape path leaves the caller unconstrained, so enforcement must be passed as false.
+        sutProvider.GetDependency<ISingleActiveLeaseEvaluator>().AppliesAsync(request.RequesterId, request.CipherId)
+            .Returns(false);
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, false)
+            .Returns(AccessLeaseMintOutcome.Minted);
+
+        await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id);
+
+        await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1)
+            .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, false);
     }
 
     private static SutProvider<ActivateAccessRequestCommand> Setup()
