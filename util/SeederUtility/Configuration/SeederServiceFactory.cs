@@ -1,10 +1,14 @@
 ﻿using AutoMapper;
+using Bit.Core.Billing.Organizations.Services;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
+using Bit.Core.Settings;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder.Options;
 using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.SeederUtility.Configuration;
 
@@ -35,8 +39,15 @@ internal sealed class SeederServiceScope : IDisposable
 
     internal IManglerService Mangler { get; }
 
-    internal SeederDependencies ToDependencies()
-        => new(Db, Mapper, PasswordHasher, Mangler);
+    internal IServiceProvider Services { get; }
+
+    internal SeederDependencies ToDependencies() => new(Db, Mapper, PasswordHasher, Mangler)
+    {
+        OrganizationBillingService = Services.GetRequiredService<IOrganizationBillingService>(),
+        PricingClient = Services.GetRequiredService<IPricingClient>(),
+        GlobalSettings = Services.GetRequiredService<IGlobalSettings>(),
+        LoggerFactory = Services.GetRequiredService<ILoggerFactory>(),
+    };
 
     private readonly ServiceProvider _provider;
 
@@ -47,6 +58,7 @@ internal sealed class SeederServiceScope : IDisposable
         _provider = provider;
         _scope = scope;
         var sp = scope.ServiceProvider;
+        Services = sp;
         Db = sp.GetRequiredService<DatabaseContext>();
         Mapper = sp.GetRequiredService<IMapper>();
         PasswordHasher = sp.GetRequiredService<IPasswordHasher<User>>();

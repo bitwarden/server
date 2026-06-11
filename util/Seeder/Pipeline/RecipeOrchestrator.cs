@@ -17,7 +17,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
     /// <param name="password">Optional password for all seeded accounts</param>
     /// <param name="kdfIterations">Optional KDF iteration count. Defaults to 5,000 for fast seeding.</param>
     /// <returns>Execution result with organization ID and entity counts</returns>
-    internal PipelineExecutionResult Execute(
+    internal Task<PipelineExecutionResult> ExecuteAsync(
         string presetName,
         string? password = null,
         int? kdfIterations = null)
@@ -30,6 +30,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         var effectiveKdf = kdfIterations ?? preset.KdfIterations ?? 5_000;
 
         var services = new ServiceCollection();
+        services.AddSingleton(deps);
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
         services.AddSingleton<ISeedReader>(reader);
@@ -48,9 +49,10 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
     /// <summary>
     /// Executes a recipe built programmatically from CLI options.
     /// </summary>
-    internal PipelineExecutionResult Execute(OrganizationVaultOptions options)
+    internal Task<PipelineExecutionResult> ExecuteAsync(OrganizationVaultOptions options)
     {
         var services = new ServiceCollection();
+        services.AddSingleton(deps);
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
         services.AddSingleton(new SeederSettings(options.Password, options.KdfIterations));
@@ -98,6 +100,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
             builder.AddCiphers(options.Ciphers, options.CipherTypeDistribution, options.PasswordDistribution, density: options.Density);
         }
 
+        builder.FinalizeOrganizationBilling();
         builder.Validate();
 
         return BuildAndExecute(recipeName, services);
@@ -106,7 +109,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
     /// <summary>
     /// Executes a recipe for an individual user built programmatically from CLI options.
     /// </summary>
-    internal PipelineExecutionResult Execute(IndividualUserOptions options)
+    internal Task<PipelineExecutionResult> ExecuteAsync(IndividualUserOptions options)
     {
         var firstName = options.FirstName ?? new Bogus.Faker().Name.FirstName();
         var lastName = options.LastName ?? new Bogus.Faker().Name.LastName();
@@ -116,6 +119,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         var maxStorageGb = premium ? (short)1 : (short)0;
 
         var services = new ServiceCollection();
+        services.AddSingleton(deps);
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
         services.AddSingleton(new SeederSettings(options.Password, options.KdfIterations));
@@ -141,12 +145,44 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         return BuildAndExecute(recipeName, services);
     }
 
-    private PipelineExecutionResult BuildAndExecute(string recipeName, ServiceCollection services)
+    private async Task<PipelineExecutionResult> BuildAndExecute(string recipeName, ServiceCollection services)
     {
-        using var serviceProvider = services.BuildServiceProvider();
+        ForwardBillingServices(services);
+        await using var serviceProvider = services.BuildServiceProvider();
         var committer = new BulkCommitter(deps.Db, deps.Mapper);
         var executor = new RecipeExecutor(recipeName, serviceProvider, committer);
-        return executor.Execute();
+        return await executor.ExecuteAsync();
+    }
+
+    /// <summary>
+    /// Registers the billing services that <see cref="Steps.FinalizeOrganizationBillingStep"/>
+    /// depends on, taken directly from <see cref="SeederDependencies"/>. Each is registered
+    /// only when supplied — missing ones surface as a clear DI resolution error if a recipe
+    /// actually uses the billing step.
+    /// </summary>
+    private void ForwardBillingServices(ServiceCollection services)
+    {
+        services.AddLogging();
+
+        if (deps.LoggerFactory is not null)
+        {
+            services.AddSingleton(deps.LoggerFactory);
+        }
+
+        if (deps.GlobalSettings is not null)
+        {
+            services.AddSingleton(deps.GlobalSettings);
+        }
+
+        if (deps.OrganizationBillingService is not null)
+        {
+            services.AddSingleton(deps.OrganizationBillingService);
+        }
+
+        if (deps.PricingClient is not null)
+        {
+            services.AddSingleton(deps.PricingClient);
+        }
     }
 
 }

@@ -9,7 +9,7 @@ namespace Bit.SeederUtility.Commands;
 public class IndividualCommand
 {
     [DefaultCommand]
-    public void Execute(IndividualArgs args)
+    public async Task ExecuteAsync(IndividualArgs args)
     {
         try
         {
@@ -17,9 +17,9 @@ public class IndividualCommand
 
             using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
 
-            var result = ConsoleProgressReporter.RunWithProgress(
+            var result = await ConsoleProgressReporter.RunWithProgressAsync(
                 deps.ToDependencies(),
-                d => new IndividualUserRecipe(d).Seed(args.ToOptions()));
+                d => new IndividualUserRecipe(d).SeedAsync(args.ToOptions()));
 
             ConsoleOutput.PrintRow("User", result.UserId);
             if (result.Email is not null)

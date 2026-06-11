@@ -8,4 +8,5 @@ internal static class SeederPhases
     internal const string CreatingGroups = "Creating groups";
     internal const string CreatingUsers = "Creating users";
     internal const string CreatingPersonalCiphers = "Creating personal ciphers";
+    internal const string PostCommit = "Post-commit";
 }
