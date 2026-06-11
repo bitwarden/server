@@ -16,7 +16,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing" Version="[9.10.0]" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing" Version="[10.6.0]" />
   </ItemGroup>
 
   <ItemGroup>
