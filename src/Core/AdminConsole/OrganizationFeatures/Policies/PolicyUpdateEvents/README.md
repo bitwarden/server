@@ -1,8 +1,7 @@
 # IPolicyUpdateEvent
 
-This is the policy update pattern that we want our system’s end state to follow.
-This directory contains the interfaces and infrastructure for the policy save workflow used by `IVNextSavePolicyCommand`.
-Currently, we’re using `IVNextSavePolicyCommand` to transition from the old `IPolicyValidator` pattern.
+This is the policy update pattern that our system follows.
+This directory contains the interfaces and infrastructure for the policy save workflow used by `ISavePolicyCommand`.
 
 ---
 
@@ -28,7 +27,7 @@ The `PolicyEventHandlerHandlerFactory` resolves the correct handler for a given 
 
 ## Limitations
 
-1. The save workflow is not atomic. If an unhandled exception occurs at any step, changes made by prior steps are not rolled back. For example, pre-save side effects that have already executed will not be undone if the upsert subsequently fails.
+The save workflow is not atomic. If an unhandled exception occurs at any step, changes made by prior steps are not rolled back. For example, pre-save side effects that have already executed will not be undone if the upsert subsequently fails.
 
 ---
 
@@ -77,7 +76,7 @@ Return an empty string to pass validation. Return a non-empty error message to t
 
 ### `IOnPolicyPreUpdateEvent`
 
-Executes side effects **before** the policy is upserted to the database.
+Executes side effects **before** the policy is upserted to the database. If an exception is thrown, the policy will not be saved.
 
 ```csharp
 public interface IOnPolicyPreUpdateEvent : IPolicyUpdateEvent
@@ -106,7 +105,7 @@ public interface IOnPolicyPostUpdateEvent : IPolicyUpdateEvent
 
 Typical uses: creating collections, sending notifications that depend on the new policy state.
 
-Note: This is more useful for enabling a policy than for disabling a policy, since when the policy is disabled, there is no easy way to find the users the policy should be enforced on.
+Note: This is more useful for enabling a policy than for disabling a policy, since when the policy is disabled, it does not have any effect.
 
 ---
 
@@ -126,9 +125,9 @@ Returns the matching handler, or `None` if the policy type does not implement th
 
 1. Create a class in `PolicyValidators/` implementing any combination of the event interfaces above.
 2. Set `Type` to the appropriate `PolicyType`.
-3. Register the class as `IPolicyUpdateEvent` (and the legacy interfaces if needed) in `PolicyServiceCollectionExtensions.AddPolicyUpdateEvents()`.
+3. Register the class as `IPolicyUpdateEvent` in `PolicyServiceCollectionExtensions.AddPolicyUpdateEvents()`.
 
-Note: No changes to `VNextSavePolicyCommand` or `PolicyEventHandlerHandlerFactory` are required.
+Note: No changes to `SavePolicyCommand` or `PolicyEventHandlerHandlerFactory` are required.
 
 ### Example
 
@@ -209,43 +208,10 @@ public interface IMyNewEvent : IPolicyUpdateEvent
 
 It must extend `IPolicyUpdateEvent`.
 
-### Step 2: Add a step to `SavePolicyCommand.SaveAsync()` or `VNextSavePolicyCommand.SaveAsync()` during transition
+### Step 2: Add a step to `SavePolicyCommand.SaveAsync()`
 
 1. Call your method at the appropriate position in the workflow
 2. You can use the existing `ExecutePolicyEventAsync<T>` helper or have your method use `policyEventHandlerFactory` directly to retrieve the handlers.
-3. **Note on cross-policy logic:** `IEnforceDependentPoliciesEvent` is a special case. It scans *all* registered handlers (not just the targeted policy's handler) to find dependents when disabling a policy. If your new interface requires similar cross-policy scanning, you will need to add that logic directly to `SavePolicyCommand` or `VNextSavePolicyCommand.SaveAsync()` during transition rather than using `ExecutePolicyEventAsync<T>`.
+3. **Note on cross-policy logic:** `IEnforceDependentPoliciesEvent` is a special case. It scans *all* registered handlers (not just the targeted policy's handler) to find dependents when disabling a policy. If your new interface requires similar cross-policy scanning, you will need to add that logic directly to `SavePolicyCommand.SaveAsync()` rather than using `ExecutePolicyEventAsync<T>`.
 
 ### Step 3: Document the interface in the [Interfaces](#interfaces) section of this README and add it to the workflow diagram.
-
----
-
-# IPolicyValidator (Legacy)
-
-`IPolicyValidator` is the **old pattern** and is being phased out. It is consumed by `ISavePolicyCommand` / `PolicyService.SavePolicyAsync`.
-
-```csharp
-public interface IPolicyValidator
-{
-    PolicyType Type { get; }
-    IEnumerable<PolicyType> RequiredPolicies { get; }
-    Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy);
-    Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy);
-}
-```
-
----
-
-## Reason for transition
-
-1. `IPolicyValidator` combines dependency enforcement (`RequiredPolicies`), validation (`ValidateAsync`), and pre-save side effects (`OnSaveSideEffectsAsync`) into a single flat interface. This makes it awkward to add a post-save side effect, since that must be executed after the policy is saved, which lives in a different abstraction.
-2. The request body has also expanded, and we need to support metadata that the server needs to perform operations, but that data is not intended to be saved with the policy.
-3. By breaking each event hook into a separate interface, it reduces boilerplate, and new hooks can be added without affecting existing services.
-
----
-
-## During the transition
-
-1. New policies should implement **both** `IPolicyValidator` and the appropriate `IPolicyUpdateEvent` sub-interfaces so they work correctly regardless of which save path is called. Once `ISavePolicyCommand` is fully replaced by `IVNextSavePolicyCommand` and removed, the `IPolicyValidator` implementation can be dropped.
-2. Previous implementations of `IPolicyValidator` classes have a postfix of `Validator`, but once we move to `IPolicyUpdateEvent`, they should be renamed to `Handler`. This will reduce confusion since validation normally implies there are no write operations, but there are in this context.
-
----
