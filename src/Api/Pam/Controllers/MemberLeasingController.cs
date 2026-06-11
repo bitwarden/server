@@ -22,7 +22,8 @@ public class MemberLeasingController(
     IUserService userService,
     IListMyAccessRequestsQuery listMyAccessRequestsQuery,
     IListMyActiveAccessLeasesQuery listMyActiveAccessLeasesQuery,
-    IActivateAccessRequestCommand activateAccessRequestCommand)
+    IActivateAccessRequestCommand activateAccessRequestCommand,
+    ICancelAccessRequestCommand cancelAccessRequestCommand)
     : Controller
 {
     /// <summary>
@@ -61,5 +62,17 @@ public class MemberLeasingController(
         var userId = userService.GetProperUserId(User)!.Value;
         var lease = await activateAccessRequestCommand.ActivateAsync(userId, id);
         return new AccessLeaseResponseModel(lease);
+    }
+
+    /// <summary>
+    /// Withdraws the caller's own pending access request. Only the requester may cancel, and only while the request is
+    /// still pending; a resolved request can no longer be withdrawn.
+    /// </summary>
+    [HttpDelete("requests/{id:guid}")]
+    public async Task<IActionResult> CancelRequest(Guid id)
+    {
+        var userId = userService.GetProperUserId(User)!.Value;
+        await cancelAccessRequestCommand.CancelAsync(userId, id);
+        return NoContent();
     }
 }
