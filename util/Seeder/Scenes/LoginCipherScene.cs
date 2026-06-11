@@ -1,9 +1,9 @@
-﻿using System.Text.Json;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
-using Bit.Seeder.Scenes.LoginCipherScene;
 using Bit.Seeder.Services;
 
 namespace Bit.Seeder.Scenes;
@@ -15,8 +15,41 @@ namespace Bit.Seeder.Scenes;
 /// </summary>
 public abstract class LoginCipherScene<TRequest>(IManglerService manglerService)
     : IScene<TRequest, LoginCipherScene<TRequest>.Result>
-    where TRequest : LoginCipherRequest
+    where TRequest : LoginCipherScene<TRequest>.LoginCipherRequest
 {
+    public abstract class LoginCipherRequest
+    {
+        [Required]
+        public required Guid UserId { get; set; }
+        [Required]
+        public required string Name { get; set; }
+        public string? Username { get; set; }
+        public string? Password { get; set; }
+        public string? Totp { get; set; }
+        public string? Uri { get; set; }
+        public string? Notes { get; set; }
+        public bool Reprompt { get; set; }
+        public bool Deleted { get; set; }
+        public bool Favorite { get; set; }
+        public Guid? FolderId { get; set; }
+        public IEnumerable<FieldRequest>? Fields { get; set; }
+        public IEnumerable<PasskeyRequest>? Passkeys { get; set; }
+
+        public class FieldRequest
+        {
+            public required string Name { get; set; }
+            public required string Value { get; set; }
+            public required int Type { get; set; }
+        }
+
+        public class PasskeyRequest
+        {
+            public required string RpId { get; set; }
+            public required string RpName { get; set; }
+            public required string UserName { get; set; }
+        }
+    }
+
     public class Result
     {
         public required Guid CipherId { get; init; }
