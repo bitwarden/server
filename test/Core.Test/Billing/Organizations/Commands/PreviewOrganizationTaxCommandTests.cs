@@ -6,6 +6,7 @@ using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
+using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks.Plans;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -17,6 +18,7 @@ namespace Bit.Core.Test.Billing.Organizations.Commands;
 
 public class PreviewOrganizationTaxCommandTests
 {
+    private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly ILogger<PreviewOrganizationTaxCommand> _logger = Substitute.For<ILogger<PreviewOrganizationTaxCommand>>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
@@ -27,7 +29,7 @@ public class PreviewOrganizationTaxCommandTests
     public PreviewOrganizationTaxCommandTests()
     {
         _user = new User { Id = Guid.NewGuid(), Email = "test@example.com" };
-        _command = new PreviewOrganizationTaxCommand(_logger, _pricingClient, _stripeAdapter, _subscriptionDiscountService);
+        _command = new PreviewOrganizationTaxCommand(_featureService, _logger, _pricingClient, _stripeAdapter, _subscriptionDiscountService);
     }
 
     #region Subscription Purchase
@@ -1435,6 +1437,63 @@ public class PreviewOrganizationTaxCommandTests
             options.Discounts == null));
     }
 
+    // PM-37510 (T7): the plan-change preview copies the existing subscription's already-materialized
+    // (grace-reduced) SM service-account quantity verbatim — no grace recompute happens here. A
+    // migrated Enterprise org billed for only 20 accounts above its 200 free ceiling previews exactly
+    // those 20.
+    [Fact]
+    public async Task Run_OrganizationPlanChange_MigratedOrg_CopiesGraceReducedServiceAccountQuantity()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            PlanType = PlanType.EnterpriseAnnually,
+            GatewayCustomerId = "cus_test123",
+            GatewaySubscriptionId = "sub_test123",
+            UseSecretsManager = true
+        };
+
+        var planChange = new OrganizationSubscriptionPlanChange
+        {
+            Tier = ProductTierType.Enterprise,
+            Cadence = PlanCadenceType.Annually
+        };
+
+        var billingAddress = new BillingAddress { Country = "US", PostalCode = "12345" };
+
+        var plan = new EnterprisePlan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+        _pricingClient.GetPlanOrThrow(planChange.PlanType).Returns(plan);
+
+        var subscriptionItems = new List<SubscriptionItem>
+        {
+            new() { Price = new Price { Id = plan.PasswordManager.StripeSeatPlanId }, Quantity = 10 },
+            new() { Price = new Price { Id = plan.SecretsManager.StripeSeatPlanId }, Quantity = 5 },
+            // Already grace-reduced: 220 accounts - 200 free ceiling => 20 billed.
+            new() { Price = new Price { Id = plan.SecretsManager.StripeServiceAccountPlanId }, Quantity = 20 }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Items = new StripeList<SubscriptionItem> { Data = subscriptionItems },
+            Customer = new Customer { Discount = null }
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var invoice = new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 0 }], Total = 0 };
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(organization, planChange, billingAddress);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.SubscriptionDetails.Items.Any(item =>
+                item.Price == plan.SecretsManager.StripeServiceAccountPlanId && item.Quantity == 20)));
+    }
+
     [Fact]
     public async Task Run_OrganizationPlanChange_ExistingSubscriptionWithDiscount_PreservesCoupon()
     {
@@ -2453,6 +2512,74 @@ public class PreviewOrganizationTaxCommandTests
 
         await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.Discounts == null || options.Discounts.Count == 0));
+    }
+
+    #endregion
+
+    #region Feature flag
+
+    [Fact]
+    public async Task Run_FlagOn_BusinessUse_DoesNotSetCustomerDetailsTaxExempt()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax).Returns(true);
+
+        var purchase = new OrganizationSubscriptionPurchase
+        {
+            Tier = ProductTierType.Teams,
+            Cadence = PlanCadenceType.Monthly,
+            PasswordManager = new OrganizationSubscriptionPurchase.PasswordManagerSelections
+            {
+                Seats = 3,
+                AdditionalStorage = 0,
+                Sponsored = false
+            }
+        };
+
+        var billingAddress = new BillingAddress { Country = "DE", PostalCode = "10115" };
+
+        var plan = new TeamsPlan(false);
+        _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 0 }], Total = 2700 });
+
+        await _command.Run(_user, purchase, billingAddress);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true &&
+            options.CustomerDetails.TaxExempt == null));
+    }
+
+    [Fact]
+    public async Task Run_FlagOn_FamiliesTier_DoesNotSetCustomerDetailsTaxExempt()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax).Returns(true);
+
+        var purchase = new OrganizationSubscriptionPurchase
+        {
+            Tier = ProductTierType.Families,
+            Cadence = PlanCadenceType.Annually,
+            PasswordManager = new OrganizationSubscriptionPurchase.PasswordManagerSelections
+            {
+                Seats = 6,
+                AdditionalStorage = 0,
+                Sponsored = false
+            }
+        };
+
+        var billingAddress = new BillingAddress { Country = "US", PostalCode = "12345" };
+
+        var plan = new FamiliesPlan();
+        _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 0 }], Total = 4000 });
+
+        await _command.Run(_user, purchase, billingAddress);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true &&
+            options.CustomerDetails.TaxExempt == null));
     }
 
     #endregion

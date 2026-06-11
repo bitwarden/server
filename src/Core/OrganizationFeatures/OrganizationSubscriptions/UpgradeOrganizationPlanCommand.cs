@@ -11,6 +11,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Extensions;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
@@ -284,29 +285,11 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         }
 
         organization.BusinessName = upgrade.BusinessName;
-        organization.PlanType = newPlan.Type;
-        organization.Seats = (short)(newPlan.PasswordManager.BaseSeats + upgrade.AdditionalSeats);
-        organization.MaxCollections = newPlan.PasswordManager.MaxCollections;
-        organization.UseGroups = newPlan.HasGroups;
-        organization.UseDirectory = newPlan.HasDirectory;
-        organization.UseEvents = newPlan.HasEvents;
-        organization.UseTotp = newPlan.HasTotp;
-        organization.Use2fa = newPlan.Has2fa;
-        organization.UseApi = newPlan.HasApi;
-        organization.SelfHost = newPlan.HasSelfHost;
-        organization.UsePolicies = newPlan.HasPolicies;
-        organization.UseMyItems = newPlan.HasMyItems;
-        organization.MaxStorageGb = (short)(newPlan.PasswordManager.BaseStorageGb + upgrade.AdditionalStorageGb);
-        organization.UseSso = newPlan.HasSso;
-        organization.UseOrganizationDomains = newPlan.HasOrganizationDomains;
-        organization.UseKeyConnector = newPlan.HasKeyConnector ? organization.UseKeyConnector : false;
-        organization.UseScim = newPlan.HasScim;
-        organization.UseResetPassword = newPlan.HasResetPassword;
+        organization.ChangePlan(newPlan);
         organization.UsersGetPremium = newPlan.UsersGetPremium || upgrade.PremiumAccessAddon;
-        organization.UseCustomPermissions = newPlan.HasCustomPermissions;
-        organization.Plan = newPlan.Name;
+        organization.Seats = (short)(newPlan.PasswordManager.BaseSeats + upgrade.AdditionalSeats);
+        organization.MaxStorageGb = (short)(newPlan.PasswordManager.BaseStorageGb + upgrade.AdditionalStorageGb);
         organization.Enabled = success;
-        organization.UsePasswordManager = true;
         organization.UseSecretsManager = upgrade.UseSecretsManager;
 
         organization.BackfillPublicPrivateKeys(upgrade.Keys);

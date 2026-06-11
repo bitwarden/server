@@ -4,7 +4,6 @@
 using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
 using Bit.Core.Context;
@@ -39,7 +38,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         GlobalSettings globalSettings,
         IAuthRequestRepository authRequestRepository,
         IUserRepository userRepository,
-        IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
@@ -47,7 +45,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
         IClientVersionValidator clientVersionValidator,
-        IBumpDeviceLastActivityDateCommand bumpDeviceLastActivityDateCommand)
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand)
         : base(
             userManager,
             userService,
@@ -60,7 +58,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             currentContext,
             globalSettings,
             userRepository,
-            policyService,
             featureService,
             ssoConfigRepository,
             userDecryptionOptionsBuilder,
@@ -69,7 +66,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             mailService,
             userAccountKeysQuery,
             clientVersionValidator,
-            bumpDeviceLastActivityDateCommand)
+            updateDeviceLastActivityCommand)
     {
         _userManager = userManager;
         _currentContext = currentContext;
@@ -80,8 +77,10 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
     public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
     {
         var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
-        // We want to keep this device around incase the device is new for the user
-        var requestDevice = DeviceValidator.GetDeviceFromRequest(context.Request);
+        // We want to keep this device around incase the device is new for the user.
+        // Pass through the client version from CurrentContext so a brand-new device row gets
+        // ClientVersion populated at Device_Create time (no temporary-NULL window).
+        var requestDevice = DeviceValidator.GetDeviceFromRequest(context.Request, _currentContext.ClientVersion?.ToString());
         var knownDevice = await _deviceValidator.GetKnownDeviceAsync(user, requestDevice);
         var validatorContext = new CustomValidatorRequestContext
         {

@@ -57,6 +57,9 @@ public class CipherServiceTests
         Organization organization, List<Guid> collectionIds)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(Arg.Any<Guid>())
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Disabled, []));
 
         var lastKnownRevisionDate = cipher.RevisionDate.AddDays(-1);
         cipher.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
@@ -284,6 +287,9 @@ public class CipherServiceTests
         var cipherRepository = sutProvider.GetDependency<ICipherRepository>();
         cipherRepository.ReplaceAsync(cipher, collectionIds).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(Arg.Any<Guid>())
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Disabled, []));
 
         cipher.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
         {
@@ -303,6 +309,9 @@ public class CipherServiceTests
         var cipherRepository = sutProvider.GetDependency<ICipherRepository>();
         cipherRepository.ReplaceAsync(cipher, collectionIds).Returns(false);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(Arg.Any<Guid>())
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Disabled, []));
 
         cipher.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
         {
@@ -324,8 +333,11 @@ public class CipherServiceTests
         var originalCipher = CoreHelpers.CloneObject(cipher);
         var cipherRepository = sutProvider.GetDependency<ICipherRepository>();
         cipherRepository.ReplaceAsync(cipher, collectionIds).Returns(true);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         var cipherSyncPushService = sutProvider.GetDependency<ICipherSyncPushService>();
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(Arg.Any<Guid>())
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Disabled, []));
+        var pushNotificationService = sutProvider.GetDependency<IPushNotificationService>();
 
         var v0AttachmentId = Guid.NewGuid().ToString();
         var anotherAttachmentId = Guid.NewGuid().ToString();
@@ -396,6 +408,9 @@ public class CipherServiceTests
         var cipherRepository = sutProvider.GetDependency<ICipherRepository>();
         cipherRepository.ReplaceAsync(cipher, collectionIds).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(Arg.Any<Guid>())
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Disabled, []));
         var attachmentStorageService = sutProvider.GetDependency<IAttachmentStorageService>();
 
         var v0AttachmentId = Guid.NewGuid().ToString();
@@ -476,6 +491,9 @@ public class CipherServiceTests
         var cipherRepository = sutProvider.GetDependency<ICipherRepository>();
         cipherRepository.ReplaceAsync(cipher, collectionIds).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(Arg.Any<Guid>())
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Disabled, []));
         var attachmentStorageService = sutProvider.GetDependency<IAttachmentStorageService>();
         var collectionCipherRepository = sutProvider.GetDependency<ICollectionCipherRepository>();
         collectionCipherRepository.GetManyByUserIdCipherIdAsync(cipher.UserId.Value, cipher.Id).Returns(
@@ -580,6 +598,9 @@ public class CipherServiceTests
         cipherRepository.ReplaceAsync(cipher, collectionIds).Returns(true);
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(Arg.Any<Guid>())
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Disabled, []));
         var attachmentStorageService = sutProvider.GetDependency<IAttachmentStorageService>();
         var userRepository = sutProvider.GetDependency<IUserRepository>();
         var collectionCipherRepository = sutProvider.GetDependency<ICollectionCipherRepository>();
@@ -1155,6 +1176,10 @@ public class CipherServiceTests
            (DateTime?)c.RevisionDate));
         var sharingUserId = ciphers.First().UserId.Value;
 
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(sharingUserId)
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Disabled, []));
+
         await sutProvider.Sut.ShareManyAsync(cipherInfos, organizationId, collectionIds, sharingUserId);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).UpdateCiphersAsync(sharingUserId,
             Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()));
@@ -1180,8 +1205,6 @@ public class CipherServiceTests
         var cipherInfos = ciphers.Select(c => (c,
             (DateTime?)c.RevisionDate));
         var sharingUserId = ciphers.First().UserId.Value;
-
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.MigrateMyVaultToMyItems).Returns(true);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(sharingUserId)
@@ -1233,37 +1256,6 @@ public class CipherServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task ShareManyAsync_StorageLimit_Enforced_WhenFeatureFlagDisabled(SutProvider<CipherService> sutProvider,
-        IEnumerable<CipherDetails> ciphers, Guid organizationId, List<Guid> collectionIds)
-    {
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
-            .Returns(new Organization
-            {
-                Id = organizationId,
-                PlanType = PlanType.EnterpriseAnnually,
-                UsePolicies = true,
-                MaxStorageGb = 3,
-                Storage = 3221225472 // 3 GB used, so 0 remaining
-            });
-        ciphers.FirstOrDefault().Attachments =
-            "{\"attachment1\":{\"Size\":\"250\",\"FileName\":\"superCoolFile\","
-            + "\"Key\":\"superCoolFile\",\"ContainerName\":\"testContainer\",\"Validated\":false}}";
-
-        var cipherInfos = ciphers.Select(c => (c,
-            (DateTime?)c.RevisionDate));
-        var sharingUserId = ciphers.First().UserId.Value;
-
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.MigrateMyVaultToMyItems).Returns(false);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.ShareManyAsync(cipherInfos, organizationId, collectionIds, sharingUserId)
-        );
-        Assert.Contains("Not enough storage available for this organization.", exception.Message);
-        await sutProvider.GetDependency<ICipherRepository>().DidNotReceive().UpdateCiphersAsync(sharingUserId,
-            Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()));
-    }
-
-    [Theory, BitAutoData]
     public async Task ShareManyAsync_StorageLimit_Enforced_WhenUsePoliciesDisabled(SutProvider<CipherService> sutProvider,
         IEnumerable<CipherDetails> ciphers, Guid organizationId, List<Guid> collectionIds)
     {
@@ -1283,8 +1275,6 @@ public class CipherServiceTests
         var cipherInfos = ciphers.Select(c => (c,
             (DateTime?)c.RevisionDate));
         var sharingUserId = ciphers.First().UserId.Value;
-
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.MigrateMyVaultToMyItems).Returns(true);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.ShareManyAsync(cipherInfos, organizationId, collectionIds, sharingUserId)

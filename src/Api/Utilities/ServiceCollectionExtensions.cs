@@ -47,20 +47,32 @@ public static class ServiceCollectionExtensions
 
             config.SwaggerDoc("internal", new OpenApiInfo { Title = "Bitwarden Internal API", Version = "latest" });
 
-            // Configure Bitwarden cloud US and EU servers. These will appear in the swagger.json build artifact
+            // Configure Bitwarden cloud servers. These will appear in the swagger.json build artifact
             // used for our help center. These are overwritten with the local server when running in self-hosted
             // or dev mode (see Api Startup.cs).
-            config.AddSwaggerServerWithSecurity(
-                serverId: "US_server",
-                serverUrl: "https://api.bitwarden.com",
-                identityTokenUrl: "https://identity.bitwarden.com/connect/token",
-                serverDescription: "US server");
+            foreach (var regionConfig in CloudRegionConfig.All)
+            {
+                config.AddSwaggerServerWithSecurity(
+                    serverId: $"{regionConfig.Region}_server",
+                    serverUrl: regionConfig.ApiUrl,
+                    identityTokenUrl: $"{regionConfig.IdentityUrl}/connect/token",
+                    serverDescription: $"{regionConfig.Region} server");
+            }
 
-            config.AddSwaggerServerWithSecurity(
-                serverId: "EU_server",
-                serverUrl: "https://api.bitwarden.eu",
-                identityTokenUrl: "https://identity.bitwarden.eu/connect/token",
-                serverDescription: "EU server");
+            // Security scheme for send access token endpoints (V2). The x-explicit-bearer-token
+            // extension signals the SDK code generator to emit an explicit Bearer token parameter
+            // instead of injecting the user session token via middleware.
+            config.AddSecurityDefinition("send-access-bearer", new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT",
+                Description = "Send access token obtained from /connect/token using the send_access grant.",
+                Extensions = new Dictionary<string, IOpenApiExtension>
+                {
+                    { "x-explicit-bearer-token", new JsonNodeExtension(true) }
+                }
+            });
 
             config.DescribeAllParametersInCamelCase();
             // config.UseReferencedDefinitionsForEnums();

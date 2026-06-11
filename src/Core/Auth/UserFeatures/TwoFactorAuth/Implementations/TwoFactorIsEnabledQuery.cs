@@ -74,6 +74,7 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
             .ToList();
 
         var twoFactorResults = await TwoFactorIsEnabledAsync(userIds);
+        var byUserId = twoFactorResults.ToDictionary(r => r.userId, r => r.twoFactorIsEnabled);
 
         var result = new List<(T user, bool twoFactorIsEnabled)>();
 
@@ -82,7 +83,7 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
             var userId = user.GetUserId();
             if (userId.HasValue)
             {
-                var hasTwoFactor = twoFactorResults.FirstOrDefault(res => res.userId == userId.Value).twoFactorIsEnabled;
+                byUserId.TryGetValue(userId.Value, out var hasTwoFactor);
                 result.Add((user, hasTwoFactor));
             }
             else

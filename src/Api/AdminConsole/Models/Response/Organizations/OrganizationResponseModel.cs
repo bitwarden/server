@@ -77,6 +77,7 @@ public class OrganizationResponseModel : ResponseModel
         UseDisableSmAdsForUsers = organization.UseDisableSmAdsForUsers;
         UsePhishingBlocker = organization.UsePhishingBlocker;
         UseMyItems = organization.UseMyItems;
+        UseInviteLinks = organization.UseInviteLinks;
     }
 
     public Guid Id { get; set; }
@@ -129,6 +130,7 @@ public class OrganizationResponseModel : ResponseModel
     public bool UseDisableSmAdsForUsers { get; set; }
     public bool UsePhishingBlocker { get; set; }
     public bool UseMyItems { get; set; }
+    public bool UseInviteLinks { get; set; }
 }
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
@@ -142,6 +144,7 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
             CoreHelpers.ReadableBytesSize(organization.Storage.Value) : null;
         StorageGb = organization.Storage.HasValue ?
             Math.Round(organization.Storage.Value / 1073741824D, 2) : 0; // 1 GB
+        ExemptFromBillingAutomation = organization.ExemptFromBillingAutomation;
     }
 
     public OrganizationSubscriptionResponseModel(
@@ -223,4 +226,6 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
     /// Date when a self-hosted organization expires (includes grace period).
     /// </summary>
     public DateTime? Expiration { get; set; }
+
+    public bool ExemptFromBillingAutomation { get; set; }
 }

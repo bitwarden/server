@@ -40,7 +40,6 @@ public class CipherService : ICipherService
     private readonly IGetCipherPermissionsForUserQuery _getCipherPermissionsForUserQuery;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IApplicationCacheService _applicationCacheService;
-    private readonly IFeatureService _featureService;
     private readonly IPricingClient _pricingClient;
 
     public CipherService(
@@ -60,7 +59,6 @@ public class CipherService : ICipherService
         IGetCipherPermissionsForUserQuery getCipherPermissionsForUserQuery,
         IPolicyRequirementQuery policyRequirementQuery,
         IApplicationCacheService applicationCacheService,
-        IFeatureService featureService,
         IPricingClient pricingClient)
     {
         _cipherRepository = cipherRepository;
@@ -79,7 +77,6 @@ public class CipherService : ICipherService
         _getCipherPermissionsForUserQuery = getCipherPermissionsForUserQuery;
         _policyRequirementQuery = policyRequirementQuery;
         _applicationCacheService = applicationCacheService;
-        _featureService = featureService;
         _pricingClient = pricingClient;
     }
 
@@ -1082,11 +1079,6 @@ public class CipherService : ICipherService
     /// </summary>
     private async Task<bool> IgnoreStorageLimitsOnMigrationAsync(Guid userId, Organization organization)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.MigrateMyVaultToMyItems))
-        {
-            return false;
-        }
-
         if (!organization.UsePolicies)
         {
             return false;
