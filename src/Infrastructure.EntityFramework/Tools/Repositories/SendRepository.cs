@@ -132,4 +132,35 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
         };
     }
 
+    /// <inheritdoc />  
+    public async Task UpdateManyDisabledAsync(IEnumerable<Guid> ids, bool disabled)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var sends = dbContext.Sends.Where(s => ids.Contains(s.Id));
+        await sends.ExecuteUpdateAsync(setters => setters
+            .SetProperty(s => s.Disabled, disabled)
+            .SetProperty(s => s.RevisionDate, DateTime.UtcNow)
+        );
+        var userIds = await sends.Select(s => s.User.Id).ToArrayAsync() ?? [];
+        await dbContext.UserBumpManyAccountRevisionDatesAsync(userIds);
+        await dbContext.SaveChangesAsync();
+    }
+
+    public async Task<IEnumerable<Guid>> GetIdsByOrganizationIdAsync(Guid organizationId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var orgUsers = await dbContext.OrganizationUsers.Where(ou => ou.OrganizationId == organizationId).ToListAsync();
+        var orgUserSendIds = await dbContext.Sends.Where(s => orgUsers.Any(ou => ou.UserId == s.UserId)).Select(s => s.Id).ToListAsync();
+        return Mapper.Map<List<Guid>>(orgUserSendIds);
+    }
+
+    public async Task<ICollection<Core.Tools.Entities.Send>> GetManyByIdsAsync(IEnumerable<Guid> ids)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var results = await dbContext.Sends.Where(s => ids.Contains(s.Id)).ToListAsync();
+        return Mapper.Map<List<Core.Tools.Entities.Send>>(results);
+    }
 }
