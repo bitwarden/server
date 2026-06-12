@@ -1342,11 +1342,11 @@
       },
       "Stripe.net": {
         "type": "Transitive",
-        "resolved": "48.5.0",
-        "contentHash": "wOAZYR0EnrLMok/ScfVOpTxjci+n3vFP0A7w/BE63yJdkRSDwZVCJIhlOjeJvgyQnMX8ZbwDAHMaxaiDa0Z5TA==",
+        "resolved": "51.2.0",
+        "contentHash": "lxylbSfZDXK9hW2ZvivnxLL/raCOxlvjUYyv2IXwWbq1DUxQ9OFhMwslLq+7JudBQ0ysd9ThV34CjrByyFnu7w==",
         "dependencies": {
           "Newtonsoft.Json": "13.0.3",
-          "System.Configuration.ConfigurationManager": "8.0.0"
+          "System.Configuration.ConfigurationManager": "9.0.0"
         }
       },
       "System.ClientModel": {
@@ -1555,7 +1555,7 @@
           "RabbitMQ.Client": "[7.1.2, 7.1.2]",
           "SendGrid": "[9.29.3, 9.29.3]",
           "Serilog.Extensions.Logging.File": "[3.0.0, 3.0.0]",
-          "Stripe.net": "[48.5.0, 48.5.0]",
+          "Stripe.net": "[51.2.0, 51.2.0]",
           "YubicoDotNetClient": "[1.2.0, 1.2.0]",
           "ZiggyCreatures.FusionCache": "[2.0.2, 2.0.2]",
           "ZiggyCreatures.FusionCache.Backplane.StackExchangeRedis": "[2.0.2, 2.0.2]",
