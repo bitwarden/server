@@ -33,6 +33,12 @@ public class AccessRuleRequestModel
     public int? MaxLeaseDurationSeconds { get; set; }
 
     /// <summary>
+    /// When false, the rule is inactive and does not gate access for the collections it governs. Defaults to
+    /// true so a request that omits the field creates an active rule.
+    /// </summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>
     /// The complete set of collections this rule governs. The rule's associations are replaced to match
     /// exactly this set; an empty array clears all associations.
     /// </summary>
@@ -48,6 +54,7 @@ public class AccessRuleRequestModel
         SingleActiveLease = SingleActiveLease,
         DefaultLeaseDurationSeconds = DefaultLeaseDurationSeconds,
         MaxLeaseDurationSeconds = MaxLeaseDurationSeconds,
+        Enabled = Enabled,
     };
 
     private static string SerializeConditions(object conditions) => conditions switch
