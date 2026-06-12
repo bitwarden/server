@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using AutoMapper;
+using Bit.Core.Platform.Data;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using LinqToDB.Data;
@@ -31,6 +32,72 @@ public abstract class BaseEntityFrameworkRepository
         return serviceScope.ServiceProvider.GetRequiredService<DatabaseContext>();
     }
 
+    /// <summary>
+    /// Returns the ambient DatabaseContext if a transaction is active, or creates a new
+    /// scope and resolves a fresh DatabaseContext. The caller must dispose the returned
+    /// scope only if it is non-null (i.e., when not using the ambient context).
+    /// </summary>
+    private (DatabaseContext DbContext, AsyncServiceScope? OwnedScope) GetDatabaseContextOrAmbient()
+    {
+        var holder = TransactionState.Current;
+        if (holder?.DbContext is DatabaseContext ambientContext)
+        {
+            return (ambientContext, null);
+        }
+
+        var scope = ServiceScopeFactory.CreateAsyncScope();
+
+        var context = GetDatabaseContext(scope);
+        if (holder is not null)
+        {
+            context.Database.UseTransaction(holder.Transaction);
+            holder.AttachDbContext(context, scope);
+        }
+
+        return (context, scope);
+    }
+
+    /// <summary>
+    /// Executes an action using the ambient transaction's DatabaseContext (if active) or a
+    /// new scoped DatabaseContext. The scope is disposed automatically when owned.
+    /// </summary>
+    protected async Task<TResult> ExecuteWithContextAsync<TResult>(
+        Func<DatabaseContext, Task<TResult>> action)
+    {
+        var (dbContext, ownedScope) = GetDatabaseContextOrAmbient();
+        try
+        {
+            return await action(dbContext);
+        }
+        finally
+        {
+            if (ownedScope is { } scope)
+            {
+                await scope.DisposeAsync();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Executes an action using the ambient transaction's DatabaseContext (if active) or a
+    /// new scoped DatabaseContext. The scope is disposed automatically when owned.
+    /// </summary>
+    protected async Task ExecuteWithContextAsync(Func<DatabaseContext, Task> action)
+    {
+        var (dbContext, ownedScope) = GetDatabaseContextOrAmbient();
+        try
+        {
+            await action(dbContext);
+        }
+        finally
+        {
+            if (ownedScope is { } scope)
+            {
+                await scope.DisposeAsync();
+            }
+        }
+    }
+
     public void ClearChangeTracking()
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -42,10 +109,7 @@ public abstract class BaseEntityFrameworkRepository
 
     public async Task<int> GetCountFromQuery<T>(IQuery<T> query)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            return await query.Run(GetDatabaseContext(scope)).CountAsync();
-        }
+        return await ExecuteWithContextAsync(dbContext => query.Run(dbContext).CountAsync());
     }
 
     protected async Task OrganizationUpdateStorage(Guid organizationId)

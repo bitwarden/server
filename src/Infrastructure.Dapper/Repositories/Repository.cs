@@ -2,7 +2,6 @@
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Dapper;
-using Microsoft.Data.SqlClient;
 
 #nullable enable
 
@@ -32,21 +31,22 @@ public abstract class Repository<T, TId> : BaseRepository, IRepository<T, TId>
 
     public virtual async Task<T?> GetByIdAsync(TId id)
     {
-        using (var connection = new SqlConnection(ConnectionString))
+        return await ExecuteWithConnectionAsync(async (connection, transaction) =>
         {
             var results = await connection.QueryAsync<T>(
                 $"[{Schema}].[{Table}_ReadById]",
                 new { Id = id },
+                transaction: transaction,
                 commandType: CommandType.StoredProcedure);
 
             return results.SingleOrDefault();
-        }
+        });
     }
 
     public virtual async Task<T> CreateAsync(T obj)
     {
         obj.SetNewId();
-        using (var connection = new SqlConnection(ConnectionString))
+        await ExecuteWithConnectionAsync(async (connection, transaction) =>
         {
             var parameters = new DynamicParameters();
             parameters.AddDynamicParams(obj);
@@ -54,21 +54,23 @@ public abstract class Repository<T, TId> : BaseRepository, IRepository<T, TId>
             await connection.ExecuteAsync(
                 $"[{Schema}].[{Table}_Create]",
                 parameters,
+                transaction: transaction,
                 commandType: CommandType.StoredProcedure);
             obj.Id = parameters.Get<TId>(nameof(obj.Id));
-        }
+        });
         return obj;
     }
 
     public virtual async Task ReplaceAsync(T obj)
     {
-        using (var connection = new SqlConnection(ConnectionString))
+        await ExecuteWithConnectionAsync(async (connection, transaction) =>
         {
             await connection.ExecuteAsync(
                 $"[{Schema}].[{Table}_Update]",
                 obj,
+                transaction: transaction,
                 commandType: CommandType.StoredProcedure);
-        }
+        });
     }
 
     public virtual async Task UpsertAsync(T obj)
@@ -85,12 +87,13 @@ public abstract class Repository<T, TId> : BaseRepository, IRepository<T, TId>
 
     public virtual async Task DeleteAsync(T obj)
     {
-        using (var connection = new SqlConnection(ConnectionString))
+        await ExecuteWithConnectionAsync(async (connection, transaction) =>
         {
             await connection.ExecuteAsync(
                 $"[{Schema}].[{Table}_DeleteById]",
                 new { Id = obj.Id },
+                transaction: transaction,
                 commandType: CommandType.StoredProcedure);
-        }
+        });
     }
 }

@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Bit.Core.Entities;
+using Bit.Core.Platform.Data;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
@@ -22,33 +23,30 @@ public abstract class Repository<T, TEntity, TId> : BaseEntityFrameworkRepositor
 
     public virtual async Task<T?> GetByIdAsync(TId id)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
+        return await ExecuteWithContextAsync(async dbContext =>
         {
-            var dbContext = GetDatabaseContext(scope);
             var entity = await GetDbSet(dbContext).FindAsync(id);
             return Mapper.Map<T>(entity);
-        }
+        });
     }
 
     public virtual async Task<T> CreateAsync(T obj)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
+        return await ExecuteWithContextAsync(async dbContext =>
         {
-            var dbContext = GetDatabaseContext(scope);
             obj.SetNewId();
             var entity = Mapper.Map<TEntity>(obj);
             await dbContext.AddAsync(entity);
             await dbContext.SaveChangesAsync();
             obj.Id = entity.Id;
             return obj;
-        }
+        });
     }
 
     public virtual async Task ReplaceAsync(T obj)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
+        await ExecuteWithContextAsync(async dbContext =>
         {
-            var dbContext = GetDatabaseContext(scope);
             var entity = await GetDbSet(dbContext).FindAsync(obj.Id);
             if (entity != null)
             {
@@ -56,7 +54,7 @@ public abstract class Repository<T, TEntity, TId> : BaseEntityFrameworkRepositor
                 dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
                 await dbContext.SaveChangesAsync();
             }
-        }
+        });
     }
 
     public virtual async Task UpsertAsync(T obj)
@@ -73,28 +71,26 @@ public abstract class Repository<T, TEntity, TId> : BaseEntityFrameworkRepositor
 
     public virtual async Task DeleteAsync(T obj)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
+        await ExecuteWithContextAsync(async dbContext =>
         {
-            var dbContext = GetDatabaseContext(scope);
             var entity = Mapper.Map<TEntity>(obj);
             dbContext.Remove(entity);
             await dbContext.SaveChangesAsync();
-        }
+        });
     }
 
     public virtual async Task RefreshDb()
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
+        await ExecuteWithContextAsync(async dbContext =>
         {
-            var context = GetDatabaseContext(scope);
-            await context.Database.EnsureDeletedAsync();
-            await context.Database.EnsureCreatedAsync();
-        }
+            await dbContext.Database.EnsureDeletedAsync();
+            await dbContext.Database.EnsureCreatedAsync();
+        });
     }
 
     public virtual async Task<List<T>> CreateMany(List<T> objs)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
+        return await ExecuteWithContextAsync(async dbContext =>
         {
             var entities = new List<TEntity>();
             foreach (var o in objs)
@@ -103,19 +99,22 @@ public abstract class Repository<T, TEntity, TId> : BaseEntityFrameworkRepositor
                 var entity = Mapper.Map<TEntity>(o);
                 entities.Add(entity);
             }
-            var dbContext = GetDatabaseContext(scope);
             await GetDbSet(dbContext).AddRangeAsync(entities);
             await dbContext.SaveChangesAsync();
             return objs;
-        }
+        });
     }
 
     public IQueryable<Tout> Run<Tout>(IQuery<Tout> query)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
+        if (TransactionState.Current?.DbContext is DatabaseContext ambientContext)
         {
-            var dbContext = GetDatabaseContext(scope);
-            return query.Run(dbContext);
+            return query.Run(ambientContext);
         }
+
+        // IQueryable is deferred, so the scope is disposed before the query is materialized.
+        // This matches existing behavior — callers must materialize within their own scope.
+        using var scope = ServiceScopeFactory.CreateScope();
+        return query.Run(GetDatabaseContext(scope));
     }
 }

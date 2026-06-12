@@ -171,11 +171,10 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         {
             logger.LogError(ex, FailedToInviteUsersError.Code);
 
-            await organizationUserRepository.DeleteManyAsync(organizationUserToInviteEntities.Select(x => x.OrganizationUser.Id));
-
-            // Do this first so that SmSeats never exceed PM seats (due to current billing requirements)
+            // The ambient transaction rolls back DB writes; the calls below compensate for
+            // state that lives outside the transaction (Stripe subscription, application cache).
+            // SM revert runs first so SmSeats never exceed PM seats (current billing requirement).
             await RevertSecretsManagerChangesAsync(validatedRequest, organization, validatedRequest.Value.InviteOrganization.SmSeats);
-
             await RevertPasswordManagerChangesAsync(validatedRequest, organization);
 
             return new Failure<InviteOrganizationUsersResponse>(
@@ -206,7 +205,8 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         {
             organization.Seats = (short?)validatedResult.Value.PasswordManagerSubscriptionUpdate.Seats;
 
-            await organizationRepository.ReplaceAsync(organization);
+            // Compensating write: the application cache is not part of the ambient transaction,
+            // so we must explicitly restore the pre-increment seat count.
             await applicationCacheService.UpsertOrganizationAbilityAsync(organization);
         }
     }
