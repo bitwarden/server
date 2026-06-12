@@ -1,52 +1,98 @@
 ﻿using System.Net;
+using System.Net.Sockets;
 
 namespace Bit.Core.Utilities;
 
 /// <summary>
 /// Extension methods for <see cref="IPAddress"/> to determine if an address is internal/private.
-/// Used for SSRF protection to block requests to private network ranges.
+/// Used for SSRF protection to block requests to reserved network ranges defined by the
+/// IANA IPv4 and IPv6 Special-Purpose Address Registries.
 /// </summary>
 public static class IPAddressExtensions
 {
-    /// <summary>
-    /// Determines whether the given IP address is an internal/private/reserved address.
-    /// This includes loopback, private RFC 1918, link-local, CGNAT (RFC 6598),
-    /// IPv6 unique local, and other reserved ranges.
-    /// </summary>
-    /// <param name="ip">The IP address to check.</param>
-    /// <returns>True if the IP is internal/private/reserved; otherwise false.</returns>
+    private static readonly IPNetwork[] _reservedIPv4Networks =
+    [
+        new(IPAddress.Parse("0.0.0.0"), 8),           // RFC 1122 "This" network
+        new(IPAddress.Parse("10.0.0.0"), 8),          // RFC 1918 Private
+        new(IPAddress.Parse("100.64.0.0"), 10),       // RFC 6598 CGNAT
+        new(IPAddress.Parse("127.0.0.0"), 8),         // RFC 1122 Loopback
+        new(IPAddress.Parse("168.63.129.16"), 32),    // Azure IP address 168.63.129.16 (https://learn.microsoft.com/en-us/azure/virtual-network/what-is-ip-address-168-63-129-16)
+        new(IPAddress.Parse("169.254.0.0"), 16),      // RFC 3927 Link-local / cloud metadata
+        new(IPAddress.Parse("172.16.0.0"), 12),       // RFC 1918 Private
+        new(IPAddress.Parse("192.0.0.0"), 24),        // RFC 6890 IETF Protocol Assignments (includes Oracle Cloud metadata 192.0.0.192)
+        new(IPAddress.Parse("192.0.2.0"), 24),        // RFC 5737 TEST-NET-1
+        new(IPAddress.Parse("192.88.99.0"), 24),      // RFC 7526 6to4 Relay Anycast (deprecated)
+        new(IPAddress.Parse("192.168.0.0"), 16),      // RFC 1918 Private
+        new(IPAddress.Parse("198.18.0.0"), 15),       // RFC 2544 Benchmarking
+        new(IPAddress.Parse("198.51.100.0"), 24),     // RFC 5737 TEST-NET-2
+        new(IPAddress.Parse("203.0.113.0"), 24),      // RFC 5737 TEST-NET-3
+        new(IPAddress.Parse("224.0.0.0"), 4),         // RFC 5771 Multicast
+        new(IPAddress.Parse("240.0.0.0"), 4),         // RFC 1112 Reserved (includes 255.255.255.255 limited broadcast)
+    ];
+
+    private static readonly IPNetwork[] _reservedIPv6Networks =
+    [
+        new(IPAddress.Parse("::"), 128),              // RFC 4291 Unspecified
+        new(IPAddress.Parse("::1"), 128),             // RFC 4291 Loopback
+        new(IPAddress.Parse("64:ff9b:1::"), 48),      // RFC 8215 NAT64 local-use
+        new(IPAddress.Parse("100::"), 64),            // RFC 6666 Discard-only
+        new(IPAddress.Parse("2001::"), 32),           // RFC 4380 Teredo
+        new(IPAddress.Parse("2001:2::"), 48),         // RFC 5180 Benchmarking
+        new(IPAddress.Parse("2001:3::"), 32),         // RFC 7450 AMT
+        new(IPAddress.Parse("2001:10::"), 28),        // RFC 4843 ORCHID (deprecated)
+        new(IPAddress.Parse("2001:20::"), 28),        // RFC 7343 ORCHIDv2
+        new(IPAddress.Parse("2001:db8::"), 32),       // RFC 3849 Documentation
+        new(IPAddress.Parse("3fff::"), 20),           // RFC 9637 Documentation
+        new(IPAddress.Parse("5f00::"), 16),           // RFC 9602 Segment Routing
+        new(IPAddress.Parse("fc00::"), 7),            // RFC 4193 Unique Local Address
+        new(IPAddress.Parse("fe80::"), 10),           // RFC 4291 Link-local
+        new(IPAddress.Parse("ff00::"), 8),            // RFC 4291 Multicast
+    ];
+
+    // IPv6 prefixes whose addresses embed an IPv4 destination. When the embedded IPv4 is itself
+    // reserved (e.g., RFC 1918), the IPv6 address is treated as internal because a NAT64 or 6to4
+    // gateway on the path would translate it back to the internal IPv4 host.
+    private static readonly (IPNetwork Prefix, int IPv4ByteOffset)[] _ipv4EmbeddedIPv6Networks =
+    [
+        (new(IPAddress.Parse("64:ff9b::"), 96), 12),    // RFC 6052 NAT64 well-known: IPv4 at bytes 12-15
+        (new(IPAddress.Parse("2002::"), 16), 2),        // RFC 3056 6to4: IPv4 at bytes 2-5
+    ];
+
     public static bool IsInternal(this IPAddress ip)
     {
-        if (IPAddress.IsLoopback(ip))
+        if (ip.AddressFamily == AddressFamily.InterNetwork)
         {
-            return true;
+            return IsReservedIPv4(ip);
         }
 
-        var ipString = ip.ToString();
-        if (ipString == "::1" || ipString == "::" || ipString.StartsWith("::ffff:"))
+        if (ip.AddressFamily != AddressFamily.InterNetworkV6)
         {
-            return true;
+            return false;
         }
 
-        // IPv6
-        if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
+        if (ip.IsIPv4MappedToIPv6)
         {
-            return ipString.StartsWith("fc") || ipString.StartsWith("fd") ||
-                ipString.StartsWith("fe") || ipString.StartsWith("ff");
+            return IsReservedIPv4(ip.MapToIPv4());
         }
 
-        // IPv4
-        var bytes = ip.GetAddressBytes();
-        return bytes[0] switch
+        foreach (var (prefix, offset) in _ipv4EmbeddedIPv6Networks)
         {
-            0 => true,                                      // "This" network (RFC 1122)
-            10 => true,                                     // Private (RFC 1918)
-            100 => bytes[1] >= 64 && bytes[1] < 128,       // CGNAT (RFC 6598) - 100.64.0.0/10
-            127 => true,                                    // Loopback (RFC 1122)
-            169 => bytes[1] == 254,                         // Link-local / cloud metadata (RFC 3927)
-            172 => bytes[1] >= 16 && bytes[1] < 32,        // Private (RFC 1918)
-            192 => bytes[1] == 168,                         // Private (RFC 1918)
-            _ => false,
-        };
+            if (prefix.Contains(ip))
+            {
+                var bytes = ip.GetAddressBytes();
+                var embedded = new IPAddress(bytes.AsSpan(offset, 4));
+                if (IsReservedIPv4(embedded))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return _reservedIPv6Networks.Any(network => network.Contains(ip));
+    }
+
+    private static bool IsReservedIPv4(IPAddress ip)
+    {
+        return _reservedIPv4Networks.Any(network => network.Contains(ip));
     }
 }
