@@ -261,6 +261,7 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
                     HasCustomPermissions = p.HasCustomPermissions,
                     HasMyItems = p.HasMyItems,
                     HasInviteLinks = p.HasInviteLinks,
+                    HasRiskInsights = p.HasRiskInsights,
                     UpgradeSortOrder = p.UpgradeSortOrder,
                     DisplaySortOrder = p.DisplaySortOrder,
                     LegacyYear = p.LegacyYear,
