@@ -3,11 +3,13 @@ using System.Data.Common;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
@@ -26,6 +28,27 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     {
         _logger = logger;
+    }
+
+    public override Task DeleteAsync(Organization organization)
+        => DeleteInternalAsync(organization, null);
+
+    public Task DeleteAndCreateDeleteTaskAsync(Organization organization, OrganizationDeleteTaskType taskType)
+        => DeleteInternalAsync(organization, taskType);
+
+    private async Task DeleteInternalAsync(Organization organization, OrganizationDeleteTaskType? taskType)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        await connection.ExecuteAsync(
+            "[dbo].[Organization_DeleteById]",
+            new
+            {
+                organization.Id,
+                OrganizationDeleteTaskId = taskType.HasValue ? CoreHelpers.GenerateComb() : (Guid?)null,
+                OrganizationDeleteTaskType = (byte?)taskType,
+                OrganizationDeleteTaskCreationDate = taskType.HasValue ? DateTime.UtcNow : (DateTime?)null,
+            },
+            commandType: CommandType.StoredProcedure);
     }
 
     public async Task<Organization?> GetByGatewayCustomerIdAsync(string gatewayCustomerId)

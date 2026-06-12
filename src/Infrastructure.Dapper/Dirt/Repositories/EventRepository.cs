@@ -143,6 +143,16 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
         }
     }
 
+    public async Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        return await connection.ExecuteScalarAsync<int>(
+            $"[{Schema}].[Event_DeleteManyByOrganizationId]",
+            new { OrganizationId = organizationId },
+            commandType: CommandType.StoredProcedure,
+            commandTimeout: 3600);
+    }
+
     public async Task<PagedResult<IEvent>> GetManyByOrganizationServiceAccountAsync(Guid organizationId, Guid serviceAccountId,
         DateTime startDate, DateTime endDate,
         PageOptions pageOptions)
