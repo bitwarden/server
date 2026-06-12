@@ -334,6 +334,7 @@ public class CipherServiceTests
         var cipherRepository = sutProvider.GetDependency<ICipherRepository>();
         cipherRepository.ReplaceAsync(cipher, collectionIds).Returns(true);
         var cipherSyncPushService = sutProvider.GetDependency<ICipherSyncPushService>();
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(Arg.Any<Guid>())
             .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Disabled, []));
