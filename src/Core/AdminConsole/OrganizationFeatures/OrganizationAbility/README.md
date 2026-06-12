@@ -258,6 +258,9 @@ For manual override capability in the admin portal:
 > Double-check your work and ask for help if unsure.
 >
 > **Note:** New properties must be added to both the `OrganizationLicense` class and the claims-based system.
+>
+> **Why these steps?** See the [Licensing system](../../../Billing/Licenses/README.md) reference for the design
+> constraints behind each edit below — especially the PM-33980 `HasClaim` rule.
 
 **Update OrganizationLicense:**
 
