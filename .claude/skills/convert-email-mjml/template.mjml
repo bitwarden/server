@@ -1,0 +1,64 @@
+<mjml>
+  <mj-head>
+    <mj-include path="../../components/head.mjml" />
+  </mj-head>
+
+  <mj-body>
+    <!-- For standard emails with logo -->
+    <mj-include path="../../components/logo.mjml" />
+
+    <!-- For Provider emails with blue header, use instead: -->
+    <!-- <mj-bw-simple-hero /> -->
+    <!-- OR -->
+    <!-- <mj-bw-hero /> -->
+
+    <!-- Main content area -->
+    <mj-wrapper background-color="#fff" border="1px solid #e9e9e9"
+                css-class="border-fix" padding="0">
+      <mj-section>
+        <mj-column>
+
+          <!-- Text blocks -->
+          <mj-text padding="0 0 10px">
+            Your text content here with {{HandlebarsVariables}}
+          </mj-text>
+
+          <!-- Conditional text (inside mj-text, no mj-raw needed) -->
+          <mj-text>
+            {{#if SomeCondition}}
+              Conditional text here
+            {{else}}
+              Alternative text
+            {{/if}}
+          </mj-text>
+
+          <!-- Buttons -->
+          <mj-button href="{{{Url}}}" border-radius="5px">
+            Button Text
+          </mj-button>
+
+        </mj-column>
+      </mj-section>
+
+      <!-- Conditional structural elements (wrap with mj-raw) -->
+      <mj-raw>{{#unless SomeCondition}}</mj-raw>
+      <mj-section>
+        <mj-column>
+          <mj-text>
+            This entire section is conditional
+          </mj-text>
+        </mj-column>
+      </mj-section>
+      <mj-raw>{{/unless}}</mj-raw>
+
+    </mj-wrapper>
+
+    <!-- Learn More footer -->
+    <mj-wrapper>
+      <mj-bw-learn-more-footer />
+    </mj-wrapper>
+
+    <!-- Standard footer -->
+    <mj-include path="../../components/footer.mjml" />
+  </mj-body>
+</mjml>

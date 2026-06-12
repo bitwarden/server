@@ -15,8 +15,9 @@ using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Mail.Billing.BusinessUnitConversionInvite;
+using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Utilities;
@@ -34,7 +35,7 @@ public class BusinessUnitConverterTests
     private readonly IDataProtectionProvider _dataProtectionProvider = Substitute.For<IDataProtectionProvider>();
     private readonly GlobalSettings _globalSettings = new();
     private readonly ILogger<BusinessUnitConverter> _logger = Substitute.For<ILogger<BusinessUnitConverter>>();
-    private readonly IMailService _mailService = Substitute.For<IMailService>();
+    private readonly IMailer _mailer = Substitute.For<IMailer>();
     private readonly IOrganizationRepository _organizationRepository = Substitute.For<IOrganizationRepository>();
     private readonly IOrganizationUserRepository _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
@@ -50,7 +51,7 @@ public class BusinessUnitConverterTests
         _dataProtectionProvider,
         _globalSettings,
         _logger,
-        _mailService,
+        _mailer,
         _organizationRepository,
         _organizationUserRepository,
         _pricingClient,
@@ -280,10 +281,11 @@ public class BusinessUnitConverterTests
                 argument.Status == ProviderUserStatusType.Invited &&
                 argument.Type == ProviderUserType.ProviderAdmin));
 
-        await _mailService.Received(1).SendBusinessUnitConversionInviteAsync(
-            organization,
-            token,
-            user.Email);
+        await _mailer.Received(1).SendEmail(
+            Arg.Is<BusinessUnitConversionInviteMail>(m =>
+                m.ToEmails.Contains(user.Email) &&
+                m.View.OrganizationId == organization.Id.ToString() &&
+                m.View.Token == System.Net.WebUtility.UrlEncode(token)));
     }
 
     [Theory, BitAutoData]
@@ -348,10 +350,11 @@ public class BusinessUnitConverterTests
 
         await businessUnitConverter.ResendConversionInvite(organization, providerAdminEmail);
 
-        await _mailService.Received(1).SendBusinessUnitConversionInviteAsync(
-            organization,
-            token,
-            providerAdminEmail);
+        await _mailer.Received(1).SendEmail(
+            Arg.Is<BusinessUnitConversionInviteMail>(m =>
+                m.ToEmails.Contains(providerAdminEmail) &&
+                m.View.OrganizationId == organization.Id.ToString() &&
+                m.View.Token == System.Net.WebUtility.UrlEncode(token)));
     }
 
     [Theory, BitAutoData]
@@ -365,10 +368,8 @@ public class BusinessUnitConverterTests
 
         await businessUnitConverter.ResendConversionInvite(organization, providerAdminEmail);
 
-        await _mailService.DidNotReceiveWithAnyArgs().SendBusinessUnitConversionInviteAsync(
-            Arg.Any<Organization>(),
-            Arg.Any<string>(),
-            Arg.Any<string>());
+        await _mailer.DidNotReceiveWithAnyArgs().SendEmail(
+            Arg.Any<BusinessUnitConversionInviteMail>());
     }
 
     #endregion
