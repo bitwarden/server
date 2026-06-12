@@ -529,6 +529,69 @@ public class EventServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task LogSendEvent_AccessEvent_ProviderRowIsExternalNotOwner(
+        Guid ownerUserId, Guid sendId, Guid providerId, SutProvider<EventService> sutProvider)
+    {
+        // The provider's event log must not credit the owner for a Send access (the owner did not
+        // access it). With access context present, the provider row is External (no attribution).
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, OrganizationAbility>());
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, ProviderAbility>
+            {
+                { providerId, new ProviderAbility { UseEvents = true, Enabled = true } }
+            });
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextOrganization>());
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderMembershipAsync(Arg.Any<IProviderUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextProvider> { new() { Id = providerId } });
+
+        await sutProvider.Sut.LogSendEventAsync(ownerUserId, sendId, EventType.Send_Accessed_Text,
+            new Dictionary<Guid, SendAccessEventOrgContext>());
+
+        await sutProvider.GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
+                events.Count() == 2
+                && events.All(e => e.SendId == sendId)
+                && events.Any(e => e.OrganizationId == null && e.ProviderId == null && e.ActingUserId == ownerUserId)
+                && events.Any(e => e.ProviderId == providerId && e.ActingUserId == null)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogSendEvent_NoContext_ProviderRowKeepsOwner(
+        Guid ownerUserId, Guid sendId, Guid providerId, SutProvider<EventService> sutProvider)
+    {
+        // Create/edit/delete (no context): the owner did perform the action, so the provider row keeps them.
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, OrganizationAbility>());
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, ProviderAbility>
+            {
+                { providerId, new ProviderAbility { UseEvents = true, Enabled = true } }
+            });
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextOrganization>());
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderMembershipAsync(Arg.Any<IProviderUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextProvider> { new() { Id = providerId } });
+
+        await sutProvider.Sut.LogSendEventAsync(ownerUserId, sendId, EventType.Send_Deleted_Text);
+
+        await sutProvider.GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
+                events.Any(e => e.ProviderId == providerId && e.ActingUserId == ownerUserId)));
+    }
+
+    [Theory, BitAutoData]
     public async Task LogUserEvent_IncludeAcceptedStatusOrgs_InvitedOrgUser_DoesNotCreateOrgScopedEvent(
         Guid userId, EventType eventType, OrganizationUser orgUser, SutProvider<EventService> sutProvider)
     {

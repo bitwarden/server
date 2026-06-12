@@ -49,12 +49,19 @@ public class SendEventClassifier : ISendEventClassifier
 
         var claimedDomainsByOrg = await LoadClaimedDomainsByOrgAsync(confirmedOrgIds);
 
+        // Resolve the accessor's membership in every org concurrently. Each repository call uses its
+        // own connection/DbContext scope
+        var membershipByOrg = confirmedOrgIds.ToDictionary(
+            orgId => orgId,
+            orgId => _organizationUserRepository.GetByOrganizationEmailAsync(orgId, accessorEmail!));
+        await Task.WhenAll(membershipByOrg.Values);
+
         var context = new Dictionary<Guid, SendAccessEventOrgContext>();
         foreach (var orgId in confirmedOrgIds)
         {
             // Accessor is a confirmed member of this org: attribute to their platform user (the id the
             // Admin Console member list is keyed on).
-            var accessor = await _organizationUserRepository.GetByOrganizationEmailAsync(orgId, accessorEmail!);
+            var accessor = await membershipByOrg[orgId];
             if (accessor is { Status: OrganizationUserStatusType.Confirmed, UserId: not null })
             {
                 context[orgId] = new SendAccessEventOrgContext(accessor.UserId.Value, null);
@@ -83,8 +90,7 @@ public class SendEventClassifier : ISendEventClassifier
             .GroupBy(d => d.OrganizationId)
             .ToDictionary(
                 g => g.Key,
-                g => g.Select(d => d.DomainName.ToLowerInvariant())
-                      .ToHashSet(StringComparer.OrdinalIgnoreCase));
+                g => g.Select(d => d.DomainName).ToHashSet(StringComparer.OrdinalIgnoreCase));
     }
 
     private static string? ExtractDomain(string? email)

@@ -760,7 +760,11 @@ public class EventService : IEventService
             {
                 ProviderId = p.Id,
                 UserId = sendOwnerUserId,
-                ActingUserId = sendOwnerUserId,
+                // Access events (context present) get the same External attribution as a non-context
+                // org: don't credit the owner, who did not access the Send. Providers have no claimed
+                // domains, so there is nothing further to attribute. Create/edit/delete (no context)
+                // keep the owner, who did perform the action.
+                ActingUserId = organizationContext == null ? sendOwnerUserId : null,
                 Type = type,
                 SendId = sendId,
                 Date = DateTime.UtcNow

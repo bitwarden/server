@@ -1599,6 +1599,10 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasKey("Id")
                         .HasAnnotation("SqlServer:Clustered", true);
 
+                    b.HasIndex("OrganizationId", "SendId", "Date")
+                        .HasDatabaseName("IX_Event_OrganizationIdSendIdDate")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
                     b.HasIndex("Date", "OrganizationId", "ActingUserId", "CipherId")
                         .HasDatabaseName("IX_Event_DateOrganizationIdUserId")
                         .HasAnnotation("SqlServer:Clustered", false)
