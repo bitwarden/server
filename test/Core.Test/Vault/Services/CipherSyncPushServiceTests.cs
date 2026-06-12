@@ -20,7 +20,8 @@ public class CipherSyncPushServiceTests
         SutProvider<CipherSyncPushService> sutProvider, Cipher cipher, List<Guid> collectionIds)
     {
         cipher.OrganizationId = null;
-        cipher.UserId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        cipher.UserId = userId;
 
         await sutProvider.Sut.PushSyncCipherCreateAsync(cipher, collectionIds);
 
@@ -28,7 +29,7 @@ public class CipherSyncPushServiceTests
             .PushAsync(Arg.Is<PushNotification<SyncCipherPushNotification>>(n =>
                 n.Type == PushType.SyncCipherCreate &&
                 n.Target == NotificationTarget.User &&
-                n.TargetId == cipher.UserId.Value &&
+                n.TargetId == userId &&
                 n.Payload.Id == cipher.Id &&
                 n.Payload.UserId == cipher.UserId &&
                 n.ExcludeCurrentContext));
