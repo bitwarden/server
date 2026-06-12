@@ -4,7 +4,9 @@
 using Bit.Api.AdminConsole.Authorization.Collections;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response;
+using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Collections.Interfaces;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
@@ -32,6 +34,7 @@ public class CollectionsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly IBulkAddCollectionAccessCommand _bulkAddCollectionAccessCommand;
     private readonly IProviderService _providerService;
+    private readonly IFeatureService _featureService;
 
     public CollectionsController(
         ICollectionRepository collectionRepository,
@@ -42,7 +45,8 @@ public class CollectionsController : Controller
         IAuthorizationService authorizationService,
         ICurrentContext currentContext,
         IBulkAddCollectionAccessCommand bulkAddCollectionAccessCommand,
-        IProviderService providerService)
+        IProviderService providerService,
+        IFeatureService featureService)
     {
         _collectionRepository = collectionRepository;
         _createCollectionCommand = createCollectionCommand;
@@ -53,6 +57,7 @@ public class CollectionsController : Controller
         _currentContext = currentContext;
         _bulkAddCollectionAccessCommand = bulkAddCollectionAccessCommand;
         _providerService = providerService;
+        _featureService = featureService;
     }
 
     [HttpGet("{id}")]
@@ -184,6 +189,11 @@ public class CollectionsController : Controller
     [HttpPut("{id}")]
     public async Task<CollectionResponseModel> Put(Guid orgId, Guid id, [FromBody] UpdateCollectionRequestModel model)
     {
+        if (_featureService.IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers))
+        {
+            return await Put_vNext(orgId, id, model);
+        }
+
         var collection = await _collectionRepository.GetByIdAsync(id);
         var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.Update)).Succeeded;
         if (!authorized)
@@ -216,6 +226,12 @@ public class CollectionsController : Controller
     [HttpPost("bulk-access")]
     public async Task PostBulkCollectionAccess(Guid orgId, [FromBody] BulkCollectionAccessRequestModel model)
     {
+        if (_featureService.IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers))
+        {
+            await PostBulkCollectionAccess_vNext(orgId, model);
+            return;
+        }
+
         var collections = await _collectionRepository.GetManyByManyIdsAsync(model.CollectionIds);
         if (collections.Count(c => c.OrganizationId == orgId) != model.CollectionIds.Count())
         {
@@ -274,5 +290,107 @@ public class CollectionsController : Controller
     public async Task PostDeleteMany(Guid orgId, [FromBody] CollectionBulkDeleteRequestModel model)
     {
         await DeleteMany(orgId, model);
+    }
+
+    private async Task<CollectionResponseModel> Put_vNext(Guid orgId, Guid id, UpdateCollectionRequestModel model)
+    {
+        var (collection, currentAccess) = await _collectionRepository.GetByIdWithAccessAsync(id);
+
+        await _authorizationService.AuthorizeOrThrowAsync(User, collection, BulkCollectionOperations.Update);
+
+        if (model.Users != null)
+        {
+            await AuthorizeUserAccessChangesAsync(model.Users, currentAccess.Users, new[] { collection });
+        }
+
+        if (model.Groups != null)
+        {
+            await AuthorizeGroupAccessChangesAsync(model.Groups, currentAccess.Groups, new[] { collection });
+        }
+
+        var groups = model.Groups?.Select(g => g.ToSelectionReadOnly());
+        var users = model.Users?.Select(g => g.ToSelectionReadOnly());
+        await _updateCollectionCommand.UpdateAsync(model.ToCollection(collection), groups, users);
+
+        if (!_currentContext.UserId.HasValue || (_currentContext.GetOrganization(collection.OrganizationId) == null && await _currentContext.ProviderUserForOrgAsync(collection.OrganizationId)))
+        {
+            return new CollectionAccessDetailsResponseModel(collection);
+        }
+
+        var collectionWithPermissions = await _collectionRepository.GetByIdWithPermissionsAsync(collection.Id, _currentContext.UserId.Value, false);
+
+        return new CollectionAccessDetailsResponseModel(collectionWithPermissions);
+    }
+
+    private async Task PostBulkCollectionAccess_vNext(Guid orgId, BulkCollectionAccessRequestModel model)
+    {
+        var collections = await _collectionRepository.GetManyByManyIdsAsync(model.CollectionIds);
+        if (collections.Count(c => c.OrganizationId == orgId) != model.CollectionIds.Count())
+        {
+            throw new NotFoundException("One or more collections not found.");
+        }
+
+        if (model.Users?.Any() == true)
+        {
+            await _authorizationService.AuthorizeOrThrowAsync(User, collections.ToList(),
+                CollectionUserOperations.Create);
+        }
+
+        if (model.Groups?.Any() == true)
+        {
+            await _authorizationService.AuthorizeOrThrowAsync(User, collections.ToList(),
+                CollectionGroupOperations.Create);
+        }
+
+        await _bulkAddCollectionAccessCommand.AddAccessAsync(
+            collections,
+            model.Users?.Select(u => u.ToSelectionReadOnly()).ToList(),
+            model.Groups?.Select(g => g.ToSelectionReadOnly()).ToList());
+    }
+
+    private async Task AuthorizeUserAccessChangesAsync(
+        IEnumerable<SelectionReadOnlyRequestModel> posted,
+        IEnumerable<CollectionAccessSelection> current,
+        ICollection<Collection> collections)
+    {
+        var (createIds, updateIds, deleteIds) = posted.DiffAccessSelections(current);
+
+        if (createIds.Count > 0)
+        {
+            await _authorizationService.AuthorizeOrThrowAsync(User, collections, CollectionUserOperations.Create);
+        }
+
+        if (updateIds.Count > 0)
+        {
+            await _authorizationService.AuthorizeOrThrowAsync(User, collections, CollectionUserOperations.Update);
+        }
+
+        if (deleteIds.Count > 0)
+        {
+            await _authorizationService.AuthorizeOrThrowAsync(User, collections, CollectionUserOperations.Delete);
+        }
+    }
+
+    private async Task AuthorizeGroupAccessChangesAsync(
+        IEnumerable<SelectionReadOnlyRequestModel> posted,
+        IEnumerable<CollectionAccessSelection> current,
+        ICollection<Collection> collections)
+    {
+        var (createIds, updateIds, deleteIds) = posted.DiffAccessSelections(current);
+
+        if (createIds.Count > 0)
+        {
+            await _authorizationService.AuthorizeOrThrowAsync(User, collections, CollectionGroupOperations.Create);
+        }
+
+        if (updateIds.Count > 0)
+        {
+            await _authorizationService.AuthorizeOrThrowAsync(User, collections, CollectionGroupOperations.Update);
+        }
+
+        if (deleteIds.Count > 0)
+        {
+            await _authorizationService.AuthorizeOrThrowAsync(User, collections, CollectionGroupOperations.Delete);
+        }
     }
 }
