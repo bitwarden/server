@@ -39,7 +39,8 @@ public class CipherSyncPushServiceTests
         SutProvider<CipherSyncPushService> sutProvider, Cipher cipher)
     {
         cipher.OrganizationId = null;
-        cipher.UserId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        cipher.UserId = userId;
 
         await sutProvider.Sut.PushSyncCipherUpdateAsync(cipher, []);
 
@@ -47,7 +48,7 @@ public class CipherSyncPushServiceTests
             .PushAsync(Arg.Is<PushNotification<SyncCipherPushNotification>>(n =>
                 n.Type == PushType.SyncCipherUpdate &&
                 n.Target == NotificationTarget.User &&
-                n.TargetId == cipher.UserId.Value &&
+                n.TargetId == userId &&
                 n.Payload.Id == cipher.Id));
     }
 
@@ -57,6 +58,7 @@ public class CipherSyncPushServiceTests
     {
         cipher.OrganizationId = null;
         cipher.UserId = Guid.NewGuid();
+        var userId = cipher.UserId.Value;
 
         await sutProvider.Sut.PushSyncCipherDeleteAsync(cipher);
 
@@ -64,7 +66,7 @@ public class CipherSyncPushServiceTests
             .PushAsync(Arg.Is<PushNotification<SyncCipherPushNotification>>(n =>
                 n.Type == PushType.SyncLoginDelete &&
                 n.Target == NotificationTarget.User &&
-                n.TargetId == cipher.UserId.Value &&
+                n.TargetId == userId &&
                 n.Payload.Id == cipher.Id));
     }
 
