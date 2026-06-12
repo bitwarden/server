@@ -34,11 +34,14 @@ public class StripePaymentServiceTests
 
         var customerDiscount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
-                PercentOff = 20m,
-                AmountOff = 1400
+                Coupon = new Coupon
+                {
+                    Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+                    PercentOff = 20m,
+                    AmountOff = 1400
+                }
             },
             End = null
         };
@@ -85,11 +88,14 @@ public class StripePaymentServiceTests
 
         var subscriptionDiscount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
-                PercentOff = 15m,
-                AmountOff = null
+                Coupon = new Coupon
+                {
+                    Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+                    PercentOff = 15m,
+                    AmountOff = null
+                }
             },
             End = null
         };
@@ -135,20 +141,26 @@ public class StripePaymentServiceTests
 
         var customerDiscount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
-                PercentOff = 25m
+                Coupon = new Coupon
+                {
+                    Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+                    PercentOff = 25m
+                }
             },
             End = null
         };
 
         var subscriptionDiscount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = "different-coupon-id",
-                PercentOff = 10m
+                Coupon = new Coupon
+                {
+                    Id = "different-coupon-id",
+                    PercentOff = 10m
+                }
             },
             End = null
         };
@@ -231,20 +243,26 @@ public class StripePaymentServiceTests
 
         var firstDiscount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = "coupon-10-percent",
-                PercentOff = 10m
+                Coupon = new Coupon
+                {
+                    Id = "coupon-10-percent",
+                    PercentOff = 10m
+                }
             },
             End = null
         };
 
         var secondDiscount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = "coupon-20-percent",
-                PercentOff = 20m
+                Coupon = new Coupon
+                {
+                    Id = "coupon-20-percent",
+                    PercentOff = 20m
+                }
             },
             End = null
         };
@@ -387,8 +405,8 @@ public class StripePaymentServiceTests
         await stripeAdapter.Received(1).GetSubscriptionAsync(
             subscriber.GatewaySubscriptionId,
             Arg.Is<SubscriptionGetOptions>(o =>
-                o.Expand.Contains("customer.discount.coupon.applies_to") &&
-                o.Expand.Contains("discounts.coupon.applies_to") &&
+                o.Expand.Contains("customer.discount.source.coupon.applies_to") &&
+                o.Expand.Contains("discounts.source.coupon.applies_to") &&
                 o.Expand.Contains("test_clock")));
     }
 
@@ -468,7 +486,13 @@ public class StripePaymentServiceTests
                     [
                         new SubscriptionSchedulePhaseDiscount
                         {
-                            Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                            Discount = new Discount
+                            {
+                                Source = new DiscountSource
+                                {
+                                    Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                                }
+                            }
                         }
                     ]
                 }
@@ -495,6 +519,12 @@ public class StripePaymentServiceTests
         Assert.Equal(CouponIDs.Milestone3SubscriptionDiscount, result.CustomerDiscount.Id);
         Assert.Equal(25m, result.CustomerDiscount.PercentOff);
         Assert.True(result.CustomerDiscount.Active);
+
+        // Assert — schedule was fetched with source.coupon expand path
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).GetSubscriptionScheduleAsync(
+            "sub_sched_test123",
+            Arg.Is<SubscriptionScheduleGetOptions>(o =>
+                o.Expand.Contains("phases.discounts.source.coupon.applies_to")));
     }
 
     [Theory]
@@ -518,7 +548,7 @@ public class StripePaymentServiceTests
             {
                 Discount = new Discount
                 {
-                    Coupon = new Coupon { Id = "existing-coupon", PercentOff = 10m },
+                    Source = new DiscountSource { Coupon = new Coupon { Id = "existing-coupon", PercentOff = 10m } },
                     End = null
                 }
             },
@@ -795,7 +825,13 @@ public class StripePaymentServiceTests
                     [
                         new SubscriptionSchedulePhaseDiscount
                         {
-                            Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                            Discount = new Discount
+                            {
+                                Source = new DiscountSource
+                                {
+                                    Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                                }
+                            }
                         }
                     ]
                 }
@@ -871,7 +907,13 @@ public class StripePaymentServiceTests
                     [
                         new SubscriptionSchedulePhaseDiscount
                         {
-                            Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                            Discount = new Discount
+                            {
+                                Source = new DiscountSource
+                                {
+                                    Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                                }
+                            }
                         }
                     ]
                 }
@@ -962,7 +1004,13 @@ public class StripePaymentServiceTests
                     [
                         new SubscriptionSchedulePhaseDiscount
                         {
-                            Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                            Discount = new Discount
+                            {
+                                Source = new DiscountSource
+                                {
+                                    Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                                }
+                            }
                         }
                     ]
                 }

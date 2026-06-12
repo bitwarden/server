@@ -166,6 +166,7 @@ public class RestartSubscriptionCommand(
         var options = new SubscriptionCreateOptions
         {
             AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
+            BillingMode = new SubscriptionBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
             CollectionMethod = CollectionMethod.ChargeAutomatically,
             Customer = canceledSubscription.CustomerId,
             Items = items,
