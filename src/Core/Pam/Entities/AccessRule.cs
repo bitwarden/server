@@ -44,6 +44,12 @@ public class AccessRule : ITableObject<Guid>
     /// </summary>
     public int? MaxLeaseDurationSeconds { get; set; }
 
+    /// <summary>
+    /// When false, the rule is inactive: it does not gate access for the collections it governs. New rules
+    /// default to enabled.
+    /// </summary>
+    public bool Enabled { get; set; } = true;
+
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
 

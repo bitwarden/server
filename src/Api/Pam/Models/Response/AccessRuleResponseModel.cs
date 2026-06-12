@@ -19,6 +19,7 @@ public class AccessRuleResponseModel : ResponseModel
         SingleActiveLease = rule.SingleActiveLease;
         DefaultLeaseDurationSeconds = rule.DefaultLeaseDurationSeconds;
         MaxLeaseDurationSeconds = rule.MaxLeaseDurationSeconds;
+        Enabled = rule.Enabled;
         CreationDate = rule.CreationDate;
         RevisionDate = rule.RevisionDate;
         Collections = rule.CollectionIds.ToList();
@@ -32,6 +33,7 @@ public class AccessRuleResponseModel : ResponseModel
     public bool SingleActiveLease { get; }
     public int? DefaultLeaseDurationSeconds { get; }
     public int? MaxLeaseDurationSeconds { get; }
+    public bool Enabled { get; }
     public DateTime CreationDate { get; }
     public DateTime RevisionDate { get; }
     public IEnumerable<Guid> Collections { get; }

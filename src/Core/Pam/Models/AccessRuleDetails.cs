@@ -19,6 +19,7 @@ public class AccessRuleDetails : AccessRule
         SingleActiveLease = rule.SingleActiveLease,
         DefaultLeaseDurationSeconds = rule.DefaultLeaseDurationSeconds,
         MaxLeaseDurationSeconds = rule.MaxLeaseDurationSeconds,
+        Enabled = rule.Enabled,
         CreationDate = rule.CreationDate,
         RevisionDate = rule.RevisionDate,
         CollectionIds = collectionIds,

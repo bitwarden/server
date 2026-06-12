@@ -7,6 +7,7 @@ CREATE TABLE [dbo].[AccessRule] (
     [SingleActiveLease] BIT                 NOT NULL CONSTRAINT [DF_AccessRule_SingleActiveLease] DEFAULT (0),
     [DefaultLeaseDurationSeconds] INT       NULL,
     [MaxLeaseDurationSeconds]     INT       NULL,
+    [Enabled]           BIT                 NOT NULL CONSTRAINT [DF_AccessRule_Enabled] DEFAULT (1),
     [CreationDate]      DATETIME2(7)        NOT NULL,
     [RevisionDate]      DATETIME2(7)        NOT NULL,
     CONSTRAINT [PK_AccessRule] PRIMARY KEY CLUSTERED ([Id] ASC),
