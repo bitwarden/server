@@ -37,7 +37,7 @@ public abstract class BaseEntityFrameworkRepository
     /// scope and resolves a fresh DatabaseContext. The caller must dispose the returned
     /// scope only if it is non-null (i.e., when not using the ambient context).
     /// </summary>
-    private (DatabaseContext DbContext, IServiceScope? OwnedScope) GetDatabaseContextOrAmbient()
+    private (DatabaseContext DbContext, AsyncServiceScope? OwnedScope) GetDatabaseContextOrAmbient()
     {
         var holder = TransactionState.Current;
         if (holder?.DbContext is DatabaseContext ambientContext)
@@ -45,8 +45,16 @@ public abstract class BaseEntityFrameworkRepository
             return (ambientContext, null);
         }
 
-        var scope = ServiceScopeFactory.CreateScope();
-        return (GetDatabaseContext(scope), scope);
+        var scope = ServiceScopeFactory.CreateAsyncScope();
+
+        var context = GetDatabaseContext(scope);
+        if (holder is not null)
+        {
+            context.Database.UseTransaction(holder.Transaction);
+            holder.AttachDbContext(context, scope);
+        }
+
+        return (context, scope);
     }
 
     /// <summary>
@@ -63,7 +71,10 @@ public abstract class BaseEntityFrameworkRepository
         }
         finally
         {
-            ownedScope?.Dispose();
+            if (ownedScope is { } scope)
+            {
+                await scope.DisposeAsync();
+            }
         }
     }
 
@@ -80,7 +91,10 @@ public abstract class BaseEntityFrameworkRepository
         }
         finally
         {
-            ownedScope?.Dispose();
+            if (ownedScope is { } scope)
+            {
+                await scope.DisposeAsync();
+            }
         }
     }
 

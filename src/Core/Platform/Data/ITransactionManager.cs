@@ -19,9 +19,4 @@ public interface ITransactionManager
     Task<ITransactionScope> BeginTransactionAsync(
         IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
         CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Returns true if the current async flow has an active ambient transaction.
-    /// </summary>
-    bool HasActiveTransaction { get; }
 }

@@ -38,7 +38,7 @@ public abstract class BaseRepository
     /// or creates a new owned connection. The caller must dispose the connection only if
     /// <c>Owned</c> is true.
     /// </summary>
-    protected (SqlConnection Connection, DbTransaction? Transaction, bool Owned) GetConnection()
+    private (SqlConnection Connection, DbTransaction? Transaction, bool Owned) GetConnection()
     {
         var holder = TransactionState.Current;
         if (holder is not null)
@@ -52,6 +52,11 @@ public abstract class BaseRepository
     /// <summary>
     /// Executes an action using the ambient transaction connection (if active) or a new
     /// owned connection. The connection is opened and disposed automatically when owned.
+    ///
+    /// <remarks>
+    /// This method will never use the ReadOnlyConnectionString. If you want to use that connection string, do not
+    /// move over to this.
+    /// </remarks>
     /// </summary>
     protected async Task<TResult> ExecuteWithConnectionAsync<TResult>(
         Func<SqlConnection, DbTransaction?, Task<TResult>> action)

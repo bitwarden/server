@@ -18,15 +18,15 @@ public sealed class RootTransactionScope : ITransactionScope
                 "Cannot commit a transaction that has been marked for rollback by a nested scope.");
         }
 
-        _holder.Committed = true;
         await _holder.Transaction.CommitAsync(cancellationToken);
+        _holder.MarkCommitted();
     }
 
     public async Task RollbackAsync(CancellationToken cancellationToken = default)
     {
-        _holder.Doomed = true;
+        _holder.MarkDoomed();
         await _holder.Transaction.RollbackAsync(cancellationToken);
-        _holder.RolledBack = true;
+        _holder.MarkRolledBack();
     }
 
     public async ValueTask DisposeAsync()

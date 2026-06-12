@@ -20,13 +20,13 @@ public sealed class EfTransactionManager(IServiceScopeFactory serviceScopeFactor
 
         await dbContext.Database.UseTransactionAsync(transaction, cancellationToken);
 
-        return new TransactionHolder
+        var holder = new TransactionHolder
         {
             Connection = connection,
             Transaction = transaction,
             OwnsConnection = false,
-            DbContext = dbContext,
-            Scope = scope,
         };
+        holder.AttachDbContext(dbContext, scope);
+        return holder;
     }
 }

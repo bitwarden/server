@@ -19,7 +19,7 @@ public sealed class NestedTransactionScope : ITransactionScope
     public Task RollbackAsync(CancellationToken cancellationToken = default)
     {
         // Mark the transaction as doomed so the root scope cannot commit.
-        _holder.Doomed = true;
+        _holder.MarkDoomed();
         return Task.CompletedTask;
     }
 

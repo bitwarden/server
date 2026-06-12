@@ -4,8 +4,6 @@ namespace Bit.Core.Platform.Data;
 
 public abstract class TransactionManagerBase : ITransactionManager
 {
-    public bool HasActiveTransaction => TransactionState.Current is not null;
-
     public async Task<ITransactionScope> BeginTransactionAsync(
         IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
         CancellationToken cancellationToken = default)

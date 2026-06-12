@@ -17,9 +17,6 @@ public sealed class TransactionHolder : IAsyncDisposable
 {
     public required DbConnection Connection { get; init; }
     public required DbTransaction Transaction { get; init; }
-    public bool Committed { get; set; }
-    public bool RolledBack { get; set; }
-    public bool Doomed { get; set; }
 
     /// <summary>
     /// True when this holder is responsible for disposing <see cref="Connection"/>.
@@ -28,15 +25,46 @@ public sealed class TransactionHolder : IAsyncDisposable
     /// </summary>
     public bool OwnsConnection { get; init; } = true;
 
-    /// <summary>
-    /// For EF: the DatabaseContext associated with this transaction.
-    /// </summary>
-    public object? DbContext { get; set; }
+    public bool Committed { get; private set; }
+    public bool RolledBack { get; private set; }
+    public bool Doomed { get; private set; }
+
+    /// <summary>For EF: the DatabaseContext associated with this transaction.</summary>
+    public object? DbContext { get; private set; }
+
+    /// <summary>For EF: the IServiceScope that owns the DatabaseContext.</summary>
+    private IAsyncDisposable? _scope;
+
+    /// <summary>One-way latch: records that the root scope committed.</summary>
+    public void MarkCommitted() => Committed = true;
+
+    /// <summary>One-way latch: records that the root scope rolled back.</summary>
+    public void MarkRolledBack() => RolledBack = true;
 
     /// <summary>
-    /// For EF: the IServiceScope that owns the DatabaseContext.
+    /// One-way latch: marks the transaction as doomed. Once doomed, the root scope
+    /// cannot commit.
     /// </summary>
-    public IAsyncDisposable? Scope { get; set; }
+    public void MarkDoomed() => Doomed = true;
+
+    /// <summary>
+    /// Attaches an EF DbContext (and the scope that owns it) to this holder. May be
+    /// called at most once per holder; subsequent calls throw.
+    /// </summary>
+    public void AttachDbContext(object dbContext, IAsyncDisposable scope)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+        ArgumentNullException.ThrowIfNull(scope);
+
+        if (DbContext is not null)
+        {
+            throw new InvalidOperationException(
+                "A DbContext is already attached to this transaction.");
+        }
+
+        DbContext = dbContext;
+        _scope = scope;
+    }
 
     public async ValueTask DisposeAsync()
     {
@@ -59,9 +87,9 @@ public sealed class TransactionHolder : IAsyncDisposable
             await Connection.DisposeAsync();
         }
 
-        if (Scope is not null)
+        if (_scope is not null)
         {
-            await Scope.DisposeAsync();
+            await _scope.DisposeAsync();
         }
     }
 }

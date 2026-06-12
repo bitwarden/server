@@ -106,12 +106,12 @@ public static class ServiceCollectionExtensions
         if (provider != SupportedDatabaseProviders.SqlServer)
         {
             services.AddPasswordManagerEFRepositories(globalSettings.SelfHosted);
-            services.AddSingleton<ITransactionManager, EfTransactionManager>();
+            services.TryAddSingleton<ITransactionManager, EfTransactionManager>();
         }
         else
         {
             services.AddDapperRepositories(globalSettings.SelfHosted);
-            services.AddSingleton<ITransactionManager, DapperTransactionManager>();
+            services.TryAddSingleton<ITransactionManager, DapperTransactionManager>();
         }
 
         if (globalSettings.SelfHosted)
