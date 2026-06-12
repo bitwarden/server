@@ -2,6 +2,7 @@
 using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
+using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.Utilities;
@@ -16,11 +17,50 @@ namespace Bit.Api.AdminConsole.Controllers;
 public class OrganizationInviteLinksController(
     ICreateOrganizationInviteLinkCommand createOrganizationInviteLinkCommand,
     IGetOrganizationInviteLinkQuery getOrganizationInviteLinkQuery,
+    IGetOrganizationInviteLinkStatusQuery getOrganizationInviteLinkStatusQuery,
     IUpdateOrganizationInviteLinkCommand updateOrganizationInviteLinkCommand,
     IDeleteOrganizationInviteLinkCommand deleteOrganizationInviteLinkCommand,
-    IRefreshOrganizationInviteLinkCommand refreshOrganizationInviteLinkCommand)
+    IRefreshOrganizationInviteLinkCommand refreshOrganizationInviteLinkCommand,
+    IValidateOrganizationInviteLinkEmailDomainQuery validateOrganizationInviteLinkEmailDomainQuery,
+    IGetOrganizationInviteLinkPoliciesQuery getOrganizationInviteLinkPoliciesQuery)
     : BaseAdminConsoleController
 {
+    [AllowAnonymous]
+    [HttpPost("/organizations/invite-link/status")]
+    public async Task<IResult> GetStatus([FromBody] GetOrganizationInviteLinkStatusRequestModel model)
+    {
+        var result = await getOrganizationInviteLinkStatusQuery.GetStatusAsync(model.Code);
+
+        return Handle(result, status =>
+            TypedResults.Ok(new OrganizationInviteLinkStatusResponseModel(
+                status.OrganizationName,
+                status.SeatsAvailable,
+                status.Sso is null
+                    ? null
+                    : new OrganizationInviteLinkSsoResponseModel(status.Sso.OrgSsoId, status.Sso.Required))));
+    }
+
+    [AllowAnonymous]
+    [HttpPost("/organizations/invite-link/policies")]
+    public async Task<IResult> GetPolicies([FromBody] GetOrganizationInviteLinkPoliciesRequestModel model)
+    {
+        var result = await getOrganizationInviteLinkPoliciesQuery.GetPoliciesAsync(model.Code);
+        return Handle(result, policies =>
+            TypedResults.Ok(new ListResponseModel<PolicyResponseModel>(
+                policies.Select(p => new PolicyResponseModel(p)))));
+    }
+
+    [AllowAnonymous]
+    [HttpPost("/organizations/invite-link/validate-email-domain")]
+    public async Task<IResult> ValidateEmailDomain(
+        [FromBody] OrganizationInviteLinkValidateEmailDomainRequestModel model)
+    {
+        var result = await validateOrganizationInviteLinkEmailDomainQuery.ValidateAsync(model.Code, model.Email);
+
+        return Handle(result, isAllowed =>
+            TypedResults.Ok(new OrganizationInviteLinkValidateEmailDomainResponseModel(isAllowed)));
+    }
+
     [HttpGet("")]
     [Authorize<ManageUsersRequirement>]
     public async Task<IResult> Get(Guid orgId)

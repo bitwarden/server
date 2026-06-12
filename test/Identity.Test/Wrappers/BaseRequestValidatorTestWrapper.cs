@@ -1,6 +1,5 @@
 ﻿using System.Security.Claims;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
 using Bit.Core.Context;
@@ -61,7 +60,6 @@ IBaseRequestValidatorTestWrapper
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
         IUserRepository userRepository,
-        IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
@@ -70,7 +68,7 @@ IBaseRequestValidatorTestWrapper
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
         IClientVersionValidator clientVersionValidator,
-        IBumpDeviceLastActivityDateCommand bumpDeviceLastActivityDateCommand) :
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand) :
          base(
             userManager,
             userService,
@@ -83,7 +81,6 @@ IBaseRequestValidatorTestWrapper
             currentContext,
             globalSettings,
             userRepository,
-            policyService,
             featureService,
             ssoConfigRepository,
             userDecryptionOptionsBuilder,
@@ -92,7 +89,7 @@ IBaseRequestValidatorTestWrapper
             mailService,
             userAccountKeysQuery,
             clientVersionValidator,
-            bumpDeviceLastActivityDateCommand)
+            updateDeviceLastActivityCommand)
     {
     }
 

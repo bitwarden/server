@@ -25,6 +25,7 @@ internal record SeedPresetOrganization
     public string? Fixture { get; init; }
     public string? Name { get; init; }
     public string? Domain { get; init; }
+    public List<string>? ClaimedDomains { get; init; }
     public int? Seats { get; init; }
     public string? PlanType { get; init; }
     public bool? UseAutomaticUserConfirmation { get; init; }
@@ -60,11 +61,13 @@ internal record SeedPresetCiphers
     public string? Fixture { get; init; }
     public int Count { get; init; }
     public bool AssignFolders { get; init; }
+    public int RepromptEveryNthCipher { get; init; }
 }
 
 internal record SeedPresetPersonalCiphers
 {
     public int CountPerUser { get; init; }
+    public int RepromptEveryNthCipher { get; init; }
 }
 
 internal record SeedCollectionAssignment

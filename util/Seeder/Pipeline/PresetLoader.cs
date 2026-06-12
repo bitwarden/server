@@ -67,7 +67,7 @@ internal static class PresetLoader
         }
         else if (preset.Ciphers is { Count: > 0 })
         {
-            builder.AddPersonalCiphers(preset.Ciphers.Count);
+            builder.AddPersonalCiphers(preset.Ciphers.Count, repromptEveryNthCipher: preset.Ciphers.RepromptEveryNthCipher);
         }
 
         if (preset.FolderAssignments is { Count: > 0 })
@@ -87,7 +87,7 @@ internal static class PresetLoader
     /// Builds a recipe from preset configuration, resolving fixtures and generation counts.
     /// </summary>
     /// <remarks>
-    /// Resolution order: Org → OrgApiKey → Roster → Owner (if no roster owner) → Generator → Users → Groups → Collections → Folders → Ciphers → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
+    /// Resolution order: Org → OrgApiKey → ClaimedDomains → Roster → Owner (if no roster owner) → Generator → Users → Groups → Collections → Folders → Ciphers → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
     /// </remarks>
     private static void BuildRecipe(string presetName, SeedPreset preset, ISeedReader reader, IServiceCollection services)
     {
@@ -116,6 +116,11 @@ internal static class PresetLoader
         }
 
         builder.AddOrganizationApiKey();
+
+        if (org.ClaimedDomains is { Count: > 0 })
+        {
+            builder.WithOrganizationDomain(org.ClaimedDomains);
+        }
 
         if (preset.Roster?.Fixture is not null)
         {
@@ -168,7 +173,7 @@ internal static class PresetLoader
         }
         else if (preset.Ciphers is not null && preset.Ciphers.Count > 0)
         {
-            builder.AddCiphers(preset.Ciphers.Count, assignFolders: preset.Ciphers.AssignFolders, density: density);
+            builder.AddCiphers(preset.Ciphers.Count, assignFolders: preset.Ciphers.AssignFolders, density: density, repromptEveryNthCipher: preset.Ciphers.RepromptEveryNthCipher);
         }
 
         if (hasCollectionAssignments)
@@ -188,7 +193,7 @@ internal static class PresetLoader
 
         if (preset.PersonalCiphers is not null && preset.PersonalCiphers.CountPerUser > 0)
         {
-            builder.AddPersonalCiphers(preset.PersonalCiphers.CountPerUser, density: density);
+            builder.AddPersonalCiphers(preset.PersonalCiphers.CountPerUser, density: density, repromptEveryNthCipher: preset.PersonalCiphers.RepromptEveryNthCipher);
         }
         else if (density?.PersonalCipherDistribution is not null)
         {

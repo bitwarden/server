@@ -1,5 +1,5 @@
-﻿using Bit.Core.Utilities;
-using Bit.Infrastructure.EntityFramework.Models;
+﻿using Bit.Core.Entities;
+using Bit.Core.Utilities;
 
 namespace Bit.Seeder.Factories;
 

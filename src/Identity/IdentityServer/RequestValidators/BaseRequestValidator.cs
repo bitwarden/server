@@ -5,7 +5,7 @@
 using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.Services;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
@@ -42,10 +42,9 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IAuthRequestRepository _authRequestRepository;
     private readonly IMailService _mailService;
     private readonly IClientVersionValidator _clientVersionValidator;
-    protected readonly IBumpDeviceLastActivityDateCommand _bumpDeviceLastActivityDateCommand;
+    protected readonly IUpdateDeviceLastActivityCommand _updateDeviceLastActivityCommand;
 
     protected ICurrentContext CurrentContext { get; }
-    protected IPolicyService PolicyService { get; }
     protected IFeatureService _featureService { get; }
     protected ISsoConfigRepository SsoConfigRepository { get; }
     protected IUserService _userService { get; }
@@ -65,7 +64,6 @@ public abstract class BaseRequestValidator<T> where T : class
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
         IUserRepository userRepository,
-        IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
@@ -74,7 +72,7 @@ public abstract class BaseRequestValidator<T> where T : class
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
         IClientVersionValidator clientVersionValidator,
-        IBumpDeviceLastActivityDateCommand bumpDeviceLastActivityDateCommand
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand
     )
     {
         _userManager = userManager;
@@ -87,7 +85,6 @@ public abstract class BaseRequestValidator<T> where T : class
         _logger = logger;
         CurrentContext = currentContext;
         _globalSettings = globalSettings;
-        PolicyService = policyService;
         _userRepository = userRepository;
         _featureService = featureService;
         SsoConfigRepository = ssoConfigRepository;
@@ -97,9 +94,17 @@ public abstract class BaseRequestValidator<T> where T : class
         _mailService = mailService;
         _accountKeysQuery = userAccountKeysQuery;
         _clientVersionValidator = clientVersionValidator;
-        _bumpDeviceLastActivityDateCommand = bumpDeviceLastActivityDateCommand;
+        _updateDeviceLastActivityCommand = updateDeviceLastActivityCommand;
     }
 
+    // NOTE: Feature flags with progressive rollout (device-keyed or user-keyed) cannot be
+    // evaluated from inside this validator without first populating CurrentContext.UserId /
+    // CurrentContext.DeviceIdentifier. CurrentContextMiddleware only sees /connect/token
+    // headers, which do not carry either value. Prefer flag-gating in BuildSuccessResultAsync
+    // (where validation is complete and User/Device entities are available) and populate
+    // CurrentContext inline immediately before the flag check. Do not populate CurrentContext
+    // from raw form-body input before the grant-specific validator finishes — pre-validation
+    // client values would become visible to any downstream reader in the same request.
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
         CustomValidatorRequestContext validatorContext)
     {
@@ -445,18 +450,26 @@ public abstract class BaseRequestValidator<T> where T : class
 
         await ResetFailedAuthDetailsAsync(user);
 
+        // Populate CurrentContext for the LD bucketing decision below. user.Id and
+        // device.Identifier are post-validation Bitwarden entities — not raw client input.
+        // TODO: PM-34091 - delete when cleaning up the feature flag; the bump call reads
+        // user.Id / device.Identifier directly.
+        CurrentContext.UserId ??= user.Id;
+        CurrentContext.DeviceIdentifier ??= device?.Identifier;
+
         // TODO: PM-34091 - remove feature flag check when cleaning up
         if (device != null && _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate))
         {
             try
             {
-                await _bumpDeviceLastActivityDateCommand.BumpAsync(device);
+                var clientVersion = CurrentContext.ClientVersion?.ToString();
+                await _updateDeviceLastActivityCommand.UpdateAsync(device, clientVersion);
             }
             catch (Exception e)
             {
-                // Log and swallow exceptions from this non-critical update, as we don't want to fail logins 
-                // due to issues updating the device's last activity date.
-                _logger.LogWarning(e, "Failed to bump LastActivityDate for device {DeviceId}.", device.Id);
+                // Log and swallow exceptions from this non-critical update, as we don't want to fail logins
+                // due to issues updating the device's last-activity state (LastActivityDate / ClientVersion).
+                _logger.LogWarning(e, "Failed to update device last activity for device {DeviceId}.", device.Id);
             }
         }
 
@@ -588,7 +601,8 @@ public abstract class BaseRequestValidator<T> where T : class
             return null;
         }
 
-        return new MasterPasswordPolicyResponseModel(await PolicyService.GetMasterPasswordPolicyForUserAsync(user));
+        var masterPasswordPolicy = await PolicyRequirementQuery.GetAsyncVNext<MasterPasswordPolicyRequirement>(user.Id);
+        return new MasterPasswordPolicyResponseModel(masterPasswordPolicy.EnforcedOptions);
     }
 
     /// <summary>

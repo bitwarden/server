@@ -17,6 +17,7 @@ public class GlobalSettings : IGlobalSettings
         BaseServiceUri = new BaseServiceUriSettings(this);
         Attachment = new FileStorageSettings(this, "attachments", "attachments");
         Send = new FileStorageSettings(this, "attachments/send", "attachments/send");
+        OrganizationReport = new FileStorageSettings(this, "attachments/reports", "attachments/reports");
         DataProtection = new DataProtectionSettings(this);
     }
 
@@ -43,10 +44,12 @@ public class GlobalSettings : IGlobalSettings
     public virtual string OidcIdentityClientKey { get; set; }
     public virtual string HibpApiKey { get; set; }
     public virtual bool DisableUserRegistration { get; set; }
+    public virtual bool SuppressOnboardingInterstitials { get; set; }
     public virtual bool DisableEmailNewDevice { get; set; }
     public virtual bool EnableNewDeviceVerification { get; set; }
     public virtual bool EnableCloudCommunication { get; set; } = false;
     public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
+    public virtual int DeviceLastActivityCacheTtlHours { get; set; } = 120; // 5 days
     public virtual string EventGridKey { get; set; }
     public virtual bool TestPlayIdTrackingEnabled { get; set; } = false;
     public virtual IInstallationSettings Installation { get; set; } = new InstallationSettings();
@@ -66,6 +69,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
     public virtual IFileStorageSettings Attachment { get; set; }
     public virtual FileStorageSettings Send { get; set; }
+    public virtual FileStorageSettings OrganizationReport { get; set; }
     public virtual IdentityServerSettings IdentityServer { get; set; } = new IdentityServerSettings();
     public virtual DataProtectionSettings DataProtection { get; set; }
     public virtual NotificationHubPoolSettings NotificationHubPool { get; set; } = new();
@@ -659,6 +663,8 @@ public class GlobalSettings : IGlobalSettings
         public int CiphersLimit { get; set; }
         public int CollectionRelationshipsLimit { get; set; }
         public int CollectionsLimit { get; set; }
+        public int FoldersLimit { get; set; }
+        public int FolderRelationshipsLimit { get; set; }
     }
 
     public class BitPaySettings
@@ -722,6 +728,10 @@ public class GlobalSettings : IGlobalSettings
         public int MaxNetworkRetries { get; set; } = 2;
         public string PremiumCheckoutSuccessUrl { get; set; }
         public string PremiumCheckoutCancelUrl { get; set; }
+        public string BrowserPremiumCheckoutSuccessUrl { get; set; }
+        public string BrowserPremiumCheckoutCancelUrl { get; set; }
+        public string DesktopPremiumCheckoutSuccessUrl { get; set; }
+        public string DesktopPremiumCheckoutCancelUrl { get; set; }
     }
 
     public class DistributedIpRateLimitingSettings
