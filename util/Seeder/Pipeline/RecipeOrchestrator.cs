@@ -39,6 +39,14 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         {
             services.AddSingleton(deps.Progress);
         }
+        if (deps.LicensingService is not null)
+        {
+            services.AddSingleton(deps.LicensingService);
+        }
+        if (deps.GlobalSettings is not null)
+        {
+            services.AddSingleton(deps.GlobalSettings);
+        }
 
         PresetLoader.RegisterRecipe(presetName, reader, services);
 
@@ -57,6 +65,14 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         if (deps.Progress is not null)
         {
             services.AddSingleton(deps.Progress);
+        }
+        if (deps.LicensingService is not null)
+        {
+            services.AddSingleton(deps.LicensingService);
+        }
+        if (deps.GlobalSettings is not null)
+        {
+            services.AddSingleton(deps.GlobalSettings);
         }
 
         var recipeName = "from-options";
@@ -122,6 +138,14 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         if (deps.Progress is not null)
         {
             services.AddSingleton(deps.Progress);
+        }
+        if (deps.LicensingService is not null)
+        {
+            services.AddSingleton(deps.LicensingService);
+        }
+        if (deps.GlobalSettings is not null)
+        {
+            services.AddSingleton(deps.GlobalSettings);
         }
 
         var recipeName = "individual-from-options";

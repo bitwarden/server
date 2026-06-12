@@ -2,6 +2,7 @@
 using Bit.Seeder.Models;
 using Bit.Seeder.Pipeline;
 using Bit.Seeder.Services;
+using Bit.Seeder.Steps;
 using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest;
@@ -167,6 +168,28 @@ public class RecipeBuilderValidationTests
         {
             Assert.Equal(i, orderedSteps[i].Order);
         }
+    }
+
+    [Fact]
+    public void CreateIndividualUser_ProducesTwoStepsInOrder()
+    {
+        var services = new ServiceCollection();
+        var builder = services.AddRecipe("test");
+
+        builder.CreateIndividualUser("user@example.com", premium: true, maxStorageGb: 1);
+
+        using var provider = services.BuildServiceProvider();
+        var steps = provider.GetKeyedServices<IStep>("test")
+            .OrderBy(s => s is OrderedStep os ? os.Order : int.MaxValue)
+            .ToList();
+
+        Assert.Equal(2, steps.Count);
+        // First step must be the user creation step; second must be the license step.
+        // If this order is reversed, GenerateSelfHostUserLicenseStep reads a null context.Owner.
+        var inner0 = ((OrderedStep)steps[0]).Inner;
+        var inner1 = ((OrderedStep)steps[1]).Inner;
+        Assert.IsType<CreateIndividualUserStep>(inner0);
+        Assert.IsType<GenerateSelfHostUserLicenseStep>(inner1);
     }
 
     private static readonly ISeedReader _stubReader = new StubSeedReader(hasOwner: false);

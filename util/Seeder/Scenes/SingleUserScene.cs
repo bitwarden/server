@@ -1,6 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Security.Cryptography;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
@@ -25,7 +29,9 @@ public struct SingleUserSceneResult
 public class SingleUserScene(
     IPasswordHasher<User> passwordHasher,
     IUserRepository userRepository,
-    IManglerService manglerService) : IScene<SingleUserScene.Request, SingleUserSceneResult>
+    IManglerService manglerService,
+    IGlobalSettings globalSettings,
+    ILicensingService? licenseService = null) : IScene<SingleUserScene.Request, SingleUserSceneResult>
 {
     public class Request
     {
@@ -39,16 +45,36 @@ public class SingleUserScene(
 
     public async Task<SceneResult<SingleUserSceneResult>> SeedAsync(Request request)
     {
-        // Pass service to factory - factory will call Mangle()
         var (user, keys) = UserSeeder.Create(
             request.Email,
             passwordHasher,
             manglerService,
-            emailVerified: request.EmailVerified,
+            emailVerified: request.EmailVerified || request.Premium,
             premium: request.Premium,
+            maxStorageGb: request.Premium ? (short)1 : null,
             password: request.Password);
 
+        if (request.Premium)
+        {
+            user.PremiumExpirationDate = DateTime.UtcNow.AddYears(1);
+        }
+
         await userRepository.CreateAsync(user);
+
+        // Best-effort license write. Self-hosted instances hold only the public licensing
+        // certificate, so token signing throws there (by design — see LicensingService.SignLicense).
+        // Don't let that failure abort the seed; the user is already persisted.
+        if (request.Premium && licenseService is not null && CoreHelpers.SettingHasValue(globalSettings.LicenseDirectory))
+        {
+            try
+            {
+                await SelfHostLicenseService.WriteLicenseAsync(licenseService, user);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or CryptographicException)
+            {
+                Console.WriteLine($"[SingleUserScene] Non-fatal license write failure for user '{user.Id}': {ex}");
+            }
+        }
 
         return new SceneResult<SingleUserSceneResult>(
             result: new SingleUserSceneResult
@@ -64,4 +90,5 @@ public class SingleUserScene(
             },
             mangleMap: manglerService.GetMangleMap());
     }
+
 }

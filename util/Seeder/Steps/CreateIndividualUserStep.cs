@@ -6,7 +6,8 @@ namespace Bit.Seeder.Steps;
 /// <summary>
 /// Creates a standalone user with no organization, registering them as the context owner.
 /// </summary>
-internal sealed class CreateIndividualUserStep(string email, bool premium, short maxStorageGb) : IStep
+internal sealed class CreateIndividualUserStep(
+    string email, bool premium, short maxStorageGb, bool emailVerified = true) : IStep
 {
     public void Execute(SeederContext context)
     {
@@ -20,7 +21,8 @@ internal sealed class CreateIndividualUserStep(string email, bool premium, short
             premium: premium,
             maxStorageGb: maxStorageGb > 0 ? Math.Min(maxStorageGb, (short)5) : null,
             password: password,
-            kdfIterations: kdfIterations);
+            kdfIterations: kdfIterations,
+            emailVerified: emailVerified);
 
         if (premium)
         {

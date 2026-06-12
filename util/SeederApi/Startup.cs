@@ -1,5 +1,9 @@
 ﻿using System.Globalization;
+using Bit.Core.Billing.Licenses.Extensions;
+using Bit.Core.Billing.Services;
+using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Bit.SeederApi.Extensions;
 using Bit.SeederApi.Utilities;
 using Bit.SharedWeb.Utilities;
@@ -36,6 +40,17 @@ public class Startup
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
         services.AddScoped<IPasswordHasher<Core.Entities.User>, PasswordHasher<Core.Entities.User>>();
+
+        // License infrastructure — only registered when configuration is sufficient to construct
+        // LicensingService without throwing. SingleUserScene accepts ILicensingService? and
+        // no-ops gracefully when the service is absent (e.g. self-hosted dev with no LicenseDirectory).
+        if (!globalSettings.SelfHosted || (globalSettings.Installation.Id != Guid.Empty && CoreHelpers.SettingHasValue(globalSettings.LicenseDirectory)))
+        {
+            services.AddLicenseServices();
+            services.TryAddSingleton<IMailService, NoopMailService>();
+            services.AddPush(globalSettings);
+            services.TryAddSingleton<ILicensingService, LicensingService>();
+        }
 
         services.AddSeederApiServices();
         services.AddScenes();
