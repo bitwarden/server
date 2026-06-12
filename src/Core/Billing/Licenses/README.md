@@ -13,7 +13,7 @@ existing license must keep validating after it upgrades.
 
 > This document explains the **why** and the **constraints**. For the step-by-step **how-to** of adding a plan-gated
 > organization ability (including the license step), see
-> [Organization ability flags → Self-host licensing](../../AdminConsole/OrganizationFeatures/OrganizationAbility/README.md#8-self-host-licensing).
+> [Organization ability flags → Self-host licensing](OrganizationAbility-README.md#8-self-host-licensing).
 
 ## Where licenses live
 
@@ -137,7 +137,7 @@ to **`VerifyData`** (with the C4 guard). For continued legacy support it interac
 model and the claim model is the main source of manual, error-prone propagation when adding features.
 
 > The how-to checklist for these edits lives in the ability guide's
-> [Self-host licensing](../../AdminConsole/OrganizationFeatures/OrganizationAbility/README.md#8-self-host-licensing)
+> [Self-host licensing](OrganizationAbility-README.md#8-self-host-licensing)
 > section. This document explains *why* each edit is required.
 
 ## Known design tensions
@@ -185,8 +185,8 @@ Captured for awareness and for the licensing refactor effort
 
 ## Related documentation
 
-- [Organization ability flags](../../AdminConsole/OrganizationFeatures/OrganizationAbility/README.md) — the how-to for
+- [Organization ability flags](OrganizationAbility-README.md) — the how-to for
   adding a plan-gated organization ability, including the
-  [Self-host licensing](../../AdminConsole/OrganizationFeatures/OrganizationAbility/README.md#8-self-host-licensing)
+  [Self-host licensing](OrganizationAbility-README.md#8-self-host-licensing)
   step this document explains the rationale for.
 - [PM-32220](https://bitwarden.atlassian.net/browse/PM-32220) — Organization and User License Refactor Effort.
