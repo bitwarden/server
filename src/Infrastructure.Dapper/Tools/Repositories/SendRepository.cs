@@ -193,6 +193,35 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
         };
     }
 
+    public async Task UpdateManyDisabledAsync(IEnumerable<Guid> ids, bool disabled)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        await connection.ExecuteAsync(
+            $"[{Schema}].[Send_UpdateDisabledByIds]",
+            new { Ids = ids.ToGuidIdArrayTVP(), Disabled = disabled, RevisionDate = DateTime.UtcNow },
+            commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task<IEnumerable<Guid>> GetIdsByOrganizationIdAsync(Guid organizationId)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        var sendIds = await connection.QueryAsync<Guid>(
+            $"[{Schema}].[Send_ReadIdsByOrganizationId]",
+            new { OrganizationId = organizationId },
+            commandType: CommandType.StoredProcedure);
+        return sendIds;
+    }
+
+    public async Task<ICollection<Send>> GetManyByIdsAsync(IEnumerable<Guid> ids)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<Send>(
+            $"[{Schema}].[Send_ReadByIds]",
+            new { Ids = ids.ToGuidIdArrayTVP() },
+            commandType: CommandType.StoredProcedure);
+        return results.Where(UnprotectData).ToList();
+    }
+
     private async Task ProtectDataAndSaveAsync(Send send, Func<Task> saveTask)
     {
         if (send == null)
