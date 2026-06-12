@@ -1475,7 +1475,7 @@ public class NonAnonymousSendCommandTests
         await _nonAnonymousSendCommand.SaveSendAsync(send);
 
         await _sendRepository.Received(1).CreateAsync(send);
-        await _eventService.Received(1).LogUserEventAsync(userId, expectedEventType);
+        await _eventService.Received(1).LogSendEventAsync(userId, Arg.Any<Guid>(), expectedEventType);
     }
 
     [Fact]
@@ -1495,7 +1495,7 @@ public class NonAnonymousSendCommandTests
 
         await _nonAnonymousSendCommand.SaveSendAsync(send);
 
-        await _eventService.Received(1).LogUserEventAsync(userId, EventType.Send_Created_Text);
+        await _eventService.Received(1).LogSendEventAsync(userId, Arg.Any<Guid>(), EventType.Send_Created_Text);
     }
 
     [Fact]
@@ -1515,7 +1515,7 @@ public class NonAnonymousSendCommandTests
         await _nonAnonymousSendCommand.SaveSendAsync(send);
 
         await _sendRepository.Received(1).CreateAsync(send);
-        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default, default);
     }
 
     [Theory]
@@ -1538,7 +1538,7 @@ public class NonAnonymousSendCommandTests
         await _nonAnonymousSendCommand.SaveSendAsync(send);
 
         await _sendRepository.Received(1).UpsertAsync(send);
-        await _eventService.Received(1).LogUserEventAsync(userId, expectedEventType);
+        await _eventService.Received(1).LogSendEventAsync(userId, Arg.Any<Guid>(), expectedEventType);
     }
 
     [Fact]
@@ -1558,7 +1558,7 @@ public class NonAnonymousSendCommandTests
         await _nonAnonymousSendCommand.SaveSendAsync(send);
 
         await _sendRepository.Received(1).UpsertAsync(send);
-        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default, default);
     }
 
     [Theory]
@@ -1581,7 +1581,7 @@ public class NonAnonymousSendCommandTests
 
         await _sendRepository.Received(1).DeleteAsync(send);
         await _pushNotificationService.Received(1).PushSyncSendDeleteAsync(send);
-        await _eventService.Received(1).LogUserEventAsync(userId, expectedEventType);
+        await _eventService.Received(1).LogSendEventAsync(userId, Arg.Any<Guid>(), expectedEventType);
     }
 
     [Fact]
@@ -1600,6 +1600,6 @@ public class NonAnonymousSendCommandTests
         await _nonAnonymousSendCommand.DeleteSendAsync(send);
 
         await _sendRepository.Received(1).DeleteAsync(send);
-        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default, default);
     }
 }

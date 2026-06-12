@@ -76,7 +76,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
             return;
         }
 
-        await _eventService.LogUserEventAsync(send.UserId.Value, ResolveSendCreatedEventType(send));
+        await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, ResolveSendCreatedEventType(send));
     }
 
     private async Task LogSendUpdatedEventAsync(Send send)
@@ -88,11 +88,11 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
 
         if (send.Type == SendType.Text)
         {
-            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Edited_Text);
+            await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Edited_Text);
         }
         else
         {
-            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Edited_File);
+            await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Edited_File);
         }
     }
 
@@ -105,11 +105,11 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
 
         if (send.Type == SendType.Text)
         {
-            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Deleted_Text);
+            await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Deleted_Text);
         }
         else
         {
-            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Deleted_File);
+            await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Deleted_File);
         }
     }
 
