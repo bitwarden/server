@@ -181,7 +181,7 @@ public class Startup
             var uri = new Uri(globalSettings.BaseServiceUri.Identity);
             app.Use(async (ctx, next) =>
             {
-                ctx.RequestServices.GetRequiredService<IServerUrls>().Origin = $"{uri.Scheme}://{uri.Host}";
+                ctx.RequestServices.GetRequiredService<IServerUrls>().Origin = $"{uri.Scheme}://{uri.Authority}";
                 await next();
             });
         }
