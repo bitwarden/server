@@ -1,0 +1,64 @@
+@model Bit.Admin.Billing.Models.OrganizationPlanMigrationCohortAssignments.BulkAssignmentResultModel
+@{
+    ViewData["Title"] = "Bulk assignment result";
+}
+
+<div class="mx-auto" style="max-width: 768px;">
+    <h1>Bulk assignment applied</h1>
+
+    <p>Summary of the bulk upload results:</p>
+
+    <div class="row mb-4">
+        <div class="col">
+            <div class="text-muted small">Inserted</div>
+            <div class="fs-2 fw-bold text-success">@Model.Summary.Inserted.ToString("N0")</div>
+        </div>
+        <div class="col">
+            <div class="text-muted small">Updated</div>
+            <div class="fs-2 fw-bold">@Model.Summary.Updated.ToString("N0")</div>
+        </div>
+        <div class="col">
+            <div class="text-muted small">Unassigned</div>
+            <div class="fs-2 fw-bold">@Model.Summary.Unassigned.ToString("N0")</div>
+        </div>
+        <div class="col">
+            <div class="text-muted small">
+                Plan mismatch
+                @if (Model.Summary.PlanMismatch > 0)
+                {
+                    <i class="fa fa-warning text-warning"></i>
+                }
+            </div>
+            <div class="fs-2 fw-bold @(Model.Summary.PlanMismatch > 0 ? "text-warning" : "")">@Model.Summary.PlanMismatch.ToString("N0")</div>
+        </div>
+        <div class="col">
+            <div class="text-muted small">
+                Skipped
+                @if (Model.Summary.Skipped > 0)
+                {
+                    <i class="fa fa-lock text-muted"></i>
+                }
+            </div>
+            <div class="fs-2 fw-bold">@Model.Summary.Skipped.ToString("N0")</div>
+        </div>
+    </div>
+
+    @if (Model.Summary.PlanMismatch > 0)
+    {
+        <div class="alert alert-warning">
+            @Model.Summary.PlanMismatch organization(s) are on a plan that doesn't match their cohort's
+            migration path; their migrations will be silently skipped at scheduling time.
+        </div>
+    }
+
+    @if (Model.Summary.Skipped > 0)
+    {
+        <p class="text-muted small">
+            Note: @Model.Summary.Skipped assignment(s) in the file were skipped because the organization
+            is locked into its current cohort (scheduled to migrate, already migrated, or a churn discount
+            has been applied) and cannot be reassigned or unassigned.
+        </p>
+    }
+
+    <a asp-action="Index" class="btn btn-primary">Upload another file</a>
+</div>
