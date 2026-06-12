@@ -1,4 +1,6 @@
-﻿using Bit.Core.Vault.Enums;
+﻿using System.Globalization;
+using Bit.Core.Vault.Enums;
+using Bit.Seeder.Factories;
 
 namespace Bit.Seeder.Models;
 
@@ -97,7 +99,7 @@ internal record CipherSeed
         Notes = item.Notes,
         Reprompt = item.Reprompt == 1 ? CipherRepromptType.Password : CipherRepromptType.None,
         Fields = MapFields(item.Fields),
-        Login = MapLogin(item.Login),
+        Login = MapLogin(item.Login, item.PasswordHistory),
         Card = MapCard(item.Card),
         Identity = MapIdentity(item.Identity),
         SecureNote = item.Type == "secureNote" ? new SecureNoteViewDto { Type = 0 } : null,
@@ -119,7 +121,8 @@ internal record CipherSeed
         {
             Name = f.Name,
             Value = f.Value,
-            Type = MapFieldType(f.Type)
+            Type = MapFieldType(f.Type),
+            LinkedId = f.LinkedId
         }).ToList();
 
     private static int MapFieldType(string type) => type switch
@@ -131,7 +134,7 @@ internal record CipherSeed
         _ => throw new ArgumentException($"Unknown field type: '{type}'", nameof(type))
     };
 
-    private static LoginViewDto? MapLogin(SeedLogin? login) =>
+    private static LoginViewDto? MapLogin(SeedLogin? login, List<SeedPasswordHistory>? passwordHistory) =>
         login == null ? null : new LoginViewDto
         {
             Username = login.Username,
@@ -141,8 +144,25 @@ internal record CipherSeed
             {
                 Uri = u.Uri,
                 Match = MapUriMatchType(u.Match)
-            }).ToList()
+            }).ToList(),
+            // Key material is synthesized; the fixture only supplies the relying-party/user identifiers.
+            Fido2Credentials = login.Fido2Credentials?.Select(f => LoginCipherSeeder.CreateFido2Credential(
+                f.RpId ?? "example.com",
+                f.RpName ?? f.RpId ?? "Example",
+                f.UserName ?? login.Username ?? "user")).ToList(),
+            PasswordHistory = MapPasswordHistory(passwordHistory)
         };
+
+    private static List<PasswordHistoryViewDto>? MapPasswordHistory(List<SeedPasswordHistory>? history) =>
+        history?.Select(p =>
+        {
+            var dto = new PasswordHistoryViewDto { Password = p.Password };
+            if (p.LastUsedDate is not null)
+            {
+                dto.LastUsedDate = DateTime.Parse(p.LastUsedDate, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+            }
+            return dto;
+        }).ToList();
 
     private static int MapUriMatchType(string match) => match switch
     {

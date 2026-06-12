@@ -199,20 +199,12 @@
     },
     "fido2Credential": {
       "type": "object",
+      "description": "A discoverable passkey. Key material (credential id, private key, counter, user handle) is synthesized at seed time; only the relying-party and user identifiers are taken from the fixture.",
       "additionalProperties": false,
       "properties": {
-        "credentialId": { "type": "string" },
-        "keyType": { "type": "string", "default": "public-key" },
-        "keyAlgorithm": { "type": "string", "default": "ECDSA" },
-        "keyCurve": { "type": "string", "default": "P-256" },
-        "keyValue": { "type": "string" },
-        "rpId": { "type": "string" },
-        "rpName": { "type": "string" },
-        "userHandle": { "type": "string" },
-        "userName": { "type": "string" },
-        "userDisplayName": { "type": "string" },
-        "counter": { "type": "integer" },
-        "discoverable": { "type": "boolean", "default": false }
+        "rpId": { "type": "string", "description": "Relying party ID (e.g. 'example.com'). Defaults to 'example.com'." },
+        "rpName": { "type": "string", "description": "Relying party display name. Defaults to rpId." },
+        "userName": { "type": "string", "description": "Account username for the passkey. Defaults to the login username." }
       }
     }
   }

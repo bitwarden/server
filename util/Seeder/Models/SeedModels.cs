@@ -15,6 +15,7 @@ internal record SeedVaultItem
     public SeedIdentity? Identity { get; init; }
     public SeedSshKey? SshKey { get; init; }
     public List<SeedField>? Fields { get; init; }
+    public List<SeedPasswordHistory>? PasswordHistory { get; init; }
     public bool? Favorite { get; init; }
     public int? Reprompt { get; init; }
 }
@@ -32,6 +33,20 @@ internal record SeedLogin
     public string? Password { get; init; }
     public List<SeedLoginUri>? Uris { get; init; }
     public string? Totp { get; init; }
+    public List<SeedFido2Credential>? Fido2Credentials { get; init; }
+}
+
+internal record SeedFido2Credential
+{
+    public string? RpId { get; init; }
+    public string? RpName { get; init; }
+    public string? UserName { get; init; }
+}
+
+internal record SeedPasswordHistory
+{
+    public required string Password { get; init; }
+    public string? LastUsedDate { get; init; }
 }
 
 internal record SeedLoginUri
@@ -76,6 +91,7 @@ internal record SeedField
     public string? Name { get; init; }
     public string? Value { get; init; }
     public string Type { get; init; } = "text";
+    public int? LinkedId { get; init; }
 }
 
 internal record SeedOrganization
