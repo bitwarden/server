@@ -6,7 +6,10 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
+using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Payment.Queries;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Context;
@@ -21,6 +24,7 @@ using CountryAbbreviations = Bit.Core.Constants.CountryAbbreviations;
 using FreeTrialWarning = OrganizationWarnings.FreeTrialWarning;
 using InactiveSubscriptionWarning = OrganizationWarnings.InactiveSubscriptionWarning;
 using ResellerRenewalWarning = OrganizationWarnings.ResellerRenewalWarning;
+using ScheduledPriceIncreaseWarning = OrganizationWarnings.ScheduledPriceIncreaseWarning;
 using TaxIdWarning = OrganizationWarnings.TaxIdWarning;
 
 public interface IGetOrganizationWarningsQuery
@@ -30,9 +34,12 @@ public interface IGetOrganizationWarningsQuery
 }
 
 public class GetOrganizationWarningsQuery(
+    IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
+    IOrganizationPlanMigrationCohortRepository cohortRepository,
     ICurrentContext currentContext,
     IFeatureService featureService,
     IHasPaymentMethodQuery hasPaymentMethodQuery,
+    IPricingClient pricingClient,
     IProviderRepository providerRepository,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService) : IGetOrganizationWarningsQuery
@@ -60,6 +67,8 @@ public class GetOrganizationWarningsQuery(
         warnings.ResellerRenewal = await GetResellerRenewalWarningAsync(organization, provider, subscription);
 
         warnings.TaxId = await GetTaxIdWarningAsync(organization, subscription.Customer, provider);
+
+        warnings.ScheduledPriceIncrease = await GetScheduledPriceIncreaseWarningAsync(organization, subscription);
 
         return warnings;
     }
@@ -311,6 +320,87 @@ public class GetOrganizationWarningsQuery(
             // Customer's tax ID failed verification
             not null when taxId.Verification.Status == TaxIdVerificationStatus.Unverified => new TaxIdWarning { Type = "tax_id_failed_verification" },
             _ => null
+        };
+    }
+
+    private async Task<ScheduledPriceIncreaseWarning?> GetScheduledPriceIncreaseWarningAsync(
+        Organization organization,
+        Subscription subscription)
+    {
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
+        {
+            return null;
+        }
+
+        if (!await currentContext.EditSubscription(organization.Id))
+        {
+            return null;
+        }
+
+        if (subscription.Status != SubscriptionStatus.Active)
+        {
+            return null;
+        }
+
+        var assignment = await assignmentRepository.GetByOrganizationIdAsync(organization.Id);
+
+        if (assignment == null)
+        {
+            return null;
+        }
+
+        var cohort = await cohortRepository.GetByIdAsync(assignment.CohortId);
+
+        // A null MigrationPathId is a churn-only cohort, which never schedules a price increase.
+        if (cohort?.MigrationPathId == null)
+        {
+            return null;
+        }
+
+        var migrationPath = MigrationPaths.FromId(cohort.MigrationPathId.Value);
+
+        if (migrationPath == null)
+        {
+            return null;
+        }
+
+        var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
+            new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
+
+        var activeSchedule = schedules.Data.FirstOrDefault(schedule =>
+            schedule.Status == SubscriptionScheduleStatus.Active && schedule.SubscriptionId == subscription.Id);
+
+        if (activeSchedule is not { Phases.Count: > 0 })
+        {
+            return null;
+        }
+
+        var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+
+        // Select by StartDate > now (earliest future phase), not EndDate > now: with EndBehavior=Release
+        // the schedule stays Active through the post-renewal period, and an EndDate filter would keep
+        // surfacing the past renewal date as the "effective date" until the period closed.
+        var upcomingPhase = activeSchedule.Phases
+            .Where(phase => phase.StartDate > now)
+            .MinBy(phase => phase.StartDate);
+
+        if (upcomingPhase == null)
+        {
+            return null;
+        }
+
+        var targetPlan = await pricingClient.GetPlanOrThrow(migrationPath.ToPlan);
+
+        // SeatPrice is per-year on annual plans and per-month on monthly plans.
+        var seatPrice = targetPlan.IsAnnual
+            ? targetPlan.PasswordManager.SeatPrice / 12
+            : targetPlan.PasswordManager.SeatPrice;
+
+        return new ScheduledPriceIncreaseWarning
+        {
+            SeatPrice = seatPrice,
+            EffectiveDate = upcomingPhase.StartDate,
+            Cadence = targetPlan.IsAnnual ? "annually" : "monthly"
         };
     }
 }
