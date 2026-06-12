@@ -18,6 +18,7 @@ using Bit.Core.Auth.UserFeatures.TempPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserApiKey.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Kdf;
@@ -250,48 +251,80 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (model.IsV2Request())
+        // Modern-shape request (MPAD + MPUD set). Try V2 encryption paths if the relevant
+        // feature flag is enabled. If the modern-shape request doesn't match a V2 branch
+        // (e.g., V2 flag off, or modern client doing V1 MP JIT), fall through to V1.
+        if (model.HasAuthAndUnlockData())
         {
-            if (model.IsTdeSetPasswordRequest())
+            // V2 encryption - TDE user with "manage account recovery" permission
+            if (model.IsTdeSetPasswordRequest() &&
+                _featureService.IsEnabled(FeatureFlagKeys.V2RegistrationTDEJIT))
             {
                 await _tdeSetPasswordCommand.SetMasterPasswordAsync(user, model.ToData());
-            }
-            else
-            {
-                await _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, model.ToData());
-            }
-        }
-        else
-        {
-            // TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
-            try
-            {
-                user = model.ToUser(user);
-            }
-            catch (Exception e)
-            {
-                ModelState.AddModelError(string.Empty, e.Message);
-                throw new BadRequestException(ModelState);
-            }
-
-            var result = await _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
-                user,
-                model.MasterPasswordHash,
-                model.Key,
-                model.OrgIdentifier);
-
-            if (result.Succeeded)
-            {
                 return;
             }
 
-            foreach (var error in result.Errors)
+            // V2 encryption - MP JIT.
+            // We require AccountKeys (the new key shape) here, not legacy Keys — otherwise
+            // a modern V1 MP JIT request (MPAD + MPUD + legacy Keys) would be incorrectly routed here
+            // when the flag is on, and `model.ToData().AccountKeys` would be null, breaking the V2 MP
+            // JIT command (which requires AccountKeys per FinishSsoJitProvisionMasterPasswordCommand).
+            if (model.AccountKeys != null &&
+                _featureService.IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration))
             {
-                ModelState.AddModelError(string.Empty, error.Description);
+                await _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, model.ToData());
+                return;
             }
+        }
 
+        // V1 encryption (MP and TDE) — handles both modern clients (sending MPAD + MPUD + legacy Keys/null)
+        // and legacy clients (sending only legacy fields). The model's ToUser() handles the fallback.
+        //
+        // TODO: removal requires that BOTH flags have been removed:
+        //  - https://bitwarden.atlassian.net/browse/PM-27327 (MP)
+        //  - https://bitwarden.atlassian.net/browse/PM-27329 (TDE)
+        await SetInitialPasswordV1Async(user, model);
+    }
+
+    private async Task SetInitialPasswordV1Async(User user, SetInitialPasswordRequestModel model)
+    {
+        // Defensive: V1 cannot consume AccountKeys (the new key shape). If a request carries
+        // AccountKeys we'd silently drop the keypair, so fail loudly. This can only happen if
+        // the V2 MP JIT flag is off (otherwise the V2 branch above would have handled it) — i.e.,
+        // a client/server flag-state mismatch or a non-Angular caller.
+        if (model.AccountKeys != null)
+        {
+            throw new BadRequestException(
+                "Request includes V2 AccountKeys but V2 encryption is not enabled.");
+        }
+
+        try
+        {
+            user = model.ToUser(user);
+        }
+        catch (Exception e)
+        {
+            ModelState.AddModelError(string.Empty, e.Message);
             throw new BadRequestException(ModelState);
         }
+
+        var result = await _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
+            user,
+            model.MasterPasswordAuthentication?.MasterPasswordAuthenticationHash ?? model.MasterPasswordHash,
+            model.MasterPasswordUnlock?.MasterKeyWrappedUserKey ?? model.Key,
+            model.OrgIdentifier);
+
+        if (result.Succeeded)
+        {
+            return;
+        }
+
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+
+        throw new BadRequestException(ModelState);
     }
 
     [HttpPost("verify-password")]

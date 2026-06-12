@@ -10,7 +10,9 @@ namespace Bit.Api.Auth.Models.Request.Accounts;
 
 public class SetInitialPasswordRequestModel : IValidatableObject
 {
-    // TODO will be removed with https://bitwarden.atlassian.net/browse/PM-27327
+    // TODO: removal requires that BOTH flags have been removed:
+    //  - https://bitwarden.atlassian.net/browse/PM-27327 (MP)
+    //  - https://bitwarden.atlassian.net/browse/PM-27329 (TDE)
     [Obsolete("Use MasterPasswordAuthentication instead")]
     [StringLength(300)]
     public string? MasterPasswordHash { get; set; }
@@ -21,16 +23,16 @@ public class SetInitialPasswordRequestModel : IValidatableObject
     [Obsolete("Use AccountKeys instead")]
     public KeysRequestModel? Keys { get; set; }
 
-    [Obsolete("Use MasterPasswordAuthentication instead")]
+    [Obsolete("Use MasterPasswordUnlock instead")]
     public KdfType? Kdf { get; set; }
 
-    [Obsolete("Use MasterPasswordAuthentication instead")]
+    [Obsolete("Use MasterPasswordUnlock instead")]
     public int? KdfIterations { get; set; }
 
-    [Obsolete("Use MasterPasswordAuthentication instead")]
+    [Obsolete("Use MasterPasswordUnlock instead")]
     public int? KdfMemory { get; set; }
 
-    [Obsolete("Use MasterPasswordAuthentication instead")]
+    [Obsolete("Use MasterPasswordUnlock instead")]
     public int? KdfParallelism { get; set; }
 
     public MasterPasswordAuthenticationDataRequestModel? MasterPasswordAuthentication { get; set; }
@@ -43,24 +45,42 @@ public class SetInitialPasswordRequestModel : IValidatableObject
     [Required]
     public required string OrgIdentifier { get; set; }
 
-    // TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
+    // Reads KDF/key/salt from MasterPasswordUnlock when present (modern clients), and falls
+    // back to the top-level legacy properties when not (older clients).
+    // TODO: removal requires that BOTH flags have been removed:
+    //  - https://bitwarden.atlassian.net/browse/PM-27327 (MP)
+    //  - https://bitwarden.atlassian.net/browse/PM-27329 (TDE)
     public User ToUser(User existingUser)
     {
         existingUser.MasterPasswordHint = MasterPasswordHint;
-        existingUser.Kdf = Kdf!.Value;
-        existingUser.KdfIterations = KdfIterations!.Value;
-        existingUser.KdfMemory = KdfMemory;
-        existingUser.KdfParallelism = KdfParallelism;
-        existingUser.Key = Key;
+        existingUser.Kdf = MasterPasswordUnlock?.Kdf.KdfType ?? Kdf!.Value;
+        existingUser.KdfIterations = MasterPasswordUnlock?.Kdf.Iterations ?? KdfIterations!.Value;
+        existingUser.KdfMemory = MasterPasswordUnlock?.Kdf.Memory ?? KdfMemory;
+        existingUser.KdfParallelism = MasterPasswordUnlock?.Kdf.Parallelism ?? KdfParallelism;
+        existingUser.Key = MasterPasswordUnlock?.MasterKeyWrappedUserKey ?? Key;
+
+        // MasterPasswordSalt column must never be null/empty after a successful password-set
+        // operation. Modern clients send an explicit salt via MPUD; older clients don't send one,
+        // so we fall back to the email-derived V1 salt (matching the implicit contract that
+        // User.GetMasterPasswordSalt() already encodes at read time).
+        existingUser.MasterPasswordSalt = MasterPasswordUnlock?.Salt ?? existingUser.Email.ToLowerInvariant().Trim();
+
         Keys?.ToUser(existingUser);
         return existingUser;
     }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (IsV2Request())
+        if (AccountKeys != null && Keys != null)
         {
-            // V2 registration - validate KDF equality, salt equality, and KDF settings
+            yield return new ValidationResult(
+                $"Cannot specify both {nameof(AccountKeys)} and {nameof(Keys)}. Provide exactly one keypair.",
+                [nameof(AccountKeys), nameof(Keys)]);
+        }
+
+        if (HasAuthAndUnlockData())
+        {
+            // Validate KDF equality, salt equality, and KDF settings on the new-shape MPAD/MPUD fields
             foreach (var validationResult in KdfSettingsValidator.ValidateAuthenticationAndUnlockData(
                          MasterPasswordAuthentication!.ToData(), MasterPasswordUnlock!.ToData()))
             {
@@ -70,8 +90,10 @@ public class SetInitialPasswordRequestModel : IValidatableObject
             yield break;
         }
 
-        // V1 registration
-        // TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
+        // Legacy-shape validation (older clients without MPAD/MPUD)
+        // TODO: removal requires that BOTH flags have been removed:
+        //  - https://bitwarden.atlassian.net/browse/PM-27327 (MP)
+        //  - https://bitwarden.atlassian.net/browse/PM-27329 (TDE)
         if (string.IsNullOrEmpty(MasterPasswordHash))
         {
             yield return new ValidationResult("MasterPasswordHash must be supplied.");
@@ -115,15 +137,25 @@ public class SetInitialPasswordRequestModel : IValidatableObject
         }
     }
 
-    public bool IsV2Request()
+    /// <summary>
+    /// True when the request uses the new data shape (MasterPasswordAuthentication + MasterPasswordUnlock).
+    /// This is a shape check, NOT a guarantee that V2 encryption will run. It is possible for V1 encryption
+    /// to run even when the request contains these new data types (see `set-password` endpoint).
+    /// Feature flags and AccountKeys presence determine the actual flow (V1 or V2).
+    /// </summary>
+    public bool HasAuthAndUnlockData()
     {
-        // AccountKeys can be null for TDE users, so we don't check that here
         return MasterPasswordAuthentication != null && MasterPasswordUnlock != null;
     }
 
+    /// <summary>
+    /// True when the request does NOT contain a keypair. TDE users don't send a keypair on the
+    /// request because they already have one. Checks both AccountKeys (new) and Keys (legacy) so
+    /// the predicate is correct for the transitional period where clients may send either key shape.
+    /// </summary>
     public bool IsTdeSetPasswordRequest()
     {
-        return AccountKeys == null;
+        return AccountKeys == null && Keys == null;
     }
 
     public SetInitialMasterPasswordDataModel ToData()
