@@ -11,7 +11,6 @@ using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
-using Bit.Core.Tools.SendFeatures.Services.Interfaces;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
@@ -27,7 +26,6 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
     private readonly ISendCoreHelperService _sendCoreHelperService;
     private readonly IEventService _eventService;
     private readonly IFeatureService _featureService;
-    private readonly ISendEventClassifier _sendEventClassifier;
     private readonly ILogger<NonAnonymousSendCommand> _logger;
 
     public NonAnonymousSendCommand(ISendRepository sendRepository,
@@ -37,7 +35,6 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         ISendCoreHelperService sendCoreHelperService,
         IEventService eventService,
         IFeatureService featureService,
-        ISendEventClassifier sendEventClassifier,
         ILogger<NonAnonymousSendCommand> logger)
     {
         _sendRepository = sendRepository;
@@ -47,7 +44,6 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         _sendCoreHelperService = sendCoreHelperService;
         _eventService = eventService;
         _featureService = featureService;
-        _sendEventClassifier = sendEventClassifier;
         _logger = logger;
     }
 
@@ -80,13 +76,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
             return;
         }
 
-        var baseType = ResolveSendCreatedEventType(send);
-        var perOrgTypeResolver = await BuildCreatedEventPerOrgResolverAsync(send);
-
-        await _eventService.LogUserEventAsync(
-            send.UserId.Value,
-            baseType,
-            perOrganizationTypeResolver: perOrgTypeResolver);
+        await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, ResolveSendCreatedEventType(send));
     }
 
     private async Task LogSendUpdatedEventAsync(Send send)
@@ -98,11 +88,11 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
 
         if (send.Type == SendType.Text)
         {
-            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Edited_Text);
+            await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Edited_Text);
         }
         else
         {
-            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Edited_File);
+            await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Edited_File);
         }
     }
 
@@ -115,11 +105,11 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
 
         if (send.Type == SendType.Text)
         {
-            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Deleted_Text);
+            await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Deleted_Text);
         }
         else
         {
-            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Deleted_File);
+            await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Deleted_File);
         }
     }
 
@@ -137,26 +127,6 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
             (SendType.File, AuthType.Email) => EventType.Send_Created_File_WithEmailVerification,
             _ => EventType.Send_Created_File,
         };
-    }
-
-    private async Task<Func<Guid, EventType?>> BuildCreatedEventPerOrgResolverAsync(Send send)
-    {
-        if (send.AuthType != AuthType.Email || string.IsNullOrWhiteSpace(send.Emails))
-        {
-            return null;
-        }
-
-        var (claimedVariant, externalVariant) = send.Type == SendType.Text
-            ? (EventType.Send_Created_Text_WithEmailVerification_FromClaimedDomain,
-                EventType.Send_Created_Text_WithEmailVerification_FromExternalDomain)
-            : (EventType.Send_Created_File_WithEmailVerification_FromClaimedDomain,
-                EventType.Send_Created_File_WithEmailVerification_FromExternalDomain);
-
-        return await _sendEventClassifier.BuildCreationResolverAsync(
-            send.UserId.Value,
-            send.Emails,
-            claimedVariant,
-            externalVariant);
     }
 
     public async Task<string> SaveFileSendAsync(Send send, SendFileData data, long fileLength)

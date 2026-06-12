@@ -406,94 +406,126 @@ public class EventServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task LogUserEvent_WithPerOrgTypeResolver_ChoosesTypePerOrg_BaseUserEventKeepsType(
-        Guid userId, OrganizationUser orgA, OrganizationUser orgB, SutProvider<EventService> sutProvider)
+    public async Task LogSendAccessEvent_AppliesPerOrgContext_BaseRowKeepsOwner(
+        Guid ownerUserId, Guid accessorUserId, Guid sendId,
+        Guid memberOrgId, Guid claimedOrgId, Guid externalOrgId, SutProvider<EventService> sutProvider)
     {
-        orgA.UserId = userId;
-        orgA.Status = OrganizationUserStatusType.Confirmed;
-        orgB.UserId = userId;
-        orgB.Status = OrganizationUserStatusType.Confirmed;
-
-        var baseType = EventType.Send_Accessed_Text;
-        var claimedType = EventType.Send_Accessed_Text_FromClaimedDomain;
-        var externalType = EventType.Send_Accessed_Text_FromExternalDomain;
-
-        var orgAbilities = new Dictionary<Guid, OrganizationAbility>
-        {
-            { orgA.OrganizationId, new OrganizationAbility { UseEvents = true, Enabled = true } },
-            { orgB.OrganizationId, new OrganizationAbility { UseEvents = true, Enabled = true } },
-        };
-
-        sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(orgAbilities);
-        sutProvider.GetDependency<IApplicationCacheService>()
-            .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(new Dictionary<Guid, ProviderAbility>());
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByUserAsync(userId)
-            .Returns(new List<OrganizationUser> { orgA, orgB });
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), userId)
-            .Returns(new List<CurrentContextOrganization>
-            {
-                new() { Id = orgA.OrganizationId },
-                new() { Id = orgB.OrganizationId },
-            });
-        sutProvider.GetDependency<ICurrentContext>()
-            .ProviderMembershipAsync(Arg.Any<IProviderUserRepository>(), userId)
-            .Returns(new List<CurrentContextProvider>());
-
-        await sutProvider.Sut.LogUserEventAsync(userId, baseType,
-            perOrganizationTypeResolver: orgId => orgId == orgA.OrganizationId ? claimedType : externalType);
-
-        await sutProvider.GetDependency<IEventWriteService>()
-            .Received(1)
-            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
-                events.Count() == 3
-                && events.Any(e => e.OrganizationId == null && e.Type == baseType)
-                && events.Any(e => e.OrganizationId == orgA.OrganizationId && e.Type == claimedType)
-                && events.Any(e => e.OrganizationId == orgB.OrganizationId && e.Type == externalType)));
-    }
-
-    [Theory, BitAutoData]
-    public async Task LogUserEvent_WithPerOrgResolverReturningNull_FallsBackToBaseType(
-        Guid userId, OrganizationUser orgUser, SutProvider<EventService> sutProvider)
-    {
-        orgUser.UserId = userId;
-        orgUser.Status = OrganizationUserStatusType.Confirmed;
-        var baseType = EventType.Send_Accessed_Text;
+        var type = EventType.Send_Accessed_Text;
 
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>
             {
-                { orgUser.OrganizationId, new OrganizationAbility { UseEvents = true, Enabled = true } }
+                { memberOrgId, new OrganizationAbility { UseEvents = true, Enabled = true } },
+                { claimedOrgId, new OrganizationAbility { UseEvents = true, Enabled = true } },
+                { externalOrgId, new OrganizationAbility { UseEvents = true, Enabled = true } },
             });
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, ProviderAbility>());
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByUserAsync(userId)
-            .Returns(new List<OrganizationUser> { orgUser });
         sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), userId)
+            .OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), ownerUserId)
             .Returns(new List<CurrentContextOrganization>
             {
-                new() { Id = orgUser.OrganizationId },
+                new() { Id = memberOrgId },
+                new() { Id = claimedOrgId },
+                new() { Id = externalOrgId },
             });
         sutProvider.GetDependency<ICurrentContext>()
-            .ProviderMembershipAsync(Arg.Any<IProviderUserRepository>(), userId)
+            .ProviderMembershipAsync(Arg.Any<IProviderUserRepository>(), ownerUserId)
             .Returns(new List<CurrentContextProvider>());
 
-        await sutProvider.Sut.LogUserEventAsync(userId, baseType,
-            perOrganizationTypeResolver: _ => null);
+        var context = new Dictionary<Guid, SendAccessEventOrgContext>
+        {
+            { memberOrgId, new SendAccessEventOrgContext(accessorUserId, null) },
+            { claimedOrgId, new SendAccessEventOrgContext(null, "example.com") },
+            // externalOrgId intentionally has no entry -> External.
+        };
+
+        await sutProvider.Sut.LogSendEventAsync(ownerUserId, sendId, type, context);
+
+        await sutProvider.GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
+                events.Count() == 4
+                && events.All(e => e.Type == type && e.SendId == sendId)
+                // Base user-only row: owner is the actor, no domain.
+                && events.Any(e => e.OrganizationId == null && e.ActingUserId == ownerUserId && e.DomainName == null)
+                // Member accessor org row.
+                && events.Any(e => e.OrganizationId == memberOrgId && e.ActingUserId == accessorUserId && e.DomainName == null)
+                // Claimed-domain org row.
+                && events.Any(e => e.OrganizationId == claimedOrgId && e.ActingUserId == null && e.DomainName == "example.com")
+                // External org row (no context entry): no accessor, no domain.
+                && events.Any(e => e.OrganizationId == externalOrgId && e.ActingUserId == null && e.DomainName == null)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogSendAccessEvent_EmptyContext_RecordsSendIdAndRendersExternal(
+        Guid ownerUserId, Guid sendId, Guid orgId, SutProvider<EventService> sutProvider)
+    {
+        var type = EventType.Send_Accessed_File;
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, OrganizationAbility>
+            {
+                { orgId, new OrganizationAbility { UseEvents = true, Enabled = true } }
+            });
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, ProviderAbility>());
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextOrganization> { new() { Id = orgId } });
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderMembershipAsync(Arg.Any<IProviderUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextProvider>());
+
+        await sutProvider.Sut.LogSendEventAsync(ownerUserId, sendId, type,
+            new Dictionary<Guid, SendAccessEventOrgContext>());
 
         await sutProvider.GetDependency<IEventWriteService>()
             .Received(1)
             .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
                 events.Count() == 2
-                && events.All(e => e.Type == baseType)));
+                && events.All(e => e.Type == type && e.SendId == sendId)
+                && events.Any(e => e.OrganizationId == null && e.ActingUserId == ownerUserId)
+                && events.Any(e => e.OrganizationId == orgId && e.ActingUserId == null && e.DomainName == null)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogSendEvent_NoContext_AttributesOrgRowsToOwner(
+        Guid ownerUserId, Guid sendId, Guid orgId, SutProvider<EventService> sutProvider)
+    {
+        // Create/edit/delete Send events pass no org context -> the owner is the actor on every row
+        // (Member column shows the owner), and the Send id is still recorded.
+        var type = EventType.Send_Created_Text_WithEmailVerification;
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, OrganizationAbility>
+            {
+                { orgId, new OrganizationAbility { UseEvents = true, Enabled = true } }
+            });
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, ProviderAbility>());
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextOrganization> { new() { Id = orgId } });
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderMembershipAsync(Arg.Any<IProviderUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextProvider>());
+
+        await sutProvider.Sut.LogSendEventAsync(ownerUserId, sendId, type);
+
+        await sutProvider.GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
+                events.Count() == 2
+                && events.All(e => e.Type == type && e.SendId == sendId && e.ActingUserId == ownerUserId && e.DomainName == null)
+                && events.Any(e => e.OrganizationId == null)
+                && events.Any(e => e.OrganizationId == orgId)));
     }
 
     [Theory, BitAutoData]

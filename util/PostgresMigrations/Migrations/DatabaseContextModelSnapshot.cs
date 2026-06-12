@@ -1581,6 +1581,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid?>("SecretId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("SendId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("ServiceAccountId")
                         .HasColumnType("uuid");
 

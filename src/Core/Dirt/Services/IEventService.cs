@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Interfaces;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Vault.Entities;
 
@@ -21,13 +22,7 @@ public interface IEventService
     /// has Accepted (not yet Confirmed) status. Use for flows where the user may not be fully confirmed
     /// (e.g. device approval, TDE onboarding).
     /// </param>
-    /// <param name="perOrganizationTypeResolver">When set, called with each organization id during the
-    /// per-org fan-out to choose the <see cref="EventType"/> recorded for that organization's copy.
-    /// Returning <c>null</c> falls back to <paramref name="type"/>. The base user event and any
-    /// provider-scoped copies always use <paramref name="type"/>.
-    /// </param>
-    Task LogUserEventAsync(Guid userId, EventType type, DateTime? date = null, bool includeAcceptedStatusOrgs = false,
-        Func<Guid, EventType?> perOrganizationTypeResolver = null);
+    Task LogUserEventAsync(Guid userId, EventType type, DateTime? date = null, bool includeAcceptedStatusOrgs = false);
     Task LogCipherEventAsync(Cipher cipher, EventType type, DateTime? date = null);
     Task LogCipherEventsAsync(IEnumerable<Tuple<Cipher, EventType, DateTime?>> events);
     Task LogCollectionEventAsync(Collection collection, EventType type, DateTime? date = null);
@@ -55,4 +50,6 @@ public interface IEventService
     Task LogServiceAccountPeopleEventAsync(Guid userId, UserServiceAccountAccessPolicy policy, EventType type, IdentityClientType identityClientType, DateTime? date = null);
     Task LogServiceAccountGroupEventAsync(Guid userId, GroupServiceAccountAccessPolicy policy, EventType type, IdentityClientType identityClientType, DateTime? date = null);
     Task LogServiceAccountEventAsync(Guid userId, List<ServiceAccount> serviceAccount, EventType type, IdentityClientType identityClientType, DateTime? date = null);
+    Task LogSendEventAsync(Guid sendOwnerUserId, Guid sendId, EventType type,
+        IReadOnlyDictionary<Guid, SendAccessEventOrgContext> organizationContext = null);
 }

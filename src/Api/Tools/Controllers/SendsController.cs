@@ -133,7 +133,14 @@ public class SendsController : Controller
             && send.UserId.HasValue
             && send.Type == SendType.Text)
         {
-            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Accessed_Text);
+            var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
+                send.UserId.Value, accessorEmail: null);
+
+            await _eventService.LogSendEventAsync(
+                send.UserId.Value,
+                send.Id,
+                EventType.Send_Accessed_Text,
+                orgContext);
         }
 
         return sendResponse;
@@ -189,7 +196,14 @@ public class SendsController : Controller
 
         if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) && send.UserId.HasValue)
         {
-            await _eventService.LogUserEventAsync(send.UserId.Value, EventType.Send_Accessed_File);
+            var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
+                send.UserId.Value, accessorEmail: null);
+
+            await _eventService.LogSendEventAsync(
+                send.UserId.Value,
+                send.Id,
+                EventType.Send_Accessed_File,
+                orgContext);
         }
 
         return new SendFileDownloadDataResponseModel { Id = fileId, Url = url };
@@ -301,16 +315,15 @@ public class SendsController : Controller
             && send.UserId.HasValue
             && send.Type == SendType.Text)
         {
-            var perOrgTypeResolver = await _sendEventClassifier.BuildAccessResolverAsync(
+            var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
                 send.UserId.Value,
-                User.GetSendAccessEmail(),
-                EventType.Send_Accessed_Text_FromClaimedDomain,
-                EventType.Send_Accessed_Text_FromExternalDomain);
+                User.GetSendAccessEmail());
 
-            await _eventService.LogUserEventAsync(
+            await _eventService.LogSendEventAsync(
                 send.UserId.Value,
+                send.Id,
                 EventType.Send_Accessed_Text,
-                perOrganizationTypeResolver: perOrgTypeResolver);
+                orgContext);
         }
 
         return new ObjectResult(sendResponse);
@@ -340,16 +353,15 @@ public class SendsController : Controller
 
         if (_featureService.IsEnabled(FeatureFlagKeys.SendEventLogging) && send.UserId.HasValue)
         {
-            var perOrgTypeResolver = await _sendEventClassifier.BuildAccessResolverAsync(
+            var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
                 send.UserId.Value,
-                User.GetSendAccessEmail(),
-                EventType.Send_Accessed_File_FromClaimedDomain,
-                EventType.Send_Accessed_File_FromExternalDomain);
+                User.GetSendAccessEmail());
 
-            await _eventService.LogUserEventAsync(
+            await _eventService.LogSendEventAsync(
                 send.UserId.Value,
+                send.Id,
                 EventType.Send_Accessed_File,
-                perOrganizationTypeResolver: perOrgTypeResolver);
+                orgContext);
         }
 
         return new ObjectResult(new SendFileDownloadDataResponseModel() { Id = fileId, Url = url });

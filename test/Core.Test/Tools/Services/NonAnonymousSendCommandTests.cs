@@ -13,7 +13,6 @@ using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.SendFeatures.Commands;
 using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
-using Bit.Core.Tools.SendFeatures.Services.Interfaces;
 using Bit.Core.Tools.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Logging;
@@ -36,7 +35,6 @@ public class NonAnonymousSendCommandTests
     private readonly ISendCoreHelperService _sendCoreHelperService;
     private readonly IEventService _eventService;
     private readonly IFeatureService _featureService;
-    private readonly ISendEventClassifier _sendEventClassifier;
     private readonly NonAnonymousSendCommand _nonAnonymousSendCommand;
 
     private readonly ILogger<NonAnonymousSendCommand> _logger;
@@ -51,7 +49,6 @@ public class NonAnonymousSendCommandTests
         _sendCoreHelperService = Substitute.For<ISendCoreHelperService>();
         _eventService = Substitute.For<IEventService>();
         _featureService = Substitute.For<IFeatureService>();
-        _sendEventClassifier = Substitute.For<ISendEventClassifier>();
         _logger = Substitute.For<ILogger<NonAnonymousSendCommand>>();
 
         _nonAnonymousSendCommand = new NonAnonymousSendCommand(
@@ -62,7 +59,6 @@ public class NonAnonymousSendCommandTests
             _sendCoreHelperService,
             _eventService,
             _featureService,
-            _sendEventClassifier,
             _logger
         );
     }
@@ -1479,84 +1475,7 @@ public class NonAnonymousSendCommandTests
         await _nonAnonymousSendCommand.SaveSendAsync(send);
 
         await _sendRepository.Received(1).CreateAsync(send);
-        await _eventService.Received(1).LogUserEventAsync(userId, expectedEventType);
-    }
-
-    [Theory]
-    [InlineData(SendType.Text,
-        EventType.Send_Created_Text_WithEmailVerification_FromClaimedDomain,
-        EventType.Send_Created_Text_WithEmailVerification_FromExternalDomain)]
-    [InlineData(SendType.File,
-        EventType.Send_Created_File_WithEmailVerification_FromClaimedDomain,
-        EventType.Send_Created_File_WithEmailVerification_FromExternalDomain)]
-    public async Task SaveSendAsync_NewSend_EmailVerification_WithRecipients_BuildsCreationResolverWithDomainVariants(
-        SendType sendType, EventType claimedVariant, EventType externalVariant)
-    {
-        var userId = Guid.NewGuid();
-        var send = new Send
-        {
-            Id = default,
-            Type = sendType,
-            UserId = userId,
-            AuthType = AuthType.Email,
-            Emails = "alice@example.com, bob@external.com",
-        };
-
-        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
-        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
-
-        await _nonAnonymousSendCommand.SaveSendAsync(send);
-
-        await _sendEventClassifier.Received(1).BuildCreationResolverAsync(
-            userId,
-            send.Emails,
-            claimedVariant,
-            externalVariant);
-    }
-
-    [Fact]
-    public async Task SaveSendAsync_NewSend_EmailVerification_NoRecipients_DoesNotBuildCreationResolver()
-    {
-        var userId = Guid.NewGuid();
-        var send = new Send
-        {
-            Id = default,
-            Type = SendType.Text,
-            UserId = userId,
-            AuthType = AuthType.Email,
-            Emails = null,
-        };
-
-        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
-        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
-
-        await _nonAnonymousSendCommand.SaveSendAsync(send);
-
-        await _sendEventClassifier.DidNotReceiveWithAnyArgs().BuildCreationResolverAsync(
-            default, default, default, default);
-    }
-
-    [Theory]
-    [InlineData(AuthType.None)]
-    [InlineData(AuthType.Password)]
-    public async Task SaveSendAsync_NewSend_NonEmailAuth_DoesNotBuildCreationResolver(AuthType authType)
-    {
-        var userId = Guid.NewGuid();
-        var send = new Send
-        {
-            Id = default,
-            Type = SendType.Text,
-            UserId = userId,
-            AuthType = authType,
-        };
-
-        _featureService.IsEnabled(FeatureFlagKeys.SendEventLogging).Returns(true);
-        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
-
-        await _nonAnonymousSendCommand.SaveSendAsync(send);
-
-        await _sendEventClassifier.DidNotReceiveWithAnyArgs().BuildCreationResolverAsync(
-            default, default, default, default);
+        await _eventService.Received(1).LogSendEventAsync(userId, Arg.Any<Guid>(), expectedEventType);
     }
 
     [Fact]
@@ -1576,7 +1495,7 @@ public class NonAnonymousSendCommandTests
 
         await _nonAnonymousSendCommand.SaveSendAsync(send);
 
-        await _eventService.Received(1).LogUserEventAsync(userId, EventType.Send_Created_Text);
+        await _eventService.Received(1).LogSendEventAsync(userId, Arg.Any<Guid>(), EventType.Send_Created_Text);
     }
 
     [Fact]
@@ -1596,7 +1515,7 @@ public class NonAnonymousSendCommandTests
         await _nonAnonymousSendCommand.SaveSendAsync(send);
 
         await _sendRepository.Received(1).CreateAsync(send);
-        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default, default);
     }
 
     [Theory]
@@ -1619,7 +1538,7 @@ public class NonAnonymousSendCommandTests
         await _nonAnonymousSendCommand.SaveSendAsync(send);
 
         await _sendRepository.Received(1).UpsertAsync(send);
-        await _eventService.Received(1).LogUserEventAsync(userId, expectedEventType);
+        await _eventService.Received(1).LogSendEventAsync(userId, Arg.Any<Guid>(), expectedEventType);
     }
 
     [Fact]
@@ -1639,7 +1558,7 @@ public class NonAnonymousSendCommandTests
         await _nonAnonymousSendCommand.SaveSendAsync(send);
 
         await _sendRepository.Received(1).UpsertAsync(send);
-        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default, default);
     }
 
     [Theory]
@@ -1662,7 +1581,7 @@ public class NonAnonymousSendCommandTests
 
         await _sendRepository.Received(1).DeleteAsync(send);
         await _pushNotificationService.Received(1).PushSyncSendDeleteAsync(send);
-        await _eventService.Received(1).LogUserEventAsync(userId, expectedEventType);
+        await _eventService.Received(1).LogSendEventAsync(userId, Arg.Any<Guid>(), expectedEventType);
     }
 
     [Fact]
@@ -1681,6 +1600,6 @@ public class NonAnonymousSendCommandTests
         await _nonAnonymousSendCommand.DeleteSendAsync(send);
 
         await _sendRepository.Received(1).DeleteAsync(send);
-        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default, default);
     }
 }

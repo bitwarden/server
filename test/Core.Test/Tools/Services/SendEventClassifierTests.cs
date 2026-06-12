@@ -22,150 +22,161 @@ public class SendEventClassifierTests
         _sut = new SendEventClassifier(_organizationUserRepository, _organizationDomainRepository);
     }
 
-    // ---------- BuildAccessResolverAsync ----------
-
     [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
     [InlineData("noatsign")]
     [InlineData("trailing@")]
-    public async Task BuildAccessResolverAsync_InvalidEmail_ReturnsNull(string? accessorEmail)
+    public async Task BuildAccessContextAsync_NoAccessorEmail_ReturnsEmpty(string? accessorEmail)
     {
-        var resolver = await _sut.BuildAccessResolverAsync(
-            Guid.NewGuid(),
-            accessorEmail,
-            EventType.Send_Accessed_Text_FromClaimedDomain,
-            EventType.Send_Accessed_Text_FromExternalDomain);
+        var context = await _sut.BuildAccessContextAsync(Guid.NewGuid(), accessorEmail);
 
-        Assert.Null(resolver);
+        Assert.Empty(context);
+        await _organizationUserRepository.DidNotReceiveWithAnyArgs().GetManyByUserAsync(default);
     }
 
     [Fact]
-    public async Task BuildAccessResolverAsync_UserHasNoOrgs_ReturnsNull()
+    public async Task BuildAccessContextAsync_OwnerHasNoConfirmedOrgs_ReturnsEmpty()
     {
         var userId = Guid.NewGuid();
         _organizationUserRepository.GetManyByUserAsync(userId)
             .Returns(new List<OrganizationUser>());
 
-        var resolver = await _sut.BuildAccessResolverAsync(
-            userId,
-            "alice@example.com",
-            EventType.Send_Accessed_Text_FromClaimedDomain,
-            EventType.Send_Accessed_Text_FromExternalDomain);
+        var context = await _sut.BuildAccessContextAsync(userId, "alice@example.com");
 
-        Assert.Null(resolver);
+        Assert.Empty(context);
     }
 
     [Fact]
-    public async Task BuildAccessResolverAsync_UserHasOrgsWithoutClaimedDomains_ReturnsNull()
+    public async Task BuildAccessContextAsync_AccessorIsConfirmedMember_SetsAccessorUserId()
     {
         var userId = Guid.NewGuid();
         var orgId = Guid.NewGuid();
-        _organizationUserRepository.GetManyByUserAsync(userId)
-            .Returns(new List<OrganizationUser>
+        var accessorUserId = Guid.NewGuid();
+        SetupOrgWithDomains(userId, orgId, "example.com");
+        _organizationUserRepository.GetByOrganizationEmailAsync(orgId, "alice@example.com")
+            .Returns(new OrganizationUser
             {
-                new() { OrganizationId = orgId, Status = OrganizationUserStatusType.Confirmed }
+                OrganizationId = orgId,
+                Status = OrganizationUserStatusType.Confirmed,
+                UserId = accessorUserId,
             });
-        _organizationDomainRepository.GetVerifiedDomainsByOrganizationIdsAsync(
-            Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgId)))
-            .Returns(new List<OrganizationDomain>());
 
-        var resolver = await _sut.BuildAccessResolverAsync(
-            userId,
-            "alice@example.com",
-            EventType.Send_Accessed_Text_FromClaimedDomain,
-            EventType.Send_Accessed_Text_FromExternalDomain);
+        var context = await _sut.BuildAccessContextAsync(userId, "alice@example.com");
 
-        Assert.Null(resolver);
+        Assert.Equal(accessorUserId, context[orgId].AccessorUserId);
+        Assert.Null(context[orgId].ClaimedDomain);
     }
 
     [Fact]
-    public async Task BuildAccessResolverAsync_AccessorInClaimedDomain_ReturnsClaimedVariant()
+    public async Task BuildAccessContextAsync_AccessorInClaimedDomainButNotMember_SetsClaimedDomain()
     {
         var userId = Guid.NewGuid();
         var orgId = Guid.NewGuid();
         SetupOrgWithDomains(userId, orgId, "example.com");
+        _organizationUserRepository.GetByOrganizationEmailAsync(orgId, "alice@example.com")
+            .Returns((OrganizationUser?)null);
 
-        var resolver = await _sut.BuildAccessResolverAsync(
-            userId,
-            "alice@example.com",
-            EventType.Send_Accessed_Text_FromClaimedDomain,
-            EventType.Send_Accessed_Text_FromExternalDomain);
+        var context = await _sut.BuildAccessContextAsync(userId, "alice@example.com");
 
-        Assert.NotNull(resolver);
-        Assert.Equal(EventType.Send_Accessed_Text_FromClaimedDomain, resolver!(orgId));
+        Assert.Null(context[orgId].AccessorUserId);
+        Assert.Equal("example.com", context[orgId].ClaimedDomain);
     }
 
     [Fact]
-    public async Task BuildAccessResolverAsync_AccessorOutsideClaimedDomain_ReturnsExternalVariant()
+    public async Task BuildAccessContextAsync_AccessorOutsideClaimedDomain_HasNoEntry()
     {
         var userId = Guid.NewGuid();
         var orgId = Guid.NewGuid();
         SetupOrgWithDomains(userId, orgId, "example.com");
+        _organizationUserRepository.GetByOrganizationEmailAsync(orgId, "bob@external.com")
+            .Returns((OrganizationUser?)null);
 
-        var resolver = await _sut.BuildAccessResolverAsync(
-            userId,
-            "bob@external.com",
-            EventType.Send_Accessed_Text_FromClaimedDomain,
-            EventType.Send_Accessed_Text_FromExternalDomain);
+        var context = await _sut.BuildAccessContextAsync(userId, "bob@external.com");
 
-        Assert.NotNull(resolver);
-        Assert.Equal(EventType.Send_Accessed_Text_FromExternalDomain, resolver!(orgId));
+        Assert.False(context.ContainsKey(orgId));
     }
 
     [Fact]
-    public async Task BuildAccessResolverAsync_CaseInsensitive_MatchesClaimedDomain()
+    public async Task BuildAccessContextAsync_CaseInsensitive_MatchesClaimedDomain()
     {
         var userId = Guid.NewGuid();
         var orgId = Guid.NewGuid();
         SetupOrgWithDomains(userId, orgId, "example.com");
+        _organizationUserRepository.GetByOrganizationEmailAsync(orgId, "Alice@Example.COM")
+            .Returns((OrganizationUser?)null);
 
-        var resolver = await _sut.BuildAccessResolverAsync(
-            userId,
-            "Alice@Example.COM",
-            EventType.Send_Accessed_Text_FromClaimedDomain,
-            EventType.Send_Accessed_Text_FromExternalDomain);
+        var context = await _sut.BuildAccessContextAsync(userId, "Alice@Example.COM");
 
-        Assert.NotNull(resolver);
-        Assert.Equal(EventType.Send_Accessed_Text_FromClaimedDomain, resolver!(orgId));
+        Assert.Equal("example.com", context[orgId].ClaimedDomain);
     }
 
     [Fact]
-    public async Task BuildAccessResolverAsync_MultipleOrgs_PerOrgClassification()
+    public async Task BuildAccessContextAsync_MultipleOrgs_ClassifiesEachIndependently()
     {
         var userId = Guid.NewGuid();
-        var orgA = Guid.NewGuid();
-        var orgB = Guid.NewGuid();
-        var orgCWithoutDomains = Guid.NewGuid();
+        var memberOrg = Guid.NewGuid();
+        var claimedOrg = Guid.NewGuid();
+        var externalOrg = Guid.NewGuid();
+        var accessorUserId = Guid.NewGuid();
+
         _organizationUserRepository.GetManyByUserAsync(userId)
             .Returns(new List<OrganizationUser>
             {
-                new() { OrganizationId = orgA, Status = OrganizationUserStatusType.Confirmed },
-                new() { OrganizationId = orgB, Status = OrganizationUserStatusType.Confirmed },
-                new() { OrganizationId = orgCWithoutDomains, Status = OrganizationUserStatusType.Confirmed },
+                new() { OrganizationId = memberOrg, Status = OrganizationUserStatusType.Confirmed },
+                new() { OrganizationId = claimedOrg, Status = OrganizationUserStatusType.Confirmed },
+                new() { OrganizationId = externalOrg, Status = OrganizationUserStatusType.Confirmed },
             });
         _organizationDomainRepository.GetVerifiedDomainsByOrganizationIdsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new List<OrganizationDomain>
             {
-                new() { OrganizationId = orgA, DomainName = "example.com" },
-                new() { OrganizationId = orgB, DomainName = "partner.com" },
+                new() { OrganizationId = memberOrg, DomainName = "example.com" },
+                new() { OrganizationId = claimedOrg, DomainName = "example.com" },
             });
+        _organizationUserRepository.GetByOrganizationEmailAsync(memberOrg, "alice@example.com")
+            .Returns(new OrganizationUser
+            {
+                OrganizationId = memberOrg,
+                Status = OrganizationUserStatusType.Confirmed,
+                UserId = accessorUserId,
+            });
+        _organizationUserRepository.GetByOrganizationEmailAsync(claimedOrg, "alice@example.com")
+            .Returns((OrganizationUser?)null);
+        _organizationUserRepository.GetByOrganizationEmailAsync(externalOrg, "alice@example.com")
+            .Returns((OrganizationUser?)null);
 
-        var resolver = await _sut.BuildAccessResolverAsync(
-            userId,
-            "alice@example.com",
-            EventType.Send_Accessed_Text_FromClaimedDomain,
-            EventType.Send_Accessed_Text_FromExternalDomain);
+        var context = await _sut.BuildAccessContextAsync(userId, "alice@example.com");
 
-        Assert.NotNull(resolver);
-        Assert.Equal(EventType.Send_Accessed_Text_FromClaimedDomain, resolver!(orgA));
-        Assert.Equal(EventType.Send_Accessed_Text_FromExternalDomain, resolver(orgB));
-        Assert.Null(resolver(orgCWithoutDomains));
+        Assert.Equal(accessorUserId, context[memberOrg].AccessorUserId);
+        Assert.Null(context[memberOrg].ClaimedDomain);
+        Assert.Null(context[claimedOrg].AccessorUserId);
+        Assert.Equal("example.com", context[claimedOrg].ClaimedDomain);
+        Assert.False(context.ContainsKey(externalOrg));
     }
 
     [Fact]
-    public async Task BuildAccessResolverAsync_OnlyConfirmedOrgs_AreConsidered()
+    public async Task BuildAccessContextAsync_InvitedMember_TreatedAsExternal()
+    {
+        var userId = Guid.NewGuid();
+        var orgId = Guid.NewGuid();
+        SetupOrgWithDomains(userId, orgId, "other.com");
+        // Accessor exists but is only Invited (no platform UserId) -> not attributable.
+        _organizationUserRepository.GetByOrganizationEmailAsync(orgId, "alice@example.com")
+            .Returns(new OrganizationUser
+            {
+                OrganizationId = orgId,
+                Status = OrganizationUserStatusType.Invited,
+                UserId = null,
+            });
+
+        var context = await _sut.BuildAccessContextAsync(userId, "alice@example.com");
+
+        Assert.False(context.ContainsKey(orgId));
+    }
+
+    [Fact]
+    public async Task BuildAccessContextAsync_OnlyConfirmedOwnerOrgs_AreConsidered()
     {
         var userId = Guid.NewGuid();
         var confirmedOrg = Guid.NewGuid();
@@ -182,112 +193,10 @@ public class SendEventClassifierTests
                 new() { OrganizationId = confirmedOrg, DomainName = "example.com" }
             });
 
-        var resolver = await _sut.BuildAccessResolverAsync(
-            userId,
-            "alice@example.com",
-            EventType.Send_Accessed_Text_FromClaimedDomain,
-            EventType.Send_Accessed_Text_FromExternalDomain);
+        await _sut.BuildAccessContextAsync(userId, "alice@example.com");
 
         await _organizationDomainRepository.Received(1).GetVerifiedDomainsByOrganizationIdsAsync(
             Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(confirmedOrg) && !ids.Contains(invitedOrg)));
-        Assert.NotNull(resolver);
-    }
-
-    // ---------- BuildCreationResolverAsync ----------
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public async Task BuildCreationResolverAsync_EmptyRecipients_ReturnsNull(string? recipients)
-    {
-        var resolver = await _sut.BuildCreationResolverAsync(
-            Guid.NewGuid(),
-            recipients,
-            EventType.Send_Created_Text_WithEmailVerification_FromClaimedDomain,
-            EventType.Send_Created_Text_WithEmailVerification_FromExternalDomain);
-
-        Assert.Null(resolver);
-    }
-
-    [Fact]
-    public async Task BuildCreationResolverAsync_AllRecipientsInClaimedDomain_ReturnsClaimed()
-    {
-        var userId = Guid.NewGuid();
-        var orgId = Guid.NewGuid();
-        SetupOrgWithDomains(userId, orgId, "example.com");
-
-        var resolver = await _sut.BuildCreationResolverAsync(
-            userId,
-            "alice@example.com, bob@example.com",
-            EventType.Send_Created_Text_WithEmailVerification_FromClaimedDomain,
-            EventType.Send_Created_Text_WithEmailVerification_FromExternalDomain);
-
-        Assert.NotNull(resolver);
-        Assert.Equal(EventType.Send_Created_Text_WithEmailVerification_FromClaimedDomain, resolver!(orgId));
-    }
-
-    [Fact]
-    public async Task BuildCreationResolverAsync_AnyRecipientOutsideClaimedDomain_ReturnsExternal()
-    {
-        var userId = Guid.NewGuid();
-        var orgId = Guid.NewGuid();
-        SetupOrgWithDomains(userId, orgId, "example.com");
-
-        var resolver = await _sut.BuildCreationResolverAsync(
-            userId,
-            "alice@example.com, bob@external.com",
-            EventType.Send_Created_Text_WithEmailVerification_FromClaimedDomain,
-            EventType.Send_Created_Text_WithEmailVerification_FromExternalDomain);
-
-        Assert.NotNull(resolver);
-        Assert.Equal(EventType.Send_Created_Text_WithEmailVerification_FromExternalDomain, resolver!(orgId));
-    }
-
-    [Fact]
-    public async Task BuildCreationResolverAsync_RecipientsWithExtraWhitespaceAndCasing_Normalized()
-    {
-        var userId = Guid.NewGuid();
-        var orgId = Guid.NewGuid();
-        SetupOrgWithDomains(userId, orgId, "example.com");
-
-        var resolver = await _sut.BuildCreationResolverAsync(
-            userId,
-            "  Alice@Example.COM ,  Bob@EXAMPLE.com ",
-            EventType.Send_Created_Text_WithEmailVerification_FromClaimedDomain,
-            EventType.Send_Created_Text_WithEmailVerification_FromExternalDomain);
-
-        Assert.NotNull(resolver);
-        Assert.Equal(EventType.Send_Created_Text_WithEmailVerification_FromClaimedDomain, resolver!(orgId));
-    }
-
-    [Fact]
-    public async Task BuildCreationResolverAsync_OrgWithoutClaimedDomains_ResolverReturnsNullForThatOrg()
-    {
-        var userId = Guid.NewGuid();
-        var orgWithDomains = Guid.NewGuid();
-        var orgWithoutDomains = Guid.NewGuid();
-        _organizationUserRepository.GetManyByUserAsync(userId)
-            .Returns(new List<OrganizationUser>
-            {
-                new() { OrganizationId = orgWithDomains, Status = OrganizationUserStatusType.Confirmed },
-                new() { OrganizationId = orgWithoutDomains, Status = OrganizationUserStatusType.Confirmed },
-            });
-        _organizationDomainRepository.GetVerifiedDomainsByOrganizationIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(new List<OrganizationDomain>
-            {
-                new() { OrganizationId = orgWithDomains, DomainName = "example.com" }
-            });
-
-        var resolver = await _sut.BuildCreationResolverAsync(
-            userId,
-            "alice@example.com",
-            EventType.Send_Created_Text_WithEmailVerification_FromClaimedDomain,
-            EventType.Send_Created_Text_WithEmailVerification_FromExternalDomain);
-
-        Assert.NotNull(resolver);
-        Assert.Equal(EventType.Send_Created_Text_WithEmailVerification_FromClaimedDomain, resolver!(orgWithDomains));
-        Assert.Null(resolver(orgWithoutDomains));
     }
 
     private void SetupOrgWithDomains(Guid userId, Guid orgId, params string[] domainNames)

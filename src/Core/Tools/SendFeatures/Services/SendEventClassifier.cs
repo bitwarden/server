@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Tools.SendFeatures.Services.Interfaces;
 
@@ -19,78 +20,22 @@ public class SendEventClassifier : ISendEventClassifier
         _organizationDomainRepository = organizationDomainRepository;
     }
 
-    public async Task<Func<Guid, EventType?>?> BuildAccessResolverAsync(
+    private static readonly IReadOnlyDictionary<Guid, SendAccessEventOrgContext> _empty =
+        new Dictionary<Guid, SendAccessEventOrgContext>();
+
+    public async Task<IReadOnlyDictionary<Guid, SendAccessEventOrgContext>> BuildAccessContextAsync(
         Guid sendOwnerUserId,
-        string? accessorEmail,
-        EventType claimedDomainVariant,
-        EventType externalDomainVariant)
+        string? accessorEmail)
     {
         var accessorDomain = ExtractDomain(accessorEmail);
         if (accessorDomain is null)
         {
-            return null;
+            // Anonymous / password / no-email access: the accessor is not identifiable, so every org
+            // renders as External.
+            return _empty;
         }
 
-        var domainsByOrg = await LoadClaimedDomainsByOrgAsync(sendOwnerUserId);
-        if (domainsByOrg.Count == 0)
-        {
-            return null;
-        }
-
-        return orgId =>
-        {
-            if (!domainsByOrg.TryGetValue(orgId, out var claimedDomains))
-            {
-                return null;
-            }
-            return claimedDomains.Contains(accessorDomain) ? claimedDomainVariant : externalDomainVariant;
-        };
-    }
-
-    public async Task<Func<Guid, EventType?>?> BuildCreationResolverAsync(
-        Guid sendOwnerUserId,
-        string? recipientEmails,
-        EventType claimedDomainVariant,
-        EventType externalDomainVariant)
-    {
-        if (string.IsNullOrWhiteSpace(recipientEmails))
-        {
-            return null;
-        }
-
-        var recipientDomains = recipientEmails
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(ExtractDomain)
-            .Where(d => d is not null)
-            .Select(d => d!)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        if (recipientDomains.Count == 0)
-        {
-            return null;
-        }
-
-        var domainsByOrg = await LoadClaimedDomainsByOrgAsync(sendOwnerUserId);
-        if (domainsByOrg.Count == 0)
-        {
-            return null;
-        }
-
-        return orgId =>
-        {
-            if (!domainsByOrg.TryGetValue(orgId, out var claimedDomains))
-            {
-                return null;
-            }
-            return recipientDomains.All(claimedDomains.Contains)
-                ? claimedDomainVariant
-                : externalDomainVariant;
-        };
-    }
-
-    private async Task<Dictionary<Guid, HashSet<string>>> LoadClaimedDomainsByOrgAsync(Guid userId)
-    {
-        var orgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
+        var orgUsers = await _organizationUserRepository.GetManyByUserAsync(sendOwnerUserId);
         var confirmedOrgIds = orgUsers
             .Where(ou => ou.Status == OrganizationUserStatusType.Confirmed)
             .Select(ou => ou.OrganizationId)
@@ -99,9 +44,38 @@ public class SendEventClassifier : ISendEventClassifier
 
         if (confirmedOrgIds.Count == 0)
         {
-            return new Dictionary<Guid, HashSet<string>>();
+            return _empty;
         }
 
+        var claimedDomainsByOrg = await LoadClaimedDomainsByOrgAsync(confirmedOrgIds);
+
+        var context = new Dictionary<Guid, SendAccessEventOrgContext>();
+        foreach (var orgId in confirmedOrgIds)
+        {
+            // Accessor is a confirmed member of this org: attribute to their platform user (the id the
+            // Admin Console member list is keyed on).
+            var accessor = await _organizationUserRepository.GetByOrganizationEmailAsync(orgId, accessorEmail!);
+            if (accessor is { Status: OrganizationUserStatusType.Confirmed, UserId: not null })
+            {
+                context[orgId] = new SendAccessEventOrgContext(accessor.UserId.Value, null);
+                continue;
+            }
+
+            // Accessor's email domain is a claimed domain of this org: record the domain only.
+            if (claimedDomainsByOrg.TryGetValue(orgId, out var claimedDomains)
+                && claimedDomains.Contains(accessorDomain))
+            {
+                context[orgId] = new SendAccessEventOrgContext(null, accessorDomain);
+            }
+
+            // Otherwise the org has no entry and the access renders as External.
+        }
+
+        return context;
+    }
+
+    private async Task<Dictionary<Guid, HashSet<string>>> LoadClaimedDomainsByOrgAsync(IEnumerable<Guid> confirmedOrgIds)
+    {
         var domains = await _organizationDomainRepository
             .GetVerifiedDomainsByOrganizationIdsAsync(confirmedOrgIds);
 

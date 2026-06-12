@@ -44,21 +44,8 @@ public class EventService : IEventService
         _globalSettings = globalSettings;
     }
 
-    // LogUserEventAsync writes the same audit-log entry to multiple places at once:
-    //   1. A "user-only" row, so the user sees it in their own activity.
-    //   2. One row per organization the user belongs to, so each org admin
-    //      sees it in that organization's event log.
-    //   3. One row per managed-service provider the user belongs to.
-    //
-    // All rows used to share the same EventType. The optional
-    // perOrganizationTypeResolver lets the caller pick a *different* EventType
-    // for each organization's copy. We need this because some Send events
-    // (e.g. "accessed by someone inside vs. outside the organization's
-    // claimed email domains") have a different meaning per organization —
-    // the same access can be "internal" to one org and "external" to another.
-    // The user-only row and the provider rows always keep the original type.
     public async Task LogUserEventAsync(Guid userId, EventType type, DateTime? date = null,
-        bool includeAcceptedStatusOrgs = false, Func<Guid, EventType?> perOrganizationTypeResolver = null)
+        bool includeAcceptedStatusOrgs = false)
     {
         var events = new List<IEvent>
         {
@@ -70,10 +57,6 @@ public class EventService : IEventService
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             }
         };
-
-        // Pick the EventType for this organization's row, falling back to `type`
-        // when no resolver was passed or the resolver returns null
-        EventType ResolveOrgType(Guid orgId) => perOrganizationTypeResolver?.Invoke(orgId) ?? type;
 
         IEnumerable<EventMessage> orgEvents;
         if (includeAcceptedStatusOrgs)
@@ -89,7 +72,7 @@ public class EventService : IEventService
                     OrganizationId = ou.OrganizationId,
                     UserId = userId,
                     ActingUserId = userId,
-                    Type = ResolveOrgType(ou.OrganizationId),
+                    Type = type,
                     Date = DateTime.UtcNow
                 });
         }
@@ -103,7 +86,7 @@ public class EventService : IEventService
                     OrganizationId = o.Id,
                     UserId = userId,
                     ActingUserId = userId,
-                    Type = ResolveOrgType(o.Id),
+                    Type = type,
                     Date = DateTime.UtcNow
                 });
         }
@@ -717,6 +700,79 @@ public class EventService : IEventService
         if (eventMessages.Any())
         {
             await _eventWriteService.CreateManyAsync(eventMessages);
+        }
+    }
+
+    // Logs a Send event, recording the Send on every row. For access events, organizationContext
+    // attributes the access per organization: a confirmed member via ActingUserId, an accessor on a
+    // claimed domain via DomainName, anyone else External (no attribution). Create/edit/delete events
+    // pass no context, so every row keeps the Send owner as the acting user.
+    public async Task LogSendEventAsync(Guid sendOwnerUserId, Guid sendId, EventType type,
+        IReadOnlyDictionary<Guid, SendAccessEventOrgContext> organizationContext = null)
+    {
+        var events = new List<IEvent>
+        {
+            new EventMessage(_currentContext)
+            {
+                UserId = sendOwnerUserId,
+                ActingUserId = sendOwnerUserId,
+                Type = type,
+                SendId = sendId,
+                Date = DateTime.UtcNow
+            }
+        };
+
+        var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, sendOwnerUserId);
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync(orgs.Select(o => o.Id));
+        events.AddRange(orgs.Where(o => CanUseEvents(orgAbilities, o.Id))
+            .Select(o =>
+            {
+
+                // Per-org attribution of this row (ActingUserId / DomainName):
+                //   create/edit/delete (no context)      -> Owner:    ActingUserId = sendOwnerUserId, DomainName = null
+                //   access (context has this org)         -> Accessor: ActingUserId / DomainName per the context entry
+                //   access (context lacks this org)       -> External: ActingUserId = null,           DomainName = null
+                Guid? actingUserId = sendOwnerUserId;
+                string domainName = null;
+                if (organizationContext != null)
+                {
+                    organizationContext.TryGetValue(o.Id, out var context);
+                    actingUserId = context?.AccessorUserId;
+                    domainName = context?.ClaimedDomain;
+                }
+
+                return new EventMessage(_currentContext)
+                {
+                    OrganizationId = o.Id,
+                    UserId = sendOwnerUserId,
+                    ActingUserId = actingUserId,
+                    DomainName = domainName,
+                    Type = type,
+                    SendId = sendId,
+                    Date = DateTime.UtcNow
+                };
+            }));
+
+        var providers = await _currentContext.ProviderMembershipAsync(_providerUserRepository, sendOwnerUserId);
+        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync(providers.Select(p => p.Id));
+        events.AddRange(providers.Where(p => CanUseProviderEvents(providerAbilities, p.Id))
+            .Select(p => new EventMessage(_currentContext)
+            {
+                ProviderId = p.Id,
+                UserId = sendOwnerUserId,
+                ActingUserId = sendOwnerUserId,
+                Type = type,
+                SendId = sendId,
+                Date = DateTime.UtcNow
+            }));
+
+        if (events.Count > 1)
+        {
+            await _eventWriteService.CreateManyAsync(events);
+        }
+        else
+        {
+            await _eventWriteService.CreateAsync(events.First());
         }
     }
 

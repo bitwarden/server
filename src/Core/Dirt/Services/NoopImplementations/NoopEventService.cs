@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Interfaces;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Vault.Entities;
 
@@ -117,8 +118,7 @@ public class NoopEventService : IEventService
         return Task.FromResult(0);
     }
 
-    public Task LogUserEventAsync(Guid userId, EventType type, DateTime? date = null, bool includeAcceptedStatusOrgs = false,
-        Func<Guid, EventType?>? perOrganizationTypeResolver = null)
+    public Task LogUserEventAsync(Guid userId, EventType type, DateTime? date = null, bool includeAcceptedStatusOrgs = false)
     {
         return Task.FromResult(0);
     }
@@ -158,6 +158,12 @@ public class NoopEventService : IEventService
     }
 
     public Task LogServiceAccountEventAsync(Guid userId, List<ServiceAccount> serviceAccount, EventType type, IdentityClientType identityClientType, DateTime? date = null)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task LogSendEventAsync(Guid sendOwnerUserId, Guid sendId, EventType type,
+        IReadOnlyDictionary<Guid, SendAccessEventOrgContext>? organizationContext = null)
     {
         return Task.FromResult(0);
     }

@@ -12,6 +12,7 @@ using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
@@ -1545,7 +1546,11 @@ public class SendsControllerTests : IDisposable
 
         await _sut.Access(accessId, new SendAccessRequestModel());
 
-        await _eventService.Received(1).LogUserEventAsync(userId, EventType.Send_Accessed_Text);
+        await _eventService.Received(1).LogSendEventAsync(
+            userId,
+            Arg.Any<Guid>(),
+            EventType.Send_Accessed_Text,
+            Arg.Any<IReadOnlyDictionary<Guid, SendAccessEventOrgContext>>());
     }
 
     [Fact]
@@ -1572,7 +1577,7 @@ public class SendsControllerTests : IDisposable
 
         await _sut.Access(accessId, new SendAccessRequestModel());
 
-        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default, default);
     }
 
     [Fact]
@@ -1597,7 +1602,7 @@ public class SendsControllerTests : IDisposable
 
         await _sut.Access(accessId, new SendAccessRequestModel());
 
-        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default, default);
     }
 
     [Fact]
@@ -1621,7 +1626,7 @@ public class SendsControllerTests : IDisposable
 
         await _sut.Access(accessId, new SendAccessRequestModel());
 
-        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default, default);
     }
 
     [Fact]
@@ -1648,7 +1653,11 @@ public class SendsControllerTests : IDisposable
 
         await _sut.GetSendFileDownloadData(encodedSendId, fileId, new SendAccessRequestModel());
 
-        await _eventService.Received(1).LogUserEventAsync(userId, EventType.Send_Accessed_File);
+        await _eventService.Received(1).LogSendEventAsync(
+            userId,
+            Arg.Any<Guid>(),
+            EventType.Send_Accessed_File,
+            Arg.Any<IReadOnlyDictionary<Guid, SendAccessEventOrgContext>>());
     }
 
     [Fact]
@@ -1675,7 +1684,7 @@ public class SendsControllerTests : IDisposable
 
         await _sut.GetSendFileDownloadData(encodedSendId, fileId, new SendAccessRequestModel());
 
-        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default, default);
     }
 
     [Fact]
@@ -1702,7 +1711,7 @@ public class SendsControllerTests : IDisposable
 
         await _sut.GetSendFileDownloadData(encodedSendId, fileId, new SendAccessRequestModel());
 
-        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default, default);
     }
 
     [Fact]
@@ -1727,12 +1736,11 @@ public class SendsControllerTests : IDisposable
 
         await _sut.AccessUsingAuth();
 
-        await _eventService.Received(1).LogUserEventAsync(
+        await _eventService.Received(1).LogSendEventAsync(
             userId,
+            Arg.Any<Guid>(),
             EventType.Send_Accessed_Text,
-            Arg.Any<DateTime?>(),
-            Arg.Any<bool>(),
-            Arg.Any<Func<Guid, EventType?>?>());
+            Arg.Any<IReadOnlyDictionary<Guid, SendAccessEventOrgContext>>());
     }
 
     [Fact]
@@ -1758,7 +1766,7 @@ public class SendsControllerTests : IDisposable
 
         await _sut.AccessUsingAuth();
 
-        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default, default);
     }
 
     [Fact]
@@ -1783,7 +1791,7 @@ public class SendsControllerTests : IDisposable
 
         await _sut.AccessUsingAuth();
 
-        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default, default);
     }
 
     [Fact]
@@ -1807,7 +1815,7 @@ public class SendsControllerTests : IDisposable
 
         await _sut.AccessUsingAuth();
 
-        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default, default);
     }
 
     [Fact]
@@ -1834,12 +1842,11 @@ public class SendsControllerTests : IDisposable
 
         await _sut.GetSendFileDownloadDataUsingAuth(fileId);
 
-        await _eventService.Received(1).LogUserEventAsync(
+        await _eventService.Received(1).LogSendEventAsync(
             userId,
+            Arg.Any<Guid>(),
             EventType.Send_Accessed_File,
-            Arg.Any<DateTime?>(),
-            Arg.Any<bool>(),
-            Arg.Any<Func<Guid, EventType?>?>());
+            Arg.Any<IReadOnlyDictionary<Guid, SendAccessEventOrgContext>>());
     }
 
     [Fact]
@@ -1866,7 +1873,7 @@ public class SendsControllerTests : IDisposable
 
         await _sut.GetSendFileDownloadDataUsingAuth(fileId);
 
-        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default, default);
     }
 
     [Fact]
@@ -1893,11 +1900,11 @@ public class SendsControllerTests : IDisposable
 
         await _sut.GetSendFileDownloadDataUsingAuth(fileId);
 
-        await _eventService.DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default, default);
     }
 
     [Fact]
-    public async Task AccessUsingAuth_TextSend_PassesAccessorEmailAndClaimedDomainVariants_ToClassifier()
+    public async Task AccessUsingAuth_TextSend_PassesAccessorEmail_ToClassifier()
     {
         var sendId = Guid.NewGuid();
         var userId = Guid.NewGuid();
@@ -1920,15 +1927,13 @@ public class SendsControllerTests : IDisposable
 
         await _sut.AccessUsingAuth();
 
-        await _sendEventClassifier.Received(1).BuildAccessResolverAsync(
+        await _sendEventClassifier.Received(1).BuildAccessContextAsync(
             userId,
-            "alice@example.com",
-            EventType.Send_Accessed_Text_FromClaimedDomain,
-            EventType.Send_Accessed_Text_FromExternalDomain);
+            "alice@example.com");
     }
 
     [Fact]
-    public async Task GetSendFileDownloadDataUsingAuth_PassesAccessorEmailAndFileVariants_ToClassifier()
+    public async Task GetSendFileDownloadDataUsingAuth_PassesAccessorEmail_ToClassifier()
     {
         var sendId = Guid.NewGuid();
         var userId = Guid.NewGuid();
@@ -1953,11 +1958,9 @@ public class SendsControllerTests : IDisposable
 
         await _sut.GetSendFileDownloadDataUsingAuth(fileId);
 
-        await _sendEventClassifier.Received(1).BuildAccessResolverAsync(
+        await _sendEventClassifier.Received(1).BuildAccessContextAsync(
             userId,
-            "alice@example.com",
-            EventType.Send_Accessed_File_FromClaimedDomain,
-            EventType.Send_Accessed_File_FromExternalDomain);
+            "alice@example.com");
     }
 
     #endregion

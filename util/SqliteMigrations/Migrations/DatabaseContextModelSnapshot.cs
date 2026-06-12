@@ -1565,6 +1565,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid?>("SecretId")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("SendId")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("ServiceAccountId")
                         .HasColumnType("TEXT");
 
