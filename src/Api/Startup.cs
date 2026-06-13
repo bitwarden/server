@@ -7,6 +7,7 @@ using Stripe;
 using Bit.Core.Utilities;
 using Duende.IdentityModel;
 using System.Globalization;
+using Bit.Api.AdminConsole.Attributes;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.KeyManagement.Validators;
@@ -213,6 +214,7 @@ public class Startup
         {
             config.Conventions.Add(new ApiExplorerGroupConvention());
             config.Conventions.Add(new PublicApiControllersModelConvention());
+            config.ModelBinderProviders.Insert(0, new ValidOrganizationAndUserModelBinderProvider());
         });
 
         services.AddSwaggerGen(globalSettings, Environment);

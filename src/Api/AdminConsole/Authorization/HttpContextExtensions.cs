@@ -68,39 +68,35 @@ public static class HttpContextExtensions
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
     public static Guid GetOrganizationId(this HttpContext httpContext)
-    {
-        var routeValues = httpContext.GetRouteData().Values;
+        => httpContext.TryGetRouteParameterAsGuid("orgId")
+           ?? httpContext.TryGetRouteParameterAsGuid("organizationId")
+           ?? throw new InvalidOperationException(NoOrgIdError);
 
-        routeValues.TryGetValue("orgId", out var orgIdParam);
-        if (orgIdParam != null && Guid.TryParse(orgIdParam.ToString(), out var orgId))
-        {
-            return orgId;
-        }
+    public static Guid? GetOrganizationId(this HttpContext httpContext, string organizationIdRouteParameterName)
+        => httpContext.TryGetRouteParameterAsGuid(organizationIdRouteParameterName);
 
-        routeValues.TryGetValue("organizationId", out var organizationIdParam);
-        if (organizationIdParam != null && Guid.TryParse(organizationIdParam.ToString(), out var organizationId))
-        {
-            return organizationId;
-        }
-
-        throw new InvalidOperationException(NoOrgIdError);
-    }
+    public static Guid? GetOrganizationUserId(this HttpContext httpContext, string organizationUserRouteParamName = "id")
+        => httpContext.TryGetRouteParameterAsGuid(organizationUserRouteParamName);
 
     /// <summary>
     /// Parses the {providerId} route parameter into a Guid, or throws if it is not present or is not a valid Guid.
     /// </summary>
     /// <exception cref="InvalidOperationException"></exception>
     public static Guid GetProviderId(this HttpContext httpContext)
+        => httpContext.TryGetRouteParameterAsGuid("providerId")
+           ?? throw new InvalidOperationException(NoProviderIdError);
+
+    private static Guid? TryGetRouteParameterAsGuid(this HttpContext httpContext, string routeParameterName)
     {
         var routeValues = httpContext.GetRouteData().Values;
 
-        if (routeValues.TryGetValue("providerId", out var providerIdParam) &&
-            providerIdParam != null &&
-            Guid.TryParse(providerIdParam.ToString(), out var providerId))
+        if (routeValues.TryGetValue(routeParameterName, out var routeParam) &&
+            routeParam != null &&
+            Guid.TryParse(routeParam.ToString(), out var parsedGuid))
         {
-            return providerId;
+            return parsedGuid;
         }
 
-        throw new InvalidOperationException(NoProviderIdError);
+        return null;
     }
 }
