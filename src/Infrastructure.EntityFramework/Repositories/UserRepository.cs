@@ -249,6 +249,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
         userEntity.MasterPassword = user.MasterPassword;
         userEntity.MasterPasswordHint = user.MasterPasswordHint;
+        userEntity.LastPasswordChangeDate = user.LastPasswordChangeDate;
 
         userEntity.LastKeyRotationDate = user.LastKeyRotationDate;
         userEntity.AccountRevisionDate = user.AccountRevisionDate;
