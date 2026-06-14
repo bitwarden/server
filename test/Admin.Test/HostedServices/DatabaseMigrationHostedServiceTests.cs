@@ -1,4 +1,4 @@
-using Bit.Admin;
+﻿using Bit.Admin;
 using Bit.Admin.HostedServices;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
