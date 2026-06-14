@@ -1,5 +1,6 @@
 ﻿using System.Data.Common;
 using Bit.Core.Utilities;
+using Microsoft.Extensions.Options;
 
 namespace Bit.Admin.HostedServices;
 
@@ -7,17 +8,25 @@ public class DatabaseMigrationHostedService : IHostedService, IDisposable
 {
     private readonly ILogger<DatabaseMigrationHostedService> _logger;
     private readonly IDbMigrator _dbMigrator;
+    private readonly AdminSettings _adminSettings;
 
     public DatabaseMigrationHostedService(
         IDbMigrator dbMigrator,
+        IOptions<AdminSettings> adminSettings,
         ILogger<DatabaseMigrationHostedService> logger)
     {
         _logger = logger;
         _dbMigrator = dbMigrator;
+        _adminSettings = adminSettings.Value;
     }
 
     public virtual async Task StartAsync(CancellationToken cancellationToken)
     {
+        if (!_adminSettings.RunDatabaseMigrations)
+        {
+            return;
+        }
+
         // Wait 20 seconds to allow database to come online
         await Task.Delay(20000, cancellationToken);
 
