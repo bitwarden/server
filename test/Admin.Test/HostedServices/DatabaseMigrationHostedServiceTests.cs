@@ -46,7 +46,7 @@ public class DatabaseMigrationHostedServiceTests
     // through the real 20s delay or refactoring the service to inject a time
     // abstraction.
     [Fact]
-    public async Task StartAsync_WhenRunDatabaseMigrationsTrue_ExcecutesMigrations()
+    public async Task StartAsync_WhenRunDatabaseMigrationsTrue_WillRunMigrations()
     {
         var sut = new DatabaseMigrationHostedService(
             _dbMigrator,
