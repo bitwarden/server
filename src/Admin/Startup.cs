@@ -35,6 +35,7 @@ public class Startup
     {
         // Options
         services.AddOptions();
+        services.TryAddSingleton(TimeProvider.System);
 
         // Settings
         var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
