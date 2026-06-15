@@ -123,7 +123,7 @@ Returns the matching handler, or `None` if the policy type does not implement th
 
 ## Adding a New Policy Handler
 
-1. Create a class in `PolicyValidators/` implementing any combination of the event interfaces above.
+1. Create a class in `PolicyEventHandlers/` implementing any combination of the event interfaces above.
 2. Set `Type` to the appropriate `PolicyType`.
 3. Register the class as `IPolicyUpdateEvent` in `PolicyServiceCollectionExtensions.AddPolicyUpdateEvents()`.
 
@@ -133,11 +133,11 @@ Note: No changes to `SavePolicyCommand` or `PolicyEventHandlerHandlerFactory` ar
 
 `AutomaticUserConfirmationPolicyEventHandler` is a good reference. It requires `SingleOrg`, validates organization compliance before enabling, and removes emergency access grants as a pre-save side effect.
 
-**Step 1: Create the handler** (`PolicyValidators/AutomaticUserConfirmationPolicyEventHandler.cs`):
+**Step 1: Create the handler** (`PolicyEventHandlers/AutomaticUserConfirmationPolicyEventHandler.cs`):
 
 ```csharp
 public class AutomaticUserConfirmationPolicyEventHandler(
-    IAutomaticUserConfirmationOrganizationPolicyComplianceValidator validator,
+    IAutomaticUserConfirmationOrganizationPolicyComplianceHandler handler,
     IOrganizationUserRepository organizationUserRepository,
     IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand)
     : IPolicyValidationEvent, IEnforceDependentPoliciesEvent, IOnPolicyPreUpdateEvent
@@ -150,7 +150,7 @@ public class AutomaticUserConfirmationPolicyEventHandler(
     // IPolicyValidationEvent: Validates org compliance
     public async Task<string> ValidateAsync(SavePolicyModel savePolicyModel, Policy? currentPolicy)
     {
-        var policyUpdate = savePolicyModel.PolicyUpdate
+        var policyUpdate = savePolicyModel.PolicyUpdate;
         var isNotEnablingPolicy = policyUpdate is not { Enabled: true };
         var policyAlreadyEnabled = currentPolicy is { Enabled: true };
         if (isNotEnablingPolicy || policyAlreadyEnabled)
@@ -158,14 +158,14 @@ public class AutomaticUserConfirmationPolicyEventHandler(
             return string.Empty;
         }
 
-        return (await validator.IsOrganizationCompliantAsync(
-            new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(policyUpdate.OrganizationId)))
+        return (await handler.IsOrganizationCompliantAsync(
+            new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(policyUpdate.OrganizationId)))
             .Match(
                 error => error.Message,
                 _ => string.Empty);
     }
 
-    // IOnPolicyPreUpdateEvent: Revokes non-compliant users, removes emergency access grants before enabling
+    // IOnPolicyPreUpdateEvent: Removes emergency access grants for org users before enabling
     public async Task ExecutePreUpsertSideEffectAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
     {
         var isNotEnablingPolicy = policyRequest.PolicyUpdate is not { Enabled: true };
