@@ -166,6 +166,81 @@ public class GetCipherAccessStateQueryTests
         Assert.Null(result.ApprovedRequest);
     }
 
+    [Theory, BitAutoData]
+    public async Task GetStateAsync_ActiveLease_ExtensionsAllowed_ReportsRemaining(
+        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId, Guid orgId, Guid collectionId,
+        AccessLease activeLease)
+    {
+        SetupCipher(sutProvider, userId, cipherId);
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, Arg.Any<DateTime>())
+            .Returns(activeLease);
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolveAsync(userId, cipherId)
+            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: false, new HumanApprovalCondition())
+            {
+                AllowsExtensions = true,
+                MaxExtensions = 3,
+            });
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .CountExtensionsByLeaseIdAsync(activeLease.Id).Returns(1);
+
+        var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
+
+        Assert.True(result.ExtensionsAllowed);
+        Assert.Equal(2, result.ExtensionsRemaining);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetStateAsync_ActiveLease_ExtensionsExhausted_ReportsZeroRemaining(
+        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId, Guid orgId, Guid collectionId,
+        AccessLease activeLease)
+    {
+        SetupCipher(sutProvider, userId, cipherId);
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, Arg.Any<DateTime>())
+            .Returns(activeLease);
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolveAsync(userId, cipherId)
+            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: false, new HumanApprovalCondition())
+            {
+                AllowsExtensions = true,
+                MaxExtensions = 2,
+            });
+        // More used than the cap (a rule whose max was lowered after the fact) must clamp to zero, never negative.
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .CountExtensionsByLeaseIdAsync(activeLease.Id).Returns(5);
+
+        var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
+
+        Assert.True(result.ExtensionsAllowed);
+        Assert.Equal(0, result.ExtensionsRemaining);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetStateAsync_ActiveLease_ExtensionsDisallowed_ReportsNotAllowed(
+        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId, Guid orgId, Guid collectionId,
+        AccessLease activeLease)
+    {
+        SetupCipher(sutProvider, userId, cipherId);
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, Arg.Any<DateTime>())
+            .Returns(activeLease);
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolveAsync(userId, cipherId)
+            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: false, new HumanApprovalCondition())
+            {
+                AllowsExtensions = false,
+            });
+
+        var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
+
+        Assert.False(result.ExtensionsAllowed);
+        Assert.Equal(0, result.ExtensionsRemaining);
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .CountExtensionsByLeaseIdAsync(default);
+    }
+
     private static void SetupCipher(SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId)
     {
         sutProvider.GetDependency<ICipherRepository>()

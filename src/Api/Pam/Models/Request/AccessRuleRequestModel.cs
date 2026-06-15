@@ -39,6 +39,18 @@ public class AccessRuleRequestModel
     public bool Enabled { get; set; } = true;
 
     /// <summary>
+    /// When true, a member holding an active lease under this rule may extend it (always auto-approved), up to
+    /// <see cref="MaxExtensions"/> times.
+    /// </summary>
+    public bool AllowsExtensions { get; set; }
+
+    /// <summary>
+    /// The maximum number of times a single lease may be extended. Required to be positive when
+    /// <see cref="AllowsExtensions"/> is true.
+    /// </summary>
+    public int? MaxExtensions { get; set; }
+
+    /// <summary>
     /// The complete set of collections this rule governs. The rule's associations are replaced to match
     /// exactly this set; an empty array clears all associations.
     /// </summary>
@@ -55,6 +67,8 @@ public class AccessRuleRequestModel
         DefaultLeaseDurationSeconds = DefaultLeaseDurationSeconds,
         MaxLeaseDurationSeconds = MaxLeaseDurationSeconds,
         Enabled = Enabled,
+        AllowsExtensions = AllowsExtensions,
+        MaxExtensions = MaxExtensions,
     };
 
     private static string SerializeConditions(object conditions) => conditions switch

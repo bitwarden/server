@@ -9,8 +9,8 @@ CREATE PROCEDURE [dbo].[AccessRequest_CreateApprovedExtension]
     @NotBefore DATETIME2(7),
     @NotAfter DATETIME2(7),
     @Reason NVARCHAR(MAX) = NULL,
-    @Now DATETIME2(7),
-    @RuleId UNIQUEIDENTIFIER = NULL
+    @MaxExtensions INT,
+    @Now DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -37,12 +37,12 @@ BEGIN
         RETURN
     END
 
-    -- A lease may be extended exactly once. Counted under the lease lock, so it is race-safe against a concurrent
-    -- extension of the same lease.
-    IF EXISTS (SELECT 1 FROM [dbo].[AccessRequest] WHERE [ExtensionOfLeaseId] = @ExtensionOfLeaseId)
+    -- Per-lease extension cap. Every extension request against this lease is auto-approved, so every one counts.
+    -- Counted under the lease lock, so it is race-safe against a concurrent extension of the same lease.
+    IF (SELECT COUNT(*) FROM [dbo].[AccessRequest] WHERE [ExtensionOfLeaseId] = @ExtensionOfLeaseId) >= @MaxExtensions
     BEGIN
         ROLLBACK TRANSACTION
-        SELECT -1 -- AlreadyExtended
+        SELECT -1 -- MaxExtensionsReached
         RETURN
     END
 
@@ -53,12 +53,12 @@ BEGIN
     INSERT INTO [dbo].[AccessRequest]
     (
         [Id], [ExtensionOfLeaseId], [OrganizationId], [CollectionId], [CipherId], [RequesterId],
-        [NotBefore], [NotAfter], [Reason], [Status], [CreationDate], [ResolvedDate], [RuleId]
+        [NotBefore], [NotAfter], [Reason], [Status], [CreationDate], [ResolvedDate]
     )
     VALUES
     (
         @AccessRequestId, @ExtensionOfLeaseId, @OrganizationId, @CollectionId, @CipherId, @RequesterId,
-        @NotBefore, @NotAfter, @Reason, 1 /* Approved */, @Now, @Now, @RuleId
+        @NotBefore, @NotAfter, @Reason, 1 /* Approved */, @Now, @Now
     )
 
     INSERT INTO [dbo].[AccessDecision]
@@ -69,7 +69,7 @@ BEGIN
     VALUES
     (
         @AccessDecisionId, @AccessRequestId, 0 /* Automatic */, NULL, NULL,
-        1 /* Approve */, NULL, NULL, @Now
+        0 /* Approve */, NULL, NULL, @Now
     )
 
     UPDATE [dbo].[AccessLease]

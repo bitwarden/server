@@ -35,6 +35,11 @@ public class CreateAccessRuleCommand : ICreateAccessRuleCommand
             throw new BadRequestException("Name is required.");
         }
 
+        if (rule.AllowsExtensions && rule.MaxExtensions is not > 0)
+        {
+            throw new BadRequestException("Maximum extensions must be a positive number when extensions are allowed.");
+        }
+
         var validation = _validator.Validate(rule.Conditions);
         if (!validation.IsValid)
         {

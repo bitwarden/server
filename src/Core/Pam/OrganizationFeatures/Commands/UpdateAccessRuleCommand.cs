@@ -35,6 +35,11 @@ public class UpdateAccessRuleCommand : IUpdateAccessRuleCommand
             throw new BadRequestException("Name is required.");
         }
 
+        if (update.AllowsExtensions && update.MaxExtensions is not > 0)
+        {
+            throw new BadRequestException("Maximum extensions must be a positive number when extensions are allowed.");
+        }
+
         var existing = await _repository.GetDetailsByIdAsync(id);
         if (existing is null || existing.OrganizationId != organizationId)
         {
@@ -68,6 +73,8 @@ public class UpdateAccessRuleCommand : IUpdateAccessRuleCommand
             DefaultLeaseDurationSeconds = update.DefaultLeaseDurationSeconds,
             MaxLeaseDurationSeconds = update.MaxLeaseDurationSeconds,
             Enabled = update.Enabled,
+            AllowsExtensions = update.AllowsExtensions,
+            MaxExtensions = update.MaxExtensions,
             CreationDate = existing.CreationDate,
             RevisionDate = _timeProvider.GetUtcNow().UtcDateTime,
         };

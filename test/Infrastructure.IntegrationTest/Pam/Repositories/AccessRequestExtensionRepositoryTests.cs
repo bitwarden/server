@@ -1,10 +1,9 @@
-﻿using Bit.Core.Repositories;
+﻿using Bit.Core.Pam.Entities;
+using Bit.Core.Pam.Enums;
+using Bit.Core.Pam.Repositories;
+using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
-using Bit.Infrastructure.IntegrationTest.Comparers;
-using Bit.Pam.Entities;
-using Bit.Pam.Enums;
-using Bit.Pam.Repositories;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Pam.Repositories;
@@ -28,19 +27,17 @@ public class AccessRequestExtensionRepositoryTests
         var newNotAfter = lease.NotAfter.AddHours(1);
 
         var outcome = await accessRequestRepository.CreateApprovedExtensionAsync(
-            BuildExtension(lease, newNotAfter, now), BuildAutoDecision(now), now);
+            BuildExtension(lease, newNotAfter, now), BuildAutoDecision(now), maxExtensions: 3, now);
 
         Assert.Equal(AccessLeaseExtendOutcome.Extended, outcome);
 
         // The parent lease's end is pushed out in place; no new lease is minted.
         var updatedLease = await accessLeaseRepository.GetByIdAsync(lease.Id);
         Assert.NotNull(updatedLease);
-        // Timestamps round-trip within a couple of milliseconds rather than exactly: Dapper binds DateTime as
-        // DbType.DateTime (3.33 ms) on the MSSQL path, and the EF providers store microseconds.
-        Assert.Equal(newNotAfter, updatedLease!.NotAfter, LaxDateTimeComparer.Default);
+        Assert.Equal(newNotAfter, updatedLease!.NotAfter);
         Assert.Equal(AccessLeaseStatus.Active, updatedLease.Status);
 
-        // The extension is recorded as an approved request pointing at the parent lease.
+        // The extension is recorded as an approved request pointing at the parent lease, and counts toward the cap.
         Assert.Equal(1, await accessRequestRepository.CountExtensionsByLeaseIdAsync(lease.Id));
 
         // An approved extension produces no lease of its own, so it must not surface as a startable approval.
@@ -49,7 +46,7 @@ public class AccessRequestExtensionRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task CreateApprovedExtensionAsync_SecondExtension_ReturnsAlreadyExtended(
+    public async Task CreateApprovedExtensionAsync_MaxReached_ReturnsMaxExtensionsReached(
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
         IAccessRequestRepository accessRequestRepository,
@@ -65,16 +62,16 @@ public class AccessRequestExtensionRepositoryTests
 
         var firstNotAfter = lease.NotAfter.AddHours(1);
         Assert.Equal(AccessLeaseExtendOutcome.Extended, await accessRequestRepository.CreateApprovedExtensionAsync(
-            BuildExtension(lease, firstNotAfter, now), BuildAutoDecision(now), now));
+            BuildExtension(lease, firstNotAfter, now), BuildAutoDecision(now), maxExtensions: 1, now));
 
-        // A lease may be extended exactly once, so a second extension is rejected and nothing is written.
+        // The cap is 1 and one extension already exists, so a second is rejected and nothing is written.
         var rejected = await accessRequestRepository.CreateApprovedExtensionAsync(
-            BuildExtension(lease, firstNotAfter.AddHours(1), now), BuildAutoDecision(now), now);
+            BuildExtension(lease, firstNotAfter.AddHours(1), now), BuildAutoDecision(now), maxExtensions: 1, now);
 
-        Assert.Equal(AccessLeaseExtendOutcome.AlreadyExtended, rejected);
+        Assert.Equal(AccessLeaseExtendOutcome.MaxExtensionsReached, rejected);
         Assert.Equal(1, await accessRequestRepository.CountExtensionsByLeaseIdAsync(lease.Id));
         var updatedLease = await accessLeaseRepository.GetByIdAsync(lease.Id);
-        Assert.Equal(firstNotAfter, updatedLease!.NotAfter, LaxDateTimeComparer.Default);
+        Assert.Equal(firstNotAfter, updatedLease!.NotAfter);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -92,11 +89,11 @@ public class AccessRequestExtensionRepositoryTests
         var lease = await CreateActiveLeaseAsync(
             accessRequestRepository, accessLeaseRepository, organization.Id, collection.Id, requesterId, now);
         // Revoke the lease so it is no longer active.
-        await accessLeaseRepository.RevokeAsync(lease, AccessLeaseStatus.Revoked, BuildHumanDecision(lease.AccessRequestId, now), now);
+        await accessLeaseRepository.RevokeAsync(lease, BuildHumanDecision(lease.AccessRequestId, now), now);
 
         var extension = BuildExtension(lease, lease.NotAfter.AddHours(1), now);
         var outcome = await accessRequestRepository.CreateApprovedExtensionAsync(
-            extension, BuildAutoDecision(now), now);
+            extension, BuildAutoDecision(now), maxExtensions: 3, now);
 
         Assert.Equal(AccessLeaseExtendOutcome.LeaseNotActive, outcome);
         Assert.Equal(0, await accessRequestRepository.CountExtensionsByLeaseIdAsync(lease.Id));
@@ -119,11 +116,12 @@ public class AccessRequestExtensionRepositoryTests
         var leaseB = await CreateActiveLeaseAsync(
             accessRequestRepository, accessLeaseRepository, organization.Id, collection.Id, Guid.NewGuid(), now);
 
-        // Extend only leaseA (a lease may be extended once); the count is scoped to its own lease.
         await accessRequestRepository.CreateApprovedExtensionAsync(
-            BuildExtension(leaseA, leaseA.NotAfter.AddHours(1), now), BuildAutoDecision(now), now);
+            BuildExtension(leaseA, leaseA.NotAfter.AddHours(1), now), BuildAutoDecision(now), maxExtensions: 5, now);
+        await accessRequestRepository.CreateApprovedExtensionAsync(
+            BuildExtension(leaseA, leaseA.NotAfter.AddHours(2), now), BuildAutoDecision(now), maxExtensions: 5, now);
 
-        Assert.Equal(1, await accessRequestRepository.CountExtensionsByLeaseIdAsync(leaseA.Id));
+        Assert.Equal(2, await accessRequestRepository.CountExtensionsByLeaseIdAsync(leaseA.Id));
         Assert.Equal(0, await accessRequestRepository.CountExtensionsByLeaseIdAsync(leaseB.Id));
     }
 
@@ -147,7 +145,7 @@ public class AccessRequestExtensionRepositoryTests
 
         var lease = new AccessLease
         {
-            Id = CombGuid.Generate(),
+            Id = CoreHelpers.GenerateComb(),
             AccessRequestId = approved.Id,
             OrganizationId = approved.OrganizationId,
             CollectionId = approved.CollectionId,

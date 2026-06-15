@@ -1,4 +1,5 @@
 ﻿using Bit.Api.Models.Response;
+using Bit.Api.Pam.Models.Request;
 using Bit.Api.Pam.Models.Response;
 using Bit.Core;
 using Bit.Core.Pam.OrganizationFeatures.Commands.Interfaces;
@@ -23,7 +24,8 @@ public class MemberLeasingController(
     IListMyAccessRequestsQuery listMyAccessRequestsQuery,
     IListMyActiveAccessLeasesQuery listMyActiveAccessLeasesQuery,
     IActivateAccessRequestCommand activateAccessRequestCommand,
-    ICancelAccessRequestCommand cancelAccessRequestCommand)
+    ICancelAccessRequestCommand cancelAccessRequestCommand,
+    IRequestLeaseExtensionCommand requestLeaseExtensionCommand)
     : Controller
 {
     /// <summary>
@@ -76,5 +78,18 @@ public class MemberLeasingController(
         var userId = userService.GetProperUserId(User)!.Value;
         await cancelAccessRequestCommand.CancelAsync(userId, id);
         return NoContent();
+    }
+
+    /// <summary>
+    /// Extends one of the caller's active leases by the requested duration. Extensions are always auto-approved,
+    /// subject to the governing rule allowing them and the per-lease maximum not being reached; the lease's end is
+    /// pushed out in place rather than minting a new lease. Only the lease's requester may extend it.
+    /// </summary>
+    [HttpPost("requests/extension")]
+    public async Task<AccessRequestDetailsResponseModel> RequestExtension([FromBody] AccessLeaseExtensionRequestModel model)
+    {
+        var userId = userService.GetProperUserId(User)!.Value;
+        var details = await requestLeaseExtensionCommand.ExtendAsync(userId, model.ToSubmission());
+        return new AccessRequestDetailsResponseModel(details);
     }
 }

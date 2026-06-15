@@ -76,4 +76,22 @@ public interface IAccessRequestRepository
     /// only when the transition happens. Both supplied entities must already have their ids assigned.
     /// </summary>
     Task CancelWithDecisionAsync(AccessRequest request, AccessDecision decision, DateTime now);
+
+    /// <summary>
+    /// Returns the number of extension requests recorded against the lease. Extensions are always auto-approved, so
+    /// every such request counts toward the governing rule's per-lease maximum.
+    /// </summary>
+    Task<int> CountExtensionsByLeaseIdAsync(Guid leaseId);
+
+    /// <summary>
+    /// Atomically records an auto-approved extension request (with its automatic decision) and pushes the parent
+    /// lease's end out to the request's NotAfter, all under a per-lease lock. Returns
+    /// <see cref="AccessLeaseExtendOutcome.LeaseNotActive"/> when the lease is no longer active or its window has
+    /// ended, or <see cref="AccessLeaseExtendOutcome.MaxExtensionsReached"/> when <paramref name="maxExtensions"/>
+    /// has already been reached; otherwise <see cref="AccessLeaseExtendOutcome.Extended"/>. Both supplied entities
+    /// must already have their ids assigned, and the request's <c>ExtensionOfLeaseId</c> identifies the lease being
+    /// extended.
+    /// </summary>
+    Task<AccessLeaseExtendOutcome> CreateApprovedExtensionAsync(AccessRequest request, AccessDecision decision,
+        int maxExtensions, DateTime now);
 }

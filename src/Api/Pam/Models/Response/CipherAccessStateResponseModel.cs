@@ -19,6 +19,8 @@ public class CipherAccessStateResponseModel : ResponseModel
         ActiveLease = state.ActiveLease is null ? null : new AccessLeaseResponseModel(state.ActiveLease);
         PendingRequest = state.PendingRequest is null ? null : new AccessRequestDetailsResponseModel(state.PendingRequest);
         ApprovedRequest = state.ApprovedRequest is null ? null : new AccessRequestDetailsResponseModel(state.ApprovedRequest);
+        ExtensionsAllowed = state.ExtensionsAllowed;
+        ExtensionsRemaining = state.ExtensionsRemaining;
     }
 
     public Guid CipherId { get; }
@@ -31,4 +33,10 @@ public class CipherAccessStateResponseModel : ResponseModel
     /// to mint the lease; lapsed approvals are never surfaced here.
     /// </summary>
     public AccessRequestDetailsResponseModel? ApprovedRequest { get; }
+
+    /// <summary>Whether the active lease's governing rule permits extending it.</summary>
+    public bool ExtensionsAllowed { get; }
+
+    /// <summary>How many extensions remain for the active lease (0 when none remain or there is no active lease).</summary>
+    public int ExtensionsRemaining { get; }
 }
