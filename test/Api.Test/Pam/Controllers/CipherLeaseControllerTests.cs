@@ -41,6 +41,9 @@ public class CipherLeaseControllerTests
         Assert.Null(result.ApprovedRequest);
     }
 
+    // GET /ciphers/{id}/lease/cipher is [Obsolete] (deprecated, scheduled for removal) but still fully functional, so
+    // its behaviour stays under test; suppress the obsolete-usage warning for these deliberate calls.
+#pragma warning disable CS0618
     [Theory, BitAutoData]
     public async Task GetCipher_NoLeasedCipher_ThrowsNotFound(
         Guid id, User user, SutProvider<CipherLeaseController> sutProvider)
@@ -86,4 +89,5 @@ public class CipherLeaseControllerTests
         Assert.Equal("2.iv|ct|mac", result.Data); // full data present
         Assert.Null(result.PartialData);           // isPartial == false
     }
+#pragma warning restore CS0618
 }
