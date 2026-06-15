@@ -12,11 +12,11 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.Pam.Controllers;
 
 /// <summary>
-/// Caller-scoped leasing surface: a user's own access requests and active leases, spanning every organization they
+/// Caller-scoped surface: a user's own access requests and active leases, spanning every organization they
 /// belong to, plus activation of their approved requests. Distinct from the approver-facing surface on
-/// <see cref="ApproverInboxController"/>. Both share the <c>leasing</c> route prefix; the templates don't overlap.
+/// <see cref="ApproverInboxController"/>; both expose actions under the top-level <c>access-requests</c> and
+/// <c>leases</c> resources.
 /// </summary>
-[Route("leasing")]
 [Authorize("Application")]
 [RequireFeature(FeatureFlagKeys.Pam)]
 public class MemberLeasingController(
@@ -32,7 +32,7 @@ public class MemberLeasingController(
     /// Returns the caller's own access requests across all their organizations, regardless of status. The client
     /// re-sorts and splits into pending/recent.
     /// </summary>
-    [HttpGet("requests/mine")]
+    [HttpGet("access-requests/mine")]
     public async Task<ListResponseModel<AccessRequestDetailsResponseModel>> GetMyRequests()
     {
         var userId = userService.GetProperUserId(User)!.Value;
@@ -44,7 +44,7 @@ public class MemberLeasingController(
     /// <summary>
     /// Returns the caller's currently-active leases across all their organizations.
     /// </summary>
-    [HttpGet("leases/mine/active")]
+    [HttpGet("leases/mine")]
     public async Task<ListResponseModel<AccessLeaseResponseModel>> GetMyActiveLeases()
     {
         var userId = userService.GetProperUserId(User)!.Value;
@@ -58,7 +58,7 @@ public class MemberLeasingController(
     /// request's approved window. Only the requester may activate, and only while the window is open. Repeat calls
     /// while the produced lease is live return that lease.
     /// </summary>
-    [HttpPost("requests/{id:guid}/activate")]
+    [HttpPost("access-requests/{id:guid}/activate")]
     public async Task<AccessLeaseResponseModel> Activate(Guid id)
     {
         var userId = userService.GetProperUserId(User)!.Value;
@@ -67,13 +67,14 @@ public class MemberLeasingController(
     }
 
     /// <summary>
-    /// Cancels an access request that has not produced a lease. The requester may cancel their own request, and a
-    /// managing approver may cancel any request on a collection they manage; either way the request must still be
+    /// Revokes an access request that has not produced a lease, ending it without minting access. Caller-dependent:
+    /// the requester withdrawing their own request ends it as <c>cancelled</c>; a managing approver retracting a
+    /// request on a collection they manage ends it as <c>denied</c>. Either way the request must still be
     /// <c>pending</c> or an unactivated <c>approved</c> request. A request that has produced a lease (revoke the lease
-    /// instead) or is otherwise resolved can no longer be cancelled.
+    /// instead) or is otherwise resolved can no longer be revoked.
     /// </summary>
-    [HttpDelete("requests/{id:guid}")]
-    public async Task<IActionResult> CancelRequest(Guid id)
+    [HttpPost("access-requests/{id:guid}/revoke")]
+    public async Task<IActionResult> RevokeRequest(Guid id)
     {
         var userId = userService.GetProperUserId(User)!.Value;
         await cancelAccessRequestCommand.CancelAsync(userId, id);

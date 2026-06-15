@@ -78,12 +78,12 @@ public class MemberLeasingControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task CancelRequest_CancelsCallersRequest_ReturnsNoContent(
+    public async Task RevokeRequest_RevokesCallersRequest_ReturnsNoContent(
         Guid userId, Guid requestId, SutProvider<MemberLeasingController> sutProvider)
     {
         SetupUser(sutProvider, userId);
 
-        var result = await sutProvider.Sut.CancelRequest(requestId);
+        var result = await sutProvider.Sut.RevokeRequest(requestId);
 
         Assert.IsType<NoContentResult>(result);
         await sutProvider.GetDependency<ICancelAccessRequestCommand>().Received(1).CancelAsync(userId, requestId);
