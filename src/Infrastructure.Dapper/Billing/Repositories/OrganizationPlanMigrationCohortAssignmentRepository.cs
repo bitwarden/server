@@ -54,7 +54,7 @@ public class OrganizationPlanMigrationCohortAssignmentRepository(
         await using var connection = new SqlConnection(ConnectionString);
 
         return await connection.QuerySingleAsync<CohortBulkAssignmentSummary>(
-            $"[{Schema}].[{Table}_SyncMany]",
+            $"[{Schema}].[{Table}_UpdateManySync]",
             new { JsonData = jsonData },
             commandType: CommandType.StoredProcedure);
     }

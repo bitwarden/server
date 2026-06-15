@@ -39,7 +39,7 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationPlanMigrationCohortAssignment_SyncMany]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationPlanMigrationCohortAssignment_UpdateManySync]
     @JsonData NVARCHAR(MAX)
 AS
 BEGIN

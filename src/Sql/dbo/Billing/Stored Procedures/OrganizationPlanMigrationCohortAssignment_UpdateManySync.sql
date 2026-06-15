@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationPlanMigrationCohortAssignment_SyncMany]
+CREATE PROCEDURE [dbo].[OrganizationPlanMigrationCohortAssignment_UpdateManySync]
     @JsonData NVARCHAR(MAX)
 AS
 BEGIN
