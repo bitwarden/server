@@ -4,13 +4,14 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    DECLARE @Source TABLE (
+    CREATE TABLE #Source
+    (
         [Id]             UNIQUEIDENTIFIER,
-        [OrganizationId] UNIQUEIDENTIFIER,
+        [OrganizationId] UNIQUEIDENTIFIER NOT NULL PRIMARY KEY CLUSTERED,
         [CohortId]       UNIQUEIDENTIFIER NULL
     )
 
-    INSERT INTO @Source
+    INSERT INTO #Source
     (
         [Id],
         [OrganizationId],
@@ -31,13 +32,16 @@ BEGIN
     -- Locked orgs: existing assignment is scheduled to migrate or has already migrated (migration
     -- cohort), or has had a churn discount applied (non-migration cohort). These orgs are
     -- protected from change.
-    DECLARE @Locked TABLE ([OrganizationId] UNIQUEIDENTIFIER PRIMARY KEY)
+    CREATE TABLE #Locked
+    (
+        [OrganizationId] UNIQUEIDENTIFIER NOT NULL PRIMARY KEY CLUSTERED
+    )
 
-    INSERT INTO @Locked ([OrganizationId])
+    INSERT INTO #Locked ([OrganizationId])
     SELECT
         A.[OrganizationId]
     FROM
-        @Source S
+        #Source S
     INNER JOIN
         [dbo].[OrganizationPlanMigrationCohortAssignmentView] A ON A.[OrganizationId] = S.[OrganizationId]
     INNER JOIN
@@ -54,11 +58,11 @@ BEGIN
     SELECT
         @Skipped = COUNT(1)
     FROM
-        @Source S
+        #Source S
     INNER JOIN
         [dbo].[OrganizationPlanMigrationCohortAssignmentView] A ON A.[OrganizationId] = S.[OrganizationId]
     INNER JOIN
-        @Locked L ON L.[OrganizationId] = S.[OrganizationId]
+        #Locked L ON L.[OrganizationId] = S.[OrganizationId]
     WHERE
         S.[CohortId] IS NULL
         OR S.[CohortId] <> A.[CohortId]
@@ -72,9 +76,9 @@ BEGIN
             [OrganizationId],
             [CohortId]
         FROM
-            @Source S
+            #Source S
         WHERE
-            NOT EXISTS (SELECT 1 FROM @Locked L WHERE L.[OrganizationId] = S.[OrganizationId])
+            NOT EXISTS (SELECT 1 FROM #Locked L WHERE L.[OrganizationId] = S.[OrganizationId])
     ) AS [Source]
         ON [Target].[OrganizationId] = [Source].[OrganizationId]
     WHEN MATCHED AND [Source].[CohortId] IS NULL THEN
@@ -109,4 +113,7 @@ BEGIN
         @Skipped AS [Skipped]
     FROM
         @Outcomes
+
+    DROP TABLE IF EXISTS #Source
+    DROP TABLE IF EXISTS #Locked
 END
