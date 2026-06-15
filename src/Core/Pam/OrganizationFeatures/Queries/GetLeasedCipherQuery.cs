@@ -57,7 +57,7 @@ public class GetLeasedCipherQuery : IGetLeasedCipherQuery
                 Timestamp = now,
             };
 
-            if (_ruleEngine.Evaluate(governingRule.Condition, signals).Outcome == AccessEvaluationOutcome.Deny)
+            if (_ruleEngine.Evaluate(governingRule.Conditions, signals).Outcome == AccessEvaluationOutcome.Deny)
             {
                 return null;
             }

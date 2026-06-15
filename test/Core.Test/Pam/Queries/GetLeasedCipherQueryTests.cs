@@ -146,13 +146,14 @@ public class GetLeasedCipherQueryTests
     {
         sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(userId, cipherId)
-            .Returns(new GoverningRule(orgId, collectionId, false, new IpAllowlistCondition { Cidrs = ["10.0.0.0/8"] }));
+            .Returns(new GoverningRule(orgId, collectionId, false,
+                [new IpAllowlistCondition { Cidrs = ["10.0.0.0/8"] }]));
     }
 
     private static void SetupEvaluation(SutProvider<GetLeasedCipherQuery> sutProvider, AccessEvaluation decision)
     {
         sutProvider.GetDependency<IAccessRuleEngine>()
-            .Evaluate(Arg.Any<AccessCondition>(), Arg.Any<AccessSignals>())
+            .Evaluate(Arg.Any<IReadOnlyList<AccessCondition>>(), Arg.Any<AccessSignals>())
             .Returns(decision);
     }
 }

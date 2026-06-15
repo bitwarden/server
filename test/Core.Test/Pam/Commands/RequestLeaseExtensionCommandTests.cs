@@ -233,7 +233,7 @@ public class RequestLeaseExtensionCommandTests
         sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(lease.RequesterId, lease.CipherId)
             .Returns(new GoverningRule(lease.OrganizationId, lease.CollectionId, RequiresHumanApproval: true,
-                new HumanApprovalCondition())
+                [new HumanApprovalCondition()])
             {
                 AllowsExtensions = allowsExtensions,
                 MaxExtensionDurationSeconds = _maxExtensionDurationSeconds,
