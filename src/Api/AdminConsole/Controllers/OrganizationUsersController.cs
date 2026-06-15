@@ -13,6 +13,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
+using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
@@ -34,6 +35,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -269,6 +271,12 @@ public class OrganizationUsersController : BaseAdminConsoleController
     [Authorize<ManageUsersRequirement>]
     public async Task Invite(Guid orgId, [FromBody] OrganizationUserInviteRequestModel model)
     {
+        if (_featureService.IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers))
+        {
+            await Invite_vNext(orgId, model);
+            return;
+        }
+
         // Check the user has permission to grant access to the collections for the new user
         if (model.Collections?.Any() == true)
         {
@@ -401,6 +409,12 @@ public class OrganizationUsersController : BaseAdminConsoleController
         if (organizationUser == null || organizationUser.OrganizationId != orgId)
         {
             throw new NotFoundException();
+        }
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers))
+        {
+            await Put_vNext(orgId, organizationUser, currentAccess, model);
+            return;
         }
 
         var userId = _userService.GetProperUserId(User).Value;
@@ -888,5 +902,88 @@ public class OrganizationUsersController : BaseAdminConsoleController
     {
         var usersOrganizationClaimedStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(orgId, userIds);
         return usersOrganizationClaimedStatus;
+    }
+
+    private async Task Invite_vNext(Guid orgId, OrganizationUserInviteRequestModel requestModel)
+    {
+        if (requestModel.Collections?.Any() == true)
+        {
+            var collections = (await _collectionRepository.GetManyByManyIdsAsync(requestModel.Collections.Select(a => a.Id))).ToList();
+            var resource = new CollectionUserAccessResource(collections, TargetOrganizationUserId: Guid.Empty);
+            await _authorizationService.AuthorizeOrThrowAsync(User, resource, CollectionUserOperations.Create);
+        }
+
+        var userId = _userService.GetProperUserId(User);
+        await _organizationService.InviteUsersAsync(orgId, userId.Value, systemUser: null,
+            [(new OrganizationUserInvite(requestModel.ToData()), externalId: null)]);
+    }
+
+    private async Task Put_vNext(Guid orgId, OrganizationUser organizationUser,
+        ICollection<CollectionAccessSelection> currentAccess, OrganizationUserUpdateRequestModel requestModel)
+    {
+        var userId = _userService.GetProperUserId(User).Value;
+
+        // TODO: remove once clients send group deltas (add/remove only) instead of the caller's full group list.
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
+        var editingSelf = userId == organizationUser.UserId;
+        var groupsToSave = editingSelf && !organizationAbility.AllowAdminAccessToAllCollectionItems
+            ? null
+            : requestModel.Groups;
+
+        if (groupsToSave != null)
+        {
+            var currentGroupIds = await _groupRepository.GetManyIdsByUserIdAsync(organizationUser.Id);
+            var groupResource = new OrganizationUserGroupAssignmentResource(
+                orgId, userId, organizationUser.Id, groupsToSave, currentGroupIds);
+            await _authorizationService.AuthorizeOrThrowAsync(User, groupResource, GroupOperations.UpdateMembership);
+        }
+
+        var collectionsToSave = await AuthorizeAndPrepareCollectionAccessAsync(requestModel, currentAccess, organizationUser.Id);
+        await _updateOrganizationUserCommand.UpdateUserAsync(requestModel.ToOrganizationUser(organizationUser), organizationUser.Type, userId,
+            collectionsToSave, groupsToSave);
+    }
+
+    /// <summary>
+    /// Authorizes the collection access changes and returns the list to persist.
+    /// </summary>
+    private async Task<List<CollectionAccessSelection>> AuthorizeAndPrepareCollectionAccessAsync(
+        OrganizationUserUpdateRequestModel requestModel,
+        ICollection<CollectionAccessSelection> currentAccess,
+        Guid targetOrganizationUserId)
+    {
+        var (createIds, updateIds, deleteIds) = requestModel.Collections.DiffAccessSelections(currentAccess);
+
+        var allCollections = await _collectionRepository.GetManyByManyIdsAsync(
+            createIds.Concat(updateIds).Concat(deleteIds));
+
+        var createCollections = allCollections.Where(c => createIds.Contains(c.Id)).ToList();
+        if (createCollections.Count > 0)
+        {
+            var resource = new CollectionUserAccessResource(createCollections, targetOrganizationUserId);
+            await _authorizationService.AuthorizeOrThrowAsync(User, resource, CollectionUserOperations.Create);
+        }
+
+        var updateCollections = allCollections.Where(c => updateIds.Contains(c.Id)).ToList();
+        if (updateCollections.Count > 0)
+        {
+            var resource = new CollectionUserAccessResource(updateCollections, targetOrganizationUserId);
+            await _authorizationService.AuthorizeOrThrowAsync(User, resource, CollectionUserOperations.Update);
+        }
+
+        // TODO: remove this preservation glue once clients send remove-list deltas instead of the full collection set.
+        var preservedFromDelete = new HashSet<Guid>();
+        var deleteCollections = allCollections.Where(c => deleteIds.Contains(c.Id)).ToList();
+        foreach (var collection in deleteCollections)
+        {
+            var resource = new CollectionUserAccessResource([collection], targetOrganizationUserId);
+            if (!(await _authorizationService.AuthorizeAsync(User, resource, CollectionUserOperations.Delete)).Succeeded)
+            {
+                preservedFromDelete.Add(collection.Id);
+            }
+        }
+
+        return requestModel.Collections.Select(c => c.ToSelectionReadOnly())
+            .Concat(currentAccess.Where(ca => preservedFromDelete.Contains(ca.Id)))
+            .ToList();
     }
 }

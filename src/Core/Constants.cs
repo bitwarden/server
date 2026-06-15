@@ -145,6 +145,7 @@ public static class FeatureFlagKeys
     public const string PM35153CollectionSdkDecryption = "pm-35153-collection-sdk-decryption";
     public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
     public const string PM36859RefactorOrgCollectionsVaultComponent = "pm-36859-refactor-org-collections-vault-component";
+    public const string CollectionUserCollectionGroupAuthorizationHandlers = "pm-35160-collection-user-collection-group-authorization-handlers";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";

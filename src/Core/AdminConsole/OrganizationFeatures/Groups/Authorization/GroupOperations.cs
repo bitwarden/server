@@ -14,4 +14,5 @@ public static class GroupOperations
 {
     public static readonly GroupOperationRequirement ReadAll = new(nameof(ReadAll));
     public static readonly GroupOperationRequirement ReadAllDetails = new(nameof(ReadAllDetails));
+    public static readonly GroupOperationRequirement UpdateMembership = new(nameof(UpdateMembership));
 }
