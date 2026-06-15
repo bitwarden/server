@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Repositories;
@@ -36,10 +37,7 @@ public class GetOrganizationInviteLinkStatusQuery(
 
         var occupied = (await organizationRepository
             .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)).Total;
-        var seatsAvailable = !organization.Seats.HasValue
-            || occupied < organization.Seats.Value
-            || !organization.MaxAutoscaleSeats.HasValue
-            || organization.Seats.Value < organization.MaxAutoscaleSeats.Value;
+        var seatsAvailable = OrganizationSeatAvailability.HasAvailableSeats(organization, occupied);
 
         var sso = seatsAvailable ? await GetSsoStatusAsync(organization) : null;
 

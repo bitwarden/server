@@ -322,4 +322,39 @@ public interface IMasterPasswordService
     /// <see cref="IdentityError"/> describing validation failures.
     /// </returns>
     Task<OneOf<User, IdentityError[]>> SaveUpdateExistingMasterPasswordAsync(User user, UpdateExistingPasswordData updateExistingData);
+
+    /// <summary>
+    /// Clears the user's master password credential and hint on the <paramref name="user"/> object
+    /// in memory only — nulls <see cref="User.MasterPassword"/> and <see cref="User.MasterPasswordSalt"/>
+    /// together to preserve the credential/salt invariant, and nulls
+    /// <see cref="User.MasterPasswordHint"/> since the hint exists only to aid recall of the
+    /// password being removed.
+    ///
+    /// <para>
+    /// Use when: a flow legitimately removes a user's master password (today, only the
+    /// Key Connector conversion path). The caller is responsible for persistence and for any
+    /// related state changes (e.g., setting <see cref="User.UsesKeyConnector"/>, writing the
+    /// Key Connector-wrapped user key, logging an event).
+    /// </para>
+    ///
+    /// <para>
+    /// Constraints: None — applies regardless of the user's current master password state.
+    /// </para>
+    ///
+    /// <para>
+    /// Side effects on <paramref name="user"/>:
+    /// <list type="bullet">
+    ///   <item><c>MasterPassword</c> → <c>null</c></item>
+    ///   <item><c>MasterPasswordSalt</c> → <c>null</c></item>
+    ///   <item><c>MasterPasswordHint</c> → <c>null</c></item>
+    ///   <item><c>RevisionDate</c> and <c>AccountRevisionDate</c> → now</item>
+    ///   <item><c>LastPasswordChangeDate</c> is intentionally NOT updated — this is credential
+    ///   removal, not a user password change.</item>
+    /// </list>
+    /// </para>
+    ///
+    /// </summary>
+    /// <param name="user">The user whose master password credential and hint will be cleared.</param>
+    /// <returns>The mutated <see cref="User"/>.</returns>
+    User PrepareClearMasterPassword(User user);
 }

@@ -2160,4 +2160,71 @@ public class UpdateOrganizationSubscriptionCommandTests
         };
     }
 
+    // PM-37510 (T8): a caller-supplied subscription carrying an expanded Customer is reused, so the
+    // command makes zero GetSubscriptionAsync calls of its own.
+    [Fact]
+    public async Task Run_SuppliedSubscriptionWithCustomer_DoesNotRefetch()
+    {
+        var organization = CreateOrganization();
+        var subscription = CreateSubscription(items: [("price_seats", "si_1", 5)]);
+        SetupUpdateSubscription(subscription);
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity("price_seats", 10)]
+        };
+
+        var result = await _command.Run(organization, changeSet, subscription);
+
+        Assert.True(result.Success);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs()
+            .GetSubscriptionAsync(default, default);
+    }
+
+    // PM-37510 (T8): a supplied subscription missing its expanded Customer is not safe to reuse, so
+    // the command re-fetches exactly once.
+    [Fact]
+    public async Task Run_SuppliedSubscriptionWithoutCustomer_RefetchesOnce()
+    {
+        var organization = CreateOrganization();
+        var suppliedWithoutCustomer = CreateSubscription(items: [("price_seats", "si_1", 5)]);
+        suppliedWithoutCustomer.Customer = null;
+
+        var refetched = CreateSubscription(items: [("price_seats", "si_1", 5)]);
+        SetupGetSubscription(organization, refetched);
+        SetupUpdateSubscription(refetched);
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity("price_seats", 10)]
+        };
+
+        var result = await _command.Run(organization, changeSet, suppliedWithoutCustomer);
+
+        Assert.True(result.Success);
+        await _stripeAdapter.Received(1)
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>());
+    }
+
+    // PM-37510 (T8): with no supplied subscription the command fetches exactly once (existing default
+    // behavior preserved).
+    [Fact]
+    public async Task Run_NoSuppliedSubscription_FetchesOnce()
+    {
+        var organization = CreateOrganization();
+        var subscription = CreateSubscription(items: [("price_seats", "si_1", 5)]);
+        SetupGetSubscription(organization, subscription);
+        SetupUpdateSubscription(subscription);
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity("price_seats", 10)]
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+        await _stripeAdapter.Received(1)
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>());
+    }
 }
