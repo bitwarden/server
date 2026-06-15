@@ -59,7 +59,8 @@ public class ApproverInboxController(
     }
 
     /// <summary>
-    /// Revokes an active lease early. The caller must be able to Manage the lease's collection.
+    /// Ends an active lease early. The caller must be either the lease's holder (ending their own access) or able to
+    /// Manage the lease's collection.
     /// </summary>
     [HttpPost("leases/{id:guid}/revoke")]
     public async Task<IActionResult> Revoke(Guid id, [FromBody] AccessLeaseRevokeRequestModel model)
