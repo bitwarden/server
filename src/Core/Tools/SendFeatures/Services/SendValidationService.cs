@@ -98,12 +98,9 @@ public class SendValidationService : ISendValidationService
             throw new BadRequestException($"Due to an Enterprise Policy your Sends must be protected by {requiredAccessControl}");
         }
 
-        if (emailsRequired && sendControlsRequirement.AllowedDomains != null)
+        if (emailsRequired && sendControlsRequirement.AllowedDomains != null && !SendAllEmailsHaveAllowedDomains(send.Emails, sendControlsRequirement.AllowedDomains))
         {
-            if (!SendAllEmailsHaveAllowedDomains(send.Emails, sendControlsRequirement.AllowedDomains))
-            {
-                throw new BadRequestException($"Due to an Enterprise Policy your Sends must be protected by email verification and access granted only to the following domain(s): {sendControlsRequirement.AllowedDomains}");
-            }
+            throw new BadRequestException($"Due to an Enterprise Policy your Sends must be protected by email verification and access granted only to the following domain(s): {sendControlsRequirement.AllowedDomains}");
         }
     }
 
