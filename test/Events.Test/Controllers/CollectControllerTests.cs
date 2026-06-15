@@ -82,7 +82,8 @@ public class CollectControllerTests
     [Theory]
     [BitAutoData(EventType.Organization_ItemOrganization_Accepted)]
     [BitAutoData(EventType.Organization_ItemOrganization_Declined)]
-    public async Task Post_Organization_ItemOrganization_LogsOrganizationUserEvent(
+    [BitAutoData(EventType.OrganizationUser_NotificationBannerActionClicked)]
+    public async Task Post_OrganizationUserEvent_LogsOrganizationUserEvent(
         EventType type, Guid userId, Guid orgId, OrganizationUser orgUser)
     {
         _currentContext.UserId.Returns(userId);
@@ -103,6 +104,56 @@ public class CollectControllerTests
 
         Assert.IsType<OkResult>(result);
         await _eventService.Received(1).LogOrganizationUserEventAsync(orgUser, type, eventDate);
+    }
+
+    [Theory]
+    [BitAutoData(EventType.Organization_ItemOrganization_Accepted)]
+    [BitAutoData(EventType.Organization_ItemOrganization_Declined)]
+    [BitAutoData(EventType.OrganizationUser_NotificationBannerActionClicked)]
+    public async Task Post_OrganizationUserEvent_WithoutOrgId_SkipsEvent(EventType type, Guid userId)
+    {
+        _currentContext.UserId.Returns(userId);
+        var events = new List<EventModel>
+        {
+            new EventModel
+            {
+                Type = type,
+                OrganizationId = null,
+                Date = DateTime.UtcNow
+            }
+        };
+
+        var result = await _sut.Post(events);
+
+        Assert.IsType<OkResult>(result);
+        await _organizationUserRepository.DidNotReceiveWithAnyArgs().GetByOrganizationAsync(default, default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>(), Arg.Any<DateTime?>());
+    }
+
+    [Theory]
+    [BitAutoData(EventType.Organization_ItemOrganization_Accepted)]
+    [BitAutoData(EventType.Organization_ItemOrganization_Declined)]
+    [BitAutoData(EventType.OrganizationUser_NotificationBannerActionClicked)]
+    public async Task Post_OrganizationUserEvent_WithNullOrgUser_SkipsEvent(
+        EventType type, Guid userId, Guid orgId)
+    {
+        _currentContext.UserId.Returns(userId);
+        _organizationUserRepository.GetByOrganizationAsync(orgId, userId).Returns((OrganizationUser)null);
+        var events = new List<EventModel>
+        {
+            new EventModel
+            {
+                Type = type,
+                OrganizationId = orgId,
+                Date = DateTime.UtcNow
+            }
+        };
+
+        var result = await _sut.Post(events);
+
+        Assert.IsType<OkResult>(result);
+        await _organizationUserRepository.Received(1).GetByOrganizationAsync(orgId, userId);
+        await _eventService.DidNotReceiveWithAnyArgs().LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>(), Arg.Any<DateTime?>());
     }
 
     [Theory]
