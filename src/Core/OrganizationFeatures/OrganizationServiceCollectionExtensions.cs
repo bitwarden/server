@@ -20,7 +20,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Update;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization.Validation;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -64,7 +63,6 @@ public static class OrganizationServiceCollectionExtensions
     {
         services.AddScoped<IOrganizationService, OrganizationService>();
         services.AddTokenizers();
-        services.AddCommonValidators();
         services.AddOrganizationGroupCommands();
         services.AddOrganizationConnectionCommands();
         services.AddOrganizationSponsorshipCommands(globalSettings);
@@ -83,11 +81,6 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationUserCommandsQueries();
         services.AddBaseOrganizationSubscriptionCommandsQueries();
         services.AddOrganizationFeatureCommands();
-    }
-
-    private static void AddCommonValidators(this IServiceCollection services)
-    {
-        services.AddScoped<IOrganizationAndOrganizationUserValidator, OrganizationAndOrganizationUserValidator>();
     }
 
     private static void AddOrganizationFeatureCommands(this IServiceCollection services)
