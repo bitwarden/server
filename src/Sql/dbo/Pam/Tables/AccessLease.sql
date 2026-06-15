@@ -25,6 +25,12 @@ CREATE NONCLUSTERED INDEX [IX_AccessLease_NotAfter_Status]
     ON [dbo].[AccessLease] ([NotAfter] ASC, [Status] ASC);
 GO
 
+-- Supports the governance lease lists (AccessLease_ReadManyActiveByCollectionIds /
+-- AccessLease_ReadManyEndedByCollectionIds), which filter by the caller's manageable collection ids.
+CREATE NONCLUSTERED INDEX [IX_AccessLease_CollectionId_Status]
+    ON [dbo].[AccessLease] ([CollectionId] ASC, [Status] ASC);
+GO
+
 -- A request produces at most one lease, ever: activating an approved request and the automatic path each insert
 -- exactly one. Unique to backstop racing activations that pass the application-level checks simultaneously.
 CREATE UNIQUE NONCLUSTERED INDEX [IX_AccessLease_AccessRequestId]
