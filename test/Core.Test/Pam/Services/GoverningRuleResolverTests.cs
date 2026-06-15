@@ -81,6 +81,21 @@ public class GoverningRuleResolverTests
     }
 
     [Theory, BitAutoData]
+    public async Task ResolveAsync_EmptyAllOf_DoesNotRequireHumanApproval(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
+    {
+        // A conditionless rule (empty all_of) governs the collection for audit logging but auto-approves access.
+        rule.Conditions = """{"kind":"all_of","conditions":[]}""";
+        SetupGovernedCollection(sutProvider, userId, cipherId, collection, rule);
+
+        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId);
+
+        Assert.NotNull(result);
+        Assert.False(result!.RequiresHumanApproval);
+        Assert.IsType<AllOfCondition>(result.Condition);
+    }
+
+    [Theory, BitAutoData]
     public async Task ResolveAsync_MalformedRule_FailsSafeToHumanApproval(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
     {
