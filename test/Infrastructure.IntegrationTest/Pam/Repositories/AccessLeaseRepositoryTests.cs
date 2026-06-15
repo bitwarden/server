@@ -307,6 +307,89 @@ public class LeaseRepositoryTests
         Assert.Null(await accessLeaseRepository.GetByAccessRequestIdAsync(second.Id));
     }
 
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyActiveByCollectionIdsAsync_ReturnsActiveInWindowLeasesOnGivenCollections(
+        IOrganizationRepository organizationRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+
+        // Two active, in-window leases on distinct collections — both visible to a manager of those collections.
+        var (req1, dec1, lease1) = BuildAutoApproved(
+            organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddMinutes(-5), now.AddHours(1));
+        await SeedActiveLeaseAsync(accessRequestRepository, accessLeaseRepository, req1, dec1, lease1, now);
+        var (req2, dec2, lease2) = BuildAutoApproved(
+            organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddMinutes(-5), now.AddHours(1));
+        await SeedActiveLeaseAsync(accessRequestRepository, accessLeaseRepository, req2, dec2, lease2, now);
+
+        // Active but already out of window (minted in a past window) on a third collection — excluded by the window.
+        var (req3, dec3, lease3) = BuildAutoApproved(
+            organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddHours(-2), now.AddHours(-1));
+        await SeedActiveLeaseAsync(accessRequestRepository, accessLeaseRepository, req3, dec3, lease3, now.AddHours(-2));
+
+        var all = await accessLeaseRepository.GetManyActiveByCollectionIdsAsync(
+            new[] { lease1.CollectionId, lease2.CollectionId, lease3.CollectionId }, now);
+
+        Assert.Equal(2, all.Count);
+        Assert.Contains(all, l => l.Id == lease1.Id);
+        Assert.Contains(all, l => l.Id == lease2.Id);
+
+        // Collection scoping: querying a subset returns only that collection's leases.
+        var scoped = await accessLeaseRepository.GetManyActiveByCollectionIdsAsync(new[] { lease1.CollectionId }, now);
+        Assert.Single(scoped);
+        Assert.Equal(lease1.Id, scoped.First().Id);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyEndedByCollectionIdsAsync_ReturnsRecentlyEndedLeasesOnGivenCollections(
+        IOrganizationRepository organizationRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+        var since = now.AddDays(-90);
+
+        // Active lease — not ended, excluded.
+        var (activeReq, activeDec, activeLease) = BuildAutoApproved(
+            organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddMinutes(-5), now.AddHours(1));
+        await SeedActiveLeaseAsync(accessRequestRepository, accessLeaseRepository, activeReq, activeDec, activeLease, now);
+
+        // Revoked within the window — included.
+        var (revReq, revDec, revLease) = BuildAutoApproved(
+            organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddMinutes(-5), now.AddHours(1));
+        await SeedActiveLeaseAsync(accessRequestRepository, accessLeaseRepository, revReq, revDec, revLease, now);
+        await accessLeaseRepository.RevokeAsync(revLease, BuildAuditDecision(revLease, now), now);
+
+        // Revoked long before the window — excluded by @Since.
+        var (oldReq, oldDec, oldLease) = BuildAutoApproved(
+            organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddDays(-200), now.AddDays(-100));
+        await SeedActiveLeaseAsync(
+            accessRequestRepository, accessLeaseRepository, oldReq, oldDec, oldLease, now.AddDays(-200));
+        await accessLeaseRepository.RevokeAsync(oldLease, BuildAuditDecision(oldLease, now.AddDays(-150)), now.AddDays(-150));
+
+        var result = await accessLeaseRepository.GetManyEndedByCollectionIdsAsync(
+            new[] { activeLease.CollectionId, revLease.CollectionId, oldLease.CollectionId }, since);
+
+        Assert.Single(result);
+        Assert.Equal(revLease.Id, result.First().Id);
+        Assert.Equal(AccessLeaseStatus.Revoked, result.First().Status);
+    }
+
+    private static AccessDecision BuildAuditDecision(AccessLease lease, DateTime now)
+        => new()
+        {
+            Id = CoreHelpers.GenerateComb(),
+            AccessRequestId = lease.AccessRequestId,
+            DeciderKind = AccessDeciderKind.Human,
+            ApproverId = Guid.NewGuid(),
+            Verdict = AccessDecisionVerdict.Deny,
+            Comment = "ended for test",
+            CreationDate = now,
+        };
+
     private static async Task<AccessRequest> CreateApprovedRequestAsync(
         IAccessRequestRepository accessRequestRepository, Guid organizationId, DateTime notBefore, DateTime notAfter,
         AccessRequestStatus status = AccessRequestStatus.Approved, Guid? cipherId = null)

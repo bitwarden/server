@@ -218,6 +218,8 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IGetCipherAccessStateQuery, GetCipherAccessStateQuery>();
         services.AddScoped<IListMyAccessRequestsQuery, ListMyAccessRequestsQuery>();
         services.AddScoped<IListMyActiveAccessLeasesQuery, ListMyActiveAccessLeasesQuery>();
+        services.AddScoped<IListActiveLeasesQuery, ListActiveLeasesQuery>();
+        services.AddScoped<IListLeaseHistoryQuery, ListLeaseHistoryQuery>();
     }
 
     private static void AddOrganizationGroupCommands(this IServiceCollection services)
