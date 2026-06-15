@@ -53,18 +53,18 @@ public class GoverningRuleResolver : IGoverningRuleResolver
                 continue;
             }
 
-            var condition = Parse(accessRule.Conditions);
-            if (ContainsHumanApproval(condition))
+            var conditions = Parse(accessRule.Conditions);
+            if (ContainsHumanApproval(conditions))
             {
                 // Most restrictive wins — return as soon as a human-approval condition is found.
-                return new GoverningRule(collection.OrganizationId, collection.Id, true, condition)
+                return new GoverningRule(collection.OrganizationId, collection.Id, true, conditions)
                 {
                     AllowsExtensions = accessRule.AllowsExtensions,
                     MaxExtensionDurationSeconds = accessRule.MaxExtensionDurationSeconds,
                 };
             }
 
-            automatic ??= new GoverningRule(collection.OrganizationId, collection.Id, false, condition)
+            automatic ??= new GoverningRule(collection.OrganizationId, collection.Id, false, conditions)
             {
                 AllowsExtensions = accessRule.AllowsExtensions,
                 MaxExtensionDurationSeconds = accessRule.MaxExtensionDurationSeconds,
@@ -75,27 +75,25 @@ public class GoverningRuleResolver : IGoverningRuleResolver
     }
 
     /// <summary>
-    /// Parses the stored conditions JSON into an <see cref="AccessCondition"/>. A malformed or unparseable document
-    /// fails safe to a <see cref="HumanApprovalCondition"/> so access is never silently auto-approved on conditions
-    /// the server could not understand; the human-approval path then routes it to an approver rather than issuing an
-    /// automatic lease.
+    /// Parses the stored conditions JSON into a flat list of <see cref="AccessCondition"/>. A malformed or
+    /// unparseable document fails safe to a single human-approval condition so access is never silently auto-approved
+    /// on conditions the server could not understand; the human-approval path then routes it to an approver rather
+    /// than issuing an automatic lease.
     /// </summary>
-    private static AccessCondition Parse(string conditionsJson)
+    private static IReadOnlyList<AccessCondition> Parse(string conditionsJson)
     {
         try
         {
-            return JsonSerializer.Deserialize<AccessCondition>(conditionsJson, _jsonOptions) ?? new HumanApprovalCondition();
+            return JsonSerializer.Deserialize<List<AccessCondition>>(conditionsJson, _jsonOptions) ?? FailSafe();
         }
         catch (JsonException)
         {
-            return new HumanApprovalCondition();
+            return FailSafe();
         }
     }
 
-    private static bool ContainsHumanApproval(AccessCondition condition) => condition switch
-    {
-        HumanApprovalCondition => true,
-        AllOfCondition all => all.Conditions.Any(ContainsHumanApproval),
-        _ => false,
-    };
+    private static IReadOnlyList<AccessCondition> FailSafe() => [new HumanApprovalCondition()];
+
+    private static bool ContainsHumanApproval(IReadOnlyList<AccessCondition> conditions) =>
+        conditions.Any(condition => condition is HumanApprovalCondition);
 }

@@ -36,7 +36,8 @@ public class AccessPreCheckQueryTests
         SetupCipher(sutProvider, userId, cipherId);
         sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(userId, cipherId)
-            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: true, new HumanApprovalCondition()));
+            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: true,
+                [new HumanApprovalCondition()]));
 
         var result = await sutProvider.Sut.PreCheckAsync(userId, cipherId);
 
@@ -50,7 +51,8 @@ public class AccessPreCheckQueryTests
         SetupCipher(sutProvider, userId, cipherId);
         sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(userId, cipherId)
-            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: false, new IpAllowlistCondition { Cidrs = ["10.0.0.0/8"] }));
+            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: false,
+                [new IpAllowlistCondition { Cidrs = ["10.0.0.0/8"] }]));
 
         var result = await sutProvider.Sut.PreCheckAsync(userId, cipherId);
 

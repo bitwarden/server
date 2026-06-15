@@ -7,8 +7,7 @@ namespace Bit.Core.Pam.Services;
 
 public sealed partial class AccessRuleValidator : IAccessRuleValidator
 {
-    private const int MaxCompositeDepth = 3;
-    private const int MaxCompositeChildren = 10;
+    private const int MaxConditions = 10;
 
     private static readonly HashSet<string> AllowedDays =
         new(StringComparer.OrdinalIgnoreCase) { "mon", "tue", "wed", "thu", "fri", "sat", "sun" };
@@ -34,32 +33,49 @@ public sealed partial class AccessRuleValidator : IAccessRuleValidator
             return AccessRuleValidationResult.Invalid("Conditions JSON cannot be empty.");
         }
 
-        AccessCondition? condition;
+        List<AccessCondition>? conditions;
         try
         {
-            condition = JsonSerializer.Deserialize<AccessCondition>(conditionsJson, JsonOptions);
+            conditions = JsonSerializer.Deserialize<List<AccessCondition>>(conditionsJson, JsonOptions);
         }
         catch (JsonException ex)
         {
             return AccessRuleValidationResult.Invalid($"Conditions JSON is malformed: {ex.Message}");
         }
 
-        if (condition is null)
+        if (conditions is null)
         {
-            return AccessRuleValidationResult.Invalid("Conditions must be an object.");
+            return AccessRuleValidationResult.Invalid("Conditions must be an array.");
         }
 
-        return ValidateCondition(condition, depth: 0);
+        // An empty list is allowed: it is vacuously satisfied, so the rule governs its collections — routing access
+        // through the PAM flow for audit logging — without imposing any gating condition. The engine evaluates it
+        // to Allow.
+        if (conditions.Count > MaxConditions)
+        {
+            return AccessRuleValidationResult.Invalid($"Conditions cannot contain more than {MaxConditions} conditions.");
+        }
+
+        foreach (var condition in conditions)
+        {
+            var result = ValidateCondition(condition);
+            if (!result.IsValid)
+            {
+                return result;
+            }
+        }
+
+        return AccessRuleValidationResult.Valid;
     }
 
-    private static AccessRuleValidationResult ValidateCondition(AccessCondition condition, int depth)
+    private static AccessRuleValidationResult ValidateCondition(AccessCondition? condition)
     {
         return condition switch
         {
             HumanApprovalCondition => AccessRuleValidationResult.Valid,
             IpAllowlistCondition ip => ValidateIpAllowlist(ip),
             TimeOfDayCondition tod => ValidateTimeOfDay(tod),
-            AllOfCondition all => ValidateAllOf(all, depth),
+            null => AccessRuleValidationResult.Invalid("Conditions cannot contain a null entry."),
             _ => AccessRuleValidationResult.Invalid($"Unsupported condition kind: {condition.GetType().Name}."),
         };
     }
@@ -130,33 +146,6 @@ public sealed partial class AccessRuleValidator : IAccessRuleValidator
             if (!TimeOfDayRegex().IsMatch(window.To))
             {
                 return AccessRuleValidationResult.Invalid($"Invalid 'to' time: '{window.To}'. Expected HH:mm.");
-            }
-        }
-
-        return AccessRuleValidationResult.Valid;
-    }
-
-    private static AccessRuleValidationResult ValidateAllOf(AllOfCondition condition, int depth)
-    {
-        if (depth >= MaxCompositeDepth)
-        {
-            return AccessRuleValidationResult.Invalid($"all_of nesting exceeds maximum depth of {MaxCompositeDepth}.");
-        }
-
-        // An empty all_of is allowed: it is vacuously satisfied, so the rule governs its collections — routing
-        // access through the PAM flow for audit logging — without imposing any gating condition. The engine
-        // evaluates it to Allow.
-        if (condition.Conditions.Count > MaxCompositeChildren)
-        {
-            return AccessRuleValidationResult.Invalid($"all_of cannot contain more than {MaxCompositeChildren} child conditions.");
-        }
-
-        foreach (var child in condition.Conditions)
-        {
-            var childResult = ValidateCondition(child, depth + 1);
-            if (!childResult.IsValid)
-            {
-                return childResult;
             }
         }
 

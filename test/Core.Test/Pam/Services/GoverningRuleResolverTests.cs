@@ -39,7 +39,7 @@ public class GoverningRuleResolverTests
     public async Task ResolveAsync_HumanApprovalCondition_RequiresHumanApproval(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
     {
-        rule.Conditions = """{"kind":"human_approval"}""";
+        rule.Conditions = """[{"kind":"human_approval"}]""";
         SetupGovernedCollection(sutProvider, userId, cipherId, collection, rule);
 
         var result = await sutProvider.Sut.ResolveAsync(userId, cipherId);
@@ -48,51 +48,52 @@ public class GoverningRuleResolverTests
         Assert.True(result!.RequiresHumanApproval);
         Assert.Equal(collection.Id, result.CollectionId);
         Assert.Equal(collection.OrganizationId, result.OrganizationId);
-        Assert.IsType<HumanApprovalCondition>(result.Condition);
+        Assert.IsType<HumanApprovalCondition>(Assert.Single(result.Conditions));
     }
 
     [Theory, BitAutoData]
     public async Task ResolveAsync_IpAllowlistCondition_DoesNotRequireHumanApproval(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
     {
-        rule.Conditions = """{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]}""";
+        rule.Conditions = """[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]}]""";
         SetupGovernedCollection(sutProvider, userId, cipherId, collection, rule);
 
         var result = await sutProvider.Sut.ResolveAsync(userId, cipherId);
 
         Assert.NotNull(result);
         Assert.False(result!.RequiresHumanApproval);
-        var ip = Assert.IsType<IpAllowlistCondition>(result.Condition);
+        var ip = Assert.IsType<IpAllowlistCondition>(Assert.Single(result.Conditions));
         Assert.Equal("10.0.0.0/8", Assert.Single(ip.Cidrs));
     }
 
     [Theory, BitAutoData]
-    public async Task ResolveAsync_AllOfContainingHumanApproval_RequiresHumanApproval(
+    public async Task ResolveAsync_ConditionsContainingHumanApproval_RequiresHumanApproval(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
     {
-        rule.Conditions = """{"kind":"all_of","conditions":[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]},{"kind":"human_approval"}]}""";
+        rule.Conditions = """[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]},{"kind":"human_approval"}]""";
         SetupGovernedCollection(sutProvider, userId, cipherId, collection, rule);
 
         var result = await sutProvider.Sut.ResolveAsync(userId, cipherId);
 
         Assert.NotNull(result);
         Assert.True(result!.RequiresHumanApproval);
-        Assert.IsType<AllOfCondition>(result.Condition);
+        Assert.Equal(2, result.Conditions.Count);
+        Assert.Contains(result.Conditions, condition => condition is HumanApprovalCondition);
     }
 
     [Theory, BitAutoData]
-    public async Task ResolveAsync_EmptyAllOf_DoesNotRequireHumanApproval(
+    public async Task ResolveAsync_EmptyConditions_DoesNotRequireHumanApproval(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
     {
-        // A conditionless rule (empty all_of) governs the collection for audit logging but auto-approves access.
-        rule.Conditions = """{"kind":"all_of","conditions":[]}""";
+        // A conditionless rule governs the collection for audit logging but auto-approves access.
+        rule.Conditions = "[]";
         SetupGovernedCollection(sutProvider, userId, cipherId, collection, rule);
 
         var result = await sutProvider.Sut.ResolveAsync(userId, cipherId);
 
         Assert.NotNull(result);
         Assert.False(result!.RequiresHumanApproval);
-        Assert.IsType<AllOfCondition>(result.Condition);
+        Assert.Empty(result.Conditions);
     }
 
     [Theory, BitAutoData]
@@ -107,7 +108,7 @@ public class GoverningRuleResolverTests
         Assert.NotNull(result);
         Assert.True(result!.RequiresHumanApproval);
         // An unparseable rule fails safe to human approval rather than surfacing a rule the engine cannot evaluate.
-        Assert.IsType<HumanApprovalCondition>(result.Condition);
+        Assert.IsType<HumanApprovalCondition>(Assert.Single(result.Conditions));
     }
 
     private static void SetupReachableCollections(

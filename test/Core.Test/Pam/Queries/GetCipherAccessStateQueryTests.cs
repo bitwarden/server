@@ -156,7 +156,8 @@ public class GetCipherAccessStateQueryTests
         SetupCipher(sutProvider, userId, cipherId);
         sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(userId, cipherId)
-            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: true, new HumanApprovalCondition()));
+            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: true,
+                [new HumanApprovalCondition()]));
 
         var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
 
@@ -177,7 +178,8 @@ public class GetCipherAccessStateQueryTests
             .Returns(activeLease);
         sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(userId, cipherId)
-            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: false, new HumanApprovalCondition())
+            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: false,
+                [new HumanApprovalCondition()])
             {
                 AllowsExtensions = true,
                 MaxExtensionDurationSeconds = 4 * 60 * 60,
@@ -202,7 +204,8 @@ public class GetCipherAccessStateQueryTests
             .Returns(activeLease);
         sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(userId, cipherId)
-            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: false, new HumanApprovalCondition())
+            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: false,
+                [new HumanApprovalCondition()])
             {
                 AllowsExtensions = true,
                 MaxExtensionDurationSeconds = 2 * 60 * 60,
@@ -228,7 +231,8 @@ public class GetCipherAccessStateQueryTests
             .Returns(activeLease);
         sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(userId, cipherId)
-            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: false, new HumanApprovalCondition())
+            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: false,
+                [new HumanApprovalCondition()])
             {
                 AllowsExtensions = false,
             });

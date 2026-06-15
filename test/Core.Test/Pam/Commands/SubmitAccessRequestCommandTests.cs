@@ -281,13 +281,13 @@ public class SubmitAccessRequestCommandTests
         var condition = requiresHuman ? new HumanApprovalCondition() : (AccessCondition)new IpAllowlistCondition { Cidrs = ["10.0.0.0/8"] };
         sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(userId, cipherId)
-            .Returns(new GoverningRule(orgId, collectionId, requiresHuman, condition));
+            .Returns(new GoverningRule(orgId, collectionId, requiresHuman, [condition]));
     }
 
     private static void SetupEvaluation(SutProvider<SubmitAccessRequestCommand> sutProvider, AccessEvaluation evaluation)
     {
         sutProvider.GetDependency<IAccessRuleEngine>()
-            .Evaluate(Arg.Any<AccessCondition>(), Arg.Any<AccessSignals>())
+            .Evaluate(Arg.Any<IReadOnlyList<AccessCondition>>(), Arg.Any<AccessSignals>())
             .Returns(evaluation);
     }
 }

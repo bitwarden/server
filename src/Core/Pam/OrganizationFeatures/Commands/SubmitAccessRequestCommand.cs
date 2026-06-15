@@ -108,7 +108,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         // The cipher must satisfy its access rule's conditions (source IP, time of day, ...) before the request is
         // auto-approved. The resolver only routes a rule here when it carries no human-approval gate, so the engine
         // never asks for approval on this path; any non-allow outcome is a denial we surface to the caller.
-        var evaluation = _ruleEngine.Evaluate(governingRule.Condition, BuildSignals(now));
+        var evaluation = _ruleEngine.Evaluate(governingRule.Conditions, BuildSignals(now));
         if (evaluation.Outcome != AccessEvaluationOutcome.Allow)
         {
             throw new BadRequestException(DenyMessage(evaluation));
