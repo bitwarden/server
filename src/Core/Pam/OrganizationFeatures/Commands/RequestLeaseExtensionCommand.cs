@@ -62,10 +62,11 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
             throw new BadRequestException("A positive duration is required.");
         }
 
-        if (submission.DurationSeconds > SubmitAccessRequestCommand.MaxDurationSeconds)
+        // The rule's max extension length is the cap (the admin picks it from presets); it is always set when
+        // AllowsExtensions is true. A missing cap is treated as zero so a misconfigured rule denies.
+        if (submission.DurationSeconds > (governingRule.MaxExtensionDurationSeconds ?? 0))
         {
-            throw new BadRequestException(
-                $"The requested duration exceeds the maximum of {SubmitAccessRequestCommand.MaxDurationSeconds} seconds.");
+            throw new BadRequestException("The requested duration exceeds the maximum extension length for this item.");
         }
 
         if (string.IsNullOrWhiteSpace(submission.Reason))
@@ -73,15 +74,11 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
             throw new BadRequestException("A justification is required to extend a lease.");
         }
 
-        // MaxExtensions is guaranteed positive when AllowsExtensions is true (enforced on rule create/update); a
-        // missing cap is treated as zero so a misconfigured rule denies rather than grants unbounded extensions.
-        var maxExtensions = governingRule.MaxExtensions ?? 0;
-
-        // Friendly early check; the mint proc re-counts under a per-lease lock and is the race-safe authority.
-        var priorExtensions = await _accessRequestRepository.CountExtensionsByLeaseIdAsync(lease.Id);
-        if (priorExtensions >= maxExtensions)
+        // A lease may be extended exactly once. Friendly early check; the mint proc re-counts under a per-lease lock
+        // and is the race-safe authority.
+        if (await _accessRequestRepository.CountExtensionsByLeaseIdAsync(lease.Id) >= 1)
         {
-            throw new BadRequestException("This lease has reached the maximum number of extensions.");
+            throw new BadRequestException("This lease has already been extended.");
         }
 
         // The extension window spans from the lease's current end to its new end; NotAfter is the lease's new end.
@@ -110,14 +107,14 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         };
         decision.SetNewId();
 
-        var outcome = await _accessRequestRepository.CreateApprovedExtensionAsync(request, decision, maxExtensions, now);
+        var outcome = await _accessRequestRepository.CreateApprovedExtensionAsync(request, decision, now);
 
         switch (outcome)
         {
             case AccessLeaseExtendOutcome.LeaseNotActive:
                 throw new ConflictException("This lease is no longer active.");
-            case AccessLeaseExtendOutcome.MaxExtensionsReached:
-                throw new BadRequestException("This lease has reached the maximum number of extensions.");
+            case AccessLeaseExtendOutcome.AlreadyExtended:
+                throw new BadRequestException("This lease has already been extended.");
         }
 
         // Project the approved-extension state the client renders (Status approved + ExtensionOfLeaseId set) from

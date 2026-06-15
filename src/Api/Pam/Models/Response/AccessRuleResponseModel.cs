@@ -21,7 +21,7 @@ public class AccessRuleResponseModel : ResponseModel
         MaxLeaseDurationSeconds = rule.MaxLeaseDurationSeconds;
         Enabled = rule.Enabled;
         AllowsExtensions = rule.AllowsExtensions;
-        MaxExtensions = rule.MaxExtensions;
+        MaxExtensionDurationSeconds = rule.MaxExtensionDurationSeconds;
         CreationDate = rule.CreationDate.AsUtc();
         RevisionDate = rule.RevisionDate.AsUtc();
         Collections = rule.CollectionIds.ToList();
@@ -37,7 +37,7 @@ public class AccessRuleResponseModel : ResponseModel
     public int? MaxLeaseDurationSeconds { get; }
     public bool Enabled { get; }
     public bool AllowsExtensions { get; }
-    public int? MaxExtensions { get; }
+    public int? MaxExtensionDurationSeconds { get; }
     public DateTime CreationDate { get; }
     public DateTime RevisionDate { get; }
     public IEnumerable<Guid> Collections { get; }

@@ -60,14 +60,14 @@ public class GoverningRuleResolver : IGoverningRuleResolver
                 return new GoverningRule(collection.OrganizationId, collection.Id, true, condition)
                 {
                     AllowsExtensions = accessRule.AllowsExtensions,
-                    MaxExtensions = accessRule.MaxExtensions,
+                    MaxExtensionDurationSeconds = accessRule.MaxExtensionDurationSeconds,
                 };
             }
 
             automatic ??= new GoverningRule(collection.OrganizationId, collection.Id, false, condition)
             {
                 AllowsExtensions = accessRule.AllowsExtensions,
-                MaxExtensions = accessRule.MaxExtensions,
+                MaxExtensionDurationSeconds = accessRule.MaxExtensionDurationSeconds,
             };
         }
 

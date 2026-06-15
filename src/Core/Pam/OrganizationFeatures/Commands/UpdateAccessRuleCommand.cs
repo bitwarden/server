@@ -35,9 +35,9 @@ public class UpdateAccessRuleCommand : IUpdateAccessRuleCommand
             throw new BadRequestException("Name is required.");
         }
 
-        if (update.AllowsExtensions && update.MaxExtensions is not > 0)
+        if (update.AllowsExtensions && update.MaxExtensionDurationSeconds is not > 0)
         {
-            throw new BadRequestException("Maximum extensions must be a positive number when extensions are allowed.");
+            throw new BadRequestException("A maximum extension length is required when extensions are allowed.");
         }
 
         var existing = await _repository.GetDetailsByIdAsync(id);
@@ -74,7 +74,7 @@ public class UpdateAccessRuleCommand : IUpdateAccessRuleCommand
             MaxLeaseDurationSeconds = update.MaxLeaseDurationSeconds,
             Enabled = update.Enabled,
             AllowsExtensions = update.AllowsExtensions,
-            MaxExtensions = update.MaxExtensions,
+            MaxExtensionDurationSeconds = update.MaxExtensionDurationSeconds,
             CreationDate = existing.CreationDate,
             RevisionDate = _timeProvider.GetUtcNow().UtcDateTime,
         };

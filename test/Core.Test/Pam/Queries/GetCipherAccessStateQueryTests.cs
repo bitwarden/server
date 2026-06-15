@@ -167,7 +167,7 @@ public class GetCipherAccessStateQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetStateAsync_ActiveLease_ExtensionsAllowed_ReportsRemaining(
+    public async Task GetStateAsync_ActiveLease_NotYetExtended_AllowedWithMaxLength(
         SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId, Guid orgId, Guid collectionId,
         AccessLease activeLease)
     {
@@ -180,41 +180,41 @@ public class GetCipherAccessStateQueryTests
             .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: false, new HumanApprovalCondition())
             {
                 AllowsExtensions = true,
-                MaxExtensions = 3,
+                MaxExtensionDurationSeconds = 4 * 60 * 60,
             });
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .CountExtensionsByLeaseIdAsync(activeLease.Id).Returns(0);
+
+        var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
+
+        Assert.True(result.ExtensionsAllowed);
+        Assert.Equal(4 * 60 * 60, result.MaxExtensionDurationSeconds);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetStateAsync_ActiveLease_AlreadyExtended_NotAllowed(
+        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId, Guid orgId, Guid collectionId,
+        AccessLease activeLease)
+    {
+        SetupCipher(sutProvider, userId, cipherId);
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, Arg.Any<DateTime>())
+            .Returns(activeLease);
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolveAsync(userId, cipherId)
+            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: false, new HumanApprovalCondition())
+            {
+                AllowsExtensions = true,
+                MaxExtensionDurationSeconds = 2 * 60 * 60,
+            });
+        // A lease may be extended once; an existing extension means no more are allowed.
         sutProvider.GetDependency<IAccessRequestRepository>()
             .CountExtensionsByLeaseIdAsync(activeLease.Id).Returns(1);
 
         var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
 
-        Assert.True(result.ExtensionsAllowed);
-        Assert.Equal(2, result.ExtensionsRemaining);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetStateAsync_ActiveLease_ExtensionsExhausted_ReportsZeroRemaining(
-        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId, Guid orgId, Guid collectionId,
-        AccessLease activeLease)
-    {
-        SetupCipher(sutProvider, userId, cipherId);
-        sutProvider.GetDependency<IAccessLeaseRepository>()
-            .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, Arg.Any<DateTime>())
-            .Returns(activeLease);
-        sutProvider.GetDependency<IGoverningRuleResolver>()
-            .ResolveAsync(userId, cipherId)
-            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: false, new HumanApprovalCondition())
-            {
-                AllowsExtensions = true,
-                MaxExtensions = 2,
-            });
-        // More used than the cap (a rule whose max was lowered after the fact) must clamp to zero, never negative.
-        sutProvider.GetDependency<IAccessRequestRepository>()
-            .CountExtensionsByLeaseIdAsync(activeLease.Id).Returns(5);
-
-        var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
-
-        Assert.True(result.ExtensionsAllowed);
-        Assert.Equal(0, result.ExtensionsRemaining);
+        Assert.False(result.ExtensionsAllowed);
+        Assert.Equal(2 * 60 * 60, result.MaxExtensionDurationSeconds);
     }
 
     [Theory, BitAutoData]
@@ -236,7 +236,7 @@ public class GetCipherAccessStateQueryTests
         var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
 
         Assert.False(result.ExtensionsAllowed);
-        Assert.Equal(0, result.ExtensionsRemaining);
+        Assert.Null(result.MaxExtensionDurationSeconds);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CountExtensionsByLeaseIdAsync(default);
     }

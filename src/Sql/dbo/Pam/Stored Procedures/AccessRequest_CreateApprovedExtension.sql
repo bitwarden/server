@@ -9,7 +9,6 @@ CREATE PROCEDURE [dbo].[AccessRequest_CreateApprovedExtension]
     @NotBefore DATETIME2(7),
     @NotAfter DATETIME2(7),
     @Reason NVARCHAR(MAX) = NULL,
-    @MaxExtensions INT,
     @Now DATETIME2(7)
 AS
 BEGIN
@@ -37,12 +36,12 @@ BEGIN
         RETURN
     END
 
-    -- Per-lease extension cap. Every extension request against this lease is auto-approved, so every one counts.
-    -- Counted under the lease lock, so it is race-safe against a concurrent extension of the same lease.
-    IF (SELECT COUNT(*) FROM [dbo].[AccessRequest] WHERE [ExtensionOfLeaseId] = @ExtensionOfLeaseId) >= @MaxExtensions
+    -- A lease may be extended exactly once. Counted under the lease lock, so it is race-safe against a concurrent
+    -- extension of the same lease.
+    IF EXISTS (SELECT 1 FROM [dbo].[AccessRequest] WHERE [ExtensionOfLeaseId] = @ExtensionOfLeaseId)
     BEGIN
         ROLLBACK TRANSACTION
-        SELECT -1 -- MaxExtensionsReached
+        SELECT -1 -- AlreadyExtended
         RETURN
     END
 

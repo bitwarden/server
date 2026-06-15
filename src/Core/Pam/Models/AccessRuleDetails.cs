@@ -21,7 +21,7 @@ public class AccessRuleDetails : AccessRule
         MaxLeaseDurationSeconds = rule.MaxLeaseDurationSeconds,
         Enabled = rule.Enabled,
         AllowsExtensions = rule.AllowsExtensions,
-        MaxExtensions = rule.MaxExtensions,
+        MaxExtensionDurationSeconds = rule.MaxExtensionDurationSeconds,
         CreationDate = rule.CreationDate,
         RevisionDate = rule.RevisionDate,
         CollectionIds = collectionIds,

@@ -9,7 +9,7 @@ CREATE PROCEDURE [dbo].[AccessRule_Create]
     @MaxLeaseDurationSeconds INT = NULL,
     @Enabled BIT = 1,
     @AllowsExtensions BIT = 0,
-    @MaxExtensions INT = NULL,
+    @MaxExtensionDurationSeconds INT = NULL,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -28,7 +28,7 @@ BEGIN
         [MaxLeaseDurationSeconds],
         [Enabled],
         [AllowsExtensions],
-        [MaxExtensions],
+        [MaxExtensionDurationSeconds],
         [CreationDate],
         [RevisionDate]
     )
@@ -44,7 +44,7 @@ BEGIN
         @MaxLeaseDurationSeconds,
         @Enabled,
         @AllowsExtensions,
-        @MaxExtensions,
+        @MaxExtensionDurationSeconds,
         @CreationDate,
         @RevisionDate
     )
