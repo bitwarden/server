@@ -44,12 +44,24 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
         var pending = await _accessRequestRepository.GetActivePendingByRequesterIdCipherIdAsync(userId, cipherId);
         var approved = await _accessRequestRepository.GetActiveApprovedByRequesterIdCipherIdAsync(userId, cipherId, now);
 
-        // 404 when the cipher isn't leasing-gated and there's nothing to report. We still return a snapshot when the
-        // caller holds a lease, a pending request, or a startable approval even if the rule was since removed, so
-        // their state isn't hidden.
-        if (activeLease is null && pending is null && approved is null
-            && await _resolver.ResolveAsync(userId, cipherId) is null)
+        var extensionsAllowed = false;
+        var extensionsRemaining = 0;
+        if (activeLease is not null)
         {
+            // Extension eligibility drives the banner's "Extend" control. Resolve the governing rule for the active
+            // lease and, when it opts in, report how many of its per-lease extensions remain.
+            var rule = await _resolver.ResolveAsync(userId, cipherId);
+            if (rule?.AllowsExtensions == true)
+            {
+                extensionsAllowed = true;
+                var used = await _accessRequestRepository.CountExtensionsByLeaseIdAsync(activeLease.Id);
+                extensionsRemaining = Math.Max(0, (rule.MaxExtensions ?? 0) - used);
+            }
+        }
+        else if (pending is null && approved is null && await _resolver.ResolveAsync(userId, cipherId) is null)
+        {
+            // Nothing to report and the cipher isn't leasing-gated. (When a lease or request exists we still return a
+            // snapshot even if the rule was since removed, so the caller's state isn't hidden.)
             throw new NotFoundException();
         }
 
@@ -57,7 +69,9 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
             cipherId,
             activeLease,
             pending is null ? null : ToDetails(pending),
-            approved is null ? null : ToDetails(approved));
+            approved is null ? null : ToDetails(approved),
+            extensionsAllowed,
+            extensionsRemaining);
     }
 
     // Neither a pending nor an approved-unactivated request has produced a lease (the approved read excludes

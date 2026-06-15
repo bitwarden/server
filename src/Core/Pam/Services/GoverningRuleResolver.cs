@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.Pam.Models;
 using Bit.Core.Pam.Models.Conditions;
 using Bit.Core.Pam.Repositories;
@@ -57,10 +57,18 @@ public class GoverningRuleResolver : IGoverningRuleResolver
             if (ContainsHumanApproval(condition))
             {
                 // Most restrictive wins — return as soon as a human-approval condition is found.
-                return new GoverningRule(collection.OrganizationId, collection.Id, true, condition);
+                return new GoverningRule(collection.OrganizationId, collection.Id, true, condition)
+                {
+                    AllowsExtensions = accessRule.AllowsExtensions,
+                    MaxExtensions = accessRule.MaxExtensions,
+                };
             }
 
-            automatic ??= new GoverningRule(collection.OrganizationId, collection.Id, false, condition);
+            automatic ??= new GoverningRule(collection.OrganizationId, collection.Id, false, condition)
+            {
+                AllowsExtensions = accessRule.AllowsExtensions,
+                MaxExtensions = accessRule.MaxExtensions,
+            };
         }
 
         return automatic;

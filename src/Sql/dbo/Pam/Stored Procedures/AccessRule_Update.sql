@@ -8,6 +8,8 @@ CREATE PROCEDURE [dbo].[AccessRule_Update]
     @DefaultLeaseDurationSeconds INT = NULL,
     @MaxLeaseDurationSeconds INT = NULL,
     @Enabled BIT = 1,
+    @AllowsExtensions BIT = 0,
+    @MaxExtensions INT = NULL,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -25,6 +27,8 @@ BEGIN
         [DefaultLeaseDurationSeconds] = @DefaultLeaseDurationSeconds,
         [MaxLeaseDurationSeconds] = @MaxLeaseDurationSeconds,
         [Enabled] = @Enabled,
+        [AllowsExtensions] = @AllowsExtensions,
+        [MaxExtensions] = @MaxExtensions,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate
     WHERE

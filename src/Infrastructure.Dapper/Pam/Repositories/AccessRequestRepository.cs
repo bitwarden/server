@@ -154,4 +154,39 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
             },
             commandType: CommandType.StoredProcedure);
     }
+
+    public async Task<int> CountExtensionsByLeaseIdAsync(Guid leaseId)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        return await connection.ExecuteScalarAsync<int>(
+            $"[{Schema}].[AccessRequest_CountExtensionsByLeaseId]",
+            new { LeaseId = leaseId },
+            commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task<AccessLeaseExtendOutcome> CreateApprovedExtensionAsync(AccessRequest request,
+        AccessDecision decision, int maxExtensions, DateTime now)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        var result = await connection.ExecuteScalarAsync<int>(
+            $"[{Schema}].[AccessRequest_CreateApprovedExtension]",
+            new
+            {
+                AccessRequestId = request.Id,
+                AccessDecisionId = decision.Id,
+                request.ExtensionOfLeaseId,
+                request.OrganizationId,
+                request.CollectionId,
+                request.CipherId,
+                request.RequesterId,
+                request.NotBefore,
+                request.NotAfter,
+                request.Reason,
+                MaxExtensions = maxExtensions,
+                Now = now,
+            },
+            commandType: CommandType.StoredProcedure);
+
+        return (AccessLeaseExtendOutcome)result;
+    }
 }

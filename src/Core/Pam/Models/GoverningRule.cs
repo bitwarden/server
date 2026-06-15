@@ -12,4 +12,17 @@ public sealed record GoverningRule(
     Guid OrganizationId,
     Guid CollectionId,
     bool RequiresHumanApproval,
-    AccessCondition Condition);
+    AccessCondition Condition)
+{
+    /// <summary>
+    /// When true, a member holding an active lease under this rule may extend it (always auto-approved), up to
+    /// <see cref="MaxExtensions"/> times.
+    /// </summary>
+    public bool AllowsExtensions { get; init; }
+
+    /// <summary>
+    /// The maximum number of times a single lease under this rule may be extended; meaningful only when
+    /// <see cref="AllowsExtensions"/> is true.
+    /// </summary>
+    public int? MaxExtensions { get; init; }
+}

@@ -195,6 +195,60 @@ public class CreateAccessRuleCommandTests
         await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
     }
 
+    [Theory, BitAutoData]
+    public async Task CreateAsync_AllowsExtensionsWithoutMax_ThrowsBadRequest(AccessRule rule)
+    {
+        var sutProvider = SetupSutProvider();
+        rule.Name = "extendable";
+        rule.AllowsExtensions = true;
+        rule.MaxExtensions = null;
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(rule, []));
+        Assert.Contains("Maximum extensions", ex.Message);
+        await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
+    }
+
+    [Theory]
+    [BitAutoData(0)]
+    [BitAutoData(-1)]
+    public async Task CreateAsync_AllowsExtensionsWithNonPositiveMax_ThrowsBadRequest(int maxExtensions, AccessRule rule)
+    {
+        var sutProvider = SetupSutProvider();
+        rule.Name = "extendable";
+        rule.AllowsExtensions = true;
+        rule.MaxExtensions = maxExtensions;
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(rule, []));
+        Assert.Contains("Maximum extensions", ex.Message);
+        await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_AllowsExtensionsWithPositiveMax_Persists(AccessRule rule)
+    {
+        var sutProvider = SetupSutProvider();
+        rule.Name = "extendable";
+        rule.Conditions = """{"kind":"human_approval"}""";
+        rule.AllowsExtensions = true;
+        rule.MaxExtensions = 3;
+        sutProvider.GetDependency<IAccessRuleValidator>()
+            .Validate(rule.Conditions)
+            .Returns(AccessRuleValidationResult.Valid);
+        sutProvider.GetDependency<IAccessRuleRepository>()
+            .GetManyByOrganizationIdAsync(rule.OrganizationId)
+            .Returns(new List<AccessRule>());
+        sutProvider.GetDependency<IAccessRuleRepository>()
+            .CreateAsync(rule)
+            .Returns(rule);
+
+        var result = await sutProvider.Sut.CreateAsync(rule, []);
+
+        Assert.True(result.AllowsExtensions);
+        Assert.Equal(3, result.MaxExtensions);
+        await sutProvider.GetDependency<IAccessRuleRepository>().Received(1)
+            .CreateAsync(Arg.Is<AccessRule>(r => r.AllowsExtensions && r.MaxExtensions == 3));
+    }
+
     private static SutProvider<CreateAccessRuleCommand> SetupSutProvider()
     {
         var sutProvider = new SutProvider<CreateAccessRuleCommand>()
