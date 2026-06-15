@@ -8,9 +8,6 @@ CREATE PROCEDURE [dbo].[AccessRequest_CancelWithDecision]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- XACT_ABORT rolls the transaction back as a unit if either write fails. Without it a constraint violation aborts
-    -- only the offending statement, execution falls through to the COMMIT, and the other half is persisted alone.
-    SET XACT_ABORT ON
 
     -- A managing approver retracts a not-yet-activated request (Pending, or an Approved request the requester has not
     -- activated): transition it to Denied and record the approver's human decision, mirroring
