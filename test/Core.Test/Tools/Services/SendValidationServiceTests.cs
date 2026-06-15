@@ -179,4 +179,37 @@ public class SendValidationServiceTests
         // No exception implies success
         await sutProvider.Sut.ValidateUserCanSaveAsync(userId, send);
     }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_EmailsExceedsMaxLength_ThrowsBadRequest(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId)
+    {
+        send.Emails = new string('a', 2501);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ValidateUserCanSaveAsync(userId, send));
+        Assert.Contains("2,500 characters", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_EmailsStartsWithProtectedPrefix_ThrowsBadRequest(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId)
+    {
+        send.Emails = Constants.DatabaseFieldProtectedPrefix + "anything";
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ValidateUserCanSaveAsync(userId, send));
+        Assert.Contains("invalid character sequence", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_OversizeEmails_AndUserIdIsNull_StillThrows(
+        SutProvider<SendValidationService> sutProvider, Send send)
+    {
+        // Proves the Emails guards run above the `!userId.HasValue` early return.
+        send.Emails = new string('a', 2501);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ValidateUserCanSaveAsync(null, send));
+    }
 }
