@@ -34,7 +34,7 @@ public class AccountsController : Controller
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
 
     private readonly byte[]? _defaultKdfHmacKey = null;
-    private static readonly List<UserKdfInformation> _defaultKdfResults =
+    internal static readonly List<UserKdfInformation> _defaultKdfResults =
     [
         // The first result (index 0) should always return the "normal" default.
         new()
@@ -59,6 +59,14 @@ public class AccountsController : Controller
             Kdf = KdfType.PBKDF2_SHA256,
             KdfIterations = 5_000,
         },
+        new()
+        {
+            Kdf = KdfType.Argon2id,
+            KdfIterations = 3,
+            KdfMemory = 64,
+            KdfParallelism = 4,
+        },
+        // Mobile-friendly Argon2id default, tuned for iOS memory constraints.
         new()
         {
             Kdf = KdfType.Argon2id,

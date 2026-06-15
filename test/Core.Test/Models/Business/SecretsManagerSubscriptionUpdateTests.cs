@@ -176,4 +176,81 @@ public class SecretsManagerSubscriptionUpdateTests
         // Act / Assert
         Assert.Equal(20, sut.SmServiceAccountsExcludingBase);
     }
+
+    // PM-37511: migrated Teams Monthly org: base 20, grace 30 => free ceiling of 50. 60 accounts bill for 10.
+    [Theory]
+    [BitAutoData]
+    public void SmServiceAccountsExcludingBase_TeamsMonthly_AboveBaselinePlusGrace_ReturnsExcess(Organization organization)
+    {
+        // Arrange
+        var plan = MockPlans.Get(PlanType.TeamsMonthly); // BaseServiceAccount = 20
+        organization.PlanType = plan.Type;
+
+        var sut = new SecretsManagerSubscriptionUpdate(organization, plan, false)
+        {
+            ServiceAccountGrace = 30,
+            SmServiceAccounts = 60
+        };
+
+        // Act / Assert
+        Assert.Equal(10, sut.SmServiceAccountsExcludingBase);
+    }
+
+    // PM-37511: 80 accounts, base 20, grace 30 => bill for 30 (covers the above-baseline billed quantity).
+    [Theory]
+    [BitAutoData]
+    public void SmServiceAccountsExcludingBase_TeamsMonthly_FarAboveBaselinePlusGrace_ReturnsExcess(Organization organization)
+    {
+        // Arrange
+        var plan = MockPlans.Get(PlanType.TeamsMonthly); // BaseServiceAccount = 20
+        organization.PlanType = plan.Type;
+
+        var sut = new SecretsManagerSubscriptionUpdate(organization, plan, false)
+        {
+            ServiceAccountGrace = 30,
+            SmServiceAccounts = 80
+        };
+
+        // Act / Assert
+        Assert.Equal(30, sut.SmServiceAccountsExcludingBase);
+    }
+
+    // PM-37511: Teams Annually keeps the 2020 SM baseline of 50 (no reduction => no grace). 70 accounts
+    // bill for 20. Proves the annual cadence is unchanged; relies on the TeamsPlan mock fix (base 50).
+    [Theory]
+    [BitAutoData]
+    public void SmServiceAccountsExcludingBase_TeamsAnnual_NoGrace_ReturnsExcess(Organization organization)
+    {
+        // Arrange
+        var plan = MockPlans.Get(PlanType.TeamsAnnually); // BaseServiceAccount = 50
+        organization.PlanType = plan.Type;
+
+        var sut = new SecretsManagerSubscriptionUpdate(organization, plan, false)
+        {
+            SmServiceAccounts = 70
+        };
+
+        // Act / Assert
+        Assert.Equal(20, sut.SmServiceAccountsExcludingBase);
+    }
+
+    // PM-37511: within the free ceiling (base 20 + grace 30 = 50), a migrated Teams Monthly org bills 0 —
+    // additions that still fit inside grace produce no billable excess.
+    [Theory]
+    [BitAutoData]
+    public void SmServiceAccountsExcludingBase_TeamsMonthly_WithinBaselinePlusGrace_ReturnsZero(Organization organization)
+    {
+        // Arrange
+        var plan = MockPlans.Get(PlanType.TeamsMonthly); // BaseServiceAccount = 20
+        organization.PlanType = plan.Type;
+
+        var sut = new SecretsManagerSubscriptionUpdate(organization, plan, false)
+        {
+            ServiceAccountGrace = 30,
+            SmServiceAccounts = 45
+        };
+
+        // Act / Assert
+        Assert.Equal(0, sut.SmServiceAccountsExcludingBase);
+    }
 }
