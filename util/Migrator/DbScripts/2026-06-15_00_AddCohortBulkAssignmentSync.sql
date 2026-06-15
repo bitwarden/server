@@ -40,7 +40,8 @@ END
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationPlanMigrationCohortAssignment_UpdateManySync]
-    @JsonData NVARCHAR(MAX)
+    @JsonData NVARCHAR(MAX),
+    @RevisionDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -127,7 +128,7 @@ BEGIN
     WHEN MATCHED AND [Target].[CohortId] <> [Source].[CohortId] THEN
         UPDATE SET
             [CohortId]     = [Source].[CohortId],
-            [RevisionDate] = GETUTCDATE()
+            [RevisionDate] = @RevisionDate
     WHEN NOT MATCHED BY TARGET AND [Source].[CohortId] IS NOT NULL THEN
         INSERT
         (
@@ -142,8 +143,8 @@ BEGIN
             [Source].[Id],
             [Source].[OrganizationId],
             [Source].[CohortId],
-            GETUTCDATE(),
-            GETUTCDATE()
+            @RevisionDate,
+            @RevisionDate
         )
     OUTPUT $action INTO @Outcomes;
 
