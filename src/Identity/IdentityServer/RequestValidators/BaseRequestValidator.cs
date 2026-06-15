@@ -97,6 +97,14 @@ public abstract class BaseRequestValidator<T> where T : class
         _updateDeviceLastActivityCommand = updateDeviceLastActivityCommand;
     }
 
+    // NOTE: Feature flags with progressive rollout (device-keyed or user-keyed) cannot be
+    // evaluated from inside this validator without first populating CurrentContext.UserId /
+    // CurrentContext.DeviceIdentifier. CurrentContextMiddleware only sees /connect/token
+    // headers, which do not carry either value. Prefer flag-gating in BuildSuccessResultAsync
+    // (where validation is complete and User/Device entities are available) and populate
+    // CurrentContext inline immediately before the flag check. Do not populate CurrentContext
+    // from raw form-body input before the grant-specific validator finishes — pre-validation
+    // client values would become visible to any downstream reader in the same request.
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
         CustomValidatorRequestContext validatorContext)
     {
@@ -441,6 +449,13 @@ public abstract class BaseRequestValidator<T> where T : class
         var customResponse = await BuildCustomResponse(user, context, device, sendRememberToken);
 
         await ResetFailedAuthDetailsAsync(user);
+
+        // Populate CurrentContext for the LD bucketing decision below. user.Id and
+        // device.Identifier are post-validation Bitwarden entities — not raw client input.
+        // TODO: PM-34091 - delete when cleaning up the feature flag; the bump call reads
+        // user.Id / device.Identifier directly.
+        CurrentContext.UserId ??= user.Id;
+        CurrentContext.DeviceIdentifier ??= device?.Identifier;
 
         // TODO: PM-34091 - remove feature flag check when cleaning up
         if (device != null && _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate))

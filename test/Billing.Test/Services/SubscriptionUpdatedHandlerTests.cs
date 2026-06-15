@@ -3851,6 +3851,371 @@ public class SubscriptionUpdatedHandlerTests
     }
 
     [Fact]
+    public async Task HandleAsync_BusinessMigration_TeamsMonthly2020ToCurrent_WritesGrace30Metadata()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var teams2020Monthly = new Teams2020Plan(false);
+        var teamsMonthly = new TeamsPlan(false);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teams2020Monthly.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teams2020Monthly.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_grace_tm",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.TeamsMonthly2020,
+            Plan = teams2020Monthly.Name,
+            Seats = 25,
+            SmServiceAccounts = 35
+        };
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            CohortId = cohortId
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(teams2020Monthly);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthly);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "Teams2020Monthly",
+            MigrationPathId = MigrationPathId.Teams2020MonthlyToCurrent,
+            IsActive = true
+        });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — grace of 30 written, merged with existing metadata, no item change.
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            subscription.Id,
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.Metadata[MetadataKeys.MigrationGraceServiceAccounts] == "30" &&
+                options.Metadata["organizationId"] == organizationId.ToString() &&
+                options.Items == null));
+
+        Assert.NotNull(assignment.MigratedDate);
+    }
+
+    // Grace is the per-path entitlement constant (50 -> 20 => 30), independent of the org's own account count.
+    [Fact]
+    public async Task HandleAsync_BusinessMigration_TeamsMonthly_OrgAboveBaseline_GraceIsEntitlementBased_NoQuantityForced()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var teams2020Monthly = new Teams2020Plan(false);
+        var teamsMonthly = new TeamsPlan(false);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teams2020Monthly.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teams2020Monthly.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_grace_tm_80",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.TeamsMonthly2020,
+            Plan = teams2020Monthly.Name,
+            Seats = 25,
+            SmServiceAccounts = 80
+        };
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            CohortId = cohortId
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(teams2020Monthly);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthly);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "Teams2020Monthly",
+            MigrationPathId = MigrationPathId.Teams2020MonthlyToCurrent,
+            IsActive = true
+        });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — grace is still the entitlement constant (30), not derived from 80; no items forced.
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            subscription.Id,
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.Metadata[MetadataKeys.MigrationGraceServiceAccounts] == "30" &&
+                options.Items == null));
+
+        Assert.NotNull(assignment.MigratedDate);
+    }
+
+    // Teams Annually is unchanged at SM base 50, so 50 - 50 = 0: no grace is written, but the migration still completes.
+    [Fact]
+    public async Task HandleAsync_BusinessMigration_TeamsAnnually2020ToCurrent_DoesNotWriteGrace()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var teams2020Annual = new Teams2020Plan(true);
+        var teamsAnnual = new TeamsPlan(true);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teams2020Annual.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teams2020Annual.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_no_grace_ta",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsAnnual.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsAnnual.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.TeamsAnnually2020,
+            Plan = teams2020Annual.Name,
+            Seats = 50,
+            SmServiceAccounts = 80
+        };
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            CohortId = cohortId
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually2020).Returns(teams2020Annual);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(teamsAnnual);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "Teams2020Annual",
+            MigrationPathId = MigrationPathId.Teams2020AnnualToCurrent,
+            IsActive = true
+        });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — no grace metadata write (50 - 50 = 0); migration still completes.
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            subscription.Id,
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.Metadata != null &&
+                options.Metadata.ContainsKey(MetadataKeys.MigrationGraceServiceAccounts)));
+
+        Assert.NotNull(assignment.MigratedDate);
+    }
+
+    [Fact]
+    public async Task HandleAsync_BusinessMigration_TeamsMonthly_FeatureFlagOff_DoesNotEstablishGrace()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var teams2020Monthly = new Teams2020Plan(false);
+        var teamsMonthly = new TeamsPlan(false);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teams2020Monthly.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teams2020Monthly.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_flag_off_tm",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.TeamsMonthly2020 };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(teams2020Monthly);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — dispatch gate (feature flag) is the outermost guard; no cohort lookups, no grace,
+        // no org write, no subscription metadata update.
+        await _cohortRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
+        await _cohortAssignmentRepository.DidNotReceive().GetByOrganizationIdAsync(Arg.Any<Guid>());
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
     public async Task HandleAsync_BusinessMigration_PreviousAttributesHasNoItemsData_LogsWarningAndSkips()
     {
         // Arrange — Stripe ships customer.subscription.updated payloads where
