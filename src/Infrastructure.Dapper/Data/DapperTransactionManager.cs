@@ -9,7 +9,8 @@ public sealed class DapperTransactionManager(GlobalSettings globalSettings) : Tr
 {
     private readonly string _connectionString = globalSettings.SqlServer.ConnectionString;
 
-    protected override async Task<TransactionHolder> CreateRootHolderAsync(
+    protected override async Task InitializeRootHolderAsync(
+        TransactionHolder holder,
         IsolationLevel isolationLevel,
         CancellationToken cancellationToken)
     {
@@ -17,10 +18,6 @@ public sealed class DapperTransactionManager(GlobalSettings globalSettings) : Tr
         await connection.OpenAsync(cancellationToken);
         var transaction = await connection.BeginTransactionAsync(isolationLevel, cancellationToken);
 
-        return new TransactionHolder
-        {
-            Connection = connection,
-            Transaction = transaction,
-        };
+        holder.Initialize(connection, transaction);
     }
 }

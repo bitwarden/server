@@ -15,15 +15,31 @@ public static class TransactionState
 
 public sealed class TransactionHolder : IAsyncDisposable
 {
-    public required DbConnection Connection { get; init; }
-    public required DbTransaction Transaction { get; init; }
+    private DbConnection? _connection;
+    private DbTransaction? _transaction;
+    private IAsyncDisposable? _scope;
+
+    /// <summary>
+    /// The open connection backing this transaction. Available only after
+    /// <see cref="Initialize"/> has been called.
+    /// </summary>
+    public DbConnection Connection =>
+        _connection ?? throw new InvalidOperationException(
+            "Transaction holder has not been initialized. Call Initialize first.");
+
+    /// <summary>
+    /// The open transaction. Available only after <see cref="Initialize"/> has been called.
+    /// </summary>
+    public DbTransaction Transaction =>
+        _transaction ?? throw new InvalidOperationException(
+            "Transaction holder has not been initialized. Call Initialize first.");
 
     /// <summary>
     /// True when this holder is responsible for disposing <see cref="Connection"/>.
     /// EF reuses the DbContext's connection and must leave its lifetime to the scope;
     /// Dapper opens its own connection and must dispose it here.
     /// </summary>
-    public bool OwnsConnection { get; init; } = true;
+    public bool OwnsConnection { get; private set; } = true;
 
     public bool Committed { get; private set; }
     public bool RolledBack { get; private set; }
@@ -32,19 +48,31 @@ public sealed class TransactionHolder : IAsyncDisposable
     /// <summary>For EF: the DatabaseContext associated with this transaction.</summary>
     public object? DbContext { get; private set; }
 
-    /// <summary>For EF: the IServiceScope that owns the DatabaseContext.</summary>
-    private IAsyncDisposable? _scope;
+    /// <summary>
+    /// Populates the holder with its open connection and transaction. May be called at most
+    /// once per holder; the manager allocates the holder synchronously before any await so
+    /// the <see cref="TransactionState.Current"/> reference flows into the caller's
+    /// ExecutionContext, then awaits the I/O that fills in these fields.
+    /// </summary>
+    public void Initialize(DbConnection connection, DbTransaction transaction, bool ownsConnection = true)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        ArgumentNullException.ThrowIfNull(transaction);
 
-    /// <summary>One-way latch: records that the root scope committed.</summary>
+        if (_connection is not null)
+        {
+            throw new InvalidOperationException("Transaction holder is already initialized.");
+        }
+
+        _connection = connection;
+        _transaction = transaction;
+        OwnsConnection = ownsConnection;
+    }
+
     public void MarkCommitted() => Committed = true;
 
-    /// <summary>One-way latch: records that the root scope rolled back.</summary>
     public void MarkRolledBack() => RolledBack = true;
 
-    /// <summary>
-    /// One-way latch: marks the transaction as doomed. Once doomed, the root scope
-    /// cannot commit.
-    /// </summary>
     public void MarkDoomed() => Doomed = true;
 
     /// <summary>
@@ -68,23 +96,26 @@ public sealed class TransactionHolder : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        if (!Committed && !RolledBack)
+        if (_transaction is not null && !Committed && !RolledBack)
         {
             try
             {
-                await Transaction.RollbackAsync();
+                await _transaction.RollbackAsync();
             }
             catch
             {
-                // Best-effort rollback; connection may already be broken
+                // Best-effort rollback; connection may already be broken.
             }
         }
 
-        await Transaction.DisposeAsync();
-
-        if (OwnsConnection)
+        if (_transaction is not null)
         {
-            await Connection.DisposeAsync();
+            await _transaction.DisposeAsync();
+        }
+
+        if (OwnsConnection && _connection is not null)
+        {
+            await _connection.DisposeAsync();
         }
 
         if (_scope is not null)

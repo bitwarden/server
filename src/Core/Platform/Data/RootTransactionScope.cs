@@ -29,15 +29,19 @@ public sealed class RootTransactionScope : ITransactionScope
         _holder.MarkRolledBack();
     }
 
-    public async ValueTask DisposeAsync()
+    // Intentionally NOT `async`. AsyncLocal mutations inside an async state machine
+    // never flow back to the caller - see TransactionManagerBase for the same trick.
+    // Clearing TransactionState.Current must happen on the caller's stack frame so the
+    // slot is null once the `await using` block exits.
+    public ValueTask DisposeAsync()
     {
         if (_disposed)
         {
-            return;
+            return default;
         }
 
         _disposed = true;
         TransactionState.Current = null;
-        await _holder.DisposeAsync();
+        return _holder.DisposeAsync();
     }
 }

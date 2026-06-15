@@ -1,11 +1,15 @@
 ﻿using System.Reflection;
 using Bit.Core.Enums;
+using Bit.Core.Platform.Data;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper;
+using Bit.Infrastructure.Dapper.Data;
 using Bit.Infrastructure.EntityFramework;
+using Bit.Infrastructure.EntityFramework.Data;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
@@ -124,6 +128,7 @@ public class DatabaseDataAttribute : DataAttribute
             }
         };
         services.AddDapperRepositories(SelfHosted);
+        services.TryAddSingleton<ITransactionManager, DapperTransactionManager>();
         services.AddSingleton(globalSettings);
         services.AddSingleton<IGlobalSettings>(globalSettings);
         services.AddSingleton(database);
@@ -147,6 +152,7 @@ public class DatabaseDataAttribute : DataAttribute
             },
         };
         services.AddPasswordManagerEFRepositories(SelfHosted);
+        services.TryAddSingleton<ITransactionManager, EfTransactionManager>();
         services.AddSingleton(globalSettings);
         services.AddSingleton<IGlobalSettings>(globalSettings);
 

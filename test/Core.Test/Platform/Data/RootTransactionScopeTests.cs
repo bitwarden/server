@@ -11,12 +11,8 @@ public class RootTransactionScopeTests
     {
         var connection = Substitute.For<DbConnection>();
         var transaction = Substitute.For<DbTransaction>();
-        var holder = new TransactionHolder
-        {
-            Connection = connection,
-            Transaction = transaction,
-            OwnsConnection = false,
-        };
+        var holder = new TransactionHolder();
+        holder.Initialize(connection, transaction, ownsConnection: false);
         return (holder, transaction);
     }
 

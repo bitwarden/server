@@ -30,7 +30,7 @@ public abstract class BaseRepository
         ReadOnlyConnectionString = readOnlyConnectionString;
     }
 
-    protected string ConnectionString { get; private set; }
+    protected string ConnectionString { get; }
     protected string ReadOnlyConnectionString { get; private set; }
 
     /// <summary>
