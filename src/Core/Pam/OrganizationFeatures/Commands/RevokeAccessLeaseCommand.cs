@@ -30,8 +30,13 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
     {
         var lease = await _accessLeaseRepository.GetByIdAsync(leaseId);
 
-        // 404 for both missing and not-visible, so the caller can't probe for leases they don't manage.
-        if (lease is null || !await _approverCollectionAccessQuery.CanManageCollectionAsync(userId, lease.CollectionId))
+        // Who may end a lease early: the lease's own holder (ending their own access), or anyone who can Manage its
+        // collection (a managing approver or org admin). Either way the lease settles to revoked, recording the actor
+        // as RevokedBy — RevokedBy == RequesterId distinguishes a self-end from an operator revoke. 404 covers both
+        // missing and not-authorized, so a caller can't probe for leases they can't touch.
+        var isHolder = lease is not null && lease.RequesterId == userId;
+        if (lease is null ||
+            (!isHolder && !await _approverCollectionAccessQuery.CanManageCollectionAsync(userId, lease.CollectionId)))
         {
             throw new NotFoundException();
         }

@@ -27,15 +27,42 @@ public class RevokeAccessLeaseCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RevokeAsync_NotManageable_ThrowsNotFound(Guid userId, AccessLease lease)
+    public async Task RevokeAsync_NeitherHolderNorManageable_ThrowsNotFound(Guid userId, AccessLease lease)
     {
         var sutProvider = Setup();
         lease.Status = AccessLeaseStatus.Active;
+        // userId is neither the lease holder (lease.RequesterId is a different AutoFixture Guid) nor a manager.
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByIdAsync(lease.Id).Returns(lease);
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .CanManageCollectionAsync(userId, lease.CollectionId).Returns(false);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.RevokeAsync(userId, lease.Id, null));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RevokeAsync_HolderEndsOwnLease_RevokesWithoutManageRights(AccessLease lease)
+    {
+        var sutProvider = Setup();
+        lease.Status = AccessLeaseStatus.Active;
+        // The caller IS the lease's own holder, but cannot Manage the collection — they may still end their own access.
+        sutProvider.GetDependency<IAccessLeaseRepository>().GetByIdAsync(lease.Id).Returns(lease);
+        sutProvider.GetDependency<IApproverCollectionAccessQuery>()
+            .CanManageCollectionAsync(lease.RequesterId, lease.CollectionId).Returns(false);
+
+        await sutProvider.Sut.RevokeAsync(lease.RequesterId, lease.Id, "done with it");
+
+        // Settles to revoked with the holder recorded as the revoker (RevokedBy via the audit decision's ApproverId).
+        await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1).RevokeAsync(
+            lease,
+            Arg.Is<AccessDecision>(d =>
+                d.AccessRequestId == lease.AccessRequestId &&
+                d.DeciderKind == AccessDeciderKind.Human &&
+                d.ApproverId == lease.RequesterId &&
+                d.Verdict == AccessDecisionVerdict.Deny &&
+                d.Comment == "done with it"),
+            _now);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
+            .NotifyCollectionApproversAsync(lease.CollectionId);
     }
 
     [Theory, BitAutoData]
