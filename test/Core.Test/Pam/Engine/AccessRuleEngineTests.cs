@@ -213,6 +213,16 @@ public class AccessRuleEngineTests
     }
 
     [Fact]
+    public void Evaluate_AllOf_NoChildren_Allows()
+    {
+        // A rule with no conditions is vacuously satisfied: access is auto-granted while still flowing through
+        // PAM for audit logging.
+        var evaluation = _sut.Evaluate(new AllOfCondition(), Signals());
+
+        Assert.Equal(AccessEvaluationOutcome.Allow, evaluation.Outcome);
+    }
+
+    [Fact]
     public void Evaluate_NestedAllOf_Allows()
     {
         var rule = new AllOfCondition

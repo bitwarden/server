@@ -143,11 +143,9 @@ public sealed partial class AccessRuleValidator : IAccessRuleValidator
             return AccessRuleValidationResult.Invalid($"all_of nesting exceeds maximum depth of {MaxCompositeDepth}.");
         }
 
-        if (condition.Conditions.Count == 0)
-        {
-            return AccessRuleValidationResult.Invalid("all_of requires at least one child condition.");
-        }
-
+        // An empty all_of is allowed: it is vacuously satisfied, so the rule governs its collections — routing
+        // access through the PAM flow for audit logging — without imposing any gating condition. The engine
+        // evaluates it to Allow.
         if (condition.Conditions.Count > MaxCompositeChildren)
         {
             return AccessRuleValidationResult.Invalid($"all_of cannot contain more than {MaxCompositeChildren} child conditions.");

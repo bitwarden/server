@@ -120,12 +120,13 @@ public class AccessRuleValidatorTests
     }
 
     [Fact]
-    public void Validate_AllOf_EmptyChildren_IsInvalid()
+    public void Validate_AllOf_EmptyChildren_IsValid()
     {
+        // A rule with no conditions (an empty all_of) is allowed: it gates nothing and exists to route access
+        // through the PAM flow for audit logging.
         var result = _sut.Validate("""{"kind":"all_of","conditions":[]}""");
 
-        Assert.False(result.IsValid);
-        Assert.Contains("at least one child", result.Error);
+        Assert.True(result.IsValid);
     }
 
     [Fact]
