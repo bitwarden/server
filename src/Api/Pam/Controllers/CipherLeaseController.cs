@@ -56,7 +56,7 @@ public class CipherLeaseController(
     /// <summary>
     /// Submits a request to lease this cipher. The automatic path creates an already-approved request the requester
     /// then activates to start the lease; the human path creates a pending request for an approver. Neither mints a
-    /// lease here — the requester activates the approved request (POST <c>leasing/requests/{id}/activate</c>).
+    /// lease here — the requester activates the approved request (POST <c>access-requests/{id}/activate</c>).
     /// </summary>
     [HttpPost("")]
     public async Task<AccessRequestResultResponseModel> Post(Guid id, [FromBody] AccessRequestCreateRequestModel model)

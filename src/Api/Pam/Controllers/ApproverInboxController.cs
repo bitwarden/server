@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Pam.Controllers;
 
-[Route("leasing")]
 [Authorize("Application")]
 [RequireFeature(FeatureFlagKeys.Pam)]
 public class ApproverInboxController(
@@ -26,7 +25,7 @@ public class ApproverInboxController(
     /// Returns the caller's pending approver queue: requests on collections the caller can Manage that are still
     /// awaiting a decision.
     /// </summary>
-    [HttpGet("inbox/requests")]
+    [HttpGet("access-requests/inbox")]
     public async Task<ListResponseModel<AccessRequestDetailsResponseModel>> GetRequests()
     {
         var userId = userService.GetProperUserId(User)!.Value;
@@ -38,7 +37,7 @@ public class ApproverInboxController(
     /// <summary>
     /// Returns the caller's resolved approver queue (decision history and lease outcomes) within the retention window.
     /// </summary>
-    [HttpGet("inbox/history")]
+    [HttpGet("access-requests/history")]
     public async Task<ListResponseModel<AccessRequestDetailsResponseModel>> GetHistory()
     {
         var userId = userService.GetProperUserId(User)!.Value;
@@ -51,7 +50,7 @@ public class ApproverInboxController(
     /// Approves or denies a pending lease request. The caller must be able to Manage the request's collection and may
     /// not decide their own request.
     /// </summary>
-    [HttpPost("requests/{id:guid}/decision")]
+    [HttpPost("access-requests/{id:guid}/decision")]
     public async Task<AccessRequestDetailsResponseModel> Decide(Guid id, [FromBody] AccessDecisionRequestModel model)
     {
         var userId = userService.GetProperUserId(User)!.Value;
