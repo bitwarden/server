@@ -2,7 +2,7 @@
 
 /// <summary>
 /// The result of a race-safe lease extension. The extension stored procedure returns a distinct integer code so the
-/// caller can tell a lease that is no longer extendable apart from a per-lease max-extensions conflict.
+/// caller can tell a lease that is no longer extendable apart from one that has already been extended.
 /// </summary>
 public enum AccessLeaseExtendOutcome
 {
@@ -16,8 +16,8 @@ public enum AccessLeaseExtendOutcome
     LeaseNotActive = 0,
 
     /// <summary>
-    /// The lease has already been extended the maximum number of times permitted by its governing rule (stored proc
-    /// returned -1). Nothing was persisted.
+    /// The lease has already been extended (a lease may be extended once; stored proc returned -1). Nothing was
+    /// persisted.
     /// </summary>
-    MaxExtensionsReached = -1,
+    AlreadyExtended = -1,
 }

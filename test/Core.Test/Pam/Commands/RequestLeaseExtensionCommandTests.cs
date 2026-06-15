@@ -18,7 +18,7 @@ namespace Bit.Core.Test.Pam.Commands;
 public class RequestLeaseExtensionCommandTests
 {
     private static readonly DateTime _now = new(2026, 6, 12, 12, 0, 0, DateTimeKind.Utc);
-    private const int _maxExtensions = 3;
+    private const int _maxExtensionDurationSeconds = 4 * 60 * 60;
 
     [Theory, BitAutoData]
     public async Task ExtendAsync_LeaseMissing_ThrowsNotFound(Guid userId, Guid leaseId)
@@ -38,7 +38,7 @@ public class RequestLeaseExtensionCommandTests
         // Someone else's lease is indistinguishable from a missing one, so ids can't be probed.
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.ExtendAsync(userId, Submission(lease.Id)));
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
-            .CreateApprovedExtensionAsync(default!, default!, default, default);
+            .CreateApprovedExtensionAsync(default!, default!, default);
     }
 
     [Theory]
@@ -53,7 +53,7 @@ public class RequestLeaseExtensionCommandTests
         await Assert.ThrowsAsync<ConflictException>(
             () => sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id)));
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
-            .CreateApprovedExtensionAsync(default!, default!, default, default);
+            .CreateApprovedExtensionAsync(default!, default!, default);
     }
 
     [Theory, BitAutoData]
@@ -89,7 +89,7 @@ public class RequestLeaseExtensionCommandTests
             () => sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id)));
         Assert.Contains("does not allow extending", ex.Message);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
-            .CreateApprovedExtensionAsync(default!, default!, default, default);
+            .CreateApprovedExtensionAsync(default!, default!, default);
     }
 
     [Theory]
@@ -105,15 +105,17 @@ public class RequestLeaseExtensionCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ExtendAsync_DurationExceedsMax_ThrowsBadRequest(AccessLease lease)
+    public async Task ExtendAsync_DurationExceedsRuleMax_ThrowsBadRequest(AccessLease lease)
     {
         var sutProvider = Setup();
         SetupExtendableLease(sutProvider, lease);
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ExtendAsync(lease.RequesterId,
-                Submission(lease.Id, SubmitAccessRequestCommand.MaxDurationSeconds + 1)));
-        Assert.Contains("exceeds the maximum", ex.Message);
+                Submission(lease.Id, _maxExtensionDurationSeconds + 1)));
+        Assert.Contains("maximum extension length", ex.Message);
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .CreateApprovedExtensionAsync(default!, default!, default);
     }
 
     [Theory]
@@ -130,18 +132,19 @@ public class RequestLeaseExtensionCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ExtendAsync_MaxExtensionsAlreadyReached_ThrowsBadRequest(AccessLease lease)
+    public async Task ExtendAsync_AlreadyExtended_ThrowsBadRequest(AccessLease lease)
     {
         var sutProvider = Setup();
         SetupExtendableLease(sutProvider, lease);
+        // A lease may be extended once; an existing extension request blocks another.
         sutProvider.GetDependency<IAccessRequestRepository>()
-            .CountExtensionsByLeaseIdAsync(lease.Id).Returns(_maxExtensions);
+            .CountExtensionsByLeaseIdAsync(lease.Id).Returns(1);
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id)));
-        Assert.Contains("maximum number of extensions", ex.Message);
+        Assert.Contains("already been extended", ex.Message);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
-            .CreateApprovedExtensionAsync(default!, default!, default, default);
+            .CreateApprovedExtensionAsync(default!, default!, default);
     }
 
     [Theory, BitAutoData]
@@ -166,7 +169,7 @@ public class RequestLeaseExtensionCommandTests
         Assert.Equal("incident", result.Reason);
         Assert.Equal(_now, result.ResolvedDate);
 
-        // The repo applies the request + decision + lease bump atomically; the per-rule cap is passed through.
+        // The repo applies the request + decision + lease bump atomically.
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).CreateApprovedExtensionAsync(
             Arg.Is<AccessRequest>(r =>
                 r.ExtensionOfLeaseId == lease.Id
@@ -175,7 +178,6 @@ public class RequestLeaseExtensionCommandTests
                 && r.NotAfter == expectedNotAfter),
             Arg.Is<AccessDecision>(d =>
                 d.DeciderKind == AccessDeciderKind.Automatic && d.Verdict == AccessDecisionVerdict.Approve),
-            _maxExtensions,
             _now);
     }
 
@@ -185,7 +187,7 @@ public class RequestLeaseExtensionCommandTests
         var sutProvider = Setup();
         SetupExtendableLease(sutProvider, lease);
         sutProvider.GetDependency<IAccessRequestRepository>()
-            .CreateApprovedExtensionAsync(Arg.Any<AccessRequest>(), Arg.Any<AccessDecision>(), _maxExtensions, _now)
+            .CreateApprovedExtensionAsync(Arg.Any<AccessRequest>(), Arg.Any<AccessDecision>(), _now)
             .Returns(AccessLeaseExtendOutcome.LeaseNotActive);
 
         await Assert.ThrowsAsync<ConflictException>(
@@ -193,18 +195,18 @@ public class RequestLeaseExtensionCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ExtendAsync_RepoReportsMaxExtensionsReached_ThrowsBadRequest(AccessLease lease)
+    public async Task ExtendAsync_RepoReportsAlreadyExtended_ThrowsBadRequest(AccessLease lease)
     {
         var sutProvider = Setup();
         SetupExtendableLease(sutProvider, lease);
-        // Lost a race: another extension filled the last slot between the pre-check and the guarded write.
+        // Lost a race: another extension landed between the pre-check and the guarded write.
         sutProvider.GetDependency<IAccessRequestRepository>()
-            .CreateApprovedExtensionAsync(Arg.Any<AccessRequest>(), Arg.Any<AccessDecision>(), _maxExtensions, _now)
-            .Returns(AccessLeaseExtendOutcome.MaxExtensionsReached);
+            .CreateApprovedExtensionAsync(Arg.Any<AccessRequest>(), Arg.Any<AccessDecision>(), _now)
+            .Returns(AccessLeaseExtendOutcome.AlreadyExtended);
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id)));
-        Assert.Contains("maximum number of extensions", ex.Message);
+        Assert.Contains("already been extended", ex.Message);
     }
 
     private static AccessLeaseExtensionSubmission Submission(
@@ -219,7 +221,7 @@ public class RequestLeaseExtensionCommandTests
     }
 
     // An active, in-window lease owned by its BitAutoData requester, governed by an extension-enabled rule with no
-    // extensions used yet, and a repo that extends successfully. Tests override the precondition they exercise.
+    // extension used yet, and a repo that extends successfully. Tests override the precondition they exercise.
     private static void SetupExtendableLease(
         SutProvider<RequestLeaseExtensionCommand> sutProvider, AccessLease lease, bool allowsExtensions = true)
     {
@@ -234,12 +236,12 @@ public class RequestLeaseExtensionCommandTests
                 new HumanApprovalCondition())
             {
                 AllowsExtensions = allowsExtensions,
-                MaxExtensions = _maxExtensions,
+                MaxExtensionDurationSeconds = _maxExtensionDurationSeconds,
             });
 
         sutProvider.GetDependency<IAccessRequestRepository>().CountExtensionsByLeaseIdAsync(lease.Id).Returns(0);
         sutProvider.GetDependency<IAccessRequestRepository>()
-            .CreateApprovedExtensionAsync(Arg.Any<AccessRequest>(), Arg.Any<AccessDecision>(), Arg.Any<int>(), _now)
+            .CreateApprovedExtensionAsync(Arg.Any<AccessRequest>(), Arg.Any<AccessDecision>(), _now)
             .Returns(AccessLeaseExtendOutcome.Extended);
     }
 }

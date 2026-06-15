@@ -27,7 +27,7 @@ public class AccessRequestExtensionRepositoryTests
         var newNotAfter = lease.NotAfter.AddHours(1);
 
         var outcome = await accessRequestRepository.CreateApprovedExtensionAsync(
-            BuildExtension(lease, newNotAfter, now), BuildAutoDecision(now), maxExtensions: 3, now);
+            BuildExtension(lease, newNotAfter, now), BuildAutoDecision(now), now);
 
         Assert.Equal(AccessLeaseExtendOutcome.Extended, outcome);
 
@@ -37,7 +37,7 @@ public class AccessRequestExtensionRepositoryTests
         Assert.Equal(newNotAfter, updatedLease!.NotAfter);
         Assert.Equal(AccessLeaseStatus.Active, updatedLease.Status);
 
-        // The extension is recorded as an approved request pointing at the parent lease, and counts toward the cap.
+        // The extension is recorded as an approved request pointing at the parent lease.
         Assert.Equal(1, await accessRequestRepository.CountExtensionsByLeaseIdAsync(lease.Id));
 
         // An approved extension produces no lease of its own, so it must not surface as a startable approval.
@@ -46,7 +46,7 @@ public class AccessRequestExtensionRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task CreateApprovedExtensionAsync_MaxReached_ReturnsMaxExtensionsReached(
+    public async Task CreateApprovedExtensionAsync_SecondExtension_ReturnsAlreadyExtended(
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
         IAccessRequestRepository accessRequestRepository,
@@ -62,13 +62,13 @@ public class AccessRequestExtensionRepositoryTests
 
         var firstNotAfter = lease.NotAfter.AddHours(1);
         Assert.Equal(AccessLeaseExtendOutcome.Extended, await accessRequestRepository.CreateApprovedExtensionAsync(
-            BuildExtension(lease, firstNotAfter, now), BuildAutoDecision(now), maxExtensions: 1, now));
+            BuildExtension(lease, firstNotAfter, now), BuildAutoDecision(now), now));
 
-        // The cap is 1 and one extension already exists, so a second is rejected and nothing is written.
+        // A lease may be extended exactly once, so a second extension is rejected and nothing is written.
         var rejected = await accessRequestRepository.CreateApprovedExtensionAsync(
-            BuildExtension(lease, firstNotAfter.AddHours(1), now), BuildAutoDecision(now), maxExtensions: 1, now);
+            BuildExtension(lease, firstNotAfter.AddHours(1), now), BuildAutoDecision(now), now);
 
-        Assert.Equal(AccessLeaseExtendOutcome.MaxExtensionsReached, rejected);
+        Assert.Equal(AccessLeaseExtendOutcome.AlreadyExtended, rejected);
         Assert.Equal(1, await accessRequestRepository.CountExtensionsByLeaseIdAsync(lease.Id));
         var updatedLease = await accessLeaseRepository.GetByIdAsync(lease.Id);
         Assert.Equal(firstNotAfter, updatedLease!.NotAfter);
@@ -93,7 +93,7 @@ public class AccessRequestExtensionRepositoryTests
 
         var extension = BuildExtension(lease, lease.NotAfter.AddHours(1), now);
         var outcome = await accessRequestRepository.CreateApprovedExtensionAsync(
-            extension, BuildAutoDecision(now), maxExtensions: 3, now);
+            extension, BuildAutoDecision(now), now);
 
         Assert.Equal(AccessLeaseExtendOutcome.LeaseNotActive, outcome);
         Assert.Equal(0, await accessRequestRepository.CountExtensionsByLeaseIdAsync(lease.Id));
@@ -116,12 +116,11 @@ public class AccessRequestExtensionRepositoryTests
         var leaseB = await CreateActiveLeaseAsync(
             accessRequestRepository, accessLeaseRepository, organization.Id, collection.Id, Guid.NewGuid(), now);
 
+        // Extend only leaseA (a lease may be extended once); the count is scoped to its own lease.
         await accessRequestRepository.CreateApprovedExtensionAsync(
-            BuildExtension(leaseA, leaseA.NotAfter.AddHours(1), now), BuildAutoDecision(now), maxExtensions: 5, now);
-        await accessRequestRepository.CreateApprovedExtensionAsync(
-            BuildExtension(leaseA, leaseA.NotAfter.AddHours(2), now), BuildAutoDecision(now), maxExtensions: 5, now);
+            BuildExtension(leaseA, leaseA.NotAfter.AddHours(1), now), BuildAutoDecision(now), now);
 
-        Assert.Equal(2, await accessRequestRepository.CountExtensionsByLeaseIdAsync(leaseA.Id));
+        Assert.Equal(1, await accessRequestRepository.CountExtensionsByLeaseIdAsync(leaseA.Id));
         Assert.Equal(0, await accessRequestRepository.CountExtensionsByLeaseIdAsync(leaseB.Id));
     }
 

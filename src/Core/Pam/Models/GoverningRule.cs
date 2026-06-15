@@ -15,14 +15,14 @@ public sealed record GoverningRule(
     AccessCondition Condition)
 {
     /// <summary>
-    /// When true, a member holding an active lease under this rule may extend it (always auto-approved), up to
-    /// <see cref="MaxExtensions"/> times.
+    /// When true, a member holding an active lease under this rule may extend it once (always auto-approved), by up
+    /// to <see cref="MaxExtensionDurationSeconds"/>.
     /// </summary>
     public bool AllowsExtensions { get; init; }
 
     /// <summary>
-    /// The maximum number of times a single lease under this rule may be extended; meaningful only when
+    /// The longest a single extension under this rule may run, in seconds; meaningful only when
     /// <see cref="AllowsExtensions"/> is true.
     /// </summary>
-    public int? MaxExtensions { get; init; }
+    public int? MaxExtensionDurationSeconds { get; init; }
 }

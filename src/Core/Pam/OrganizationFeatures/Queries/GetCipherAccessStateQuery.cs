@@ -45,17 +45,18 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
         var approved = await _accessRequestRepository.GetActiveApprovedByRequesterIdCipherIdAsync(userId, cipherId, now);
 
         var extensionsAllowed = false;
-        var extensionsRemaining = 0;
+        int? maxExtensionDurationSeconds = null;
         if (activeLease is not null)
         {
-            // Extension eligibility drives the banner's "Extend" control. Resolve the governing rule for the active
-            // lease and, when it opts in, report how many of its per-lease extensions remain.
+            // Extension eligibility drives the banner's "Extend" control. A lease may be extended once, so it is
+            // extendable only while the rule opts in and no extension has been recorded yet; surface the rule's max
+            // length so the client can cap its duration picker.
             var rule = await _resolver.ResolveAsync(userId, cipherId);
             if (rule?.AllowsExtensions == true)
             {
-                extensionsAllowed = true;
                 var used = await _accessRequestRepository.CountExtensionsByLeaseIdAsync(activeLease.Id);
-                extensionsRemaining = Math.Max(0, (rule.MaxExtensions ?? 0) - used);
+                extensionsAllowed = used == 0;
+                maxExtensionDurationSeconds = rule.MaxExtensionDurationSeconds;
             }
         }
         else if (pending is null && approved is null && await _resolver.ResolveAsync(userId, cipherId) is null)
@@ -71,7 +72,7 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
             pending is null ? null : ToDetails(pending),
             approved is null ? null : ToDetails(approved),
             extensionsAllowed,
-            extensionsRemaining);
+            maxExtensionDurationSeconds);
     }
 
     // Neither a pending nor an approved-unactivated request has produced a lease (the approved read excludes

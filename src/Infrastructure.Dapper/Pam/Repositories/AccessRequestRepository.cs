@@ -165,7 +165,7 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
     }
 
     public async Task<AccessLeaseExtendOutcome> CreateApprovedExtensionAsync(AccessRequest request,
-        AccessDecision decision, int maxExtensions, DateTime now)
+        AccessDecision decision, DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);
         var result = await connection.ExecuteScalarAsync<int>(
@@ -182,7 +182,6 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
                 request.NotBefore,
                 request.NotAfter,
                 request.Reason,
-                MaxExtensions = maxExtensions,
                 Now = now,
             },
             commandType: CommandType.StoredProcedure);

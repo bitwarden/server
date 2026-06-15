@@ -201,25 +201,25 @@ public class CreateAccessRuleCommandTests
         var sutProvider = SetupSutProvider();
         rule.Name = "extendable";
         rule.AllowsExtensions = true;
-        rule.MaxExtensions = null;
+        rule.MaxExtensionDurationSeconds = null;
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(rule, []));
-        Assert.Contains("Maximum extensions", ex.Message);
+        Assert.Contains("maximum extension length", ex.Message);
         await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
     }
 
     [Theory]
     [BitAutoData(0)]
     [BitAutoData(-1)]
-    public async Task CreateAsync_AllowsExtensionsWithNonPositiveMax_ThrowsBadRequest(int maxExtensions, AccessRule rule)
+    public async Task CreateAsync_AllowsExtensionsWithNonPositiveMax_ThrowsBadRequest(int maxExtensionDurationSeconds, AccessRule rule)
     {
         var sutProvider = SetupSutProvider();
         rule.Name = "extendable";
         rule.AllowsExtensions = true;
-        rule.MaxExtensions = maxExtensions;
+        rule.MaxExtensionDurationSeconds = maxExtensionDurationSeconds;
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(rule, []));
-        Assert.Contains("Maximum extensions", ex.Message);
+        Assert.Contains("maximum extension length", ex.Message);
         await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
     }
 
@@ -230,7 +230,7 @@ public class CreateAccessRuleCommandTests
         rule.Name = "extendable";
         rule.Conditions = """{"kind":"human_approval"}""";
         rule.AllowsExtensions = true;
-        rule.MaxExtensions = 3;
+        rule.MaxExtensionDurationSeconds = 3600;
         sutProvider.GetDependency<IAccessRuleValidator>()
             .Validate(rule.Conditions)
             .Returns(AccessRuleValidationResult.Valid);
@@ -244,9 +244,9 @@ public class CreateAccessRuleCommandTests
         var result = await sutProvider.Sut.CreateAsync(rule, []);
 
         Assert.True(result.AllowsExtensions);
-        Assert.Equal(3, result.MaxExtensions);
+        Assert.Equal(3600, result.MaxExtensionDurationSeconds);
         await sutProvider.GetDependency<IAccessRuleRepository>().Received(1)
-            .CreateAsync(Arg.Is<AccessRule>(r => r.AllowsExtensions && r.MaxExtensions == 3));
+            .CreateAsync(Arg.Is<AccessRule>(r => r.AllowsExtensions && r.MaxExtensionDurationSeconds == 3600));
     }
 
     private static SutProvider<CreateAccessRuleCommand> SetupSutProvider()

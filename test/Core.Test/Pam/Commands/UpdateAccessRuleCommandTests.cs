@@ -32,7 +32,7 @@ public class UpdateAccessRuleCommandTests
         update.DefaultLeaseDurationSeconds = 3600;
         update.MaxLeaseDurationSeconds = 28800;
         update.AllowsExtensions = true;
-        update.MaxExtensions = 2;
+        update.MaxExtensionDurationSeconds = 7200;
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetDetailsByIdAsync(existing.Id)
             .Returns(existing);
@@ -52,14 +52,14 @@ public class UpdateAccessRuleCommandTests
         Assert.Equal(3600, result.DefaultLeaseDurationSeconds);
         Assert.Equal(28800, result.MaxLeaseDurationSeconds);
         Assert.True(result.AllowsExtensions);
-        Assert.Equal(2, result.MaxExtensions);
+        Assert.Equal(7200, result.MaxExtensionDurationSeconds);
         Assert.Equal(_now, result.RevisionDate);
         await sutProvider.GetDependency<IAccessRuleRepository>().Received(1)
             .ReplaceAsync(Arg.Is<AccessRule>(r =>
                 r.Id == existing.Id && r.Name == "renamed" && r.Description == "new description"
                 && r.SingleActiveLease
                 && r.DefaultLeaseDurationSeconds == 3600 && r.MaxLeaseDurationSeconds == 28800
-                && r.AllowsExtensions && r.MaxExtensions == 2));
+                && r.AllowsExtensions && r.MaxExtensionDurationSeconds == 7200));
     }
 
     [Theory, BitAutoData]
@@ -68,27 +68,27 @@ public class UpdateAccessRuleCommandTests
         var sutProvider = SetupSutProvider();
         update.Name = "renamed";
         update.AllowsExtensions = true;
-        update.MaxExtensions = null;
+        update.MaxExtensionDurationSeconds = null;
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateAsync(update.OrganizationId, update.Id, update, []));
-        Assert.Contains("Maximum extensions", ex.Message);
+        Assert.Contains("maximum extension length", ex.Message);
         await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
     }
 
     [Theory]
     [BitAutoData(0)]
     [BitAutoData(-1)]
-    public async Task UpdateAsync_AllowsExtensionsWithNonPositiveMax_ThrowsBadRequest(int maxExtensions, AccessRule update)
+    public async Task UpdateAsync_AllowsExtensionsWithNonPositiveMax_ThrowsBadRequest(int maxExtensionDurationSeconds, AccessRule update)
     {
         var sutProvider = SetupSutProvider();
         update.Name = "renamed";
         update.AllowsExtensions = true;
-        update.MaxExtensions = maxExtensions;
+        update.MaxExtensionDurationSeconds = maxExtensionDurationSeconds;
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateAsync(update.OrganizationId, update.Id, update, []));
-        Assert.Contains("Maximum extensions", ex.Message);
+        Assert.Contains("maximum extension length", ex.Message);
         await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
     }
 

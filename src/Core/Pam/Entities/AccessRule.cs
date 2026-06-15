@@ -51,16 +51,16 @@ public class AccessRule : ITableObject<Guid>
     public bool Enabled { get; set; } = true;
 
     /// <summary>
-    /// When true, a member holding an active lease under this rule may extend it. Extensions are always
-    /// auto-approved (regardless of the rule's approval conditions), up to <see cref="MaxExtensions"/> times.
+    /// When true, a member holding an active lease under this rule may extend it once. Extensions are always
+    /// auto-approved (regardless of the rule's approval conditions).
     /// </summary>
     public bool AllowsExtensions { get; set; }
 
     /// <summary>
-    /// The maximum number of times a single lease granted under this rule may be extended. Required to be a
-    /// positive value when <see cref="AllowsExtensions"/> is true; ignored otherwise.
+    /// The longest a single extension granted under this rule may run, in seconds. Required to be a positive value
+    /// when <see cref="AllowsExtensions"/> is true; ignored otherwise.
     /// </summary>
-    public int? MaxExtensions { get; set; }
+    public int? MaxExtensionDurationSeconds { get; set; }
 
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
