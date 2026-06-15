@@ -21,12 +21,12 @@ public class AccessRequestDetailsResponseModel : ResponseModel
         OrganizationId = details.OrganizationId;
         RequesterId = details.RequesterId;
         Status = AccessRequestStatusNames.From(details.Status, details.ProducedLeaseId.HasValue);
-        RequestedNotBefore = details.NotBefore;
-        RequestedNotAfter = details.NotAfter;
+        RequestedNotBefore = details.NotBefore.AsUtc();
+        RequestedNotAfter = details.NotAfter.AsUtc();
         RequestedTtlSeconds = (int)(details.NotAfter - details.NotBefore).TotalSeconds;
         Reason = details.Reason;
-        SubmittedAt = details.CreationDate;
-        ResolvedAt = details.ResolvedDate;
+        SubmittedAt = details.CreationDate.AsUtc();
+        ResolvedAt = details.ResolvedDate.AsUtc();
         ApproverId = details.ApproverId;
         ApproverComment = details.ApproverComment;
         ProducedLeaseId = details.ProducedLeaseId;

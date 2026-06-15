@@ -24,9 +24,9 @@ public class AccessLeaseResponseModel : ResponseModel
         OrganizationId = lease.OrganizationId;
         RequesterId = lease.RequesterId;
         Status = AccessLeaseStatusNames.From(lease.Status);
-        NotBefore = lease.NotBefore;
-        NotAfter = lease.NotAfter;
-        RevokedAt = lease.RevokedDate;
+        NotBefore = lease.NotBefore.AsUtc();
+        NotAfter = lease.NotAfter.AsUtc();
+        RevokedAt = lease.RevokedDate.AsUtc();
         RevokedByUserId = lease.RevokedBy;
     }
 

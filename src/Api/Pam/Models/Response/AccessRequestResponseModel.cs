@@ -16,10 +16,10 @@ public class AccessRequestResponseModel : ResponseModel
         CollectionId = request.CollectionId;
         OrganizationId = request.OrganizationId;
         Status = AccessRequestStatusNames.From(request.Status, hasLease: false);
-        NotBefore = request.NotBefore;
-        NotAfter = request.NotAfter;
+        NotBefore = request.NotBefore.AsUtc();
+        NotAfter = request.NotAfter.AsUtc();
         Reason = request.Reason;
-        CreationDate = request.CreationDate;
+        CreationDate = request.CreationDate.AsUtc();
     }
 
     public Guid Id { get; }
