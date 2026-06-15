@@ -137,4 +137,21 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
             new { AccessRequestId = id, Now = now },
             commandType: CommandType.StoredProcedure);
     }
+
+    public async Task CancelWithDecisionAsync(AccessRequest request, AccessDecision decision, DateTime now)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.ExecuteAsync(
+            $"[{Schema}].[AccessRequest_CancelWithDecision]",
+            new
+            {
+                AccessRequestId = request.Id,
+                AccessDecisionId = decision.Id,
+                ApproverId = decision.ApproverId,
+                Verdict = decision.Verdict,
+                decision.Comment,
+                Now = now,
+            },
+            commandType: CommandType.StoredProcedure);
+    }
 }

@@ -65,8 +65,10 @@ public class MemberLeasingController(
     }
 
     /// <summary>
-    /// Withdraws the caller's own pending access request. Only the requester may cancel, and only while the request is
-    /// still pending; a resolved request can no longer be withdrawn.
+    /// Cancels an access request that has not produced a lease. The requester may cancel their own request, and a
+    /// managing approver may cancel any request on a collection they manage; either way the request must still be
+    /// <c>pending</c> or an unactivated <c>approved</c> request. A request that has produced a lease (revoke the lease
+    /// instead) or is otherwise resolved can no longer be cancelled.
     /// </summary>
     [HttpDelete("requests/{id:guid}")]
     public async Task<IActionResult> CancelRequest(Guid id)

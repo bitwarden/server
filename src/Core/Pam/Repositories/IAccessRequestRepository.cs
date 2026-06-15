@@ -58,11 +58,22 @@ public interface IAccessRequestRepository
     Task ResolveWithDecisionAsync(AccessRequest request, AccessDecision decision, AccessRequestStatus status, DateTime now);
 
     /// <summary>
-    /// Withdraws the requester's own pending request: transitions it to <see cref="AccessRequestStatus.Cancelled"/>
-    /// and stamps <paramref name="now"/> as its resolved date. No <see cref="AccessDecision"/> is written — a
-    /// cancellation is the requester acting on their own request, not an approver verdict. The caller enforces
-    /// ownership and the pending precondition; the write is guarded so a request that has already left
-    /// <see cref="AccessRequestStatus.Pending"/> is left untouched (race-safe / idempotent).
+    /// Withdraws a not-yet-activated request on the requester's behalf: transitions it to
+    /// <see cref="AccessRequestStatus.Cancelled"/> (from <see cref="AccessRequestStatus.Pending"/> or an
+    /// <see cref="AccessRequestStatus.Approved"/> request the requester has not activated) and stamps
+    /// <paramref name="now"/> as its resolved date. No <see cref="AccessDecision"/> is written — a cancellation is the
+    /// requester acting on their own request, not an approver verdict. The write is guarded so a request that has
+    /// already left the cancellable set or produced a lease is left untouched (race-safe / idempotent).
     /// </summary>
     Task CancelAsync(Guid id, DateTime now);
+
+    /// <summary>
+    /// Retracts a not-yet-activated request on a managing approver's behalf: transitions it to
+    /// <see cref="AccessRequestStatus.Denied"/> (from <see cref="AccessRequestStatus.Pending"/> or an unactivated
+    /// <see cref="AccessRequestStatus.Approved"/> request), stamps the resolved date, and records the approver's human
+    /// Deny <paramref name="decision"/> so the audit trail names them. The write is guarded so a request that has
+    /// already left the cancellable set or produced a lease is left untouched (race-safe); the decision is recorded
+    /// only when the transition happens. Both supplied entities must already have their ids assigned.
+    /// </summary>
+    Task CancelWithDecisionAsync(AccessRequest request, AccessDecision decision, DateTime now);
 }
