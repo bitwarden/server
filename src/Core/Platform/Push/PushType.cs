@@ -108,4 +108,7 @@ public enum PushType : byte
 
     [NotificationInfo("@bitwarden/team-vault-dev", typeof(Models.UserPushNotification))]
     RefreshApproverInbox = 28,
+
+    [NotificationInfo("@bitwarden/team-vault-dev", typeof(Models.UserPushNotification))]
+    RefreshAccessRequest = 29,
 }

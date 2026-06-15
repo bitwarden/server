@@ -12,6 +12,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
     private readonly IAccessRequestRepository _accessRequestRepository;
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IApproverInboxNotifier _approverInboxNotifier;
+    private readonly IRequesterNotifier _requesterNotifier;
     private readonly ISingleActiveLeaseEvaluator _singleActiveLeaseEvaluator;
     private readonly TimeProvider _timeProvider;
 
@@ -19,12 +20,14 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository,
         IApproverInboxNotifier approverInboxNotifier,
+        IRequesterNotifier requesterNotifier,
         ISingleActiveLeaseEvaluator singleActiveLeaseEvaluator,
         TimeProvider timeProvider)
     {
         _accessRequestRepository = accessRequestRepository;
         _accessLeaseRepository = accessLeaseRepository;
         _approverInboxNotifier = approverInboxNotifier;
+        _requesterNotifier = requesterNotifier;
         _singleActiveLeaseEvaluator = singleActiveLeaseEvaluator;
         _timeProvider = timeProvider;
     }
@@ -114,6 +117,10 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         // The approver's history row just flipped approved -> activated and gained a revocable lease; tell every
         // approver of this collection to re-fetch, mirroring decide and revoke.
         await _approverInboxNotifier.NotifyCollectionApproversAsync(request.CollectionId);
+
+        // Tell the requester's other devices the approved request just minted a lease, so their "My requests" view
+        // and any open partial cipher pick up the live lease without a manual refresh.
+        await _requesterNotifier.NotifyRequesterAsync(request.RequesterId);
 
         return lease;
     }

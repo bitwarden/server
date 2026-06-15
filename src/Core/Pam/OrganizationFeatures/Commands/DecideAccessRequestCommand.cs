@@ -13,17 +13,20 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
     private readonly IAccessRequestRepository _accessRequestRepository;
     private readonly IApproverCollectionAccessQuery _approverCollectionAccessQuery;
     private readonly IApproverInboxNotifier _approverInboxNotifier;
+    private readonly IRequesterNotifier _requesterNotifier;
     private readonly TimeProvider _timeProvider;
 
     public DecideAccessRequestCommand(
         IAccessRequestRepository accessRequestRepository,
         IApproverCollectionAccessQuery approverCollectionAccessQuery,
         IApproverInboxNotifier approverInboxNotifier,
+        IRequesterNotifier requesterNotifier,
         TimeProvider timeProvider)
     {
         _accessRequestRepository = accessRequestRepository;
         _approverCollectionAccessQuery = approverCollectionAccessQuery;
         _approverInboxNotifier = approverInboxNotifier;
+        _requesterNotifier = requesterNotifier;
         _timeProvider = timeProvider;
     }
 
@@ -78,6 +81,10 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
 
         // The request just left the pending queue; tell every approver of this collection to re-fetch.
         await _approverInboxNotifier.NotifyCollectionApproversAsync(request.CollectionId);
+
+        // Tell the requester their request was resolved, so their "My requests" view flips to approved/denied and
+        // an approval becomes activatable without a manual refresh.
+        await _requesterNotifier.NotifyRequesterAsync(request.RequesterId);
 
         // The client repaints the row from Status, ResolvedAt, and ApproverComment, so those must be accurate; the
         // denormalized display fields already live on the client's existing row. Project from what we just wrote

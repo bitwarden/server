@@ -154,6 +154,8 @@ public class SubmitAccessRequestCommandTests
             .CreateAutoApprovedAsync(default!, default!);
         await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
             .NotifyCollectionApproversAsync(collectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(userId);
     }
 
     [Theory, BitAutoData]
@@ -169,6 +171,10 @@ public class SubmitAccessRequestCommandTests
 
         await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
             .NotifyCollectionApproversAsync(default);
+        // The auto path mints no approval gate, but the requester's other devices still learn of the new approved
+        // request.
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(userId);
     }
 
     [Theory, BitAutoData]

@@ -12,17 +12,20 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IApproverCollectionAccessQuery _approverCollectionAccessQuery;
     private readonly IApproverInboxNotifier _approverInboxNotifier;
+    private readonly IRequesterNotifier _requesterNotifier;
     private readonly TimeProvider _timeProvider;
 
     public RevokeAccessLeaseCommand(
         IAccessLeaseRepository accessLeaseRepository,
         IApproverCollectionAccessQuery approverCollectionAccessQuery,
         IApproverInboxNotifier approverInboxNotifier,
+        IRequesterNotifier requesterNotifier,
         TimeProvider timeProvider)
     {
         _accessLeaseRepository = accessLeaseRepository;
         _approverCollectionAccessQuery = approverCollectionAccessQuery;
         _approverInboxNotifier = approverInboxNotifier;
+        _requesterNotifier = requesterNotifier;
         _timeProvider = timeProvider;
     }
 
@@ -64,5 +67,9 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
 
         // The active lease just drained; tell every approver of this collection to re-fetch.
         await _approverInboxNotifier.NotifyCollectionApproversAsync(lease.CollectionId);
+
+        // Tell the lease holder their access ended, so an open cipher re-locks and the banner/badges drop the lease
+        // — whether an operator revoked it or the holder ended it from another device.
+        await _requesterNotifier.NotifyRequesterAsync(lease.RequesterId);
     }
 }

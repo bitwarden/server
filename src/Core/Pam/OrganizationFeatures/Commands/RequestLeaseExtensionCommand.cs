@@ -13,17 +13,23 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IGoverningRuleResolver _resolver;
     private readonly IAccessRequestRepository _accessRequestRepository;
+    private readonly IApproverInboxNotifier _approverInboxNotifier;
+    private readonly IRequesterNotifier _requesterNotifier;
     private readonly TimeProvider _timeProvider;
 
     public RequestLeaseExtensionCommand(
         IAccessLeaseRepository accessLeaseRepository,
         IGoverningRuleResolver resolver,
         IAccessRequestRepository accessRequestRepository,
+        IApproverInboxNotifier approverInboxNotifier,
+        IRequesterNotifier requesterNotifier,
         TimeProvider timeProvider)
     {
         _accessLeaseRepository = accessLeaseRepository;
         _resolver = resolver;
         _accessRequestRepository = accessRequestRepository;
+        _approverInboxNotifier = approverInboxNotifier;
+        _requesterNotifier = requesterNotifier;
         _timeProvider = timeProvider;
     }
 
@@ -116,6 +122,12 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
             case AccessLeaseExtendOutcome.AlreadyExtended:
                 throw new BadRequestException("This lease has already been extended.");
         }
+
+        // The parent lease's window just grew. Tell every approver of the collection to re-fetch (their active-leases
+        // and history views show the new end), and tell the requester's other devices so the banner/badge countdown
+        // reflects the longer window without a manual refresh.
+        await _approverInboxNotifier.NotifyCollectionApproversAsync(lease.CollectionId);
+        await _requesterNotifier.NotifyRequesterAsync(lease.RequesterId);
 
         // Project the approved-extension state the client renders (Status approved + ExtensionOfLeaseId set) from
         // what we just wrote. The parent lease's end has already been pushed out, so the next access-state snapshot
