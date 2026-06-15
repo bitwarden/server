@@ -30,4 +30,43 @@ public class AccessLeaseResponseModelTests
         Assert.Null(model.RuleId);
         Assert.Null(model.RevocationReason);
     }
+
+    [Fact]
+    public void Ctor_MarksTimestampsAsUtc()
+    {
+        // Dapper materialises stored UTC instants with Kind=Unspecified; the model must relabel them UTC so the
+        // serialised JSON carries a 'Z' and clients don't reparse them as local time.
+        var unspecified = new DateTime(2026, 6, 15, 13, 0, 0, DateTimeKind.Unspecified);
+        var lease = new AccessLease
+        {
+            Status = AccessLeaseStatus.Active,
+            NotBefore = unspecified,
+            NotAfter = unspecified.AddHours(1),
+            RevokedDate = unspecified.AddMinutes(30),
+        };
+
+        var model = new AccessLeaseResponseModel(lease);
+
+        Assert.Equal(DateTimeKind.Utc, model.NotBefore.Kind);
+        Assert.Equal(DateTimeKind.Utc, model.NotAfter.Kind);
+        Assert.Equal(DateTimeKind.Utc, model.RevokedAt!.Value.Kind);
+        // SpecifyKind relabels without shifting the wall clock.
+        Assert.Equal(unspecified.Ticks, model.NotBefore.Ticks);
+    }
+
+    [Fact]
+    public void Ctor_LeavesNullRevokedDateNull()
+    {
+        var lease = new AccessLease
+        {
+            Status = AccessLeaseStatus.Active,
+            NotBefore = new DateTime(2026, 6, 15, 13, 0, 0, DateTimeKind.Unspecified),
+            NotAfter = new DateTime(2026, 6, 15, 14, 0, 0, DateTimeKind.Unspecified),
+            RevokedDate = null,
+        };
+
+        var model = new AccessLeaseResponseModel(lease);
+
+        Assert.Null(model.RevokedAt);
+    }
 }

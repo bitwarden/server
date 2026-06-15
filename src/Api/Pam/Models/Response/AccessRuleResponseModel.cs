@@ -20,8 +20,8 @@ public class AccessRuleResponseModel : ResponseModel
         DefaultLeaseDurationSeconds = rule.DefaultLeaseDurationSeconds;
         MaxLeaseDurationSeconds = rule.MaxLeaseDurationSeconds;
         Enabled = rule.Enabled;
-        CreationDate = rule.CreationDate;
-        RevisionDate = rule.RevisionDate;
+        CreationDate = rule.CreationDate.AsUtc();
+        RevisionDate = rule.RevisionDate.AsUtc();
         Collections = rule.CollectionIds.ToList();
     }
 
