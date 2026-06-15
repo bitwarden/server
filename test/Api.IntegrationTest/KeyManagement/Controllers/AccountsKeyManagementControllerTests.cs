@@ -7,7 +7,6 @@ using Bit.Api.KeyManagement.Models.Requests;
 using Bit.Api.KeyManagement.Models.Responses;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -17,6 +16,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Entities;
 using Bit.Core.KeyManagement.Enums;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
@@ -228,7 +228,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
             Key = _mockEncryptedString,
             Keys = new KeysRequestModel { PublicKey = ssoUser.PublicKey, EncryptedPrivateKey = ssoUser.PrivateKey },
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
             OrgIdentifier = organizationSsoIdentifier
         };
 
@@ -309,9 +309,9 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         Assert.Equal(request.KeyConnectorKeyWrappedUserKey, user.Key);
         Assert.True(user.UsesKeyConnector);
         Assert.Equal(KdfType.Argon2id, user.Kdf);
-        Assert.Equal(AuthConstants.ARGON2_ITERATIONS.Default, user.KdfIterations);
-        Assert.Equal(AuthConstants.ARGON2_MEMORY.Default, user.KdfMemory);
-        Assert.Equal(AuthConstants.ARGON2_PARALLELISM.Default, user.KdfParallelism);
+        Assert.Equal(KdfConstants.ARGON2_ITERATIONS.Default, user.KdfIterations);
+        Assert.Equal(KdfConstants.ARGON2_MEMORY.Default, user.KdfMemory);
+        Assert.Equal(KdfConstants.ARGON2_PARALLELISM.Default, user.KdfParallelism);
         Assert.Equal(request.AccountKeys.PublicKeyEncryptionKeyPair!.SignedPublicKey, user.SignedPublicKey);
         Assert.Equal(request.AccountKeys.SecurityState!.SecurityState, user.SecurityState);
         Assert.Equal(request.AccountKeys.SecurityState.SecurityVersion, user.SecurityVersion);
@@ -344,6 +344,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     public async Task PostConvertToKeyConnectorAsync_Success()
     {
         var (ssoUserEmail, organization) = await SetupKeyConnectorTestAsync(OrganizationUserStatusType.Accepted);
+        await SeedMasterPasswordSaltAndHintAsync(ssoUserEmail);
 
         var response = await _client.PostAsJsonAsync("/accounts/convert-to-key-connector", new { });
         response.EnsureSuccessStatusCode();
@@ -351,6 +352,8 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
         Assert.NotNull(user);
         Assert.Null(user.MasterPassword);
+        Assert.Null(user.MasterPasswordSalt);
+        Assert.Null(user.MasterPasswordHint);
         Assert.True(user.UsesKeyConnector);
         Assert.Equal(DateTime.UtcNow, user.RevisionDate, TimeSpan.FromMinutes(1));
         Assert.Equal(DateTime.UtcNow, user.AccountRevisionDate, TimeSpan.FromMinutes(1));
@@ -392,6 +395,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     public async Task PostEnrollToKeyConnectorAsync_Success()
     {
         var (ssoUserEmail, _) = await SetupKeyConnectorTestAsync(OrganizationUserStatusType.Accepted);
+        await SeedMasterPasswordSaltAndHintAsync(ssoUserEmail);
 
         var request = new KeyConnectorEnrollmentRequestModel
         {
@@ -404,6 +408,8 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
         Assert.NotNull(user);
         Assert.Null(user.MasterPassword);
+        Assert.Null(user.MasterPasswordSalt);
+        Assert.Null(user.MasterPasswordHint);
         Assert.True(user.UsesKeyConnector);
         Assert.Equal(request.KeyConnectorKeyWrappedUserKey, user.Key);
         Assert.Equal(DateTime.UtcNow, user.RevisionDate, TimeSpan.FromMinutes(1));
@@ -890,6 +896,23 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
             OrganizationUserType.User, userStatusType: userStatusType);
 
         return (ssoUserEmail, organization);
+    }
+
+    // Registration did not populate MasterPasswordSalt or MasterPasswordHint for V1 users, so
+    // tests that need to prove the salt- and hint-clearing behavior of the Key Connector
+    // conversion must seed them explicitly.
+    private async Task SeedMasterPasswordSaltAndHintAsync(string email)
+    {
+        var user = await _userRepository.GetByEmailAsync(email);
+        Assert.NotNull(user);
+        user.MasterPasswordSalt = email;
+        user.MasterPasswordHint = "existing-hint";
+        await _userRepository.ReplaceAsync(user);
+
+        var reloaded = await _userRepository.GetByEmailAsync(email);
+        Assert.NotNull(reloaded);
+        Assert.NotNull(reloaded.MasterPasswordSalt);
+        Assert.NotNull(reloaded.MasterPasswordHint);
     }
 
     private async Task<User> SetupUserForKeyRotationAsync(

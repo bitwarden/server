@@ -1,4 +1,5 @@
 ﻿using Aspire.Hosting.Azure;
+using Aspire.Hosting.JavaScript;
 using Azure.Provisioning;
 using Azure.Provisioning.Storage;
 
@@ -28,7 +29,7 @@ public static class BuilderExtensions
     {
         var migrationArgs = new List<string> { "-File", builder.Required("Scripts:DbMigration") };
         if (builder.IsSelfHosted())
-            migrationArgs.Add("-self-hosted");
+            migrationArgs.Add("-selfhost");
 
         return builder
             .AddExecutable("run-db-migrations", "pwsh", builder.Required("WorkingDirectory"), migrationArgs.ToArray());
@@ -66,11 +67,14 @@ public static class BuilderExtensions
                     MaxAgeInSeconds = new BicepValue<int>("30")
                 }));
             })
-            .RunAsEmulator(c =>
+            .RunAsEmulator(emulator =>
             {
-                c.WithBlobPort(10000)
+                emulator
+                    .WithBlobPort(10000)
                     .WithQueuePort(10001)
-                    .WithTablePort(10002);
+                    .WithTablePort(10002)
+                    .WithDataVolume()
+                    .WithLifetime(ContainerLifetime.Persistent);
             });
 
         builder
@@ -215,6 +219,11 @@ public static class BuilderExtensions
             .WaitFor(db)
             .WaitForCompletion(secretsSetup);
 
+        if (builder.IsSelfHosted())
+        {
+            service.WithEnvironment("developSelfHosted", "true");
+        }
+
         if (name is "admin" or "identity" or "billing" or "sso")
             service.WithReference(mail.GetEndpoint("smtp"));
 
@@ -256,30 +265,31 @@ public static class BuilderExtensions
     private static bool IsSelfHosted(this IDistributedApplicationBuilder builder) =>
         builder.Configuration["SelfHost"]?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
 
-#if ENABLE_NODEJS_COMMUNITY_PLUGIN
     public static void ConfigureWebFrontend(this IDistributedApplicationBuilder builder,
         IResourceBuilder<ProjectResource> api)
     {
-        if (!int.TryParse(builder.Required("WebFrontend:Port"), out var port))
+        if (!int.TryParse(builder.Required("WebFrontend:Port"), out var basePort))
             throw new InvalidOperationException("Invalid value for WebFrontend:Port.");
-
+        var port = builder.IsSelfHosted() ? basePort + 1 : basePort;
+        var scriptName = builder.IsSelfHosted() ? "build:bit:selfhost:watch" : "build:bit:watch";
+        var url = builder.Required("WebFrontend:Url") + $":{port}";
         builder
-            .AddBitwardenNpmApp("web-frontend", "web", api)
-            .WithHttpsEndpoint(port, port, "angular-http", isProxied: false)
-            .WithUrl(builder.Required("WebFrontend:Url"))
+            .AddBitwardenNpmApp("web-frontend", "web", api, port: port, scriptName: scriptName)
+            .WithUrl(url)
             .WithExternalHttpEndpoints();
     }
 
-    private static IResourceBuilder<NodeAppResource> AddBitwardenNpmApp(this IDistributedApplicationBuilder builder,
-        string name, string path, IResourceBuilder<ProjectResource> api, string scriptName = "build:bit:watch")
+    private static IResourceBuilder<JavaScriptAppResource> AddBitwardenNpmApp(this IDistributedApplicationBuilder builder,
+        string name, string path, IResourceBuilder<ProjectResource> api, int port, string scriptName = "build:bit:watch")
     {
         return builder
-            .AddNpmApp(name, $"{builder.Required("ClientsPath")}/{path}", scriptName)
+            .AddJavaScriptApp(name, $"{builder.Required("ClientsPath")}/{path}", scriptName)
+            .WithHttpsEndpoint(port, port, "angular-http", isProxied: false)
+            .WithNpm(install: false)
             .WithReference(api)
             .WaitFor(api)
             .WithExplicitStart();
     }
-#endif
 
 #if ENABLE_NGROK_COMMUNITY_PLUGIN
     public static void ConfigureNgrok(this IDistributedApplicationBuilder builder,

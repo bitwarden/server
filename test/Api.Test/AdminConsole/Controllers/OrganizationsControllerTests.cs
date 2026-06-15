@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
@@ -27,6 +28,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Test.Billing.Mocks;
+using Bit.Core.Tokens;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -205,8 +207,8 @@ public class OrganizationsControllerTests
         var plan = MockPlans.Get(PlanType.EnterpriseAnnually);
         sutProvider.GetDependency<IPricingClient>().GetPlan(Arg.Any<PlanType>()).Returns(plan);
 
-        sutProvider.GetDependency<IOrganizationService>()
-            .UpdateCollectionManagementSettingsAsync(
+        sutProvider.GetDependency<IOrganizationUpdateCollectionManagementCommand>()
+            .UpdateAsync(
                 organization.Id,
                 Arg.Is<OrganizationCollectionManagementSettings>(s =>
                     s.LimitCollectionCreation == model.LimitCollectionCreation &&
@@ -219,9 +221,9 @@ public class OrganizationsControllerTests
         await sutProvider.Sut.PutCollectionManagement(organization.Id, model);
 
         // Assert
-        await sutProvider.GetDependency<IOrganizationService>()
+        await sutProvider.GetDependency<IOrganizationUpdateCollectionManagementCommand>()
             .Received(1)
-            .UpdateCollectionManagementSettingsAsync(
+            .UpdateAsync(
                 organization.Id,
                 Arg.Is<OrganizationCollectionManagementSettings>(s =>
                     s.LimitCollectionCreation == model.LimitCollectionCreation &&
@@ -337,5 +339,28 @@ public class OrganizationsControllerTests
         var result = await sutProvider.Sut.RotateApiKey(organization.Id.ToString(), model);
 
         Assert.Equal(organizationApiKey.ApiKey, result.ApiKey);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostDeleteRecoverToken_ThrowsBadRequestException_WhenTokenExpired(
+        SutProvider<OrganizationsController> sutProvider,
+        Organization organization)
+    {
+        // Arrange
+        var model = new OrganizationVerifyDeleteRecoverRequestModel { Token = "expired-token" };
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+
+        // Token has a matching organization Id but an expiration date two hours in the past.
+        var expiredTokenData = new OrgDeleteTokenable(organization, -2);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<OrgDeleteTokenable>>()
+            .TryUnprotect(model.Token, out expiredTokenData).Returns(true);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.PostDeleteRecoverToken(organization.Id, model));
+
+        await sutProvider.GetDependency<IOrganizationDeleteCommand>()
+            .DidNotReceiveWithAnyArgs().DeleteAsync(default);
     }
 }

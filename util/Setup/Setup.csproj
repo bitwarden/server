@@ -13,11 +13,12 @@
 
   <ItemGroup>
     <PackageReference Include="Handlebars.Net" Version="[2.1.6]" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="[10.0.3]" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="[10.0.8]" />
     <PackageReference Include="YamlDotNet" Version="[11.2.1]" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Core\Core.csproj" />
     <ProjectReference Include="..\Migrator\Migrator.csproj" />
   </ItemGroup>
 

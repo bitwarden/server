@@ -18,6 +18,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Update;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
@@ -105,6 +106,7 @@ public static class OrganizationServiceCollectionExtensions
     {
         services.AddScoped<IOrganizationUpdateKeysCommand, OrganizationUpdateKeysCommand>();
         services.AddScoped<IOrganizationUpdateCommand, OrganizationUpdateCommand>();
+        services.AddScoped<IOrganizationUpdateCollectionManagementCommand, OrganizationUpdateCollectionManagementCommand>();
     }
 
     private static void AddOrganizationEnableCommands(this IServiceCollection services) =>
@@ -159,6 +161,8 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<AccountRecoveryV2.IAdminRecoverAccountValidator, AccountRecoveryV2.AdminRecoverAccountValidator>();
         services.AddScoped<IAutomaticallyConfirmOrganizationUserCommand, AutomaticallyConfirmOrganizationUserCommand>();
         services.AddScoped<IAutomaticallyConfirmOrganizationUsersValidator, AutomaticallyConfirmOrganizationUsersValidator>();
+        services.AddScoped<IBulkAutomaticallyConfirmOrganizationUsersValidator, BulkAutomaticallyConfirmOrganizationUsersValidator>();
+        services.AddScoped<IBulkAutomaticallyConfirmOrganizationUsersCommand, BulkAutomaticallyConfirmOrganizationUsersCommand>();
 
         services.AddScoped<IDeleteClaimedOrganizationUserAccountCommand, DeleteClaimedOrganizationUserAccountCommand>();
         services.AddScoped<IDeleteClaimedOrganizationUserAccountValidator, DeleteClaimedOrganizationUserAccountValidator>();
@@ -197,9 +201,13 @@ public static class OrganizationServiceCollectionExtensions
     {
         services.TryAddScoped<ICreateOrganizationInviteLinkCommand, CreateOrganizationInviteLinkCommand>();
         services.TryAddScoped<IGetOrganizationInviteLinkQuery, GetOrganizationInviteLinkQuery>();
+        services.TryAddScoped<IGetOrganizationInviteLinkPoliciesQuery, GetOrganizationInviteLinkPoliciesQuery>();
+        services.TryAddScoped<IValidateOrganizationInviteLinkEmailDomainQuery, ValidateOrganizationInviteLinkEmailDomainQuery>();
+        services.TryAddScoped<IGetOrganizationInviteLinkStatusQuery, GetOrganizationInviteLinkStatusQuery>();
         services.TryAddScoped<IUpdateOrganizationInviteLinkCommand, UpdateOrganizationInviteLinkCommand>();
         services.TryAddScoped<IDeleteOrganizationInviteLinkCommand, DeleteOrganizationInviteLinkCommand>();
         services.TryAddScoped<IRefreshOrganizationInviteLinkCommand, RefreshOrganizationInviteLinkCommand>();
+        services.TryAddScoped<IAcceptOrganizationInviteLinkCommand, AcceptOrganizationInviteLinkCommand>();
     }
 
     private static void AddOrganizationDomainCommandsQueries(this IServiceCollection services)
@@ -210,6 +218,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IGetOrganizationDomainByOrganizationIdQuery, GetOrganizationDomainByOrganizationIdQuery>();
         services.AddScoped<IDeleteOrganizationDomainCommand, DeleteOrganizationDomainCommand>();
         services.AddScoped<IOrganizationHasVerifiedDomainsQuery, OrganizationHasVerifiedDomainsQuery>();
+        services.AddScoped<IOrganizationDomainAllowEmailChangeQuery, OrganizationDomainAllowEmailChangeQuery>();
     }
 
     private static void AddOrganizationAuthCommands(this IServiceCollection services)
@@ -221,9 +230,11 @@ public static class OrganizationServiceCollectionExtensions
     {
         services.AddScoped<ICountNewSmSeatsRequiredQuery, CountNewSmSeatsRequiredQuery>();
         services.AddScoped<IAcceptOrgUserCommand, AcceptOrgUserCommand>();
+        services.TryAddScoped<IAcceptOrganizationMembershipValidator, AcceptOrganizationMembershipValidator>();
         services.AddScoped<IPushAutoConfirmNotificationCommand, PushAutoConfirmNotificationCommand>();
         services.AddScoped<IOrganizationUserUserDetailsQuery, OrganizationUserUserDetailsQuery>();
         services.AddScoped<IGetOrganizationUsersClaimedStatusQuery, GetOrganizationUsersClaimedStatusQuery>();
+        services.AddScoped<IGetPendingAutoConfirmUsersQuery, GetPendingAutoConfirmUsersQuery>();
 
         services.AddScoped<IRestoreOrganizationUserCommand, RestoreOrganizationUserCommand>();
 

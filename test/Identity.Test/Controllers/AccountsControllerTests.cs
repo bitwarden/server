@@ -1,7 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using System.Text;
-using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.Registration;
@@ -9,6 +8,7 @@ using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -72,7 +72,7 @@ public class AccountsControllerTests : IDisposable
         var userKdfInfo = new UserKdfInformation
         {
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default
         };
         _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(userKdfInfo);
 
@@ -118,9 +118,9 @@ public class AccountsControllerTests : IDisposable
         var userKdfInfo = new UserKdfInformation
         {
             Kdf = KdfType.Argon2id,
-            KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default,
-            KdfMemory = AuthConstants.ARGON2_MEMORY.Default,
-            KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default,
+            KdfIterations = KdfConstants.ARGON2_ITERATIONS.Default,
+            KdfMemory = KdfConstants.ARGON2_MEMORY.Default,
+            KdfParallelism = KdfConstants.ARGON2_PARALLELISM.Default,
             MasterPasswordSalt = email
         };
         _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(userKdfInfo);
@@ -151,7 +151,7 @@ public class AccountsControllerTests : IDisposable
         var userKdfInfo = new UserKdfInformation
         {
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
             MasterPasswordSalt = null
         };
         _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(userKdfInfo);
@@ -172,7 +172,7 @@ public class AccountsControllerTests : IDisposable
         var response = await _sut.PostPasswordPrelogin(new PasswordPreloginRequestModel { Email = "user@example.com" });
 
         Assert.Equal(KdfType.PBKDF2_SHA256, response.Kdf);
-        Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, response.KdfIterations);
+        Assert.Equal(KdfConstants.PBKDF2_ITERATIONS.Default, response.KdfIterations);
     }
 
     [Fact]
@@ -207,11 +207,7 @@ public class AccountsControllerTests : IDisposable
 
         _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult<UserKdfInformation?>(null));
 
-        var fieldInfo = typeof(AccountsController).GetField("_defaultKdfResults", BindingFlags.NonPublic | BindingFlags.Static);
-        if (fieldInfo == null)
-            throw new InvalidOperationException("Field '_defaultKdfResults' not found.");
-
-        var defaultKdfResults = (List<UserKdfInformation>)fieldInfo.GetValue(null)!;
+        var defaultKdfResults = AccountsController._defaultKdfResults;
 
         var expectedIndex = GetExpectedKdfIndex(email, defaultKey, defaultKdfResults);
         var expectedKdf = defaultKdfResults[expectedIndex];
@@ -338,7 +334,7 @@ public class AccountsControllerTests : IDisposable
             OrgInviteToken = orgInviteToken,
             OrganizationUserId = organizationUserId,
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
             UserSymmetricKey = userSymmetricKey,
             UserAsymmetricKeys = userAsymmetricKeys
         };
@@ -346,9 +342,9 @@ public class AccountsControllerTests : IDisposable
         var kdfModel = new KdfRequestModel
         {
             KdfType = KdfType.Argon2id,
-            Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
-            Memory = AuthConstants.ARGON2_MEMORY.Default,
-            Parallelism = AuthConstants.ARGON2_PARALLELISM.Default
+            Iterations = KdfConstants.ARGON2_ITERATIONS.Default,
+            Memory = KdfConstants.ARGON2_MEMORY.Default,
+            Parallelism = KdfConstants.ARGON2_PARALLELISM.Default
         };
 
         var newModel = new RegisterFinishRequestModel
@@ -418,7 +414,7 @@ public class AccountsControllerTests : IDisposable
             OrgInviteToken = orgInviteToken,
             OrganizationUserId = organizationUserId,
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
             UserSymmetricKey = userSymmetricKey,
             UserAsymmetricKeys = userAsymmetricKeys
         };
@@ -426,9 +422,9 @@ public class AccountsControllerTests : IDisposable
         var kdfModel = new KdfRequestModel
         {
             KdfType = KdfType.Argon2id,
-            Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
-            Memory = AuthConstants.ARGON2_MEMORY.Default,
-            Parallelism = AuthConstants.ARGON2_ITERATIONS.Default
+            Iterations = KdfConstants.ARGON2_ITERATIONS.Default,
+            Memory = KdfConstants.ARGON2_MEMORY.Default,
+            Parallelism = KdfConstants.ARGON2_ITERATIONS.Default
         };
 
         var newModel = new RegisterFinishRequestModel
@@ -518,7 +514,7 @@ public class AccountsControllerTests : IDisposable
             MasterPasswordHash = masterPasswordHash,
             EmailVerificationToken = emailVerificationToken,
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
             UserSymmetricKey = userSymmetricKey,
             UserAsymmetricKeys = userAsymmetricKeys
         };
@@ -526,9 +522,9 @@ public class AccountsControllerTests : IDisposable
         var kdfModel = new KdfRequestModel
         {
             KdfType = KdfType.Argon2id,
-            Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
-            Memory = AuthConstants.ARGON2_MEMORY.Default,
-            Parallelism = AuthConstants.ARGON2_PARALLELISM.Default,
+            Iterations = KdfConstants.ARGON2_ITERATIONS.Default,
+            Memory = KdfConstants.ARGON2_MEMORY.Default,
+            Parallelism = KdfConstants.ARGON2_PARALLELISM.Default,
         };
 
         var newModel = new RegisterFinishRequestModel
@@ -596,7 +592,7 @@ public class AccountsControllerTests : IDisposable
             MasterPasswordHash = masterPasswordHash,
             EmailVerificationToken = emailVerificationToken,
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
             UserSymmetricKey = userSymmetricKey,
             UserAsymmetricKeys = userAsymmetricKeys
         };
@@ -604,9 +600,9 @@ public class AccountsControllerTests : IDisposable
         var kdfModel = new KdfRequestModel
         {
             KdfType = KdfType.Argon2id,
-            Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
-            Memory = AuthConstants.ARGON2_MEMORY.Default,
-            Parallelism = AuthConstants.ARGON2_PARALLELISM.Default
+            Iterations = KdfConstants.ARGON2_ITERATIONS.Default,
+            Memory = KdfConstants.ARGON2_MEMORY.Default,
+            Parallelism = KdfConstants.ARGON2_PARALLELISM.Default
         };
 
         var newModel = new RegisterFinishRequestModel
@@ -781,9 +777,9 @@ public class AccountsControllerTests : IDisposable
         var kdfData = new KdfRequestModel
         {
             KdfType = KdfType.Argon2id,
-            Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
-            Memory = AuthConstants.ARGON2_MEMORY.Default,
-            Parallelism = AuthConstants.ARGON2_PARALLELISM.Default
+            Iterations = KdfConstants.ARGON2_ITERATIONS.Default,
+            Memory = KdfConstants.ARGON2_MEMORY.Default,
+            Parallelism = KdfConstants.ARGON2_PARALLELISM.Default
         };
 
         var newModel = new RegisterFinishRequestModel
@@ -812,7 +808,7 @@ public class AccountsControllerTests : IDisposable
             EmailVerificationToken = emailVerificationToken,
             MasterPasswordHash = masterPasswordHash,
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
             UserSymmetricKey = masterKeyWrappedUserKey,
             UserAsymmetricKeys = new KeysRequestModel
             {
@@ -888,9 +884,9 @@ public class AccountsControllerTests : IDisposable
         var kdfData = new KdfRequestModel
         {
             KdfType = KdfType.Argon2id,
-            Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
-            Memory = AuthConstants.ARGON2_MEMORY.Default,
-            Parallelism = AuthConstants.ARGON2_PARALLELISM.Default
+            Iterations = KdfConstants.ARGON2_ITERATIONS.Default,
+            Memory = KdfConstants.ARGON2_MEMORY.Default,
+            Parallelism = KdfConstants.ARGON2_PARALLELISM.Default
         };
 
         // Arrange: new-form model (MasterPasswordAuthenticationData + MasterPasswordUnlockData)
@@ -922,7 +918,7 @@ public class AccountsControllerTests : IDisposable
             OrganizationUserId = organizationUserId,
             MasterPasswordHash = masterPasswordHash,
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
             UserSymmetricKey = masterKeyWrappedUserKey,
             UserAsymmetricKeys = new KeysRequestModel
             {
@@ -1054,7 +1050,7 @@ public class AccountsControllerTests : IDisposable
             EmailVerificationToken = emailVerificationToken,
             MasterPasswordHash = masterPasswordHash,
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
             UserSymmetricKey = legacyKey,
             MasterPasswordUnlock = null,
             UserAsymmetricKeys = new KeysRequestModel
@@ -1078,7 +1074,7 @@ public class AccountsControllerTests : IDisposable
             Arg.Is<User>(u =>
                 u.Email == email &&
                 u.Kdf == KdfType.PBKDF2_SHA256 &&
-                u.KdfIterations == AuthConstants.PBKDF2_ITERATIONS.Default &&
+                u.KdfIterations == KdfConstants.PBKDF2_ITERATIONS.Default &&
                 u.Key == legacyKey),
             data,
             emailVerificationToken);
@@ -1096,14 +1092,14 @@ public class AccountsControllerTests : IDisposable
         var authKdf = new KdfRequestModel
         {
             KdfType = KdfType.PBKDF2_SHA256,
-            Iterations = AuthConstants.PBKDF2_ITERATIONS.Default
+            Iterations = KdfConstants.PBKDF2_ITERATIONS.Default
         };
         var unlockKdf = new KdfRequestModel
         {
             KdfType = KdfType.Argon2id,
-            Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
-            Memory = AuthConstants.ARGON2_MEMORY.Default,
-            Parallelism = AuthConstants.ARGON2_PARALLELISM.Default
+            Iterations = KdfConstants.ARGON2_ITERATIONS.Default,
+            Memory = KdfConstants.ARGON2_MEMORY.Default,
+            Parallelism = KdfConstants.ARGON2_PARALLELISM.Default
         };
 
         var model = new RegisterFinishRequestModel
@@ -1152,9 +1148,9 @@ public class AccountsControllerTests : IDisposable
         var unlockKdf = new KdfRequestModel
         {
             KdfType = KdfType.Argon2id,
-            Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
-            Memory = AuthConstants.ARGON2_MEMORY.Default,
-            Parallelism = AuthConstants.ARGON2_PARALLELISM.Default
+            Iterations = KdfConstants.ARGON2_ITERATIONS.Default,
+            Memory = KdfConstants.ARGON2_MEMORY.Default,
+            Parallelism = KdfConstants.ARGON2_PARALLELISM.Default
         };
 
         var model = new RegisterFinishRequestModel
@@ -1206,7 +1202,7 @@ public class AccountsControllerTests : IDisposable
         var kdf = new KdfRequestModel
         {
             KdfType = KdfType.PBKDF2_SHA256,
-            Iterations = AuthConstants.PBKDF2_ITERATIONS.Default
+            Iterations = KdfConstants.PBKDF2_ITERATIONS.Default
         };
 
         var model = new RegisterFinishRequestModel
@@ -1247,6 +1243,42 @@ public class AccountsControllerTests : IDisposable
             "MasterPasswordAuthenticationHash and root level MasterPasswordHash provided and are not equal. Only provide one."));
         Assert.Contains("MasterPasswordAuthenticationHash", mismatchResult.MemberNames);
         Assert.Contains("MasterPasswordHash", mismatchResult.MemberNames);
+    }
+
+    [Fact]
+    public void DefaultKdfResults_ShouldContainExpectedEntries()
+    {
+        var pool = AccountsController._defaultKdfResults;
+
+        Assert.Equal(6, pool.Count);
+
+        // Index 0 — PBKDF2 600k (normal default)
+        Assert.Equal(KdfType.PBKDF2_SHA256, pool[0].Kdf);
+        Assert.Equal(600_000, pool[0].KdfIterations);
+
+        // Index 1 — PBKDF2 600k (weight duplicate)
+        Assert.Equal(KdfType.PBKDF2_SHA256, pool[1].Kdf);
+        Assert.Equal(600_000, pool[1].KdfIterations);
+
+        // Index 2 — PBKDF2 100k (historical)
+        Assert.Equal(KdfType.PBKDF2_SHA256, pool[2].Kdf);
+        Assert.Equal(100_000, pool[2].KdfIterations);
+
+        // Index 3 — PBKDF2 5k (historical)
+        Assert.Equal(KdfType.PBKDF2_SHA256, pool[3].Kdf);
+        Assert.Equal(5_000, pool[3].KdfIterations);
+
+        // Index 4 — Argon2id 3 iterations, 64MB, 4 parallelism (historical)
+        Assert.Equal(KdfType.Argon2id, pool[4].Kdf);
+        Assert.Equal(3, pool[4].KdfIterations);
+        Assert.Equal(64, pool[4].KdfMemory);
+        Assert.Equal(4, pool[4].KdfParallelism);
+
+        // Index 5 — Argon2id 6 iterations, 32MB, 4 parallelism
+        Assert.Equal(KdfType.Argon2id, pool[5].Kdf);
+        Assert.Equal(6, pool[5].KdfIterations);
+        Assert.Equal(32, pool[5].KdfMemory);
+        Assert.Equal(4, pool[5].KdfParallelism);
     }
 
     private void SetDefaultKdfHmacKey(byte[]? newKey)

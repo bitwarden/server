@@ -65,6 +65,7 @@ public class OrganizationsController : Controller
     private readonly IPricingClient _pricingClient;
     private readonly IOrganizationUpdateKeysCommand _organizationUpdateKeysCommand;
     private readonly IOrganizationUpdateCommand _organizationUpdateCommand;
+    private readonly IOrganizationUpdateCollectionManagementCommand _organizationUpdateCollectionManagementCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -88,7 +89,8 @@ public class OrganizationsController : Controller
         IOrganizationDeleteCommand organizationDeleteCommand,
         IPricingClient pricingClient,
         IOrganizationUpdateKeysCommand organizationUpdateKeysCommand,
-        IOrganizationUpdateCommand organizationUpdateCommand)
+        IOrganizationUpdateCommand organizationUpdateCommand,
+        IOrganizationUpdateCollectionManagementCommand organizationUpdateCollectionManagementCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -112,6 +114,7 @@ public class OrganizationsController : Controller
         _pricingClient = pricingClient;
         _organizationUpdateKeysCommand = organizationUpdateKeysCommand;
         _organizationUpdateCommand = organizationUpdateCommand;
+        _organizationUpdateCollectionManagementCommand = organizationUpdateCollectionManagementCommand;
     }
 
     [HttpGet("{id}")]
@@ -338,7 +341,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        if (!_orgDeleteTokenDataFactory.TryUnprotect(model.Token, out var data) || !data.IsValid(organization))
+        if (!_orgDeleteTokenDataFactory.TryUnprotect(model.Token, out var data) || !data.Valid || !data.IsValid(organization))
         {
             throw new BadRequestException("Invalid token.");
         }
@@ -547,7 +550,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var organization = await _organizationService.UpdateCollectionManagementSettingsAsync(id, model.ToSettings());
+        var organization = await _organizationUpdateCollectionManagementCommand.UpdateAsync(id, model.ToSettings());
         var plan = await _pricingClient.GetPlan(organization.PlanType);
         return new OrganizationResponseModel(organization, plan);
     }

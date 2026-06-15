@@ -1,15 +1,17 @@
-﻿using Bit.Core.Billing.Enums;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.PlanMigration;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using static Bit.Core.Billing.Constants.StripeConstants;
-using Plan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Core.Billing.Pricing;
 
@@ -46,22 +48,45 @@ public interface IPriceIncreaseScheduler
     Task<bool> ScheduleBusinessPriceIncrease(Subscription subscription, OrganizationPlanMigrationCohort cohort);
 
     /// <summary>
+    /// Creates a deferred price-increase schedule for the given subscription,
+    /// dispatching to the correct path based on the subscription owner.
+    /// </summary>
+    /// <param name="subscription">The Stripe subscription to schedule a price increase for.</param>
+    /// <param name="options">
+    /// Optional guards applied before scheduling.
+    /// </param>
+    /// <returns>True if a new schedule was created; false if skipped.</returns>
+    Task<bool> ScheduleForSubscription(
+        Subscription subscription,
+        OrganizationPriceIncreaseOptions? options = null);
+
+    /// <summary>
     /// Releases any active subscription schedule for the given subscription, cancelling a pending
-    /// deferred price increase. Use when the subscription operation makes the scheduled migration
-    /// irrelevant (e.g., plan upgrade, sponsorship, cancellation). Runs when either
-    /// <c>PM32645_DeferPriceMigrationToRenewal</c> or <c>PM35215_BusinessPlanPriceMigration</c> is
-    /// enabled. Logs and re-throws on failure, requiring manual release via the Stripe Dashboard.
+    /// deferred price increase. When <paramref name="organizationId"/> is provided, the
+    /// organization's cohort assignment is also dropped so it leaves the deferred business
+    /// migration. Use when the subscription operation makes the scheduled migration irrelevant
+    /// (e.g., plan upgrade, sponsorship, cancellation). The release is driven by the presence of
+    /// an active schedule rather than a feature flag, so it safely no-ops when no schedule exists.
+    /// Logs and re-throws if the Stripe release fails, requiring manual release via the Stripe
+    /// Dashboard. A failure to drop the cohort assignment after a successful release is logged for
+    /// manual cleanup but does not fail the operation.
     /// </summary>
     /// <param name="customerId">The Stripe customer ID that owns the subscription.</param>
     /// <param name="subscriptionId">The Stripe subscription ID to release the schedule for.</param>
-    Task Release(string customerId, string subscriptionId);
+    /// <param name="organizationId">
+    /// When provided, the organization's cohort assignment row is also deleted after the Stripe
+    /// schedule is released, dropping it from the deferred business migration.
+    /// </param>
+    Task Release(string customerId, string subscriptionId, Guid? organizationId = null);
 }
 
 public class PriceIncreaseScheduler(
     IStripeAdapter stripeAdapter,
     IFeatureService featureService,
     IPricingClient pricingClient,
+    IOrganizationRepository organizationRepository,
     IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
+    IOrganizationPlanMigrationCohortRepository cohortRepository,
     ILogger<PriceIncreaseScheduler> logger) : IPriceIncreaseScheduler
 {
     public async Task<bool> SchedulePersonalPriceIncrease(Subscription subscription)
@@ -140,7 +165,13 @@ public class PriceIncreaseScheduler(
             return false;
         }
 
-        await CreateAndConfigureScheduleAsync(subscription, phase2);
+        var phaseMetadata = new Dictionary<string, string>
+        {
+            [MetadataKeys.MigrationCohortId] = cohort.Id.ToString(),
+            [MetadataKeys.MigrationCohortName] = cohort.Name
+        };
+
+        await CreateAndConfigureScheduleAsync(subscription, phase2, phaseMetadata);
 
         var assignment = await assignmentRepository.GetByOrganizationIdAsync(organizationId);
         if (assignment is null)
@@ -163,14 +194,35 @@ public class PriceIncreaseScheduler(
         return true;
     }
 
-    public async Task Release(string customerId, string subscriptionId)
+    public async Task<bool> ScheduleForSubscription(
+        Subscription subscription,
+        OrganizationPriceIncreaseOptions? options = null)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal) &&
-            !featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
+        try
         {
-            return;
+            SubscriberId subscriberId = subscription;
+            return await subscriberId.Match(
+                _ => SchedulePersonalPriceIncrease(subscription),
+                orgId => DispatchOrganizationScheduleAsync(subscription, orgId.Value, options),
+                _ =>
+                {
+                    logger.LogWarning(
+                        "Provider subscriptions do not support schedule recovery ({SubscriptionId})",
+                        subscription.Id);
+                    return Task.FromResult(false);
+                });
         }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Failed to resolve subscriber type for subscription ({SubscriptionId}), cannot recover schedule",
+                subscription.Id);
+            return false;
+        }
+    }
 
+    public async Task Release(string customerId, string subscriptionId, Guid? organizationId = null)
+    {
         try
         {
             var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
@@ -182,6 +234,24 @@ public class PriceIncreaseScheduler(
             if (activeSchedule != null)
             {
                 await stripeAdapter.ReleaseSubscriptionScheduleAsync(activeSchedule.Id);
+            }
+
+            if (organizationId is not null)
+            {
+                try
+                {
+                    var assignment = await assignmentRepository.GetByOrganizationIdAsync(organizationId.Value);
+                    if (assignment is not null)
+                    {
+                        await assignmentRepository.DeleteAsync(assignment);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex,
+                        "Released the subscription schedule for subscription {SubscriptionId} but failed to drop the migration cohort assignment for organization {OrganizationId}. Manual cleanup of the cohort assignment is required.",
+                        subscriptionId, organizationId.Value);
+                }
             }
         }
         catch (Exception ex)
@@ -213,7 +283,8 @@ public class PriceIncreaseScheduler(
 
     private async Task<SubscriptionSchedule> CreateAndConfigureScheduleAsync(
         Subscription subscription,
-        SubscriptionSchedulePhaseOptions phase2)
+        SubscriptionSchedulePhaseOptions phase2Options,
+        Dictionary<string, string>? phaseMetadata = null)
     {
         var schedule = await stripeAdapter.CreateSubscriptionScheduleAsync(
             new SubscriptionScheduleCreateOptions { FromSubscription = subscription.Id });
@@ -222,32 +293,36 @@ public class PriceIncreaseScheduler(
         {
             var phase1 = schedule.Phases[0];
 
+            var phase1Options = new SubscriptionSchedulePhaseOptions
+            {
+                StartDate = phase1.StartDate,
+                EndDate = phase1.EndDate,
+                Items = [.. phase1.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
+                {
+                    Price = i.PriceId,
+                    Quantity = i.Quantity
+                })],
+                Discounts = phase1.Discounts is null ? null :
+                [
+                    .. phase1.Discounts.Select(d => new SubscriptionSchedulePhaseDiscountOptions
+                    {
+                        Coupon = d.CouponId
+                    })
+                ],
+                ProrationBehavior = ProrationBehavior.None
+            };
+
+            if (phaseMetadata is not null)
+            {
+                phase1Options.Metadata = phaseMetadata;
+                phase2Options.Metadata = phaseMetadata;
+            }
+
             await stripeAdapter.UpdateSubscriptionScheduleAsync(schedule.Id,
                 new SubscriptionScheduleUpdateOptions
                 {
                     EndBehavior = SubscriptionScheduleEndBehavior.Release,
-                    Phases =
-                    [
-                        new SubscriptionSchedulePhaseOptions
-                        {
-                            StartDate = phase1.StartDate,
-                            EndDate = phase1.EndDate,
-                            Items = [.. phase1.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
-                            {
-                                Price = i.PriceId,
-                                Quantity = i.Quantity
-                            })],
-                            Discounts = phase1.Discounts is null ? null :
-                            [
-                                .. phase1.Discounts.Select(d => new SubscriptionSchedulePhaseDiscountOptions
-                                {
-                                    Coupon = d.CouponId
-                                })
-                            ],
-                            ProrationBehavior = ProrationBehavior.None
-                        },
-                        phase2
-                    ]
+                    Phases = [phase1Options, phase2Options]
                 });
 
             return schedule;
@@ -467,9 +542,7 @@ public class PriceIncreaseScheduler(
 
         if (cohort.MigrationPathId is null)
         {
-            logger.LogWarning(
-                "Cohort ({CohortId}) has no MigrationPathId; cannot schedule business price increase for subscription ({SubscriptionId})",
-                cohort.Id, subscription.Id);
+            // Churn-only cohort — no migration to schedule.
             return null;
         }
 
@@ -488,7 +561,7 @@ public class PriceIncreaseScheduler(
         var items = new List<SubscriptionSchedulePhaseItemOptions>();
         foreach (var item in subscription.Items.Data)
         {
-            var targetPriceId = MapToTargetPriceId(item.Price.Id, sourcePlan, targetPlan);
+            var targetPriceId = OrganizationPlanMigrationPriceMapper.MapOrNull(item.Price.Id, sourcePlan, targetPlan);
             if (targetPriceId is null)
             {
                 logger.LogWarning(
@@ -544,13 +617,90 @@ public class PriceIncreaseScheduler(
         };
     }
 
-    private static string? MapToTargetPriceId(string sourcePriceId, Plan source, Plan target) => sourcePriceId switch
+    /// <summary>
+    /// Coordinates the full organization scheduling flow. Resolves the organization, routes
+    /// non-business plan types (personal, family, and 2019-era plans) to the personal scheduling
+    /// path, then validates cohort eligibility before scheduling.
+    /// </summary>
+    private async Task<bool> DispatchOrganizationScheduleAsync(
+        Subscription subscription,
+        Guid organizationId,
+        OrganizationPriceIncreaseOptions? options)
     {
-        _ when sourcePriceId == source.PasswordManager.StripeSeatPlanId => target.PasswordManager.StripeSeatPlanId,
-        _ when sourcePriceId == source.PasswordManager.StripeStoragePlanId => target.PasswordManager.StripeStoragePlanId,
-        _ when sourcePriceId == source.SecretsManager?.StripeSeatPlanId => target.SecretsManager?.StripeSeatPlanId,
-        _ when sourcePriceId == source.SecretsManager?.StripeServiceAccountPlanId => target.SecretsManager?.StripeServiceAccountPlanId,
-        _ => null
-    };
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+        if (organization is null)
+        {
+            logger.LogError(
+                "Organization ({OrganizationId}) not found; cannot recover schedule for subscription ({SubscriptionId})",
+                organizationId, subscription.Id);
+            return false;
+        }
+
+        if (organization.PlanType.GetProductTier() is not (ProductTierType.Teams or ProductTierType.Enterprise))
+        {
+            return await SchedulePersonalPriceIncrease(subscription);
+        }
+
+        var assignment = await assignmentRepository.GetByOrganizationIdAsync(organization.Id);
+        if (assignment is null)
+        {
+            return false;
+        }
+
+        var cohort = await cohortRepository.GetByIdAsync(assignment.CohortId);
+        if (cohort is null)
+        {
+            return false;
+        }
+
+        if (!IsEligibleForScheduling(organization, assignment, cohort, options))
+        {
+            return false;
+        }
+
+        return await ScheduleBusinessPriceIncrease(subscription, cohort);
+    }
+
+    /// <summary>
+    /// Returns true if the organization is eligible for a business plan price increase.
+    /// Guards from <paramref name="options"/> are evaluated first against all resolved data;
+    /// structural eligibility checks follow.
+    /// </summary>
+    private bool IsEligibleForScheduling(
+        Organization organization,
+        OrganizationPlanMigrationCohortAssignment assignment,
+        OrganizationPlanMigrationCohort cohort,
+        OrganizationPriceIncreaseOptions? options)
+    {
+        if (options?.SkipIfAlreadyScheduled == true && assignment.ScheduledDate is not null)
+        {
+            return false;
+        }
+
+        if (!cohort.IsActive || cohort.MigrationPathId is null)
+        {
+            return false;
+        }
+
+        var migrationPath = MigrationPaths.FromId(cohort.MigrationPathId.Value);
+        if (migrationPath is null)
+        {
+            logger.LogError(
+                "Unknown MigrationPathId ({MigrationPathId}) on cohort ({CohortId}); skipping schedule for organization ({OrganizationId})",
+                cohort.MigrationPathId, cohort.Id, organization.Id);
+            return false;
+        }
+
+        if (organization.PlanType != migrationPath.FromPlan)
+        {
+            logger.LogWarning(
+                "Skipping schedule for Organization ({OrganizationId}); PlanType {ActualPlan} does not match cohort {CohortName} source {ExpectedPlan}",
+                organization.Id, organization.PlanType, cohort.Name, migrationPath.FromPlan);
+            return false;
+        }
+
+        return true;
+    }
+
 
 }
