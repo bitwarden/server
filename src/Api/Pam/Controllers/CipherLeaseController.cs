@@ -71,6 +71,10 @@ public class CipherLeaseController(
     /// This is the read-back counterpart to the partial data sync returns for leasing-gated ciphers. The data is
     /// still client-encrypted; the lease only gates whether the server hands it over.
     /// </summary>
+    // DEPRECATED: scheduled for removal; the full leased cipher will be served through the standard cipher read path
+    // rather than this dedicated endpoint. Kept fully functional during the PAM pre-release. Removal is a later task.
+    [Obsolete("Deprecated and scheduled for removal; the full leased cipher will be served through the standard " +
+              "cipher read path instead of this dedicated endpoint. Kept functional for the PAM pre-release.")]
     [HttpGet("cipher")]
     public async Task<CipherDetailsResponseModel> GetCipher(Guid id)
     {
