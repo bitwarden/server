@@ -208,6 +208,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<ISubmitAccessRequestCommand, SubmitAccessRequestCommand>();
         services.AddScoped<IApproverCollectionAccessQuery, ApproverCollectionAccessQuery>();
         services.AddScoped<IApproverInboxNotifier, ApproverInboxNotifier>();
+        services.AddScoped<IRequesterNotifier, RequesterNotifier>();
         services.AddScoped<IListInboxRequestsQuery, ListInboxRequestsQuery>();
         services.AddScoped<IListInboxHistoryQuery, ListInboxHistoryQuery>();
         services.AddScoped<IDecideAccessRequestCommand, DecideAccessRequestCommand>();

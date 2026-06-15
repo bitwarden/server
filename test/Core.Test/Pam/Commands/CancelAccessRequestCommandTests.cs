@@ -79,6 +79,8 @@ public class CancelAccessRequestCommandTests
             .CancelWithDecisionAsync(default!, default!, default);
         await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
             .NotifyCollectionApproversAsync(request.CollectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(request.RequesterId);
     }
 
     [Theory]
@@ -107,6 +109,8 @@ public class CancelAccessRequestCommandTests
             .CancelAsync(default, default);
         await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
             .NotifyCollectionApproversAsync(request.CollectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(request.RequesterId);
     }
 
     [Theory, BitAutoData]

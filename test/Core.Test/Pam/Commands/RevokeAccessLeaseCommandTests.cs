@@ -63,6 +63,8 @@ public class RevokeAccessLeaseCommandTests
             _now);
         await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
             .NotifyCollectionApproversAsync(lease.CollectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(lease.RequesterId);
     }
 
     [Theory, BitAutoData]
@@ -95,6 +97,8 @@ public class RevokeAccessLeaseCommandTests
             _now);
         await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
             .NotifyCollectionApproversAsync(lease.CollectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(lease.RequesterId);
     }
 
     private static SutProvider<RevokeAccessLeaseCommand> Setup()

@@ -179,6 +179,13 @@ public class RequestLeaseExtensionCommandTests
             Arg.Is<AccessDecision>(d =>
                 d.DeciderKind == AccessDeciderKind.Automatic && d.Verdict == AccessDecisionVerdict.Approve),
             _now);
+
+        // The widened lease window must reach both the approvers (active-leases / history views) and the requester's
+        // other devices (banner / badge countdown).
+        await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
+            .NotifyCollectionApproversAsync(lease.CollectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(lease.RequesterId);
     }
 
     [Theory, BitAutoData]

@@ -13,6 +13,7 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IApproverCollectionAccessQuery _approverCollectionAccessQuery;
     private readonly IApproverInboxNotifier _approverInboxNotifier;
+    private readonly IRequesterNotifier _requesterNotifier;
     private readonly TimeProvider _timeProvider;
 
     public CancelAccessRequestCommand(
@@ -20,12 +21,14 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
         IAccessLeaseRepository accessLeaseRepository,
         IApproverCollectionAccessQuery approverCollectionAccessQuery,
         IApproverInboxNotifier approverInboxNotifier,
+        IRequesterNotifier requesterNotifier,
         TimeProvider timeProvider)
     {
         _accessRequestRepository = accessRequestRepository;
         _accessLeaseRepository = accessLeaseRepository;
         _approverCollectionAccessQuery = approverCollectionAccessQuery;
         _approverInboxNotifier = approverInboxNotifier;
+        _requesterNotifier = requesterNotifier;
         _timeProvider = timeProvider;
     }
 
@@ -94,5 +97,9 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
         // The request just left the pending/approved set; tell every approver of this collection to re-fetch so it
         // drops out of their inbox. Mirrors decide.
         await _approverInboxNotifier.NotifyCollectionApproversAsync(request.CollectionId);
+
+        // Tell the requester their request is gone, so a manager's retraction reaches them and their other devices
+        // drop the request from "My requests" without a manual refresh.
+        await _requesterNotifier.NotifyRequesterAsync(request.RequesterId);
     }
 }

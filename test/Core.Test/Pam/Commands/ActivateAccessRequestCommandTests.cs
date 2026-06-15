@@ -154,6 +154,8 @@ public class ActivateAccessRequestCommandTests
             .CreateFromApprovedRequestAsync(result, _now, Arg.Any<bool>());
         await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
             .NotifyCollectionApproversAsync(request.CollectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(request.RequesterId);
     }
 
     [Theory, BitAutoData]
@@ -174,6 +176,8 @@ public class ActivateAccessRequestCommandTests
         Assert.Same(winner, result);
         await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
             .NotifyCollectionApproversAsync(default);
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
     }
 
     [Theory, BitAutoData]
@@ -226,6 +230,8 @@ public class ActivateAccessRequestCommandTests
         Assert.Contains("Another active lease exists", ex.Message);
         await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
             .NotifyCollectionApproversAsync(default);
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
     }
 
     [Theory, BitAutoData]

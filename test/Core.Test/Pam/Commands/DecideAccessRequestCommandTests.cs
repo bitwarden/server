@@ -39,6 +39,10 @@ public class DecideAccessRequestCommandTests
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.DecideAsync(userId, request.Id, Approve()));
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
     }
 
     [Theory, BitAutoData]
@@ -50,6 +54,10 @@ public class DecideAccessRequestCommandTests
 
         await Assert.ThrowsAsync<ConflictException>(
             () => sutProvider.Sut.DecideAsync(userId, request.Id, Approve()));
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
     }
 
     [Theory, BitAutoData]
@@ -65,6 +73,8 @@ public class DecideAccessRequestCommandTests
         Assert.Contains("your own request", ex.Message);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .ResolveWithDecisionAsync(default!, default!, default, default);
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
     }
 
     [Theory, BitAutoData]
@@ -83,6 +93,8 @@ public class DecideAccessRequestCommandTests
             .ResolveWithDecisionAsync(default!, default!, default, default);
         await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
             .NotifyCollectionApproversAsync(default);
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
     }
 
     [Theory, BitAutoData]
@@ -126,6 +138,8 @@ public class DecideAccessRequestCommandTests
             _now);
         await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
             .NotifyCollectionApproversAsync(request.CollectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(request.RequesterId);
     }
 
     [Theory, BitAutoData]
@@ -144,6 +158,9 @@ public class DecideAccessRequestCommandTests
             Arg.Is<AccessDecision>(d => d.Verdict == AccessDecisionVerdict.Deny),
             AccessRequestStatus.Denied,
             _now);
+        // A denial reaches the requester too (their "My requests" view flips to denied).
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(request.RequesterId);
     }
 
     private static AccessDecisionSubmission Approve(string? comment = null) =>

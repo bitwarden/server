@@ -27,6 +27,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IAccessRequestRepository _accessRequestRepository;
     private readonly IApproverInboxNotifier _approverInboxNotifier;
+    private readonly IRequesterNotifier _requesterNotifier;
     private readonly TimeProvider _timeProvider;
 
     public SubmitAccessRequestCommand(
@@ -37,6 +38,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         IAccessLeaseRepository accessLeaseRepository,
         IAccessRequestRepository accessRequestRepository,
         IApproverInboxNotifier approverInboxNotifier,
+        IRequesterNotifier requesterNotifier,
         TimeProvider timeProvider)
     {
         _cipherRepository = cipherRepository;
@@ -46,6 +48,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         _accessLeaseRepository = accessLeaseRepository;
         _accessRequestRepository = accessRequestRepository;
         _approverInboxNotifier = approverInboxNotifier;
+        _requesterNotifier = requesterNotifier;
         _timeProvider = timeProvider;
     }
 
@@ -146,6 +149,10 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         // the one place a lease is now minted, rather than here.
         await _accessRequestRepository.CreateAutoApprovedAsync(request, decision);
 
+        // Tell the requester's other devices a new approved request exists, so "My requests" can offer to activate it
+        // without a manual refresh.
+        await _requesterNotifier.NotifyRequesterAsync(userId);
+
         return AccessRequestResult.Automatic(request);
     }
 
@@ -195,6 +202,10 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
 
         // A new request just entered the pending queue; tell every approver of this collection to re-fetch.
         await _approverInboxNotifier.NotifyCollectionApproversAsync(created.CollectionId);
+
+        // Tell the requester's other devices a new pending request exists, so "My requests" reflects it without a
+        // manual refresh.
+        await _requesterNotifier.NotifyRequesterAsync(userId);
 
         return AccessRequestResult.Human(created);
     }
