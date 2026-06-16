@@ -11,7 +11,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
 public class AdminRecoverAccountValidator(
     IOrganizationRepository organizationRepository,
     IPolicyQuery policyQuery,
-    IFeatureService featureService,
     IUserRepository userRepository) : IAdminRecoverAccountValidator
 {
     public async Task<ValidationResult<RecoverAccountRequest>> ValidateAsync(RecoverAccountRequest request)
@@ -31,12 +30,6 @@ public class AdminRecoverAccountValidator(
             {
                 return Invalid(request, new MissingPasswordFieldsError());
             }
-        }
-
-        // If resetting 2FA, feature flag must be enabled
-        if (request.ResetTwoFactor && !featureService.IsEnabled(FeatureFlagKeys.AdminResetTwoFactor))
-        {
-            return Invalid(request, new FeatureDisabledError());
         }
 
         // Org must allow reset password

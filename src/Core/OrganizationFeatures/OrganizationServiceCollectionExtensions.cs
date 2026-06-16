@@ -156,7 +156,6 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IUpdateOrganizationUserGroupsCommand, UpdateOrganizationUserGroupsCommand>();
         services.AddScoped<IConfirmOrganizationUserCommand, ConfirmOrganizationUserCommand>();
         services.AddScoped<ISendOrganizationConfirmationCommand, SendOrganizationConfirmationCommand>();
-        services.AddScoped<IAdminRecoverAccountCommand, AdminRecoverAccountCommand>();
         services.AddScoped<AccountRecoveryV2.IAdminRecoverAccountCommand, AccountRecoveryV2.AdminRecoverAccountCommand>();
         services.AddScoped<AccountRecoveryV2.IAdminRecoverAccountValidator, AccountRecoveryV2.AdminRecoverAccountValidator>();
         services.AddScoped<IAutomaticallyConfirmOrganizationUserCommand, AutomaticallyConfirmOrganizationUserCommand>();

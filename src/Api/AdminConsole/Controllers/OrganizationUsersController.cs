@@ -86,7 +86,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
     private readonly IInitPendingOrganizationCommand _initPendingOrganizationCommand;
     private readonly V1_RevokeOrganizationUserCommand _revokeOrganizationUserCommand;
-    private readonly IAdminRecoverAccountCommand _adminRecoverAccountCommand;
     private readonly AccountRecoveryV2.IAdminRecoverAccountCommand _adminRecoverAccountCommandV2;
     private readonly ISelfRevokeOrganizationUserCommand _selfRevokeOrganizationUserCommand;
     private readonly IUpdateUserResetPasswordEnrollmentCommand _updateUserResetPasswordEnrollmentCommand;
@@ -118,7 +117,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         V1_RevokeOrganizationUserCommand revokeOrganizationUserCommand,
         IResendOrganizationInviteCommand resendOrganizationInviteCommand,
         IBulkResendOrganizationInvitesCommand bulkResendOrganizationInvitesCommand,
-        IAdminRecoverAccountCommand adminRecoverAccountCommand,
         AccountRecoveryV2.IAdminRecoverAccountCommand adminRecoverAccountCommandV2,
         IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand,
         IBulkAutomaticallyConfirmOrganizationUsersCommand bulkAutomaticallyConfirmOrganizationUsersCommand,
@@ -158,7 +156,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
         _initPendingOrganizationCommand = initPendingOrganizationCommand;
         _revokeOrganizationUserCommand = revokeOrganizationUserCommand;
-        _adminRecoverAccountCommand = adminRecoverAccountCommand;
         _adminRecoverAccountCommandV2 = adminRecoverAccountCommandV2;
         _selfRevokeOrganizationUserCommand = selfRevokeOrganizationUserCommand;
         _updateUserResetPasswordEnrollmentCommand = updateUserResetPasswordEnrollmentCommand;
@@ -530,35 +527,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
             return TypedResults.BadRequest(new ErrorResponseModel(failureReason));
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AdminResetTwoFactor))
-        {
-            var commandRequest = model.ToCommandRequest(orgId, targetOrganizationUser);
-            return Handle(await _adminRecoverAccountCommandV2.RecoverAccountAsync(commandRequest));
-        }
-
-        IdentityResult result;
-        if (model.RequestHasNewDataTypes())
-        {
-            result = await _adminRecoverAccountCommand.RecoverAccountAsync(
-                orgId, targetOrganizationUser, model.UnlockData!.ToData(), model.AuthenticationData!.ToData());
-        }
-        else
-        {
-            result = await _adminRecoverAccountCommand.RecoverAccountAsync(
-                orgId, targetOrganizationUser, model.NewMasterPasswordHash!, model.Key!);
-        }
-        if (result.Succeeded)
-        {
-            return TypedResults.Ok();
-        }
-
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        await Task.Delay(2000);
-        return TypedResults.BadRequest(ModelState);
+        var commandRequest = model.ToCommandRequest(orgId, targetOrganizationUser);
+        return Handle(await _adminRecoverAccountCommandV2.RecoverAccountAsync(commandRequest));
     }
 #nullable disable
 
