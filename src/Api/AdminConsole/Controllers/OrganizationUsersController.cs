@@ -75,7 +75,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IGetOrganizationUsersClaimedStatusQuery _getOrganizationUsersClaimedStatusQuery;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IGetPendingAutoConfirmUsersQuery _getPendingAutoConfirmUsersQuery;
-    private readonly IFeatureService _featureService;
     private readonly IPricingClient _pricingClient;
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
     private readonly IBulkResendOrganizationInvitesCommand _bulkResendOrganizationInvitesCommand;
@@ -109,7 +108,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IDeleteClaimedOrganizationUserAccountCommand deleteClaimedOrganizationUserAccountCommand,
         IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery,
         IPolicyRequirementQuery policyRequirementQuery,
-        IFeatureService featureService,
         IPricingClient pricingClient,
         IConfirmOrganizationUserCommand confirmOrganizationUserCommand,
         IRestoreOrganizationUserCommand restoreOrganizationUserCommand,
@@ -145,7 +143,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _getOrganizationUsersClaimedStatusQuery = getOrganizationUsersClaimedStatusQuery;
         _policyRequirementQuery = policyRequirementQuery;
         _getPendingAutoConfirmUsersQuery = getPendingAutoConfirmUsersQuery;
-        _featureService = featureService;
         _pricingClient = pricingClient;
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
         _bulkResendOrganizationInvitesCommand = bulkResendOrganizationInvitesCommand;
