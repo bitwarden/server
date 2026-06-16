@@ -17,9 +17,7 @@ public class FeatureRoutedCacheService(
         inMemoryApplicationCacheService.GetOrganizationAbilitiesAsync();
 
     public Task<OrganizationAbility?> GetOrganizationAbilityAsync(Guid orgId) =>
-        featureService.IsEnabled(FeatureFlagKeys.OrgAbilityExtendedCache)
-            ? extendedOrgAbilityCacheService.GetOrganizationAbilityAsync(orgId)
-            : inMemoryApplicationCacheService.GetOrganizationAbilityAsync(orgId);
+        extendedOrgAbilityCacheService.GetOrganizationAbilityAsync(orgId);
 
     public Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync() =>
         inMemoryApplicationCacheService.GetProviderAbilitiesAsync();
@@ -49,24 +47,11 @@ public class FeatureRoutedCacheService(
             .ToDictionary(id => id, id => allProviderAbilities[id]);
     }
 
-    public async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync(IEnumerable<Guid> orgIds)
-    {
-        if (featureService.IsEnabled(FeatureFlagKeys.OrgAbilityExtendedCache))
-        {
-            return await extendedOrgAbilityCacheService.GetOrganizationAbilitiesAsync(orgIds);
-        }
-
-        var allOrganizationAbilities = await inMemoryApplicationCacheService.GetOrganizationAbilitiesAsync();
-        return orgIds
-            .Distinct()
-            .Where(allOrganizationAbilities.ContainsKey)
-            .ToDictionary(id => id, id => allOrganizationAbilities[id]);
-    }
+    public Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync(IEnumerable<Guid> orgIds) =>
+        extendedOrgAbilityCacheService.GetOrganizationAbilitiesAsync(orgIds);
 
     public Task UpsertOrganizationAbilityAsync(Organization organization) =>
-        featureService.IsEnabled(FeatureFlagKeys.OrgAbilityExtendedCache)
-            ? extendedOrgAbilityCacheService.UpsertOrganizationAbilityAsync(organization)
-            : inMemoryApplicationCacheService.UpsertOrganizationAbilityAsync(organization);
+        extendedOrgAbilityCacheService.UpsertOrganizationAbilityAsync(organization);
 
     public Task UpsertProviderAbilityAsync(Provider provider)
     {
@@ -79,9 +64,7 @@ public class FeatureRoutedCacheService(
     }
 
     public Task DeleteOrganizationAbilityAsync(Guid organizationId) =>
-        featureService.IsEnabled(FeatureFlagKeys.OrgAbilityExtendedCache)
-            ? extendedOrgAbilityCacheService.DeleteOrganizationAbilityAsync(organizationId)
-            : inMemoryApplicationCacheService.DeleteOrganizationAbilityAsync(organizationId);
+        extendedOrgAbilityCacheService.DeleteOrganizationAbilityAsync(organizationId);
 
     public Task DeleteProviderAbilityAsync(Guid providerId)
     {
@@ -93,39 +76,9 @@ public class FeatureRoutedCacheService(
         return inMemoryApplicationCacheService.DeleteProviderAbilityAsync(providerId);
     }
 
-    public async Task BaseUpsertOrganizationAbilityAsync(Organization organization)
-    {
-        if (featureService.IsEnabled(FeatureFlagKeys.OrgAbilityExtendedCache))
-        {
-            await extendedOrgAbilityCacheService.UpsertOrganizationAbilityAsync(organization);
-            return;
-        }
+    public Task BaseUpsertOrganizationAbilityAsync(Organization organization) =>
+        extendedOrgAbilityCacheService.UpsertOrganizationAbilityAsync(organization);
 
-        if (inMemoryApplicationCacheService is InMemoryServiceBusApplicationCacheService serviceBusCache)
-        {
-            await serviceBusCache.BaseUpsertOrganizationAbilityAsync(organization);
-        }
-        else
-        {
-            throw new InvalidOperationException($"Expected {nameof(inMemoryApplicationCacheService)} to be of type {nameof(InMemoryServiceBusApplicationCacheService)}");
-        }
-    }
-
-    public async Task BaseDeleteOrganizationAbilityAsync(Guid organizationId)
-    {
-        if (featureService.IsEnabled(FeatureFlagKeys.OrgAbilityExtendedCache))
-        {
-            await extendedOrgAbilityCacheService.DeleteOrganizationAbilityAsync(organizationId);
-            return;
-        }
-
-        if (inMemoryApplicationCacheService is InMemoryServiceBusApplicationCacheService serviceBusCache)
-        {
-            await serviceBusCache.BaseDeleteOrganizationAbilityAsync(organizationId);
-        }
-        else
-        {
-            throw new InvalidOperationException($"Expected {nameof(inMemoryApplicationCacheService)} to be of type {nameof(InMemoryServiceBusApplicationCacheService)}");
-        }
-    }
+    public Task BaseDeleteOrganizationAbilityAsync(Guid organizationId) =>
+        extendedOrgAbilityCacheService.DeleteOrganizationAbilityAsync(organizationId);
 }
