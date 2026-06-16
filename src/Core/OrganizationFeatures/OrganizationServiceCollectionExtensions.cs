@@ -1,6 +1,5 @@
 ﻿using Bit.Core.AdminConsole.OrganizationAuth;
 using Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 using Bit.Core.AdminConsole.OrganizationFeatures.Collections;
 using Bit.Core.AdminConsole.OrganizationFeatures.Collections.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups;
