@@ -19,6 +19,7 @@ public static class Constants
     // File size limits - give 1 MB extra for cushion.
     // Note: if request size limits are changed, 'client_max_body_size'
     // in nginx/proxy.conf may also need to be updated accordingly.
+    public const long FileSize25mb = 25L * 1024L * 1024L;
     public const long FileSize101mb = 101L * 1024L * 1024L;
     public const long FileSize501mb = 501L * 1024L * 1024L;
     public const string DatabaseFieldProtectorPurpose = "DatabaseFieldProtection";
@@ -234,6 +235,7 @@ public static class FeatureFlagKeys
     public const string WebAuthnRelatedOrigins = "pm-30529-webauthn-related-origins";
     public const string ElectronStorageCache = "pm-32783-electron-storage-cache";
     public const string AttachmentUploadProgress = "pm-34410-attachment-upload-progress";
+    public const string OrgCipherPushFanout = "pm-35168-org-cipher-push-fanout";
     public const string FedRampGovRegion = "fedramp-gov-region";
 
     /* Tools Team */
