@@ -119,6 +119,8 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
+        // TODO: PM-39120 - PM30806_SelfServiceChangeEmailCommand flag cleanup, remove the flag
+        // check and keep only the SelfServiceChangeEmailCommand call.
         if (_featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand))
         {
             await _selfServiceChangeEmailCommand.InitiateChangeEmailAsync(
@@ -157,6 +159,8 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
+        // TODO: PM-39120 - PM30806_SelfServiceChangeEmailCommand flag cleanup, remove the flag
+        // check and keep only the SelfServiceChangeEmailCommand call.
         if (_featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand))
         {
             await _selfServiceChangeEmailCommand.ChangeEmailAsync(

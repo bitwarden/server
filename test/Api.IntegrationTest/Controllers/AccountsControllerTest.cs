@@ -1332,6 +1332,10 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    // TODO: PM-39120 - On PM30806_SelfServiceChangeEmailCommand flag cleanup, clean up the
+    // email-change tests below: delete the *_LegacyFlagOff_* (and legacy PostEmail/PostEmailToken)
+    // tests, rename the *_SelfServiceFlagOn_* tests to drop the flag qualifier, and remove the
+    // per-test `_featureService.IsEnabled(...).Returns(...)` flag mocking.
     [Fact]
     public async Task PostEmail_Success_UpdatesEmailAndPassword()
     {
