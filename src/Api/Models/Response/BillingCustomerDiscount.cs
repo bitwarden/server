@@ -41,6 +41,12 @@ public class BillingCustomerDiscount
     /// </summary>
     public decimal? AmountOff { get; }
 
+    /// <summary>The instant the discount stops applying (Stripe Discount.end). Null = no end date / perpetual.</summary>
+    public DateTime? End { get; }
+
+    /// <summary>For a repeating coupon, the number of months it applies. Null for once/forever.</summary>
+    public long? DurationInMonths { get; }
+
     /// <summary>
     /// List of Stripe product IDs that this discount applies to (e.g., ["prod_premium", "prod_families"]).
     /// <para>
@@ -64,6 +70,8 @@ public class BillingCustomerDiscount
         Active = discount.Active;
         PercentOff = discount.PercentOff;
         AmountOff = discount.AmountOff;
+        End = discount.End;
+        DurationInMonths = discount.DurationInMonths;
         AppliesTo = discount.AppliesTo;
     }
 }
