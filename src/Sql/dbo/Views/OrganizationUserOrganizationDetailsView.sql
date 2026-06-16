@@ -61,8 +61,7 @@ SELECT
     O.[UseMyItems],
     O.[UseInviteLinks],
     O.[UsePam],
-    OU.[RevocationReason],
-    OU.[AccessPam]
+    OU.[RevocationReason]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN

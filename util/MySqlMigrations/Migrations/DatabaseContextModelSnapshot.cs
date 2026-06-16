@@ -2371,154 +2371,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("NotificationStatus", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessDecision", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid>("AccessRequestId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid?>("ApproverId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("Comment")
-                        .HasColumnType("longtext");
-
-                    b.Property<byte?>("ConditionKind")
-                        .HasColumnType("tinyint unsigned");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<byte>("DeciderKind")
-                        .HasColumnType("tinyint unsigned");
-
-                    b.Property<string>("EvaluationContext")
-                        .HasColumnType("longtext");
-
-                    b.Property<byte>("Verdict")
-                        .HasColumnType("tinyint unsigned");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AccessRequestId");
-
-                    b.ToTable("AccessDecision", (string)null);
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessLease", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid>("AccessRequestId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid>("CipherId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid>("CollectionId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime>("NotAfter")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime>("NotBefore")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid>("RequesterId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid?>("RevokedBy")
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime?>("RevokedDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<byte>("Status")
-                        .HasColumnType("tinyint unsigned");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AccessRequestId")
-                        .IsUnique();
-
-                    b.HasIndex("OrganizationId");
-
-                    b.HasIndex("CipherId", "Status");
-
-                    b.HasIndex("CollectionId", "Status");
-
-                    b.HasIndex("NotAfter", "Status");
-
-                    b.HasIndex("RequesterId", "CipherId", "Status");
-
-                    b.ToTable("AccessLease", (string)null);
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRequest", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid>("CipherId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid>("CollectionId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<Guid?>("ExtensionOfLeaseId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("NotAfter")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime>("NotBefore")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("Reason")
-                        .HasColumnType("longtext");
-
-                    b.Property<Guid>("RequesterId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime?>("ResolvedDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<Guid?>("RuleId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<byte>("Status")
-                        .HasColumnType("tinyint unsigned");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ExtensionOfLeaseId");
-
-                    b.HasIndex("RuleId");
-
-                    b.HasIndex("CollectionId", "Status");
-
-                    b.HasIndex("OrganizationId", "Status");
-
-                    b.HasIndex("RequesterId", "CipherId", "Status");
-
-                    b.ToTable("AccessRequest", (string)null);
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRule", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2542,9 +2394,6 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<bool>("Enabled")
                         .HasColumnType("tinyint(1)");
-
-                    b.Property<Guid?>("LastEditedBy")
-                        .HasColumnType("char(36)");
 
                     b.Property<int?>("MaxExtensionDurationSeconds")
                         .HasColumnType("int");
@@ -2601,40 +2450,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Installation", (string)null);
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRule", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("varchar(256)");
-
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Conditions")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrganizationId", "Name")
-                        .IsUnique();
-
-                    b.ToTable("AccessRule", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.AccessPolicy", b =>
