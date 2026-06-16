@@ -12,18 +12,6 @@ namespace Bit.Core.Pam.Engine;
 /// </summary>
 public sealed class AccessRuleEngine : IAccessRuleEngine
 {
-    // The conditions JSON encodes days as the lowercase three-letter abbreviations the validator accepts.
-    private static readonly IReadOnlyDictionary<string, DayOfWeek> _days = new Dictionary<string, DayOfWeek>(StringComparer.OrdinalIgnoreCase)
-    {
-        ["sun"] = DayOfWeek.Sunday,
-        ["mon"] = DayOfWeek.Monday,
-        ["tue"] = DayOfWeek.Tuesday,
-        ["wed"] = DayOfWeek.Wednesday,
-        ["thu"] = DayOfWeek.Thursday,
-        ["fri"] = DayOfWeek.Friday,
-        ["sat"] = DayOfWeek.Saturday,
-    };
-
     public AccessEvaluation Evaluate(IReadOnlyList<AccessCondition> conditions, AccessSignals signals) =>
         AccessEvaluation.Combine(conditions.Select(condition => EvaluateCondition(condition, signals)));
 
@@ -80,7 +68,8 @@ public sealed class AccessRuleEngine : IAccessRuleEngine
 
     private static bool WindowContains(TimeWindow window, DayOfWeek day, TimeOnly time)
     {
-        var dayMatches = window.Days.Any(d => _days.TryGetValue(d, out var parsed) && parsed == day);
+        // AccessWeekday values align with System.DayOfWeek (Sunday = 0), so a direct cast compares correctly.
+        var dayMatches = window.Days.Any(d => (DayOfWeek)d == day);
         if (!dayMatches)
         {
             return false;

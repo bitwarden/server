@@ -22,6 +22,9 @@ public class LeaseRepositoryTests
         var requesterId = Guid.NewGuid();
 
         var (request, decision, _) = BuildAutoApproved(organization.Id, cipherId, requesterId, now, now.AddHours(1));
+        // Exercise the TINYINT ConditionKind column end-to-end: the INSERT throws if the sproc param / column type
+        // does not accept the byte-backed enum value.
+        decision.ConditionKind = AccessConditionKind.IpAllowlist;
 
         await accessRequestRepository.CreateAutoApprovedAsync(request, decision);
 

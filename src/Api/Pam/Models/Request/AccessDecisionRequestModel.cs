@@ -1,31 +1,25 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Core.Exceptions;
 using Bit.Core.Pam.Enums;
 using Bit.Core.Pam.Models;
 
 namespace Bit.Api.Pam.Models.Request;
 
 /// <summary>
-/// An approver's decision on a pending access request. <see cref="Verdict"/> is <c>"approve"</c> or <c>"deny"</c>;
+/// An approver's decision on a pending access request. <see cref="Verdict"/> is the
+/// <see cref="AccessDecisionVerdict"/> value on the wire (<c>0</c> = approve, <c>1</c> = deny);
 /// <see cref="Comment"/> is optional.
 /// </summary>
 public class AccessDecisionRequestModel
 {
     [Required]
-    public string Verdict { get; set; } = null!;
+    [EnumDataType(typeof(AccessDecisionVerdict))]
+    public AccessDecisionVerdict? Verdict { get; set; }
 
     public string? Comment { get; set; }
 
     public AccessDecisionSubmission ToSubmission() => new()
     {
-        Verdict = ParseVerdict(Verdict),
+        Verdict = Verdict!.Value,
         Comment = Comment,
-    };
-
-    private static AccessDecisionVerdict ParseVerdict(string verdict) => verdict?.ToLowerInvariant() switch
-    {
-        "approve" => AccessDecisionVerdict.Approve,
-        "deny" => AccessDecisionVerdict.Deny,
-        _ => throw new BadRequestException("Verdict must be either 'approve' or 'deny'."),
     };
 }

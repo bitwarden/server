@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using Bit.Core.Pam.Engine;
+using Bit.Core.Pam.Enums;
 using Bit.Core.Pam.Models.Conditions;
 using Xunit;
 
@@ -75,7 +76,7 @@ public class AccessRuleEngineTests
         var conditions = Set(new TimeOfDayCondition
         {
             Tz = "UTC",
-            Windows = [new TimeWindow { Days = ["thu"], From = "09:00", To = "17:00" }],
+            Windows = [new TimeWindow { Days = [AccessWeekday.Thu], From = "09:00", To = "17:00" }],
         });
 
         var evaluation = _sut.Evaluate(conditions, Signals());
@@ -89,7 +90,7 @@ public class AccessRuleEngineTests
         var conditions = Set(new TimeOfDayCondition
         {
             Tz = "UTC",
-            Windows = [new TimeWindow { Days = ["thu"], From = "00:00", To = "06:00" }],
+            Windows = [new TimeWindow { Days = [AccessWeekday.Thu], From = "00:00", To = "06:00" }],
         });
 
         var evaluation = _sut.Evaluate(conditions, Signals());
@@ -104,7 +105,7 @@ public class AccessRuleEngineTests
         var conditions = Set(new TimeOfDayCondition
         {
             Tz = "UTC",
-            Windows = [new TimeWindow { Days = ["fri"], From = "00:00", To = "23:59" }],
+            Windows = [new TimeWindow { Days = [AccessWeekday.Fri], From = "00:00", To = "23:59" }],
         });
 
         var evaluation = _sut.Evaluate(conditions, Signals());
@@ -120,7 +121,7 @@ public class AccessRuleEngineTests
         var conditions = Set(new TimeOfDayCondition
         {
             Tz = "America/New_York",
-            Windows = [new TimeWindow { Days = ["thu"], From = "18:00", To = "20:00" }],
+            Windows = [new TimeWindow { Days = [AccessWeekday.Thu], From = "18:00", To = "20:00" }],
         });
 
         var evaluation = _sut.Evaluate(conditions, Signals(at: new DateTimeOffset(2026, 6, 4, 23, 0, 0, TimeSpan.Zero)));
@@ -134,7 +135,7 @@ public class AccessRuleEngineTests
         var conditions = Set(new TimeOfDayCondition
         {
             Tz = "Not/AZone",
-            Windows = [new TimeWindow { Days = ["thu"], From = "00:00", To = "23:59" }],
+            Windows = [new TimeWindow { Days = [AccessWeekday.Thu], From = "00:00", To = "23:59" }],
         });
 
         var evaluation = _sut.Evaluate(conditions, Signals());
@@ -148,7 +149,7 @@ public class AccessRuleEngineTests
     {
         var conditions = Set(
             new IpAllowlistCondition { Cidrs = ["10.0.0.0/8"] },
-            new TimeOfDayCondition { Tz = "UTC", Windows = [new TimeWindow { Days = ["thu"], From = "09:00", To = "17:00" }] });
+            new TimeOfDayCondition { Tz = "UTC", Windows = [new TimeWindow { Days = [AccessWeekday.Thu], From = "09:00", To = "17:00" }] });
 
         var evaluation = _sut.Evaluate(conditions, Signals(IPAddress.Parse("10.1.2.3")));
 
@@ -160,7 +161,7 @@ public class AccessRuleEngineTests
     {
         var conditions = Set(
             new IpAllowlistCondition { Cidrs = ["10.0.0.0/8"] },
-            new TimeOfDayCondition { Tz = "UTC", Windows = [new TimeWindow { Days = ["thu"], From = "00:00", To = "06:00" }] });
+            new TimeOfDayCondition { Tz = "UTC", Windows = [new TimeWindow { Days = [AccessWeekday.Thu], From = "00:00", To = "06:00" }] });
 
         var evaluation = _sut.Evaluate(conditions, Signals(IPAddress.Parse("10.1.2.3")));
 

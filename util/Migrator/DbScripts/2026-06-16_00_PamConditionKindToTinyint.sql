@@ -1,4 +1,19 @@
-CREATE PROCEDURE [dbo].[AccessRequest_CreateAutoApproved]
+-- PAM Credential Leasing: convert [AccessDecision].[ConditionKind] from a magic-string NVARCHAR(50) to a TINYINT,
+-- backed by the new AccessConditionKind enum (HumanApproval = 0, IpAllowlist = 1, TimeOfDay = 2). The column records
+-- which condition produced an automatic decision; it is internal-only (never returned to clients) and currently always
+-- NULL, so no data backfill is required. The conditions JSON keeps its string `kind` discriminator. Acceptable as a
+-- straight type change here: the feature is an unshipped POC behind the pm-37044-pam-v-0 flag and the server +
+-- migration deploy together.
+
+IF COL_LENGTH('[dbo].[AccessDecision]', 'ConditionKind') IS NOT NULL
+BEGIN
+    ALTER TABLE [dbo].[AccessDecision]
+        ALTER COLUMN [ConditionKind] TINYINT NULL;
+END
+GO
+
+-- Re-create the only proc that takes @ConditionKind as a parameter so its type matches the column.
+CREATE OR ALTER PROCEDURE [dbo].[AccessRequest_CreateAutoApproved]
     @AccessRequestId UNIQUEIDENTIFIER,
     @AccessDecisionId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -45,3 +60,4 @@ BEGIN
 
     COMMIT TRANSACTION AccessRequest_CreateAutoApproved
 END
+GO

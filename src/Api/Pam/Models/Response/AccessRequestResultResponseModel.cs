@@ -11,16 +11,16 @@ public class AccessRequestResultResponseModel : ResponseModel
     {
         ArgumentNullException.ThrowIfNull(result);
 
-        ApprovalMode = result.ApprovalMode == AccessApprovalMode.Human ? "human" : "automatic";
+        ApprovalMode = result.ApprovalMode;
         Request = new AccessRequestResponseModel(result.Request);
     }
 
     /// <summary>
-    /// <c>"automatic"</c> when the <see cref="Request"/> was approved on submit and is ready to activate (the client
-    /// shows "Start lease"), <c>"human"</c> when it is pending an approver. No lease is minted at submit on either
-    /// path; the requester activates the request to start the lease.
+    /// <see cref="AccessApprovalMode.Automatic"/> when the <see cref="Request"/> was approved on submit and is ready
+    /// to activate (the client shows "Start lease"), <see cref="AccessApprovalMode.Human"/> when it is pending an
+    /// approver. No lease is minted at submit on either path; the requester activates the request to start the lease.
     /// </summary>
-    public string ApprovalMode { get; }
+    public AccessApprovalMode ApprovalMode { get; }
 
     public AccessRequestResponseModel Request { get; }
 }

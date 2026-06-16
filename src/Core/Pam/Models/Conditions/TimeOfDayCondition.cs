@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Pam.Models.Conditions;
+﻿using Bit.Core.Pam.Enums;
+
+namespace Bit.Core.Pam.Models.Conditions;
 
 /// <summary>
 /// Auto-approves a lease when the request falls inside one of the configured windows, evaluated in
@@ -12,7 +14,7 @@ public sealed class TimeOfDayCondition : AccessCondition
 
 public sealed class TimeWindow
 {
-    public IReadOnlyList<string> Days { get; init; } = [];
+    public IReadOnlyList<AccessWeekday> Days { get; init; } = [];
     public string From { get; init; } = string.Empty;
     public string To { get; init; } = string.Empty;
 }
