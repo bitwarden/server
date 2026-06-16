@@ -63,11 +63,7 @@ public class SelfServiceChangeEmailCommand(
     {
         await CheckPasswordAndKeyConnector(user, masterPassword);
 
-        //? This query runs twice for self-service. Once here and once in the ChangeEmailCommand
-        //? Maybe think about returning a Expiring Tokenable that tracks email change as valid
-        //? tokenable could be used to signal that the user has satisfied the user verification so
-        //? the MP hash can be removed from state.
-        await _organizationDomainAllowEmailChangeQuery.IsAllowedAsync(user, newEmail);
+        await _organizationDomainAllowEmailChangeQuery.ValidateAllowedAsync(user, newEmail);
 
         var existingUser = await _userRepository.GetByEmailAsync(newEmail);
         if (existingUser != null)

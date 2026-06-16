@@ -18,5 +18,5 @@ public interface IOrganizationDomainAllowEmailChangeQuery
     /// policy enabled.
     /// </remarks>
     /// <param name="newEmail">The new email address trying to be set (e.g. "user@example.com").</param>
-    Task IsAllowedAsync(User user, string newEmail);
+    Task ValidateAllowedAsync(User user, string newEmail);
 }

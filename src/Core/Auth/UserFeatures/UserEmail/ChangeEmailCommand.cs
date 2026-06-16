@@ -24,7 +24,7 @@ public class ChangeEmailCommand(
     /// <inheritdoc />
     public async Task ChangeEmailAsync(User user, string newEmail)
     {
-        await _organizationDomainAllowEmailChangeQuery.IsAllowedAsync(user, newEmail);
+        await _organizationDomainAllowEmailChangeQuery.ValidateAllowedAsync(user, newEmail);
 
         var existingUser = await _userRepository.GetByEmailAsync(newEmail);
         if (existingUser != null && existingUser.Id != user.Id)

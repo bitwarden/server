@@ -12,7 +12,7 @@ public class OrganizationDomainAllowEmailChangeQuery(
     : IOrganizationDomainAllowEmailChangeQuery
 {
     /// <inheritdoc />
-    public async Task IsAllowedAsync(User user, string newEmail)
+    public async Task ValidateAllowedAsync(User user, string newEmail)
     {
         var newDomain = EmailValidation.GetDomain(newEmail);
         if (newDomain == EmailValidation.GetDomain(user.Email))

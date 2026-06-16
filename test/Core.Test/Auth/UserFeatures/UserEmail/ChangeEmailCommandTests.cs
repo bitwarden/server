@@ -166,14 +166,14 @@ public class ChangeEmailCommandTests
         SutProvider<ChangeEmailCommand> sutProvider, User user)
     {
         // Domain-policy details (denial reasons, message text, same-domain short-circuit) belong
-        // to OrganizationDomainAllowEmailChangeQuery.IsAllowedAsync and are covered there.
+        // to OrganizationDomainAllowEmailChangeQuery.ValidateAllowedAsync and are covered there.
         // This test just locks in that ChangeEmailCommand defers to that gate and propagates
         // failures without persisting anything.
         user.Email = _currentEmail;
         const string blockedEmail = "user@blocked-domain.com";
         var thrown = new BadRequestException("Domain not allowed.");
         sutProvider.GetDependency<IOrganizationDomainAllowEmailChangeQuery>()
-            .IsAllowedAsync(user, blockedEmail)
+            .ValidateAllowedAsync(user, blockedEmail)
             .Throws(thrown);
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
@@ -199,7 +199,7 @@ public class ChangeEmailCommandTests
         Assert.Equal(unblockedEmail, user.Email);
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
         await sutProvider.GetDependency<IOrganizationDomainAllowEmailChangeQuery>().Received(1)
-            .IsAllowedAsync(user, unblockedEmail);
+            .ValidateAllowedAsync(user, unblockedEmail);
     }
 
     [Theory, BitAutoData]

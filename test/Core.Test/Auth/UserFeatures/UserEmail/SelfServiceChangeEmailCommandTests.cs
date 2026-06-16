@@ -164,7 +164,7 @@ public class SelfServiceChangeEmailCommandTests
         await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs()
             .SendChangeEmailAlreadyExistsEmailAsync(default!, default!);
         await sutProvider.GetDependency<IOrganizationDomainAllowEmailChangeQuery>().Received(1)
-            .IsAllowedAsync(user, _newEmail);
+            .ValidateAllowedAsync(user, _newEmail);
     }
 
     [Theory, BitAutoData]
@@ -208,7 +208,7 @@ public class SelfServiceChangeEmailCommandTests
         await sutProvider.GetDependency<IUserService>().DidNotReceiveWithAnyArgs()
             .CheckPasswordAsync(default!, default!);
         await sutProvider.GetDependency<IOrganizationDomainAllowEmailChangeQuery>().DidNotReceiveWithAnyArgs()
-            .IsAllowedAsync(default!, default!);
+            .ValidateAllowedAsync(default!, default!);
         await sutProvider.GetDependency<IUserRepository>().DidNotReceiveWithAnyArgs()
             .GetByEmailAsync(default!);
         await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs()
@@ -233,7 +233,7 @@ public class SelfServiceChangeEmailCommandTests
         Assert.True(ex.ModelState!.ContainsKey("MasterPasswordHash"));
 
         await sutProvider.GetDependency<IOrganizationDomainAllowEmailChangeQuery>().DidNotReceiveWithAnyArgs()
-            .IsAllowedAsync(default!, default!);
+            .ValidateAllowedAsync(default!, default!);
         await sutProvider.GetDependency<IUserRepository>().DidNotReceiveWithAnyArgs()
             .GetByEmailAsync(default!);
         await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs()
@@ -246,7 +246,7 @@ public class SelfServiceChangeEmailCommandTests
     public async Task InitiateChangeEmailAsync_DomainGateThrows_PropagatesAndDoesNotIssueToken(User user)
     {
         // Domain-policy details (denial reasons, message text, same-domain short-circuit) belong
-        // to OrganizationDomainAllowEmailChangeQuery.IsAllowedAsync and are covered there.
+        // to OrganizationDomainAllowEmailChangeQuery.ValidateAllowedAsync and are covered there.
         // This test just locks in that InitiateChangeEmailAsync defers to that gate and propagates
         // failures without issuing a change-email token or notifying anyone.
         user.Email = _currentEmail;
@@ -259,7 +259,7 @@ public class SelfServiceChangeEmailCommandTests
             .Returns(true);
         var thrown = new BadRequestException("Domain not allowed.");
         sutProvider.GetDependency<IOrganizationDomainAllowEmailChangeQuery>()
-            .IsAllowedAsync(user, newEmail)
+            .ValidateAllowedAsync(user, newEmail)
             .Throws(thrown);
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
