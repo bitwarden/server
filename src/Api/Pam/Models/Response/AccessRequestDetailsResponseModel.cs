@@ -27,10 +27,20 @@ public class AccessRequestDetailsResponseModel : ResponseModel
         Reason = details.Reason;
         SubmittedAt = details.CreationDate.AsUtc();
         ResolvedAt = details.ResolvedDate.AsUtc();
-        ApproverId = details.ApproverId;
-        ApproverName = details.ApproverName;
-        ApproverEmail = details.ApproverEmail;
-        ApproverComment = details.ApproverComment;
+        // The request's full decision log, oldest first: one element per recorded decision (human or automatic).
+        // Empty only while pending (no decision recorded yet).
+        Decisions = details.Decisions
+            .Select(d => new AccessRequestDecisionResponseModel
+            {
+                DeciderKind = AccessDeciderKindNames.From(d.DeciderKind),
+                Id = d.Id,
+                Name = d.Name,
+                Email = d.Email,
+                Comment = d.Comment,
+                Verdict = d.Verdict,
+                DecidedAt = d.DecidedAt.AsUtc(),
+            })
+            .ToList();
         ProducedLeaseId = details.ProducedLeaseId;
         ProducedLeaseStatus = details.ProducedLeaseStatus.HasValue
             ? AccessLeaseStatusNames.From(details.ProducedLeaseStatus.Value)
@@ -65,16 +75,12 @@ public class AccessRequestDetailsResponseModel : ResponseModel
     /// <summary>Distinct from <see cref="ResolvedAt"/>; set when an approved request lapses unactivated. Not tracked in v1.</summary>
     public DateTime? ExpiredAt => null;
 
-    /// <summary>The human approver who decided the request, or null (e.g. still pending or decided automatically).</summary>
-    public Guid? ApproverId { get; }
-
-    /// <summary>The human approver's display name, or null. Lets the client name the resolver instead of an id.</summary>
-    public string? ApproverName { get; }
-
-    /// <summary>The human approver's email, the fallback display when <see cref="ApproverName"/> is unset.</summary>
-    public string? ApproverEmail { get; }
-
-    public string? ApproverComment { get; }
+    /// <summary>
+    /// The request's decision log, oldest first — one element per decision (human or automatic). Each carries who
+    /// decided (<c>deciderKind</c>), the verdict, and (for a human decision) the approver's identity and comment.
+    /// Empty only while pending. An array so multi-party approval lands without breaking the contract.
+    /// </summary>
+    public IEnumerable<AccessRequestDecisionResponseModel> Decisions { get; }
 
     /// <summary>Set once an approved request has produced a lease.</summary>
     public Guid? ProducedLeaseId { get; }

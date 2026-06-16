@@ -69,12 +69,12 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
     public async Task<ICollection<AccessRequestDetails>> GetManyByRequesterIdAsync(Guid requesterId)
     {
         await using var connection = new SqlConnection(ConnectionString);
-        var results = await connection.QueryAsync<AccessRequestDetails>(
+        using var results = await connection.QueryMultipleAsync(
             $"[{Schema}].[AccessRequest_ReadManyByRequesterId]",
             new { RequesterId = requesterId },
             commandType: CommandType.StoredProcedure);
 
-        return results.ToList();
+        return await ReadDetailsWithDecisionsAsync(results);
     }
 
     public async Task<ICollection<AccessRequestDetails>> GetManyInboxPendingByCollectionIdsAsync(IEnumerable<Guid> collectionIds)
@@ -103,12 +103,12 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
         }
 
         await using var connection = new SqlConnection(ConnectionString);
-        var results = await connection.QueryAsync<AccessRequestDetails>(
+        using var results = await connection.QueryMultipleAsync(
             $"[{Schema}].[AccessRequest_ReadInboxHistoryByCollectionIds]",
             new { CollectionIds = ids.ToGuidIdArrayTVP(), Since = since },
             commandType: CommandType.StoredProcedure);
 
-        return results.ToList();
+        return await ReadDetailsWithDecisionsAsync(results);
     }
 
     public async Task ResolveWithDecisionAsync(AccessRequest request, AccessDecision decision, AccessRequestStatus status, DateTime now)
@@ -187,5 +187,52 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
             commandType: CommandType.StoredProcedure);
 
         return (AccessLeaseExtendOutcome)result;
+    }
+
+    /// <summary>
+    /// Reads a two-result-set access-request projection: result 1 is the request rows, result 2 is every decision row
+    /// (human or automatic) keyed by AccessRequestId (ordered oldest-first by the procedure). Groups the decisions onto
+    /// each request's <see cref="AccessRequestDetails.Decisions"/>; a pending request keeps its empty list.
+    /// </summary>
+    private static async Task<List<AccessRequestDetails>> ReadDetailsWithDecisionsAsync(SqlMapper.GridReader reader)
+    {
+        var details = (await reader.ReadAsync<AccessRequestDetails>()).ToList();
+        var decisionsByRequest = (await reader.ReadAsync<DecisionRow>())
+            .GroupBy(row => row.AccessRequestId)
+            .ToDictionary(group => group.Key, group => group.Select(row => row.ToDecision()).ToList());
+
+        foreach (var detail in details)
+        {
+            if (decisionsByRequest.TryGetValue(detail.Id, out var decisions))
+            {
+                detail.Decisions = decisions;
+            }
+        }
+
+        return details;
+    }
+
+    /// <summary>A decision row from the decision result set, carrying its AccessRequestId for grouping.</summary>
+    private sealed class DecisionRow
+    {
+        public Guid AccessRequestId { get; set; }
+        public AccessDeciderKind DeciderKind { get; set; }
+        public Guid? Id { get; set; }
+        public string? Name { get; set; }
+        public string? Email { get; set; }
+        public string? Comment { get; set; }
+        public AccessDecisionVerdict Verdict { get; set; }
+        public DateTime DecidedAt { get; set; }
+
+        public AccessRequestDecision ToDecision() => new()
+        {
+            DeciderKind = DeciderKind,
+            Id = Id,
+            Name = Name,
+            Email = Email,
+            Comment = Comment,
+            Verdict = Verdict,
+            DecidedAt = DecidedAt,
+        };
     }
 }
