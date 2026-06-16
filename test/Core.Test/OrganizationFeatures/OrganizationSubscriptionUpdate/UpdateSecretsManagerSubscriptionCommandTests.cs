@@ -935,6 +935,53 @@ public class UpdateSecretsManagerSubscriptionCommandTests
                 cs.Changes.Single().AsT3.Quantity == 20), Arg.Any<Subscription>());
     }
 
+    // PM-37511: a migrated Teams Monthly org (base 20 + grace 30 => 50 free) increasing to 60
+    // accounts is billed for 10 — the excess above the free ceiling.
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateSubscriptionAsync_WithFeatureFlag_TeamsMonthly_WithGrace30_AboveCeiling_BillsExcess(
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var plan = MockPlans.Get(PlanType.TeamsMonthly); // BaseServiceAccount = 20
+        organization.PlanType = plan.Type;
+        organization.Seats = 400;
+        organization.SmSeats = 10;
+        organization.MaxAutoscaleSmSeats = 20;
+        organization.SmServiceAccounts = 55; // already above the free ceiling => existing line item present
+        organization.MaxAutoscaleSmServiceAccounts = 400;
+
+        var update = new SecretsManagerSubscriptionUpdate(organization, plan, false)
+        {
+            SmServiceAccounts = 60,
+            MaxAutoscaleSmServiceAccounts = 400
+        };
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
+            .Returns(true);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(SubscriptionWithGrace(30));
+
+        BillingCommandResult<Subscription> successResult = new Subscription();
+        sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>()
+            .Run(organization, Arg.Any<OrganizationSubscriptionChangeSet>(), Arg.Any<Subscription>())
+            .Returns(successResult);
+
+        await sutProvider.Sut.UpdateSubscriptionAsync(update);
+
+        Assert.Equal(30, update.ServiceAccountGrace);
+        Assert.Equal(10, update.SmServiceAccountsExcludingBase);
+
+        await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().Received(1)
+            .Run(organization, Arg.Is<OrganizationSubscriptionChangeSet>(cs =>
+                cs.Changes.Count == 1 &&
+                cs.Changes.Single().IsT3 &&
+                cs.Changes.Single().AsT3.Quantity == 10), Arg.Any<Subscription>());
+    }
+
     // PM-37510 (T6): at the free ceiling (200), the excess is 0 — the existing line item is updated
     // to quantity 0 (delete), never an AddItem(0).
     [Theory]
