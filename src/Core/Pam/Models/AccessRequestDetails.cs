@@ -39,6 +39,15 @@ public class AccessRequestDetails
     /// <summary>The human approver who resolved the request, or null (e.g. still pending or auto-resolved).</summary>
     public Guid? ApproverId { get; set; }
 
+    /// <summary>
+    /// The human approver's display name, denormalized from the User join so the requester's own
+    /// request list can name the resolver instead of showing a raw id. Null when no human resolved.
+    /// </summary>
+    public string? ApproverName { get; set; }
+
+    /// <summary>The human approver's email, the fallback display when <see cref="ApproverName"/> is unset.</summary>
+    public string? ApproverEmail { get; set; }
+
     /// <summary>The human approver's comment, if any.</summary>
     public string? ApproverComment { get; set; }
 

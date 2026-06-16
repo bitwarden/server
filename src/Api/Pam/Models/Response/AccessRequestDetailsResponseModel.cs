@@ -28,6 +28,8 @@ public class AccessRequestDetailsResponseModel : ResponseModel
         SubmittedAt = details.CreationDate.AsUtc();
         ResolvedAt = details.ResolvedDate.AsUtc();
         ApproverId = details.ApproverId;
+        ApproverName = details.ApproverName;
+        ApproverEmail = details.ApproverEmail;
         ApproverComment = details.ApproverComment;
         ProducedLeaseId = details.ProducedLeaseId;
         ProducedLeaseStatus = details.ProducedLeaseStatus.HasValue
@@ -65,6 +67,12 @@ public class AccessRequestDetailsResponseModel : ResponseModel
 
     /// <summary>The human approver who decided the request, or null (e.g. still pending or decided automatically).</summary>
     public Guid? ApproverId { get; }
+
+    /// <summary>The human approver's display name, or null. Lets the client name the resolver instead of an id.</summary>
+    public string? ApproverName { get; }
+
+    /// <summary>The human approver's email, the fallback display when <see cref="ApproverName"/> is unset.</summary>
+    public string? ApproverEmail { get; }
 
     public string? ApproverComment { get; }
 

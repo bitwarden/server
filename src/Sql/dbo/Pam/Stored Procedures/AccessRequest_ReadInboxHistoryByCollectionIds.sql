@@ -25,6 +25,8 @@ BEGIN
         PL.[Id] AS [ProducedLeaseId],
         PL.[Status] AS [ProducedLeaseStatus],
         RES.[ApproverId] AS [ApproverId],
+        RES.[ApproverName] AS [ApproverName],
+        RES.[ApproverEmail] AS [ApproverEmail],
         RES.[Comment] AS [ApproverComment],
         JSON_VALUE(C.[Data], '$.Name') AS [CipherName],
         COL.[Name] AS [CollectionName],
@@ -42,8 +44,9 @@ BEGIN
         ORDER BY L.[CreationDate] DESC
     ) PL
     OUTER APPLY (
-        SELECT TOP 1 LD.[ApproverId], LD.[Comment]
+        SELECT TOP 1 LD.[ApproverId], LD.[Comment], AU.[Name] AS [ApproverName], AU.[Email] AS [ApproverEmail]
         FROM [dbo].[AccessDecision] LD
+        LEFT JOIN [dbo].[User] AU ON AU.[Id] = LD.[ApproverId]
         WHERE LD.[AccessRequestId] = LR.[Id] AND LD.[DeciderKind] = 1 -- Human
         ORDER BY LD.[CreationDate] ASC
     ) RES
