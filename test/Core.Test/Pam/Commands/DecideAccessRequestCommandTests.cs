@@ -124,8 +124,12 @@ public class DecideAccessRequestCommandTests
 
         Assert.Equal(AccessRequestStatus.Approved, result.Status);
         Assert.Equal(_now, result.ResolvedDate);
-        Assert.Equal(userId, result.ApproverId);
-        Assert.Equal("looks good", result.ApproverComment);
+        var decision = Assert.Single(result.Decisions);
+        Assert.Equal(AccessDeciderKind.Human, decision.DeciderKind);
+        Assert.Equal(userId, decision.Id!.Value);
+        Assert.Equal(AccessDecisionVerdict.Approve, decision.Verdict);
+        Assert.Equal("looks good", decision.Comment);
+        Assert.Equal(_now, decision.DecidedAt);
         // Approval records the verdict only; no lease is minted until the requester activates the approved request.
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).ResolveWithDecisionAsync(
             request,

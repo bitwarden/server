@@ -6,9 +6,8 @@ BEGIN
 
     -- The approver inbox: pending requests for the supplied (caller-manageable) collections, joined with the
     -- denormalized display fields the client needs (cipher/collection names, requester identity) so it avoids an N+1.
-    -- ApproverId/ApproverComment come from the EARLIEST human decision so a later revocation decision (also human,
-    -- recorded against the same request) never overwrites the original approve/deny resolver. ProducedLeaseId is the
-    -- lease that the request birthed, if any. ExtensionOfLeaseId is the parent lease for extension requests.
+    -- A pending request has not been decided by anyone yet, so it carries no approvers (the caller leaves the
+    -- request's approvers list empty); only the resolved reads return a second decision result set.
     SELECT
         LR.[Id],
         LR.[ExtensionOfLeaseId],
@@ -24,10 +23,6 @@ BEGIN
         LR.[ResolvedDate],
         PL.[Id] AS [ProducedLeaseId],
         PL.[Status] AS [ProducedLeaseStatus],
-        RES.[ApproverId] AS [ApproverId],
-        RES.[ApproverName] AS [ApproverName],
-        RES.[ApproverEmail] AS [ApproverEmail],
-        RES.[Comment] AS [ApproverComment],
         JSON_VALUE(C.[Data], '$.Name') AS [CipherName],
         COL.[Name] AS [CollectionName],
         U.[Name] AS [RequesterName],
@@ -43,12 +38,5 @@ BEGIN
         WHERE L.[AccessRequestId] = LR.[Id]
         ORDER BY L.[CreationDate] DESC
     ) PL
-    OUTER APPLY (
-        SELECT TOP 1 LD.[ApproverId], LD.[Comment], AU.[Name] AS [ApproverName], AU.[Email] AS [ApproverEmail]
-        FROM [dbo].[AccessDecision] LD
-        LEFT JOIN [dbo].[User] AU ON AU.[Id] = LD.[ApproverId]
-        WHERE LD.[AccessRequestId] = LR.[Id] AND LD.[DeciderKind] = 1 -- Human
-        ORDER BY LD.[CreationDate] ASC
-    ) RES
     WHERE LR.[Status] = 0 -- Pending
 END

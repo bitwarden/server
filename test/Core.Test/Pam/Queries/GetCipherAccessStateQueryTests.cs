@@ -98,7 +98,7 @@ public class GetCipherAccessStateQueryTests
         Assert.Equal(AccessRequestStatus.Pending, result.PendingRequest.Status);
         // Pending has produced no lease and has no resolver yet; display-name fields are not populated.
         Assert.Null(result.PendingRequest.ProducedLeaseId);
-        Assert.Null(result.PendingRequest.ApproverId);
+        Assert.Empty(result.PendingRequest.Decisions);
         Assert.Null(result.PendingRequest.CipherName);
     }
 
@@ -126,7 +126,7 @@ public class GetCipherAccessStateQueryTests
         // The approved read excludes activated rows, so no lease id; the caller-scoped snapshot carries no approver
         // identity or display-name fields.
         Assert.Null(result.ApprovedRequest.ProducedLeaseId);
-        Assert.Null(result.ApprovedRequest.ApproverId);
+        Assert.Empty(result.ApprovedRequest.Decisions);
         Assert.Null(result.ApprovedRequest.CipherName);
     }
 

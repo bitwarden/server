@@ -36,20 +36,14 @@ public class AccessRequestDetails
     /// </summary>
     public AccessLeaseStatus? ProducedLeaseStatus { get; set; }
 
-    /// <summary>The human approver who resolved the request, or null (e.g. still pending or auto-resolved).</summary>
-    public Guid? ApproverId { get; set; }
-
     /// <summary>
-    /// The human approver's display name, denormalized from the User join so the requester's own
-    /// request list can name the resolver instead of showing a raw id. Null when no human resolved.
+    /// Every decision recorded against this request, oldest first — one element per
+    /// <see cref="Entities.AccessDecision"/> row (human or automatic; identity denormalized from the User join for
+    /// human decisions). Empty only while pending (no decision recorded yet). The resolved reads return the decisions
+    /// as a second result set that the repository groups onto this list; the constructed reads (decision result,
+    /// cipher access-state snapshot) set it directly.
     /// </summary>
-    public string? ApproverName { get; set; }
-
-    /// <summary>The human approver's email, the fallback display when <see cref="ApproverName"/> is unset.</summary>
-    public string? ApproverEmail { get; set; }
-
-    /// <summary>The human approver's comment, if any.</summary>
-    public string? ApproverComment { get; set; }
+    public List<AccessRequestDecision> Decisions { get; set; } = new();
 
     /// <summary>The cipher's client-encrypted name. The only cipher attribute the inbox exposes.</summary>
     public string? CipherName { get; set; }

@@ -180,16 +180,22 @@ public class AccessRequestRepositoryTests
         Assert.Equal(AccessRequestStatus.Approved, persisted!.Status);
         Assert.NotNull(persisted.ResolvedDate);
 
-        // The human decision surfaces as the resolver in the inbox projection.
+        // The human decision surfaces as a single element of the inbox projection's decision log.
         var history = await accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
             [collection.Id], now.AddDays(-1));
         var row = Assert.Single(history);
-        Assert.Equal(approverId, row.ApproverId);
-        Assert.Equal("approved for audit", row.ApproverComment);
+        var recorded = Assert.Single(row.Decisions);
+        Assert.Equal(AccessDeciderKind.Human, recorded.DeciderKind);
+        Assert.Equal(approverId, recorded.Id!.Value);
+        Assert.Equal("approved for audit", recorded.Comment);
+        // Verdict and decision timestamp come straight from the AccessDecision row, so the contract exposes what each
+        // approver decided and when.
+        Assert.Equal(AccessDecisionVerdict.Approve, recorded.Verdict);
+        Assert.Equal(now, recorded.DecidedAt);
         // The approver id here belongs to no User row, so the identity join yields null name/email and the client
         // falls back to the id. Identity resolution against a real User is covered by the My Requests read test.
-        Assert.Null(row.ApproverName);
-        Assert.Null(row.ApproverEmail);
+        Assert.Null(recorded.Name);
+        Assert.Null(recorded.Email);
 
         // Approval records the verdict only: no lease exists until the requester activates the approved request,
         // so the requester does not yet hold access and the inbox row carries no produced lease.
@@ -383,10 +389,86 @@ public class AccessRequestRepositoryTests
         var mine = await accessRequestRepository.GetManyByRequesterIdAsync(requesterId);
 
         var row = Assert.Single(mine);
-        Assert.Equal(approver.Id, row.ApproverId);
-        Assert.Equal(approver.Name, row.ApproverName);
-        Assert.Equal(approver.Email, row.ApproverEmail);
-        Assert.Equal("not now", row.ApproverComment);
+        var resolver = Assert.Single(row.Decisions);
+        Assert.Equal(AccessDeciderKind.Human, resolver.DeciderKind);
+        Assert.Equal(approver.Id, resolver.Id!.Value);
+        Assert.Equal(approver.Name, resolver.Name);
+        Assert.Equal(approver.Email, resolver.Email);
+        Assert.Equal("not now", resolver.Comment);
+        Assert.Equal(AccessDecisionVerdict.Deny, resolver.Verdict);
+        Assert.Equal(now, resolver.DecidedAt);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyInboxHistoryByCollectionIdsAsync_MultipleHumanDecisions_ProjectsFullHistoryOldestFirst(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRequestRepository accessRequestRepository)
+    {
+        // AccessDecision is 1-to-many with AccessRequest, so the approvers array carries every human decision oldest
+        // first: an approval followed by a managing approver retracting the unactivated approval surfaces both, rather
+        // than collapsing to a single resolver.
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var now = DateTime.UtcNow;
+        var firstApproverId = Guid.NewGuid();
+        var secondApproverId = Guid.NewGuid();
+
+        var request = await accessRequestRepository.CreateAsync(new AccessRequest
+        {
+            OrganizationId = organization.Id,
+            CollectionId = collection.Id,
+            CipherId = Guid.NewGuid(),
+            RequesterId = Guid.NewGuid(),
+            NotBefore = now.AddHours(-1),
+            NotAfter = now.AddHours(1),
+            Reason = "audit",
+            Status = AccessRequestStatus.Pending,
+            CreationDate = now,
+        });
+
+        // First decision: approve.
+        await accessRequestRepository.ResolveWithDecisionAsync(
+            request,
+            new AccessDecision
+            {
+                Id = CoreHelpers.GenerateComb(),
+                AccessRequestId = request.Id,
+                DeciderKind = AccessDeciderKind.Human,
+                ApproverId = firstApproverId,
+                Verdict = AccessDecisionVerdict.Approve,
+                Comment = "approved",
+                CreationDate = now,
+            },
+            AccessRequestStatus.Approved,
+            now);
+
+        // Second decision: a managing approver retracts the still-unactivated approval (records a Deny).
+        await accessRequestRepository.CancelWithDecisionAsync(
+            request,
+            new AccessDecision
+            {
+                Id = CoreHelpers.GenerateComb(),
+                AccessRequestId = request.Id,
+                DeciderKind = AccessDeciderKind.Human,
+                ApproverId = secondApproverId,
+                Verdict = AccessDecisionVerdict.Deny,
+                Comment = "retracted",
+                CreationDate = now.AddMinutes(1),
+            },
+            now.AddMinutes(1));
+
+        var history = await accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
+            [collection.Id], now.AddDays(-1));
+        var row = Assert.Single(history);
+        Assert.Equal(2, row.Decisions.Count);
+        Assert.Equal(AccessDeciderKind.Human, row.Decisions[0].DeciderKind);
+        Assert.Equal(firstApproverId, row.Decisions[0].Id!.Value);
+        Assert.Equal(AccessDecisionVerdict.Approve, row.Decisions[0].Verdict);
+        Assert.Equal("approved", row.Decisions[0].Comment);
+        Assert.Equal(secondApproverId, row.Decisions[1].Id!.Value);
+        Assert.Equal(AccessDecisionVerdict.Deny, row.Decisions[1].Verdict);
+        Assert.Equal("retracted", row.Decisions[1].Comment);
     }
 
     [DatabaseTheory, DatabaseData]

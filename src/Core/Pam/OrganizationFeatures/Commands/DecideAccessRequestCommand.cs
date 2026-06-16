@@ -86,9 +86,9 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
         // an approval becomes activatable without a manual refresh.
         await _requesterNotifier.NotifyRequesterAsync(request.RequesterId);
 
-        // The client repaints the row from Status, ResolvedAt, and ApproverComment, so those must be accurate; the
-        // denormalized display fields already live on the client's existing row. Project from what we just wrote
-        // rather than re-reading.
+        // The client repaints the row from Status, ResolvedAt, and the single Decisions element (verdict + comment),
+        // so those must be accurate; the approver's denormalized name/email is resolved on the next read. Project from
+        // what we just wrote rather than re-reading.
         return new AccessRequestDetails
         {
             Id = request.Id,
@@ -103,8 +103,17 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
             Status = status,
             CreationDate = request.CreationDate,
             ResolvedDate = now,
-            ApproverId = decision.ApproverId,
-            ApproverComment = decision.Comment,
+            Decisions =
+            [
+                new AccessRequestDecision
+                {
+                    DeciderKind = AccessDeciderKind.Human,
+                    Id = userId,
+                    Comment = decision.Comment,
+                    Verdict = decision.Verdict,
+                    DecidedAt = now,
+                },
+            ],
         };
     }
 }

@@ -5,10 +5,13 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- The approver history: resolved requests (anything no longer Pending) created on or after @Since, for the
-    -- supplied (caller-manageable) collections. Same projection as the pending inbox. History rows that produced a
-    -- lease carry ProducedLeaseId so the client can target the Revoke action at the lease, plus ProducedLeaseStatus
-    -- so the client can tell a still-live lease from one that has ended (and not offer Revoke on an ended lease).
+    -- The approver history, returned as two result sets so the caller can attach each request's full decision list
+    -- without an N+1:
+    --   1) the resolved requests (anything no longer Pending) created on or after @Since, for the supplied
+    --      (caller-manageable) collections, with denormalized display fields. Rows that produced a lease carry
+    --      ProducedLeaseId/ProducedLeaseStatus so the client can target (and gate) the Revoke action.
+    --   2) every decision (human or automatic) for those requests, keyed by AccessRequestId and ordered oldest-first;
+    --      DeciderKind says which, and a human decision's identity is denormalized from [User].
     SELECT
         LR.[Id],
         LR.[ExtensionOfLeaseId],
@@ -24,10 +27,6 @@ BEGIN
         LR.[ResolvedDate],
         PL.[Id] AS [ProducedLeaseId],
         PL.[Status] AS [ProducedLeaseStatus],
-        RES.[ApproverId] AS [ApproverId],
-        RES.[ApproverName] AS [ApproverName],
-        RES.[ApproverEmail] AS [ApproverEmail],
-        RES.[Comment] AS [ApproverComment],
         JSON_VALUE(C.[Data], '$.Name') AS [CipherName],
         COL.[Name] AS [CollectionName],
         U.[Name] AS [RequesterName],
@@ -43,13 +42,23 @@ BEGIN
         WHERE L.[AccessRequestId] = LR.[Id]
         ORDER BY L.[CreationDate] DESC
     ) PL
-    OUTER APPLY (
-        SELECT TOP 1 LD.[ApproverId], LD.[Comment], AU.[Name] AS [ApproverName], AU.[Email] AS [ApproverEmail]
-        FROM [dbo].[AccessDecision] LD
-        LEFT JOIN [dbo].[User] AU ON AU.[Id] = LD.[ApproverId]
-        WHERE LD.[AccessRequestId] = LR.[Id] AND LD.[DeciderKind] = 1 -- Human
-        ORDER BY LD.[CreationDate] ASC
-    ) RES
     WHERE LR.[Status] <> 0 -- not Pending
         AND LR.[CreationDate] >= @Since
+
+    SELECT
+        AD.[AccessRequestId],
+        AD.[DeciderKind] AS [DeciderKind],
+        AD.[ApproverId] AS [Id],
+        AU.[Name] AS [Name],
+        AU.[Email] AS [Email],
+        AD.[Comment] AS [Comment],
+        AD.[Verdict] AS [Verdict],
+        AD.[CreationDate] AS [DecidedAt]
+    FROM [dbo].[AccessDecision] AD
+    INNER JOIN [dbo].[AccessRequest] LR ON LR.[Id] = AD.[AccessRequestId]
+    INNER JOIN @CollectionIds CI ON CI.[Id] = LR.[CollectionId]
+    LEFT JOIN [dbo].[User] AU ON AU.[Id] = AD.[ApproverId]
+    WHERE LR.[Status] <> 0 -- not Pending
+        AND LR.[CreationDate] >= @Since
+    ORDER BY AD.[AccessRequestId], AD.[CreationDate] ASC
 END
