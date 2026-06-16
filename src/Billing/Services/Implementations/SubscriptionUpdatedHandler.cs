@@ -425,10 +425,10 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
         var customerHasSecretsManagerTrial = subscription.Customer
             ?.Discount
-            ?.Coupon
+            ?.Source?.Coupon
             ?.Id == "sm-standalone";
 
-        var subscriptionHasSecretsManagerTrial = subscription.Discounts.Select(discount => discount.Coupon.Id)
+        var subscriptionHasSecretsManagerTrial = subscription.Discounts.Select(discount => discount.Source?.Coupon?.Id)
             .Contains(CouponIDs.SecretsManagerStandalone);
 
         if (customerHasSecretsManagerTrial)

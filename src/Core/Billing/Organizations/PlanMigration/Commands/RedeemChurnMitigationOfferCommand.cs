@@ -183,7 +183,7 @@ public class RedeemChurnMitigationOfferCommand(
         }
 
         var existingDiscounts = subscription.Discounts?
-            .Select(d => new SubscriptionDiscountOptions { Coupon = d.Coupon.Id })
+            .Select(d => new SubscriptionDiscountOptions { Coupon = d.Source?.Coupon?.Id })
             .ToList() ?? [];
 
         var alreadyApplied = existingDiscounts.Any(d =>

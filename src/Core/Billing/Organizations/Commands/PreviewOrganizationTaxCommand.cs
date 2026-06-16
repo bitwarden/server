@@ -154,7 +154,11 @@ public class PreviewOrganizationTaxCommand(
                     break;
             }
 
-            options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
+            options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
+            {
+                BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
+                Items = items
+            };
 
             var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
             return GetAmounts(invoice);
@@ -194,7 +198,11 @@ public class PreviewOrganizationTaxCommand(
                     });
                 }
 
-                options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
+                options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
+                {
+                    BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
+                    Items = items
+                };
 
                 var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
                 return GetAmounts(invoice);
@@ -219,7 +227,7 @@ public class PreviewOrganizationTaxCommand(
                 {
                     options.Discounts =
                     [
-                        new InvoiceDiscountOptions { Coupon = subscription.Customer.Discount.Coupon.Id }
+                        new InvoiceDiscountOptions { Coupon = subscription.Customer.Discount.Source.Coupon.Id }
                     ];
                 }
 
@@ -288,7 +296,11 @@ public class PreviewOrganizationTaxCommand(
                     }
                 }
 
-                options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
+                options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
+                {
+                    BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
+                    Items = items
+                };
 
                 var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
                 return GetAmounts(invoice);
@@ -319,7 +331,7 @@ public class PreviewOrganizationTaxCommand(
             {
                 options.Discounts =
                 [
-                    new InvoiceDiscountOptions { Coupon = subscription.Customer.Discount.Coupon.Id }
+                    new InvoiceDiscountOptions { Coupon = subscription.Customer.Discount.Source.Coupon.Id }
                 ];
             }
 
@@ -365,7 +377,11 @@ public class PreviewOrganizationTaxCommand(
                 }
             }
 
-            options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
+            options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
+            {
+                BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
+                Items = items
+            };
 
             var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
             return GetAmounts(invoice);

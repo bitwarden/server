@@ -458,9 +458,9 @@ public class OrganizationBillingService(
 
         var subscriptionCreateOptions = new SubscriptionCreateOptions
         {
+            BillingMode = new SubscriptionBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
             Customer = customer.Id,
-            Discounts = coupons.Count > 0 ? coupons.Select(c => new SubscriptionDiscountOptions { Coupon = c }).ToList() : null,
             Items = subscriptionItemOptionsList,
             Metadata = new Dictionary<string, string>
             {
@@ -475,6 +475,13 @@ public class OrganizationBillingService(
                 ? 0
                 : subscriptionSetup.TrialLength ?? plan.TrialPeriodDays
         };
+
+        if (coupons.Count > 0)
+        {
+            subscriptionCreateOptions.Discounts = coupons
+                .Select(c => new SubscriptionDiscountOptions { Coupon = c })
+                .ToList();
+        }
 
         var hasPaymentMethod = await hasPaymentMethodQuery.Run(organization);
 

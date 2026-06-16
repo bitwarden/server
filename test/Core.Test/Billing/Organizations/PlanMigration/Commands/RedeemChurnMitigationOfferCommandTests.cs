@@ -216,7 +216,7 @@ public class RedeemChurnMitigationOfferCommandTests
 
         var subscription = CreateSubscription(customerDiscount: new Discount
         {
-            Coupon = new Coupon { Id = "customer-level-coupon" }
+            Source = new DiscountSource { Coupon = new Coupon { Id = "customer-level-coupon" } }
         });
         SetupGetSubscription(organization, subscription);
         SetupActiveScheduleWithTwoPhases(subscription);
@@ -338,7 +338,7 @@ public class RedeemChurnMitigationOfferCommandTests
 
         var subscription = CreateSubscription(customerDiscount: new Discount
         {
-            Coupon = new Coupon { Id = "customer-level-coupon" }
+            Source = new DiscountSource { Coupon = new Coupon { Id = "customer-level-coupon" } }
         });
         SetupGetSubscription(organization, subscription);
 

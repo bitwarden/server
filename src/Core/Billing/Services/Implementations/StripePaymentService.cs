@@ -104,7 +104,7 @@ public class StripePaymentService : IStripePaymentService
                 "You do not have an active subscription. Reinstate your subscription to make changes.");
         }
 
-        var existingCoupon = sub.Customer.Discount?.Coupon?.Id;
+        var existingCoupon = sub.Customer.Discount?.Source?.Coupon?.Id;
 
         var collectionMethod = sub.CollectionMethod;
         var daysUntilDue = sub.DaysUntilDue;
@@ -217,7 +217,7 @@ public class StripePaymentService : IStripePaymentService
 
             var customer = await _stripeAdapter.GetCustomerAsync(sub.CustomerId);
 
-            var newCoupon = customer.Discount?.Coupon?.Id;
+            var newCoupon = customer.Discount?.Source?.Coupon?.Id;
 
             if (!string.IsNullOrEmpty(existingCoupon) && string.IsNullOrEmpty(newCoupon))
             {
@@ -645,7 +645,7 @@ public class StripePaymentService : IStripePaymentService
         }
 
         var subscription = await _stripeAdapter.GetSubscriptionAsync(subscriber.GatewaySubscriptionId,
-            new SubscriptionGetOptions { Expand = ["customer.discount.coupon.applies_to", "discounts.coupon.applies_to", "test_clock"] });
+            new SubscriptionGetOptions { Expand = ["customer.discount.source.coupon.applies_to", "discounts.source.coupon.applies_to", "test_clock"] });
 
         if (subscription == null)
         {
@@ -688,7 +688,11 @@ public class StripePaymentService : IStripePaymentService
             var invoiceCreatePreviewOptions = new InvoiceCreatePreviewOptions
             {
                 Customer = subscriber.GatewayCustomerId,
-                Subscription = subscriber.GatewaySubscriptionId
+                Subscription = subscriber.GatewaySubscriptionId,
+                SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
+                {
+                    BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic }
+                }
             };
 
             var upcomingInvoice = await _stripeAdapter.CreateInvoicePreviewAsync(invoiceCreatePreviewOptions);
@@ -723,7 +727,7 @@ public class StripePaymentService : IStripePaymentService
             var schedule = await _stripeAdapter.GetSubscriptionScheduleAsync(subscription.ScheduleId,
                 new SubscriptionScheduleGetOptions
                 {
-                    Expand = ["phases.discounts.coupon.applies_to", "phases.items.price"]
+                    Expand = ["phases.discounts.source.coupon.applies_to", "phases.items.price"]
                 });
 
             if (schedule.Status != StripeConstants.SubscriptionScheduleStatus.Active || schedule.Phases.Count < 2)
@@ -794,9 +798,9 @@ public class StripePaymentService : IStripePaymentService
 
             // Override discount with Phase 2 discount
             var phase2Discount = phase2.Discounts?.FirstOrDefault();
-            if (phase2Discount?.Coupon != null)
+            if (phase2Discount?.Discount?.Source?.Coupon != null)
             {
-                subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(phase2Discount.Coupon);
+                subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(phase2Discount.Discount.Source.Coupon);
             }
         }
         catch (StripeException ex)
@@ -834,7 +838,7 @@ public class StripePaymentService : IStripePaymentService
 
         var customer = await _stripeAdapter.GetCustomerAsync(gatewayCustomerId);
 
-        return customer?.Discount?.Coupon?.Id == SecretsManagerStandaloneDiscountId;
+        return customer?.Discount?.Source?.Coupon?.Id == SecretsManagerStandaloneDiscountId;
     }
 
     private async Task<(DateTime?, DateTime?)> GetSuspensionDateAsync(Subscription subscription)

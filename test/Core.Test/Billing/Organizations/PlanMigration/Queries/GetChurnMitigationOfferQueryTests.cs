@@ -349,7 +349,7 @@ public class GetChurnMitigationOfferQueryTests
 
         var subscription = CreateSubscription(subscriptionDiscounts:
         [
-            new Discount { Coupon = new Coupon { Id = ChurnCouponCode } }
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = ChurnCouponCode } } }
         ]);
         SetupGetSubscription(organization, subscription);
 
@@ -368,7 +368,7 @@ public class GetChurnMitigationOfferQueryTests
 
         var subscription = CreateSubscription(customerDiscount: new Discount
         {
-            Coupon = new Coupon { Id = ChurnCouponCode }
+            Source = new DiscountSource { Coupon = new Coupon { Id = ChurnCouponCode } }
         });
         SetupGetSubscription(organization, subscription);
 
