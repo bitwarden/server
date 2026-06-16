@@ -13,13 +13,16 @@ public class SendEventClassifierTests
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
+    private readonly IUserRepository _userRepository;
     private readonly SendEventClassifier _sut;
 
     public SendEventClassifierTests()
     {
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _organizationDomainRepository = Substitute.For<IOrganizationDomainRepository>();
-        _sut = new SendEventClassifier(_organizationUserRepository, _organizationDomainRepository);
+        _userRepository = Substitute.For<IUserRepository>();
+        _sut = new SendEventClassifier(
+            _organizationUserRepository, _organizationDomainRepository, _userRepository);
     }
 
     [Theory]
@@ -34,6 +37,7 @@ public class SendEventClassifierTests
 
         Assert.Empty(context);
         await _organizationUserRepository.DidNotReceiveWithAnyArgs().GetManyByUserAsync(default);
+        await _userRepository.DidNotReceiveWithAnyArgs().GetByEmailAsync(default!);
     }
 
     [Fact]
@@ -46,6 +50,7 @@ public class SendEventClassifierTests
         var context = await _sut.BuildAccessContextAsync(userId, "alice@example.com");
 
         Assert.Empty(context);
+        await _userRepository.DidNotReceiveWithAnyArgs().GetByEmailAsync(default!);
     }
 
     [Fact]
@@ -55,13 +60,8 @@ public class SendEventClassifierTests
         var orgId = Guid.NewGuid();
         var accessorUserId = Guid.NewGuid();
         SetupOrgWithDomains(userId, orgId, "example.com");
-        _organizationUserRepository.GetByOrganizationEmailAsync(orgId, "alice@example.com")
-            .Returns(new OrganizationUser
-            {
-                OrganizationId = orgId,
-                Status = OrganizationUserStatusType.Confirmed,
-                UserId = accessorUserId,
-            });
+        // OrganizationUser.Email is null for confirmed members; the accessor is matched via their User.
+        SetupAccessorMemberships("alice@example.com", accessorUserId, (orgId, OrganizationUserStatusType.Confirmed));
 
         var context = await _sut.BuildAccessContextAsync(userId, "alice@example.com");
 
@@ -75,8 +75,8 @@ public class SendEventClassifierTests
         var userId = Guid.NewGuid();
         var orgId = Guid.NewGuid();
         SetupOrgWithDomains(userId, orgId, "example.com");
-        _organizationUserRepository.GetByOrganizationEmailAsync(orgId, "alice@example.com")
-            .Returns((OrganizationUser?)null);
+        // No user account for the accessor email -> not a member.
+        _userRepository.GetByEmailAsync("alice@example.com").Returns((User?)null);
 
         var context = await _sut.BuildAccessContextAsync(userId, "alice@example.com");
 
@@ -90,8 +90,7 @@ public class SendEventClassifierTests
         var userId = Guid.NewGuid();
         var orgId = Guid.NewGuid();
         SetupOrgWithDomains(userId, orgId, "example.com");
-        _organizationUserRepository.GetByOrganizationEmailAsync(orgId, "bob@external.com")
-            .Returns((OrganizationUser?)null);
+        _userRepository.GetByEmailAsync("bob@external.com").Returns((User?)null);
 
         var context = await _sut.BuildAccessContextAsync(userId, "bob@external.com");
 
@@ -104,8 +103,7 @@ public class SendEventClassifierTests
         var userId = Guid.NewGuid();
         var orgId = Guid.NewGuid();
         SetupOrgWithDomains(userId, orgId, "example.com");
-        _organizationUserRepository.GetByOrganizationEmailAsync(orgId, "Alice@Example.COM")
-            .Returns((OrganizationUser?)null);
+        _userRepository.GetByEmailAsync("Alice@Example.COM").Returns((User?)null);
 
         var context = await _sut.BuildAccessContextAsync(userId, "Alice@Example.COM");
 
@@ -134,17 +132,8 @@ public class SendEventClassifierTests
                 new() { OrganizationId = memberOrg, DomainName = "example.com" },
                 new() { OrganizationId = claimedOrg, DomainName = "example.com" },
             });
-        _organizationUserRepository.GetByOrganizationEmailAsync(memberOrg, "alice@example.com")
-            .Returns(new OrganizationUser
-            {
-                OrganizationId = memberOrg,
-                Status = OrganizationUserStatusType.Confirmed,
-                UserId = accessorUserId,
-            });
-        _organizationUserRepository.GetByOrganizationEmailAsync(claimedOrg, "alice@example.com")
-            .Returns((OrganizationUser?)null);
-        _organizationUserRepository.GetByOrganizationEmailAsync(externalOrg, "alice@example.com")
-            .Returns((OrganizationUser?)null);
+        // Accessor is a confirmed member of memberOrg only.
+        SetupAccessorMemberships("alice@example.com", accessorUserId, (memberOrg, OrganizationUserStatusType.Confirmed));
 
         var context = await _sut.BuildAccessContextAsync(userId, "alice@example.com");
 
@@ -156,19 +145,14 @@ public class SendEventClassifierTests
     }
 
     [Fact]
-    public async Task BuildAccessContextAsync_InvitedMember_TreatedAsExternal()
+    public async Task BuildAccessContextAsync_AccessorOnlyInvitedToOwnerOrg_TreatedAsExternal()
     {
         var userId = Guid.NewGuid();
         var orgId = Guid.NewGuid();
+        var accessorUserId = Guid.NewGuid();
         SetupOrgWithDomains(userId, orgId, "other.com");
-        // Accessor exists but is only Invited (no platform UserId) -> not attributable.
-        _organizationUserRepository.GetByOrganizationEmailAsync(orgId, "alice@example.com")
-            .Returns(new OrganizationUser
-            {
-                OrganizationId = orgId,
-                Status = OrganizationUserStatusType.Invited,
-                UserId = null,
-            });
+        // Accessor has a user account but is only Invited (not Confirmed) to the org -> not attributable.
+        SetupAccessorMemberships("alice@example.com", accessorUserId, (orgId, OrganizationUserStatusType.Invited));
 
         var context = await _sut.BuildAccessContextAsync(userId, "alice@example.com");
 
@@ -209,6 +193,23 @@ public class SendEventClassifierTests
         _organizationDomainRepository.GetVerifiedDomainsByOrganizationIdsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(domainNames
                 .Select(d => new OrganizationDomain { OrganizationId = orgId, DomainName = d })
+                .ToList());
+    }
+
+    private void SetupAccessorMemberships(
+        string accessorEmail,
+        Guid accessorUserId,
+        params (Guid orgId, OrganizationUserStatusType status)[] memberships)
+    {
+        _userRepository.GetByEmailAsync(accessorEmail).Returns(new User { Id = accessorUserId });
+        _organizationUserRepository.GetManyByUserAsync(accessorUserId)
+            .Returns(memberships
+                .Select(m => new OrganizationUser
+                {
+                    OrganizationId = m.orgId,
+                    Status = m.status,
+                    UserId = accessorUserId,
+                })
                 .ToList());
     }
 }

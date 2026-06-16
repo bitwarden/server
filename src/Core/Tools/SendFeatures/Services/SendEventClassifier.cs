@@ -11,13 +11,16 @@ public class SendEventClassifier : ISendEventClassifier
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
+    private readonly IUserRepository _userRepository;
 
     public SendEventClassifier(
         IOrganizationUserRepository organizationUserRepository,
-        IOrganizationDomainRepository organizationDomainRepository)
+        IOrganizationDomainRepository organizationDomainRepository,
+        IUserRepository userRepository)
     {
         _organizationUserRepository = organizationUserRepository;
         _organizationDomainRepository = organizationDomainRepository;
+        _userRepository = userRepository;
     }
 
     private static readonly IReadOnlyDictionary<Guid, SendAccessEventOrgContext> _empty =
@@ -49,22 +52,31 @@ public class SendEventClassifier : ISendEventClassifier
 
         var claimedDomainsByOrg = await LoadClaimedDomainsByOrgAsync(confirmedOrgIds);
 
-        // Resolve the accessor's membership in every org concurrently. Each repository call uses its
-        // own connection/DbContext scope
-        var membershipByOrg = confirmedOrgIds.ToDictionary(
-            orgId => orgId,
-            orgId => _organizationUserRepository.GetByOrganizationEmailAsync(orgId, accessorEmail!));
-        await Task.WhenAll(membershipByOrg.Values);
+        // Resolve the accessor as a confirmed member via their linked user account. OrganizationUser.Email
+        // is only populated for pending invites, so a confirmed member can only be matched through the User
+        // record (email -> user -> confirmed memberships), never via OrganizationUser.Email.
+        Guid? accessorUserId = null;
+        var accessorMemberOrgIds = new HashSet<Guid>();
+        var accessorUser = await _userRepository.GetByEmailAsync(accessorEmail!);
+        if (accessorUser is not null)
+        {
+            accessorUserId = accessorUser.Id;
+            var accessorMemberships = await _organizationUserRepository.GetManyByUserAsync(accessorUser.Id);
+            foreach (var membership in accessorMemberships
+                .Where(ou => ou.Status == OrganizationUserStatusType.Confirmed))
+            {
+                accessorMemberOrgIds.Add(membership.OrganizationId);
+            }
+        }
 
         var context = new Dictionary<Guid, SendAccessEventOrgContext>();
         foreach (var orgId in confirmedOrgIds)
         {
             // Accessor is a confirmed member of this org: attribute to their platform user (the id the
             // Admin Console member list is keyed on).
-            var accessor = await membershipByOrg[orgId];
-            if (accessor is { Status: OrganizationUserStatusType.Confirmed, UserId: not null })
+            if (accessorUserId.HasValue && accessorMemberOrgIds.Contains(orgId))
             {
-                context[orgId] = new SendAccessEventOrgContext(accessor.UserId.Value, null);
+                context[orgId] = new SendAccessEventOrgContext(accessorUserId.Value, null);
                 continue;
             }
 
