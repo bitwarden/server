@@ -221,40 +221,18 @@ public class HubHelpers
 
                 break;
             case PushType.RefreshSecurityTasks:
-                var pendingTasksData =
-                    JsonSerializer.Deserialize<PushNotificationData<UserPushNotification>>(notificationJson,
-                        _deserializerOptions);
-                if (pendingTasksData is null)
-                {
-                    break;
-                }
-
-                await _hubContext.Clients.User(pendingTasksData.Payload.UserId.ToString())
-                    .SendAsync(_receiveMessageMethod, pendingTasksData, cancellationToken);
-                break;
             case PushType.RefreshApproverInbox:
-                var approverInboxData =
-                    JsonSerializer.Deserialize<PushNotificationData<UserPushNotification>>(notificationJson,
-                        _deserializerOptions);
-                if (approverInboxData is null)
-                {
-                    break;
-                }
-
-                await _hubContext.Clients.User(approverInboxData.Payload.UserId.ToString())
-                    .SendAsync(_receiveMessageMethod, approverInboxData, cancellationToken);
-                break;
             case PushType.RefreshAccessRequest:
-                var accessRequestData =
+                var userRefreshData =
                     JsonSerializer.Deserialize<PushNotificationData<UserPushNotification>>(notificationJson,
                         _deserializerOptions);
-                if (accessRequestData is null)
+                if (userRefreshData is null)
                 {
                     break;
                 }
 
-                await _hubContext.Clients.User(accessRequestData.Payload.UserId.ToString())
-                    .SendAsync(_receiveMessageMethod, accessRequestData, cancellationToken);
+                await _hubContext.Clients.User(userRefreshData.Payload.UserId.ToString())
+                    .SendAsync(_receiveMessageMethod, userRefreshData, cancellationToken);
                 break;
             case PushType.PolicyChanged:
                 await policyChangedNotificationHandler(notificationJson, cancellationToken);
