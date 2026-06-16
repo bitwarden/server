@@ -508,7 +508,7 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task PutRecoverAccount_WhenAuthorizationFails_ReturnsBadRequest(
+    public async Task RecoverAccount_WhenAuthorizationFails_ReturnsBadRequest(
         Guid orgId, Guid orgUserId, OrganizationUserResetPasswordRequestModel model, OrganizationUser organizationUser,
         SutProvider<OrganizationUsersController> sutProvider)
     {
@@ -520,14 +520,14 @@ public class OrganizationUsersControllerTests
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(x => x.SingleOrDefault() is RecoverAccountAuthorizationRequirement))
             .Returns(AuthorizationResult.Failed());
 
-        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model, organizationUser);
+        var result = await sutProvider.Sut.RecoverAccount(orgId, orgUserId, model, organizationUser);
 
         Assert.IsType<BadRequest<ErrorResponseModel>>(result);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PutRecoverAccount_WhenRecoverAccountSucceeds_ReturnsNoContent(
+    public async Task RecoverAccount_WhenRecoverAccountSucceeds_ReturnsNoContent(
         Guid orgId, Guid orgUserId, OrganizationUserResetPasswordRequestModel model, OrganizationUser organizationUser,
         SutProvider<OrganizationUsersController> sutProvider)
     {
@@ -542,14 +542,14 @@ public class OrganizationUsersControllerTests
             .RecoverAccountAsync(Arg.Any<RecoverAccountRequest>())
             .Returns(new None());
 
-        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model, organizationUser);
+        var result = await sutProvider.Sut.RecoverAccount(orgId, orgUserId, model, organizationUser);
 
         Assert.IsType<NoContent>(result);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PutRecoverAccount_WhenRecoverAccountFails_ReturnsBadRequest(
+    public async Task RecoverAccount_WhenRecoverAccountFails_ReturnsBadRequest(
         Guid orgId, Guid orgUserId, OrganizationUserResetPasswordRequestModel model, OrganizationUser organizationUser,
         SutProvider<OrganizationUsersController> sutProvider)
     {
@@ -564,7 +564,7 @@ public class OrganizationUsersControllerTests
             .RecoverAccountAsync(Arg.Any<RecoverAccountRequest>())
             .Returns(new PasswordUpdateFailedError("Error message"));
 
-        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model, organizationUser);
+        var result = await sutProvider.Sut.RecoverAccount(orgId, orgUserId, model, organizationUser);
 
         Assert.IsType<BadRequest<ErrorResponseModel>>(result);
     }

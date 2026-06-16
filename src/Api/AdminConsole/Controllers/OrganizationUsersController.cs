@@ -499,7 +499,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
 #nullable enable
     [HttpPut("{id}/recover-account")]
     [Authorize<ManageAccountRecoveryRequirement>]
-    public async Task<IResult> PutRecoverAccount(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model,
+    public async Task<IResult> RecoverAccount(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model,
         [InjectOrganizationUser] OrganizationUser targetOrganizationUser)
     {
 

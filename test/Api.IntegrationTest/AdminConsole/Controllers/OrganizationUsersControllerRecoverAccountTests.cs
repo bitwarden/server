@@ -20,7 +20,7 @@ using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
 
-public class OrganizationUsersControllerPutRecoverAccountTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private static readonly KdfRequestModel _defaultKdfRequest =
         new() { KdfType = KdfType.PBKDF2_SHA256, Iterations = KdfConstants.PBKDF2_ITERATIONS.Default };
@@ -32,7 +32,7 @@ public class OrganizationUsersControllerPutRecoverAccountTests : IClassFixture<A
     private Organization _organization = null!;
     private string _ownerEmail = null!;
 
-    public OrganizationUsersControllerPutRecoverAccountTests(ApiApplicationFactory apiFactory)
+    public OrganizationUsersControllerRecoverAccountTests(ApiApplicationFactory apiFactory)
     {
         _factory = apiFactory;
         _client = _factory.CreateClient();
@@ -81,7 +81,7 @@ public class OrganizationUsersControllerPutRecoverAccountTests : IClassFixture<A
     }
 
     [Fact]
-    public async Task PutRecoverAccount_WithLegacyPayload_UpdatesUserKeyAndForcesPasswordReset()
+    public async Task RecoverAccount_WithLegacyPayload_UpdatesUserKeyAndForcesPasswordReset()
     {
         // Arrange
         var (ownerEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
@@ -125,7 +125,7 @@ public class OrganizationUsersControllerPutRecoverAccountTests : IClassFixture<A
     }
 
     [Fact]
-    public async Task PutRecoverAccount_WithUnlockAndAuthenticationData_UpdatesUserKeyAndForcesPasswordReset()
+    public async Task RecoverAccount_WithUnlockAndAuthenticationData_UpdatesUserKeyAndForcesPasswordReset()
     {
         // Arrange
         var (ownerEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
@@ -183,7 +183,7 @@ public class OrganizationUsersControllerPutRecoverAccountTests : IClassFixture<A
     }
 
     [Fact]
-    public async Task PutRecoverAccount_AsLowerRole_CannotRecoverHigherRole()
+    public async Task RecoverAccount_AsLowerRole_CannotRecoverHigherRole()
     {
         // Arrange
         var (adminEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
@@ -213,7 +213,7 @@ public class OrganizationUsersControllerPutRecoverAccountTests : IClassFixture<A
     }
 
     [Fact]
-    public async Task PutRecoverAccount_CannotRecoverProviderAccount()
+    public async Task RecoverAccount_CannotRecoverProviderAccount()
     {
         // Arrange - Create owner who will try to recover the provider account
         var (ownerEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
