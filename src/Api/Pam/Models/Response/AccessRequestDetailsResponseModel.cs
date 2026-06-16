@@ -50,7 +50,7 @@ public class AccessRequestDetailsResponseModel : ResponseModel
     public Guid OrganizationId { get; }
     public Guid RequesterId { get; }
 
-    /// <summary><c>pending | approved | activated | denied | cancelled | expired</c>.</summary>
+    /// <summary><c>pending | approved | activated | denied | canceled | expired</c>.</summary>
     public string Status { get; }
 
     public DateTime RequestedNotBefore { get; }
