@@ -186,6 +186,10 @@ public class AccessRequestRepositoryTests
         var row = Assert.Single(history);
         Assert.Equal(approverId, row.ApproverId);
         Assert.Equal("approved for audit", row.ApproverComment);
+        // The approver id here belongs to no User row, so the identity join yields null name/email and the client
+        // falls back to the id. Identity resolution against a real User is covered by the My Requests read test.
+        Assert.Null(row.ApproverName);
+        Assert.Null(row.ApproverEmail);
 
         // Approval records the verdict only: no lease exists until the requester activates the approved request,
         // so the requester does not yet hold access and the inbox row carries no produced lease.
@@ -343,6 +347,46 @@ public class AccessRequestRepositoryTests
         Assert.Contains(mine, r => r.Id == denied.Id);
         // Caller-scoped self-read omits the display-name joins.
         Assert.All(mine, r => Assert.Null(r.CollectionName));
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyByRequesterIdAsync_ResolvesHumanApproverIdentity(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRequestRepository accessRequestRepository)
+    {
+        // The requester's own list names who decided the request. The collection/cipher/requester joins stay
+        // omitted (those names come from the caller's vault), but the approver identity must resolve from the
+        // human decision's User so the client shows a name instead of a raw id.
+        var approver = await userRepository.CreateTestUserAsync("approver");
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var now = DateTime.UtcNow;
+        var requesterId = Guid.NewGuid();
+
+        var request = await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, requesterId, AccessRequestStatus.Pending, now));
+
+        var decision = new AccessDecision
+        {
+            Id = CoreHelpers.GenerateComb(),
+            AccessRequestId = request.Id,
+            DeciderKind = AccessDeciderKind.Human,
+            ApproverId = approver.Id,
+            Verdict = AccessDecisionVerdict.Deny,
+            Comment = "not now",
+            CreationDate = now,
+        };
+        await accessRequestRepository.ResolveWithDecisionAsync(request, decision, AccessRequestStatus.Denied, now);
+
+        var mine = await accessRequestRepository.GetManyByRequesterIdAsync(requesterId);
+
+        var row = Assert.Single(mine);
+        Assert.Equal(approver.Id, row.ApproverId);
+        Assert.Equal(approver.Name, row.ApproverName);
+        Assert.Equal(approver.Email, row.ApproverEmail);
+        Assert.Equal("not now", row.ApproverComment);
     }
 
     [DatabaseTheory, DatabaseData]

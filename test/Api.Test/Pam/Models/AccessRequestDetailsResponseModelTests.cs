@@ -50,4 +50,29 @@ public class AccessRequestDetailsResponseModelTests
 
         Assert.Null(model.ResolvedAt);
     }
+
+    [Fact]
+    public void Ctor_MapsApproverIdentity()
+    {
+        // The requester's own request list names who decided the request; the resolved approver identity must flow
+        // through from the denormalized details rather than being dropped (which would leave the client showing a id).
+        var approverId = Guid.NewGuid();
+        var unspecified = new DateTime(2026, 6, 15, 13, 0, 0, DateTimeKind.Unspecified);
+        var details = new AccessRequestDetails
+        {
+            Status = AccessRequestStatus.Denied,
+            NotBefore = unspecified,
+            NotAfter = unspecified.AddHours(1),
+            CreationDate = unspecified,
+            ApproverId = approverId,
+            ApproverName = "Ada Approver",
+            ApproverEmail = "ada@example.com",
+        };
+
+        var model = new AccessRequestDetailsResponseModel(details);
+
+        Assert.Equal(approverId, model.ApproverId);
+        Assert.Equal("Ada Approver", model.ApproverName);
+        Assert.Equal("ada@example.com", model.ApproverEmail);
+    }
 }
