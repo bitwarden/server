@@ -1225,7 +1225,7 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage($"You Have Been Confirmed as Emergency Access Contact", email);
         var model = new EmergencyAccessConfirmedViewModel
         {
-            Name = CoreHelpers.SanitizeForEmail(grantorName),
+            Name = CoreHelpers.SanitizeForEmail(grantorName, false),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
@@ -1256,7 +1256,7 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage("Emergency Access Approved", email);
         var model = new EmergencyAccessApprovedViewModel
         {
-            Name = CoreHelpers.SanitizeForEmail(approvingName),
+            Name = CoreHelpers.SanitizeForEmail(approvingName, false),
         };
         await AddMessageContentAsync(message, "Auth.EmergencyAccessApproved", model);
         message.Category = "EmergencyAccessApproved";
@@ -1283,7 +1283,7 @@ public class HandlebarsMailService : IMailService
 
         var model = new EmergencyAccessRecoveryViewModel
         {
-            Name = CoreHelpers.SanitizeForEmail(initiatingName),
+            Name = CoreHelpers.SanitizeForEmail(initiatingName, false),
             Action = emergencyAccess.Type.ToString(),
             DaysLeft = emergencyAccess.WaitTimeDays - Convert.ToInt32((remainingTime).TotalDays),
         };
