@@ -502,15 +502,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
 #nullable enable
-    /// <summary>
-    /// Backward compat alias — remove after clients migrate to recover-account.
-    /// </summary>
-    [HttpPut("{id}/reset-password")]
-    [Authorize<ManageAccountRecoveryRequirement>]
-    public Task<IResult> PutResetPassword(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model,
-        [InjectOrganizationUser] OrganizationUser targetOrganizationUser)
-        => PutRecoverAccount(orgId, id, model, targetOrganizationUser);
-
     [HttpPut("{id}/recover-account")]
     [Authorize<ManageAccountRecoveryRequirement>]
     public async Task<IResult> PutRecoverAccount(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model,
