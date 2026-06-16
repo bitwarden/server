@@ -343,6 +343,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("UseOrganizationDomains")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("UsePam")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("UsePasswordManager")
                         .HasColumnType("boolean");
 
@@ -2351,6 +2354,58 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("NotificationStatus", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("AllowsExtensions")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Conditions")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DefaultLeaseDurationSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("MaxExtensionDurationSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MaxLeaseDurationSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("SingleActiveLease")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("AccessRule", (string)null);
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Platform.Installation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2378,40 +2433,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Installation", (string)null);
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRule", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Conditions")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrganizationId", "Name")
-                        .IsUnique();
-
-                    b.ToTable("AccessRule", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.AccessPolicy", b =>

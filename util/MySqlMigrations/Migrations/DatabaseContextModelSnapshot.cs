@@ -341,6 +341,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("UseOrganizationDomains")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("UsePam")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("UsePasswordManager")
                         .HasColumnType("tinyint(1)");
 
@@ -2345,6 +2348,58 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("NotificationStatus", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<bool>("AllowsExtensions")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Conditions")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("DefaultLeaseDurationSeconds")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<int?>("MaxExtensionDurationSeconds")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MaxLeaseDurationSeconds")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("SingleActiveLease")
+                        .HasColumnType("tinyint(1)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("AccessRule", (string)null);
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Platform.Installation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2372,40 +2427,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Installation", (string)null);
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRule", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("varchar(256)");
-
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Conditions")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrganizationId", "Name")
-                        .IsUnique();
-
-                    b.ToTable("AccessRule", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.AccessPolicy", b =>
