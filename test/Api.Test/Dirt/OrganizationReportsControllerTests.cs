@@ -45,7 +45,7 @@ public class OrganizationReportControllerTests
         SetupAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceNewArchitecture)
             .Returns(true);
 
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
@@ -87,7 +87,7 @@ public class OrganizationReportControllerTests
         SetupAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceNewArchitecture)
             .Returns(true);
 
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
@@ -123,7 +123,7 @@ public class OrganizationReportControllerTests
         SetupAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceNewArchitecture)
             .Returns(true);
 
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
@@ -160,7 +160,7 @@ public class OrganizationReportControllerTests
         SetupAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceNewArchitecture)
             .Returns(false);
 
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
@@ -1525,7 +1525,11 @@ public class OrganizationReportControllerTests
         var fileData = new ReportFile { Id = "file-id", FileName = "report.json", Size = 1024, Validated = false };
         report.SetReportFile(fileData);
 
-        SetupV2Authorization(sutProvider, orgId);
+        SetupAuthorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceNewArchitecture)
+            .Returns(true);
 
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
             .GetOrganizationReportAsync(report.Id)
@@ -1551,7 +1555,11 @@ public class OrganizationReportControllerTests
         var fileData = new ReportFile { Id = "file-id", FileName = "report.json", Size = 1024, Validated = true };
         report.SetReportFile(fileData);
 
-        SetupV2Authorization(sutProvider, orgId);
+        SetupAuthorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceNewArchitecture)
+            .Returns(true);
 
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
             .GetOrganizationReportAsync(report.Id)
@@ -1584,7 +1592,7 @@ public class OrganizationReportControllerTests
         SetupAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceNewArchitecture)
             .Returns(false);
 
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
