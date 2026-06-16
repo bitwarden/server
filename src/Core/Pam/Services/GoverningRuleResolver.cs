@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Bit.Core.Pam.Engine;
 using Bit.Core.Pam.Models;
 using Bit.Core.Pam.Models.Conditions;
 using Bit.Core.Pam.Repositories;
@@ -17,18 +18,21 @@ public class GoverningRuleResolver : IGoverningRuleResolver
     private readonly ICollectionCipherRepository _collectionCipherRepository;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IAccessRuleRepository _accessRuleRepository;
+    private readonly IAccessRuleEngine _ruleEngine;
 
     public GoverningRuleResolver(
         ICollectionCipherRepository collectionCipherRepository,
         ICollectionRepository collectionRepository,
-        IAccessRuleRepository accessRuleRepository)
+        IAccessRuleRepository accessRuleRepository,
+        IAccessRuleEngine ruleEngine)
     {
         _collectionCipherRepository = collectionCipherRepository;
         _collectionRepository = collectionRepository;
         _accessRuleRepository = accessRuleRepository;
+        _ruleEngine = ruleEngine;
     }
 
-    public async Task<GoverningRule?> ResolveAsync(Guid userId, Guid cipherId)
+    public async Task<GoverningRule?> ResolveAsync(Guid userId, Guid cipherId, AccessSignals signals)
     {
         var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, cipherId);
         if (collectionCiphers.Count == 0)
@@ -39,12 +43,17 @@ public class GoverningRuleResolver : IGoverningRuleResolver
         var collectionIds = collectionCiphers.Select(cc => cc.CollectionId).ToHashSet();
         var collections = await _collectionRepository.GetManyByManyIdsAsync(collectionIds);
 
-        // Deterministic order so the chosen governing collection is stable across calls.
+        // Deterministic order so ties between equally-favourable rules resolve to a stable governing collection.
         var governed = collections
             .Where(c => collectionIds.Contains(c.Id) && c.AccessRuleId.HasValue)
             .OrderBy(c => c.Id);
 
-        GoverningRule? automatic = null;
+        // Least-restrictive wins: among the rules on the collections through which the caller reaches the cipher,
+        // an automatic grant (Allow) is favoured over one needing human approval (RequiresApproval), which is
+        // favoured over a denial (Deny). Evaluating each rule against the request signals means a failing automatic
+        // rule (e.g. an out-of-range IP) never pre-empts a different path that would grant or route to a human.
+        GoverningRule? best = null;
+        var bestOutcome = AccessEvaluationOutcome.Deny;
         foreach (var collection in governed)
         {
             var accessRule = await _accessRuleRepository.GetByIdAsync(collection.AccessRuleId!.Value);
@@ -54,24 +63,31 @@ public class GoverningRuleResolver : IGoverningRuleResolver
             }
 
             var conditions = Parse(accessRule.Conditions);
-            if (ContainsHumanApproval(conditions))
+            var outcome = _ruleEngine.Evaluate(conditions, signals).Outcome;
+            if (best is not null && outcome >= bestOutcome)
             {
-                // Most restrictive wins — return as soon as a human-approval condition is found.
-                return new GoverningRule(collection.OrganizationId, collection.Id, true, conditions)
-                {
-                    AllowsExtensions = accessRule.AllowsExtensions,
-                    MaxExtensionDurationSeconds = accessRule.MaxExtensionDurationSeconds,
-                };
+                continue;
             }
 
-            automatic ??= new GoverningRule(collection.OrganizationId, collection.Id, false, conditions)
+            bestOutcome = outcome;
+            best = new GoverningRule(
+                collection.OrganizationId,
+                collection.Id,
+                outcome == AccessEvaluationOutcome.RequiresApproval,
+                conditions)
             {
                 AllowsExtensions = accessRule.AllowsExtensions,
                 MaxExtensionDurationSeconds = accessRule.MaxExtensionDurationSeconds,
             };
+
+            if (outcome == AccessEvaluationOutcome.Allow)
+            {
+                // Nothing beats an automatic grant; stop scanning the remaining collections.
+                break;
+            }
         }
 
-        return automatic;
+        return best;
     }
 
     /// <summary>
@@ -93,7 +109,4 @@ public class GoverningRuleResolver : IGoverningRuleResolver
     }
 
     private static IReadOnlyList<AccessCondition> FailSafe() => [new HumanApprovalCondition()];
-
-    private static bool ContainsHumanApproval(IReadOnlyList<AccessCondition> conditions) =>
-        conditions.Any(condition => condition is HumanApprovalCondition);
 }

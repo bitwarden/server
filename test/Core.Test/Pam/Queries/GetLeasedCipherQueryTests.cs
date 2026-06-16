@@ -145,7 +145,7 @@ public class GetLeasedCipherQueryTests
         Guid orgId, Guid collectionId)
     {
         sutProvider.GetDependency<IGoverningRuleResolver>()
-            .ResolveAsync(userId, cipherId)
+            .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
             .Returns(new GoverningRule(orgId, collectionId, false,
                 [new IpAllowlistCondition { Cidrs = ["10.0.0.0/8"] }]));
     }

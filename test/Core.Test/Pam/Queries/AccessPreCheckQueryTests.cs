@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Exceptions;
+using Bit.Core.Pam.Engine;
 using Bit.Core.Pam.Entities;
 using Bit.Core.Pam.Enums;
 using Bit.Core.Pam.Models;
@@ -35,7 +36,7 @@ public class AccessPreCheckQueryTests
     {
         SetupCipher(sutProvider, userId, cipherId);
         sutProvider.GetDependency<IGoverningRuleResolver>()
-            .ResolveAsync(userId, cipherId)
+            .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
             .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: true,
                 [new HumanApprovalCondition()]));
 
@@ -50,7 +51,7 @@ public class AccessPreCheckQueryTests
     {
         SetupCipher(sutProvider, userId, cipherId);
         sutProvider.GetDependency<IGoverningRuleResolver>()
-            .ResolveAsync(userId, cipherId)
+            .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
             .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: false,
                 [new IpAllowlistCondition { Cidrs = ["10.0.0.0/8"] }]));
 
@@ -72,7 +73,7 @@ public class AccessPreCheckQueryTests
 
         Assert.True(result.HasActiveLease);
         // The approval path is irrelevant once a lease is held, so the rule resolver is never consulted.
-        await sutProvider.GetDependency<IGoverningRuleResolver>().DidNotReceiveWithAnyArgs().ResolveAsync(default, default);
+        await sutProvider.GetDependency<IGoverningRuleResolver>().DidNotReceiveWithAnyArgs().ResolveAsync(default, default, default);
     }
 
     [Theory, BitAutoData]
@@ -81,7 +82,7 @@ public class AccessPreCheckQueryTests
     {
         SetupCipher(sutProvider, userId, cipherId);
         sutProvider.GetDependency<IGoverningRuleResolver>()
-            .ResolveAsync(userId, cipherId)
+            .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
             .Returns((GoverningRule?)null);
 
         var result = await sutProvider.Sut.PreCheckAsync(userId, cipherId);

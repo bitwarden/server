@@ -1,4 +1,6 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.Context;
+using Bit.Core.Exceptions;
+using Bit.Core.Pam.Engine;
 using Bit.Core.Pam.Entities;
 using Bit.Core.Pam.Models;
 using Bit.Core.Pam.OrganizationFeatures.Queries.Interfaces;
@@ -14,6 +16,7 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
     private readonly IGoverningRuleResolver _resolver;
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IAccessRequestRepository _accessRequestRepository;
+    private readonly ICurrentContext _currentContext;
     private readonly TimeProvider _timeProvider;
 
     public GetCipherAccessStateQuery(
@@ -21,12 +24,14 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
         IGoverningRuleResolver resolver,
         IAccessLeaseRepository accessLeaseRepository,
         IAccessRequestRepository accessRequestRepository,
+        ICurrentContext currentContext,
         TimeProvider timeProvider)
     {
         _cipherRepository = cipherRepository;
         _resolver = resolver;
         _accessLeaseRepository = accessLeaseRepository;
         _accessRequestRepository = accessRequestRepository;
+        _currentContext = currentContext;
         _timeProvider = timeProvider;
     }
 
@@ -40,6 +45,7 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var signals = AccessSignals.From(_currentContext, new DateTimeOffset(now, TimeSpan.Zero));
         var activeLease = await _accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(userId, cipherId, now);
         var pending = await _accessRequestRepository.GetActivePendingByRequesterIdCipherIdAsync(userId, cipherId);
         var approved = await _accessRequestRepository.GetActiveApprovedByRequesterIdCipherIdAsync(userId, cipherId, now);
@@ -51,7 +57,7 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
             // Extension eligibility drives the banner's "Extend" control. A lease may be extended once, so it is
             // extendable only while the rule opts in and no extension has been recorded yet; surface the rule's max
             // length so the client can cap its duration picker.
-            var rule = await _resolver.ResolveAsync(userId, cipherId);
+            var rule = await _resolver.ResolveAsync(userId, cipherId, signals);
             if (rule?.AllowsExtensions == true)
             {
                 var used = await _accessRequestRepository.CountExtensionsByLeaseIdAsync(activeLease.Id);
@@ -59,7 +65,7 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
                 maxExtensionDurationSeconds = rule.MaxExtensionDurationSeconds;
             }
         }
-        else if (pending is null && approved is null && await _resolver.ResolveAsync(userId, cipherId) is null)
+        else if (pending is null && approved is null && await _resolver.ResolveAsync(userId, cipherId, signals) is null)
         {
             // Nothing to report and the cipher isn't leasing-gated. (When a lease or request exists we still return a
             // snapshot even if the rule was since removed, so the caller's state isn't hidden.)

@@ -1,5 +1,4 @@
-﻿using System.Net;
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Pam.Engine;
 using Bit.Core.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Core.Pam.Repositories;
@@ -45,22 +44,16 @@ public class GetLeasedCipherQuery : IGetLeasedCipherQuery
             return null;
         }
 
+        var signals = AccessSignals.From(_currentContext, now);
+
         // A lease grants a window, but the access rule's environmental conditions (source IP, time of day) must
         // still hold at the moment the data is handed over. Approval is not re-checked here: holding the lease is
         // proof it was already granted, so only an outright denial withholds the data.
-        var governingRule = await _resolver.ResolveAsync(userId, cipherId);
-        if (governingRule is not null)
+        var governingRule = await _resolver.ResolveAsync(userId, cipherId, signals);
+        if (governingRule is not null
+            && _ruleEngine.Evaluate(governingRule.Conditions, signals).Outcome == AccessEvaluationOutcome.Deny)
         {
-            var signals = new AccessSignals
-            {
-                IpAddress = IPAddress.TryParse(_currentContext.IpAddress, out var ip) ? ip : null,
-                Timestamp = now,
-            };
-
-            if (_ruleEngine.Evaluate(governingRule.Conditions, signals).Outcome == AccessEvaluationOutcome.Deny)
-            {
-                return null;
-            }
+            return null;
         }
 
         // GetByIdAsync filters by access, so a null result means the caller cannot see the cipher.

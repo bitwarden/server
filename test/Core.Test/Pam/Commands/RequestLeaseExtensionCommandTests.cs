@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Exceptions;
+using Bit.Core.Pam.Engine;
 using Bit.Core.Pam.Entities;
 using Bit.Core.Pam.Enums;
 using Bit.Core.Pam.Models;
@@ -73,7 +74,8 @@ public class RequestLeaseExtensionCommandTests
         var sutProvider = Setup();
         SetupExtendableLease(sutProvider, lease);
         sutProvider.GetDependency<IGoverningRuleResolver>()
-            .ResolveAsync(lease.RequesterId, lease.CipherId).Returns((GoverningRule?)null);
+            .ResolveAsync(lease.RequesterId, lease.CipherId, Arg.Any<AccessSignals>())
+            .Returns((GoverningRule?)null);
 
         await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id)));
@@ -238,7 +240,7 @@ public class RequestLeaseExtensionCommandTests
 
         // A human-approval rule still yields automatic extensions — the approval gate never applies to extensions.
         sutProvider.GetDependency<IGoverningRuleResolver>()
-            .ResolveAsync(lease.RequesterId, lease.CipherId)
+            .ResolveAsync(lease.RequesterId, lease.CipherId, Arg.Any<AccessSignals>())
             .Returns(new GoverningRule(lease.OrganizationId, lease.CollectionId, RequiresHumanApproval: true,
                 [new HumanApprovalCondition()])
             {

@@ -41,7 +41,7 @@ public class SubmitAccessRequestCommandTests
     {
         var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
-        sutProvider.GetDependency<IGoverningRuleResolver>().ResolveAsync(userId, cipherId)
+        sutProvider.GetDependency<IGoverningRuleResolver>().ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
             .Returns((GoverningRule?)null);
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
@@ -403,7 +403,7 @@ public class SubmitAccessRequestCommandTests
     {
         var condition = requiresHuman ? new HumanApprovalCondition() : (AccessCondition)new IpAllowlistCondition { Cidrs = ["10.0.0.0/8"] };
         sutProvider.GetDependency<IGoverningRuleResolver>()
-            .ResolveAsync(userId, cipherId)
+            .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
             .Returns(new GoverningRule(orgId, collectionId, requiresHuman, [condition]));
     }
 
