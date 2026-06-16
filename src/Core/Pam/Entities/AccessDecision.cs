@@ -23,10 +23,10 @@ public class AccessDecision : ITableObject<Guid>
     public Guid? ApproverId { get; set; }
 
     /// <summary>
-    /// The condition kind that decided (e.g. <c>ip_allowlist</c>). NULL when <see cref="DeciderKind"/> is
-    /// <see cref="AccessDeciderKind.Human"/>.
+    /// The condition kind that decided (e.g. <see cref="AccessConditionKind.IpAllowlist"/>). NULL when
+    /// <see cref="DeciderKind"/> is <see cref="AccessDeciderKind.Human"/>.
     /// </summary>
-    public string? ConditionKind { get; set; }
+    public AccessConditionKind? ConditionKind { get; set; }
 
     public AccessDecisionVerdict Verdict { get; set; }
 

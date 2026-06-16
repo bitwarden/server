@@ -3,7 +3,7 @@ CREATE TABLE [dbo].[AccessDecision] (
     [AccessRequestId]       UNIQUEIDENTIFIER    NOT NULL,
     [DeciderKind]           TINYINT             NOT NULL,
     [ApproverId]            UNIQUEIDENTIFIER    NULL,
-    [ConditionKind]         NVARCHAR(50)        NULL,
+    [ConditionKind]         TINYINT             NULL,
     [Verdict]               TINYINT             NOT NULL,
     [Comment]               NVARCHAR(MAX)       NULL,
     [EvaluationContext]     NVARCHAR(MAX)       NULL,

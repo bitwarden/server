@@ -9,9 +9,6 @@ public sealed partial class AccessRuleValidator : IAccessRuleValidator
 {
     private const int MaxConditions = 10;
 
-    private static readonly HashSet<string> AllowedDays =
-        new(StringComparer.OrdinalIgnoreCase) { "mon", "tue", "wed", "thu", "fri", "sat", "sun" };
-
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -130,14 +127,8 @@ public sealed partial class AccessRuleValidator : IAccessRuleValidator
                 return AccessRuleValidationResult.Invalid("time_of_day window requires at least one day.");
             }
 
-            foreach (var day in window.Days)
-            {
-                if (!AllowedDays.Contains(day))
-                {
-                    return AccessRuleValidationResult.Invalid($"Invalid day: '{day}'.");
-                }
-            }
-
+            // Day tokens are validated during deserialization by AccessWeekdayJsonConverter; an unknown token fails
+            // the JSON parse above and is reported as malformed.
             if (!TimeOfDayRegex().IsMatch(window.From))
             {
                 return AccessRuleValidationResult.Invalid($"Invalid 'from' time: '{window.From}'. Expected HH:mm.");

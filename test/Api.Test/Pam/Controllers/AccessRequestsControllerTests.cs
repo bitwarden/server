@@ -1,7 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Api.Pam.Controllers;
 using Bit.Api.Pam.Models.Request;
-using Bit.Core.Exceptions;
 using Bit.Core.Pam.Entities;
 using Bit.Core.Pam.Enums;
 using Bit.Core.Pam.Models;
@@ -85,20 +84,10 @@ public class AccessRequestsControllerTests
             .DecideAsync(userId, requestId, Arg.Any<AccessDecisionSubmission>())
             .Returns(updated);
 
-        var result = await sutProvider.Sut.Decide(requestId, new AccessDecisionRequestModel { Verdict = "approve" });
+        var result = await sutProvider.Sut.Decide(requestId, new AccessDecisionRequestModel { Verdict = AccessDecisionVerdict.Approve });
 
         Assert.Equal(updated.Id, result.Id);
         Assert.Equal(AccessRequestStatusNames.Approved, result.Status);
-    }
-
-    [Theory, BitAutoData]
-    public async Task Decide_InvalidDecision_ThrowsBadRequest(
-        Guid userId, Guid requestId, SutProvider<AccessRequestsController> sutProvider)
-    {
-        SetupUser(sutProvider, userId);
-
-        await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.Decide(requestId, new AccessDecisionRequestModel { Verdict = "maybe" }));
     }
 
     [Theory, BitAutoData]
