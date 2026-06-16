@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Exceptions;
+using Bit.Core.Pam.Engine;
 using Bit.Core.Pam.Entities;
 using Bit.Core.Pam.Enums;
 using Bit.Core.Pam.Models;
@@ -36,7 +37,7 @@ public class GetCipherAccessStateQueryTests
         SetupCipher(sutProvider, userId, cipherId);
         // No active lease, no pending request, and the resolver finds no governing rule.
         sutProvider.GetDependency<IGoverningRuleResolver>()
-            .ResolveAsync(userId, cipherId)
+            .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
             .Returns((GoverningRule?)null);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetStateAsync(userId, cipherId));
@@ -68,7 +69,7 @@ public class GetCipherAccessStateQueryTests
             .Returns(activeLease);
         // Access rule since removed: resolver returns null, but the held lease must not be hidden.
         sutProvider.GetDependency<IGoverningRuleResolver>()
-            .ResolveAsync(userId, cipherId)
+            .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
             .Returns((GoverningRule?)null);
 
         var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
@@ -140,7 +141,7 @@ public class GetCipherAccessStateQueryTests
             .Returns(approved);
         // Access rule since removed: resolver returns null, but the startable approval must not be hidden.
         sutProvider.GetDependency<IGoverningRuleResolver>()
-            .ResolveAsync(userId, cipherId)
+            .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
             .Returns((GoverningRule?)null);
 
         var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
@@ -155,7 +156,7 @@ public class GetCipherAccessStateQueryTests
     {
         SetupCipher(sutProvider, userId, cipherId);
         sutProvider.GetDependency<IGoverningRuleResolver>()
-            .ResolveAsync(userId, cipherId)
+            .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
             .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: true,
                 [new HumanApprovalCondition()]));
 
@@ -177,7 +178,7 @@ public class GetCipherAccessStateQueryTests
             .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, Arg.Any<DateTime>())
             .Returns(activeLease);
         sutProvider.GetDependency<IGoverningRuleResolver>()
-            .ResolveAsync(userId, cipherId)
+            .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
             .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: false,
                 [new HumanApprovalCondition()])
             {
@@ -203,7 +204,7 @@ public class GetCipherAccessStateQueryTests
             .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, Arg.Any<DateTime>())
             .Returns(activeLease);
         sutProvider.GetDependency<IGoverningRuleResolver>()
-            .ResolveAsync(userId, cipherId)
+            .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
             .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: false,
                 [new HumanApprovalCondition()])
             {
@@ -230,7 +231,7 @@ public class GetCipherAccessStateQueryTests
             .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, Arg.Any<DateTime>())
             .Returns(activeLease);
         sutProvider.GetDependency<IGoverningRuleResolver>()
-            .ResolveAsync(userId, cipherId)
+            .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
             .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: false,
                 [new HumanApprovalCondition()])
             {

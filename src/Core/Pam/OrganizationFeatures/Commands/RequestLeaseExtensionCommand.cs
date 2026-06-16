@@ -1,4 +1,6 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.Context;
+using Bit.Core.Exceptions;
+using Bit.Core.Pam.Engine;
 using Bit.Core.Pam.Entities;
 using Bit.Core.Pam.Enums;
 using Bit.Core.Pam.Models;
@@ -15,6 +17,7 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
     private readonly IAccessRequestRepository _accessRequestRepository;
     private readonly IApproverInboxNotifier _approverInboxNotifier;
     private readonly IRequesterNotifier _requesterNotifier;
+    private readonly ICurrentContext _currentContext;
     private readonly TimeProvider _timeProvider;
 
     public RequestLeaseExtensionCommand(
@@ -23,6 +26,7 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         IAccessRequestRepository accessRequestRepository,
         IApproverInboxNotifier approverInboxNotifier,
         IRequesterNotifier requesterNotifier,
+        ICurrentContext currentContext,
         TimeProvider timeProvider)
     {
         _accessLeaseRepository = accessLeaseRepository;
@@ -30,6 +34,7 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         _accessRequestRepository = accessRequestRepository;
         _approverInboxNotifier = approverInboxNotifier;
         _requesterNotifier = requesterNotifier;
+        _currentContext = currentContext;
         _timeProvider = timeProvider;
     }
 
@@ -52,7 +57,8 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
 
         // Extensions reuse the cipher's governing rule, but never its approval gate: they are always auto-approved,
         // gated only by the rule opting in and the per-lease maximum.
-        var governingRule = await _resolver.ResolveAsync(userId, lease.CipherId);
+        var signals = AccessSignals.From(_currentContext, new DateTimeOffset(now, TimeSpan.Zero));
+        var governingRule = await _resolver.ResolveAsync(userId, lease.CipherId, signals);
         if (governingRule is null)
         {
             throw new BadRequestException("This item does not require a lease.");

@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using Bit.Core.Context;
 
 namespace Bit.Core.Pam.Engine;
 
@@ -11,4 +12,15 @@ public sealed record AccessSignals
 {
     public required IPAddress? IpAddress { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
+
+    /// <summary>
+    /// Builds the signals for the current request: the caller's source IP from
+    /// <see cref="ICurrentContext.IpAddress"/> (parsed, or null when it is absent or unparseable) and the supplied
+    /// evaluation <paramref name="timestamp"/>.
+    /// </summary>
+    public static AccessSignals From(ICurrentContext currentContext, DateTimeOffset timestamp) => new()
+    {
+        IpAddress = IPAddress.TryParse(currentContext.IpAddress, out var ip) ? ip : null,
+        Timestamp = timestamp,
+    };
 }

@@ -1,5 +1,4 @@
-﻿using System.Net;
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Pam.Engine;
 using Bit.Core.Pam.Entities;
@@ -78,13 +77,14 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
             throw new NotFoundException();
         }
 
-        var governingRule = await _resolver.ResolveAsync(userId, cipherId);
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var signals = AccessSignals.From(_currentContext, new DateTimeOffset(now, TimeSpan.Zero));
+
+        var governingRule = await _resolver.ResolveAsync(userId, cipherId, signals);
         if (governingRule is null)
         {
             throw new BadRequestException("This item does not require a lease.");
         }
-
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         if (await _accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(userId, cipherId, now) is not null)
         {
@@ -105,11 +105,12 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
 
         return governingRule.RequiresHumanApproval
             ? await RequestHumanApprovalAsync(userId, cipherId, governingRule, submission)
-            : await ApproveAutomaticallyAsync(userId, cipherId, governingRule, submission, now);
+            : await ApproveAutomaticallyAsync(userId, cipherId, governingRule, submission, now, signals);
     }
 
     private async Task<AccessRequestResult> ApproveAutomaticallyAsync(
-        Guid userId, Guid cipherId, GoverningRule governingRule, AccessRequestSubmission submission, DateTime now)
+        Guid userId, Guid cipherId, GoverningRule governingRule, AccessRequestSubmission submission, DateTime now,
+        AccessSignals signals)
     {
         if (submission.Start.HasValue || submission.End.HasValue)
         {
@@ -129,7 +130,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         // The cipher must satisfy its access rule's conditions (source IP, time of day, ...) before the request is
         // auto-approved. The resolver only routes a rule here when it carries no human-approval gate, so the engine
         // never asks for approval on this path; any non-allow outcome is a denial we surface to the caller.
-        var evaluation = _ruleEngine.Evaluate(governingRule.Conditions, BuildSignals(now));
+        var evaluation = _ruleEngine.Evaluate(governingRule.Conditions, signals);
         if (evaluation.Outcome != AccessEvaluationOutcome.Allow)
         {
             throw new BadRequestException(DenyMessage(evaluation));
@@ -294,12 +295,6 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
                 "Failed to send PAM approver emails for access request {AccessRequestId}.", request.Id);
         }
     }
-
-    private AccessSignals BuildSignals(DateTime now) => new()
-    {
-        IpAddress = IPAddress.TryParse(_currentContext.IpAddress, out var ip) ? ip : null,
-        Timestamp = new DateTimeOffset(now, TimeSpan.Zero),
-    };
 
     private static string DenyMessage(AccessEvaluation evaluation) => evaluation.Reason switch
     {

@@ -1,4 +1,6 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.Context;
+using Bit.Core.Exceptions;
+using Bit.Core.Pam.Engine;
 using Bit.Core.Pam.Enums;
 using Bit.Core.Pam.Models;
 using Bit.Core.Pam.OrganizationFeatures.Queries.Interfaces;
@@ -13,17 +15,20 @@ public class AccessPreCheckQuery : IAccessPreCheckQuery
     private readonly ICipherRepository _cipherRepository;
     private readonly IGoverningRuleResolver _resolver;
     private readonly IAccessLeaseRepository _accessLeaseRepository;
+    private readonly ICurrentContext _currentContext;
     private readonly TimeProvider _timeProvider;
 
     public AccessPreCheckQuery(
         ICipherRepository cipherRepository,
         IGoverningRuleResolver resolver,
         IAccessLeaseRepository accessLeaseRepository,
+        ICurrentContext currentContext,
         TimeProvider timeProvider)
     {
         _cipherRepository = cipherRepository;
         _resolver = resolver;
         _accessLeaseRepository = accessLeaseRepository;
+        _currentContext = currentContext;
         _timeProvider = timeProvider;
     }
 
@@ -45,7 +50,8 @@ public class AccessPreCheckQuery : IAccessPreCheckQuery
             return new AccessPreCheckResult(AccessApprovalMode.Automatic, HasActiveLease: true);
         }
 
-        var governingRule = await _resolver.ResolveAsync(userId, cipherId);
+        var signals = AccessSignals.From(_currentContext, new DateTimeOffset(now, TimeSpan.Zero));
+        var governingRule = await _resolver.ResolveAsync(userId, cipherId, signals);
         var approvalMode = governingRule?.RequiresHumanApproval == true
             ? AccessApprovalMode.Human
             : AccessApprovalMode.Automatic;
