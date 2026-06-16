@@ -68,6 +68,12 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
+    public Task SendPamPendingAccessRequestEmailsAsync(IEnumerable<string> managerEmails, string organizationName,
+        string? requesterName, string requesterEmail, DateTime notBefore, DateTime notAfter, string? reason)
+    {
+        return Task.FromResult(0);
+    }
+
     public Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier,
         IEnumerable<string> adminEmails, bool hasAccessSecretsManager = false)
     {

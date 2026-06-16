@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Globalization;
 using System.Net;
 using System.Reflection;
 using System.Text.Json;
@@ -340,6 +341,40 @@ public class HandlebarsMailService : IMailService
         await AddMessageContentAsync(message, "OrganizationUserAccepted", model);
         message.Category = "OrganizationUserAccepted";
         await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendPamPendingAccessRequestEmailsAsync(IEnumerable<string> managerEmails, string organizationName,
+        string? requesterName, string requesterEmail, DateTime notBefore, DateTime notAfter, string? reason)
+    {
+        // The body is identical for every approver, so build the view model once and reuse it.
+        var model = new PamPendingAccessRequestViewModel
+        {
+            // Only server-readable request metadata is rendered. The requested item and collection names are
+            // encrypted vault data and are intentionally never passed to, or shown by, this email. The requester
+            // controls their name, email, and reason, so each is anti-phishing sanitized to neutralize links and
+            // spoofed addresses smuggled into the notice.
+            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
+            RequesterName = CoreHelpers.SanitizeForEmail(
+                string.IsNullOrWhiteSpace(requesterName) ? requesterEmail : requesterName, false),
+            RequesterEmail = CoreHelpers.SanitizeForEmail(requesterEmail, false),
+            NotBefore = notBefore.ToString("MMMM d, yyyy h:mm tt", CultureInfo.InvariantCulture) + " " + _utcTimeZoneDisplay,
+            NotAfter = notAfter.ToString("MMMM d, yyyy h:mm tt", CultureInfo.InvariantCulture) + " " + _utcTimeZoneDisplay,
+            Reason = CoreHelpers.SanitizeForEmail(string.IsNullOrWhiteSpace(reason) ? "(no reason provided)" : reason, false),
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName,
+        };
+
+        // One message per recipient so approvers are not disclosed to one another.
+        var queueMessages = managerEmails.Select(email =>
+        {
+            var message = CreateDefaultMessage("New access request awaiting your approval", email);
+            return new MailQueueMessage(message, "Pam.PendingAccessRequest", model)
+            {
+                Category = "PamPendingAccessRequest",
+            };
+        });
+
+        await EnqueueMailAsync(queueMessages);
     }
 
     public async Task SendOrganizationConfirmedEmailAsync(string organizationName, string email, bool hasAccessSecretsManager = false)
