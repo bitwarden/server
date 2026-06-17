@@ -1,4 +1,4 @@
-CREATE FUNCTION [dbo].[UserCollectionDetails](@UserId UNIQUEIDENTIFIER)
+CREATE OR ALTER FUNCTION [dbo].[UserCollectionDetails](@UserId UNIQUEIDENTIFIER)
 RETURNS TABLE
 AS RETURN
 SELECT
@@ -73,3 +73,5 @@ WHERE
     AND OU.[Status] = 2 -- 2 = Confirmed
     AND O.[Enabled] = 1
     AND CU.[CollectionId] IS NULL
+
+GO
