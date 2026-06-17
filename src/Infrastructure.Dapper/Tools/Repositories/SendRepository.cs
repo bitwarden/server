@@ -22,11 +22,15 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
     private readonly IDataProtector _dataProtector;
     private readonly ILogger<SendRepository> _logger;
 
-    public SendRepository(GlobalSettings globalSettings, IDataProtectionProvider dataProtectionProvider, ILogger<SendRepository> logger)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString, dataProtectionProvider, logger)
-    { }
+    public SendRepository(GlobalSettings globalSettings, IDataProtectionProvider dataProtectionProvider,
+        ILogger<SendRepository> logger)
+        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString,
+            dataProtectionProvider, logger)
+    {
+    }
 
-    public SendRepository(string connectionString, string readOnlyConnectionString, IDataProtectionProvider dataProtectionProvider, ILogger<SendRepository> logger)
+    public SendRepository(string connectionString, string readOnlyConnectionString,
+        IDataProtectionProvider dataProtectionProvider, ILogger<SendRepository> logger)
         : base(connectionString, readOnlyConnectionString)
     {
         _dataProtector = dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose);
@@ -40,6 +44,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
         {
             return null;
         }
+
         return UnprotectData(send) ? send : null;
     }
 
@@ -184,11 +189,9 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
                 cmd.ExecuteNonQuery();
             }
 
-            // Restore in-memory Emails. The DB write only touched Key/RevisionDate, so
-            // a per-row decryption failure here is benign — discard the bool return.
             foreach (var send in sendsList)
             {
-                _ = UnprotectData(send);
+                UnprotectData(send);
             }
         };
     }
@@ -245,7 +248,8 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
 
     private void ProtectData(Send send)
     {
-        if (send.Emails == null || send.Emails.StartsWith(Constants.DatabaseFieldProtectedPrefix))
+        if (string.IsNullOrWhiteSpace(send.Emails) ||
+            send.Emails.StartsWith(Constants.DatabaseFieldProtectedPrefix))
         {
             return;
         }
@@ -256,7 +260,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
 
     private bool UnprotectData(Send send)
     {
-        if (send.Emails == null || !send.Emails.StartsWith(Constants.DatabaseFieldProtectedPrefix))
+        if (string.IsNullOrWhiteSpace(send.Emails) || !send.Emails.StartsWith(Constants.DatabaseFieldProtectedPrefix))
         {
             return true;
         }
@@ -269,8 +273,15 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
         }
         catch (CryptographicException ex)
         {
-            _logger.LogWarning(ex, "Failed to unprotect Emails for Send {SendId}.", send.Id);
-            return false;
+            if (send.Emails.Length == 4000)
+            {
+                _logger.LogError(ex, "Emails column for Send {SendId} is max length and may have been truncated.", send.Id);
+            }
+            else
+            {
+                _logger.LogError(ex, "Failed to unprotect Emails for Send {SendId}.", send.Id);
+            }
+            throw;
         }
     }
 }

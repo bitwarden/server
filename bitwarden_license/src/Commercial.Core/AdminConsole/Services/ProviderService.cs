@@ -697,7 +697,7 @@ public class ProviderService : IProviderService
 
     public async Task DeleteAsync(Provider provider, string token)
     {
-        if (!_providerDeleteTokenDataFactory.TryUnprotect(token, out var data) || !data.IsValid(provider))
+        if (!_providerDeleteTokenDataFactory.TryUnprotect(token, out var data) || !data.Valid || !data.IsValid(provider))
         {
             throw new BadRequestException("Invalid token.");
         }

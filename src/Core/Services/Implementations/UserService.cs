@@ -497,6 +497,7 @@ public class UserService : UserManager<User>, IUserService
         });
     }
 
+    [Obsolete("Use ISelfServicePasswordChangeCommand instead. To be removed in PM-33141.")]
     public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint,
         string key)
     {
@@ -547,29 +548,6 @@ public class UserService : UserManager<User>, IUserService
         await _eventService.LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
 
         await _acceptOrgUserCommand.AcceptOrgUserByOrgSsoIdAsync(orgIdentifier, user, this);
-
-        return IdentityResult.Success;
-    }
-
-    public async Task<IdentityResult> ConvertToKeyConnectorAsync(User user, string keyConnectorKeyWrappedUserKey = null)
-    {
-        var identityResult = CheckCanUseKeyConnector(user);
-        if (identityResult != null)
-        {
-            return identityResult;
-        }
-
-        user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
-        user.MasterPassword = null;
-        user.UsesKeyConnector = true;
-
-        if (!string.IsNullOrWhiteSpace(keyConnectorKeyWrappedUserKey))
-        {
-            user.Key = keyConnectorKeyWrappedUserKey;
-        }
-
-        await _userRepository.ReplaceAsync(user);
-        await _eventService.LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
 
         return IdentityResult.Success;
     }
@@ -673,6 +651,7 @@ public class UserService : UserManager<User>, IUserService
         return IdentityResult.Success;
     }
 
+    [Obsolete("Use IReplaceAdminSetTemporaryPasswordCommand instead. To be removed in PM-33141.")]
     public async Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint)
     {
         if (!user.ForcePasswordReset)
@@ -1010,6 +989,7 @@ public class UserService : UserManager<User>, IUserService
         return user.Key == null && user.MasterPassword != null && user.PrivateKey != null;
     }
 
+    [Obsolete("Use MasterPasswordService.PrepareSetInitialMasterPasswordAsync or PrepareUpdateExistingMasterPasswordAsync instead. To be removed in PM-33141.")]
     private async Task<IdentityResult> ValidatePasswordInternal(User user, string password)
     {
         var errors = new List<IdentityError>();

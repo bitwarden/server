@@ -50,6 +50,7 @@ public class CloudOrganizationSignUpCommand(
         var plan = await pricingClient.GetPlanOrThrow(signup.Plan);
 
         ValidatePasswordManagerPlan(plan, signup);
+        ValidateTrialLength(signup);
 
         if (signup.UseSecretsManager)
         {
@@ -342,5 +343,13 @@ public class CloudOrganizationSignUpCommand(
         return devices
             .Where(d => !string.IsNullOrWhiteSpace(d.PushToken))
             .Select(d => d.Id.ToString());
+    }
+
+    private static void ValidateTrialLength(OrganizationSignup signup)
+    {
+        if (signup.TrialLength is < 0 or > 30)
+        {
+            throw new BadRequestException("Trial length must be between 0 and 30 days.");
+        }
     }
 }

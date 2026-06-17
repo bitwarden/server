@@ -141,16 +141,15 @@ public class OrganizationReportsController : Controller
 
         await AuthorizeAsync(organizationId);
 
-        var latestReport = await _getOrganizationReportQuery.GetLatestOrganizationReportAsync(organizationId);
+        var isAccessIntelligenceV2 = _featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2);
 
-        if (latestReport == null)
-        {
-            throw new NotFoundException();
-        }
+        var latestReport = isAccessIntelligenceV2
+            ? await _getOrganizationReportQuery.ReadLatestOrganizationReportAsync(organizationId)
+            : await _getOrganizationReportQuery.GetLatestOrganizationReportAsync(organizationId);
 
         var response = new OrganizationReportResponseModel(latestReport);
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2))
+        if (isAccessIntelligenceV2)
         {
             var fileData = latestReport.GetReportFile();
             if (fileData is { Validated: true })
@@ -393,7 +392,7 @@ public class OrganizationReportsController : Controller
         }
 
         var fileData = report.GetReportFile();
-        if (fileData == null || fileData.Id != reportFileId)
+        if (fileData == null || fileData.Id != reportFileId || fileData.Validated)
         {
             throw new NotFoundException();
         }
@@ -449,6 +448,11 @@ public class OrganizationReportsController : Controller
             throw new NotFoundException();
         }
 
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2) && !fileData.Validated)
+        {
+            throw new NotFoundException();
+        }
+
         var stream = await _storageService.GetReportReadStreamAsync(report, fileData);
         if (stream == null)
         {
@@ -465,11 +469,15 @@ public class OrganizationReportsController : Controller
             throw new NotFoundException();
         }
 
-        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
-        if (orgAbility is null || !orgAbility.UseRiskInsights)
-        {
-            throw new BadRequestException("Your organization's plan does not support this feature.");
-        }
+        // TODO: Re-enable this access control in PM-37469
+        // Temporarily disabling this access control to allow for proper access control and billing
+        // setup to be done.
+        //
+        // var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+        // if (orgAbility is null || !orgAbility.UseRiskInsights)
+        // {
+        //     throw new BadRequestException("Your organization's plan does not support this feature.");
+        // }
     }
 
     private static void EnsureValidIds(Guid organizationId, Guid? reportId = null)

@@ -986,6 +986,85 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("OrganizationInstallation", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.OrganizationPlanMigrationCohort", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ChurnDiscountCouponCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<byte?>("MigrationPathId")
+                        .HasColumnType("smallint");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("ProactiveDiscountCouponCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id")
+                        .HasAnnotation("SqlServer:Clustered", true);
+
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.ToTable("OrganizationPlanMigrationCohort", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.OrganizationPlanMigrationCohortAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ChurnDiscountAppliedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CohortId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("MigratedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ScheduledDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id")
+                        .HasAnnotation("SqlServer:Clustered", true);
+
+                    b.HasIndex("OrganizationId")
+                        .IsUnique()
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("CohortId", "ScheduledDate", "MigratedDate")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.ToTable("OrganizationPlanMigrationCohortAssignment", (string)null);
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.ProviderInvoiceItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1751,6 +1830,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<short>("Status")
                         .HasColumnType("smallint");
 
+                    b.Property<short?>("StatusNew")
+                        .HasColumnType("smallint");
+
                     b.Property<byte>("Type")
                         .HasColumnType("smallint");
 
@@ -1822,6 +1904,7 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Data")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime>("DeletionDate")
@@ -1841,6 +1924,7 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<string>("Key")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<int?>("MaxAccessCount")
@@ -3000,6 +3084,25 @@ namespace Bit.PostgresMigrations.Migrations
                         .IsRequired();
 
                     b.Navigation("Installation");
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.OrganizationPlanMigrationCohortAssignment", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Billing.Models.OrganizationPlanMigrationCohort", "Cohort")
+                        .WithMany()
+                        .HasForeignKey("CohortId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cohort");
 
                     b.Navigation("Organization");
                 });

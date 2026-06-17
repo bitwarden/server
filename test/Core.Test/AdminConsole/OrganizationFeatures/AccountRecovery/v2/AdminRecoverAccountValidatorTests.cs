@@ -5,8 +5,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -148,36 +148,6 @@ public class AdminRecoverAccountValidatorTests
         // Assert
         Assert.True(result.IsError);
         Assert.IsType<MissingPasswordFieldsError>(result.AsError);
-    }
-
-    // region Error: FeatureDisabledError
-
-    [Theory]
-    [BitAutoData]
-    public async Task ValidateAsync_ResetTwoFactor_FeatureFlagDisabled_ReturnsFeatureDisabledError(
-        Organization organization,
-        OrganizationUser organizationUser,
-        SutProvider<AdminRecoverAccountValidator> sutProvider)
-    {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AdminResetTwoFactor)
-            .Returns(false);
-
-        var request = new RecoverAccountRequest
-        {
-            OrgId = organization.Id,
-            OrganizationUser = organizationUser,
-            ResetMasterPassword = false,
-            ResetTwoFactor = true,
-        };
-
-        // Act
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        // Assert
-        Assert.True(result.IsError);
-        Assert.IsType<FeatureDisabledError>(result.AsError);
     }
 
     // region Error: OrgDoesNotAllowResetError
@@ -544,9 +514,6 @@ public class AdminRecoverAccountValidatorTests
         SetupValidPolicy(sutProvider, organization, policy);
         SetupValidOrganizationUser(organizationUser, organization.Id);
         SetupValidUser(sutProvider, user, organizationUser);
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AdminResetTwoFactor)
-            .Returns(true);
 
         var request = new RecoverAccountRequest
         {
@@ -578,9 +545,6 @@ public class AdminRecoverAccountValidatorTests
         SetupValidPolicy(sutProvider, organization, policy);
         SetupValidOrganizationUser(organizationUser, organization.Id);
         SetupValidUser(sutProvider, user, organizationUser);
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AdminResetTwoFactor)
-            .Returns(true);
 
         var request = new RecoverAccountRequest
         {
@@ -598,6 +562,144 @@ public class AdminRecoverAccountValidatorTests
         // Assert
         Assert.True(result.IsValid);
         Assert.Equal(request, result.Request);
+    }
+
+    // Success paths: UnlockAndAuthenticationData
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_ResetMasterPassword_WithUnlockAndAuthenticationData_ReturnsValid(
+        Organization organization,
+        OrganizationUser organizationUser,
+        User user,
+        MasterPasswordAuthenticationData authenticationData,
+        MasterPasswordUnlockData unlockData,
+        [Policy(PolicyType.ResetPassword, true)] PolicyStatus policy,
+        SutProvider<AdminRecoverAccountValidator> sutProvider)
+    {
+        // Arrange
+        SetupValidOrganization(sutProvider, organization);
+        SetupValidPolicy(sutProvider, organization, policy);
+        SetupValidOrganizationUser(organizationUser, organization.Id);
+        SetupValidUser(sutProvider, user, organizationUser);
+
+        var request = new RecoverAccountRequest
+        {
+            OrgId = organization.Id,
+            OrganizationUser = organizationUser,
+            ResetMasterPassword = true,
+            ResetTwoFactor = false,
+            NewMasterPasswordHash = null,
+            Key = null,
+            AuthenticationData = authenticationData,
+            UnlockData = unlockData,
+        };
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        // Assert
+        Assert.True(result.IsValid);
+        Assert.Equal(request, result.Request);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_ResetBothPasswordAndTwoFactor_WithUnlockAndAuthenticationData_ReturnsValid(
+        Organization organization,
+        OrganizationUser organizationUser,
+        User user,
+        MasterPasswordAuthenticationData authenticationData,
+        MasterPasswordUnlockData unlockData,
+        [Policy(PolicyType.ResetPassword, true)] PolicyStatus policy,
+        SutProvider<AdminRecoverAccountValidator> sutProvider)
+    {
+        // Arrange
+        SetupValidOrganization(sutProvider, organization);
+        SetupValidPolicy(sutProvider, organization, policy);
+        SetupValidOrganizationUser(organizationUser, organization.Id);
+        SetupValidUser(sutProvider, user, organizationUser);
+
+        var request = new RecoverAccountRequest
+        {
+            OrgId = organization.Id,
+            OrganizationUser = organizationUser,
+            ResetMasterPassword = true,
+            ResetTwoFactor = true,
+            NewMasterPasswordHash = null,
+            Key = null,
+            AuthenticationData = authenticationData,
+            UnlockData = unlockData,
+        };
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        // Assert
+        Assert.True(result.IsValid);
+        Assert.Equal(request, result.Request);
+    }
+
+    // Error: MissingPasswordFieldsError (UnlockAndAuthenticationData variants)
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_ResetMasterPassword_NoPayloadsProvided_ReturnsMissingPasswordFieldsError(
+        Organization organization,
+        OrganizationUser organizationUser,
+        SutProvider<AdminRecoverAccountValidator> sutProvider)
+    {
+        // Arrange
+        var request = new RecoverAccountRequest
+        {
+            OrgId = organization.Id,
+            OrganizationUser = organizationUser,
+            ResetMasterPassword = true,
+            ResetTwoFactor = false,
+            NewMasterPasswordHash = null,
+            Key = null,
+            AuthenticationData = null,
+            UnlockData = null,
+        };
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<MissingPasswordFieldsError>(result.AsError);
+    }
+
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task ValidateAsync_ResetMasterPassword_OnlyOneOfAuthenticationOrUnlockData_ReturnsMissingPasswordFieldsError(
+        bool hasAuthenticationData,
+        Organization organization,
+        OrganizationUser organizationUser,
+        MasterPasswordAuthenticationData authenticationData,
+        MasterPasswordUnlockData unlockData,
+        SutProvider<AdminRecoverAccountValidator> sutProvider)
+    {
+        // Arrange
+        var request = new RecoverAccountRequest
+        {
+            OrgId = organization.Id,
+            OrganizationUser = organizationUser,
+            ResetMasterPassword = true,
+            ResetTwoFactor = false,
+            NewMasterPasswordHash = null,
+            Key = null,
+            AuthenticationData = hasAuthenticationData ? authenticationData : null,
+            UnlockData = hasAuthenticationData ? null : unlockData,
+        };
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<MissingPasswordFieldsError>(result.AsError);
     }
 
     // region Success paths: Revoked users
@@ -651,9 +753,6 @@ public class AdminRecoverAccountValidatorTests
         SetupValidOrganizationUser(organizationUser, organization.Id);
         organizationUser.Status = OrganizationUserStatusType.Revoked;
         SetupValidUser(sutProvider, user, organizationUser);
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AdminResetTwoFactor)
-            .Returns(true);
 
         var request = new RecoverAccountRequest
         {
@@ -757,9 +856,6 @@ public class AdminRecoverAccountValidatorTests
         SetupValidOrganizationUser(organizationUser, organization.Id);
         organizationUser.Status = OrganizationUserStatusType.Accepted;
         SetupValidUser(sutProvider, user, organizationUser);
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AdminResetTwoFactor)
-            .Returns(true);
 
         var request = new RecoverAccountRequest
         {

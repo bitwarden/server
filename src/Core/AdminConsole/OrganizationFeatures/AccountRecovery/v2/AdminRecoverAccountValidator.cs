@@ -3,7 +3,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
@@ -11,7 +10,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
 public class AdminRecoverAccountValidator(
     IOrganizationRepository organizationRepository,
     IPolicyQuery policyQuery,
-    IFeatureService featureService,
     IUserRepository userRepository) : IAdminRecoverAccountValidator
 {
     public async Task<ValidationResult<RecoverAccountRequest>> ValidateAsync(RecoverAccountRequest request)
@@ -22,17 +20,15 @@ public class AdminRecoverAccountValidator(
             return Invalid(request, new NoActionRequestedError());
         }
 
-        // If resetting master password, hash and key are required
-        if (request.ResetMasterPassword &&
-            (string.IsNullOrEmpty(request.NewMasterPasswordHash) || string.IsNullOrEmpty(request.Key)))
+        if (request.ResetMasterPassword)
         {
-            return Invalid(request, new MissingPasswordFieldsError());
-        }
+            var hasHashAndKey = !string.IsNullOrEmpty(request.NewMasterPasswordHash) && !string.IsNullOrEmpty(request.Key);
+            var hasUnlockAndAuthenticationData = request.AuthenticationData is not null && request.UnlockData is not null;
 
-        // If resetting 2FA, feature flag must be enabled
-        if (request.ResetTwoFactor && !featureService.IsEnabled(FeatureFlagKeys.AdminResetTwoFactor))
-        {
-            return Invalid(request, new FeatureDisabledError());
+            if (!hasHashAndKey && !hasUnlockAndAuthenticationData)
+            {
+                return Invalid(request, new MissingPasswordFieldsError());
+            }
         }
 
         // Org must allow reset password

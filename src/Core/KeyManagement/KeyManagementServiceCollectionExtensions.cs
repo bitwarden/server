@@ -5,6 +5,8 @@ using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Kdf.Implementations;
 using Bit.Core.KeyManagement.Queries;
 using Bit.Core.KeyManagement.Queries.Interfaces;
+using Bit.Core.KeyManagement.UserKey.Queries;
+using Bit.Core.KeyManagement.UserKey.Queries.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -30,11 +32,13 @@ public static class KeyManagementServiceCollectionExtensions
         services.AddScoped<IRegenerateUserAsymmetricKeysCommand, RegenerateUserAsymmetricKeysCommand>();
         services.AddScoped<IChangeKdfCommand, ChangeKdfCommand>();
         services.AddScoped<ISetKeyConnectorKeyCommand, SetKeyConnectorKeyCommand>();
+        services.AddScoped<IConvertUserToKeyConnectorCommand, ConvertUserToKeyConnectorCommand>();
     }
 
     private static void AddKeyManagementQueries(this IServiceCollection services)
     {
         services.AddScoped<IUserAccountKeysQuery, UserAccountKeysQuery>();
         services.AddScoped<IKeyConnectorConfirmationDetailsQuery, KeyConnectorConfirmationDetailsQuery>();
+        services.AddScoped<IKeyRotationDataQuery, KeyRotationDataQuery>();
     }
 }

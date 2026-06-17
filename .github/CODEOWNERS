@@ -92,6 +92,7 @@ bitwarden_license/src/test/Scim.ScimTest @bitwarden/team-admin-console-dev
 **/*invoice* @bitwarden/team-billing-dev
 **/*OrganizationLicense* @bitwarden/team-billing-dev
 **/Billing @bitwarden/team-billing-dev
+**/AppHost @bitwarden/team-billing-dev @bitwarden/dept-architecture # joint ownership
 src/Admin/Controllers/ToolsController.cs @bitwarden/team-billing-dev
 src/Admin/Views/Tools @bitwarden/team-billing-dev
 

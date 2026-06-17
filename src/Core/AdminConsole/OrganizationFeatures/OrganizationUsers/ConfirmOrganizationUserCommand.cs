@@ -32,7 +32,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     private readonly IDeviceRepository _deviceRepository;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly ICollectionRepository _collectionRepository;
-    private readonly IAutomaticUserConfirmationPolicyEnforcementValidator _automaticUserConfirmationPolicyEnforcementValidator;
+    private readonly IAutomaticUserConfirmationPolicyEnforcementHandler _automaticUserConfirmationPolicyEnforcementHandler;
     private readonly ISendOrganizationConfirmationCommand _sendOrganizationConfirmationCommand;
     private readonly IDeleteEmergencyAccessCommand _deleteEmergencyAccessCommand;
 
@@ -47,7 +47,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         IDeviceRepository deviceRepository,
         IPolicyRequirementQuery policyRequirementQuery,
         ICollectionRepository collectionRepository,
-        IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator,
+        IAutomaticUserConfirmationPolicyEnforcementHandler automaticUserConfirmationPolicyEnforcementHandler,
         ISendOrganizationConfirmationCommand sendOrganizationConfirmationCommand,
         IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand)
     {
@@ -61,7 +61,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         _deviceRepository = deviceRepository;
         _policyRequirementQuery = policyRequirementQuery;
         _collectionRepository = collectionRepository;
-        _automaticUserConfirmationPolicyEnforcementValidator = automaticUserConfirmationPolicyEnforcementValidator;
+        _automaticUserConfirmationPolicyEnforcementHandler = automaticUserConfirmationPolicyEnforcementHandler;
         _sendOrganizationConfirmationCommand = sendOrganizationConfirmationCommand;
         _deleteEmergencyAccessCommand = deleteEmergencyAccessCommand;
     }
@@ -188,7 +188,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         var policyRequirement = await _policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(
             user.Id);
 
-        var error = (await _automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
+        var error = (await _automaticUserConfirmationPolicyEnforcementHandler.IsCompliantAsync(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(
                     organizationId,
                     orgUsers,

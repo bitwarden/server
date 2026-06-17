@@ -1,7 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using Bit.Setup.Enums;
+using Bit.Core.Enums;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -125,7 +125,7 @@ public class Context
             {
                 var confContent = File.ReadAllText(nginxFile);
                 var selfSigned = confContent.Contains("/etc/ssl/self/");
-                Config.Ssl = confContent.Contains("ssl http2;");
+                Config.Ssl = confContent.Contains("ssl;");
                 Config.SslManagedLetsEncrypt = !selfSigned && confContent.Contains("/etc/letsencrypt/live/");
                 var diffieHellman = confContent.Contains("/dhparam.pem;");
                 var trusted = confContent.Contains("ssl_trusted_certificate ");

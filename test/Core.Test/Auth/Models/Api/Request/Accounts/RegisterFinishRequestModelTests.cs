@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -277,7 +278,7 @@ public class RegisterFinishRequestModelTests
         Assert.Equal(email, newResult.Email);
         Assert.Equal(masterPasswordHint, newResult.MasterPasswordHint);
         Assert.Equal(KdfType.PBKDF2_SHA256, newResult.Kdf);
-        Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, newResult.KdfIterations);
+        Assert.Equal(KdfConstants.PBKDF2_ITERATIONS.Default, newResult.KdfIterations);
         Assert.Null(newResult.KdfMemory);
         Assert.Null(newResult.KdfParallelism);
         Assert.Null(newResult.Key);
@@ -302,7 +303,7 @@ public class RegisterFinishRequestModelTests
                 Kdf = new KdfRequestModel
                 {
                     KdfType = KdfType.PBKDF2_SHA256,
-                    Iterations = AuthConstants.PBKDF2_ITERATIONS.Default
+                    Iterations = KdfConstants.PBKDF2_ITERATIONS.Default
                 },
                 MasterKeyWrappedUserKey = "wrapped-key",
                 Salt = "explicit-salt-value"
@@ -327,13 +328,13 @@ public class RegisterFinishRequestModelTests
             // Provide both unlock and authentication with valid KDF so only the mismatch rule fires
             MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
             {
-                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = AuthConstants.PBKDF2_ITERATIONS.Default },
+                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = KdfConstants.PBKDF2_ITERATIONS.Default },
                 MasterKeyWrappedUserKey = "wrapped",
                 Salt = "salt"
             },
             MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
             {
-                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = AuthConstants.PBKDF2_ITERATIONS.Default },
+                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = KdfConstants.PBKDF2_ITERATIONS.Default },
                 MasterPasswordAuthenticationHash = "auth-hash", // different than root
                 Salt = "salt"
             },
@@ -356,7 +357,7 @@ public class RegisterFinishRequestModelTests
             UserAsymmetricKeys = new KeysRequestModel { PublicKey = "pk", EncryptedPrivateKey = "sk" },
             MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
             {
-                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = AuthConstants.PBKDF2_ITERATIONS.Default },
+                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = KdfConstants.PBKDF2_ITERATIONS.Default },
                 MasterPasswordAuthenticationHash = "auth-hash",
                 Salt = "salt"
             },
@@ -377,7 +378,7 @@ public class RegisterFinishRequestModelTests
             UserAsymmetricKeys = new KeysRequestModel { PublicKey = "pk", EncryptedPrivateKey = "sk" },
             MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
             {
-                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = AuthConstants.PBKDF2_ITERATIONS.Default },
+                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = KdfConstants.PBKDF2_ITERATIONS.Default },
                 MasterKeyWrappedUserKey = "wrapped",
                 Salt = "salt"
             },
@@ -419,7 +420,7 @@ public class RegisterFinishRequestModelTests
             MasterPasswordHash = null,
             // Provide valid root KDF to avoid root KDF errors
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
             EmailVerificationToken = "token" // avoid token error
         };
 
@@ -441,13 +442,13 @@ public class RegisterFinishRequestModelTests
             UserAsymmetricKeys = new KeysRequestModel { PublicKey = "pk", EncryptedPrivateKey = "sk" },
             MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
             {
-                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = AuthConstants.PBKDF2_ITERATIONS.Default },
+                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = KdfConstants.PBKDF2_ITERATIONS.Default },
                 MasterKeyWrappedUserKey = "wrapped",
                 Salt = "salt"
             },
             MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
             {
-                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = AuthConstants.PBKDF2_ITERATIONS.Default },
+                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = KdfConstants.PBKDF2_ITERATIONS.Default },
                 MasterPasswordAuthenticationHash = "auth-hash",
                 Salt = "salt"
             },
@@ -468,7 +469,7 @@ public class RegisterFinishRequestModelTests
             UserAsymmetricKeys = new KeysRequestModel { PublicKey = "pk", EncryptedPrivateKey = "sk" },
             MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
             {
-                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = AuthConstants.PBKDF2_ITERATIONS.Default },
+                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = KdfConstants.PBKDF2_ITERATIONS.Default },
                 MasterKeyWrappedUserKey = "wrapped",
                 Salt = "salt"
             },
@@ -495,13 +496,13 @@ public class RegisterFinishRequestModelTests
             UserAsymmetricKeys = new KeysRequestModel { PublicKey = "pk", EncryptedPrivateKey = "sk" },
             MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
             {
-                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = AuthConstants.PBKDF2_ITERATIONS.Default },
+                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = KdfConstants.PBKDF2_ITERATIONS.Default },
                 MasterKeyWrappedUserKey = "wrapped",
                 Salt = "salt-unlock"
             },
             MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
             {
-                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = AuthConstants.PBKDF2_ITERATIONS.Default },
+                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = KdfConstants.PBKDF2_ITERATIONS.Default },
                 MasterPasswordAuthenticationHash = "auth-hash",
                 Salt = "salt-auth"
             },
@@ -522,13 +523,13 @@ public class RegisterFinishRequestModelTests
             UserAsymmetricKeys = new KeysRequestModel { PublicKey = "pk", EncryptedPrivateKey = "sk" },
             MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
             {
-                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = AuthConstants.PBKDF2_ITERATIONS.Default },
+                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = KdfConstants.PBKDF2_ITERATIONS.Default },
                 MasterKeyWrappedUserKey = "wrapped",
                 Salt = "salt"
             },
             MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
             {
-                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = AuthConstants.PBKDF2_ITERATIONS.Default },
+                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = KdfConstants.PBKDF2_ITERATIONS.Default },
                 MasterPasswordAuthenticationHash = "auth-hash",
                 Salt = "salt"
             }
