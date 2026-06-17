@@ -37,6 +37,8 @@ public class MigrationPathIdsSnapshotTests
         Assert.Equal((byte)2, (byte)MigrationPathId.Enterprise2020MonthlyToCurrent);
         Assert.Equal((byte)3, (byte)MigrationPathId.Teams2020AnnualToCurrent);
         Assert.Equal((byte)4, (byte)MigrationPathId.Teams2020MonthlyToCurrent);
+        Assert.Equal((byte)5, (byte)MigrationPathId.Enterprise2019AnnualToCurrent);
+        Assert.Equal((byte)6, (byte)MigrationPathId.Enterprise2019MonthlyToCurrent);
     }
 
     [Fact]
@@ -53,6 +55,10 @@ public class MigrationPathIdsSnapshotTests
             MigrationPaths.Teams2020AnnualToCurrent.Id);
         Assert.Equal(MigrationPathId.Teams2020MonthlyToCurrent,
             MigrationPaths.Teams2020MonthlyToCurrent.Id);
+        Assert.Equal(MigrationPathId.Enterprise2019AnnualToCurrent,
+            MigrationPaths.Enterprise2019AnnualToCurrent.Id);
+        Assert.Equal(MigrationPathId.Enterprise2019MonthlyToCurrent,
+            MigrationPaths.Enterprise2019MonthlyToCurrent.Id);
     }
 
     [Fact]
@@ -78,6 +84,14 @@ public class MigrationPathIdsSnapshotTests
             MigrationPaths.Teams2020MonthlyToCurrent.FromPlan);
         Assert.Equal(PlanType.TeamsMonthly,
             MigrationPaths.Teams2020MonthlyToCurrent.ToPlan);
+        Assert.Equal(PlanType.EnterpriseAnnually2019,
+            MigrationPaths.Enterprise2019AnnualToCurrent.FromPlan);
+        Assert.Equal(PlanType.EnterpriseAnnually,
+            MigrationPaths.Enterprise2019AnnualToCurrent.ToPlan);
+        Assert.Equal(PlanType.EnterpriseMonthly2019,
+            MigrationPaths.Enterprise2019MonthlyToCurrent.FromPlan);
+        Assert.Equal(PlanType.EnterpriseMonthly,
+            MigrationPaths.Enterprise2019MonthlyToCurrent.ToPlan);
     }
 
     [Fact]
@@ -85,7 +99,7 @@ public class MigrationPathIdsSnapshotTests
     {
         // Guards against accidental removal. Increment when intentionally adding a
         // new path.
-        Assert.Equal(4, MigrationPaths.All.Count);
+        Assert.Equal(6, MigrationPaths.All.Count);
     }
 
     [Fact]
