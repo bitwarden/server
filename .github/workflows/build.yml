@@ -486,6 +486,7 @@ jobs:
     needs: lint
     permissions:
       contents: read
+      id-token: write
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -523,13 +524,58 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
 
-      - name: Build Chainguard Docker image
+      - name: Log in to Azure
+        uses: bitwarden/gh-actions/azure-login@main
+        with:
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
+
+      - name: Log in to ACR
+        run: az acr login -n bitwardenprod
+
+      - name: Set up project name
+        id: setup
+        run: |
+          PROJECT_NAME=$(echo "${{ matrix.project_name }}" | awk '{print tolower($0)}')
+          echo "project_name=$PROJECT_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Generate Chainguard image tag
+        id: tag
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" || "${GITHUB_EVENT_NAME}" == "pull_request_target" ]]; then
+            IMAGE_TAG=$(echo "${GITHUB_HEAD_REF}" | sed "s/[^a-zA-Z0-9]/-/g") # Sanitize branch name to alphanumeric only
+          else
+            IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")
+          fi
+
+          if [[ "${{ github.event.pull_request.head.repo.fork }}" == "true" ]]; then
+            SANITIZED_REPO_NAME=$(echo "$_GITHUB_PR_REPO_NAME" | sed "s/[^a-zA-Z0-9]/-/g") # Sanitize repo name to alphanumeric only
+            IMAGE_TAG=$SANITIZED_REPO_NAME-$IMAGE_TAG # Add repo name to the tag
+          fi
+
+          if [[ "$IMAGE_TAG" == "main" ]]; then
+            IMAGE_TAG=dev
+          fi
+
+          # `chainguard-` prefix keeps these images from colliding
+          # with the standard tags on the same per-project ACR repo
+          IMAGE_TAG="chainguard-${IMAGE_TAG}"
+          IMAGE_TAG=${IMAGE_TAG:0:128} # Limit image tags to 128 chars
+          echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          echo "### Chainguard Docker Image Tag: $IMAGE_TAG" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Build and push Chainguard Docker image
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         with:
           context: .
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/chainguard.Dockerfile
           platforms: linux/amd64
-          push: false
+          push: true
+          tags: ${{ env._AZ_REGISTRY }}/${{ steps.setup.outputs.project_name }}:${{ steps.tag.outputs.image_tag }}
+
+      - name: Log out from Azure
+        uses: bitwarden/gh-actions/azure-logout@main
 
   bitwarden-lite-build:
     name: Trigger Bitwarden lite build
