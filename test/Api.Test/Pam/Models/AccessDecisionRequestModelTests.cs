@@ -12,8 +12,8 @@ public class AccessDecisionRequestModelTests
     private static readonly JsonSerializerOptions _web = new(JsonSerializerDefaults.Web);
 
     [Theory]
-    [InlineData(0, AccessDecisionVerdict.Approve)]
-    [InlineData(1, AccessDecisionVerdict.Deny)]
+    [InlineData(0, AccessDecisionVerdict.Deny)]
+    [InlineData(1, AccessDecisionVerdict.Approve)]
     public void Deserialize_BindsIntegerVerdictToEnum(int wire, AccessDecisionVerdict expected)
     {
         var model = JsonSerializer.Deserialize<AccessDecisionRequestModel>($$"""{"verdict":{{wire}}}""", _web);

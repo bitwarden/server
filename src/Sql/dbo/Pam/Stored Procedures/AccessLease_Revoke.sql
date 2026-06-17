@@ -28,7 +28,7 @@ BEGIN
     VALUES
     (
         @AccessDecisionId, @AccessRequestId, 1 /* Human */, @RevokedBy, NULL,
-        1 /* Deny */, @Reason, NULL, @Now
+        0 /* Deny */, @Reason, NULL, @Now
     )
 
     COMMIT TRANSACTION AccessLease_Revoke
