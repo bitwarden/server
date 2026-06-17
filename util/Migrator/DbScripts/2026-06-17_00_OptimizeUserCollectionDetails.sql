@@ -1,23 +1,23 @@
-CREATE OR ALTER FUNCTION [dbo].[UserCollectionDetails](@UserId UNIQUEIDENTIFIER)
+CREATE FUNCTION [dbo].[UserCollectionDetails](@UserId UNIQUEIDENTIFIER)
 RETURNS TABLE
 AS RETURN
 SELECT
     C.*,
     CASE
         WHEN
-            COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) = 0
+            COALESCE(CU.[ReadOnly], 0) = 0
         THEN 0
         ELSE 1
     END [ReadOnly],
     CASE
         WHEN
-            COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
+            COALESCE(CU.[HidePasswords], 0) = 0
         THEN 0
         ELSE 1
     END [HidePasswords],
     CASE
         WHEN
-            COALESCE(CU.[Manage], CG.[Manage], 0) = 0
+            COALESCE(CU.[Manage], 0) = 0
         THEN 0
         ELSE 1
     END [Manage]
@@ -40,19 +40,19 @@ SELECT
     C.*,
     CASE
         WHEN
-            COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) = 0
+            COALESCE(CG.[ReadOnly], 0) = 0
         THEN 0
         ELSE 1
     END [ReadOnly],
     CASE
         WHEN
-            COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
+            COALESCE(CG.[HidePasswords], 0) = 0
         THEN 0
         ELSE 1
     END [HidePasswords],
     CASE
         WHEN
-            COALESCE(CU.[Manage], CG.[Manage], 0) = 0
+            COALESCE(CG.[Manage], 0) = 0
         THEN 0
         ELSE 1
     END [Manage]
@@ -73,4 +73,3 @@ WHERE
     AND OU.[Status] = 2 -- 2 = Confirmed
     AND O.[Enabled] = 1
     AND CU.[CollectionId] IS NULL
-GO

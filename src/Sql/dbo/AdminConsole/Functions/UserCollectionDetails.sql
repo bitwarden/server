@@ -5,19 +5,19 @@ SELECT
     C.*,
     CASE
         WHEN
-            COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) = 0
+            COALESCE(CU.[ReadOnly], 0) = 0
         THEN 0
         ELSE 1
     END [ReadOnly],
     CASE
         WHEN
-            COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
+            COALESCE(CU.[HidePasswords], 0) = 0
         THEN 0
         ELSE 1
     END [HidePasswords],
     CASE
         WHEN
-            COALESCE(CU.[Manage], CG.[Manage], 0) = 0
+            COALESCE(CU.[Manage], 0) = 0
         THEN 0
         ELSE 1
     END [Manage]
@@ -40,19 +40,19 @@ SELECT
     C.*,
     CASE
         WHEN
-            COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) = 0
+            COALESCE(CG.[ReadOnly], 0) = 0
         THEN 0
         ELSE 1
     END [ReadOnly],
     CASE
         WHEN
-            COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
+            COALESCE(CG.[HidePasswords], 0) = 0
         THEN 0
         ELSE 1
     END [HidePasswords],
     CASE
         WHEN
-            COALESCE(CU.[Manage], CG.[Manage], 0) = 0
+            COALESCE(CG.[Manage], 0) = 0
         THEN 0
         ELSE 1
     END [Manage]
