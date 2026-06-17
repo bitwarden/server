@@ -3,10 +3,10 @@ using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
-using Bit.Core.Services;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
@@ -54,7 +54,7 @@ public class OrganizationAbilityCacheTests : IClassFixture<ApiApplicationFactory
         // which calls UpsertOrganizationAbilityAsync
 
         // Act - read the cached ability directly
-        var cacheService = _factory.GetService<IApplicationCacheService>();
+        var cacheService = _factory.GetService<IOrganizationAbilityCacheService>();
         var ability = await cacheService.GetOrganizationAbilityAsync(_organization.Id);
 
         // Assert - cache was populated by the sign-up flow
@@ -69,7 +69,7 @@ public class OrganizationAbilityCacheTests : IClassFixture<ApiApplicationFactory
         // Arrange - setup in InitializeAsync()
         await _loginHelper.LoginAsync(_ownerEmail);
 
-        var cacheService = _factory.GetService<IApplicationCacheService>();
+        var cacheService = _factory.GetService<IOrganizationAbilityCacheService>();
         var abilityBefore = await cacheService.GetOrganizationAbilityAsync(_organization.Id);
         Assert.NotNull(abilityBefore);
         Assert.False(abilityBefore.LimitCollectionCreation);
@@ -101,7 +101,7 @@ public class OrganizationAbilityCacheTests : IClassFixture<ApiApplicationFactory
         await _loginHelper.LoginAsync(_ownerEmail);
 
         // Verify cache is populated before delete
-        var cacheService = _factory.GetService<IApplicationCacheService>();
+        var cacheService = _factory.GetService<IOrganizationAbilityCacheService>();
         var abilityBeforeDelete = await cacheService.GetOrganizationAbilityAsync(_organization.Id);
         Assert.NotNull(abilityBeforeDelete);
 

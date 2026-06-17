@@ -2,6 +2,7 @@
 using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Services;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -989,7 +990,7 @@ public class OrganizationsControllerTests
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(Arg.Any<Organization>());
         // Downstream pipeline must still run after a cohort write failure -- the ability cache
         // would otherwise be stale relative to the just-replaced organization.
-        await sutProvider.GetDependency<IApplicationCacheService>().Received(1)
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>().Received(1)
             .UpsertOrganizationAbilityAsync(Arg.Is<Organization>(o => o.Id == organization.Id));
     }
 

@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Context;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Context;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
@@ -34,7 +35,7 @@ public class EventServiceTests
         {
             { group.OrganizationId, new OrganizationAbility() { UseEvents = true, Enabled = true } }
         };
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(orgAbilities);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(orgAbilities);
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
@@ -68,7 +69,7 @@ public class EventServiceTests
         {
             { group.OrganizationId, new OrganizationAbility() { UseEvents = true, Enabled = true } }
         };
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(orgAbilities);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(orgAbilities);
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
@@ -147,7 +148,7 @@ public class EventServiceTests
         {
             {orgUser.OrganizationId, new OrganizationAbility() { UseEvents = true, Enabled = true } }
         };
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(orgAbilities);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(orgAbilities);
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
@@ -181,7 +182,7 @@ public class EventServiceTests
         {
             {orgUser.OrganizationId, new OrganizationAbility() { UseEvents = true, Enabled = true } }
         };
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(orgAbilities);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(orgAbilities);
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
         sutProvider.GetDependency<ICurrentContext>().ProviderIdForOrg(Arg.Any<Guid>()).Returns(providerId);
@@ -248,7 +249,7 @@ public class EventServiceTests
         {
             { collection.OrganizationId, new OrganizationAbility() { UseEvents = true, Enabled = true } }
         };
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(orgAbilities);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(orgAbilities);
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
@@ -281,7 +282,7 @@ public class EventServiceTests
         DateTime date, SutProvider<EventService> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>());
 
@@ -297,7 +298,7 @@ public class EventServiceTests
         Guid actingUserId, Guid providerId, string ipAddress, DeviceType deviceType, SutProvider<EventService> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(policy.OrganizationId)
             .Returns(new OrganizationAbility { UseEvents = true, Enabled = true });
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
@@ -323,7 +324,7 @@ public class EventServiceTests
         DateTime date, SutProvider<EventService> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(policy.OrganizationId)
             .Returns(new OrganizationAbility { UseEvents = false, Enabled = true });
 
@@ -382,7 +383,7 @@ public class EventServiceTests
             { orgUser.OrganizationId, new OrganizationAbility { UseEvents = true, Enabled = true } }
         };
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(orgAbilities);
         sutProvider.GetDependency<IApplicationCacheService>()
@@ -417,7 +418,7 @@ public class EventServiceTests
             { orgUser.OrganizationId, new OrganizationAbility { UseEvents = true, Enabled = true } }
         };
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(orgAbilities);
         sutProvider.GetDependency<IApplicationCacheService>()
@@ -587,7 +588,7 @@ public class EventServiceTests
             { provider.Id, new ProviderAbility() { UseEvents = true, Enabled = true } }
         };
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>());
         sutProvider.GetDependency<IApplicationCacheService>()
@@ -615,7 +616,7 @@ public class EventServiceTests
         SutProvider<EventService> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>());
         sutProvider.GetDependency<IApplicationCacheService>()

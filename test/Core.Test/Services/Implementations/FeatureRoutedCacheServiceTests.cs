@@ -1,8 +1,6 @@
 ﻿using Bit.Core.AdminConsole.AbilitiesCache;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Services;
 using Bit.Core.Services.Implementations;
 using Bit.Test.Common.AutoFixture;
@@ -15,49 +13,6 @@ namespace Bit.Core.Test.Services.Implementations;
 [SutProviderCustomize]
 public class FeatureRoutedCacheServiceTests
 {
-    [Theory, BitAutoData]
-    public async Task GetOrganizationAbilitiesAsync_ReturnsFromInMemoryService(
-        SutProvider<FeatureRoutedCacheService> sutProvider,
-        IDictionary<Guid, OrganizationAbility> expectedResult)
-    {
-        // Arrange
-        sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
-            .GetOrganizationAbilitiesAsync()
-            .Returns(expectedResult);
-
-        // Act
-        var result = await sutProvider.Sut.GetOrganizationAbilitiesAsync();
-
-        // Assert
-        Assert.Equal(expectedResult, result);
-        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
-            .Received(1)
-            .GetOrganizationAbilitiesAsync();
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetOrganizationAbilityAsync_ReturnsFromExtendedCacheService(
-        SutProvider<FeatureRoutedCacheService> sutProvider,
-        Guid orgId,
-        OrganizationAbility expectedResult)
-    {
-        // Arrange
-        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
-            .GetOrganizationAbilityAsync(orgId)
-            .Returns(expectedResult);
-
-        // Act
-        var result = await sutProvider.Sut.GetOrganizationAbilityAsync(orgId);
-
-        // Assert
-        Assert.Equal(expectedResult, result);
-        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
-            .Received(1)
-            .GetOrganizationAbilityAsync(orgId);
-        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
-            .DidNotReceiveWithAnyArgs()
-            .GetOrganizationAbilityAsync(default);
-    }
 
     [Theory, BitAutoData]
     public async Task GetProviderAbilitiesAsync_ReturnsFromInMemoryService(
@@ -309,65 +264,4 @@ public class FeatureRoutedCacheServiceTests
             .DidNotReceiveWithAnyArgs()
             .GetProviderAbilitiesAsync();
     }
-
-    [Theory, BitAutoData]
-    public async Task GetOrganizationAbilitiesAsync_ReturnsFromExtendedCacheService(
-        SutProvider<FeatureRoutedCacheService> sutProvider,
-        OrganizationAbility ability)
-    {
-        // Arrange
-        var orgIds = new[] { ability.Id };
-        var expectedResult = new Dictionary<Guid, OrganizationAbility> { [ability.Id] = ability };
-        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
-            .GetOrganizationAbilitiesAsync(orgIds)
-            .Returns(expectedResult);
-
-        // Act
-        var result = await sutProvider.Sut.GetOrganizationAbilitiesAsync(orgIds);
-
-        // Assert
-        Assert.Single(result);
-        Assert.Equal(ability, result[ability.Id]);
-        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
-            .Received(1)
-            .GetOrganizationAbilitiesAsync(orgIds);
-        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
-            .DidNotReceiveWithAnyArgs()
-            .GetOrganizationAbilitiesAsync();
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpsertOrganizationAbilityAsync_CallsExtendedCacheService(
-        SutProvider<FeatureRoutedCacheService> sutProvider,
-        Organization organization)
-    {
-        // Act
-        await sutProvider.Sut.UpsertOrganizationAbilityAsync(organization);
-
-        // Assert
-        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
-            .Received(1)
-            .UpsertOrganizationAbilityAsync(organization);
-        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
-            .DidNotReceiveWithAnyArgs()
-            .UpsertOrganizationAbilityAsync(default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task DeleteOrganizationAbilityAsync_CallsExtendedCacheService(
-        SutProvider<FeatureRoutedCacheService> sutProvider,
-        Guid organizationId)
-    {
-        // Act
-        await sutProvider.Sut.DeleteOrganizationAbilityAsync(organizationId);
-
-        // Assert
-        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
-            .Received(1)
-            .DeleteOrganizationAbilityAsync(organizationId);
-        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
-            .DidNotReceiveWithAnyArgs()
-            .DeleteOrganizationAbilityAsync(default);
-    }
-
 }

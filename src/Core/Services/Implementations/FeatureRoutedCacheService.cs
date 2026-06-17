@@ -1,23 +1,15 @@
 ﻿using Bit.Core.AdminConsole.AbilitiesCache;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
-using Bit.Core.Models.Data.Organizations;
 
 namespace Bit.Core.Services.Implementations;
 
 public class FeatureRoutedCacheService(
     IVCurrentInMemoryApplicationCacheService inMemoryApplicationCacheService,
-    IOrganizationAbilityCacheService extendedOrgAbilityCacheService,
     IProviderAbilityCacheService providerAbilityCacheService,
     IFeatureService featureService)
     : IApplicationCacheService
 {
-    public Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync() =>
-        inMemoryApplicationCacheService.GetOrganizationAbilitiesAsync();
-
-    public Task<OrganizationAbility?> GetOrganizationAbilityAsync(Guid orgId) =>
-        extendedOrgAbilityCacheService.GetOrganizationAbilityAsync(orgId);
 
     public Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync() =>
         inMemoryApplicationCacheService.GetProviderAbilitiesAsync();
@@ -47,12 +39,6 @@ public class FeatureRoutedCacheService(
             .ToDictionary(id => id, id => allProviderAbilities[id]);
     }
 
-    public Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync(IEnumerable<Guid> orgIds) =>
-        extendedOrgAbilityCacheService.GetOrganizationAbilitiesAsync(orgIds);
-
-    public Task UpsertOrganizationAbilityAsync(Organization organization) =>
-        extendedOrgAbilityCacheService.UpsertOrganizationAbilityAsync(organization);
-
     public Task UpsertProviderAbilityAsync(Provider provider)
     {
         if (featureService.IsEnabled(FeatureFlagKeys.ProviderAbilityExtendedCache))
@@ -63,9 +49,6 @@ public class FeatureRoutedCacheService(
         return inMemoryApplicationCacheService.UpsertProviderAbilityAsync(provider);
     }
 
-    public Task DeleteOrganizationAbilityAsync(Guid organizationId) =>
-        extendedOrgAbilityCacheService.DeleteOrganizationAbilityAsync(organizationId);
-
     public Task DeleteProviderAbilityAsync(Guid providerId)
     {
         if (featureService.IsEnabled(FeatureFlagKeys.ProviderAbilityExtendedCache))
@@ -75,10 +58,4 @@ public class FeatureRoutedCacheService(
 
         return inMemoryApplicationCacheService.DeleteProviderAbilityAsync(providerId);
     }
-
-    public Task BaseUpsertOrganizationAbilityAsync(Organization organization) =>
-        extendedOrgAbilityCacheService.UpsertOrganizationAbilityAsync(organization);
-
-    public Task BaseDeleteOrganizationAbilityAsync(Guid organizationId) =>
-        extendedOrgAbilityCacheService.DeleteOrganizationAbilityAsync(organizationId);
 }
