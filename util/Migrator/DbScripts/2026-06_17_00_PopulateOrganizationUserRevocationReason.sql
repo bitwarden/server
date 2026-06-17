@@ -39,7 +39,7 @@ GO
 -- Sets RevocationReason to Unknown (0) for every revoked user that pre-dates the
 -- revocation-reason feature. See RevocationReason enum: Unknown is explicitly
 -- defined as "migrated from before revocation reasons were tracked."
-DECLARE @BatchSize INT = 5000;
+DECLARE @BatchSize INT = 2000;
 DECLARE @RowsAffected INT = 1;
 
 WHILE @RowsAffected > 0
@@ -50,6 +50,7 @@ BEGIN
       AND [RevocationReason] IS NULL;
 
     SET @RowsAffected = @@ROWCOUNT;
+    WAITFOR DELAY '00:00:00.100'
 END
 
 GO
