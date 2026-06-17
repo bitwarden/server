@@ -9,6 +9,7 @@ public class SsoRedirectUrlBuilderTests
     private const string VaultWithHash = "https://vault.bitwarden.com/#";
     private const string InviteAcceptanceRequired =
         SsoRedirectUrlBuilder.ErrorCodes.InviteAcceptanceRequired;
+    private static readonly Guid OrgId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
     [Fact]
     public void BuildLoginRedirectUrl_BasicInputs_ComposesExpectedUrl()
@@ -16,11 +17,13 @@ public class SsoRedirectUrlBuilderTests
         var url = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
             VaultWithHash,
             email: "user@example.com",
+            organizationId: OrgId,
             organizationDisplayName: "Acme",
             errorCode: InviteAcceptanceRequired);
 
         Assert.Equal(
             "https://vault.bitwarden.com/#/login?email=user%40example.com" +
+            $"&organizationId={OrgId}" +
             "&organizationName=Acme" +
             "&error=ssoOrgInviteAcceptanceRequired",
             url);
@@ -35,6 +38,7 @@ public class SsoRedirectUrlBuilderTests
         var url = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
             VaultWithHash,
             email: "user+tag@example.com",
+            organizationId: OrgId,
             organizationDisplayName: "Acme",
             errorCode: InviteAcceptanceRequired);
 
@@ -47,6 +51,7 @@ public class SsoRedirectUrlBuilderTests
         var url = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
             VaultWithHash,
             email: "user@example.com",
+            organizationId: OrgId,
             organizationDisplayName: "Acme Corp",
             errorCode: InviteAcceptanceRequired);
 
@@ -63,6 +68,7 @@ public class SsoRedirectUrlBuilderTests
         var url = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
             VaultWithHash,
             email: "user@example.com",
+            organizationId: OrgId,
             organizationDisplayName: "Acme & Co",
             errorCode: InviteAcceptanceRequired);
 
@@ -76,6 +82,7 @@ public class SsoRedirectUrlBuilderTests
         var url = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
             VaultWithHash,
             email: "user@example.com",
+            organizationId: OrgId,
             organizationDisplayName: "50% Off Inc",
             errorCode: InviteAcceptanceRequired);
 
@@ -90,6 +97,7 @@ public class SsoRedirectUrlBuilderTests
         var url = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
             VaultWithHash,
             email: "user@example.com",
+            organizationId: OrgId,
             organizationDisplayName: "Café Münchën 漢字",
             errorCode: InviteAcceptanceRequired);
 
@@ -103,6 +111,21 @@ public class SsoRedirectUrlBuilderTests
     }
 
     [Fact]
+    public void BuildLoginRedirectUrl_OrganizationIdIsAppendedRaw()
+    {
+        // The id is a server-generated GUID, not user input, so it is appended
+        // as-is. The client matches it against its stashed invite's organizationId.
+        var url = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
+            VaultWithHash,
+            email: "user@example.com",
+            organizationId: OrgId,
+            organizationDisplayName: "Acme",
+            errorCode: InviteAcceptanceRequired);
+
+        Assert.Contains($"&organizationId={OrgId}", url);
+    }
+
+    [Fact]
     public void BuildLoginRedirectUrl_ErrorCodeIsAppendedRaw()
     {
         // Error codes are server-controlled constants (no user input), so they
@@ -111,35 +134,11 @@ public class SsoRedirectUrlBuilderTests
         var url = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
             VaultWithHash,
             email: "user@example.com",
+            organizationId: OrgId,
             organizationDisplayName: "Acme",
             errorCode: InviteAcceptanceRequired);
 
         Assert.EndsWith("&error=ssoOrgInviteAcceptanceRequired", url);
-    }
-
-    [Fact]
-    public void BuildLoginRedirectUrl_AutoSubmitDefault_OmitsAutoSubmitParam()
-    {
-        var url = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
-            VaultWithHash,
-            email: "user@example.com",
-            organizationDisplayName: "Acme",
-            errorCode: InviteAcceptanceRequired);
-
-        Assert.DoesNotContain("autoSubmit", url);
-    }
-
-    [Fact]
-    public void BuildLoginRedirectUrl_AutoSubmitTrue_AppendsAutoSubmitParam()
-    {
-        var url = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
-            VaultWithHash,
-            email: "user@example.com",
-            organizationDisplayName: "Acme",
-            errorCode: InviteAcceptanceRequired,
-            autoSubmit: true);
-
-        Assert.EndsWith("&autoSubmit=true", url);
     }
 
     [Fact]

@@ -316,9 +316,9 @@ public class AccountController : Controller
                 var redirectUrl = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
                     _globalSettings.BaseServiceUri.VaultWithHash,
                     ex.UserEmail,
+                    ex.OrganizationId,
                     ex.OrganizationDisplayName,
-                    SsoRedirectUrlBuilder.ErrorCodes.InviteAcceptanceRequired,
-                    autoSubmit: true);
+                    SsoRedirectUrlBuilder.ErrorCodes.InviteAcceptanceRequired);
 
                 return Redirect(redirectUrl);
             }
@@ -580,6 +580,7 @@ public class AccountController : Controller
                 // same person in this scenario, and the existing user's email is what
                 // the redirected login form will pre-fill.
                 throw new SsoAuthnRequiresInviteAcceptanceException(
+                    organization.Id,
                     organization.DisplayName(),
                     guaranteedExistingUser.Email);
             }

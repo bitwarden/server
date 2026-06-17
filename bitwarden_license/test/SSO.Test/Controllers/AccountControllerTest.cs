@@ -278,9 +278,9 @@ public class AccountControllerTest
         Assert.Equal(
             "https://vault.bitwarden.com/#/login" +
             $"?email={Uri.EscapeDataString(email)}" +
+            $"&organizationId={orgId}" +
             $"&organizationName={Uri.EscapeDataString(organization.Name)}" +
-            "&error=ssoOrgInviteAcceptanceRequired" +
-            "&autoSubmit=true",
+            "&error=ssoOrgInviteAcceptanceRequired",
             redirect.Url);
 
         // External auth cookie is cleared so retry attempts start fresh.
@@ -744,6 +744,7 @@ public class AccountControllerTest
         // catch it and redirect the user back to the web client's /login. The security
         // gate itself (refusing SSO completion for invited users) is unchanged.
         var ex = await Assert.ThrowsAsync<SsoAuthnRequiresInviteAcceptanceException>(async () => await task);
+        Assert.Equal(orgId, ex.OrganizationId);
         Assert.Equal("Org", ex.OrganizationDisplayName);
         Assert.Equal(email, ex.UserEmail);
     }

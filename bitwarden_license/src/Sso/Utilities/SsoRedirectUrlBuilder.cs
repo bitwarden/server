@@ -22,33 +22,31 @@ public static class SsoRedirectUrlBuilder
 
     /// <summary>
     /// Composes a redirect URL of the form
-    /// <c>{vaultWithHashUrl}/login?email=…&amp;organizationName=…&amp;error=…</c>.
-    /// Email and organization name are URL-encoded; the error code is treated as
-    /// a server-controlled constant and is not encoded.
+    /// <c>{vaultWithHashUrl}/login?email=…&amp;organizationId=…&amp;organizationName=…&amp;error=…</c>.
+    /// Email and organization name are URL-encoded; the organization id is rendered
+    /// as a bare GUID string; the error code is treated as a server-controlled
+    /// constant and is not encoded.
     /// </summary>
     /// <param name="vaultWithHashUrl">The web vault base URL including the hash fragment marker
     /// (e.g. <c>https://vault.bitwarden.com/#</c>), as exposed by
     /// <c>IGlobalSettings.BaseServiceUri.VaultWithHash</c>.</param>
     /// <param name="email">The invited org user's email, pre-filled into the login form.</param>
+    /// <param name="organizationId">The organization id. The client uses this as the stable
+    /// match key against its locally stashed invite — display names can drift between
+    /// when an invite is sent and when SSO is attempted, so id is the source of truth.</param>
     /// <param name="organizationDisplayName">The organization display name, surfaced in the toast.</param>
     /// <param name="errorCode">A constant from <see cref="ErrorCodes"/>.</param>
-    /// <param name="autoSubmit">When true, the client auto-progresses past the email-entry step
-    /// to the master-password entry step (saves a click on a flow where the redirect already
-    /// supplied the email). Emitted as <c>&amp;autoSubmit=true</c> only when true.</param>
     public static string BuildLoginRedirectUrl(
         string vaultWithHashUrl,
         string email,
+        Guid organizationId,
         string organizationDisplayName,
-        string errorCode,
-        bool autoSubmit = false)
+        string errorCode)
     {
         var qs = $"email={Uri.EscapeDataString(email)}"
+               + $"&organizationId={organizationId}"
                + $"&organizationName={Uri.EscapeDataString(organizationDisplayName)}"
                + $"&error={errorCode}";
-        if (autoSubmit)
-        {
-            qs += "&autoSubmit=true";
-        }
         return $"{vaultWithHashUrl}/login?{qs}";
     }
 }

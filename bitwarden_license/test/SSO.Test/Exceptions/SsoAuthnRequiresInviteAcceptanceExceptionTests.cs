@@ -7,10 +7,13 @@ public class SsoAuthnRequiresInviteAcceptanceExceptionTests
     [Fact]
     public void Constructor_AssignsProperties()
     {
+        var orgId = Guid.NewGuid();
         var ex = new SsoAuthnRequiresInviteAcceptanceException(
+            organizationId: orgId,
             organizationDisplayName: "Acme Corp",
             userEmail: "invited@example.com");
 
+        Assert.Equal(orgId, ex.OrganizationId);
         Assert.Equal("Acme Corp", ex.OrganizationDisplayName);
         Assert.Equal("invited@example.com", ex.UserEmail);
     }
@@ -19,6 +22,7 @@ public class SsoAuthnRequiresInviteAcceptanceExceptionTests
     public void Constructor_SetsDescriptiveMessage()
     {
         var ex = new SsoAuthnRequiresInviteAcceptanceException(
+            organizationId: Guid.NewGuid(),
             organizationDisplayName: "Acme Corp",
             userEmail: "invited@example.com");
 

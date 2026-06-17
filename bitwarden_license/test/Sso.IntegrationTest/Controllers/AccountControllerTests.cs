@@ -310,9 +310,11 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         Assert.Contains("/login?", location);
         Assert.Contains("error=ssoOrgInviteAcceptanceRequired", location);
 
-        // The redirect carries the seeded user's email + the seeded organization's display name
-        // (URL-encoded) so the web client can pre-fill /login and render a contextual toast.
+        // The redirect carries the seeded user's email, the org id (stable match key), and
+        // the org display name (URL-encoded, for the toast) so the web client can pre-fill
+        // /login and render a contextual toast.
         Assert.Contains($"email={Uri.EscapeDataString(testData.User!.Email)}", location);
+        Assert.Contains($"organizationId={testData.Organization!.Id}", location);
         Assert.Contains(
             $"organizationName={Uri.EscapeDataString(testData.Organization!.DisplayName())}",
             location);
