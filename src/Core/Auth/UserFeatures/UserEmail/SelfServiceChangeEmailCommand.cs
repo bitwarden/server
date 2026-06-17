@@ -1,12 +1,9 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.KeyManagement.Authorization;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 
@@ -14,8 +11,6 @@ namespace Bit.Core.Auth.UserFeatures.UserEmail;
 
 public class SelfServiceChangeEmailCommand(
     IUserService userService,
-    ICurrentContext currentContext,
-    IAuthorizationService authorizationService,
     UserManager<User> userManager,
     IUserRepository userRepository,
     IMailService mailService,
@@ -26,8 +21,6 @@ public class SelfServiceChangeEmailCommand(
 {
     private readonly IUserService _userService = userService;
     private readonly IPushNotificationService _pushService = pushService;
-    private readonly ICurrentContext _currentContext = currentContext;
-    private readonly IAuthorizationService _authorizationService = authorizationService;
     private readonly UserManager<User> _userManager = userManager;
     private readonly IUserRepository _userRepository = userRepository;
     private readonly IMailService _mailService = mailService;
@@ -87,12 +80,7 @@ public class SelfServiceChangeEmailCommand(
 
     private async Task CheckPasswordAndKeyConnector(User user, string masterPassword)
     {
-        var authorizationResult =
-            await _authorizationService.AuthorizeAsync(
-                    _currentContext.HttpContext.User,
-                    user,
-                    KeyConnectorOperations.Use);
-        if (!authorizationResult.Succeeded)
+        if (user.UsesKeyConnector)
         {
             throw new BadRequestException("You cannot change your email when using Key Connector.");
         }

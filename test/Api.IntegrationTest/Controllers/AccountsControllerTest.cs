@@ -9,6 +9,7 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -1699,10 +1700,9 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     [Fact]
     public async Task PostEmail_SelfServiceFlagOn_KeyConnectorUser_BadRequest_AndDoesNotChangeEmail()
     {
-        // The KeyConnector gate now lives inside SelfServiceChangeEmailCommand via
-        // KeyConnectorOperations.Use. This test exercises the full DI graph (KeyConnectorAuthorizationHandler
-        // wired up, ICurrentContext populated, IAuthorizationService resolving the requirement) to
-        // confirm KeyConnector users still get a BadRequest on the flag-on path.
+        // The KeyConnector gate lives inside SelfServiceChangeEmailCommand and is driven by the
+        // user's own UsesKeyConnector flag. This test exercises the full DI graph to confirm
+        // KeyConnector users still get a BadRequest on the flag-on path.
         _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
         var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
         await _loginHelper.LoginAsync(_ownerEmail);
@@ -1722,6 +1722,43 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         var unchangedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(unchangedUser);
         Assert.Equal(_ownerEmail, unchangedUser.Email);
+    }
+
+    [Fact]
+    public async Task PostEmail_SelfServiceFlagOn_KeyConnectorOrgOwner_NotUsingKeyConnector_CanChangeEmail()
+    {
+        // An owner of a Key Connector organization who doesn't personally use Key Connector must be
+        // able to change their email.
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
+
+        // Make the seeded account the owner of a Key Connector organization, then re-login so the
+        // access token carries the owner claim that ICurrentContext.Organizations is built from.
+        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
+            PlanType.EnterpriseAnnually, _ownerEmail, passwordManagerSeats: 10,
+            paymentMethod: PaymentMethodType.Card);
+        organization.UseKeyConnector = true;
+        organization.UseSso = true;
+        organization.Identifier = $"kc-org-{Guid.NewGuid()}";
+        await _organizationRepository.ReplaceAsync(organization);
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
+        var userBefore = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userBefore);
+        // The org uses Key Connector, but the owner themselves does not.
+        Assert.False(userBefore.UsesKeyConnector);
+
+        var userManager = _factory.GetService<UserManager<User>>();
+        var token = await userManager.GenerateChangeEmailTokenAsync(userBefore, newEmail);
+
+        var response = await PostEmailSelfServiceAsync(newEmail, token, _masterPasswordHash);
+
+        response.EnsureSuccessStatusCode();
+
+        var updatedUser = await _userRepository.GetByEmailAsync(newEmail);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(newEmail, updatedUser.Email);
+        Assert.True(updatedUser.EmailVerified);
     }
 
     [Fact]
