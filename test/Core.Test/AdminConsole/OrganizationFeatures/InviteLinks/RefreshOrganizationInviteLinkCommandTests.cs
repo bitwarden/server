@@ -1,7 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -15,21 +17,29 @@ public class RefreshOrganizationInviteLinkCommandTests
 {
     [Theory, BitAutoData]
     public async Task RefreshAsync_WithValidInput_Success(
-        Guid organizationId,
+        Organization organization,
         OrganizationInviteLink existingLink,
         SutProvider<RefreshOrganizationInviteLinkCommand> sutProvider)
     {
-        existingLink.OrganizationId = organizationId;
+        organization.Enabled = true;
+        organization.UseEvents = true;
+
+        existingLink.OrganizationId = organization.Id;
         existingLink.SetAllowedDomains(["acme.com", "example.com"]);
 
-        SetupAbility(sutProvider, organizationId);
+        SetupAbility(sutProvider, organization.Id);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
-            .GetByOrganizationIdAsync(organizationId)
+            .GetByOrganizationIdAsync(organization.Id)
             .Returns(existingLink);
 
         var request = new RefreshOrganizationInviteLinkRequest
         {
-            OrganizationId = organizationId,
+            OrganizationId = organization.Id,
             EncryptedInviteKey = "new-encrypted-key-value",
         };
 
@@ -37,7 +47,7 @@ public class RefreshOrganizationInviteLinkCommandTests
 
         Assert.True(result.IsSuccess);
         var link = result.AsSuccess;
-        Assert.Equal(organizationId, link.OrganizationId);
+        Assert.Equal(organization.Id, link.OrganizationId);
         Assert.NotEqual(Guid.Empty, link.Id);
         Assert.NotEqual(existingLink.Id, link.Id);
         Assert.NotEqual(existingLink.Code, link.Code);
@@ -49,6 +59,10 @@ public class RefreshOrganizationInviteLinkCommandTests
         await sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
             .Received(1)
             .RefreshAsync(existingLink, link);
+
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationEventAsync(organization, EventType.Organization_InviteLinkRefreshed);
     }
 
     [Theory, BitAutoData]
@@ -75,6 +89,10 @@ public class RefreshOrganizationInviteLinkCommandTests
         await sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
             .DidNotReceiveWithAnyArgs()
             .RefreshAsync(default!, default!);
+
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogOrganizationEventAsync(Arg.Any<Organization>(), Arg.Any<EventType>());
     }
 
     [Theory, BitAutoData]
