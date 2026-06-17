@@ -72,8 +72,12 @@ RUN apk add --no-cache curl \
 WORKDIR /app
 COPY --from=build /source/src/Notifications/out /app
 COPY ./src/Notifications/entrypoint.sh /entrypoint.sh
-RUN echo "net.ipv4.ip_local_port_range = 5024 65000" >> /etc/sysctl.d/99-sysctl.conf
-RUN echo "net.ipv4.tcp_fin_timeout = 30" >> /etc/sysctl.d/99-sysctl.conf
+# The Chainguard (Wolfi) runtime base ships no /etc/sysctl.d. Note these settings
+# only take effect if an init applies sysctl.d at runtime — in a container they
+# are inert unless set via the runtime
+RUN mkdir -p /etc/sysctl.d && \
+    echo "net.ipv4.ip_local_port_range = 5024 65000" >> /etc/sysctl.d/99-sysctl.conf && \
+    echo "net.ipv4.tcp_fin_timeout = 30" >> /etc/sysctl.d/99-sysctl.conf
 RUN chmod +x /entrypoint.sh
 HEALTHCHECK CMD curl -f http://localhost:5000/alive || exit 1
 
