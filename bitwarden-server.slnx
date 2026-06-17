@@ -51,6 +51,7 @@
     <Project Path="test/Admin.Test/Admin.Test.csproj" />
     <Project Path="test/Api.IntegrationTest/Api.IntegrationTest.csproj" />
     <Project Path="test/Api.Test/Api.Test.csproj" />
+    <Project Path="test/Billing.IntegrationTest/Billing.IntegrationTest.csproj" />
     <Project Path="test/Billing.Test/Billing.Test.csproj" />
     <Project Path="test/Common/Common.csproj" />
     <Project Path="test/Core.IntegrationTest/Core.IntegrationTest.csproj" />
