@@ -19,6 +19,7 @@ server {
   listen [::]:8443 ssl;
   http2 on;
   server_name {{{Domain}}};
+  port_in_redirect off;
 
   ssl_certificate {{{CertificatePath}}};
   ssl_certificate_key {{{KeyPath}}};
