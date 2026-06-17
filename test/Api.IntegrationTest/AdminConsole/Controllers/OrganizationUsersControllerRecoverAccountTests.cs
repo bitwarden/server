@@ -11,14 +11,20 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Kdf;
+using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
+using Microsoft.AspNetCore.Identity;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
 
-public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
+    private static readonly KdfRequestModel _defaultKdfRequest =
+        new() { KdfType = KdfType.PBKDF2_SHA256, Iterations = KdfConstants.PBKDF2_ITERATIONS.Default };
+
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
     private readonly LoginHelper _loginHelper;
@@ -26,7 +32,7 @@ public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<Ap
     private Organization _organization = null!;
     private string _ownerEmail = null!;
 
-    public OrganizationUsersControllerPutResetPasswordTests(ApiApplicationFactory apiFactory)
+    public OrganizationUsersControllerRecoverAccountTests(ApiApplicationFactory apiFactory)
     {
         _factory = apiFactory;
         _client = _factory.CreateClient();
@@ -75,35 +81,109 @@ public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<Ap
     }
 
     [Fact]
-    public async Task PutResetPassword_AsHigherRole_CanRecoverLowerRole()
+    public async Task RecoverAccount_WithLegacyPayload_UpdatesUserKeyAndForcesPasswordReset()
     {
         // Arrange
         var (ownerEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
             _organization.Id, OrganizationUserType.Owner);
         await _loginHelper.LoginAsync(ownerEmail);
 
-        var (_, targetOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+        var (targetEmail, targetOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
             _factory, _organization.Id, OrganizationUserType.User);
         await SetResetPasswordKeyAsync(targetOrgUser);
 
+        var userRepository = _factory.GetService<IUserRepository>();
+        var passwordHasher = _factory.GetService<IPasswordHasher<User>>();
+        var userBefore = await userRepository.GetByEmailAsync(targetEmail);
+        Assert.NotNull(userBefore);
+
+        const string newMasterPasswordHash = "new-master-password-hash";
         var resetPasswordRequest = new OrganizationUserResetPasswordRequestModel
         {
             ResetMasterPassword = true,
-            NewMasterPasswordHash = "new-master-password-hash",
+            NewMasterPasswordHash = newMasterPasswordHash,
             Key = "encrypted-recovery-key"
         };
 
         // Act
         var response = await _client.PutAsJsonAsync(
-            $"organizations/{_organization.Id}/users/{targetOrgUser.Id}/reset-password",
+            $"organizations/{_organization.Id}/users/{targetOrgUser.Id}/recover-account",
             resetPasswordRequest);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        var userAfter = await userRepository.GetByEmailAsync(targetEmail);
+        Assert.NotNull(userAfter);
+        Assert.Equal("encrypted-recovery-key", userAfter.Key);
+        Assert.True(userAfter.ForcePasswordReset);
+        Assert.Equal(PasswordVerificationResult.Success,
+            passwordHasher.VerifyHashedPassword(userAfter, userAfter.MasterPassword!, newMasterPasswordHash));
+        Assert.NotEqual(userBefore.SecurityStamp, userAfter.SecurityStamp);
+        Assert.True(userAfter.LastPasswordChangeDate > userBefore.RevisionDate);
+        Assert.True(userAfter.RevisionDate > userBefore.RevisionDate);
     }
 
     [Fact]
-    public async Task PutResetPassword_AsLowerRole_CannotRecoverHigherRole()
+    public async Task RecoverAccount_WithUnlockAndAuthenticationData_UpdatesUserKeyAndForcesPasswordReset()
+    {
+        // Arrange
+        var (ownerEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.Owner);
+        await _loginHelper.LoginAsync(ownerEmail);
+
+        var (targetEmail, targetOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+        await SetResetPasswordKeyAsync(targetOrgUser);
+
+        var userRepository = _factory.GetService<IUserRepository>();
+        var passwordHasher = _factory.GetService<IPasswordHasher<User>>();
+        var userBefore = await userRepository.GetByEmailAsync(targetEmail);
+        Assert.NotNull(userBefore);
+
+        // Salt must match the user's existing salt; for a freshly registered user this falls back to the lowercased email.
+        var salt = targetEmail.ToLowerInvariant().Trim();
+        const string newWrappedUserKey =
+            "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
+        const string newMasterPasswordHash = "new-master-password-hash";
+        var resetPasswordRequest = new OrganizationUserResetPasswordRequestModel
+        {
+            ResetMasterPassword = true,
+            UnlockData = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = _defaultKdfRequest,
+                MasterKeyWrappedUserKey = newWrappedUserKey,
+                Salt = salt
+            },
+            AuthenticationData = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = _defaultKdfRequest,
+                MasterPasswordAuthenticationHash = newMasterPasswordHash,
+                Salt = salt
+            }
+        };
+
+        // Act
+        var response = await _client.PutAsJsonAsync(
+            $"organizations/{_organization.Id}/users/{targetOrgUser.Id}/recover-account",
+            resetPasswordRequest);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        var userAfter = await userRepository.GetByEmailAsync(targetEmail);
+        Assert.NotNull(userAfter);
+        Assert.Equal(newWrappedUserKey, userAfter.Key);
+        Assert.True(userAfter.ForcePasswordReset);
+        Assert.Equal(PasswordVerificationResult.Success,
+            passwordHasher.VerifyHashedPassword(userAfter, userAfter.MasterPassword!, newMasterPasswordHash));
+        Assert.NotEqual(userBefore.SecurityStamp, userAfter.SecurityStamp);
+        Assert.True(userAfter.LastPasswordChangeDate > userBefore.RevisionDate);
+        Assert.True(userAfter.RevisionDate > userBefore.RevisionDate);
+    }
+
+    [Fact]
+    public async Task RecoverAccount_AsLowerRole_CannotRecoverHigherRole()
     {
         // Arrange
         var (adminEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
@@ -123,7 +203,7 @@ public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<Ap
 
         // Act
         var response = await _client.PutAsJsonAsync(
-            $"organizations/{_organization.Id}/users/{targetOwnerOrgUser.Id}/reset-password",
+            $"organizations/{_organization.Id}/users/{targetOwnerOrgUser.Id}/recover-account",
             resetPasswordRequest);
 
         // Assert
@@ -133,7 +213,7 @@ public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<Ap
     }
 
     [Fact]
-    public async Task PutResetPassword_CannotRecoverProviderAccount()
+    public async Task RecoverAccount_CannotRecoverProviderAccount()
     {
         // Arrange - Create owner who will try to recover the provider account
         var (ownerEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
@@ -180,7 +260,7 @@ public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<Ap
 
         // Act
         var response = await _client.PutAsJsonAsync(
-            $"organizations/{_organization.Id}/users/{targetOrgUser.Id}/reset-password",
+            $"organizations/{_organization.Id}/users/{targetOrgUser.Id}/recover-account",
             resetPasswordRequest);
 
         // Assert
