@@ -19,6 +19,7 @@ public static class Constants
     // File size limits - give 1 MB extra for cushion.
     // Note: if request size limits are changed, 'client_max_body_size'
     // in nginx/proxy.conf may also need to be updated accordingly.
+    public const long FileSize25mb = 25L * 1024L * 1024L;
     public const long FileSize101mb = 101L * 1024L * 1024L;
     public const long FileSize501mb = 501L * 1024L * 1024L;
     public const string DatabaseFieldProtectorPurpose = "DatabaseFieldProtection";
@@ -135,7 +136,6 @@ public static class FeatureFlagKeys
     /* Admin Console Team */
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
     public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
-    public const string AdminResetTwoFactor = "pm-15489-reset-two-factor-account-recovery";
     public const string BulkAutoConfirmOnLogin = "pm-35803-browser-auto-confirm-log-in";
     public const string PublicMembersInviteRefactor = "pm-33398-refactor-members-invite-org-users-command";
     public const string GenerateInviteLink = "pm-32497-generate-invite-link";
@@ -187,6 +187,7 @@ public static class FeatureFlagKeys
     public const string PM32581_UseUpdateOrganizationSubscriptionCommand = "pm-32581-use-update-organization-subscription-command";
     public const string PM32645_DeferPriceMigrationToRenewal = "pm-32645-defer-price-migration-to-renewal";
     public const string PM34515_BrowserDesktopCheckout = "pm-34515-browser-desktop-checkout";
+    public const string DebugDisableSelfHostPremiumCheck = "debug-disable-self-host-premium-check";
     public const string PM35215_BusinessPlanPriceMigration = "pm-35215-business-plan-price-migration";
     public const string PM37597_AlwaysEnableStripeAutomaticTax = "pm-37597-always-enable-stripe-automatic-tax";
 
@@ -234,6 +235,8 @@ public static class FeatureFlagKeys
     public const string WebAuthnRelatedOrigins = "pm-30529-webauthn-related-origins";
     public const string ElectronStorageCache = "pm-32783-electron-storage-cache";
     public const string AttachmentUploadProgress = "pm-34410-attachment-upload-progress";
+    public const string OrgCipherPushFanout = "pm-35168-org-cipher-push-fanout";
+    public const string FedRampGovRegion = "fedramp-gov-region";
 
     /* Tools Team */
     /// <summary>
@@ -241,7 +244,6 @@ public static class FeatureFlagKeys
     /// on the desktop client.
     /// </summary>
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
-    public const string SendUIRefresh = "pm-28175-send-ui-refresh";
     public const string SendEmailOTP = "pm-19051-send-email-verification";
     public const string SendControls = "pm-31885-send-controls";
     public const string SdkSendsApi = "pm-30110-sdk-sends-api";
@@ -271,9 +273,10 @@ public static class FeatureFlagKeys
     public const string PM34500_StrictCipherDecryption = "pm-34500-strict-cipher-decryption";
     public const string PM28091_AddCopyAndQuickLaunchActions = "pm-28091-add-copy-and-quick-launch-actions";
     public const string PM28192_CipherAttachmentOps = "pm-28192-cipher-attachment-ops-to-sdk";
-    public const string PM32016_RemoveAtRiskCallouts = "pm-32016-remove-at-risk-callouts";
+    public const string PM32016_RemoveAtRiskCallout = "pm-32016-remove-at-risk-callout";
     public const string PM37785_VaultBatchBar = "pm-37785-vault-batch-bar";
     public const string PM37785_DesktopVaultBatchBar = "pm-37785-desktop-vault-batch-bar";
+    public const string PM29968_FillAfterSave = "pm-29968-fill-after-save";
 
     /* Secrets Manager Team */
     public const string SecretsVersioning = "sm-1587-secrets-versioning";

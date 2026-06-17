@@ -44,10 +44,12 @@ public class GlobalSettings : IGlobalSettings
     public virtual string OidcIdentityClientKey { get; set; }
     public virtual string HibpApiKey { get; set; }
     public virtual bool DisableUserRegistration { get; set; }
+    public virtual bool SuppressOnboardingInterstitials { get; set; }
     public virtual bool DisableEmailNewDevice { get; set; }
     public virtual bool EnableNewDeviceVerification { get; set; }
     public virtual bool EnableCloudCommunication { get; set; } = false;
     public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
+    public virtual int DeviceLastActivityCacheTtlHours { get; set; } = 120; // 5 days
     public virtual string EventGridKey { get; set; }
     public virtual bool TestPlayIdTrackingEnabled { get; set; } = false;
     public virtual IInstallationSettings Installation { get; set; } = new InstallationSettings();

@@ -29,7 +29,7 @@ public static class BuilderExtensions
     {
         var migrationArgs = new List<string> { "-File", builder.Required("Scripts:DbMigration") };
         if (builder.IsSelfHosted())
-            migrationArgs.Add("-self-hosted");
+            migrationArgs.Add("-selfhost");
 
         return builder
             .AddExecutable("run-db-migrations", "pwsh", builder.Required("WorkingDirectory"), migrationArgs.ToArray());
@@ -219,6 +219,11 @@ public static class BuilderExtensions
             .WaitFor(db)
             .WaitForCompletion(secretsSetup);
 
+        if (builder.IsSelfHosted())
+        {
+            service.WithEnvironment("developSelfHosted", "true");
+        }
+
         if (name is "admin" or "identity" or "billing" or "sso")
             service.WithReference(mail.GetEndpoint("smtp"));
 
@@ -263,12 +268,14 @@ public static class BuilderExtensions
     public static void ConfigureWebFrontend(this IDistributedApplicationBuilder builder,
         IResourceBuilder<ProjectResource> api)
     {
-        if (!int.TryParse(builder.Required("WebFrontend:Port"), out var port))
+        if (!int.TryParse(builder.Required("WebFrontend:Port"), out var basePort))
             throw new InvalidOperationException("Invalid value for WebFrontend:Port.");
-
+        var port = builder.IsSelfHosted() ? basePort + 1 : basePort;
+        var scriptName = builder.IsSelfHosted() ? "build:bit:selfhost:watch" : "build:bit:watch";
+        var url = builder.Required("WebFrontend:Url") + $":{port}";
         builder
-            .AddBitwardenNpmApp("web-frontend", "web", api, port: port)
-            .WithUrl(builder.Required("WebFrontend:Url"))
+            .AddBitwardenNpmApp("web-frontend", "web", api, port: port, scriptName: scriptName)
+            .WithUrl(url)
             .WithExternalHttpEndpoints();
     }
 
