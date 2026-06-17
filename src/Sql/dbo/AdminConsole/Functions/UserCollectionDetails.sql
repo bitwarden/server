@@ -3,9 +3,24 @@ RETURNS TABLE
 AS RETURN
 SELECT
     C.*,
-    CASE WHEN COALESCE(CU.[ReadOnly], 0) = 0 THEN 0 ELSE 1 END [ReadOnly],
-    CASE WHEN COALESCE(CU.[HidePasswords], 0) = 0 THEN 0 ELSE 1 END [HidePasswords],
-    CASE WHEN COALESCE(CU.[Manage], 0) = 0 THEN 0 ELSE 1 END [Manage]
+    CASE
+        WHEN
+            COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) = 0
+        THEN 0
+        ELSE 1
+    END [ReadOnly],
+    CASE
+        WHEN
+            COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
+        THEN 0
+        ELSE 1
+    END [HidePasswords],
+    CASE
+        WHEN
+            COALESCE(CU.[Manage], CG.[Manage], 0) = 0
+        THEN 0
+        ELSE 1
+    END [Manage]
 FROM
     [dbo].[CollectionView] C
 INNER JOIN
@@ -23,9 +38,24 @@ UNION ALL
 
 SELECT
     C.*,
-    CASE WHEN COALESCE(CG.[ReadOnly], 0) = 0 THEN 0 ELSE 1 END [ReadOnly],
-    CASE WHEN COALESCE(CG.[HidePasswords], 0) = 0 THEN 0 ELSE 1 END [HidePasswords],
-    CASE WHEN COALESCE(CG.[Manage], 0) = 0 THEN 0 ELSE 1 END [Manage]
+    CASE
+        WHEN
+            COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) = 0
+        THEN 0
+        ELSE 1
+    END [ReadOnly],
+    CASE
+        WHEN
+            COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
+        THEN 0
+        ELSE 1
+    END [HidePasswords],
+    CASE
+        WHEN
+            COALESCE(CU.[Manage], CG.[Manage], 0) = 0
+        THEN 0
+        ELSE 1
+    END [Manage]
 FROM
     [dbo].[CollectionView] C
 INNER JOIN
