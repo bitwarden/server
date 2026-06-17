@@ -26,7 +26,7 @@ public class AccessRequestDecisionResponseModel
 
     public string? Comment { get; init; }
 
-    /// <summary>The verdict reached (<c>0 = approve, 1 = deny</c>).</summary>
+    /// <summary>The verdict reached (<c>0 = deny, 1 = approve</c>).</summary>
     public AccessDecisionVerdict Verdict { get; init; }
 
     public DateTime DecidedAt { get; init; }

@@ -68,7 +68,7 @@ BEGIN
     VALUES
     (
         @AccessDecisionId, @AccessRequestId, 0 /* Automatic */, NULL, NULL,
-        0 /* Approve */, NULL, NULL, @Now
+        1 /* Approve */, NULL, NULL, @Now
     )
 
     UPDATE [dbo].[AccessLease]

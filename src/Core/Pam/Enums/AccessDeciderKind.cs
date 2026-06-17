@@ -14,6 +14,6 @@ public enum AccessDeciderKind : byte
 /// </summary>
 public enum AccessDecisionVerdict : byte
 {
-    Approve = 0,
-    Deny = 1,
+    Deny = 0,
+    Approve = 1,
 }

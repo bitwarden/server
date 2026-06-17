@@ -6,7 +6,7 @@ namespace Bit.Api.Pam.Models.Request;
 
 /// <summary>
 /// An approver's decision on a pending access request. <see cref="Verdict"/> is the
-/// <see cref="AccessDecisionVerdict"/> value on the wire (<c>0</c> = approve, <c>1</c> = deny);
+/// <see cref="AccessDecisionVerdict"/> value on the wire (<c>0</c> = deny, <c>1</c> = approve);
 /// <see cref="Comment"/> is optional.
 /// </summary>
 public class AccessDecisionRequestModel

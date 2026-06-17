@@ -40,7 +40,7 @@ BEGIN
     VALUES
     (
         @AccessDecisionId, @AccessRequestId, 0 /* Automatic */, NULL, @ConditionKind,
-        0 /* Approve */, NULL, NULL, @CreationDate
+        1 /* Approve */, NULL, NULL, @CreationDate
     )
 
     COMMIT TRANSACTION AccessRequest_CreateAutoApproved
