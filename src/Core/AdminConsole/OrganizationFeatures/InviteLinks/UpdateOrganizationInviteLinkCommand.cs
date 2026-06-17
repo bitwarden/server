@@ -3,6 +3,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
+using Bit.Core.Enums;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
@@ -10,7 +12,9 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 public class UpdateOrganizationInviteLinkCommand(
     IOrganizationInviteLinkRepository organizationInviteLinkRepository,
     IApplicationCacheService applicationCacheService,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    IOrganizationRepository organizationRepository,
+    IEventService eventService)
     : IUpdateOrganizationInviteLinkCommand
 {
     public async Task<CommandResult<OrganizationInviteLink>> UpdateAsync(
@@ -37,6 +41,12 @@ public class UpdateOrganizationInviteLinkCommand(
         inviteLink.RevisionDate = timeProvider.GetUtcNow().UtcDateTime;
 
         await organizationInviteLinkRepository.ReplaceAsync(inviteLink);
+
+        var organization = await organizationRepository.GetByIdAsync(request.OrganizationId);
+        if (organization is not null)
+        {
+            await eventService.LogOrganizationEventAsync(organization, EventType.Organization_InviteLinkDomainsEdited);
+        }
 
         return inviteLink;
     }
