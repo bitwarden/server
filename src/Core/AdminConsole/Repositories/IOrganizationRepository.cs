@@ -1,8 +1,8 @@
 ﻿using System.Data.Common;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.Dirt.Enums;
 using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 

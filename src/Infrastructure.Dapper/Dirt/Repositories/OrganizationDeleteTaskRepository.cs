@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Settings;

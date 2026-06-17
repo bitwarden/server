@@ -1,4 +1,4 @@
-namespace Bit.Core.Dirt.Enums;
+﻿namespace Bit.Core.Dirt.Enums;
 
 public enum OrganizationDeleteTaskType : byte
 {

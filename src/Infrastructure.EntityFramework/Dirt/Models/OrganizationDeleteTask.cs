@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 
 namespace Bit.Infrastructure.EntityFramework.Dirt.Models;
 
