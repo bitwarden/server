@@ -950,6 +950,10 @@ public class UpcomingInvoiceHandler(
                     // Re-including it would cause Stripe to re-apply it.
                     var discountConsumed = i > 0 && activeSchedule.Phases[i - 1].EndDate <= now;
 
+                    // Gate on StartDate > now, not !discountConsumed (false for the active phase 0),
+                    // so we never re-stack the customer coupon onto the already-billing current period.
+                    var customerDiscount = phase.StartDate > now ? subscription.Customer?.Discount : null;
+
                     phases.Add(new SubscriptionSchedulePhaseOptions
                     {
                         StartDate = phase.StartDate,
@@ -961,10 +965,8 @@ public class UpcomingInvoiceHandler(
                         }).ToList(),
                         Discounts = discountConsumed
                             ? []
-                            : phase.Discounts?.Select(d => new SubscriptionSchedulePhaseDiscountOptions
-                            {
-                                Coupon = d.CouponId
-                            }).ToList(),
+                            : customerDiscount.MergeDiscountCouponIds(
+                                phase.Discounts?.Select(d => d.CouponId)).ToPhaseDiscountOptions(),
                         ProrationBehavior = phase.ProrationBehavior,
                         AutomaticTax = new SubscriptionSchedulePhaseAutomaticTaxOptions
                         {

@@ -218,6 +218,57 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
+    public async Task SchedulePersonalPriceIncrease_Premium_CarriesCustomerDiscountIntoPhase2_WithMilestone2()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        var oldPremium = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            Seat = new Purchasable { StripePriceId = "premium-old-seat", Price = 10, Provided = 1 },
+            Storage = new Purchasable { StripePriceId = "premium-old-storage", Price = 4, Provided = 1 }
+        };
+
+        var newPremium = new PremiumPlan
+        {
+            Name = "Premium",
+            Available = true,
+            Seat = new Purchasable { StripePriceId = "premium-new-seat", Price = 15, Provided = 1 },
+            Storage = new Purchasable { StripePriceId = "premium-new-storage", Price = 4, Provided = 1 }
+        };
+
+        _pricingClient.ListPremiumPlans().Returns([oldPremium, newPremium]);
+
+        var subscription = CreateSubscription("sub_1", "cus_1",
+            CreateSubscriptionItem("premium-old-seat", 1));
+        subscription.Customer = new Customer
+        {
+            Id = "cus_1",
+            Discount = new Discount { Coupon = new Coupon { Id = "retention" } }
+        };
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+
+        var sut = CreateSut();
+
+        await sut.SchedulePersonalPriceIncrease(subscription);
+
+        // Customer-level discount is carried into Phase 2 first, then the milestone coupon stacks.
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sched_1",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases.Count == 2 &&
+                o.Phases[1].Discounts.Count == 2 &&
+                o.Phases[1].Discounts[0].Coupon == "retention" &&
+                o.Phases[1].Discounts[1].Coupon == CouponIDs.Milestone2SubscriptionDiscount));
+    }
+
+    [Fact]
     public async Task SchedulePersonalPriceIncrease_PremiumSubscriptionWithStorage_IncludesStorageInPhase2()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
@@ -345,6 +396,93 @@ public class PriceIncreaseSchedulerTests
                 o.Phases[1].Discounts.Count == 2 &&
                 o.Phases[1].Discounts[0].Coupon == "existing-partner-discount" &&
                 o.Phases[1].Discounts[1].Coupon == CouponIDs.Milestone3SubscriptionDiscount));
+    }
+
+    [Fact]
+    public async Task SchedulePersonalPriceIncrease_Families2019_CarriesCustomerDiscountIntoPhase2_WithMilestone3()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        _pricingClient.ListPremiumPlans().Returns([]);
+
+        var families2019 = MockPlans.Get(PlanType.FamiliesAnnually2019);
+        var families2025 = MockPlans.Get(PlanType.FamiliesAnnually2025);
+        var familiesTarget = MockPlans.Get(PlanType.FamiliesAnnually);
+
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesTarget);
+
+        var orgMetadata = new Dictionary<string, string> { { "organizationId", Guid.NewGuid().ToString() } };
+        var subscription = CreateSubscription("sub_1", "cus_1", orgMetadata,
+            CreateSubscriptionItem(families2019.PasswordManager.StripePlanId, 1));
+        subscription.Customer = new Customer
+        {
+            Id = "cus_1",
+            Discount = new Discount { Coupon = new Coupon { Id = "retention" } }
+        };
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+
+        var sut = CreateSut();
+
+        await sut.SchedulePersonalPriceIncrease(subscription);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sched_1",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases.Count == 2 &&
+                o.Phases[1].Discounts.Count == 2 &&
+                o.Phases[1].Discounts[0].Coupon == "retention" &&
+                o.Phases[1].Discounts[1].Coupon == CouponIDs.Milestone3SubscriptionDiscount));
+    }
+
+    [Fact]
+    public async Task SchedulePersonalPriceIncrease_Families2025_CarriesCustomerDiscountIntoPhase2_NoMilestone()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        _pricingClient.ListPremiumPlans().Returns([]);
+
+        var families2019 = MockPlans.Get(PlanType.FamiliesAnnually2019);
+        var families2025 = MockPlans.Get(PlanType.FamiliesAnnually2025);
+        var familiesTarget = MockPlans.Get(PlanType.FamiliesAnnually);
+
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesTarget);
+
+        var orgMetadata = new Dictionary<string, string> { { "organizationId", Guid.NewGuid().ToString() } };
+        var subscription = CreateSubscription("sub_1", "cus_1", orgMetadata,
+            CreateSubscriptionItem(families2025.PasswordManager.StripePlanId, 1));
+        subscription.Customer = new Customer
+        {
+            Id = "cus_1",
+            Discount = new Discount { Coupon = new Coupon { Id = "retention" } }
+        };
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+
+        var sut = CreateSut();
+
+        await sut.SchedulePersonalPriceIncrease(subscription);
+
+        // 2025 plans do not get milestone-3; the customer discount is still carried (and not null).
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sched_1",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases.Count == 2 &&
+                o.Phases[1].Discounts != null &&
+                o.Phases[1].Discounts.Count == 1 &&
+                o.Phases[1].Discounts[0].Coupon == "retention"));
     }
 
     [Fact]
@@ -1321,6 +1459,102 @@ public class PriceIncreaseSchedulerTests
 
         await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
             Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task ScheduleBusinessPriceIncrease_CustomerDiscountAlsoInSubscriptionDiscounts_NotDoubleAdded()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+
+        var source = MockPlans.Get(PlanType.EnterpriseAnnually2020);
+        var target = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(source);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(target);
+
+        var orgId = Guid.NewGuid();
+        var subscription = CreateBusinessSubscription("sub_1", "cus_1", orgId,
+            CreateSubscriptionItem(source.PasswordManager.StripeSeatPlanId, 10));
+        // Same coupon id is on BOTH the customer discount and the subscription discounts.
+        subscription.Discounts = [new Discount { Coupon = new Coupon { Id = "retention" } }];
+        subscription.Customer = new Customer
+        {
+            Id = "cus_1",
+            Discount = new Discount { Coupon = new Coupon { Id = "retention" } }
+        };
+        var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CohortId = cohort.Id
+        });
+
+        var sut = CreateSut();
+
+        await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
+
+        // Regression for the reference-pattern dedup gap: the shared coupon appears exactly once.
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sched_1",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases[1].Discounts != null &&
+                o.Phases[1].Discounts.Count == 1 &&
+                o.Phases[1].Discounts[0].Coupon == "retention"));
+    }
+
+    [Fact]
+    public async Task ScheduleBusinessPriceIncrease_InvalidCustomerCoupon_StillCarried()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+
+        var source = MockPlans.Get(PlanType.EnterpriseAnnually2020);
+        var target = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(source);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(target);
+
+        var orgId = Guid.NewGuid();
+        var subscription = CreateBusinessSubscription("sub_1", "cus_1", orgId,
+            CreateSubscriptionItem(source.PasswordManager.StripeSeatPlanId, 10));
+        // Coupon.Valid == false must NOT cause the carry-over to be dropped (validity is not gated).
+        subscription.Customer = new Customer
+        {
+            Id = "cus_1",
+            Discount = new Discount { Coupon = new Coupon { Id = "retention", Valid = false } }
+        };
+        var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CohortId = cohort.Id
+        });
+
+        var sut = CreateSut();
+
+        await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sched_1",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases[1].Discounts != null &&
+                o.Phases[1].Discounts.Count == 1 &&
+                o.Phases[1].Discounts[0].Coupon == "retention"));
     }
 
     [Fact]

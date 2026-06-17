@@ -439,13 +439,9 @@ public class PriceIncreaseScheduler(
             return null;
         }
 
-        List<SubscriptionSchedulePhaseDiscountOptions> discounts = [..
-            subscription.Discounts?.Select(d => new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.Coupon.Id }) ?? []];
-
-        discounts.Add(new SubscriptionSchedulePhaseDiscountOptions
-        {
-            Coupon = CouponIDs.Milestone2SubscriptionDiscount
-        });
+        var discounts = (subscription.Customer?.Discount).MergeDiscountCouponIds(
+            subscription.Discounts?.Select(d => d.Coupon.Id),
+            CouponIDs.Milestone2SubscriptionDiscount).ToPhaseDiscountOptions();
 
         return new SubscriptionSchedulePhaseOptions
         {
@@ -494,16 +490,10 @@ public class PriceIncreaseScheduler(
             });
         }
 
-        List<SubscriptionSchedulePhaseDiscountOptions> discounts = [..
-            subscription.Discounts?.Select(d => new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.Coupon.Id }) ?? []];
-
-        if (oldPlan.Type == PlanType.FamiliesAnnually2019)
-        {
-            discounts.Add(new SubscriptionSchedulePhaseDiscountOptions
-            {
-                Coupon = CouponIDs.Milestone3SubscriptionDiscount
-            });
-        }
+        var discounts = (subscription.Customer?.Discount).MergeDiscountCouponIds(
+            subscription.Discounts?.Select(d => d.Coupon.Id),
+            oldPlan.Type == PlanType.FamiliesAnnually2019 ? CouponIDs.Milestone3SubscriptionDiscount : null)
+            .ToPhaseDiscountOptions();
 
         var startDate = subscription.GetCurrentPeriodEnd();
         if (startDate == null)
@@ -576,26 +566,10 @@ public class PriceIncreaseScheduler(
             });
         }
 
-        var discounts = new List<SubscriptionSchedulePhaseDiscountOptions>();
-
-        if (subscription.Customer?.Discount?.Coupon?.Id is { Length: > 0 } customerCouponId)
-        {
-            discounts.Add(new SubscriptionSchedulePhaseDiscountOptions { Coupon = customerCouponId });
-        }
-
-        if (subscription.Discounts is not null)
-        {
-            discounts.AddRange(subscription.Discounts.Select(d =>
-                new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.Coupon.Id }));
-        }
-
-        if (!string.IsNullOrEmpty(cohort.ProactiveDiscountCouponCode))
-        {
-            discounts.Add(new SubscriptionSchedulePhaseDiscountOptions
-            {
-                Coupon = cohort.ProactiveDiscountCouponCode
-            });
-        }
+        // Merge de-duplicates, so a coupon on both the customer and the subscription isn't double-added.
+        var discounts = (subscription.Customer?.Discount).MergeDiscountCouponIds(
+            subscription.Discounts?.Select(d => d.Coupon.Id),
+            cohort.ProactiveDiscountCouponCode).ToPhaseDiscountOptions();
 
         if (subscription.GetCurrentPeriod() is not { Start: { } currentStart, End: { } currentEnd })
         {
