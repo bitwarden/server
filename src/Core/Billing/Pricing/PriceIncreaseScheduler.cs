@@ -159,7 +159,7 @@ public class PriceIncreaseScheduler(
             return false;
         }
 
-        var phase2 = await ResolvePhase2ForBusinessAsync(subscription, cohort);
+        var phase2 = await ResolvePhase2ForBusinessAsync(subscription, cohort, organizationId);
         if (phase2 is null)
         {
             return false;
@@ -526,7 +526,8 @@ public class PriceIncreaseScheduler(
 
     private async Task<SubscriptionSchedulePhaseOptions?> ResolvePhase2ForBusinessAsync(
         Subscription subscription,
-        OrganizationPlanMigrationCohort cohort)
+        OrganizationPlanMigrationCohort cohort,
+        Guid organizationId)
     {
         // Stripe.NET deserializes an unexpanded "discounts" array as a list of null entries;
         // proceeding would silently drop pre-existing discounts from Phase 2.
@@ -558,6 +559,16 @@ public class PriceIncreaseScheduler(
         var sourcePlan = await pricingClient.GetPlanOrThrow(migrationPath.FromPlan);
         var targetPlan = await pricingClient.GetPlanOrThrow(migrationPath.ToPlan);
 
+        // A packaged source (e.g. Teams Starter) carries its flat bundle at quantity ~1, so bill the org's
+        // actual occupied seats on the per-seat target — applied unconditionally and floored at 1.
+        var overrideSeatQuantity =
+            sourcePlan.HasNonSeatBasedPasswordManagerPlan()
+                ? Math.Max(1, (await organizationRepository
+                    .GetOccupiedSeatCountByOrganizationIdAsync(organizationId)).Total)
+                : (long?)null;
+
+        var targetSeatPriceId = targetPlan.PasswordManager.StripeSeatPlanId;
+
         var items = new List<SubscriptionSchedulePhaseItemOptions>();
         foreach (var item in subscription.Items.Data)
         {
@@ -569,10 +580,16 @@ public class PriceIncreaseScheduler(
                     subscription.Id, item.Price.Id, migrationPath.Name);
                 return null;
             }
+
+            var quantity =
+                overrideSeatQuantity is { } seats && targetPriceId == targetSeatPriceId
+                    ? seats
+                    : item.Quantity;
+
             items.Add(new SubscriptionSchedulePhaseItemOptions
             {
                 Price = targetPriceId,
-                Quantity = item.Quantity
+                Quantity = quantity
             });
         }
 
@@ -636,7 +653,8 @@ public class PriceIncreaseScheduler(
             return false;
         }
 
-        if (organization.PlanType.GetProductTier() is not (ProductTierType.Teams or ProductTierType.Enterprise))
+        if (organization.PlanType.GetProductTier() is not
+            (ProductTierType.Teams or ProductTierType.Enterprise or ProductTierType.TeamsStarter))
         {
             return await SchedulePersonalPriceIncrease(subscription);
         }
