@@ -5090,7 +5090,7 @@ public class UpcomingInvoiceHandlerTests
             subscriptionDiscounts:
             [
                 new Discount { Coupon = new Coupon { Id = "sub-5", PercentOff = 5 } }
-            ]);
+        ]);
         var (organization, enterprise2020Plan, enterprisePlan, assignment, cohort, cohortId) =
             BuildBusinessMigrationContext(coupon: "cohort-20");
 
@@ -5479,4 +5479,3 @@ public class UpcomingInvoiceHandlerTests
     };
 
 }
-

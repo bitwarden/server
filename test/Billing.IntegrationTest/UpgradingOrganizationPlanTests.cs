@@ -1,4 +1,4 @@
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using Bit.Core.Billing.Enums;
 using Bit.Test.Common.Helpers;
 

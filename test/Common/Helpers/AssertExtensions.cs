@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System.Text.Json;
 using Xunit;

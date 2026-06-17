@@ -1,4 +1,4 @@
-namespace Bit.Billing.IntegrationTest;
+﻿namespace Bit.Billing.IntegrationTest;
 
 public class UnpaidCancellationTests(StripeTestsFixture fixture) : IClassFixture<StripeTestsFixture>
 {

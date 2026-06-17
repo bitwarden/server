@@ -1,4 +1,4 @@
-using Bit.Test.Common.Helpers;
+﻿using Bit.Test.Common.Helpers;
 
 namespace Bit.Billing.IntegrationTest;
 

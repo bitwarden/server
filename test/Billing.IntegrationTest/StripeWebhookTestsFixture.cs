@@ -1,4 +1,4 @@
-namespace Bit.Billing.IntegrationTest;
+﻿namespace Bit.Billing.IntegrationTest;
 
 /// <summary>
 /// Variant of <see cref="StripeTestsFixture"/> that additionally spins up the
