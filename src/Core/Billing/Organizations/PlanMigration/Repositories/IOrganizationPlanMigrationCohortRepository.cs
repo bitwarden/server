@@ -17,4 +17,6 @@ public interface IOrganizationPlanMigrationCohortRepository
     Task<IEnumerable<CohortListItem>> SearchWithCountsAsync(string? name, int skip, int take);
 
     Task<OrganizationPlanMigrationCohort?> GetByNameAsync(string name);
+
+    Task<IReadOnlyList<OrganizationPlanMigrationCohort>> GetManyByNamesAsync(IEnumerable<string> names);
 }

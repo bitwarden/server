@@ -4,7 +4,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
 
 public record NoActionRequestedError() : BadRequestError("At least one recovery action must be requested.");
 public record MissingPasswordFieldsError() : BadRequestError("Master password hash and key are required when resetting master password.");
-public record FeatureDisabledError() : BadRequestError("Two-factor reset is not available.");
 public record OrgDoesNotAllowResetError() : BadRequestError("Organization does not allow password reset.");
 public record PolicyNotEnabledError() : BadRequestError("Organization does not have the password reset policy enabled.");
 public record InvalidOrgUserError() : BadRequestError("Organization User not valid.");
