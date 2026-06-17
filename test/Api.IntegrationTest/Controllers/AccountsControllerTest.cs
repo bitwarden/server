@@ -1675,6 +1675,10 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(originalKey, updatedUser.Key);
         Assert.Equal(originalMasterPassword, updatedUser.MasterPassword);
         Assert.Equal(originalSecurityStamp, updatedUser.SecurityStamp);
+
+        await _pushNotificationService.Received(1).PushSyncSettingsAsync(updatedUser.Id);
+        await _pushNotificationService.DidNotReceive()
+            .PushLogOutAsync(updatedUser.Id, Arg.Any<bool>(), Arg.Any<PushNotificationLogOutReason?>());
     }
 
     [Fact]
