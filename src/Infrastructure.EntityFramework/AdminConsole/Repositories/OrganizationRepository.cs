@@ -7,7 +7,11 @@ using AutoMapper.QueryableExtensions;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+<<<<<<< HEAD
 using Bit.Core.Dirt.Enums;
+=======
+using Bit.Core.Billing.Organizations.Models;
+>>>>>>> main
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -65,6 +69,22 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .FirstOrDefaultAsync();
             return organization;
         }
+    }
+
+    public async Task<ICollection<OrganizationPlanType>> GetPlanTypesByOrganizationIdsAsync(IEnumerable<Guid> ids)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var query = from organization in dbContext.Organizations
+                    where ids.Contains(organization.Id)
+                    select new OrganizationPlanType
+                    {
+                        OrganizationId = organization.Id,
+                        PlanType = organization.PlanType,
+                    };
+
+        return await query.ToArrayAsync();
     }
 
     public async Task<ICollection<Core.AdminConsole.Entities.Organization>> GetManyByEnabledAsync()
