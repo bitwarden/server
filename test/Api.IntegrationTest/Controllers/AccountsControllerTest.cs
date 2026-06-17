@@ -5,6 +5,9 @@ using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
@@ -1771,6 +1774,67 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.NotNull(updatedUser);
         Assert.Equal(newEmail, updatedUser.Email);
         Assert.True(updatedUser.EmailVerified);
+    }
+
+    [Fact]
+    public async Task PostEmail_SelfServiceFlagOn_UnclaimedUserAtBlockedDomain_ChangingWithinSameDomain_IsBlocked()
+    {
+        // PM-30806 item 2 — regression guard.
+        //
+        // A user registers at a domain while it is still unclaimed and never
+        // joins the organization. An organization later VERIFIES that domain and enables the
+        // BlockClaimedDomainAccountCreation policy. The user then changes to a different local-part at the
+        // SAME (now-blocked) domain.
+        //
+        // The change must be DENIED: a same-domain change no longer bypasses the block-policy gate.
+
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
+
+        var blockedDomain = OrganizationTestHelpers.GenerateRandomDomain();
+
+        // Grandfathered, non-member user whose current email lives at the (soon-to-be) blocked domain.
+        var grandfatheredEmail = $"grandfathered-{Guid.NewGuid()}@{blockedDomain}";
+        await _factory.LoginWithNewAccount(grandfatheredEmail);
+
+        // A SEPARATE organization claims the domain: verify it and enable the block policy.
+        // The grandfathered user is intentionally NOT a member of this org.
+        var orgOwnerEmail = $"org-owner-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(orgOwnerEmail);
+        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
+            PlanType.EnterpriseAnnually, orgOwnerEmail, passwordManagerSeats: 10,
+            paymentMethod: PaymentMethodType.Card);
+        organization.UsePolicies = true;
+        organization.UseOrganizationDomains = true;
+        await _organizationRepository.ReplaceAsync(organization);
+
+        await OrganizationTestHelpers.CreateVerifiedDomainAsync(_factory, organization.Id, blockedDomain);
+
+        var policyRepository = _factory.GetService<IPolicyRepository>();
+        await policyRepository.CreateAsync(new Policy
+        {
+            OrganizationId = organization.Id,
+            Type = PolicyType.BlockClaimedDomainAccountCreation,
+            Enabled = true
+        });
+
+        // Act on the inherited domain user, changing to a new local-part at the SAME blocked domain.
+        await _loginHelper.LoginAsync(grandfatheredEmail);
+        var newEmail = $"changed-{Guid.NewGuid()}@{blockedDomain}";
+
+        var userBefore = await _userRepository.GetByEmailAsync(grandfatheredEmail);
+        Assert.NotNull(userBefore);
+
+        var userManager = _factory.GetService<UserManager<User>>();
+        var token = await userManager.GenerateChangeEmailTokenAsync(userBefore, newEmail);
+
+        var response = await PostEmailSelfServiceAsync(newEmail, token, _masterPasswordHash);
+
+        // The block-claimed-domain policy denies the change, and the email is left unchanged.
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var unchangedUser = await _userRepository.GetByEmailAsync(grandfatheredEmail);
+        Assert.NotNull(unchangedUser);
+        Assert.Equal(grandfatheredEmail, unchangedUser.Email);
     }
 
     [Fact]

@@ -132,44 +132,6 @@ public class OrganizationDomainAllowEmailChangeQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAllowedAsync_NoClaimingOrganization_DomainNotBlocked_DoesNotThrow(
-        SutProvider<OrganizationDomainAllowEmailChangeQuery> sutProvider,
-        User user)
-    {
-        user.Email = _currentEmail;
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByVerifiedUserEmailDomainAsync(user.Id)
-            .Returns(new List<Organization>());
-
-        sutProvider.GetDependency<IOrganizationDomainRepository>()
-            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(_newDomain, Arg.Any<Guid?>())
-            .Returns(false);
-
-        await sutProvider.Sut.ValidateAllowedAsync(user, _newEmail);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateAllowedAsync_NoClaimingOrganization_DomainBlocked_ThrowsWithPolicyMessage(
-        SutProvider<OrganizationDomainAllowEmailChangeQuery> sutProvider,
-        User user)
-    {
-        user.Email = _currentEmail;
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByVerifiedUserEmailDomainAsync(user.Id)
-            .Returns(new List<Organization>());
-
-        sutProvider.GetDependency<IOrganizationDomainRepository>()
-            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(_newDomain, Arg.Any<Guid?>())
-            .Returns(true);
-
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ValidateAllowedAsync(user, _newEmail));
-        Assert.Equal(_blockedByPolicyMessage, ex.Message);
-    }
-
-    [Theory, BitAutoData]
     public async Task ValidateAllowedAsync_MultipleClaimingOrganizations_DomainVerifiedByAny_DoesNotThrow(
         SutProvider<OrganizationDomainAllowEmailChangeQuery> sutProvider,
         User user,
@@ -234,33 +196,49 @@ public class OrganizationDomainAllowEmailChangeQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAllowedAsync_SameDomain_SkipsPolicyLookup(
+    public async Task ValidateAllowedAsync_SameDomain_UnclaimedDomainNotBlocked_DoesNotThrow(
         SutProvider<OrganizationDomainAllowEmailChangeQuery> sutProvider,
         User user)
     {
-        user.Email = "old@example.com";
+        // A same-domain change runs the full check rather than short-circuiting. An unclaimed user
+        // whose domain is not blocked may change to a different local-part at that same domain.
+        user.Email = $"old@{_newDomain}";
 
-        await sutProvider.Sut.ValidateAllowedAsync(user, "new@example.com");
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByVerifiedUserEmailDomainAsync(user.Id)
+            .Returns(new List<Organization>());
 
-        await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceiveWithAnyArgs()
-            .GetByVerifiedUserEmailDomainAsync(default);
-        await sutProvider.GetDependency<IOrganizationDomainRepository>().DidNotReceiveWithAnyArgs()
-            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(default!, default);
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(_newDomain, Arg.Any<Guid?>())
+            .Returns(false);
+
+        await sutProvider.Sut.ValidateAllowedAsync(user, _newEmail);
+
+        await sutProvider.GetDependency<IOrganizationDomainRepository>().Received(1)
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(_newDomain, Arg.Any<Guid?>());
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAllowedAsync_SameDomainDifferentCase_SkipsPolicyLookup(
+    public async Task ValidateAllowedAsync_SameDomain_UnclaimedDomainBlocked_ThrowsWithPolicyMessage(
         SutProvider<OrganizationDomainAllowEmailChangeQuery> sutProvider,
         User user)
     {
-        // EmailValidation.GetDomain lowercases the domain, so casing differences must not
-        // re-enter the policy gate.
-        user.Email = "old@Example.com";
+        // An inherited (unclaimed, non-member) user sitting at a domain another organization has
+        // verified-and-blocked must NOT be able to change to a different local-part at that same
+        // domain. Removing the same-domain short-circuit restores this block.
+        user.Email = $"old@{_newDomain}";
 
-        await sutProvider.Sut.ValidateAllowedAsync(user, "new@example.com");
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByVerifiedUserEmailDomainAsync(user.Id)
+            .Returns(new List<Organization>());
 
-        await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceiveWithAnyArgs()
-            .GetByVerifiedUserEmailDomainAsync(default);
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(_newDomain, Arg.Any<Guid?>())
+            .Returns(true);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ValidateAllowedAsync(user, _newEmail));
+        Assert.Equal(_blockedByPolicyMessage, ex.Message);
     }
 
     [Theory]

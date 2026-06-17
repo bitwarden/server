@@ -15,10 +15,6 @@ public class OrganizationDomainAllowEmailChangeQuery(
     public async Task ValidateAllowedAsync(User user, string newEmail)
     {
         var newDomain = EmailValidation.GetDomain(newEmail);
-        if (newDomain == EmailValidation.GetDomain(user.Email))
-        {
-            return;
-        }
 
         // If the user is claimed by any active organization that uses organization domains,
         // the new domain must be one of those organizations' verified domains.

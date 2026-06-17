@@ -7,9 +7,7 @@ public interface IOrganizationDomainAllowEmailChangeQuery
 {
     /// <summary>
     /// Throws <see cref="BadRequestException"/> if <paramref name="user"/> is not permitted to
-    /// change their email to <paramref name="newEmail"/>. Short-circuits when the new email shares
-    /// a domain with the user's current email, since a same-domain change is a no-op against the
-    /// policy.
+    /// change their email to <paramref name="newEmail"/>.
     /// </summary>
     /// <remarks>
     /// If the user's account is claimed by one or more organizations, the new domain must itself
