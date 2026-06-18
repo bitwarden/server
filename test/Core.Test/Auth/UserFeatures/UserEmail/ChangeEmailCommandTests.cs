@@ -17,9 +17,8 @@ namespace Bit.Core.Test.Auth.UserFeatures.UserEmail;
 [SutProviderCustomize]
 public class ChangeEmailCommandTests
 {
-    // Same-domain pair: lets tests bypass the policy gate via the domain-equality short-circuit
-    // in ChangeEmailCommand.EnsureNewEmailDomainAllowedByPolicyAsync. Tests that specifically
-    // exercise the policy gate use their own different-domain emails.
+    // Shared baseline emails used across most tests. Tests that exercise domain-policy behavior
+    // use explicit scenario-specific addresses.
     private const string _currentEmail = "old@example.com";
     private const string _newEmail = "new@example.com";
 
@@ -165,7 +164,7 @@ public class ChangeEmailCommandTests
     public async Task ChangeEmailAsync_DomainGateThrows_PropagatesAndDoesNotPersist(
         SutProvider<ChangeEmailCommand> sutProvider, User user)
     {
-        // Domain-policy details (denial reasons, message text, same-domain short-circuit) belong
+        // Domain-policy details (denial reasons and message text) belong
         // to OrganizationDomainAllowEmailChangeQuery.ValidateAllowedAsync and are covered there.
         // This test just locks in that ChangeEmailCommand defers to that gate and propagates
         // failures without persisting anything.

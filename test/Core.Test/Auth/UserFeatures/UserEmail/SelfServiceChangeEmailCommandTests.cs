@@ -19,8 +19,8 @@ namespace Bit.Core.Test.Auth.UserFeatures.UserEmail;
 [SutProviderCustomize]
 public class SelfServiceChangeEmailCommandTests
 {
-    // Same-domain pair: lets tests bypass the org-domain policy gate via the
-    // EmailValidation.GetDomain short-circuit in EnsureNewEmailDomainAllowedAsync.
+    // Shared baseline emails used across most tests. Tests that exercise domain-policy behavior
+    // use explicit scenario-specific addresses.
     private const string _currentEmail = "old@example.com";
     private const string _newEmail = "new@example.com";
     private const string _masterPasswordHash = "master-password-hash";
@@ -241,7 +241,7 @@ public class SelfServiceChangeEmailCommandTests
     [Theory, BitAutoData]
     public async Task InitiateChangeEmailAsync_DomainGateThrows_PropagatesAndDoesNotIssueToken(User user)
     {
-        // Domain-policy details (denial reasons, message text, same-domain short-circuit) belong
+        // Domain-policy details (denial reasons and message text) belong
         // to OrganizationDomainAllowEmailChangeQuery.ValidateAllowedAsync and are covered there.
         // This test just locks in that InitiateChangeEmailAsync defers to that gate and propagates
         // failures without issuing a change-email token or notifying anyone.
