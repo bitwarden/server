@@ -1,5 +1,6 @@
 ﻿using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using Azure;
 using Azure.Storage.Blobs;
 using Bit.Core.Settings;
 using Bit.SharedWeb.Utilities;
@@ -368,18 +369,19 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
             { "GlobalSettings:DataProtection:UnprotectCertificates:0:Password", "Undergrad-Police0-Maturely-Countless" },
         }));
         Assert.Contains("Unprotect 0", exception.Message);
+        Assert.IsType<RequestFailedException>(exception.InnerException);
     }
 
     [Fact]
     public async Task UnprotectCertificatePasswordIncorrect_Throws()
     {
-        // The previous implementation caught the X509 load failure and returned null, which
+        // The previous implementation swallowed the X509 load failure and returned null, which
         // reached UnprotectKeysWithAnyCertificate with the same downstream effects as a missing
         // blob: pods failed to unprotect existing keys with a NullReferenceException and
         // auto-generated their own divergent keys across a rolling deploy. The current
         // implementation throws InvalidOperationException at startup with the call-site context
-        // ("Unprotect 0") in the message so operators can tell which entry went wrong from the
-        // log alone.
+        // ("Unprotect 0") in the message and the underlying CryptographicException as the inner
+        // exception so operators can tell which entry went wrong from the log alone.
         await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
             .WithPortBinding(10000, true)
             .Build();
@@ -408,6 +410,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
             { "GlobalSettings:DataProtection:UnprotectCertificates:0:Password", "Wrong-Password-For-Cert" },
         }));
         Assert.Contains("Unprotect 0", exception.Message);
+        Assert.IsType<CryptographicException>(exception.InnerException);
     }
 
     [Fact]
@@ -415,8 +418,9 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
     {
         // The previous implementation passed a null certificate to ProtectKeysWithCertificate
         // and the call threw with an opaque error. The current implementation throws
-        // InvalidOperationException with the call-site context ("protect") in the message so
-        // operators can tell which cert went wrong from the log alone.
+        // InvalidOperationException with the call-site context ("protect") in the message and
+        // the underlying RequestFailedException as the inner exception so operators can tell
+        // which cert went wrong from the log alone.
         await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
             .WithPortBinding(10000, true)
             .Build();
@@ -436,16 +440,17 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
             { "GlobalSettings:DataProtection:CertificatePassword", "Alongside-Unworthy-Query3-Cozy" },
         }));
         Assert.Contains("protect", exception.Message);
+        Assert.IsType<RequestFailedException>(exception.InnerException);
     }
 
     [Fact]
     public async Task ProtectionCertificatePasswordIncorrect_Throws()
     {
-        // The previous implementation caught the X509 load failure inside
-        // GetBlobCertificateAsync and returned null, which ProtectKeysWithCertificate rejected
-        // with an opaque error. The current implementation throws InvalidOperationException
-        // with the call-site context ("protect") in the message so operators can tell which
-        // cert went wrong from the log alone.
+        // The previous implementation swallowed the X509 load failure and returned null, which
+        // ProtectKeysWithCertificate rejected with an opaque error. The current implementation
+        // throws InvalidOperationException with the call-site context ("protect") in the message
+        // and the underlying CryptographicException as the inner exception so operators can tell
+        // which cert went wrong from the log alone.
         await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
             .WithPortBinding(10000, true)
             .Build();
@@ -469,6 +474,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
             { "GlobalSettings:DataProtection:CertificatePassword", "Wrong-Password-For-Cert" },
         }));
         Assert.Contains("protect", exception.Message);
+        Assert.IsType<CryptographicException>(exception.InnerException);
     }
 
     private record TestSetupContext(BlobContainerClient Certificates, BlobContainerClient DataProtection, IConfigurationBuilder Config);
