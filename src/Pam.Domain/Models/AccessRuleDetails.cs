@@ -24,7 +24,6 @@ public class AccessRuleDetails : AccessRule
         MaxExtensionDurationSeconds = rule.MaxExtensionDurationSeconds,
         CreationDate = rule.CreationDate,
         RevisionDate = rule.RevisionDate,
-        LastEditedBy = rule.LastEditedBy,
         CollectionIds = collectionIds,
     };
 }

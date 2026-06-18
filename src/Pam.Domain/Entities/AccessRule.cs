@@ -65,11 +65,6 @@ public class AccessRule : ITableObject<Guid>
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
 
-    /// <summary>
-    /// The user who created or last updated the rule (the latest editor).
-    /// </summary>
-    public Guid? LastEditedBy { get; set; }
-
     public void SetNewId()
     {
         Id = CombGuid.Generate();

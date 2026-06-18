@@ -50,7 +50,7 @@ public class AccessPreCheckQuery : IAccessPreCheckQuery
             return new AccessPreCheckResult(AccessApprovalMode.Automatic, HasActiveLease: true);
         }
 
-        var signals = AccessSignals.From(_currentContext, new DateTimeOffset(now, TimeSpan.Zero));
+        var signals = AccessSignals.From(_currentContext.IpAddress, new DateTimeOffset(now, TimeSpan.Zero));
         var governingRule = await _resolver.ResolveAsync(userId, cipherId, signals);
         var approvalMode = governingRule?.RequiresHumanApproval == true
             ? AccessApprovalMode.Human

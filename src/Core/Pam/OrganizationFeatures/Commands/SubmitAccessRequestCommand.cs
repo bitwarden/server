@@ -78,7 +78,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        var signals = AccessSignals.From(_currentContext, new DateTimeOffset(now, TimeSpan.Zero));
+        var signals = AccessSignals.From(_currentContext.IpAddress, new DateTimeOffset(now, TimeSpan.Zero));
 
         var governingRule = await _resolver.ResolveAsync(userId, cipherId, signals);
         if (governingRule is null)

@@ -57,7 +57,7 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
 
         // Extensions reuse the cipher's governing rule, but never its approval gate: they are always auto-approved,
         // gated only by the rule opting in and the per-lease maximum.
-        var signals = AccessSignals.From(_currentContext, new DateTimeOffset(now, TimeSpan.Zero));
+        var signals = AccessSignals.From(_currentContext.IpAddress, new DateTimeOffset(now, TimeSpan.Zero));
         var governingRule = await _resolver.ResolveAsync(userId, lease.CipherId, signals);
         if (governingRule is null)
         {

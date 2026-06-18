@@ -5,8 +5,8 @@ namespace Bit.Pam.Models;
 /// <summary>
 /// One decision on an <see cref="Entities.AccessRequest"/>, projected from an <see cref="Entities.AccessDecision"/>
 /// row. The element of <see cref="AccessRequestDetails.Decisions"/> — there is one per recorded decision, human or
-/// automatic. A human decision carries the approver's identity (<see cref="ApproverId"/> plus the denormalized name/email); an
-/// automatic decision has none (<see cref="ApproverId"/> null — it was decided by an access-rule condition).
+/// automatic. A human decision carries the approver's identity (<see cref="Id"/> plus the denormalized name/email); an
+/// automatic decision has none (<see cref="Id"/> null — it was decided by an access-rule condition).
 /// </summary>
 public class AccessRequestDecision
 {
@@ -14,7 +14,7 @@ public class AccessRequestDecision
     public AccessDeciderKind DeciderKind { get; set; }
 
     /// <summary>The human approver, or null for an automatic decision.</summary>
-    public Guid? ApproverId { get; set; }
+    public Guid? Id { get; set; }
 
     /// <summary>The human approver's display name, or null (automatic, or the server could not resolve the user).</summary>
     public string? Name { get; set; }
