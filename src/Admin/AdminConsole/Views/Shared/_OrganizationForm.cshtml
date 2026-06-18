@@ -78,12 +78,25 @@
                             {
                                 new() { Value = string.Empty, Text = "(Not assigned)", Selected = !Model.MigrationCohortId.HasValue }
                             };
-                            cohortItems.AddRange(Model.AvailableMigrationCohorts.Select(c => new SelectListItem
+                            cohortItems.AddRange(Model.AvailableMigrationCohorts.Select(c =>
                             {
-                                Value = c.Id.ToString(),
-                                Text = c.IsActive ? c.Name : $"{c.Name} (inactive)",
-                                Selected = Model.MigrationCohortId == c.Id
+                                var isSelected = Model.MigrationCohortId == c.Id;
+                                var label = c.IsActive ? c.Name : $"{c.Name} (inactive)";
+                                if (isSelected && Model.MigrationCohortMismatch)
+                                {
+                                    label += " (plan mismatch)";
+                                }
+                                return new SelectListItem { Value = c.Id.ToString(), Text = label, Selected = isSelected };
                             }));
+                            if (Model.MigrationCohortOrphaned && Model.MigrationCohortId.HasValue)
+                            {
+                                cohortItems.Add(new SelectListItem
+                                {
+                                    Value = Model.MigrationCohortId.Value.ToString(),
+                                    Text = "(assigned cohort no longer exists)",
+                                    Selected = true
+                                });
+                            }
                         }
                         <select class="form-select" asp-for="MigrationCohortId" asp-items="cohortItems" disabled="@(migrationCohortDisabled ? "disabled" : null)"></select>
                         @if (migrationCohortDisabled)

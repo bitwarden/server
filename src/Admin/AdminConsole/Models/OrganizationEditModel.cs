@@ -225,6 +225,10 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
     public bool MigrationCohortLocked { get; set; }
 
     public string MigrationCohortLockReason { get; set; }
+
+    public bool MigrationCohortMismatch { get; set; }
+
+    public bool MigrationCohortOrphaned { get; set; }
     /**
      * Creates a Plan[] object for use in Javascript
      * This is mapped manually below to provide some type safety in case the plan objects change
