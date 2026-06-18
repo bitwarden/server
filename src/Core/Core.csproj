@@ -77,10 +77,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Libraries\Data\Data.csproj" />
-    <ProjectReference Include="..\Libraries\ExceptionHandling\ExceptionHandling.csproj" />
-    <ProjectReference Include="..\Libraries\SerilogFileLogging\SerilogFileLogging.csproj" />
-    <ProjectReference Include="..\Libraries\SsrfProtection\SsrfProtection.csproj" />
+    <ProjectReference Include="..\Data\Data.csproj" />
   </ItemGroup>
 
   <ItemGroup>
