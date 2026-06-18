@@ -19,6 +19,7 @@
     <Project Path="src/Api/Api.csproj" />
     <Project Path="src/Billing/Billing.csproj" />
     <Project Path="src/Core/Core.csproj" />
+    <Project Path="src/Data/Data.csproj" />
     <Project Path="src/Events/Events.csproj" />
     <Project Path="src/EventsProcessor/EventsProcessor.csproj" />
     <Project Path="src/Icons/Icons.csproj" />
