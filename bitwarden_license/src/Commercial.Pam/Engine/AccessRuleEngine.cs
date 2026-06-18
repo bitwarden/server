@@ -1,7 +1,6 @@
 ﻿using System.Globalization;
-using Bit.Pam.Engine;
 using System.Net;
-using Bit.Pam.Models.Conditions;
+using Bit.Commercial.Pam.Models.Conditions;
 
 namespace Bit.Commercial.Pam.Engine;
 

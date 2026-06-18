@@ -1,8 +1,7 @@
 ﻿using System.Net;
-using Bit.Pam.Services;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Bit.Pam.Models.Conditions;
+using Bit.Commercial.Pam.Models.Conditions;
 
 namespace Bit.Commercial.Pam.Services;
 

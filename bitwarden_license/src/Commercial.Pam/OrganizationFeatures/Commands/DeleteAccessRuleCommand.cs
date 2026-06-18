@@ -1,5 +1,5 @@
-﻿using Bit.Core.Exceptions;
-using Bit.Pam.OrganizationFeatures.Commands.Interfaces;
+﻿using Bit.Commercial.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Core.Exceptions;
 using Bit.Pam.Repositories;
 
 namespace Bit.Commercial.Pam.OrganizationFeatures.Commands;

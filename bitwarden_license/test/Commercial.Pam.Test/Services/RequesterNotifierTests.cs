@@ -1,6 +1,5 @@
-﻿using Bit.Core.Platform.Push;
-using Bit.Commercial.Pam.Services;
-using Bit.Pam.Services;
+﻿using Bit.Commercial.Pam.Services;
+using Bit.Core.Platform.Push;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;

@@ -1,6 +1,6 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Commercial.Pam.OrganizationFeatures.Commands;
+using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
-using Bit.Commercial.Pam.OrganizationFeatures.Commands;
 using Bit.Pam.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;

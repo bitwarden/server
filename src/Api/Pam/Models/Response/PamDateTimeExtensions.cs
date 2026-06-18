@@ -1,4 +1,4 @@
-namespace Bit.Api.Pam.Models.Response;
+﻿namespace Bit.Api.Pam.Models.Response;
 
 /// <summary>
 /// Marks PAM response timestamps as UTC for serialization.

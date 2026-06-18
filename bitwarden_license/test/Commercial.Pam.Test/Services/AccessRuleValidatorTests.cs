@@ -1,5 +1,4 @@
-﻿using Bit.Pam.Services;
-using Bit.Commercial.Pam.Services;
+﻿using Bit.Commercial.Pam.Services;
 using Xunit;
 
 namespace Bit.Commercial.Pam.Test.Services;

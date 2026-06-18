@@ -1,11 +1,9 @@
-using Bit.Commercial.Pam.Engine;
+﻿using Bit.Commercial.Pam.Engine;
 using Bit.Commercial.Pam.OrganizationFeatures.Commands;
+using Bit.Commercial.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Commercial.Pam.OrganizationFeatures.Queries;
 using Bit.Commercial.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Commercial.Pam.Services;
-using Bit.Pam.Engine;
-using Bit.Pam.OrganizationFeatures.Commands.Interfaces;
-using Bit.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Pam.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
