@@ -164,7 +164,7 @@ jobs:
           ls -atlh ../../../
 
       - name: Upload project artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ matrix.dotnet }}
         with:
           name: ${{ matrix.project_name }}.zip
@@ -385,7 +385,7 @@ jobs:
         if: |
           github.event_name != 'pull_request'
           && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: docker-stub-US.zip
           path: docker-stub-US.zip
@@ -395,7 +395,7 @@ jobs:
         if: |
           github.event_name != 'pull_request'
           && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: docker-stub-EU.zip
           path: docker-stub-EU.zip
@@ -407,21 +407,21 @@ jobs:
           pwsh ./generate_openapi_files.ps1
 
       - name: Upload Public API Swagger artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: swagger.json
           path: api.public.json
           if-no-files-found: error
 
       - name: Upload Internal API Swagger artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: internal.json
           path: api.json
           if-no-files-found: error
 
       - name: Upload Identity Swagger artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: identity.json
           path: identity.json
@@ -466,7 +466,7 @@ jobs:
 
       - name: Upload project artifact for Windows
         if: ${{ contains(matrix.target, 'win') == true }}
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: MsSqlMigratorUtility-${{ matrix.target }}
           path: util/MsSqlMigratorUtility/obj/build-output/publish/MsSqlMigratorUtility.exe
@@ -474,7 +474,7 @@ jobs:
 
       - name: Upload project artifact
         if: ${{ contains(matrix.target, 'win') == false }}
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: MsSqlMigratorUtility-${{ matrix.target }}
           path: util/MsSqlMigratorUtility/obj/build-output/publish/MsSqlMigratorUtility
