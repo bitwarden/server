@@ -2,7 +2,7 @@
 using System.Text;
 using System.Text.Json;
 using Bit.Api.Auth.Models.Request.Accounts;
-using Bit.Api.Utilities;
+using Bit.Api.Test.Vault.AutoFixture;
 using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models;
 using Bit.Api.Vault.Models.Request;
@@ -33,6 +33,7 @@ namespace Bit.Api.Test.Controllers;
 
 [ControllerCustomize(typeof(CiphersController))]
 [SutProviderCustomize]
+[CipherLeaseGateBypassCustomize]
 public class CiphersControllerTests
 {
     [Theory, BitAutoData]
@@ -1181,7 +1182,7 @@ public class CiphersControllerTests
 
         var result = await sutProvider.Sut.PutRestoreAdmin(cipherOrgDetails.Id);
 
-        Assert.IsType<CipherMiniResponseModel>(result);
+        Assert.IsAssignableFrom<CipherMiniResponseModel>(result);
         await sutProvider.GetDependency<ICipherService>().Received(1).RestoreAsync(Arg.Is<CipherDetails>(
                     (cd) => cd.OrganizationId.Equals(cipherOrgDetails.OrganizationId)), userId, true);
     }
@@ -1250,7 +1251,7 @@ public class CiphersControllerTests
 
         var result = await sutProvider.Sut.PutRestoreAdmin(cipherOrgDetails.Id);
 
-        Assert.IsType<CipherMiniResponseModel>(result);
+        Assert.IsAssignableFrom<CipherMiniResponseModel>(result);
         await sutProvider.GetDependency<ICipherService>().Received(1).RestoreAsync(Arg.Is<CipherDetails>(
                     (cd) => cd.OrganizationId.Equals(cipherOrgDetails.OrganizationId)), userId, true);
     }
@@ -1279,7 +1280,7 @@ public class CiphersControllerTests
 
         var result = await sutProvider.Sut.PutRestoreAdmin(cipherOrgDetails.Id);
 
-        Assert.IsType<CipherMiniResponseModel>(result);
+        Assert.IsAssignableFrom<CipherMiniResponseModel>(result);
         await sutProvider.GetDependency<ICipherService>().Received(1).RestoreAsync(Arg.Is<CipherDetails>(
                     (cd) => cd.OrganizationId.Equals(cipherOrgDetails.OrganizationId)), userId, true);
     }
@@ -1303,7 +1304,7 @@ public class CiphersControllerTests
 
         var result = await sutProvider.Sut.PutRestoreAdmin(cipherOrgDetails.Id);
 
-        Assert.IsType<CipherMiniResponseModel>(result);
+        Assert.IsAssignableFrom<CipherMiniResponseModel>(result);
         await sutProvider.GetDependency<ICipherService>().Received(1).RestoreAsync(Arg.Is<CipherDetails>(
                     (cd) => cd.OrganizationId.Equals(cipherOrgDetails.OrganizationId)), userId, true);
     }
@@ -1343,7 +1344,7 @@ public class CiphersControllerTests
 
         var result = await sutProvider.Sut.PutRestoreAdmin(cipherDetails.Id);
 
-        Assert.IsType<CipherMiniResponseModel>(result);
+        Assert.IsAssignableFrom<CipherMiniResponseModel>(result);
         await sutProvider.GetDependency<ICipherService>().Received(1).RestoreAsync(Arg.Is<CipherDetails>(
                     (cd) => cd.OrganizationId.Equals(cipherOrgDetails.OrganizationId)), userId, true);
     }

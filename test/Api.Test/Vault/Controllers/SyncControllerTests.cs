@@ -19,11 +19,13 @@ using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Pam.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Repositories;
+using Bit.Core.Vault.Authorization;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
@@ -38,6 +40,7 @@ namespace Bit.Api.Test.Controllers;
 
 [ControllerCustomize(typeof(SyncController))]
 [SutProviderCustomize]
+[Bit.Api.Test.Vault.AutoFixture.CipherLeaseGateBypassCustomize]
 public class SyncControllerTests
 {
     [Theory]
@@ -724,6 +727,12 @@ public class SyncControllerTests
             collections: new List<CollectionDetails> { new() { Id = leasingCollectionId, OrganizationId = orgId, AccessRuleId = Guid.NewGuid() } },
             collectionCiphers: new List<CollectionCipher> { new() { CipherId = cipherId, CollectionId = leasingCollectionId } },
             pamFlagEnabled: true);
+        // The gate withholds this leasing-gated cipher: its witness authorizes nothing, so sync delivers partial data.
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .AuthorizeReadManyAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Cipher>>(),
+                Arg.Any<IEnumerable<CollectionDetails>>(),
+                Arg.Any<IDictionary<Guid, IGrouping<Guid, CollectionCipher>>>())
+            .Returns(FullCipherAccess.ForCiphers(Array.Empty<Guid>()));
 
         var result = await sutProvider.Sut.Get();
 

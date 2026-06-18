@@ -19,6 +19,7 @@ using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
+using Bit.Core.Vault.Authorization;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 
@@ -47,21 +48,22 @@ public class SyncResponseModel() : ResponseModel("sync")
         IEnumerable<WebAuthnCredential> webAuthnCredentials,
         IEnumerable<Policy> policiesNew = null,
         IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetailsNew = null,
-        ISet<Guid> partialDataCipherIds = null)
+        FullCipherAccess fullCipherAccess = null)
         : this()
     {
         Profile = new ProfileResponseModel(user, userAccountKeysData, organizationUserDetails, providerUserDetails,
             providerUserOrganizationDetails, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsClaimingingUser,
             organizationUserDetailsNew);
         Folders = folders.Select(f => new FolderResponseModel(f));
+        // A leasing-gated cipher (one the witness does not authorize) is delivered partial; when no
+        // witness is supplied every cipher falls back to the partial shape, keeping sync fail-closed.
         Ciphers = ciphers.Select(cipher =>
-            new CipherDetailsResponseModel(
-                cipher,
-                user,
-                GetOrganizationAbility(cipher, organizationAbilities),
-                globalSettings,
-                collectionCiphersDict,
-                isPartial: partialDataCipherIds?.Contains(cipher.Id) ?? false));
+        {
+            var organizationAbility = GetOrganizationAbility(cipher, organizationAbilities);
+            return fullCipherAccess is not null && fullCipherAccess.Authorizes(cipher.Id)
+                ? new FullCipherDetailsResponseModel(fullCipherAccess, cipher, user, organizationAbility, globalSettings, collectionCiphersDict)
+                : new CipherDetailsResponseModel(cipher, user, organizationAbility, globalSettings, collectionCiphersDict);
+        });
         Collections = collections?.Select(
             c => new CollectionDetailsResponseModel(c)) ?? new List<CollectionDetailsResponseModel>();
         Domains = excludeDomains ? null : new DomainsResponseModel(user, false);

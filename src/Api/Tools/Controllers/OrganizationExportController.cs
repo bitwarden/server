@@ -2,6 +2,7 @@
 using Bit.Api.Tools.Models.Response;
 using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.Exceptions;
+using Bit.Core.Pam.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -20,6 +21,7 @@ public class OrganizationExportController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IOrganizationCiphersQuery _organizationCiphersQuery;
     private readonly ICollectionRepository _collectionRepository;
+    private readonly ICipherLeaseGate _cipherLeaseGate;
 
     public OrganizationExportController(
         IUserService userService,
@@ -27,13 +29,15 @@ public class OrganizationExportController : Controller
         IAuthorizationService authorizationService,
         IOrganizationCiphersQuery organizationCiphersQuery,
         ICollectionRepository collectionRepository,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        ICipherLeaseGate cipherLeaseGate)
     {
         _userService = userService;
         _globalSettings = globalSettings;
         _authorizationService = authorizationService;
         _organizationCiphersQuery = organizationCiphersQuery;
         _collectionRepository = collectionRepository;
+        _cipherLeaseGate = cipherLeaseGate;
     }
 
     [HttpGet("export")]
@@ -50,8 +54,9 @@ public class OrganizationExportController : Controller
                 .GetManySharedCollectionsByOrganizationIdAsync(organizationId);
             await Task.WhenAll(ciphersTask, collectionsTask);
 
+            // Whole-vault export is authorized through org-wide permissions, so nothing is leasing-gated.
             return Ok(new OrganizationExportResponseModel(ciphersTask.Result, collectionsTask.Result,
-                _globalSettings));
+                _globalSettings, _cipherLeaseGate.Unrestricted()));
         }
 
         var canExportManaged = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(organizationId),
@@ -68,7 +73,9 @@ public class OrganizationExportController : Controller
             var managedCiphers = await _organizationCiphersQuery.GetOrganizationCiphersByCollectionIds(organizationId,
                 managedOrgCollections.Select(c => c.Id));
 
-            return Ok(new OrganizationExportResponseModel(managedCiphers, managedOrgCollections, _globalSettings));
+            // Leasing-gated ciphers the exporter holds no valid lease for are excluded from the export.
+            var fullAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(userId, managedCiphers);
+            return Ok(new OrganizationExportResponseModel(managedCiphers, managedOrgCollections, _globalSettings, fullAccess));
         }
 
         // Unauthorized

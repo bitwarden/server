@@ -23,6 +23,7 @@ namespace Bit.Api.Test.Auth.Controllers;
 
 [ControllerCustomize(typeof(EmergencyAccessController))]
 [SutProviderCustomize]
+[Bit.Api.Test.Vault.AutoFixture.CipherLeaseGateBypassCustomize]
 public class EmergencyAccessControllerTests
 {
     [Theory, BitAutoData]
