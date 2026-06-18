@@ -44,7 +44,7 @@ public class GetLeasedCipherQuery : IGetLeasedCipherQuery
             return null;
         }
 
-        var signals = AccessSignals.From(_currentContext, now);
+        var signals = AccessSignals.From(_currentContext.IpAddress, now);
 
         // A lease grants a window, but the access rule's environmental conditions (source IP, time of day) must
         // still hold at the moment the data is handed over. Approval is not re-checked here: holding the lease is

@@ -34,6 +34,6 @@ public class AccessLease : ITableObject<Guid>
 
     public void SetNewId()
     {
-        Id = CoreHelpers.GenerateComb();
+        Id = CombGuid.Generate();
     }
 }

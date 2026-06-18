@@ -52,6 +52,6 @@ public class AccessRequest : ITableObject<Guid>
 
     public void SetNewId()
     {
-        Id = CoreHelpers.GenerateComb();
+        Id = CombGuid.Generate();
     }
 }

@@ -156,7 +156,7 @@ public class CipherLeaseGate : ICipherLeaseGate
         var leasedCipherIds = (await _accessLeaseRepository.GetManyActiveByRequesterIdAsync(userId, now))
             .Select(l => l.CipherId)
             .ToHashSet();
-        var signals = AccessSignals.From(_currentContext, new DateTimeOffset(now, TimeSpan.Zero));
+        var signals = AccessSignals.From(_currentContext.IpAddress, new DateTimeOffset(now, TimeSpan.Zero));
 
         foreach (var cipher in cipherList)
         {
@@ -189,7 +189,7 @@ public class CipherLeaseGate : ICipherLeaseGate
     private async Task<bool> IsBlockedAsync(Guid userId, Guid cipherId)
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        var signals = AccessSignals.From(_currentContext, new DateTimeOffset(now, TimeSpan.Zero));
+        var signals = AccessSignals.From(_currentContext.IpAddress, new DateTimeOffset(now, TimeSpan.Zero));
 
         if (await _resolver.ResolveAsync(userId, cipherId, signals) is null)
         {

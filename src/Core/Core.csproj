@@ -78,6 +78,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Data\Data.csproj" />
+    <ProjectReference Include="..\Pam.Domain\Pam.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>

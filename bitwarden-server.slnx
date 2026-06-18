@@ -27,6 +27,7 @@
     <Project Path="src/Infrastructure.Dapper/Infrastructure.Dapper.csproj" />
     <Project Path="src/Infrastructure.EntityFramework/Infrastructure.EntityFramework.csproj" />
     <Project Path="src/Notifications/Notifications.csproj" />
+    <Project Path="src/Pam.Domain/Pam.Domain.csproj" />
     <Project Path="src/SharedWeb/SharedWeb.csproj" />
     <Project Path="src/Sql/Sql.sqlproj">
       <Build />

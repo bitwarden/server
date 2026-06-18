@@ -45,7 +45,7 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        var signals = AccessSignals.From(_currentContext, new DateTimeOffset(now, TimeSpan.Zero));
+        var signals = AccessSignals.From(_currentContext.IpAddress, new DateTimeOffset(now, TimeSpan.Zero));
         var activeLease = await _accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(userId, cipherId, now);
         var pending = await _accessRequestRepository.GetActivePendingByRequesterIdCipherIdAsync(userId, cipherId);
         var approved = await _accessRequestRepository.GetActiveApprovedByRequesterIdCipherIdAsync(userId, cipherId, now);
