@@ -1,0 +1,21 @@
+name: Enforce PR labels
+
+on:
+  workflow_call:
+  pull_request:
+    types: [labeled, unlabeled, opened, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+  enforce-label:
+    if: ${{ contains(github.event.*.labels.*.name, 'DB-migrations-changed') }}
+    name: Enforce label
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Check for label
+        run: |
+          echo "PRs with the 'DB-migrations-changed' label cannot be merged"
+          echo "### :x: PRs with the 'DB-migrations-changed' label cannot be merged" >> "$GITHUB_STEP_SUMMARY"
+          exit 1
