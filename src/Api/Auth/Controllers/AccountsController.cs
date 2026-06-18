@@ -356,11 +356,6 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (model.AuthenticationData == null || model.UnlockData == null)
-        {
-            throw new BadRequestException("AuthenticationData and UnlockData must be provided.");
-        }
-
         var result = await _changeKdfCommand.ChangeKdfAsync(user, model.MasterPasswordHash, model.AuthenticationData.ToData(), model.UnlockData.ToData());
         if (result.Succeeded)
         {
@@ -818,13 +813,13 @@ public class AccountsController : Controller
     [HttpPost("resend-new-device-otp")]
     public async Task ResendNewDeviceOtpAsync([FromBody] UnauthenticatedSecretVerificationRequestModel request)
     {
-        var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
-        if (!await _userService.VerifySecretAsync(user, request.Secret))
+        var user = await _userRepository.GetByEmailAsync(request.Email);
+        if (user == null || !await _userService.VerifySecretAsync(user, request.Secret))
         {
-            await Task.Delay(2000);
-            throw new BadRequestException(string.Empty, "User verification failed.");
+            // If the user is not found, or the secret is not valid, we still return
+            // a success response, to avoid account enumeration via response shape.
+            return;
         }
-
         await _twoFactorEmailService.SendNewDeviceVerificationEmailAsync(user);
     }
 

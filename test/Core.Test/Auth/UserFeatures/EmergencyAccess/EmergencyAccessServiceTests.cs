@@ -318,6 +318,41 @@ public class EmergencyAccessServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task AcceptUserAsync_TokenExpired_ThrowsBadRequest(
+        SutProvider<EmergencyAccessService> sutProvider,
+        User acceptingUser,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
+        string token)
+    {
+        emergencyAccess.Status = EmergencyAccessStatusType.Invited;
+        emergencyAccess.Email = acceptingUser.Email;
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+                .GetByIdAsync(Arg.Any<Guid>())
+                .Returns(emergencyAccess);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<EmergencyAccessInviteTokenable>>()
+            .TryUnprotect(token, out Arg.Any<EmergencyAccessInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                // Tokenable that would pass IsValid(id, email) but is past
+                // its expiration window.
+                callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, -1);
+                return true;
+            });
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<Guid>())
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AcceptUserAsync(emergencyAccess.Id, acceptingUser, token, sutProvider.GetDependency<IUserService>()));
+
+        Assert.Contains("Invalid token.", exception.Message);
+        await sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .DidNotReceiveWithAnyArgs().ReplaceAsync(default);
+    }
+
+    [Theory, BitAutoData]
     public async Task AcceptUserAsync_AcceptedStatus_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
         User acceptingUser,

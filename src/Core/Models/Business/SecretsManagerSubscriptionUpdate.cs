@@ -36,6 +36,12 @@ public class SecretsManagerSubscriptionUpdate
     public bool Autoscaling { get; }
 
     /// <summary>
+    /// Free service accounts beyond the plan's baseline, granted to organizations migrated from a
+    /// plan with a higher baseline.
+    /// </summary>
+    public int ServiceAccountGrace { get; set; }
+
+    /// <summary>
     /// The seats the organization will have after the update, excluding the base seats included in the plan
     /// Usually this is what the organization is billed for
     /// </summary>
@@ -44,7 +50,7 @@ public class SecretsManagerSubscriptionUpdate
     /// The seats the organization will have after the update, excluding the base seats included in the plan
     /// Usually this is what the organization is billed for
     /// </summary>
-    public int SmServiceAccountsExcludingBase => SmServiceAccounts.HasValue ? SmServiceAccounts.Value - Plan.SecretsManager!.BaseServiceAccount : 0;
+    public int SmServiceAccountsExcludingBase => SmServiceAccounts.HasValue ? Math.Max(0, SmServiceAccounts.Value - Plan.SecretsManager!.BaseServiceAccount - ServiceAccountGrace) : 0;
     public bool SmSeatsChanged => SmSeats != Organization.SmSeats;
     public bool SmServiceAccountsChanged => SmServiceAccounts != Organization.SmServiceAccounts;
     public bool MaxAutoscaleSmSeatsChanged => MaxAutoscaleSmSeats != Organization.MaxAutoscaleSmSeats;

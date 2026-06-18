@@ -1330,6 +1330,22 @@ public class ProviderServiceTests
         await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteAsync(provider, validToken));
     }
 
+    [Theory, BitAutoData]
+    public async Task DeleteAsync_ThrowsBadRequestException_WhenTokenExpired(Provider provider, string expiredToken
+        , SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        // Token has a matching provider Id but an expiration date two hours in the past.
+        var expiredTokenData = new ProviderDeleteTokenable(provider, -2);
+        var providerDeleteTokenDataFactory = sutProvider.GetDependency<IDataProtectorTokenFactory<ProviderDeleteTokenable>>();
+        providerDeleteTokenDataFactory.TryUnprotect(expiredToken, out expiredTokenData).Returns(true);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteAsync(provider, expiredToken));
+
+        await sutProvider.GetDependency<IProviderRepository>().DidNotReceive().DeleteAsync(provider);
+    }
+
     private static SubscriptionUpdateOptions SubscriptionUpdateRequest(string expectedPlanId, Subscription subscriptionItem) =>
         new()
         {

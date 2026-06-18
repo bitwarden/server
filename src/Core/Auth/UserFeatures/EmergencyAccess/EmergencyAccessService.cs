@@ -145,12 +145,12 @@ public class EmergencyAccessService : IEmergencyAccessService
             throw new BadRequestException("Emergency Access not valid.");
         }
 
-        if (!_dataProtectorTokenizer.TryUnprotect(token, out var data))
-        {
-            throw new BadRequestException("Invalid token.");
-        }
+        var tokenIsValid =
+            _dataProtectorTokenizer.TryUnprotect(token, out var data)
+            && data.Valid
+            && data.IsValid(emergencyAccessId, granteeUser.Email);
 
-        if (!data.IsValid(emergencyAccessId, granteeUser.Email))
+        if (!tokenIsValid)
         {
             throw new BadRequestException("Invalid token.");
         }
