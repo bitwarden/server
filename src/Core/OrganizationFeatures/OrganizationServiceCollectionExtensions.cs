@@ -221,6 +221,8 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IListMyActiveAccessLeasesQuery, ListMyActiveAccessLeasesQuery>();
         services.AddScoped<IListActiveLeasesQuery, ListActiveLeasesQuery>();
         services.AddScoped<IListLeaseHistoryQuery, ListLeaseHistoryQuery>();
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddScoped<ICipherLeaseGate, CipherLeaseGate>();
     }
 
     private static void AddOrganizationGroupCommands(this IServiceCollection services)

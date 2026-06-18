@@ -14,7 +14,9 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Pam.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -51,6 +53,7 @@ public class CiphersController : Controller
     private readonly ICollectionRepository _collectionRepository;
     private readonly IArchiveCiphersCommand _archiveCiphersCommand;
     private readonly IUnarchiveCiphersCommand _unarchiveCiphersCommand;
+    private readonly ICipherLeaseGate _cipherLeaseGate;
 
     public CiphersController(
         ICipherRepository cipherRepository,
@@ -65,7 +68,8 @@ public class CiphersController : Controller
         IApplicationCacheService applicationCacheService,
         ICollectionRepository collectionRepository,
         IArchiveCiphersCommand archiveCiphersCommand,
-        IUnarchiveCiphersCommand unarchiveCiphersCommand)
+        IUnarchiveCiphersCommand unarchiveCiphersCommand,
+        ICipherLeaseGate cipherLeaseGate)
     {
         _cipherRepository = cipherRepository;
         _collectionCipherRepository = collectionCipherRepository;
@@ -80,6 +84,49 @@ public class CiphersController : Controller
         _collectionRepository = collectionRepository;
         _archiveCiphersCommand = archiveCiphersCommand;
         _unarchiveCiphersCommand = unarchiveCiphersCommand;
+        _cipherLeaseGate = cipherLeaseGate;
+    }
+
+    /// <summary>
+    /// Builds a cipher response for a personal/member read or write-return, honouring credential leasing:
+    /// a leasing-gated cipher with no valid active lease yields the partial shape, otherwise the full one.
+    /// </summary>
+    private async Task<CipherResponseModel> BuildCipherResponseAsync(CipherDetails cipher, User user)
+    {
+        var organizationAbility = await GetOrganizationAbilityAsync(cipher);
+        var access = await _cipherLeaseGate.AuthorizeReadAsync(user.Id, cipher);
+        return access is null
+            ? new CipherResponseModel(cipher, user, organizationAbility, _globalSettings)
+            : new FullCipherResponseModel(access, cipher, user, organizationAbility, _globalSettings);
+    }
+
+    /// <summary>Details variant of <see cref="BuildCipherResponseAsync"/>.</summary>
+    private async Task<CipherDetailsResponseModel> BuildCipherDetailsResponseAsync(
+        CipherDetails cipher, User user, IEnumerable<CollectionCipher> collectionCiphers)
+    {
+        var organizationAbility = await GetOrganizationAbilityAsync(cipher);
+        var access = await _cipherLeaseGate.AuthorizeReadAsync(user.Id, cipher);
+        return access is null
+            ? new CipherDetailsResponseModel(cipher, user, organizationAbility, _globalSettings, collectionCiphers)
+            : new FullCipherDetailsResponseModel(access, cipher, user, organizationAbility, _globalSettings, collectionCiphers);
+    }
+
+    /// <summary>
+    /// Bulk variant for write-returns over a set of ciphers (archive/unarchive). Leasing-gated ciphers
+    /// the caller cannot fully access fall back to the partial shape; the gated set is resolved once.
+    /// </summary>
+    private async Task<IEnumerable<CipherResponseModel>> BuildCipherResponsesAsync(
+        ICollection<CipherDetails> ciphers, User user,
+        IDictionary<Guid, OrganizationAbility> organizationAbilities)
+    {
+        var fullAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(user.Id, ciphers);
+        return ciphers.Select(cipher =>
+        {
+            var organizationAbility = GetOrganizationAbility(cipher, organizationAbilities);
+            return fullAccess.Authorizes(cipher.Id)
+                ? new FullCipherResponseModel(fullAccess, cipher, user, organizationAbility, _globalSettings)
+                : new CipherResponseModel(cipher, user, organizationAbility, _globalSettings);
+        });
     }
 
     [HttpGet("{id}")]
@@ -92,9 +139,7 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        var organizationAbility = await GetOrganizationAbilityAsync(cipher);
-
-        return new CipherResponseModel(cipher, user, organizationAbility, _globalSettings);
+        return await BuildCipherResponseAsync(cipher, user);
     }
 
     [HttpGet("{id}/admin")]
@@ -110,7 +155,10 @@ public class CiphersController : Controller
         var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(cipher.OrganizationId.Value);
         var collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
 
-        return new CipherMiniDetailsResponseModel(cipher, _globalSettings, collectionCiphersGroupDict, cipher.OrganizationUseTotp);
+        // Admin/org-wide path: authorized through org permissions with no collection-membership path, so
+        // the cipher is never leasing-gated for this caller and full data is released.
+        return new FullCipherMiniDetailsResponseModel(_cipherLeaseGate.Unrestricted(), cipher, _globalSettings,
+            collectionCiphersGroupDict, cipher.OrganizationUseTotp);
     }
 
     [HttpGet("{id}/details")]
@@ -123,9 +171,8 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        var organizationAbility = await GetOrganizationAbilityAsync(cipher);
         var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(user.Id, id);
-        return new CipherDetailsResponseModel(cipher, user, organizationAbility, _globalSettings, collectionCiphers);
+        return await BuildCipherDetailsResponseAsync(cipher, user, collectionCiphers);
     }
 
     [HttpGet("{id}/full-details")]
@@ -143,18 +190,25 @@ public class CiphersController : Controller
         // TODO: Use hasOrgs proper for cipher listing here?
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, withOrganizations: true);
         Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict = null;
+        IEnumerable<CollectionDetails> collections = null;
         if (hasOrgs)
         {
             var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(user.Id);
             collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
+            collections = await _collectionRepository.GetManyByUserIdAsync(user.Id);
         }
         var organizationAbilities = await GetOrganizationAbilitiesAsync(ciphers);
-        var responses = ciphers.Select(cipher => new CipherDetailsResponseModel(
-            cipher,
-            user,
-            GetOrganizationAbility(cipher, organizationAbilities),
-            _globalSettings,
-            collectionCiphersGroupDict)).ToArray();
+
+        // Bulk reads strip every leasing-gated cipher regardless of lease state; secrets are only ever
+        // released through the single-cipher GET above. The gated set is computed in-memory.
+        var fullAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(user.Id, ciphers, collections, collectionCiphersGroupDict);
+        var responses = ciphers.Select(cipher =>
+        {
+            var organizationAbility = GetOrganizationAbility(cipher, organizationAbilities);
+            return fullAccess.Authorizes(cipher.Id)
+                ? new FullCipherDetailsResponseModel(fullAccess, cipher, user, organizationAbility, _globalSettings, collectionCiphersGroupDict)
+                : new CipherDetailsResponseModel(cipher, user, organizationAbility, _globalSettings, collectionCiphersGroupDict);
+        }).ToArray();
         return new ListResponseModel<CipherDetailsResponseModel>(responses);
     }
 
@@ -181,8 +235,7 @@ public class CiphersController : Controller
         }
 
         await _cipherService.SaveDetailsAsync(cipher, user.Id, model.LastKnownRevisionDate, null, cipher.OrganizationId.HasValue);
-        var response = new CipherResponseModel(cipher, user, await GetOrganizationAbilityAsync(cipher), _globalSettings);
-        return response;
+        return await BuildCipherResponseAsync(cipher, user);
     }
 
     [HttpPost("create")]
@@ -235,8 +288,8 @@ public class CiphersController : Controller
 
         await _cipherService.SaveAsync(cipher, userId, model.Cipher.LastKnownRevisionDate, model.CollectionIds, true, false);
 
-        var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
-        return response;
+        // Admin create through org-wide permissions; the cipher is not leasing-gated for this caller.
+        return new FullCipherMiniResponseModel(_cipherLeaseGate.Unrestricted(), cipher, _globalSettings, false);
     }
 
     [HttpPut("{id}")]
@@ -272,8 +325,7 @@ public class CiphersController : Controller
 
         await _cipherService.SaveDetailsAsync(model.ToCipherDetails(cipher), user.Id, model.LastKnownRevisionDate, collectionIds);
 
-        var response = new CipherResponseModel(cipher, user, await GetOrganizationAbilityAsync(cipher), _globalSettings);
-        return response;
+        return await BuildCipherResponseAsync(cipher, user);
     }
 
     [HttpPost("{id}")]
@@ -312,8 +364,8 @@ public class CiphersController : Controller
         var cipherClone = model.ToCipher(cipher).Clone();
         await _cipherService.SaveAsync(cipherClone, userId, model.LastKnownRevisionDate, collectionIds, true, false);
 
-        var response = new CipherMiniResponseModel(cipherClone, _globalSettings, cipher.OrganizationUseTotp);
-        return response;
+        // Admin edit through org-wide permissions; the cipher is not leasing-gated for this caller.
+        return new FullCipherMiniResponseModel(_cipherLeaseGate.Unrestricted(), cipherClone, _globalSettings, cipher.OrganizationUseTotp);
     }
 
     [HttpPost("{id}/admin")]
@@ -337,9 +389,12 @@ public class CiphersController : Controller
         :
             await _organizationCiphersQuery.GetAllOrganizationCiphers(organizationId);
 
+        // Reaching this endpoint requires can-access-all-ciphers (org-wide) permission, so these ciphers
+        // are not leasing-gated for this caller and full data is released.
+        var fullAccess = _cipherLeaseGate.Unrestricted();
         var allOrganizationCipherResponses =
             allOrganizationCiphers.Select(c =>
-                new CipherMiniDetailsResponseModel(c, _globalSettings, c.OrganizationUseTotp)
+                new FullCipherMiniDetailsResponseModel(fullAccess, c, _globalSettings, c.OrganizationUseTotp)
             );
 
         return new ListResponseModel<CipherMiniDetailsResponseModel>(allOrganizationCipherResponses);
@@ -366,10 +421,24 @@ public class CiphersController : Controller
             }));
         }
 
+        var cipherList = ciphers.ToList();
         var user = await _userService.GetUserByPrincipalAsync(User);
         var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
-        var responses = ciphers.Select(cipher =>
-            new CipherDetailsResponseModel(cipher, user, organizationAbility, _globalSettings));
+
+        // Member read: leasing-gated ciphers (reachable only through leasing-enabled collections) are
+        // delivered partial here too, computed in-memory from the user's collections and each cipher's
+        // own collection memberships. Secrets are only released through the single-cipher GET.
+        var collections = await _collectionRepository.GetManyByUserIdAsync(user.Id);
+        var collectionCiphersGroupDict = cipherList
+            .SelectMany(c => (c.CollectionIds ?? []).Select(cid => new CollectionCipher { CipherId = c.Id, CollectionId = cid }))
+            .GroupBy(cc => cc.CipherId)
+            .ToDictionary(g => g.Key);
+        var fullAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(user.Id, cipherList, collections, collectionCiphersGroupDict);
+
+        var responses = cipherList.Select(cipher =>
+            fullAccess.Authorizes(cipher.Id)
+                ? new FullCipherDetailsResponseModel(fullAccess, cipher, user, organizationAbility, _globalSettings)
+                : new CipherDetailsResponseModel(cipher, user, organizationAbility, _globalSettings));
 
         return new ListResponseModel<CipherDetailsResponseModel>(responses);
     }
@@ -709,8 +778,7 @@ public class CiphersController : Controller
         await _cipherRepository.UpdatePartialAsync(id, user.Id, folderId, model.Favorite);
 
         var updatedCipher = await GetByIdAsync(id, user.Id);
-        var response = new CipherResponseModel(updatedCipher, user, await GetOrganizationAbilityAsync(updatedCipher), _globalSettings);
-        return response;
+        return await BuildCipherResponseAsync(updatedCipher, user);
     }
 
     [HttpPost("{id}/partial")]
@@ -748,8 +816,7 @@ public class CiphersController : Controller
             model.CollectionIds.Select(c => new Guid(c)), user.Id, model.Cipher.LastKnownRevisionDate);
 
         var sharedCipher = await GetByIdAsync(id, user.Id);
-        var response = new CipherResponseModel(sharedCipher, user, await GetOrganizationAbilityAsync(sharedCipher), _globalSettings);
-        return response;
+        return await BuildCipherResponseAsync(sharedCipher, user);
     }
 
     [HttpPost("{id}/share")]
@@ -776,7 +843,7 @@ public class CiphersController : Controller
         var updatedCipher = await GetByIdAsync(id, user.Id);
         var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(user.Id, id);
 
-        return new CipherDetailsResponseModel(updatedCipher, user, await GetOrganizationAbilityAsync(updatedCipher), _globalSettings, collectionCiphers);
+        return await BuildCipherDetailsResponseAsync(updatedCipher, user, collectionCiphers);
     }
 
     [HttpPost("{id}/collections")]
@@ -809,7 +876,7 @@ public class CiphersController : Controller
             Unavailable = updatedCipher is null,
             Cipher = updatedCipher is null
                 ? null
-                : new CipherDetailsResponseModel(updatedCipher, user, await GetOrganizationAbilityAsync(updatedCipher), _globalSettings, collectionCiphers)
+                : await BuildCipherDetailsResponseAsync(updatedCipher, user, collectionCiphers)
         };
         return response;
     }
@@ -847,7 +914,10 @@ public class CiphersController : Controller
         var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(cipher.OrganizationId.Value);
         var collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
 
-        return new CipherMiniDetailsResponseModel(cipher, _globalSettings, collectionCiphersGroupDict, cipher.OrganizationUseTotp);
+        // Admin/org-wide path: authorized through org permissions with no collection-membership path, so
+        // the cipher is never leasing-gated for this caller and full data is released.
+        return new FullCipherMiniDetailsResponseModel(_cipherLeaseGate.Unrestricted(), cipher, _globalSettings,
+            collectionCiphersGroupDict, cipher.OrganizationUseTotp);
     }
 
     [HttpPost("{id}/collections-admin")]
@@ -892,7 +962,8 @@ public class CiphersController : Controller
         }
 
         var archivedCipher = archivedCipherOrganizationDetails.First();
-        return new CipherResponseModel(archivedCipher, await _userService.GetUserByPrincipalAsync(User), await GetOrganizationAbilityAsync(archivedCipher), _globalSettings);
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        return await BuildCipherResponseAsync(archivedCipher, user);
     }
 
     [HttpPut("archive")]
@@ -916,8 +987,7 @@ public class CiphersController : Controller
         }
 
         var organizationAbilities = await GetOrganizationAbilitiesAsync(archivedCiphers);
-        var responses = archivedCiphers.Select(cipher =>
-            new CipherResponseModel(cipher, user, GetOrganizationAbility(cipher, organizationAbilities), _globalSettings)).ToArray();
+        var responses = (await BuildCipherResponsesAsync(archivedCiphers, user, organizationAbilities)).ToArray();
 
         return new ListResponseModel<CipherResponseModel>(responses);
     }
@@ -1092,11 +1162,8 @@ public class CiphersController : Controller
         }
 
         var unarchivedCipher = unarchivedCipherDetails.First();
-        return new CipherResponseModel(unarchivedCipher,
-            await _userService.GetUserByPrincipalAsync(User),
-            await GetOrganizationAbilityAsync(unarchivedCipher),
-            _globalSettings
-        );
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        return await BuildCipherResponseAsync(unarchivedCipher, user);
     }
 
     [HttpPut("unarchive")]
@@ -1120,8 +1187,7 @@ public class CiphersController : Controller
         }
 
         var organizationAbilities = await GetOrganizationAbilitiesAsync(unarchivedCipherOrganizationDetails);
-        var responses = unarchivedCipherOrganizationDetails.Select(cipher =>
-            new CipherResponseModel(cipher, user, GetOrganizationAbility(cipher, organizationAbilities), _globalSettings)).ToArray();
+        var responses = (await BuildCipherResponsesAsync(unarchivedCipherOrganizationDetails, user, organizationAbilities)).ToArray();
 
         return new ListResponseModel<CipherResponseModel>(responses);
     }
@@ -1137,11 +1203,7 @@ public class CiphersController : Controller
         }
 
         await _cipherService.RestoreAsync(cipher, user.Id);
-        return new CipherResponseModel(
-            cipher,
-            user,
-            await GetOrganizationAbilityAsync(cipher),
-            _globalSettings);
+        return await BuildCipherResponseAsync(cipher, user);
     }
 
     [HttpPut("{id}/restore-admin")]
@@ -1156,7 +1218,8 @@ public class CiphersController : Controller
         }
 
         await _cipherService.RestoreAsync(new CipherDetails(cipher), userId, true);
-        return new CipherMiniResponseModel(cipher, _globalSettings, cipher.OrganizationUseTotp);
+        // Admin restore through org-wide permissions; the cipher is not leasing-gated for this caller.
+        return new FullCipherMiniResponseModel(_cipherLeaseGate.Unrestricted(), cipher, _globalSettings, cipher.OrganizationUseTotp);
     }
 
     [HttpPut("restore")]
@@ -1171,7 +1234,10 @@ public class CiphersController : Controller
         var cipherIdsToRestore = new HashSet<Guid>(model.Ids.Select(i => new Guid(i)));
 
         var restoredCiphers = await _cipherService.RestoreManyAsync(cipherIdsToRestore, userId);
-        var responses = restoredCiphers.Select(c => new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
+        var fullAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(userId, restoredCiphers);
+        var responses = restoredCiphers.Select(c => fullAccess.Authorizes(c.Id)
+            ? new FullCipherMiniResponseModel(fullAccess, c, _globalSettings, c.OrganizationUseTotp)
+            : new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
         return new ListResponseModel<CipherMiniResponseModel>(responses);
     }
 
@@ -1198,7 +1264,9 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
 
         var restoredCiphers = await _cipherService.RestoreManyAsync(cipherIdsToRestore, userId, model.OrganizationId, true);
-        var responses = restoredCiphers.Select(c => new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
+        // Admin restore through org-wide permissions; these ciphers are not leasing-gated for this caller.
+        var fullAccess = _cipherLeaseGate.Unrestricted();
+        var responses = restoredCiphers.Select(c => new FullCipherMiniResponseModel(fullAccess, c, _globalSettings, c.OrganizationUseTotp));
         return new ListResponseModel<CipherMiniResponseModel>(responses);
     }
 
@@ -1266,7 +1334,10 @@ public class CiphersController : Controller
             userId
         );
 
-        var response = updated.Select(c => new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
+        var fullAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(userId, updated);
+        var response = updated.Select(c => fullAccess.Authorizes(c.Id)
+            ? new FullCipherMiniResponseModel(fullAccess, c, _globalSettings, c.OrganizationUseTotp)
+            : new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
         return new ListResponseModel<CipherMiniResponseModel>(response);
     }
 
@@ -1340,12 +1411,10 @@ public class CiphersController : Controller
             AttachmentId = attachmentId,
             Url = uploadUrl,
             FileUploadType = _attachmentStorageService.FileUploadType,
-            CipherResponse = request.AdminRequest ? null : new CipherResponseModel(
-                cipherDetails,
-                user,
-                await GetOrganizationAbilityAsync(cipherDetails),
-                _globalSettings),
-            CipherMiniResponse = request.AdminRequest ? new CipherMiniResponseModel(cipher, _globalSettings, cipher.OrganizationUseTotp) : null,
+            CipherResponse = request.AdminRequest ? null : await BuildCipherResponseAsync(cipherDetails, user),
+            CipherMiniResponse = request.AdminRequest
+                ? new FullCipherMiniResponseModel(_cipherLeaseGate.Unrestricted(), cipher, _globalSettings, cipher.OrganizationUseTotp)
+                : null,
         };
     }
 
@@ -1433,11 +1502,7 @@ public class CiphersController : Controller
                     Request.ContentLength.GetValueOrDefault(0), user.Id, false, lastKnownRevisionDate);
         });
 
-        return new CipherResponseModel(
-            cipher,
-            user,
-            await GetOrganizationAbilityAsync(cipher),
-            _globalSettings);
+        return await BuildCipherResponseAsync(cipher, user);
     }
 
     [HttpPost("{id}/attachment-admin")]
@@ -1465,7 +1530,8 @@ public class CiphersController : Controller
                     Request.ContentLength.GetValueOrDefault(0), userId, true, lastKnownRevisionDate);
         });
 
-        return new CipherMiniResponseModel(cipher, _globalSettings, cipher.OrganizationUseTotp);
+        // Admin attachment upload through org-wide permissions; the cipher is not leasing-gated here.
+        return new FullCipherMiniResponseModel(_cipherLeaseGate.Unrestricted(), cipher, _globalSettings, cipher.OrganizationUseTotp);
     }
 
     [HttpGet("{id}/attachment/{attachmentId}/admin")]

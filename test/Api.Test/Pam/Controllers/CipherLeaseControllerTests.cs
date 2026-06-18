@@ -19,6 +19,7 @@ namespace Bit.Api.Test.Pam.Controllers;
 
 [ControllerCustomize(typeof(CipherLeaseController))]
 [SutProviderCustomize]
+[Bit.Api.Test.Vault.AutoFixture.CipherLeaseGateBypassCustomize]
 public class CipherLeaseControllerTests
 {
     [Theory, BitAutoData]
@@ -84,7 +85,7 @@ public class CipherLeaseControllerTests
 
         var result = await sutProvider.Sut.GetCipher(id);
 
-        Assert.IsType<CipherDetailsResponseModel>(result);
+        Assert.IsAssignableFrom<CipherDetailsResponseModel>(result);
         Assert.Equal(id, result.Id);
         Assert.Equal("2.iv|ct|mac", result.Data); // full data present
         Assert.Null(result.PartialData);           // isPartial == false

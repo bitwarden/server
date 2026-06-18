@@ -9,6 +9,7 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Pam.Services;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -43,6 +44,7 @@ public class CipherService : ICipherService
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IPricingClient _pricingClient;
+    private readonly ICipherLeaseGate _cipherLeaseGate;
 
     public CipherService(
         ICipherRepository cipherRepository,
@@ -60,7 +62,8 @@ public class CipherService : ICipherService
         IGetCipherPermissionsForUserQuery getCipherPermissionsForUserQuery,
         IPolicyRequirementQuery policyRequirementQuery,
         IApplicationCacheService applicationCacheService,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        ICipherLeaseGate cipherLeaseGate)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -78,6 +81,7 @@ public class CipherService : ICipherService
         _policyRequirementQuery = policyRequirementQuery;
         _applicationCacheService = applicationCacheService;
         _pricingClient = pricingClient;
+        _cipherLeaseGate = cipherLeaseGate;
     }
 
     public async Task SaveAsync(Cipher cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
@@ -86,6 +90,13 @@ public class CipherService : ICipherService
         if (!skipPermissionCheck && !(await UserCanEditAsync(cipher, savingUserId)))
         {
             throw new BadRequestException("You do not have permissions to edit this.");
+        }
+
+        // Editing an existing leasing-gated cipher requires a valid active lease. New ciphers have no
+        // collection paths yet, so they are never gated; admin/internal flows skip the lease gate too.
+        if (!skipPermissionCheck && cipher.Id != default(Guid))
+        {
+            await _cipherLeaseGate.EnsureCanMutateAsync(savingUserId, cipher);
         }
 
         if (cipher.Id == default(Guid))
@@ -126,6 +137,12 @@ public class CipherService : ICipherService
         if (!skipPermissionCheck && !(await UserCanEditAsync(cipher, savingUserId)))
         {
             throw new BadRequestException("You do not have permissions to edit this.");
+        }
+
+        // Editing an existing leasing-gated cipher requires a valid active lease; new ciphers are never gated.
+        if (!skipPermissionCheck && cipher.Id != default(Guid))
+        {
+            await _cipherLeaseGate.EnsureCanMutateAsync(savingUserId, cipher);
         }
 
         cipher.UserId = savingUserId;
@@ -424,6 +441,11 @@ public class CipherService : ICipherService
             throw new BadRequestException("You do not have permissions to delete this.");
         }
 
+        if (!orgAdmin)
+        {
+            await _cipherLeaseGate.EnsureCanMutateAsync(deletingUserId, cipherDetails);
+        }
+
         await _cipherRepository.DeleteAsync(cipherDetails);
         await _attachmentStorageService.DeleteAttachmentsForCipherAsync(cipherDetails.Id);
         await _eventService.LogCipherEventAsync(cipherDetails, EventType.Cipher_Deleted);
@@ -448,6 +470,7 @@ public class CipherService : ICipherService
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId);
             var filteredCiphers = await FilterCiphersByDeletePermission(ciphers, cipherIdsSet, deletingUserId);
             deletingCiphers = filteredCiphers.Select(c => (Cipher)c).ToList();
+            await _cipherLeaseGate.EnsureCanMutateManyAsync(deletingUserId, deletingCiphers);
             await _cipherRepository.DeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId);
         }
 
@@ -513,6 +536,10 @@ public class CipherService : ICipherService
 
     public async Task MoveManyAsync(IEnumerable<Guid> cipherIds, Guid? destinationFolderId, Guid movingUserId)
     {
+        // Moving a leasing-gated cipher (changing its folder) requires a valid active lease. The gate only
+        // reads each cipher's id, so lightweight placeholders avoid an extra repository read.
+        await _cipherLeaseGate.EnsureCanMutateManyAsync(movingUserId, cipherIds.Select(id => new Cipher { Id = id }));
+
         if (destinationFolderId.HasValue)
         {
             var folder = await _folderRepository.GetByIdAsync(destinationFolderId.Value);
@@ -715,6 +742,7 @@ public class CipherService : ICipherService
             {
                 throw new BadRequestException("You do not have permissions to edit this.");
             }
+            await _cipherLeaseGate.EnsureCanMutateAsync(savingUserId, cipher);
             await _collectionCipherRepository.UpdateCollectionsAsync(cipher.Id, savingUserId, collectionIds);
         }
 
@@ -729,6 +757,11 @@ public class CipherService : ICipherService
         if (!orgAdmin && !await UserCanDeleteAsync(cipherDetails, deletingUserId))
         {
             throw new BadRequestException("You do not have permissions to soft delete this.");
+        }
+
+        if (!orgAdmin)
+        {
+            await _cipherLeaseGate.EnsureCanMutateAsync(deletingUserId, cipherDetails);
         }
 
         if (cipherDetails.DeletedDate.HasValue)
@@ -763,6 +796,7 @@ public class CipherService : ICipherService
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId);
             var filteredCiphers = await FilterCiphersByDeletePermission(ciphers, cipherIdsSet, deletingUserId);
             deletingCiphers = filteredCiphers.Select(c => (Cipher)c).ToList();
+            await _cipherLeaseGate.EnsureCanMutateManyAsync(deletingUserId, deletingCiphers);
             await _cipherRepository.SoftDeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId);
         }
 
@@ -784,6 +818,11 @@ public class CipherService : ICipherService
         if (!orgAdmin && !await UserCanRestoreAsync(cipherDetails, restoringUserId))
         {
             throw new BadRequestException("You do not have permissions to delete this.");
+        }
+
+        if (!orgAdmin)
+        {
+            await _cipherLeaseGate.EnsureCanMutateAsync(restoringUserId, cipherDetails);
         }
 
         if (!cipherDetails.DeletedDate.HasValue)
@@ -824,6 +863,7 @@ public class CipherService : ICipherService
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(restoringUserId);
             var filteredCiphers = await FilterCiphersByDeletePermission(ciphers, cipherIdsSet, restoringUserId);
             restoringCiphers = filteredCiphers.Select(c => (CipherOrganizationDetails)c).ToList();
+            await _cipherLeaseGate.EnsureCanMutateManyAsync(restoringUserId, restoringCiphers);
             revisionDate = await _cipherRepository.RestoreAsync(restoringCiphers.Select(c => c.Id), restoringUserId);
         }
 
@@ -931,6 +971,11 @@ public class CipherService : ICipherService
         if (!orgAdmin && !(await UserCanEditAsync(cipher, savingUserId)))
         {
             throw new BadRequestException("You do not have permissions to edit this.");
+        }
+
+        if (!orgAdmin)
+        {
+            await _cipherLeaseGate.EnsureCanMutateAsync(savingUserId, cipher);
         }
 
         if (requestLength < 1)

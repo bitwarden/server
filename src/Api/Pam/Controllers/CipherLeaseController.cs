@@ -5,6 +5,7 @@ using Bit.Core;
 using Bit.Core.Exceptions;
 using Bit.Core.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Core.Pam.OrganizationFeatures.Queries.Interfaces;
+using Bit.Core.Pam.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -25,6 +26,7 @@ public class CipherLeaseController(
     IGetLeasedCipherQuery getLeasedCipherQuery,
     IApplicationCacheService applicationCacheService,
     ICollectionCipherRepository collectionCipherRepository,
+    ICipherLeaseGate cipherLeaseGate,
     GlobalSettings globalSettings)
     : Controller
 {
@@ -95,6 +97,10 @@ public class CipherLeaseController(
             : null;
         var collectionCiphers = await collectionCipherRepository.GetManyByUserIdCipherIdAsync(user.Id, id);
 
-        return new CipherDetailsResponseModel(cipher, user, organizationAbility, globalSettings, collectionCiphers);
+        // The query above already confirmed an active lease, so the gate authorizes full data here.
+        var access = await cipherLeaseGate.AuthorizeReadAsync(user.Id, cipher);
+        return access is null
+            ? new CipherDetailsResponseModel(cipher, user, organizationAbility, globalSettings, collectionCiphers)
+            : new FullCipherDetailsResponseModel(access, cipher, user, organizationAbility, globalSettings, collectionCiphers);
     }
 }

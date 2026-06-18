@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core.Settings;
+using Bit.Core.Vault.Authorization;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
@@ -46,7 +47,7 @@ public class CipherResponseModelTests
             CreationDate = DateTime.UtcNow,
         };
 
-        var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
+        var response = new FullCipherMiniResponseModel(FullCipherAccess.Unrestricted(), cipher, _globalSettings, false);
 
         Assert.Equal(CipherType.DriversLicense, response.Type);
         Assert.Equal("2.name|encrypted", response.Name);
@@ -80,7 +81,7 @@ public class CipherResponseModelTests
             CreationDate = DateTime.UtcNow,
         };
 
-        var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
+        var response = new FullCipherMiniResponseModel(FullCipherAccess.Unrestricted(), cipher, _globalSettings, false);
 
         Assert.Equal(CipherType.DriversLicense, response.Type);
         Assert.NotNull(response.DriversLicense);
@@ -118,7 +119,7 @@ public class CipherResponseModelTests
             CreationDate = DateTime.UtcNow,
         };
 
-        var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
+        var response = new FullCipherMiniResponseModel(FullCipherAccess.Unrestricted(), cipher, _globalSettings, false);
 
         Assert.Equal(CipherType.Passport, response.Type);
         Assert.Equal("2.name|encrypted", response.Name);
@@ -154,7 +155,7 @@ public class CipherResponseModelTests
             CreationDate = DateTime.UtcNow,
         };
 
-        var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
+        var response = new FullCipherMiniResponseModel(FullCipherAccess.Unrestricted(), cipher, _globalSettings, false);
 
         Assert.Equal(CipherType.Passport, response.Type);
         Assert.NotNull(response.Passport);
@@ -186,7 +187,7 @@ public class CipherResponseModelTests
             CreationDate = DateTime.UtcNow,
         };
 
-        var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
+        var response = new FullCipherMiniResponseModel(FullCipherAccess.Unrestricted(), cipher, _globalSettings, false);
 
         Assert.NotNull(response.Fields);
         Assert.Single(response.Fields);
@@ -215,7 +216,7 @@ public class CipherResponseModelTests
             CreationDate = DateTime.UtcNow,
         };
 
-        var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
+        var response = new FullCipherMiniResponseModel(FullCipherAccess.Unrestricted(), cipher, _globalSettings, false);
 
         Assert.NotNull(response.Fields);
         Assert.Single(response.Fields);
@@ -241,7 +242,7 @@ public class CipherResponseModelTests
             CreationDate = DateTime.UtcNow,
         };
 
-        var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
+        var response = new FullCipherMiniResponseModel(FullCipherAccess.Unrestricted(), cipher, _globalSettings, false);
 
         Assert.Equal(serializedData, response.Data);
     }
@@ -265,7 +266,7 @@ public class CipherResponseModelTests
             CreationDate = DateTime.UtcNow,
         };
 
-        var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
+        var response = new FullCipherMiniResponseModel(FullCipherAccess.Unrestricted(), cipher, _globalSettings, false);
 
         Assert.Equal(serializedData, response.Data);
     }
@@ -295,7 +296,7 @@ public class CipherResponseModelTests
             CreationDate = DateTime.UtcNow,
         };
 
-        var response = new CipherMiniResponseModel(cipher, _globalSettings, false, isPartial: true);
+        var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
 
         // Full data is withheld; the reduced blob is returned only in the separate PartialData field.
         Assert.Null(response.Data);
@@ -338,7 +339,7 @@ public class CipherResponseModelTests
             CreationDate = DateTime.UtcNow,
         };
 
-        var response = new CipherMiniResponseModel(cipher, _globalSettings, false, isPartial: true);
+        var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
 
         Assert.Null(response.Data);
         Assert.NotNull(response.PartialData);
@@ -364,7 +365,7 @@ public class CipherResponseModelTests
             CreationDate = DateTime.UtcNow,
         };
 
-        var response = new CipherMiniResponseModel(cipher, _globalSettings, false, isPartial: true);
+        var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
 
         // An opaque blob can't be reshaped, so neither full nor partial data is returned.
         Assert.Null(response.Data);
@@ -393,7 +394,8 @@ public class CipherResponseModelTests
             CreationDate = DateTime.UtcNow,
         };
 
-        var response = new CipherMiniResponseModel(cipher, _globalSettings, false, isPartial: false);
+        // The full-data path requires a gate-minted witness; the default-named type is partial only.
+        var response = new FullCipherMiniResponseModel(FullCipherAccess.Unrestricted(), cipher, _globalSettings, false);
 
         Assert.Equal(serializedData, response.Data);
         Assert.Null(response.PartialData);
@@ -422,7 +424,7 @@ public class CipherResponseModelTests
             CreationDate = DateTime.UtcNow,
         };
 
-        var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
+        var response = new FullCipherMiniResponseModel(FullCipherAccess.Unrestricted(), cipher, _globalSettings, false);
 
         Assert.Equal(type, response.Type);
         Assert.Equal(opaque, response.Data);

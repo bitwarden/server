@@ -11,6 +11,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Pam.Services;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -23,6 +24,7 @@ using Bit.Core.Vault.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Bit.Core.Test.Services;
@@ -2485,5 +2487,46 @@ public class CipherServiceTests
                 .DidNotReceive()
                 .DeleteAttachmentsForCipherAsync(cipher.Id);
         }
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveDetailsAsync_ExistingLeasingGatedCipher_ThrowsAndDoesNotPersist(
+        SutProvider<CipherService> sutProvider, CipherDetails cipher)
+    {
+        // Personal cipher so the edit-permission check passes and we reach the lease gate.
+        var savingUserId = cipher.UserId!.Value;
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .EnsureCanMutateAsync(savingUserId, cipher)
+            .ThrowsAsync(new NotFoundException());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.SaveDetailsAsync(cipher, savingUserId, cipher.RevisionDate));
+
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceive().ReplaceAsync(Arg.Any<CipherDetails>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_NewCipher_DoesNotInvokeLeaseGate(
+        SutProvider<CipherService> sutProvider, Cipher cipher)
+    {
+        // A new cipher has no collection paths yet, so it is never leasing-gated.
+        cipher.Id = default;
+        var savingUserId = cipher.UserId!.Value;
+
+        await sutProvider.Sut.SaveAsync(cipher, savingUserId, null);
+
+        await sutProvider.GetDependency<ICipherLeaseGate>()
+            .DidNotReceiveWithAnyArgs().EnsureCanMutateAsync(default, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAsync_OrgAdmin_DoesNotInvokeLeaseGate(
+        SutProvider<CipherService> sutProvider, CipherDetails cipher, Guid deletingUserId)
+    {
+        // Admins act through org-wide permissions with no collection-membership path, so the gate is skipped.
+        await sutProvider.Sut.DeleteAsync(cipher, deletingUserId, orgAdmin: true);
+
+        await sutProvider.GetDependency<ICipherLeaseGate>()
+            .DidNotReceiveWithAnyArgs().EnsureCanMutateAsync(default, default!);
     }
 }

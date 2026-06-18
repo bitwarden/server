@@ -17,6 +17,7 @@ using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Pam.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -50,6 +51,7 @@ public class SyncController : Controller
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
+    private readonly ICipherLeaseGate _cipherLeaseGate;
 
     public SyncController(
         IUserService userService,
@@ -67,7 +69,8 @@ public class SyncController : Controller
         IApplicationCacheService applicationCacheService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IWebAuthnCredentialRepository webAuthnCredentialRepository,
-        IUserAccountKeysQuery userAccountKeysQuery)
+        IUserAccountKeysQuery userAccountKeysQuery,
+        ICipherLeaseGate cipherLeaseGate)
     {
         _userService = userService;
         _folderRepository = folderRepository;
@@ -85,6 +88,7 @@ public class SyncController : Controller
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _webAuthnCredentialRepository = webAuthnCredentialRepository;
         _userAccountKeysQuery = userAccountKeysQuery;
+        _cipherLeaseGate = cipherLeaseGate;
     }
 
     [HttpGet("")]
@@ -122,10 +126,9 @@ public class SyncController : Controller
         }
 
         // PAM credential leasing: ciphers reachable only through leasing-enabled collections are delivered
-        // with reduced data during the passive sync. The active GET /ciphers/{id} path is unchanged.
-        var partialDataCipherIds = _featureService.IsEnabled(FeatureFlagKeys.Pam)
-            ? GetPartialDataCipherIds(collections, collectionCiphersGroupDict)
-            : new HashSet<Guid>();
+        // with reduced data during the passive sync. The active GET /ciphers/{id} path is unchanged. The
+        // witness authorizes the non-gated subset; gated ciphers fall through to the partial shape.
+        var fullCipherAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(user.Id, ciphers, collections, collectionCiphersGroupDict);
 
         var userTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
@@ -153,43 +156,8 @@ public class SyncController : Controller
         var response = new SyncResponseModel(_globalSettings, user, userAccountKeys, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
             organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
             folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends, webAuthnCredentials,
-            policiesNew, organizationUserDetailsNew, partialDataCipherIds);
+            policiesNew, organizationUserDetailsNew, fullCipherAccess);
         return response;
-    }
-
-    /// <summary>
-    /// Returns the IDs of ciphers the user can reach <em>only</em> through leasing-enabled collections
-    /// (those with an <see cref="Collection.AccessRuleId"/>). A cipher reachable through any non-leasing
-    /// collection — or owned personally with no collection mapping — is excluded and receives full data.
-    /// </summary>
-    private static ISet<Guid> GetPartialDataCipherIds(
-        IEnumerable<CollectionDetails> collections,
-        IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict)
-    {
-        var partialDataCipherIds = new HashSet<Guid>();
-        if (collections == null || collectionCiphersGroupDict == null)
-        {
-            return partialDataCipherIds;
-        }
-
-        var leasingCollectionIds = collections
-            .Where(c => c.AccessRuleId.HasValue)
-            .Select(c => c.Id)
-            .ToHashSet();
-        if (leasingCollectionIds.Count == 0)
-        {
-            return partialDataCipherIds;
-        }
-
-        foreach (var (cipherId, collectionCiphers) in collectionCiphersGroupDict)
-        {
-            if (collectionCiphers.Any() && collectionCiphers.All(cc => leasingCollectionIds.Contains(cc.CollectionId)))
-            {
-                partialDataCipherIds.Add(cipherId);
-            }
-        }
-
-        return partialDataCipherIds;
     }
 
     private async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync(ICollection<CipherDetails> ciphers)
