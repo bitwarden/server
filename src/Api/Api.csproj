@@ -24,6 +24,7 @@
     <ProjectReference Include="..\SharedWeb\SharedWeb.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />
     <ProjectReference Include="..\Pam.Domain\Pam.Domain.csproj" />
+    <ProjectReference Include="..\Pam\Pam.csproj" />
   </ItemGroup>
 
   <Choose>
