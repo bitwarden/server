@@ -1,6 +1,6 @@
-﻿using Bit.Core.Pam.Models;
+﻿using Bit.Pam.Models;
 
-namespace Bit.Core.Pam.OrganizationFeatures.Queries.Interfaces;
+namespace Bit.Pam.OrganizationFeatures.Queries.Interfaces;
 
 public interface IAccessPreCheckQuery
 {

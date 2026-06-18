@@ -1,15 +1,16 @@
-﻿using Bit.Core.Context;
+﻿using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
-using Bit.Core.Pam.Engine;
-using Bit.Core.Pam.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Vault.Authorization;
 using Bit.Core.Vault.Entities;
+using Bit.Pam.Engine;
+using Bit.Pam.Repositories;
 
-namespace Bit.Core.Pam.Services;
+namespace Bit.Pam.Services;
 
 /// <inheritdoc cref="ICipherLeaseGate" />
 public class CipherLeaseGate : ICipherLeaseGate

@@ -3,7 +3,7 @@ using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
-namespace Bit.Core.Pam.Services;
+namespace Bit.Pam.Services;
 
 public class ApproverCollectionAccessQuery : IApproverCollectionAccessQuery
 {

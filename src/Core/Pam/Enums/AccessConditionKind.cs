@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Pam.Enums;
+﻿namespace Bit.Pam.Enums;
 
 /// <summary>
 /// The kind of access condition that produced an automatic <see cref="Entities.AccessDecision"/>. Mirrors the

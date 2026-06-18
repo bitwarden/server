@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Pam.Enums;
+﻿namespace Bit.Pam.Enums;
 
 /// <summary>
 /// The approval path a lease request will take, surfaced by the pre-check so the client can present the right

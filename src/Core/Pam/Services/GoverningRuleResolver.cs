@@ -1,11 +1,11 @@
 ﻿using System.Text.Json;
-using Bit.Core.Pam.Engine;
-using Bit.Core.Pam.Models;
-using Bit.Core.Pam.Models.Conditions;
-using Bit.Core.Pam.Repositories;
 using Bit.Core.Repositories;
+using Bit.Pam.Engine;
+using Bit.Pam.Models;
+using Bit.Pam.Models.Conditions;
+using Bit.Pam.Repositories;
 
-namespace Bit.Core.Pam.Services;
+namespace Bit.Pam.Services;
 
 public class GoverningRuleResolver : IGoverningRuleResolver
 {

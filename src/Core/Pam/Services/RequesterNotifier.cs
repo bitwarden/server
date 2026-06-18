@@ -1,6 +1,6 @@
-using Bit.Core.Platform.Push;
+﻿using Bit.Core.Platform.Push;
 
-namespace Bit.Core.Pam.Services;
+namespace Bit.Pam.Services;
 
 public class RequesterNotifier : IRequesterNotifier
 {

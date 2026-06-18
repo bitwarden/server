@@ -1,8 +1,8 @@
-﻿using Bit.Core.Pam.Entities;
-using Bit.Core.Pam.Enums;
-using Bit.Core.Pam.Models;
+﻿using Bit.Pam.Entities;
+using Bit.Pam.Enums;
+using Bit.Pam.Models;
 
-namespace Bit.Core.Pam.Repositories;
+namespace Bit.Pam.Repositories;
 
 public interface IAccessRequestRepository
 {

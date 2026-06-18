@@ -1,6 +1,6 @@
-﻿using Bit.Core.Pam.Entities;
+﻿using Bit.Pam.Entities;
 
-namespace Bit.Core.Pam.Models;
+namespace Bit.Pam.Models;
 
 /// <summary>
 /// The caller's access state for a single cipher: the active lease they hold (if any), their pending request (if

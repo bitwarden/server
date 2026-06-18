@@ -1,6 +1,6 @@
-using Bit.Core.Pam.Enums;
+﻿using Bit.Pam.Enums;
 
-namespace Bit.Core.Pam.Models;
+namespace Bit.Pam.Models;
 
 /// <summary>
 /// One decision on an <see cref="Entities.AccessRequest"/>, projected from an <see cref="Entities.AccessDecision"/>

@@ -1,9 +1,9 @@
 ﻿using AutoFixture;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
-using Bit.Core.Pam.Services;
 using Bit.Core.Vault.Authorization;
 using Bit.Core.Vault.Entities;
+using Bit.Pam.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 

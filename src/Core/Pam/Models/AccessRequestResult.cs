@@ -1,7 +1,7 @@
-﻿using Bit.Core.Pam.Entities;
-using Bit.Core.Pam.Enums;
+﻿using Bit.Pam.Entities;
+using Bit.Pam.Enums;
 
-namespace Bit.Core.Pam.Models;
+namespace Bit.Pam.Models;
 
 /// <summary>
 /// The result of submitting an access request. Neither path mints a lease at submit: the

@@ -1,6 +1,6 @@
-using Bit.Core.Pam.Entities;
+﻿using Bit.Pam.Entities;
 
-namespace Bit.Core.Pam.OrganizationFeatures.Commands.Interfaces;
+namespace Bit.Pam.OrganizationFeatures.Commands.Interfaces;
 
 public interface IActivateAccessRequestCommand
 {

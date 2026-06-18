@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Vault.Models.Data;
 
-namespace Bit.Core.Pam.OrganizationFeatures.Queries.Interfaces;
+namespace Bit.Pam.OrganizationFeatures.Queries.Interfaces;
 
 public interface IGetLeasedCipherQuery
 {

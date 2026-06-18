@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Pam.Services;
+﻿namespace Bit.Pam.Services;
 
 /// <summary>
 /// Resolves which collections the current user can Manage — the single authorization predicate for the approver

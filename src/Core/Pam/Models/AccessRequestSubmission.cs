@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Pam.Models;
+﻿namespace Bit.Pam.Models;
 
 /// <summary>
 /// A request to lease a cipher. The automatic path supplies <see cref="DurationSeconds"/> (and an optional

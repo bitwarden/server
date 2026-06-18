@@ -1,6 +1,6 @@
-﻿using Bit.Core.Pam.Enums;
+﻿using Bit.Pam.Enums;
 
-namespace Bit.Core.Pam.Models;
+namespace Bit.Pam.Models;
 
 /// <summary>
 /// A lease request projected for the approver inbox: every <see cref="Entities.AccessRequest"/> field plus the

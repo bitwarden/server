@@ -1,4 +1,4 @@
-﻿using Bit.Core.Pam.Services;
+﻿using Bit.Pam.Services;
 using Xunit;
 
 namespace Bit.Core.Test.Pam.Services;

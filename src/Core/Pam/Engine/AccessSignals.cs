@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using Bit.Core.Context;
 
-namespace Bit.Core.Pam.Engine;
+namespace Bit.Pam.Engine;
 
 /// <summary>
 /// The request-time inputs an access rule is evaluated against: the caller's source IP and the instant the

@@ -1,4 +1,4 @@
-namespace Bit.Core.Pam.OrganizationFeatures.Commands.Interfaces;
+﻿namespace Bit.Pam.OrganizationFeatures.Commands.Interfaces;
 
 public interface ICancelAccessRequestCommand
 {

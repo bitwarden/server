@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Bit.Core.Pam.Models.Conditions;
+namespace Bit.Pam.Models.Conditions;
 
 /// <summary>
 /// Base type for a single leaf condition in an access rule's flat conditions list. Polymorphic deserialization is

@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Pam.Engine;
+﻿namespace Bit.Pam.Engine;
 
 public enum AccessEvaluationOutcome
 {

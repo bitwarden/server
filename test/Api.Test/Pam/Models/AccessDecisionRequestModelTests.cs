@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using Bit.Api.Pam.Models.Request;
-using Bit.Core.Pam.Enums;
+using Bit.Pam.Enums;
 using Xunit;
 
 namespace Bit.Api.Test.Pam.Models;

@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Pam.Enums;
+﻿namespace Bit.Pam.Enums;
 
 /// <summary>
 /// Lifecycle of a <see cref="Entities.AccessRequest"/>. A request starts <see cref="Pending"/> and moves to exactly

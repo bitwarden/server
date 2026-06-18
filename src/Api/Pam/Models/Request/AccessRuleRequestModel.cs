@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
-using Bit.Core.Pam.Entities;
+using Bit.Pam.Entities;
 
 namespace Bit.Api.Pam.Models.Request;
 

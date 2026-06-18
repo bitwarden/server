@@ -1,9 +1,9 @@
 ﻿using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Bit.Core.Pam.Models.Conditions;
+using Bit.Pam.Models.Conditions;
 
-namespace Bit.Core.Pam.Services;
+namespace Bit.Pam.Services;
 
 public sealed partial class AccessRuleValidator : IAccessRuleValidator
 {

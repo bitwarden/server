@@ -1,4 +1,4 @@
-﻿using Bit.Core.Pam.Models;
+﻿using Bit.Pam.Models;
 
 namespace Bit.Api.Pam.Models.Request;
 

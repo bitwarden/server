@@ -2,10 +2,10 @@
 using Bit.Api.Pam.Models.Request;
 using Bit.Api.Pam.Models.Response;
 using Bit.Core;
-using Bit.Core.Pam.OrganizationFeatures.Commands.Interfaces;
-using Bit.Core.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Bit.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Pam.OrganizationFeatures.Queries.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

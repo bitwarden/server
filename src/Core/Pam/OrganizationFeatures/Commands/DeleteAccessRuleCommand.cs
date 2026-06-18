@@ -1,8 +1,8 @@
 ﻿using Bit.Core.Exceptions;
-using Bit.Core.Pam.OrganizationFeatures.Commands.Interfaces;
-using Bit.Core.Pam.Repositories;
+using Bit.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Pam.Repositories;
 
-namespace Bit.Core.Pam.OrganizationFeatures.Commands;
+namespace Bit.Pam.OrganizationFeatures.Commands;
 
 public class DeleteAccessRuleCommand : IDeleteAccessRuleCommand
 {

@@ -1,7 +1,7 @@
-﻿using Bit.Core.Pam.Repositories;
-using Bit.Core.Repositories;
+﻿using Bit.Core.Repositories;
+using Bit.Pam.Repositories;
 
-namespace Bit.Core.Pam.Services;
+namespace Bit.Pam.Services;
 
 public class SingleActiveLeaseEvaluator : ISingleActiveLeaseEvaluator
 {

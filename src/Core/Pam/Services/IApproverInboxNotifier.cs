@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Pam.Services;
+﻿namespace Bit.Pam.Services;
 
 /// <summary>
 /// Pushes the <c>RefreshApproverInbox</c> signal to every user who can Manage a collection, telling their clients to

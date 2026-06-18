@@ -1,9 +1,9 @@
-using Bit.Core.Exceptions;
-using Bit.Core.Pam.Entities;
-using Bit.Core.Pam.Enums;
-using Bit.Core.Pam.OrganizationFeatures.Commands;
-using Bit.Core.Pam.Repositories;
-using Bit.Core.Pam.Services;
+﻿using Bit.Core.Exceptions;
+using Bit.Pam.Entities;
+using Bit.Pam.Enums;
+using Bit.Pam.OrganizationFeatures.Commands;
+using Bit.Pam.Repositories;
+using Bit.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Time.Testing;

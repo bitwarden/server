@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Models.Api;
-using Bit.Core.Pam.Enums;
-using Bit.Core.Pam.Models;
+using Bit.Pam.Enums;
+using Bit.Pam.Models;
 
 namespace Bit.Api.Pam.Models.Response;
 

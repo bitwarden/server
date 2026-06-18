@@ -1,6 +1,6 @@
-﻿using Bit.Core.Pam.Enums;
+﻿using Bit.Pam.Enums;
 
-namespace Bit.Core.Pam.Models.Conditions;
+namespace Bit.Pam.Models.Conditions;
 
 /// <summary>
 /// Auto-approves a lease when the request falls inside one of the configured windows, evaluated in

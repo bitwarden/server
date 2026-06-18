@@ -7,7 +7,6 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
-using Bit.Core.Pam.Services;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -19,6 +18,7 @@ using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
 using Bit.Core.Vault.Repositories;
+using Bit.Pam.Services;
 namespace Bit.Core.Vault.Services;
 
 public class CipherService : ICipherService

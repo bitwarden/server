@@ -3,13 +3,13 @@ using Bit.Api.Pam.Models.Response;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
 using Bit.Core.Exceptions;
-using Bit.Core.Pam.OrganizationFeatures.Commands.Interfaces;
-using Bit.Core.Pam.OrganizationFeatures.Queries.Interfaces;
-using Bit.Core.Pam.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Pam.OrganizationFeatures.Queries.Interfaces;
+using Bit.Pam.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

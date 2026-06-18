@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Pam.Enums;
+﻿namespace Bit.Pam.Enums;
 
 /// <summary>
 /// Lifecycle of a <see cref="Entities.AccessLease"/>. Only <see cref="Active"/> leases authorize access.

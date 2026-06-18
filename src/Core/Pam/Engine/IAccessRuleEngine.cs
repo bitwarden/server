@@ -1,6 +1,6 @@
-﻿using Bit.Core.Pam.Models.Conditions;
+﻿using Bit.Pam.Models.Conditions;
 
-namespace Bit.Core.Pam.Engine;
+namespace Bit.Pam.Engine;
 
 /// <summary>
 /// Evaluates an access rule's conditions — a flat list of <see cref="AccessCondition"/> ANDed together — against

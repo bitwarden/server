@@ -1,8 +1,8 @@
 ﻿using Bit.Core.Entities;
-using Bit.Core.Pam.Enums;
 using Bit.Core.Utilities;
+using Bit.Pam.Enums;
 
-namespace Bit.Core.Pam.Entities;
+namespace Bit.Pam.Entities;
 
 /// <summary>
 /// A single decision on a <see cref="AccessRequest"/>. In v0 there is exactly one decision per request: an automated

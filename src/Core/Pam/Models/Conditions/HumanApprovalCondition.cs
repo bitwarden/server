@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Pam.Models.Conditions;
+﻿namespace Bit.Pam.Models.Conditions;
 
 /// <summary>
 /// Always requires a human decision before a lease can be issued.

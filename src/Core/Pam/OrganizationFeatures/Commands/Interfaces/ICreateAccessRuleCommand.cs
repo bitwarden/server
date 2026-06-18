@@ -1,7 +1,7 @@
-﻿using Bit.Core.Pam.Entities;
-using Bit.Core.Pam.Models;
+﻿using Bit.Pam.Entities;
+using Bit.Pam.Models;
 
-namespace Bit.Core.Pam.OrganizationFeatures.Commands.Interfaces;
+namespace Bit.Pam.OrganizationFeatures.Commands.Interfaces;
 
 public interface ICreateAccessRuleCommand
 {

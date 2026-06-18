@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Pam.Enums;
+﻿namespace Bit.Pam.Enums;
 
 /// <summary>
 /// Who made a <see cref="Entities.AccessDecision"/>: an automatic condition evaluation or a human approver.

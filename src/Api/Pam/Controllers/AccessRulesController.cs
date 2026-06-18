@@ -4,9 +4,9 @@ using Bit.Api.Pam.Models.Response;
 using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
-using Bit.Core.Pam.OrganizationFeatures.Commands.Interfaces;
-using Bit.Core.Pam.Repositories;
 using Bit.Core.Utilities;
+using Bit.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Pam.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

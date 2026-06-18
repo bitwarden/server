@@ -1,7 +1,7 @@
-﻿using Bit.Core.Pam.Engine;
-using Bit.Core.Pam.Models;
+﻿using Bit.Pam.Engine;
+using Bit.Pam.Models;
 
-namespace Bit.Core.Pam.Services;
+namespace Bit.Pam.Services;
 
 public interface IGoverningRuleResolver
 {

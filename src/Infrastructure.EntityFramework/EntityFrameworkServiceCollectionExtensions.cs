@@ -9,7 +9,6 @@ using Bit.Core.Dirt.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.NotificationCenter.Repositories;
-using Bit.Core.Pam.Repositories;
 using Bit.Core.Platform.Installations;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;

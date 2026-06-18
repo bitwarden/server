@@ -1,8 +1,8 @@
 ﻿using Bit.Core.Entities;
-using Bit.Core.Pam.Enums;
 using Bit.Core.Utilities;
+using Bit.Pam.Enums;
 
-namespace Bit.Core.Pam.Entities;
+namespace Bit.Pam.Entities;
 
 /// <summary>
 /// An active grant of access to a cipher, born from an approved <see cref="AccessRequest"/>. Only

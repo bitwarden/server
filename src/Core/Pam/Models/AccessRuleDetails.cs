@@ -1,6 +1,6 @@
-﻿using Bit.Core.Pam.Entities;
+﻿using Bit.Pam.Entities;
 
-namespace Bit.Core.Pam.Models;
+namespace Bit.Pam.Models;
 
 /// <summary>
 /// An <see cref="AccessRule"/> together with the IDs of the collections it governs.

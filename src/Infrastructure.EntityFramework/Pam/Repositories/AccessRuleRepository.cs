@@ -1,10 +1,10 @@
 ﻿using AutoMapper;
-using Bit.Core.Pam.Models;
-using Bit.Core.Pam.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Pam.Models;
+using Bit.Pam.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using CoreEntity = Bit.Core.Pam.Entities.AccessRule;
+using CoreEntity = Bit.Pam.Entities.AccessRule;
 using EfModel = Bit.Infrastructure.EntityFramework.Pam.Models.AccessRule;
 
 #nullable enable

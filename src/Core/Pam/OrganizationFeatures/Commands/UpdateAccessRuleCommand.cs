@@ -1,12 +1,12 @@
 ﻿using Bit.Core.Exceptions;
-using Bit.Core.Pam.Entities;
-using Bit.Core.Pam.Models;
-using Bit.Core.Pam.OrganizationFeatures.Commands.Interfaces;
-using Bit.Core.Pam.Repositories;
-using Bit.Core.Pam.Services;
 using Bit.Core.Repositories;
+using Bit.Pam.Entities;
+using Bit.Pam.Models;
+using Bit.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Pam.Repositories;
+using Bit.Pam.Services;
 
-namespace Bit.Core.Pam.OrganizationFeatures.Commands;
+namespace Bit.Pam.OrganizationFeatures.Commands;
 
 public class UpdateAccessRuleCommand : IUpdateAccessRuleCommand
 {
