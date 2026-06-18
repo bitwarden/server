@@ -28,7 +28,6 @@
     <Project Path="src/Infrastructure.EntityFramework/Infrastructure.EntityFramework.csproj" />
     <Project Path="src/Notifications/Notifications.csproj" />
     <Project Path="src/Pam.Domain/Pam.Domain.csproj" />
-    <Project Path="src/Pam/Pam.csproj" />
     <Project Path="src/SharedWeb/SharedWeb.csproj" />
     <Project Path="src/Sql/Sql.sqlproj">
       <Build />
@@ -40,11 +39,15 @@
       <BuildDependency Project="src/Core/Core.csproj" />
     </Project>
     <Project Path="bitwarden_license/src/Commercial.Infrastructure.EntityFramework/Commercial.Infrastructure.EntityFramework.csproj" />
+    <Project Path="bitwarden_license/src/Commercial.Pam/Commercial.Pam.csproj">
+      <BuildDependency Project="src/Core/Core.csproj" />
+    </Project>
     <Project Path="bitwarden_license/src/Scim/Scim.csproj" />
     <Project Path="bitwarden_license/src/Sso/Sso.csproj" />
   </Folder>
   <Folder Name="/test - Bitwarden License/">
     <Project Path="bitwarden_license/test/Commercial.Core.Test/Commercial.Core.Test.csproj" />
+    <Project Path="bitwarden_license/test/Commercial.Pam.Test/Commercial.Pam.Test.csproj" />
     <Project Path="bitwarden_license/test/Scim.IntegrationTest/Scim.IntegrationTest.csproj" />
     <Project Path="bitwarden_license/test/Scim.Test/Scim.Test.csproj" />
     <Project Path="bitwarden_license/test/Sso.IntegrationTest/Sso.IntegrationTest.csproj" />

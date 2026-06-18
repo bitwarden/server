@@ -1,6 +1,7 @@
 ﻿using Bit.Api.Pam.Models.Request;
 using Bit.Api.Pam.Models.Response;
 using Bit.Api.Vault.Models.Response;
+using Bit.Commercial.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Core;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;

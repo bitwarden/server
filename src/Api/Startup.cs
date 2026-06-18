@@ -40,6 +40,7 @@ using Bit.Core.Enums;
 using Bit.Commercial.Core.SecretsManager;
 using Bit.Commercial.Core.Utilities;
 using Bit.Commercial.Infrastructure.EntityFramework.SecretsManager;
+using Bit.Commercial.Pam.Utilities;
 #endif
 
 namespace Bit.Api;
@@ -204,6 +205,7 @@ public class Startup
 #else
         services.AddCommercialCoreServices();
         services.AddCommercialSecretsManagerServices();
+        services.AddCommercialPamServices();
         services.AddSecretsManagerEfRepositories();
         Jobs.JobsHostedService.AddCommercialSecretsManagerJobServices(services);
 #endif
