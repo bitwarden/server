@@ -1,4 +1,4 @@
-namespace Bit.Core.Pam.Services;
+﻿namespace Bit.Pam.Services;
 
 /// <summary>
 /// Pushes the <c>RefreshAccessRequest</c> signal to a single requester, telling their clients to re-fetch their own

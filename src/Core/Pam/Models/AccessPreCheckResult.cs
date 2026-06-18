@@ -1,6 +1,6 @@
-﻿using Bit.Core.Pam.Enums;
+﻿using Bit.Pam.Enums;
 
-namespace Bit.Core.Pam.Models;
+namespace Bit.Pam.Models;
 
 /// <summary>
 /// The result of a pre-check. When <see cref="HasActiveLease"/> is true the caller already holds an active lease for

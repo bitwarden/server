@@ -1,14 +1,14 @@
 ﻿using Bit.Core.Context;
 using Bit.Core.Exceptions;
-using Bit.Core.Pam.Engine;
-using Bit.Core.Pam.Enums;
-using Bit.Core.Pam.Models;
-using Bit.Core.Pam.OrganizationFeatures.Queries.Interfaces;
-using Bit.Core.Pam.Repositories;
-using Bit.Core.Pam.Services;
 using Bit.Core.Vault.Repositories;
+using Bit.Pam.Engine;
+using Bit.Pam.Enums;
+using Bit.Pam.Models;
+using Bit.Pam.OrganizationFeatures.Queries.Interfaces;
+using Bit.Pam.Repositories;
+using Bit.Pam.Services;
 
-namespace Bit.Core.Pam.OrganizationFeatures.Queries;
+namespace Bit.Pam.OrganizationFeatures.Queries;
 
 public class AccessPreCheckQuery : IAccessPreCheckQuery
 {

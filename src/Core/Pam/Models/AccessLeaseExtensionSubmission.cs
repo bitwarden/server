@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Pam.Models;
+﻿namespace Bit.Pam.Models;
 
 /// <summary>
 /// A request to extend an active lease. Extensions are always auto-approved, subject to the governing rule's

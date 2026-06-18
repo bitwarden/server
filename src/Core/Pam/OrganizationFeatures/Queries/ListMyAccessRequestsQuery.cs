@@ -1,8 +1,8 @@
-﻿using Bit.Core.Pam.Models;
-using Bit.Core.Pam.OrganizationFeatures.Queries.Interfaces;
-using Bit.Core.Pam.Repositories;
+﻿using Bit.Pam.Models;
+using Bit.Pam.OrganizationFeatures.Queries.Interfaces;
+using Bit.Pam.Repositories;
 
-namespace Bit.Core.Pam.OrganizationFeatures.Queries;
+namespace Bit.Pam.OrganizationFeatures.Queries;
 
 public class ListMyAccessRequestsQuery : IListMyAccessRequestsQuery
 {

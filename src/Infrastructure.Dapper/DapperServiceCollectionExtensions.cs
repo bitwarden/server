@@ -8,7 +8,6 @@ using Bit.Core.Dirt.Reports.Repositories;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.NotificationCenter.Repositories;
-using Bit.Core.Pam.Repositories;
 using Bit.Core.Platform.Installations;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
@@ -26,6 +25,7 @@ using Bit.Infrastructure.Dapper.Repositories;
 using Bit.Infrastructure.Dapper.SecretsManager.Repositories;
 using Bit.Infrastructure.Dapper.Tools.Repositories;
 using Bit.Infrastructure.Dapper.Vault.Repositories;
+using Bit.Pam.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.Dapper;

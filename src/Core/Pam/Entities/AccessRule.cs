@@ -2,7 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Pam.Entities;
+namespace Bit.Pam.Entities;
 
 /// <summary>
 /// A reusable, org-scoped PAM access rule. Referenced by collections (and eventually Secrets Manager

@@ -6,7 +6,7 @@ using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 
 namespace Bit.Infrastructure.EntityFramework.Pam.Models;
 
-public class AccessRule : Core.Pam.Entities.AccessRule
+public class AccessRule : Bit.Pam.Entities.AccessRule
 {
     public virtual Organization Organization { get; set; }
 }
@@ -15,7 +15,7 @@ public class AccessRuleMapperProfile : Profile
 {
     public AccessRuleMapperProfile()
     {
-        CreateMap<Core.Pam.Entities.AccessRule, AccessRule>().ReverseMap();
-        CreateMap<AccessRule, Core.Pam.Models.AccessRuleDetails>();
+        CreateMap<Bit.Pam.Entities.AccessRule, AccessRule>().ReverseMap();
+        CreateMap<AccessRule, Bit.Pam.Models.AccessRuleDetails>();
     }
 }

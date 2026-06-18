@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Pam.Enums;
+﻿namespace Bit.Pam.Enums;
 
 /// <summary>
 /// The result of a race-safe lease mint. The mint stored procedures return a distinct integer code so the caller can

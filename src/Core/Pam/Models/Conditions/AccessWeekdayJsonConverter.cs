@@ -1,8 +1,8 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
-using Bit.Core.Pam.Enums;
+using Bit.Pam.Enums;
 
-namespace Bit.Core.Pam.Models.Conditions;
+namespace Bit.Pam.Models.Conditions;
 
 /// <summary>
 /// (De)serializes <see cref="AccessWeekday"/> as the lowercase three-letter tokens the conditions JSON uses

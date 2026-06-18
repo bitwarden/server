@@ -1,8 +1,8 @@
 ﻿using Bit.Core.Entities;
-using Bit.Core.Pam.Enums;
 using Bit.Core.Utilities;
+using Bit.Pam.Enums;
 
-namespace Bit.Core.Pam.Entities;
+namespace Bit.Pam.Entities;
 
 /// <summary>
 /// A request to lease access to a cipher in a leasing-governed collection. Auto-approved requests are created

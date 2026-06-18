@@ -1,6 +1,6 @@
-﻿using Bit.Core.Pam.Entities;
+﻿using Bit.Pam.Entities;
 
-namespace Bit.Core.Pam.OrganizationFeatures.Queries.Interfaces;
+namespace Bit.Pam.OrganizationFeatures.Queries.Interfaces;
 
 public interface IListMyActiveAccessLeasesQuery
 {

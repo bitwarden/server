@@ -4,10 +4,10 @@ using Bit.Api.Vault.Models.Response;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
-using Bit.Core.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Vault.Models.Data;
+using Bit.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -24,14 +24,14 @@ public class CipherLeaseControllerTests
 {
     [Theory, BitAutoData]
     public async Task State_ReturnsSnapshotFromQuery(
-        Guid id, Guid userId, Bit.Core.Pam.Entities.AccessLease activeLease, SutProvider<CipherLeaseController> sutProvider)
+        Guid id, Guid userId, Bit.Pam.Entities.AccessLease activeLease, SutProvider<CipherLeaseController> sutProvider)
     {
         sutProvider.GetDependency<IUserService>()
             .GetProperUserId(Arg.Any<ClaimsPrincipal>())
             .Returns(userId);
         sutProvider.GetDependency<IGetCipherAccessStateQuery>()
             .GetStateAsync(userId, id)
-            .Returns(new Bit.Core.Pam.Models.CipherAccessState(id, activeLease, null, null));
+            .Returns(new Bit.Pam.Models.CipherAccessState(id, activeLease, null, null));
 
         var result = await sutProvider.Sut.State(id);
 

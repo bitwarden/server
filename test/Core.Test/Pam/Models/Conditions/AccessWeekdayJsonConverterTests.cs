@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-using Bit.Core.Pam.Enums;
+using Bit.Pam.Enums;
 using Xunit;
 
 namespace Bit.Core.Test.Pam.Models.Conditions;

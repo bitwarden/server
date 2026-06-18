@@ -1,7 +1,7 @@
-﻿using Bit.Core.Pam.Entities;
-using Bit.Core.Pam.Enums;
+﻿using Bit.Pam.Entities;
+using Bit.Pam.Enums;
 
-namespace Bit.Core.Pam.Repositories;
+namespace Bit.Pam.Repositories;
 
 public interface IAccessLeaseRepository
 {

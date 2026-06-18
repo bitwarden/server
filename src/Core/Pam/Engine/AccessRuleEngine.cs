@@ -1,8 +1,8 @@
 ﻿using System.Globalization;
 using System.Net;
-using Bit.Core.Pam.Models.Conditions;
+using Bit.Pam.Models.Conditions;
 
-namespace Bit.Core.Pam.Engine;
+namespace Bit.Pam.Engine;
 
 /// <summary>
 /// Evaluates the access rule's flat list of <see cref="AccessCondition"/>s against the caller's signals. Each

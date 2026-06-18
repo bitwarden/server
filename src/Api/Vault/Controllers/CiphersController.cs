@@ -16,7 +16,6 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
-using Bit.Core.Pam.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -29,6 +28,7 @@ using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
 using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
+using Bit.Pam.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

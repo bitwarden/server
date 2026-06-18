@@ -1,6 +1,6 @@
-﻿using Bit.Core.Pam.Models.Conditions;
+﻿using Bit.Pam.Models.Conditions;
 
-namespace Bit.Core.Pam.Models;
+namespace Bit.Pam.Models;
 
 /// <summary>
 /// The access rule that governs a cipher for a particular caller: which collection's rule applies, the owning

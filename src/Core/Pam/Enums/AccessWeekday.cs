@@ -1,7 +1,7 @@
 ﻿using System.Text.Json.Serialization;
-using Bit.Core.Pam.Models.Conditions;
+using Bit.Pam.Models.Conditions;
 
-namespace Bit.Core.Pam.Enums;
+namespace Bit.Pam.Enums;
 
 /// <summary>
 /// A day of the week used in a <see cref="Models.Conditions.TimeOfDayCondition"/> window. Values align with

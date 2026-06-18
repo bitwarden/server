@@ -1,6 +1,6 @@
-﻿using Bit.Core.Pam.Enums;
+﻿using Bit.Pam.Enums;
 
-namespace Bit.Core.Pam.Models;
+namespace Bit.Pam.Models;
 
 /// <summary>
 /// An approver's decision on a pending lease request: approve or deny, with an optional comment.

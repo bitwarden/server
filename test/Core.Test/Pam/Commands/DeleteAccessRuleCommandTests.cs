@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Exceptions;
-using Bit.Core.Pam.Entities;
-using Bit.Core.Pam.OrganizationFeatures.Commands;
-using Bit.Core.Pam.Repositories;
+using Bit.Pam.Entities;
+using Bit.Pam.OrganizationFeatures.Commands;
+using Bit.Pam.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;

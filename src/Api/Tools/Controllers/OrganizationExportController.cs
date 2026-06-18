@@ -2,11 +2,11 @@
 using Bit.Api.Tools.Models.Response;
 using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.Exceptions;
-using Bit.Core.Pam.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Queries;
+using Bit.Pam.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

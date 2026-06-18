@@ -1,10 +1,10 @@
 ﻿using System.Data;
-using Bit.Core.Pam.Entities;
-using Bit.Core.Pam.Enums;
-using Bit.Core.Pam.Models;
-using Bit.Core.Pam.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
+using Bit.Pam.Entities;
+using Bit.Pam.Enums;
+using Bit.Pam.Models;
+using Bit.Pam.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
 

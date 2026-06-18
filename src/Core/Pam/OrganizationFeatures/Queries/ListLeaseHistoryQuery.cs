@@ -1,9 +1,9 @@
-using Bit.Core.Pam.Entities;
-using Bit.Core.Pam.OrganizationFeatures.Queries.Interfaces;
-using Bit.Core.Pam.Repositories;
-using Bit.Core.Pam.Services;
+﻿using Bit.Pam.Entities;
+using Bit.Pam.OrganizationFeatures.Queries.Interfaces;
+using Bit.Pam.Repositories;
+using Bit.Pam.Services;
 
-namespace Bit.Core.Pam.OrganizationFeatures.Queries;
+namespace Bit.Pam.OrganizationFeatures.Queries;
 
 public class ListLeaseHistoryQuery : IListLeaseHistoryQuery
 {

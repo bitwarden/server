@@ -1,6 +1,6 @@
-using Bit.Api.Pam.Models.Response;
-using Bit.Core.Pam.Enums;
-using Bit.Core.Pam.Models;
+﻿using Bit.Api.Pam.Models.Response;
+using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Xunit;
 
 namespace Bit.Api.Test.Pam.Models;

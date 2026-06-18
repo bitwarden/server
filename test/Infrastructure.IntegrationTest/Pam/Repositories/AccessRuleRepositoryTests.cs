@@ -1,8 +1,8 @@
 ﻿using Bit.Core.Entities;
-using Bit.Core.Pam.Entities;
-using Bit.Core.Pam.Repositories;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
+using Bit.Pam.Entities;
+using Bit.Pam.Repositories;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Pam.Repositories;

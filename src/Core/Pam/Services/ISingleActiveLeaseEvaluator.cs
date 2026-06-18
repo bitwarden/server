@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Pam.Services;
+﻿namespace Bit.Pam.Services;
 
 public interface ISingleActiveLeaseEvaluator
 {

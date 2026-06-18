@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 
-namespace Bit.Core.Pam.Services;
+namespace Bit.Pam.Services;
 
 public class ApproverInboxNotifier : IApproverInboxNotifier
 {

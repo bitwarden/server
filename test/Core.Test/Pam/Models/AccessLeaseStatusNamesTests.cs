@@ -1,5 +1,5 @@
-﻿using Bit.Core.Pam.Enums;
-using Bit.Core.Pam.Models;
+﻿using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Xunit;
 
 namespace Bit.Core.Test.Pam.Models;

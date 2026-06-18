@@ -1,6 +1,6 @@
-﻿using Bit.Core.Pam.Enums;
+﻿using Bit.Pam.Enums;
 
-namespace Bit.Core.Pam.Models;
+namespace Bit.Pam.Models;
 
 /// <summary>
 /// Maps the backend <see cref="AccessLeaseStatus"/> to the status vocabulary the leasing client expects:
