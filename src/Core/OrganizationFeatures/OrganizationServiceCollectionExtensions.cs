@@ -43,12 +43,6 @@ using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
-using Bit.Pam.Engine;
-using Bit.Pam.OrganizationFeatures.Commands;
-using Bit.Pam.OrganizationFeatures.Commands.Interfaces;
-using Bit.Pam.OrganizationFeatures.Queries;
-using Bit.Pam.OrganizationFeatures.Queries.Interfaces;
-using Bit.Pam.Services;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -73,7 +67,6 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationSponsorshipCommands(globalSettings);
         services.AddOrganizationApiKeyCommandsQueries();
         services.AddOrganizationCollectionCommands();
-        services.AddPamServices();
         services.AddOrganizationGroupCommands();
         services.AddOrganizationInviteLinkCommandsQueries();
         services.AddOrganizationDomainCommandsQueries();
@@ -192,37 +185,6 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IUpdateCollectionCommand, UpdateCollectionCommand>();
         services.AddScoped<IDeleteCollectionCommand, DeleteCollectionCommand>();
         services.AddScoped<IBulkAddCollectionAccessCommand, BulkAddCollectionAccessCommand>();
-    }
-
-    public static void AddPamServices(this IServiceCollection services)
-    {
-        services.AddSingleton<IAccessRuleValidator, AccessRuleValidator>();
-        services.AddScoped<ICreateAccessRuleCommand, CreateAccessRuleCommand>();
-        services.AddScoped<IUpdateAccessRuleCommand, UpdateAccessRuleCommand>();
-        services.AddScoped<IDeleteAccessRuleCommand, DeleteAccessRuleCommand>();
-        services.AddScoped<IGoverningRuleResolver, GoverningRuleResolver>();
-        services.AddScoped<ISingleActiveLeaseEvaluator, SingleActiveLeaseEvaluator>();
-        services.AddSingleton<IAccessRuleEngine, AccessRuleEngine>();
-        services.AddScoped<IAccessPreCheckQuery, AccessPreCheckQuery>();
-        services.AddScoped<IGetLeasedCipherQuery, GetLeasedCipherQuery>();
-        services.AddScoped<ISubmitAccessRequestCommand, SubmitAccessRequestCommand>();
-        services.AddScoped<IApproverCollectionAccessQuery, ApproverCollectionAccessQuery>();
-        services.AddScoped<IApproverInboxNotifier, ApproverInboxNotifier>();
-        services.AddScoped<IRequesterNotifier, RequesterNotifier>();
-        services.AddScoped<IListInboxRequestsQuery, ListInboxRequestsQuery>();
-        services.AddScoped<IListInboxHistoryQuery, ListInboxHistoryQuery>();
-        services.AddScoped<IDecideAccessRequestCommand, DecideAccessRequestCommand>();
-        services.AddScoped<IActivateAccessRequestCommand, ActivateAccessRequestCommand>();
-        services.AddScoped<ICancelAccessRequestCommand, CancelAccessRequestCommand>();
-        services.AddScoped<IRequestLeaseExtensionCommand, RequestLeaseExtensionCommand>();
-        services.AddScoped<IRevokeAccessLeaseCommand, RevokeAccessLeaseCommand>();
-        services.AddScoped<IGetCipherAccessStateQuery, GetCipherAccessStateQuery>();
-        services.AddScoped<IListMyAccessRequestsQuery, ListMyAccessRequestsQuery>();
-        services.AddScoped<IListMyActiveAccessLeasesQuery, ListMyActiveAccessLeasesQuery>();
-        services.AddScoped<IListActiveLeasesQuery, ListActiveLeasesQuery>();
-        services.AddScoped<IListLeaseHistoryQuery, ListLeaseHistoryQuery>();
-        services.TryAddSingleton(TimeProvider.System);
-        services.AddScoped<ICipherLeaseGate, CipherLeaseGate>();
     }
 
     private static void AddOrganizationGroupCommands(this IServiceCollection services)
