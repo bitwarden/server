@@ -1743,10 +1743,13 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(_ownerEmail, unchangedUser.Email);
     }
 
-    [Fact]
-    public async Task PostEmail_SelfServiceFlagOn_KeyConnectorOrgOwner_NotUsingKeyConnector_CanChangeEmail()
+    [Theory]
+    [InlineData(OrganizationUserType.Owner)]
+    [InlineData(OrganizationUserType.Admin)]
+    public async Task PostEmail_SelfServiceFlagOn_KeyConnectorOrgAdminOrOwner_NotUsingKeyConnector_CanChangeEmail(
+        OrganizationUserType userType)
     {
-        // An owner of a Key Connector organization who doesn't personally use Key Connector must be
+        // An owner/admin of a Key Connector organization who doesn't personally use Key Connector must be
         // able to change their email.
         _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
 
@@ -1759,12 +1762,18 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         organization.UseSso = true;
         organization.Identifier = $"kc-org-{Guid.NewGuid()}";
         await _organizationRepository.ReplaceAsync(organization);
-        await _loginHelper.LoginAsync(_ownerEmail);
+
+        (var currentUserEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory,
+            organization.Id,
+            userType);
+
+        await _loginHelper.LoginAsync(currentUserEmail);
 
         var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
-        var userBefore = await _userRepository.GetByEmailAsync(_ownerEmail);
+        var userBefore = await _userRepository.GetByEmailAsync(currentUserEmail);
         Assert.NotNull(userBefore);
-        // The org uses Key Connector, but the owner themselves does not.
+        // The org uses Key Connector, but the acting member themselves does not.
         Assert.False(userBefore.UsesKeyConnector);
 
         var userManager = _factory.GetService<UserManager<User>>();
