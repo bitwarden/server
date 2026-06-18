@@ -219,37 +219,51 @@
                     <label class="form-check-label" asp-for="UseInviteLinks"></label>
                 </div>
             </div>
-            <div class="col-3">
-                <h3>Password Manager</h3>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="UseTotp" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="UseTotp"></label>
+            <div class="col-8">
+                <div class="row">
+                    <div class="col-6">
+                        <h3>Password Manager</h3>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" asp-for="UseTotp" disabled='@(canEditPlan ? null : "disabled")'>
+                            <label class="form-check-label" asp-for="UseTotp"></label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" asp-for="UsersGetPremium" disabled='@(canEditPlan ? null : "disabled")'>
+                            <label class="form-check-label" asp-for="UsersGetPremium"></label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" asp-for="UseMyItems" disabled='@(canEditPlan ? null : "disabled")'>
+                            <label class="form-check-label" asp-for="UseMyItems"></label>
+                        </div>
+                    </div>
+
+                    <div class="col-6">
+                        <h3>Secrets Manager</h3>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" asp-for="UseSecretsManager" disabled='@(canEditPlan ? null : "disabled")'>
+                            <label class="form-check-label" asp-for="UseSecretsManager"></label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" asp-for="UseDisableSmAdsForUsers" disabled='@(canEditPlan ? null : "disabled")'>
+                            <label class="form-check-label" asp-for="UseDisableSmAdsForUsers"></label>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="UsersGetPremium" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="UsersGetPremium"></label>
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="UseMyItems" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="UseMyItems"></label>
-                </div>
-            </div>
-            <div class="col-3">
-                <h3>Secrets Manager</h3>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="UseSecretsManager" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="UseSecretsManager"></label>
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="UseDisableSmAdsForUsers" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="UseDisableSmAdsForUsers"></label>
-                </div>
-            </div>
-            <div class="col-2">
-                <h3>Access Intelligence</h3>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="UseRiskInsights" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="UseRiskInsights"></label>
+                <div class="row mt-4">
+                    <div class="col-6">
+                        <h3>Access Intelligence</h3>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" asp-for="UseRiskInsights" disabled='@(canEditPlan ? null : "disabled")'>
+                            <label class="form-check-label" asp-for="UseRiskInsights"></label>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h3>Privileged Access Management</h3>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" asp-for="UsePam" disabled='@(canEditPlan ? null : "disabled")'>
+                            <label class="form-check-label" asp-for="UsePam"></label>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

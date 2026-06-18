@@ -112,6 +112,7 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
         UsePhishingBlocker = org.UsePhishingBlocker;
         UseMyItems = org.UseMyItems;
         UseInviteLinks = org.UseInviteLinks;
+        UsePam = org.UsePam;
         ExemptFromBillingAutomation = org.ExemptFromBillingAutomation;
 
         _plans = plans;
@@ -210,6 +211,8 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
     public bool UseMyItems { get; set; }
     [Display(Name = "Invite Links")]
     public bool UseInviteLinks { get; set; }
+    [Display(Name = "Use PAM")]
+    public bool UsePam { get; set; }
     [Display(Name = "Exempt From Billing Automation")]
     public bool ExemptFromBillingAutomation { get; set; }
 
@@ -366,6 +369,7 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
         existingOrganization.UsePhishingBlocker = UsePhishingBlocker;
         existingOrganization.UseMyItems = UseMyItems;
         existingOrganization.UseInviteLinks = UseInviteLinks;
+        existingOrganization.UsePam = UsePam;
         existingOrganization.ExemptFromBillingAutomation = ExemptFromBillingAutomation;
         return existingOrganization;
     }
