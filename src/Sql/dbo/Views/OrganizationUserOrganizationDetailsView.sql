@@ -60,6 +60,7 @@ SELECT
     O.[UseDisableSmAdsForUsers],
     O.[UseMyItems],
     O.[UseInviteLinks],
+    O.[UsePam],
     OU.[RevocationReason]
 FROM
     [dbo].[OrganizationUser] OU

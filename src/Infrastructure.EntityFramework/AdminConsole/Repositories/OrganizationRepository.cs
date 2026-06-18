@@ -158,7 +158,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 UseDisableSmAdsForUsers = e.UseDisableSmAdsForUsers,
                 UsePhishingBlocker = e.UsePhishingBlocker,
                 UseMyItems = e.UseMyItems,
-                UseInviteLinks = e.UseInviteLinks
+                UseInviteLinks = e.UseInviteLinks,
+                UsePam = e.UsePam
             }).ToListAsync();
         }
     }
