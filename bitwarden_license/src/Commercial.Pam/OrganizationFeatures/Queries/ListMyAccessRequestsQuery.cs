@@ -1,5 +1,5 @@
-﻿using Bit.Pam.Models;
-using Bit.Pam.OrganizationFeatures.Queries.Interfaces;
+﻿using Bit.Commercial.Pam.OrganizationFeatures.Queries.Interfaces;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 
 namespace Bit.Commercial.Pam.OrganizationFeatures.Queries;

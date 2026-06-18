@@ -1,8 +1,7 @@
 ﻿using System.Net;
 using Bit.Commercial.Pam.Engine;
-using Bit.Pam.Engine;
-using Bit.Pam.Enums;
-using Bit.Pam.Models.Conditions;
+using Bit.Commercial.Pam.Enums;
+using Bit.Commercial.Pam.Models.Conditions;
 using Xunit;
 
 namespace Bit.Commercial.Pam.Test.Engine;

@@ -1,5 +1,4 @@
 ﻿using Bit.Pam.Enums;
-using Bit.Pam.Models;
 
 namespace Bit.Api.Pam.Models.Response;
 

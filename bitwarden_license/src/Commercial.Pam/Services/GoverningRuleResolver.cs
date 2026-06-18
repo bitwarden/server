@@ -1,9 +1,8 @@
 ﻿using System.Text.Json;
-using Bit.Pam.Services;
+using Bit.Commercial.Pam.Engine;
+using Bit.Commercial.Pam.Models;
+using Bit.Commercial.Pam.Models.Conditions;
 using Bit.Core.Repositories;
-using Bit.Pam.Engine;
-using Bit.Pam.Models;
-using Bit.Pam.Models.Conditions;
 using Bit.Pam.Repositories;
 
 namespace Bit.Commercial.Pam.Services;

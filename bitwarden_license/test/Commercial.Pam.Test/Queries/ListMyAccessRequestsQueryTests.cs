@@ -1,5 +1,5 @@
-﻿using Bit.Pam.Models;
-using Bit.Commercial.Pam.OrganizationFeatures.Queries;
+﻿using Bit.Commercial.Pam.OrganizationFeatures.Queries;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;

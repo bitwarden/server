@@ -1,12 +1,14 @@
 ﻿using System.Security.Claims;
 using Bit.Api.Pam.Controllers;
 using Bit.Api.Pam.Models.Request;
+using Bit.Api.Pam.Models.Response;
+using Bit.Commercial.Pam.Models;
+using Bit.Commercial.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Commercial.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Core.Services;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
-using Bit.Pam.OrganizationFeatures.Commands.Interfaces;
-using Bit.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Mvc;

@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Models.Api;
 using Bit.Pam.Entities;
-using Bit.Pam.Models;
 
 namespace Bit.Api.Pam.Models.Response;
 

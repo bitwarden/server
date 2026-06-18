@@ -1,6 +1,7 @@
 ﻿using Bit.Api.Pam.Models.Request;
 using Bit.Api.Pam.Models.Response;
 using Bit.Api.Vault.Models.Response;
+using Bit.Commercial.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Commercial.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Core;
 using Bit.Core.Exceptions;
@@ -8,8 +9,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Bit.Pam.OrganizationFeatures.Commands.Interfaces;
-using Bit.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Pam.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

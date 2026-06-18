@@ -1,5 +1,5 @@
-﻿using Bit.Core;
-using Bit.Pam.Services;
+﻿using Bit.Commercial.Pam.Engine;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -8,8 +8,8 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Vault.Authorization;
 using Bit.Core.Vault.Entities;
-using Bit.Pam.Engine;
 using Bit.Pam.Repositories;
+using Bit.Pam.Services;
 
 namespace Bit.Commercial.Pam.Services;
 

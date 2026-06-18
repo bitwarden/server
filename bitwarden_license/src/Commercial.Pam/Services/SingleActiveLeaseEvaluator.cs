@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Repositories;
-using Bit.Pam.Services;
 using Bit.Pam.Repositories;
 
 namespace Bit.Commercial.Pam.Services;

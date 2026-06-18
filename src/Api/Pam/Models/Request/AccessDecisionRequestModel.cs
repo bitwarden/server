@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Commercial.Pam.Models;
 using Bit.Pam.Enums;
-using Bit.Pam.Models;
 
 namespace Bit.Api.Pam.Models.Request;
 

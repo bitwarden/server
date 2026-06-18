@@ -1,7 +1,7 @@
-﻿using Bit.Pam.Entities;
-using Bit.Pam.OrganizationFeatures.Queries.Interfaces;
+﻿using Bit.Commercial.Pam.OrganizationFeatures.Queries.Interfaces;
+using Bit.Commercial.Pam.Services;
+using Bit.Pam.Entities;
 using Bit.Pam.Repositories;
-using Bit.Pam.Services;
 
 namespace Bit.Commercial.Pam.OrganizationFeatures.Queries;
 
