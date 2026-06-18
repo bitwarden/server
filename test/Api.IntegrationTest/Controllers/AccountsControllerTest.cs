@@ -12,11 +12,8 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
-<<<<<<< auth/pm-30806/self-service-change-email-command
-using Bit.Core.Billing.Enums;
-=======
 using Bit.Core.Auth.Services;
->>>>>>> main
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -72,11 +69,8 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         _factory.SubstituteService<IPushNotificationService>(_ => { });
         _factory.SubstituteService<IFeatureService>(_ => { });
         _factory.SubstituteService<IStripeSyncService>(_ => { });
-<<<<<<< auth/pm-30806/self-service-change-email-command
         _factory.SubstituteService<IMailService>(_ => { });
-=======
         _factory.SubstituteService<ITwoFactorEmailService>(_ => { });
->>>>>>> main
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
         _userRepository = _factory.GetService<IUserRepository>();
@@ -1678,7 +1672,6 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         return await _client.SendAsync(message);
     }
 
-<<<<<<< auth/pm-30806/self-service-change-email-command
     // ===== Email change: self-service path (PM30806_SelfServiceChangeEmailCommand flag ON) =====
     // These tests pin the flag ON to exercise SelfServiceChangeEmailCommand, which changes the
     // email only — the master password, derived security stamp, and wrapped user key are left
@@ -1984,7 +1977,10 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/email-token");
         message.Content = JsonContent.Create(requestModel);
-=======
+
+        return await _client.SendAsync(message);
+    }
+
     [Fact]
     public async Task PostResendNewDeviceOtp_ValidEmailAndSecret_OkAndSendsEmail()
     {
@@ -2031,7 +2027,6 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
             Email = email,
             MasterPasswordHash = masterPasswordHash,
         });
->>>>>>> main
         return await _client.SendAsync(message);
     }
 }
