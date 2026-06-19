@@ -92,9 +92,14 @@ public class OrganizationConnectionsController : Controller
             throw new NotFoundException();
         }
 
-        if (!await HasPermissionAsync(model?.OrganizationId, model?.Type))
+        if (!await HasPermissionAsync(existingOrganizationConnection.OrganizationId, existingOrganizationConnection.Type))
         {
             throw new BadRequestException("You do not have permission to update this connection.");
+        }
+
+        if (model.Type != existingOrganizationConnection.Type)
+        {
+            throw new BadRequestException("The connection type cannot be changed.");
         }
 
         if (await HasConnectionTypeAsync(model, organizationConnectionId, model.Type))
@@ -175,6 +180,15 @@ public class OrganizationConnectionsController : Controller
         return existingConnections.Any(c => c.Type == model.Type && (!connectionId.HasValue || c.Id != connectionId.Value));
     }
 
+    /// <summary>
+    /// Returns whether the current user has permission to manage a connection of the given <paramref name="type"/>
+    /// in the given organization. The required permission varies by connection type (e.g. Scim requires Manage SCIM,
+    /// while CloudBillingSync requires Organization Owner).
+    /// </summary>
+    /// <remarks>
+    /// When authorizing an update or delete against an existing connection, <paramref name="type"/> MUST be sourced
+    /// from the persisted connection — never from the request body.
+    /// </remarks>
     private async Task<bool> HasPermissionAsync(Guid? organizationId, OrganizationConnectionType? type = null)
     {
         if (!organizationId.HasValue)
