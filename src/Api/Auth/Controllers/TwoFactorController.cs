@@ -160,8 +160,8 @@ public class TwoFactorController : Controller
     }
 
     [HttpDelete("authenticator")]
-    public async Task<TwoFactorProviderResponseModel> DisableAuthenticator(
-        [FromBody] TwoFactorAuthenticatorDisableRequestModel model)
+    public async Task<TwoFactorProviderResponseModel> DeleteAuthenticator(
+        [FromBody] TwoFactorAuthenticatorDeleteRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
 
@@ -190,7 +190,7 @@ public class TwoFactorController : Controller
     }
 
     [HttpDelete("yubikey")]
-    public async Task<TwoFactorProviderResponseModel> DisableYubiKey([FromBody] TwoFactorYubiKeyDisableRequestModel model)
+    public async Task<TwoFactorProviderResponseModel> DeleteYubiKey([FromBody] TwoFactorYubiKeyDeleteRequestModel model)
     {
         var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.YubiKey);
         await _userService.DisableTwoFactorProviderAsync(user, TwoFactorProviderType.YubiKey);
@@ -233,7 +233,7 @@ public class TwoFactorController : Controller
     }
 
     [HttpDelete("duo")]
-    public async Task<TwoFactorProviderResponseModel> DisableDuo([FromBody] TwoFactorDuoDisableRequestModel model)
+    public async Task<TwoFactorProviderResponseModel> DeleteDuo([FromBody] TwoFactorDuoDeleteRequestModel model)
     {
         var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.Duo);
         await _userService.DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Duo);
@@ -284,8 +284,8 @@ public class TwoFactorController : Controller
     }
 
     [HttpDelete("~/organizations/{id}/two-factor/duo")]
-    public async Task<TwoFactorProviderResponseModel> DisableOrganizationDuo(string id,
-        [FromBody] TwoFactorOrganizationDuoDisableRequestModel model)
+    public async Task<TwoFactorProviderResponseModel> DeleteOrganizationDuo(string id,
+        [FromBody] TwoFactorOrganizationDuoDeleteRequestModel model)
     {
         await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.OrganizationDuo);
 
@@ -402,8 +402,8 @@ public class TwoFactorController : Controller
     }
 
     [HttpDelete("webauthn/all")]
-    public async Task<TwoFactorProviderResponseModel> DisableWebAuthnAll(
-        [FromBody] TwoFactorWebAuthnDisableAllRequestModel model)
+    public async Task<TwoFactorProviderResponseModel> DeleteWebAuthnAll(
+        [FromBody] TwoFactorWebAuthnDeleteAllRequestModel model)
     {
         var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.WebAuthn);
         await _userService.DisableTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
@@ -421,7 +421,7 @@ public class TwoFactorController : Controller
     }
 
     [HttpDelete("email")]
-    public async Task<TwoFactorProviderResponseModel> DisableEmail([FromBody] TwoFactorEmailDisableRequestModel model)
+    public async Task<TwoFactorProviderResponseModel> DeleteEmail([FromBody] TwoFactorEmailDeleteRequestModel model)
     {
         var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.Email);
         await _userService.DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Email);

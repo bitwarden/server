@@ -3,7 +3,7 @@
 namespace Bit.Api.Auth.Models.Request;
 
 /// <summary>Request body for <c>DELETE /two-factor/duo</c>.</summary>
-public class TwoFactorDuoDisableRequestModel
+public class TwoFactorDuoDeleteRequestModel
 {
     /// <summary>Token minted by <c>GetDuo</c>; bound to <c>UserId + ProviderType</c>.</summary>
     [Required]

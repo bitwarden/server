@@ -3,7 +3,7 @@
 namespace Bit.Api.Auth.Models.Request;
 
 /// <summary>Request body for <c>DELETE /two-factor/yubikey</c>.</summary>
-public class TwoFactorYubiKeyDisableRequestModel
+public class TwoFactorYubiKeyDeleteRequestModel
 {
     /// <summary>Token minted by <c>GetYubiKey</c>; bound to <c>UserId + ProviderType</c>.</summary>
     [Required]

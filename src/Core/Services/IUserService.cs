@@ -39,6 +39,14 @@ public interface IUserService
     Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint);
     Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
     Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true, bool logEvent = true);
+    /// <summary>
+    /// Removes the entry for <paramref name="type"/> from the user's <c>TwoFactorProviders</c> JSON column.
+    /// The provider's <c>MetaData</c> (TOTP shared secret, Duo client secret, YubiKey IDs, WebAuthn credentials, etc.)
+    /// is destroyed in the process; the name is historical — this is a hard delete of the provider configuration,
+    /// not a reversible disable. No-op if <paramref name="type"/> is not currently configured. Emits
+    /// <see cref="Bit.Core.Enums.EventType.User_Disabled2fa"/> and re-evaluates 2FA-removal policies if no
+    /// providers remain.
+    /// </summary>
     Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type);
     Task<IdentityResult> DeleteAsync(User user);
     Task<IdentityResult> DeleteAsync(User user, string token);

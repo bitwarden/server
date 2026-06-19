@@ -98,7 +98,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     }
 
     [Fact]
-    public async Task DisableAuthenticator_ExpiredToken_BadRequest()
+    public async Task DeleteAuthenticator_ExpiredToken_BadRequest()
     {
         var user = await _userRepository.GetByEmailAsync(_userEmail);
         var expiredToken = _authenticatorTokenFactory.Protect(
@@ -108,7 +108,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
             });
 
         var response = await SendJsonAsync(HttpMethod.Delete, "/two-factor/authenticator",
-            new TwoFactorAuthenticatorDisableRequestModel
+            new TwoFactorAuthenticatorDeleteRequestModel
             {
                 Key = _authenticatorKey,
                 UserVerificationToken = expiredToken,
@@ -119,7 +119,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     }
 
     [Fact]
-    public async Task GetAuthenticator_ValidSecret_ReturnsTokenUsableForDisable()
+    public async Task GetAuthenticator_ValidSecret_ReturnsTokenUsableForDelete()
     {
         await EnrollUserInAuthenticator();
 
@@ -133,7 +133,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         var uvToken = root.GetProperty("userVerificationToken").GetString()!;
 
         var disableResponse = await SendJsonAsync(HttpMethod.Delete, "/two-factor/authenticator",
-            new TwoFactorAuthenticatorDisableRequestModel
+            new TwoFactorAuthenticatorDeleteRequestModel
             {
                 Key = key,
                 UserVerificationToken = uvToken,
@@ -173,7 +173,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     }
 
     [Fact]
-    public async Task DisableAuthenticator_BodyTypeMismatch_RespectsUrlRoute()
+    public async Task DeleteAuthenticator_BodyTypeMismatch_RespectsUrlRoute()
     {
         // Any "Type" field sent in the wire body must be ignored — the URL determines the
         // provider. Enroll Authenticator and Email, then send a body claiming Type=Email
@@ -205,7 +205,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     // ---------------------------------------------------------------------
 
     [Fact]
-    public async Task GetYubiKey_ValidSecret_ReturnsTokenUsableForDisable()
+    public async Task GetYubiKey_ValidSecret_ReturnsTokenUsableForDelete()
     {
         await EnrollUserInYubiKey();
 
@@ -217,7 +217,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         Assert.False(string.IsNullOrEmpty(uvToken));
 
         var disableResponse = await SendJsonAsync(HttpMethod.Delete, "/two-factor/yubikey",
-            new TwoFactorYubiKeyDisableRequestModel { UserVerificationToken = uvToken });
+            new TwoFactorYubiKeyDeleteRequestModel { UserVerificationToken = uvToken });
         Assert.Equal(HttpStatusCode.OK, disableResponse.StatusCode);
 
         var refreshed = await _userRepository.GetByEmailAsync(_userEmail);
@@ -251,7 +251,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     // ---------------------------------------------------------------------
 
     [Fact]
-    public async Task GetDuo_ValidSecret_ReturnsTokenUsableForDisable()
+    public async Task GetDuo_ValidSecret_ReturnsTokenUsableForDelete()
     {
         await EnrollUserInDuo();
 
@@ -263,7 +263,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         Assert.False(string.IsNullOrEmpty(uvToken));
 
         var disableResponse = await SendJsonAsync(HttpMethod.Delete, "/two-factor/duo",
-            new TwoFactorDuoDisableRequestModel { UserVerificationToken = uvToken });
+            new TwoFactorDuoDeleteRequestModel { UserVerificationToken = uvToken });
         Assert.Equal(HttpStatusCode.OK, disableResponse.StatusCode);
 
         var refreshed = await _userRepository.GetByEmailAsync(_userEmail);
@@ -298,7 +298,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     // ---------------------------------------------------------------------
 
     [Fact]
-    public async Task GetOrganizationDuo_ValidSecret_ReturnsTokenUsableForDisable()
+    public async Task GetOrganizationDuo_ValidSecret_ReturnsTokenUsableForDelete()
     {
         var (org, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
             plan: PlanType.EnterpriseAnnually, ownerEmail: _userEmail, passwordManagerSeats: 1);
@@ -316,7 +316,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
 
         var disableResponse = await SendJsonAsync(HttpMethod.Delete,
             $"/organizations/{org.Id}/two-factor/duo",
-            new TwoFactorOrganizationDuoDisableRequestModel { UserVerificationToken = uvToken });
+            new TwoFactorOrganizationDuoDeleteRequestModel { UserVerificationToken = uvToken });
         Assert.Equal(HttpStatusCode.OK, disableResponse.StatusCode);
 
         var refreshedOrg = await _organizationRepository.GetByIdAsync(org.Id);
@@ -404,7 +404,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     }
 
     [Fact]
-    public async Task DisableWebAuthnAll_ValidToken_RemovesProvider()
+    public async Task DeleteWebAuthnAll_ValidToken_RemovesProvider()
     {
         await EnrollUserInWebAuthn();
 
@@ -416,7 +416,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         Assert.False(string.IsNullOrEmpty(uvToken));
 
         var disableResponse = await SendJsonAsync(HttpMethod.Delete, "/two-factor/webauthn/all",
-            new TwoFactorWebAuthnDisableAllRequestModel { UserVerificationToken = uvToken });
+            new TwoFactorWebAuthnDeleteAllRequestModel { UserVerificationToken = uvToken });
         Assert.Equal(HttpStatusCode.OK, disableResponse.StatusCode);
 
         var refreshed = await _userRepository.GetByEmailAsync(_userEmail);
@@ -424,7 +424,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     }
 
     [Fact]
-    public async Task DisableWebAuthnAll_SingleCredentialEnrollment_RemovesProvider()
+    public async Task DeleteWebAuthnAll_SingleCredentialEnrollment_RemovesProvider()
     {
         // The per-credential DELETE /two-factor/webauthn refuses the last registered credential
         // (lockout prevention in DeleteTwoFactorWebAuthnCredentialCommand). The bulk-disable
@@ -438,7 +438,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse);
 
         var disableResponse = await SendJsonAsync(HttpMethod.Delete, "/two-factor/webauthn/all",
-            new TwoFactorWebAuthnDisableAllRequestModel { UserVerificationToken = uvToken });
+            new TwoFactorWebAuthnDeleteAllRequestModel { UserVerificationToken = uvToken });
         Assert.Equal(HttpStatusCode.OK, disableResponse.StatusCode);
 
         var refreshed = await _userRepository.GetByEmailAsync(_userEmail);
@@ -446,7 +446,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     }
 
     [Fact]
-    public async Task DisableWebAuthnAll_ExpiredToken_BadRequest()
+    public async Task DeleteWebAuthnAll_ExpiredToken_BadRequest()
     {
         var user = (await _userRepository.GetByEmailAsync(_userEmail))!;
         var expiredToken = _userVerificationTokenFactory.Protect(new TwoFactorUserVerificationTokenable
@@ -457,21 +457,21 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         });
 
         var response = await SendJsonAsync(HttpMethod.Delete, "/two-factor/webauthn/all",
-            new TwoFactorWebAuthnDisableAllRequestModel { UserVerificationToken = expiredToken });
+            new TwoFactorWebAuthnDeleteAllRequestModel { UserVerificationToken = expiredToken });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
-    public async Task DisableWebAuthnAll_CrossProviderToken_BadRequest()
+    public async Task DeleteWebAuthnAll_CrossProviderToken_BadRequest()
     {
         var user = (await _userRepository.GetByEmailAsync(_userEmail))!;
         // Token bound to Duo replayed against the WebAuthn-all DELETE endpoint.
         var duoToken = ProtectUserVerificationToken(user, TwoFactorProviderType.Duo);
 
         var response = await SendJsonAsync(HttpMethod.Delete, "/two-factor/webauthn/all",
-            new TwoFactorWebAuthnDisableAllRequestModel { UserVerificationToken = duoToken });
+            new TwoFactorWebAuthnDeleteAllRequestModel { UserVerificationToken = duoToken });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
@@ -482,7 +482,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     // ---------------------------------------------------------------------
 
     [Fact]
-    public async Task GetEmail_ValidSecret_ReturnsTokenUsableForDisable()
+    public async Task GetEmail_ValidSecret_ReturnsTokenUsableForDelete()
     {
         await EnrollUserInEmail();
 
@@ -494,7 +494,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         Assert.False(string.IsNullOrEmpty(uvToken));
 
         var disableResponse = await SendJsonAsync(HttpMethod.Delete, "/two-factor/email",
-            new TwoFactorEmailDisableRequestModel { UserVerificationToken = uvToken });
+            new TwoFactorEmailDeleteRequestModel { UserVerificationToken = uvToken });
         Assert.Equal(HttpStatusCode.OK, disableResponse.StatusCode);
 
         var refreshed = await _userRepository.GetByEmailAsync(_userEmail);
@@ -584,14 +584,14 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     // ---------------------------------------------------------------------
 
     [Fact]
-    public async Task DisableYubiKey_CrossProviderToken_BadRequest()
+    public async Task DeleteYubiKey_CrossProviderToken_BadRequest()
     {
         var user = (await _userRepository.GetByEmailAsync(_userEmail))!;
         // Token bound to Duo replayed against the YubiKey DELETE endpoint.
         var duoToken = ProtectUserVerificationToken(user, TwoFactorProviderType.Duo);
 
         var response = await SendJsonAsync(HttpMethod.Delete, "/two-factor/yubikey",
-            new TwoFactorYubiKeyDisableRequestModel { UserVerificationToken = duoToken });
+            new TwoFactorYubiKeyDeleteRequestModel { UserVerificationToken = duoToken });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());

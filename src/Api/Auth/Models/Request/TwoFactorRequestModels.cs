@@ -310,7 +310,7 @@ public class TwoFactorRecoveryRequestModel : TwoFactorEmailRequestModel
 }
 
 /// <summary>Request body for <c>DELETE /two-factor/authenticator</c>.</summary>
-public class TwoFactorAuthenticatorDisableRequestModel
+public class TwoFactorAuthenticatorDeleteRequestModel
 {
     /// <summary>Token minted by <c>GetAuthenticator</c>; bound to <c>UserId + Key</c>.</summary>
     [Required]
