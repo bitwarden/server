@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260525194940_PopulateOrganizationUserRevocationReason")]
+    [Migration("20260619194940_PopulateOrganizationUserRevocationReason")]
     partial class PopulateOrganizationUserRevocationReason
     {
         /// <inheritdoc />
