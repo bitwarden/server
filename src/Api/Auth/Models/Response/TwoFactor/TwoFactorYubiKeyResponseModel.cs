@@ -60,4 +60,5 @@ public class TwoFactorYubiKeyResponseModel : ResponseModel
     public string Key4 { get; set; }
     public string Key5 { get; set; }
     public bool Nfc { get; set; }
+    public string UserVerificationToken { get; set; }
 }

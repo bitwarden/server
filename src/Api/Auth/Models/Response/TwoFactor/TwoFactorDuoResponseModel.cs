@@ -35,6 +35,7 @@ public class TwoFactorDuoResponseModel : ResponseModel
     public string Host { get; set; }
     public string ClientSecret { get; set; }
     public string ClientId { get; set; }
+    public string UserVerificationToken { get; set; }
 
     private void Build(TwoFactorProvider provider)
     {

@@ -57,6 +57,7 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
     public string ClientSecret { get; set; }
     [Required]
     public string Host { get; set; }
+    public string UserVerificationToken { get; set; }
 
     public User ToUser(User existingUser)
     {
@@ -140,6 +141,7 @@ public class UpdateTwoFactorYubicoOtpRequestModel : SecretVerificationRequestMod
     public string Key5 { get; set; }
     [Required]
     public bool? Nfc { get; set; }
+    public string UserVerificationToken { get; set; }
 
     public User ToUser(User existingUser)
     {
@@ -224,6 +226,7 @@ public class TwoFactorEmailRequestModel : SecretVerificationRequestModel
     public string AuthRequestId { get; set; }
     // An auth session token used for obtaining email and as an authN factor for the sending of emailed 2FA OTPs.
     public string SsoEmail2FaSessionToken { get; set; }
+    public string UserVerificationToken { get; set; }
     public User ToUser(User existingUser)
     {
         var providers = existingUser.GetTwoFactorProviders();
@@ -247,9 +250,12 @@ public class TwoFactorEmailRequestModel : SecretVerificationRequestModel
 
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (string.IsNullOrEmpty(Secret) && string.IsNullOrEmpty(AuthRequestAccessCode) && string.IsNullOrEmpty((SsoEmail2FaSessionToken)))
+        if (string.IsNullOrEmpty(Secret)
+            && string.IsNullOrEmpty(AuthRequestAccessCode)
+            && string.IsNullOrEmpty(SsoEmail2FaSessionToken)
+            && string.IsNullOrEmpty(UserVerificationToken))
         {
-            yield return new ValidationResult("MasterPasswordHash, OTP, AccessCode, or SsoEmail2faSessionToken must be supplied.");
+            yield return new ValidationResult("MasterPasswordHash, OTP, AccessCode, SsoEmail2faSessionToken, or UserVerificationToken must be supplied.");
         }
     }
 }
@@ -265,6 +271,7 @@ public class TwoFactorWebAuthnDeleteRequestModel : SecretVerificationRequestMode
 {
     [Required]
     public int? Id { get; set; }
+    public string UserVerificationToken { get; set; }
 
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {

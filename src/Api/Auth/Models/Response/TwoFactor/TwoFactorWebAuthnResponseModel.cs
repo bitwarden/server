@@ -27,6 +27,7 @@ public class TwoFactorWebAuthnResponseModel : ResponseModel
 
     public bool Enabled { get; set; }
     public IEnumerable<KeyModel> Keys { get; set; }
+    public string UserVerificationToken { get; set; }
 
     public class KeyModel
     {
