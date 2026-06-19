@@ -401,6 +401,15 @@ public class TwoFactorController : Controller
         return response;
     }
 
+    [HttpDelete("webauthn/all")]
+    public async Task<TwoFactorProviderResponseModel> DisableWebAuthnAll(
+        [FromBody] TwoFactorWebAuthnDisableAllRequestModel model)
+    {
+        var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.WebAuthn);
+        await _userService.DisableTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
+        return new TwoFactorProviderResponseModel(TwoFactorProviderType.WebAuthn, user);
+    }
+
     [HttpPost("get-email")]
     public async Task<TwoFactorEmailResponseModel> GetEmail([FromBody] SecretVerificationRequestModel model)
     {

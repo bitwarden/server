@@ -403,6 +403,80 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         Assert.Equal(HttpStatusCode.OK, putResponse.StatusCode);
     }
 
+    [Fact]
+    public async Task DisableWebAuthnAll_ValidToken_RemovesProvider()
+    {
+        await EnrollUserInWebAuthn();
+
+        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-webauthn",
+            new { MasterPasswordHash = _masterPasswordHash });
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        var (enabled, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse);
+        Assert.True(enabled);
+        Assert.False(string.IsNullOrEmpty(uvToken));
+
+        var disableResponse = await SendJsonAsync(HttpMethod.Delete, "/two-factor/webauthn/all",
+            new TwoFactorWebAuthnDisableAllRequestModel { UserVerificationToken = uvToken });
+        Assert.Equal(HttpStatusCode.OK, disableResponse.StatusCode);
+
+        var refreshed = await _userRepository.GetByEmailAsync(_userEmail);
+        Assert.Null(refreshed!.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn));
+    }
+
+    [Fact]
+    public async Task DisableWebAuthnAll_SingleCredentialEnrollment_RemovesProvider()
+    {
+        // The per-credential DELETE /two-factor/webauthn refuses the last registered credential
+        // (lockout prevention in DeleteTwoFactorWebAuthnCredentialCommand). The bulk-disable
+        // endpoint is the only path that handles "user has exactly one WebAuthn credential and
+        // wants to disable WebAuthn entirely" correctly.
+        await EnrollUserInWebAuthn(); // single-credential enrollment
+
+        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-webauthn",
+            new { MasterPasswordHash = _masterPasswordHash });
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse);
+
+        var disableResponse = await SendJsonAsync(HttpMethod.Delete, "/two-factor/webauthn/all",
+            new TwoFactorWebAuthnDisableAllRequestModel { UserVerificationToken = uvToken });
+        Assert.Equal(HttpStatusCode.OK, disableResponse.StatusCode);
+
+        var refreshed = await _userRepository.GetByEmailAsync(_userEmail);
+        Assert.Null(refreshed!.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn));
+    }
+
+    [Fact]
+    public async Task DisableWebAuthnAll_ExpiredToken_BadRequest()
+    {
+        var user = (await _userRepository.GetByEmailAsync(_userEmail))!;
+        var expiredToken = _userVerificationTokenFactory.Protect(new TwoFactorUserVerificationTokenable
+        {
+            UserId = user.Id,
+            ProviderType = TwoFactorProviderType.WebAuthn,
+            ExpirationDate = DateTime.UtcNow.AddMinutes(-1),
+        });
+
+        var response = await SendJsonAsync(HttpMethod.Delete, "/two-factor/webauthn/all",
+            new TwoFactorWebAuthnDisableAllRequestModel { UserVerificationToken = expiredToken });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task DisableWebAuthnAll_CrossProviderToken_BadRequest()
+    {
+        var user = (await _userRepository.GetByEmailAsync(_userEmail))!;
+        // Token bound to Duo replayed against the WebAuthn-all DELETE endpoint.
+        var duoToken = ProtectUserVerificationToken(user, TwoFactorProviderType.Duo);
+
+        var response = await SendJsonAsync(HttpMethod.Delete, "/two-factor/webauthn/all",
+            new TwoFactorWebAuthnDisableAllRequestModel { UserVerificationToken = duoToken });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
+    }
+
     // ---------------------------------------------------------------------
     // Email
     // ---------------------------------------------------------------------
