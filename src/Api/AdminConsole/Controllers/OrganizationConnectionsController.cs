@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Api.AdminConsole.Models.Request.Organizations;
+﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Interfaces;
@@ -57,7 +54,7 @@ public class OrganizationConnectionsController : Controller
     [HttpPost]
     public async Task<OrganizationConnectionResponseModel> CreateConnection([FromBody] OrganizationConnectionRequestModel model)
     {
-        if (!await HasPermissionAsync(model?.OrganizationId, model?.Type))
+        if (!await HasPermissionAsync(model.OrganizationId, model.Type))
         {
             throw new BadRequestException($"You do not have permission to create a connection of type {model.Type}.");
         }
@@ -162,13 +159,6 @@ public class OrganizationConnectionsController : Controller
         await _deleteOrganizationConnectionCommand.DeleteAsync(connection);
     }
 
-    [HttpPost("{organizationConnectionId}/delete")]
-    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
-    public async Task PostDeleteConnection(Guid organizationConnectionId)
-    {
-        await DeleteConnection(organizationConnectionId);
-    }
-
     private async Task<ICollection<OrganizationConnection>> GetConnectionsAsync(Guid organizationId, OrganizationConnectionType type) =>
         await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(organizationId, type);
 
@@ -209,7 +199,8 @@ public class OrganizationConnectionsController : Controller
             throw new BadRequestException($"Cannot create a {typedModel.Type} connection outside of a self-hosted instance.");
         }
         var license = await _licensingService.ReadOrganizationLicenseAsync(typedModel.OrganizationId);
-        if (!_licensingService.VerifyLicense(license))
+
+        if (license == null || !_licensingService.VerifyLicense(license))
         {
             throw new BadRequestException("Cannot verify license file.");
         }
@@ -219,7 +210,7 @@ public class OrganizationConnectionsController : Controller
     private async Task<OrganizationConnectionResponseModel> CreateOrUpdateOrganizationConnectionAsync<T>(
         Guid? organizationConnectionId,
         OrganizationConnectionRequestModel model,
-        Func<OrganizationConnectionRequestModel<T>, Task> validateAction = null)
+        Func<OrganizationConnectionRequestModel<T>, Task>? validateAction = null)
         where T : IConnectionConfig
     {
         var typedModel = new OrganizationConnectionRequestModel<T>(model);
