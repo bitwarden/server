@@ -12,15 +12,23 @@ using Fido2NetLib;
 
 namespace Bit.Api.Auth.Models.Request;
 
-public class UpdateTwoFactorAuthenticatorRequestModel : SecretVerificationRequestModel
+/// <summary>Request body for <c>PUT /two-factor/authenticator</c>.</summary>
+public class UpdateTwoFactorAuthenticatorRequestModel
 {
+    /// <summary>Six-digit TOTP code from the authenticator app, proving the user enrolled <see cref="Key"/>.</summary>
     [Required]
     [StringLength(50)]
     public string Token { get; set; }
+
+    /// <summary>TOTP shared secret that the token was minted against; must match the token's bound Key.</summary>
     [Required]
     [StringLength(50)]
     public string Key { get; set; }
+
+    /// <summary>Token minted by <c>GetAuthenticator</c>; bound to <c>UserId + Key</c>.</summary>
+    [Required]
     public string UserVerificationToken { get; set; }
+
     public User ToUser(User existingUser)
     {
         var providers = existingUser.GetTwoFactorProviders();
@@ -294,12 +302,6 @@ public class UpdateTwoFactorEmailRequestModel : TwoFactorEmailRequestModel
     public string Token { get; set; }
 }
 
-public class TwoFactorProviderRequestModel : SecretVerificationRequestModel
-{
-    [Required]
-    public TwoFactorProviderType? Type { get; set; }
-}
-
 public class TwoFactorRecoveryRequestModel : TwoFactorEmailRequestModel
 {
     [Required]
@@ -307,10 +309,14 @@ public class TwoFactorRecoveryRequestModel : TwoFactorEmailRequestModel
     public string RecoveryCode { get; set; }
 }
 
-public class TwoFactorAuthenticatorDisableRequestModel : TwoFactorProviderRequestModel
+/// <summary>Request body for <c>DELETE /two-factor/authenticator</c>.</summary>
+public class TwoFactorAuthenticatorDisableRequestModel
 {
+    /// <summary>Token minted by <c>GetAuthenticator</c>; bound to <c>UserId + Key</c>.</summary>
     [Required]
     public string UserVerificationToken { get; set; }
+
+    /// <summary>TOTP shared secret that the token was minted against; must match the token's bound Key.</summary>
     [Required]
     public string Key { get; set; }
 }

@@ -64,7 +64,6 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
             Token = "123456",
             Key = _key,
             UserVerificationToken = expiredToken,
-            MasterPasswordHash = "master_password_hash",
         };
 
         using var message = new HttpRequestMessage(HttpMethod.Put, "/two-factor/authenticator");
@@ -95,10 +94,8 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
 
         var requestModel = new TwoFactorAuthenticatorDisableRequestModel
         {
-            Type = TwoFactorProviderType.Authenticator,
             Key = _key,
             UserVerificationToken = expiredToken,
-            MasterPasswordHash = "master_password_hash",
         };
 
         using var message = new HttpRequestMessage(HttpMethod.Delete, "/two-factor/authenticator");
