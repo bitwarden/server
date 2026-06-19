@@ -10,6 +10,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations.OrganizationConnections;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -406,6 +407,105 @@ public class OrganizationConnectionsControllerTests
         await sutProvider.Sut.DeleteConnection(connection.Id);
 
         await sutProvider.GetDependency<IDeleteOrganizationConnectionCommand>().DeleteAsync(connection);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateConnection_PermissionCheckUsesPersistedType_NotRequestType(
+        Guid connectionId, Guid organizationId, BillingSyncConfig config,
+        SutProvider<OrganizationConnectionsController> sutProvider)
+    {
+        var existing = new OrganizationConnection
+        {
+            Id = connectionId,
+            Type = OrganizationConnectionType.CloudBillingSync,
+            OrganizationId = organizationId,
+            Config = JsonSerializer.Serialize(config),
+        };
+
+        var request = new OrganizationConnectionRequestModel
+        {
+            Type = OrganizationConnectionType.Scim,
+            OrganizationId = organizationId,
+            Enabled = true,
+            Config = JsonDocumentFromObject(new ScimConfig()),
+        };
+
+        sutProvider.GetDependency<IOrganizationConnectionRepository>()
+            .GetByIdOrganizationIdAsync(connectionId, organizationId)
+            .Returns(existing);
+
+        // The user can update a Scim connection but not a Cloud Billing Sync connection
+        sutProvider.GetDependency<ICurrentContext>().ManageScim(organizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organizationId).Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateConnection(connectionId, request));
+
+        Assert.Contains("You do not have permission to update this connection.", exception.Message);
+        await sutProvider.GetDependency<IUpdateOrganizationConnectionCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateAsync<BillingSyncConfig>(default);
+        await sutProvider.GetDependency<IUpdateOrganizationConnectionCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateAsync<ScimConfig>(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateConnection_IgnoresChangeToType(
+        Guid connectionId, Guid organizationId,
+        BillingSyncConfig config, OrganizationLicense organizationLicense,
+        SutProvider<OrganizationConnectionsController> sutProvider)
+    {
+        organizationLicense.Id = config.CloudOrganizationId;
+        organizationLicense.Issued = DateTime.UtcNow.AddDays(-1);
+        organizationLicense.Expires = DateTime.UtcNow.AddDays(1);
+        organizationLicense.Version = 1;
+
+        var existing = new OrganizationConnection
+        {
+            Id = connectionId,
+            Type = OrganizationConnectionType.CloudBillingSync,
+            OrganizationId = organizationId,
+            Config = JsonSerializer.Serialize(config),
+        };
+
+        var request = new OrganizationConnectionRequestModel
+        {
+            Type = OrganizationConnectionType.Scim,
+            OrganizationId = organizationId,
+            Enabled = true,
+            Config = JsonDocumentFromObject(new ScimConfig()),
+        };
+
+        sutProvider.GetDependency<IOrganizationConnectionRepository>()
+            .GetByIdOrganizationIdAsync(connectionId, organizationId)
+            .Returns(existing);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().ManageScim(organizationId).Returns(true);
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(true);
+        sutProvider.GetDependency<ILicensingService>()
+            .ReadOrganizationLicenseAsync(Arg.Any<Guid>())
+            .Returns(organizationLicense);
+        sutProvider.GetDependency<ILicensingService>()
+            .VerifyLicense(organizationLicense)
+            .Returns(true);
+        sutProvider.GetDependency<IUpdateOrganizationConnectionCommand>()
+            .UpdateAsync<BillingSyncConfig>(default)
+            .ReturnsForAnyArgs(existing);
+
+        await sutProvider.Sut.UpdateConnection(connectionId, request);
+
+        // Expect: connection type has not changed
+        await sutProvider.GetDependency<IUpdateOrganizationConnectionCommand>().Received(1)
+            .UpdateAsync(Arg.Is<OrganizationConnectionData<BillingSyncConfig>>(d =>
+                d.Type == OrganizationConnectionType.CloudBillingSync
+                && d.OrganizationId == organizationId
+                && d.Id == connectionId));
+        await sutProvider.GetDependency<IUpdateOrganizationConnectionCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateAsync<ScimConfig>(default);
     }
 
     private static OrganizationConnectionRequestModel<T> RequestModelFromEntity<T>(OrganizationConnection entity)
