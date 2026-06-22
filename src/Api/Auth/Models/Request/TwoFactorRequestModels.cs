@@ -227,7 +227,11 @@ public class UpdateTwoFactorYubicoOtpRequestModel : IValidatableObject
     }
 }
 
-public class TwoFactorEmailRequestModel : SecretVerificationRequestModel
+/// <summary>
+/// Request body for the anonymous login-time endpoint that emails a 2FA OTP during sign-in. Authenticated
+/// by master password / OTP, SSO email-2FA session token, or device-auth-request access code.
+/// </summary>
+public class TwoFactorEmailLoginRequestModel : SecretVerificationRequestModel
 {
     [Required]
     [EmailAddress]
@@ -236,36 +240,14 @@ public class TwoFactorEmailRequestModel : SecretVerificationRequestModel
     public string AuthRequestId { get; set; }
     // An auth session token used for obtaining email and as an authN factor for the sending of emailed 2FA OTPs.
     public string SsoEmail2FaSessionToken { get; set; }
-    public string UserVerificationToken { get; set; }
-    public User ToUser(User existingUser)
-    {
-        var providers = existingUser.GetTwoFactorProviders();
-        if (providers == null)
-        {
-            providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
-        }
-        else
-        {
-            providers.Remove(TwoFactorProviderType.Email);
-        }
-
-        providers.Add(TwoFactorProviderType.Email, new TwoFactorProvider
-        {
-            MetaData = new Dictionary<string, object> { ["Email"] = Email.ToLowerInvariant() },
-            Enabled = true
-        });
-        existingUser.SetTwoFactorProviders(providers);
-        return existingUser;
-    }
 
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (string.IsNullOrEmpty(Secret)
             && string.IsNullOrEmpty(AuthRequestAccessCode)
-            && string.IsNullOrEmpty(SsoEmail2FaSessionToken)
-            && string.IsNullOrEmpty(UserVerificationToken))
+            && string.IsNullOrEmpty(SsoEmail2FaSessionToken))
         {
-            yield return new ValidationResult("MasterPasswordHash, OTP, AccessCode, SsoEmail2faSessionToken, or UserVerificationToken must be supplied.");
+            yield return new ValidationResult("MasterPasswordHash, OTP, AccessCode, or SsoEmail2faSessionToken must be supplied.");
         }
     }
 }
@@ -293,7 +275,47 @@ public class TwoFactorWebAuthnDeleteRequestModel : IValidatableObject
     }
 }
 
-public class UpdateTwoFactorEmailRequestModel : TwoFactorEmailRequestModel
+/// <summary>
+/// Request body for the authenticated setup endpoint that sends a verification OTP to the user's chosen
+/// 2FA email address. Authenticated by a user-verification token minted earlier in the setup flow.
+/// </summary>
+public class TwoFactorEmailSetupRequestModel
+{
+    [Required]
+    [EmailAddress]
+    [StringLength(256)]
+    public string Email { get; set; }
+
+    [Required]
+    public string UserVerificationToken { get; set; }
+
+    public User ToUser(User existingUser)
+    {
+        var providers = existingUser.GetTwoFactorProviders();
+        if (providers == null)
+        {
+            providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
+        }
+        else
+        {
+            providers.Remove(TwoFactorProviderType.Email);
+        }
+
+        providers.Add(TwoFactorProviderType.Email, new TwoFactorProvider
+        {
+            MetaData = new Dictionary<string, object> { ["Email"] = Email.ToLowerInvariant() },
+            Enabled = true
+        });
+        existingUser.SetTwoFactorProviders(providers);
+        return existingUser;
+    }
+}
+
+/// <summary>
+/// Request body for the authenticated setup endpoint that completes Email 2FA enrollment by replaying the
+/// OTP from the previous setup step. Authenticated by the same user-verification token.
+/// </summary>
+public class UpdateTwoFactorEmailRequestModel : TwoFactorEmailSetupRequestModel
 {
     [Required]
     [StringLength(50)]

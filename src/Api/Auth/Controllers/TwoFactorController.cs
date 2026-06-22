@@ -434,7 +434,7 @@ public class TwoFactorController : Controller
     /// call <c>get-email</c> to obtain a user-verification token, then replay that token here.
     /// </summary>
     [HttpPost("send-email")]
-    public async Task SendEmail([FromBody] TwoFactorEmailRequestModel model)
+    public async Task SendEmail([FromBody] TwoFactorEmailSetupRequestModel model)
     {
         var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.Email);
         // Add email to the user's 2FA providers, with the email address they've provided.
@@ -444,7 +444,7 @@ public class TwoFactorController : Controller
 
     [AllowAnonymous]
     [HttpPost("send-email-login")]
-    public async Task SendEmailLoginAsync([FromBody] TwoFactorEmailRequestModel requestModel)
+    public async Task SendEmailLoginAsync([FromBody] TwoFactorEmailLoginRequestModel requestModel)
     {
         var user = await _userManager.FindByEmailAsync(requestModel.Email.ToLowerInvariant());
 

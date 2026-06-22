@@ -574,6 +574,72 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         await emailService.Received().SendTwoFactorSetupEmailAsync(Arg.Any<User>());
     }
 
+    [Fact]
+    public async Task SendEmail_MissingUserVerificationToken_BadRequest()
+    {
+        var response = await _client.PostAsJsonAsync("/two-factor/send-email",
+            new { Email = _userEmail });
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task SendEmail_MissingEmail_BadRequest()
+    {
+        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-email",
+            new { MasterPasswordHash = _masterPasswordHash });
+        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse);
+
+        var response = await _client.PostAsJsonAsync("/two-factor/send-email",
+            new { UserVerificationToken = uvToken });
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutEmail_MissingUserVerificationToken_BadRequest()
+    {
+        var response = await _client.PutAsJsonAsync("/two-factor/email",
+            new { Email = _userEmail, Token = "123456" });
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutEmail_MissingToken_BadRequest()
+    {
+        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-email",
+            new { MasterPasswordHash = _masterPasswordHash });
+        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse);
+
+        var response = await _client.PutAsJsonAsync("/two-factor/email",
+            new { Email = _userEmail, UserVerificationToken = uvToken });
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task SendEmailLogin_ValidMasterPassword_InvokesEmailService()
+    {
+        var emailService = _factory.GetService<ITwoFactorEmailService>();
+
+        var response = await _client.PostAsJsonAsync("/two-factor/send-email-login",
+            new
+            {
+                Email = _userEmail,
+                MasterPasswordHash = _masterPasswordHash,
+            });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await emailService.Received().SendTwoFactorEmailAsync(Arg.Any<User>());
+    }
+
+    [Fact]
+    public async Task SendEmailLogin_NoCredentials_BadRequest()
+    {
+        // Body carries only Email — no MasterPasswordHash, OTP, AuthRequestAccessCode,
+        // or SsoEmail2FaSessionToken. The model's Validate must reject before the controller runs.
+        var response = await _client.PostAsJsonAsync("/two-factor/send-email-login",
+            new { Email = _userEmail });
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     // ---------------------------------------------------------------------
     // Cross-cutting: provider-type binding + legacy endpoint removal
     // ---------------------------------------------------------------------
