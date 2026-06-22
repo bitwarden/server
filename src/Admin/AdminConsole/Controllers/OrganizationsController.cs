@@ -754,6 +754,7 @@ public class OrganizationsController : Controller
             organization.UsePhishingBlocker = model.UsePhishingBlocker;
             organization.UseMyItems = model.UseMyItems;
             organization.UseInviteLinks = model.UseInviteLinks;
+            organization.UsePam = model.UsePam;
 
             //secrets
             organization.SmSeats = model.SmSeats;

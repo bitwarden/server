@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -64,10 +65,15 @@ public class OrganizationPlanMigrationCohortAssignmentRepository(
             from a in dbContext.OrganizationPlanMigrationCohortAssignments
             join c in dbContext.OrganizationPlanMigrationCohorts on a.CohortId equals c.Id
             where a.CohortId == cohortId
-                  && ((c.MigrationPathId != null && a.ScheduledDate != null)
+                  && ((c.MigrationPathId != null && (a.ScheduledDate != null || a.MigratedDate != null))
                       || (c.MigrationPathId == null && a.ChurnDiscountAppliedDate != null))
             select a.Id;
 
         return await query.CountAsync();
     }
+
+    public Task<CohortBulkAssignmentSummary> SyncManyAsync(
+        IEnumerable<ResolvedCohortBulkAssignmentRow> rows) =>
+        throw new NotSupportedException(
+            "Bulk cohort assignment sync is only supported on Microsoft SQL Server.");
 }

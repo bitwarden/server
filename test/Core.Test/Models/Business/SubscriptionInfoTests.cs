@@ -121,5 +121,101 @@ public class SubscriptionInfoTests
         Assert.Equal(25.00m, result.Amount); // Converted from cents
         Assert.NotNull(result.Date);
     }
+
+    [Fact]
+    public void BillingCustomerDiscount_DiscountCtor_WithEndDate_SetsEndAndDurationAndActiveFalse()
+    {
+        // Arrange - repeating discount with an absolute end date
+        var end = DateTime.UtcNow.AddMonths(12);
+        var discount = new Discount
+        {
+            End = end,
+            Coupon = new Coupon
+            {
+                PercentOff = 10m,
+                Duration = "repeating",
+                DurationInMonths = 12
+            }
+        };
+
+        // Act
+        var result = new SubscriptionInfo.BillingCustomerDiscount(discount);
+
+        // Assert
+        Assert.Equal(end, result.End);
+        Assert.Equal(12, result.DurationInMonths);
+        Assert.False(result.Active);   // End != null => not perpetual (UNCHANGED semantics)
+        Assert.Equal(10m, result.PercentOff);
+    }
+
+    [Fact]
+    public void BillingCustomerDiscount_DiscountCtor_NoEndDate_SetsEndNullAndActiveTrue()
+    {
+        // Arrange - perpetual discount (no end date)
+        var discount = new Discount
+        {
+            End = null,
+            Coupon = new Coupon
+            {
+                PercentOff = 10m,
+                Duration = "forever"
+            }
+        };
+
+        // Act
+        var result = new SubscriptionInfo.BillingCustomerDiscount(discount);
+
+        // Assert
+        Assert.Null(result.End);
+        Assert.True(result.Active);   // End == null => perpetual (UNCHANGED semantics)
+    }
+
+    [Fact]
+    public void BillingCustomerDiscount_CouponCtor_SetsEndNullDurationAndActiveTrue()
+    {
+        // Arrange - Phase-2 scheduled discount: a Coupon with no Discount wrapper
+        var coupon = new Coupon
+        {
+            PercentOff = 10m,
+            Duration = "repeating",
+            DurationInMonths = 12
+        };
+
+        // Act
+        var result = new SubscriptionInfo.BillingCustomerDiscount(coupon);
+
+        // Assert
+        Assert.Null(result.End);            // no Discount wrapper => no end date
+        Assert.Equal(12, result.DurationInMonths);
+        Assert.True(result.Active);         // Coupon ctor: Active unconditionally true (UNCHANGED)
+    }
+
+    [Fact]
+    public void BillingCustomerDiscount_DiscountCtor_AmountOffRepeatingWithEnd_AmountEndAndDurationCoexist()
+    {
+        // Arrange - amount-off repeating discount with an end date
+        var end = DateTime.UtcNow.AddMonths(6);
+        var discount = new Discount
+        {
+            End = end,
+            Coupon = new Coupon
+            {
+                AmountOff = 1500, // $15.00
+                PercentOff = null,
+                Duration = "repeating",
+                DurationInMonths = 6
+            }
+        };
+
+        // Act
+        var result = new SubscriptionInfo.BillingCustomerDiscount(discount);
+
+        // Assert - amount (in dollars), end, and duration all present on one discount
+        Assert.Equal(15.00m, result.AmountOff);
+        Assert.Null(result.PercentOff);
+        Assert.Equal(end, result.End);
+        Assert.Equal(6, result.DurationInMonths);
+        Assert.False(result.Active);
+    }
 }
 
