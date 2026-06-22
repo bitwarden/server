@@ -5,7 +5,7 @@ using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 
 public class AdminRecoverAccountValidator(
     IOrganizationRepository organizationRepository,
