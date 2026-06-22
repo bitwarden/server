@@ -2,26 +2,25 @@
 
 #nullable disable
 
-namespace Bit.PostgresMigrations.Migrations
+namespace Bit.PostgresMigrations.Migrations;
+
+/// <inheritdoc />
+public partial class AddCohortAssignmentExportByCohortId : Migration
 {
     /// <inheritdoc />
-    public partial class AddCohortAssignmentExportByCohortId : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.CreateIndex(
-                name: "IX_OrganizationPlanMigrationCohortAssignment_CohortId_Creation~",
-                table: "OrganizationPlanMigrationCohortAssignment",
-                columns: new[] { "CohortId", "CreationDate", "Id" });
-        }
+        migrationBuilder.CreateIndex(
+            name: "IX_OrganizationPlanMigrationCohortAssignment_CohortId_Creation~",
+            table: "OrganizationPlanMigrationCohortAssignment",
+            columns: new[] { "CohortId", "CreationDate", "Id" });
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropIndex(
-                name: "IX_OrganizationPlanMigrationCohortAssignment_CohortId_Creation~",
-                table: "OrganizationPlanMigrationCohortAssignment");
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropIndex(
+            name: "IX_OrganizationPlanMigrationCohortAssignment_CohortId_Creation~",
+            table: "OrganizationPlanMigrationCohortAssignment");
     }
 }
