@@ -183,6 +183,10 @@ public class OrganizationPlanMigrationCohortsController(
         }
         catch (Exception ex)
         {
+            // Deliberately broad: once the 200 + headers are committed we cannot convert any failure
+            // (DB read, serialization, write) into an error response, so every failure mode must take
+            // the same path -- log it and abort the connection so the operator gets a visibly broken
+            // download instead of a silently truncated CSV that looks complete.
             logger.LogError(ex,
                 "Cohort CSV export failed mid-stream after the response started. CohortId: {CohortId}, RowsWritten: {RowsWritten}",
                 cohort.Id,
@@ -197,8 +201,12 @@ public class OrganizationPlanMigrationCohortsController(
                 await csv.DisposeAsync();
                 await writer.DisposeAsync();
             }
-            catch when (aborted)
+            catch (Exception ex) when (aborted)
             {
+                // After an abort the underlying stream is dead, so a dispose-time flush throws. The
+                // original failure was already logged and surfaced via the abort; record this at debug
+                // for diagnosability without masking the real cause.
+                logger.LogDebug(ex, "Disposing the CSV writer after an aborted export threw; ignoring.");
             }
         }
 
