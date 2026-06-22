@@ -1,4 +1,6 @@
-﻿using System.Security.Cryptography.X509Certificates;
+﻿using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+using Azure;
 using Azure.Storage.Blobs;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -88,9 +90,13 @@ public static class DataProtectionServiceCollectionExtensions
             blobClient.DownloadTo(memoryStream);
             return X509CertificateLoader.LoadPkcs12(memoryStream.ToArray(), password);
         }
-        catch (Exception ex)
+        catch (RequestFailedException ex)
         {
-            throw new InvalidOperationException($"Unable to acquire certificate from azure blob storage: {context}", ex);
+            throw new InvalidOperationException($"Unable to download certificate from azure blob storage: {context}", ex);
+        }
+        catch (CryptographicException ex)
+        {
+            throw new InvalidOperationException($"Unable to load certificate downloaded from azure blob storage; verify the password is correct and the blob contains valid PKCS#12 data: {context}", ex);
         }
     }
 }

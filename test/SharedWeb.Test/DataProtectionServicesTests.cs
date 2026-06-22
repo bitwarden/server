@@ -368,6 +368,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
             { "GlobalSettings:DataProtection:UnprotectCertificates:0:FileName", "mynewcert.pfx" },
             { "GlobalSettings:DataProtection:UnprotectCertificates:0:Password", "Undergrad-Police0-Maturely-Countless" },
         }));
+        Assert.Contains("Unable to download certificate from azure blob storage", exception.Message);
         Assert.Contains("Unprotect 0", exception.Message);
         Assert.IsType<RequestFailedException>(exception.InnerException);
     }
@@ -409,6 +410,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
             { "GlobalSettings:DataProtection:UnprotectCertificates:0:FileName", "mynewcert.pfx" },
             { "GlobalSettings:DataProtection:UnprotectCertificates:0:Password", "Wrong-Password-For-Cert" },
         }));
+        Assert.Contains("Unable to load certificate downloaded from azure blob storage", exception.Message);
         Assert.Contains("Unprotect 0", exception.Message);
         Assert.IsType<CryptographicException>(exception.InnerException);
     }
@@ -439,6 +441,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
             { "GlobalSettings:Storage:ConnectionString", azuriteConnectionString },
             { "GlobalSettings:DataProtection:CertificatePassword", "Alongside-Unworthy-Query3-Cozy" },
         }));
+        Assert.Contains("Unable to download certificate from azure blob storage", exception.Message);
         Assert.Contains("protect", exception.Message);
         Assert.IsType<RequestFailedException>(exception.InnerException);
     }
@@ -473,6 +476,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
             { "GlobalSettings:Storage:ConnectionString", azuriteConnectionString },
             { "GlobalSettings:DataProtection:CertificatePassword", "Wrong-Password-For-Cert" },
         }));
+        Assert.Contains("Unable to load certificate downloaded from azure blob storage", exception.Message);
         Assert.Contains("protect", exception.Message);
         Assert.IsType<CryptographicException>(exception.InnerException);
     }
