@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Pam.Controllers;
 
+[ApiController]
 [Route("ciphers/{id:guid}/lease")]
 [Authorize("Application")]
 [RequireFeature(FeatureFlagKeys.Pam)]
@@ -28,7 +29,7 @@ public class CipherLeaseController(
     ICollectionCipherRepository collectionCipherRepository,
     ICipherLeaseGate cipherLeaseGate,
     GlobalSettings globalSettings)
-    : Controller
+    : ControllerBase
 {
     /// <summary>
     /// Reports whether leasing this cipher would be approved automatically or require human approval, so the client
@@ -61,7 +62,7 @@ public class CipherLeaseController(
     /// lease here — the requester activates the approved request (POST <c>access-requests/{id}/activate</c>).
     /// </summary>
     [HttpPost("")]
-    public async Task<AccessRequestResultResponseModel> Post(Guid id, [FromBody] AccessRequestCreateRequestModel model)
+    public async Task<AccessRequestResultResponseModel> Post(Guid id, AccessRequestCreateRequestModel model)
     {
         var userId = userService.GetProperUserId(User)!.Value;
         var result = await submitAccessRequestCommand.SubmitAsync(userId, id, model.ToSubmission());

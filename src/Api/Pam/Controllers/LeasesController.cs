@@ -18,6 +18,7 @@ namespace Bit.Api.Pam.Controllers;
 /// The governance scope mirrors the approver inbox — the caller's manageable collections — so an org admin or
 /// collection manager sees all access in their scope.
 /// </summary>
+[ApiController]
 [Route("leases")]
 [Authorize("Application")]
 [RequireFeature(FeatureFlagKeys.Pam)]
@@ -28,7 +29,7 @@ public class LeasesController(
     IListMyActiveAccessLeasesQuery listMyActiveAccessLeasesQuery,
     IRevokeAccessLeaseCommand revokeAccessLeaseCommand,
     IRequestLeaseExtensionCommand requestLeaseExtensionCommand)
-    : Controller
+    : ControllerBase
 {
     /// <summary>
     /// Returns every currently-active lease on collections the caller can Manage.
@@ -71,7 +72,7 @@ public class LeasesController(
     /// Manage the lease's collection.
     /// </summary>
     [HttpPost("{id:guid}/revoke")]
-    public async Task<IActionResult> Revoke(Guid id, [FromBody] AccessLeaseRevokeRequestModel model)
+    public async Task<IActionResult> Revoke(Guid id, AccessLeaseRevokeRequestModel model)
     {
         var userId = userService.GetProperUserId(User)!.Value;
         await revokeAccessLeaseCommand.RevokeAsync(userId, id, model.Reason);
@@ -84,7 +85,7 @@ public class LeasesController(
     /// pushed out in place rather than minting a new lease. Only the lease's requester may extend it.
     /// </summary>
     [HttpPost("{id:guid}/extend")]
-    public async Task<AccessRequestDetailsResponseModel> Extend(Guid id, [FromBody] AccessLeaseExtensionRequestModel model)
+    public async Task<AccessRequestDetailsResponseModel> Extend(Guid id, AccessLeaseExtensionRequestModel model)
     {
         var userId = userService.GetProperUserId(User)!.Value;
         var details = await requestLeaseExtensionCommand.ExtendAsync(userId, model.ToSubmission(id));
