@@ -126,8 +126,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         var getResponse = await _client.PostAsJsonAsync("/two-factor/get-authenticator",
             new { MasterPasswordHash = _masterPasswordHash });
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-        var (root, document) = await ReadJsonRootAsync(getResponse);
-        using var _ = document;
+        var root = await ReadJsonRootAsync(getResponse);
         Assert.True(root.GetProperty("enabled").GetBoolean());
         var key = root.GetProperty("key").GetString()!;
         var uvToken = root.GetProperty("userVerificationToken").GetString()!;
@@ -153,8 +152,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         var getResponse = await _client.PostAsJsonAsync("/two-factor/get-authenticator",
             new { MasterPasswordHash = _masterPasswordHash });
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-        var (root, document) = await ReadJsonRootAsync(getResponse);
-        using var _ = document;
+        var root = await ReadJsonRootAsync(getResponse);
         var key = root.GetProperty("key").GetString()!;
         var uvToken = root.GetProperty("userVerificationToken").GetString()!;
         var totp = new Totp(Base32Encoding.ToBytes(key)).ComputeTotp();
@@ -384,8 +382,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         var challengeResponse = await _client.PostAsJsonAsync("/two-factor/get-webauthn-challenge",
             new { MasterPasswordHash = _masterPasswordHash });
         Assert.Equal(HttpStatusCode.OK, challengeResponse.StatusCode);
-        var (root, document) = await ReadJsonRootAsync(challengeResponse);
-        using var _ = document;
+        var root = await ReadJsonRootAsync(challengeResponse);
         Assert.Equal(JsonValueKind.Object, root.GetProperty("options").ValueKind);
         var uvToken = root.GetProperty("userVerificationToken").GetString()!;
         Assert.False(string.IsNullOrEmpty(uvToken));
@@ -720,16 +717,16 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     private static async Task<(bool Enabled, string UserVerificationToken)> ReadEnabledAndUserVerificationTokenAsync(
         HttpResponseMessage response)
     {
-        var (root, _) = await ReadJsonRootAsync(response);
+        var root = await ReadJsonRootAsync(response);
         return (
             root.GetProperty("enabled").GetBoolean(),
             root.GetProperty("userVerificationToken").GetString() ?? string.Empty);
     }
 
-    private static async Task<(JsonElement Root, JsonDocument Document)> ReadJsonRootAsync(HttpResponseMessage response)
+    private static async Task<JsonElement> ReadJsonRootAsync(HttpResponseMessage response)
     {
-        var document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
-        return (document.RootElement.Clone(), document);
+        using var document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
+        return document.RootElement.Clone();
     }
 
     private Task<HttpResponseMessage> SendJsonAsync<T>(HttpMethod method, string url, T body) =>
