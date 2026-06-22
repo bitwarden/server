@@ -28,11 +28,11 @@ namespace Bit.Api.Test.Auth.Controllers;
 public class TwoFactorControllerTests
 {
     // ---------------------------------------------------------------------
-    // Controller helper methods (CheckAsync / CheckOrganizationAsync)
+    // Entry-secret verification (ValidateUserBySecretAsync helper)
     // ---------------------------------------------------------------------
 
     [Theory, BitAutoData]
-    public async Task CheckAsync_UserNull_ThrowsUnauthorizedException(SecretVerificationRequestModel request, SutProvider<TwoFactorController> sutProvider)
+    public async Task ValidateUserBySecretAsync_UserNull_ThrowsUnauthorizedException(SecretVerificationRequestModel request, SutProvider<TwoFactorController> sutProvider)
     {
         // Arrange
         sutProvider.GetDependency<IUserService>()
@@ -47,7 +47,7 @@ public class TwoFactorControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task CheckAsync_BadSecret_ThrowsBadRequestException(User user, SecretVerificationRequestModel request, SutProvider<TwoFactorController> sutProvider)
+    public async Task ValidateUserBySecretAsync_BadSecret_ThrowsBadRequestException(User user, SecretVerificationRequestModel request, SutProvider<TwoFactorController> sutProvider)
     {
         // Arrange
         sutProvider.GetDependency<IUserService>()
@@ -68,48 +68,6 @@ public class TwoFactorControllerTests
             // Assert
             Assert.Equal("The model state is invalid.", e.Message);
         }
-    }
-
-    [Theory, BitAutoData]
-    public async Task CheckOrganizationAsync_ManagePolicies_ThrowsNotFoundException(
-        User user, Organization organization, SecretVerificationRequestModel request, SutProvider<TwoFactorController> sutProvider)
-    {
-        // Arrange
-        organization.TwoFactorProviders = GetOrganizationTwoFactorDuoProvidersJson();
-        SetupValidateUserBySecretToPass(sutProvider, user);
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .ManagePolicies(default)
-            .ReturnsForAnyArgs(false);
-
-        // Act
-        var result = () => sutProvider.Sut.GetOrganizationDuo(organization.Id.ToString(), request);
-
-        // Assert
-        await Assert.ThrowsAsync<NotFoundException>(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task CheckOrganizationAsync_GetByIdAsync_ThrowsNotFoundException(
-        User user, Organization organization, SecretVerificationRequestModel request, SutProvider<TwoFactorController> sutProvider)
-    {
-        // Arrange
-        organization.TwoFactorProviders = GetOrganizationTwoFactorDuoProvidersJson();
-        SetupValidateUserBySecretToPass(sutProvider, user);
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .ManagePolicies(default)
-            .ReturnsForAnyArgs(true);
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(default)
-            .ReturnsForAnyArgs(null as Organization);
-
-        // Act
-        var result = () => sutProvider.Sut.GetOrganizationDuo(organization.Id.ToString(), request);
-
-        // Assert
-        await Assert.ThrowsAsync<NotFoundException>(result);
     }
 
     // ---------------------------------------------------------------------
@@ -757,7 +715,7 @@ public class TwoFactorControllerTests
         // Arrange
         organization.TwoFactorProviders = GetOrganizationTwoFactorDuoProvidersJson();
         SetupValidateUserBySecretToPass(sutProvider, user);
-        SetupCheckOrganizationAsyncToPass(sutProvider, organization);
+        SetupOrganizationAccessToPass(sutProvider, organization);
 
         // Act
         var result = await sutProvider.Sut.GetOrganizationDuo(organization.Id.ToString(), request);
@@ -768,6 +726,48 @@ public class TwoFactorControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task GetOrganizationDuo_ManagePolicies_ThrowsNotFoundException(
+        User user, Organization organization, SecretVerificationRequestModel request, SutProvider<TwoFactorController> sutProvider)
+    {
+        // Arrange
+        organization.TwoFactorProviders = GetOrganizationTwoFactorDuoProvidersJson();
+        SetupValidateUserBySecretToPass(sutProvider, user);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .ManagePolicies(default)
+            .ReturnsForAnyArgs(false);
+
+        // Act
+        var result = () => sutProvider.Sut.GetOrganizationDuo(organization.Id.ToString(), request);
+
+        // Assert
+        await Assert.ThrowsAsync<NotFoundException>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationDuo_GetByIdAsync_ThrowsNotFoundException(
+        User user, Organization organization, SecretVerificationRequestModel request, SutProvider<TwoFactorController> sutProvider)
+    {
+        // Arrange
+        organization.TwoFactorProviders = GetOrganizationTwoFactorDuoProvidersJson();
+        SetupValidateUserBySecretToPass(sutProvider, user);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .ManagePolicies(default)
+            .ReturnsForAnyArgs(true);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(default)
+            .ReturnsForAnyArgs(null as Organization);
+
+        // Act
+        var result = () => sutProvider.Sut.GetOrganizationDuo(organization.Id.ToString(), request);
+
+        // Assert
+        await Assert.ThrowsAsync<NotFoundException>(result);
+    }
+
+    [Theory, BitAutoData]
     public async Task PutOrganizationDuo_InvalidConfiguration_ThrowsBadRequestException(
         User user, Organization organization, TwoFactorDuoUpdateRequestModel request, SutProvider<TwoFactorController> sutProvider)
     {
@@ -775,7 +775,7 @@ public class TwoFactorControllerTests
         SetupGetUserByPrincipalAsync(sutProvider, user);
         SetupUserVerificationTokenFactoryToUnprotectInto(
             sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.OrganizationDuo));
-        SetupCheckOrganizationAsyncToPass(sutProvider, organization);
+        SetupOrganizationAccessToPass(sutProvider, organization);
 
         sutProvider.GetDependency<IDuoUniversalTokenService>()
             .ValidateDuoConfiguration(default, default, default)
@@ -801,7 +801,7 @@ public class TwoFactorControllerTests
         SetupGetUserByPrincipalAsync(sutProvider, user);
         SetupUserVerificationTokenFactoryToUnprotectInto(
             sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.OrganizationDuo));
-        SetupCheckOrganizationAsyncToPass(sutProvider, organization);
+        SetupOrganizationAccessToPass(sutProvider, organization);
         organization.TwoFactorProviders = GetUserTwoFactorDuoProvidersJson();
 
         sutProvider.GetDependency<IDuoUniversalTokenService>()
@@ -914,7 +914,7 @@ public class TwoFactorControllerTests
         SetupGetUserByPrincipalAsync(sutProvider, user);
         SetupUserVerificationTokenFactoryToUnprotectInto(
             sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.OrganizationDuo));
-        SetupCheckOrganizationAsyncToPass(sutProvider, organization);
+        SetupOrganizationAccessToPass(sutProvider, organization);
         organization.TwoFactorProviders = GetOrganizationTwoFactorDuoProvidersJson();
 
         // Act
@@ -1640,7 +1640,7 @@ public class TwoFactorControllerTests
             .ReturnsForAnyArgs(true);
     }
 
-    private void SetupCheckOrganizationAsyncToPass(SutProvider<TwoFactorController> sutProvider, Organization organization)
+    private void SetupOrganizationAccessToPass(SutProvider<TwoFactorController> sutProvider, Organization organization)
     {
         sutProvider.GetDependency<ICurrentContext>()
             .ManagePolicies(default)
