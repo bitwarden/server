@@ -4,9 +4,26 @@
     <RootNamespace>Bit.Commercial.Pam</RootNamespace>
   </PropertyGroup>
 
+  <!-- The Api/ folder hosts this feature's Minimal API surface (endpoints, handlers, filters, models), so the
+       library needs the ASP.NET Core shared framework plus the web global usings the Web SDK would provide. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Microsoft.AspNetCore.Builder" />
+    <Using Include="Microsoft.AspNetCore.Hosting" />
+    <Using Include="Microsoft.AspNetCore.Http" />
+    <Using Include="Microsoft.AspNetCore.Routing" />
+    <Using Include="Microsoft.Extensions.DependencyInjection" />
+    <Using Include="Microsoft.Extensions.Hosting" />
+    <Using Include="Microsoft.Extensions.Logging" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Core\Core.csproj" />
     <ProjectReference Include="..\..\..\src\Pam.Domain\Pam.Domain.csproj" />
+    <ProjectReference Include="..\..\..\src\SharedWeb\SharedWeb.csproj" />
   </ItemGroup>
 
 </Project>

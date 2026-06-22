@@ -17,31 +17,14 @@ using CipherType = Bit.Core.Vault.Enums.CipherType;
 
 namespace Bit.Commercial.Pam.Test.Api.Controllers;
 
+// The deprecated GET /ciphers/{id}/lease/cipher endpoint stays in the Api project (it depends on the Vault
+// response models), so it is tested here as an MVC controller. The rest of the cipher-lease resource lives in
+// the Commercial.Pam Minimal API handler (see CipherLeaseEndpointsHandlerTests).
 [ControllerCustomize(typeof(CipherLeaseController))]
 [SutProviderCustomize]
 [Bit.Api.Test.Vault.AutoFixture.CipherLeaseGateBypassCustomize]
 public class CipherLeaseControllerTests
 {
-    [Theory, BitAutoData]
-    public async Task State_ReturnsSnapshotFromQuery(
-        Guid id, Guid userId, Bit.Pam.Entities.AccessLease activeLease, SutProvider<CipherLeaseController> sutProvider)
-    {
-        sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
-            .Returns(userId);
-        sutProvider.GetDependency<IGetCipherAccessStateQuery>()
-            .GetStateAsync(userId, id)
-            .Returns(new Bit.Commercial.Pam.Models.CipherAccessState(id, activeLease, null, null));
-
-        var result = await sutProvider.Sut.State(id);
-
-        Assert.Equal(id, result.CipherId);
-        Assert.NotNull(result.ActiveLease);
-        Assert.Equal(activeLease.Id, result.ActiveLease!.Id);
-        Assert.Null(result.PendingRequest);
-        Assert.Null(result.ApprovedRequest);
-    }
-
     // GET /ciphers/{id}/lease/cipher is [Obsolete] (deprecated, scheduled for removal) but still fully functional, so
     // its behaviour stays under test; suppress the obsolete-usage warning for these deliberate calls.
 #pragma warning disable CS0618

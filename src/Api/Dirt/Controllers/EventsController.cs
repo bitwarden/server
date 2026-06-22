@@ -2,7 +2,6 @@
 #nullable disable
 
 using Bit.Api.Dirt.Models.Response;
-using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Api.Utilities.DiagnosticTools;
 using Bit.Core.AdminConsole.Repositories;
@@ -15,6 +14,7 @@ using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Vault.Repositories;
+using Bit.SharedWeb.Models.Response;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

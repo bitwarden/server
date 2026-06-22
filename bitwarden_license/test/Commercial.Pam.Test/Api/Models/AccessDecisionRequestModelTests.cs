@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
-using Bit.Api.Pam.Models.Request;
+using Bit.Commercial.Pam.Api.Models.Request;
 using Bit.Pam.Enums;
 using Xunit;
 

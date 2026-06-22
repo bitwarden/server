@@ -37,6 +37,8 @@ using Bit.Core.Enums;
 
 
 #if !OSS
+using Bit.Commercial.Pam.Api;
+using Bit.Commercial.Pam.Api.Endpoints;
 using Bit.Commercial.Core.SecretsManager;
 using Bit.Commercial.Core.Utilities;
 using Bit.Commercial.Infrastructure.EntityFramework.SecretsManager;
@@ -206,6 +208,7 @@ public class Startup
         services.AddCommercialCoreServices();
         services.AddCommercialSecretsManagerServices();
         services.AddCommercialPamServices();
+        services.AddPamApiServices();
         services.AddSecretsManagerEfRepositories();
         services.AddPamServices();
         Jobs.JobsHostedService.AddCommercialSecretsManagerJobServices(services);
@@ -216,16 +219,9 @@ public class Startup
         {
             config.Conventions.Add(new ApiExplorerGroupConvention());
             config.Conventions.Add(new PublicApiControllersModelConvention());
-        })
-        .ConfigureApiBehaviorOptions(options =>
-        {
-            // The PAM controllers are [ApiController]; keep Bitwarden's ErrorResponseModel 400 contract
-            // (produced by ModelStateValidationFilterAttribute) instead of the framework's default
-            // ValidationProblemDetails. Only affects [ApiController] controllers.
-            options.SuppressModelStateInvalidFilter = true;
         });
 
-        // Required for ApiExplorer to enumerate Minimal API endpoints (e.g. PAM) so they appear in the OpenAPI spec.
+        // Required for the PAM Minimal API endpoints to be discovered by ApiExplorer/Swagger.
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(globalSettings, Environment);
         Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
@@ -294,6 +290,11 @@ public class Startup
         {
             endpoints.MapDefaultControllerRoute();
             endpoints.MapVersionEndpoint();
+
+#if !OSS
+            // PAM is a commercial feature; its Minimal API endpoints are only mapped in non-OSS builds.
+            endpoints.MapPamEndpoints();
+#endif
 
 #if !OSS
             // PAM is a commercial feature; its Minimal API endpoints are only mapped in non-OSS builds.

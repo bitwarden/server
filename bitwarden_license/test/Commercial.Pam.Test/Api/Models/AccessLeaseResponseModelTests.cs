@@ -1,4 +1,4 @@
-﻿using Bit.Api.Pam.Models.Response;
+﻿using Bit.Commercial.Pam.Api.Models.Response;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Test.Common.AutoFixture.Attributes;
