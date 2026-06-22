@@ -8,8 +8,8 @@ using Bit.Core.Services;
 namespace Bit.Commercial.Pam.Api.Endpoints.Handlers;
 
 /// <summary>
-/// Handler for the <c>ciphers/{id}/lease</c> resource: the per-cipher leasing entry points (pre-check, state,
-/// submit). The deprecated full-cipher read-back (<c>GET …/lease/cipher</c>) is hosted by a small MVC controller
+/// Handler for the <c>leases/ciphers/{id}</c> resource: the per-cipher leasing entry points (pre-check, state,
+/// submit). The deprecated full-cipher read-back (<c>GET …/cipher</c>) is hosted by a small MVC controller
 /// in the Api project instead, since it depends on the Api Vault response models.
 /// </summary>
 public class CipherLeaseEndpointsHandler(
