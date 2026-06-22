@@ -11,6 +11,7 @@ public interface IPushAutoConfirmNotificationCommand
     /// <list type="bullet">
     /// <item>The organization has the <c>UseAutomaticUserConfirmation</c> ability enabled.</item>
     /// <item>The organization has the <c>AutomaticUserConfirmation</c> policy enabled.</item>
+    /// <item>The user being confirmed has the <c>User</c> role (owners, admins, and custom are excluded).</item>
     /// </list>
     /// </remarks>
     Task PushAsync(Guid userId, Guid organizationId);

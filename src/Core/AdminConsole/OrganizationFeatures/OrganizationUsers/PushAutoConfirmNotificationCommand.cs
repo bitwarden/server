@@ -48,6 +48,11 @@ public class PushAutoConfirmNotificationCommand : IPushAutoConfirmNotificationCo
             throw new Exception("Organization user not found");
         }
 
+        if (organizationUser.Type != OrganizationUserType.User)
+        {
+            return;
+        }
+
         var admins = await _organizationUserRepository.GetManyByMinimumRoleAsync(
             organizationId,
             OrganizationUserType.Admin);

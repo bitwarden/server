@@ -391,4 +391,32 @@ public class PushAutoConfirmNotificationCommandTests
             .GetByOrganizationAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
     }
 
+    // Guard 3: target user role check
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task PushAsync_TargetUserIsNotMember_ReturnsEarlyWithoutNotification(
+        OrganizationUserType privilegedType,
+        SutProvider<PushAutoConfirmNotificationCommand> sutProvider,
+        Guid userId,
+        Guid organizationId,
+        OrganizationUser orgUser)
+    {
+        orgUser.Type = privilegedType;
+        SetupPassingGuards(sutProvider, organizationId, orgUser);
+        orgUser.Type = privilegedType; // override after SetupPassingGuards sets User
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organizationId, userId)
+            .Returns(orgUser);
+
+        await sutProvider.Sut.PushAsync(userId, organizationId);
+
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .DidNotReceiveWithAnyArgs()
+            .PushAsync(Arg.Any<PushNotification<AutoConfirmPushNotification>>());
+    }
+
 }
