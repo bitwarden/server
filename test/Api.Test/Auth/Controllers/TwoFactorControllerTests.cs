@@ -27,6 +27,10 @@ namespace Bit.Api.Test.Auth.Controllers;
 [SutProviderCustomize]
 public class TwoFactorControllerTests
 {
+    // ---------------------------------------------------------------------
+    // Controller helper methods (CheckAsync / CheckOrganizationAsync)
+    // ---------------------------------------------------------------------
+
     [Theory, BitAutoData]
     public async Task CheckAsync_UserNull_ThrowsUnauthorizedException(SecretVerificationRequestModel request, SutProvider<TwoFactorController> sutProvider)
     {
@@ -67,23 +71,416 @@ public class TwoFactorControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task PutDuo_CannotAccessPremium_ThrowsBadRequestException(User user, UpdateTwoFactorDuoRequestModel request, SutProvider<TwoFactorController> sutProvider)
+    public async Task CheckOrganizationAsync_ManagePolicies_ThrowsNotFoundException(
+        User user, Organization organization, SecretVerificationRequestModel request, SutProvider<TwoFactorController> sutProvider)
     {
         // Arrange
+        organization.TwoFactorProviders = GetOrganizationTwoFactorDuoProvidersJson();
+        SetupValidateUserBySecretToPass(sutProvider, user);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .ManagePolicies(default)
+            .ReturnsForAnyArgs(false);
+
+        // Act
+        var result = () => sutProvider.Sut.GetOrganizationDuo(organization.Id.ToString(), request);
+
+        // Assert
+        await Assert.ThrowsAsync<NotFoundException>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CheckOrganizationAsync_GetByIdAsync_ThrowsNotFoundException(
+        User user, Organization organization, SecretVerificationRequestModel request, SutProvider<TwoFactorController> sutProvider)
+    {
+        // Arrange
+        organization.TwoFactorProviders = GetOrganizationTwoFactorDuoProvidersJson();
+        SetupValidateUserBySecretToPass(sutProvider, user);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .ManagePolicies(default)
+            .ReturnsForAnyArgs(true);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(default)
+            .ReturnsForAnyArgs(null as Organization);
+
+        // Act
+        var result = () => sutProvider.Sut.GetOrganizationDuo(organization.Id.ToString(), request);
+
+        // Assert
+        await Assert.ThrowsAsync<NotFoundException>(result);
+    }
+
+    // ---------------------------------------------------------------------
+    // Authenticator
+    // ---------------------------------------------------------------------
+
+    [Theory, BitAutoData]
+    public async Task PutAuthenticator_ExpiredToken_ThrowsBadRequest(
+        User user,
+        UpdateTwoFactorAuthenticatorRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupAuthenticatorTokenFactoryToUnprotectInto(sutProvider, new TwoFactorAuthenticatorUserVerificationTokenable(user, model.Key)
+        {
+            ExpirationDate = DateTime.UtcNow.AddMinutes(-1)
+        });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutAuthenticator(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutAuthenticator_TryUnprotectFails_ThrowsBadRequest(
+        User user,
+        UpdateTwoFactorAuthenticatorRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable>>()
+            .TryUnprotect(model.UserVerificationToken, out Arg.Any<TwoFactorAuthenticatorUserVerificationTokenable>())
+            .Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutAuthenticator(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutAuthenticator_InvalidTokenData_ThrowsBadRequest(
+        User user,
+        User otherUser,
+        UpdateTwoFactorAuthenticatorRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupAuthenticatorTokenFactoryToUnprotectInto(sutProvider, new TwoFactorAuthenticatorUserVerificationTokenable(otherUser, "different-key"));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutAuthenticator(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutAuthenticator_ValidToken_ReturnsResponse(
+        User user,
+        UpdateTwoFactorAuthenticatorRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupAuthenticatorTokenFactoryToUnprotectInto(
+            sutProvider,
+            new TwoFactorAuthenticatorUserVerificationTokenable(user, model.Key));
+
+        // UserManager.VerifyTwoFactorTokenAsync delegates to a registered
+        // token provider; register a substitute that accepts model.Token.
+        var authenticatorProvider = Substitute.For<IUserTwoFactorTokenProvider<User>>();
+        authenticatorProvider
+            .ValidateAsync("TwoFactor", model.Token, Arg.Any<UserManager<User>>(), Arg.Any<User>())
+            .Returns(true);
+        sutProvider.GetDependency<UserManager<User>>()
+            .RegisterTokenProvider(
+                CoreHelpers.CustomProviderName(TwoFactorProviderType.Authenticator),
+                authenticatorProvider);
+
+        var response = await sutProvider.Sut.PutAuthenticator(model);
+
+        Assert.IsType<TwoFactorAuthenticatorResponseModel>(response);
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Authenticator);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAuthenticator_ExpiredToken_ThrowsBadRequest(
+        User user,
+        TwoFactorAuthenticatorDeleteRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupAuthenticatorTokenFactoryToUnprotectInto(sutProvider, new TwoFactorAuthenticatorUserVerificationTokenable(user, model.Key)
+        {
+            ExpirationDate = DateTime.UtcNow.AddMinutes(-1)
+        });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteAuthenticator(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAuthenticator_TryUnprotectFails_ThrowsBadRequest(
+        User user,
+        TwoFactorAuthenticatorDeleteRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable>>()
+            .TryUnprotect(model.UserVerificationToken, out Arg.Any<TwoFactorAuthenticatorUserVerificationTokenable>())
+            .Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteAuthenticator(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAuthenticator_InvalidTokenData_ThrowsBadRequest(
+        User user,
+        User otherUser,
+        TwoFactorAuthenticatorDeleteRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupAuthenticatorTokenFactoryToUnprotectInto(sutProvider, new TwoFactorAuthenticatorUserVerificationTokenable(otherUser, "different-key"));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteAuthenticator(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAuthenticator_ValidToken_ReturnsResponse(
+        User user,
+        TwoFactorAuthenticatorDeleteRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupAuthenticatorTokenFactoryToUnprotectInto(
+            sutProvider,
+            new TwoFactorAuthenticatorUserVerificationTokenable(user, model.Key));
+
+        var response = await sutProvider.Sut.DeleteAuthenticator(model);
+
+        Assert.IsType<TwoFactorProviderResponseModel>(response);
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Authenticator);
+    }
+
+    // ---------------------------------------------------------------------
+    // YubiKey
+    // ---------------------------------------------------------------------
+
+    [Theory, BitAutoData]
+    public async Task GetYubiKey_NonPremiumUserWithExistingConfig_ReturnsConfigAndToken(
+        User user, SecretVerificationRequestModel request, SutProvider<TwoFactorController> sutProvider)
+    {
+        // Mirror of GetDuo_NonPremiumUserWithExistingConfig_ReturnsConfigAndToken for YubiKey.
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        user.TwoFactorProviders = GetUserTwoFactorYubiKeyProvidersJson();
+        sutProvider.GetDependency<IUserService>()
+            .VerifySecretAsync(default, default)
+            .ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IUserService>()
+            .CanAccessPremium(default)
+            .ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<TwoFactorUserVerificationTokenable>>()
+            .Protect(Arg.Any<TwoFactorUserVerificationTokenable>())
+            .Returns("protected-yubikey-token");
+
+        var result = await sutProvider.Sut.GetYubiKey(request);
+
+        Assert.True(result.Enabled);
+        Assert.Equal("ccccccccccbe", result.Key1);
+        Assert.True(result.Nfc);
+        Assert.Equal("protected-yubikey-token", result.UserVerificationToken);
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceiveWithAnyArgs()
+            .CanAccessPremium(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutYubiKey_ValidToken_ReturnsResponse(
+        User user,
+        UpdateTwoFactorYubicoOtpRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        // Null TwoFactorProviders so the response constructor doesn't choke on AutoFixture junk.
+        user.TwoFactorProviders = null;
+        // Null all keys so ValidateYubiKeyAsync skips its UserManager round-trips.
+        model.Key1 = model.Key2 = model.Key3 = model.Key4 = model.Key5 = null;
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupUserVerificationTokenFactoryToUnprotectInto(
+            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.YubiKey));
+        sutProvider.GetDependency<IUserService>()
+            .CanAccessPremium(default)
+            .ReturnsForAnyArgs(true);
+
+        var response = await sutProvider.Sut.PutYubiKey(model);
+
+        Assert.IsType<TwoFactorYubiKeyResponseModel>(response);
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.YubiKey);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutYubiKey_ExpiredToken_ThrowsBadRequest(
+        User user,
+        UpdateTwoFactorYubicoOtpRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupUserVerificationTokenFactoryToUnprotectInto(sutProvider, new TwoFactorUserVerificationTokenable
+        {
+            UserId = user.Id,
+            ProviderType = TwoFactorProviderType.YubiKey,
+            ExpirationDate = DateTime.UtcNow.AddMinutes(-1),
+        });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutYubiKey(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateTwoFactorProviderAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutYubiKey_TryUnprotectFails_ThrowsBadRequest(
+        User user,
+        UpdateTwoFactorYubicoOtpRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<TwoFactorUserVerificationTokenable>>()
+            .TryUnprotect(model.UserVerificationToken, out Arg.Any<TwoFactorUserVerificationTokenable>())
+            .Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutYubiKey(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateTwoFactorProviderAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutYubiKey_TokenBoundToDifferentUser_ThrowsBadRequest(
+        User user,
+        User otherUser,
+        UpdateTwoFactorYubicoOtpRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupUserVerificationTokenFactoryToUnprotectInto(
+            sutProvider, ValidUserVerificationTokenableFor(otherUser, TwoFactorProviderType.YubiKey));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutYubiKey(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateTwoFactorProviderAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutYubiKey_TokenBoundToDifferentProvider_ThrowsBadRequest(
+        User user,
+        UpdateTwoFactorYubicoOtpRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
         SetupGetUserByPrincipalAsync(sutProvider, user);
         SetupUserVerificationTokenFactoryToUnprotectInto(
             sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.Duo));
 
-        sutProvider.GetDependency<IUserService>()
-            .CanAccessPremium(default)
-            .ReturnsForAnyArgs(false);
-
-        // Act
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutDuo(request));
-
-        // Assert
-        Assert.Equal("Premium status is required.", exception.Message);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutYubiKey(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateTwoFactorProviderAsync(default, default);
     }
+
+    [Theory, BitAutoData]
+    public async Task DeleteYubiKey_ValidToken_DeletesProvider(
+        User user,
+        TwoFactorYubiKeyDeleteRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupUserVerificationTokenFactoryToUnprotectInto(
+            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.YubiKey));
+
+        var response = await sutProvider.Sut.DeleteYubiKey(model);
+
+        Assert.IsType<TwoFactorProviderResponseModel>(response);
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .DisableTwoFactorProviderAsync(user, TwoFactorProviderType.YubiKey);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteYubiKey_ExpiredToken_ThrowsBadRequest(
+        User user,
+        TwoFactorYubiKeyDeleteRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupUserVerificationTokenFactoryToUnprotectInto(sutProvider, new TwoFactorUserVerificationTokenable
+        {
+            UserId = user.Id,
+            ProviderType = TwoFactorProviderType.YubiKey,
+            ExpirationDate = DateTime.UtcNow.AddMinutes(-1),
+        });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteYubiKey(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceiveWithAnyArgs()
+            .DisableTwoFactorProviderAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteYubiKey_TryUnprotectFails_ThrowsBadRequest(
+        User user,
+        TwoFactorYubiKeyDeleteRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<TwoFactorUserVerificationTokenable>>()
+            .TryUnprotect(model.UserVerificationToken, out Arg.Any<TwoFactorUserVerificationTokenable>())
+            .Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteYubiKey(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceiveWithAnyArgs()
+            .DisableTwoFactorProviderAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteYubiKey_TokenBoundToDifferentUser_ThrowsBadRequest(
+        User user,
+        User otherUser,
+        TwoFactorYubiKeyDeleteRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupUserVerificationTokenFactoryToUnprotectInto(
+            sutProvider, ValidUserVerificationTokenableFor(otherUser, TwoFactorProviderType.YubiKey));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteYubiKey(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceiveWithAnyArgs()
+            .DisableTwoFactorProviderAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteYubiKey_TokenBoundToDifferentProvider_ThrowsBadRequest(
+        User user,
+        TwoFactorYubiKeyDeleteRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupUserVerificationTokenFactoryToUnprotectInto(
+            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.Duo));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteYubiKey(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceiveWithAnyArgs()
+            .DisableTwoFactorProviderAsync(default, default);
+    }
+
+    // ---------------------------------------------------------------------
+    // Duo (personal)
+    // ---------------------------------------------------------------------
 
     [Theory, BitAutoData]
     public async Task GetDuo_Success(User user, SecretVerificationRequestModel request, SutProvider<TwoFactorController> sutProvider)
@@ -135,31 +532,22 @@ public class TwoFactorControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetYubiKey_NonPremiumUserWithExistingConfig_ReturnsConfigAndToken(
-        User user, SecretVerificationRequestModel request, SutProvider<TwoFactorController> sutProvider)
+    public async Task PutDuo_CannotAccessPremium_ThrowsBadRequestException(User user, UpdateTwoFactorDuoRequestModel request, SutProvider<TwoFactorController> sutProvider)
     {
-        // Mirror of GetDuo_NonPremiumUserWithExistingConfig_ReturnsConfigAndToken for YubiKey.
+        // Arrange
         SetupGetUserByPrincipalAsync(sutProvider, user);
-        user.TwoFactorProviders = GetUserTwoFactorYubiKeyProvidersJson();
-        sutProvider.GetDependency<IUserService>()
-            .VerifySecretAsync(default, default)
-            .ReturnsForAnyArgs(true);
+        SetupUserVerificationTokenFactoryToUnprotectInto(
+            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.Duo));
+
         sutProvider.GetDependency<IUserService>()
             .CanAccessPremium(default)
             .ReturnsForAnyArgs(false);
-        sutProvider.GetDependency<IDataProtectorTokenFactory<TwoFactorUserVerificationTokenable>>()
-            .Protect(Arg.Any<TwoFactorUserVerificationTokenable>())
-            .Returns("protected-yubikey-token");
 
-        var result = await sutProvider.Sut.GetYubiKey(request);
+        // Act
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutDuo(request));
 
-        Assert.True(result.Enabled);
-        Assert.Equal("ccccccccccbe", result.Key1);
-        Assert.True(result.Nfc);
-        Assert.Equal("protected-yubikey-token", result.UserVerificationToken);
-        await sutProvider.GetDependency<IUserService>()
-            .DidNotReceiveWithAnyArgs()
-            .CanAccessPremium(default);
+        // Assert
+        Assert.Equal("Premium status is required.", exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -267,46 +655,100 @@ public class TwoFactorControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task CheckOrganizationAsync_ManagePolicies_ThrowsNotFoundException(
-        User user, Organization organization, SecretVerificationRequestModel request, SutProvider<TwoFactorController> sutProvider)
+    public async Task DeleteDuo_ValidToken_DeletesProvider(
+        User user,
+        TwoFactorDuoDeleteRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
     {
-        // Arrange
-        organization.TwoFactorProviders = GetOrganizationTwoFactorDuoProvidersJson();
-        SetupValidateUserBySecretToPass(sutProvider, user);
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupUserVerificationTokenFactoryToUnprotectInto(
+            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.Duo));
 
-        sutProvider.GetDependency<ICurrentContext>()
-            .ManagePolicies(default)
-            .ReturnsForAnyArgs(false);
+        var response = await sutProvider.Sut.DeleteDuo(model);
 
-        // Act
-        var result = () => sutProvider.Sut.GetOrganizationDuo(organization.Id.ToString(), request);
-
-        // Assert
-        await Assert.ThrowsAsync<NotFoundException>(result);
+        Assert.IsType<TwoFactorProviderResponseModel>(response);
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Duo);
     }
 
     [Theory, BitAutoData]
-    public async Task CheckOrganizationAsync_GetByIdAsync_ThrowsNotFoundException(
-        User user, Organization organization, SecretVerificationRequestModel request, SutProvider<TwoFactorController> sutProvider)
+    public async Task DeleteDuo_ExpiredToken_ThrowsBadRequest(
+        User user,
+        TwoFactorDuoDeleteRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
     {
-        // Arrange
-        organization.TwoFactorProviders = GetOrganizationTwoFactorDuoProvidersJson();
-        SetupValidateUserBySecretToPass(sutProvider, user);
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupUserVerificationTokenFactoryToUnprotectInto(sutProvider, new TwoFactorUserVerificationTokenable
+        {
+            UserId = user.Id,
+            ProviderType = TwoFactorProviderType.Duo,
+            ExpirationDate = DateTime.UtcNow.AddMinutes(-1),
+        });
 
-        sutProvider.GetDependency<ICurrentContext>()
-            .ManagePolicies(default)
-            .ReturnsForAnyArgs(true);
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(default)
-            .ReturnsForAnyArgs(null as Organization);
-
-        // Act
-        var result = () => sutProvider.Sut.GetOrganizationDuo(organization.Id.ToString(), request);
-
-        // Assert
-        await Assert.ThrowsAsync<NotFoundException>(result);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteDuo(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceiveWithAnyArgs()
+            .DisableTwoFactorProviderAsync(default, default);
     }
+
+    [Theory, BitAutoData]
+    public async Task DeleteDuo_TryUnprotectFails_ThrowsBadRequest(
+        User user,
+        TwoFactorDuoDeleteRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<TwoFactorUserVerificationTokenable>>()
+            .TryUnprotect(model.UserVerificationToken, out Arg.Any<TwoFactorUserVerificationTokenable>())
+            .Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteDuo(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceiveWithAnyArgs()
+            .DisableTwoFactorProviderAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteDuo_TokenBoundToDifferentUser_ThrowsBadRequest(
+        User user,
+        User otherUser,
+        TwoFactorDuoDeleteRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupUserVerificationTokenFactoryToUnprotectInto(
+            sutProvider, ValidUserVerificationTokenableFor(otherUser, TwoFactorProviderType.Duo));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteDuo(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceiveWithAnyArgs()
+            .DisableTwoFactorProviderAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteDuo_TokenBoundToDifferentProvider_ThrowsBadRequest(
+        User user,
+        TwoFactorDuoDeleteRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupUserVerificationTokenFactoryToUnprotectInto(
+            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.YubiKey));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteDuo(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceiveWithAnyArgs()
+            .DisableTwoFactorProviderAsync(default, default);
+    }
+
+    // ---------------------------------------------------------------------
+    // Organization Duo
+    // ---------------------------------------------------------------------
 
     [Theory, BitAutoData]
     public async Task GetOrganizationDuo_Success(
@@ -485,189 +927,57 @@ public class TwoFactorControllerTests
             .DisableTwoFactorProviderAsync(organization, TwoFactorProviderType.OrganizationDuo);
     }
 
+    // ---------------------------------------------------------------------
+    // WebAuthn
+    // ---------------------------------------------------------------------
 
     [Theory, BitAutoData]
-    public async Task PutAuthenticator_ExpiredToken_ThrowsBadRequest(
+    public async Task PutWebAuthn_ValidToken_ReturnsResponse(
         User user,
-        UpdateTwoFactorAuthenticatorRequestModel model,
+        TwoFactorWebAuthnRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupAuthenticatorTokenFactoryToUnprotectInto(sutProvider, new TwoFactorAuthenticatorUserVerificationTokenable(user, model.Key)
-        {
-            ExpirationDate = DateTime.UtcNow.AddMinutes(-1)
-        });
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutAuthenticator(model));
-        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-    }
-
-    [Theory, BitAutoData]
-    public async Task PutAuthenticator_TryUnprotectFails_ThrowsBadRequest(
-        User user,
-        UpdateTwoFactorAuthenticatorRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        sutProvider.GetDependency<IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable>>()
-            .TryUnprotect(model.UserVerificationToken, out Arg.Any<TwoFactorAuthenticatorUserVerificationTokenable>())
-            .Returns(false);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutAuthenticator(model));
-        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-    }
-
-    [Theory, BitAutoData]
-    public async Task PutAuthenticator_InvalidTokenData_ThrowsBadRequest(
-        User user,
-        User otherUser,
-        UpdateTwoFactorAuthenticatorRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupAuthenticatorTokenFactoryToUnprotectInto(sutProvider, new TwoFactorAuthenticatorUserVerificationTokenable(otherUser, "different-key"));
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutAuthenticator(model));
-        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-    }
-
-    [Theory, BitAutoData]
-    public async Task PutAuthenticator_ValidToken_ReturnsResponse(
-        User user,
-        UpdateTwoFactorAuthenticatorRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupAuthenticatorTokenFactoryToUnprotectInto(
-            sutProvider,
-            new TwoFactorAuthenticatorUserVerificationTokenable(user, model.Key));
-
-        // UserManager.VerifyTwoFactorTokenAsync delegates to a registered
-        // token provider; register a substitute that accepts model.Token.
-        var authenticatorProvider = Substitute.For<IUserTwoFactorTokenProvider<User>>();
-        authenticatorProvider
-            .ValidateAsync("TwoFactor", model.Token, Arg.Any<UserManager<User>>(), Arg.Any<User>())
-            .Returns(true);
-        sutProvider.GetDependency<UserManager<User>>()
-            .RegisterTokenProvider(
-                CoreHelpers.CustomProviderName(TwoFactorProviderType.Authenticator),
-                authenticatorProvider);
-
-        var response = await sutProvider.Sut.PutAuthenticator(model);
-
-        Assert.IsType<TwoFactorAuthenticatorResponseModel>(response);
-        await sutProvider.GetDependency<IUserService>()
-            .Received(1)
-            .UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Authenticator);
-    }
-
-    [Theory, BitAutoData]
-    public async Task DeleteAuthenticator_ExpiredToken_ThrowsBadRequest(
-        User user,
-        TwoFactorAuthenticatorDeleteRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupAuthenticatorTokenFactoryToUnprotectInto(sutProvider, new TwoFactorAuthenticatorUserVerificationTokenable(user, model.Key)
-        {
-            ExpirationDate = DateTime.UtcNow.AddMinutes(-1)
-        });
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteAuthenticator(model));
-        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-    }
-
-    [Theory, BitAutoData]
-    public async Task DeleteAuthenticator_TryUnprotectFails_ThrowsBadRequest(
-        User user,
-        TwoFactorAuthenticatorDeleteRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        sutProvider.GetDependency<IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable>>()
-            .TryUnprotect(model.UserVerificationToken, out Arg.Any<TwoFactorAuthenticatorUserVerificationTokenable>())
-            .Returns(false);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteAuthenticator(model));
-        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-    }
-
-    [Theory, BitAutoData]
-    public async Task DeleteAuthenticator_InvalidTokenData_ThrowsBadRequest(
-        User user,
-        User otherUser,
-        TwoFactorAuthenticatorDeleteRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupAuthenticatorTokenFactoryToUnprotectInto(sutProvider, new TwoFactorAuthenticatorUserVerificationTokenable(otherUser, "different-key"));
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteAuthenticator(model));
-        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-    }
-
-    [Theory, BitAutoData]
-    public async Task DeleteAuthenticator_ValidToken_ReturnsResponse(
-        User user,
-        TwoFactorAuthenticatorDeleteRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupAuthenticatorTokenFactoryToUnprotectInto(
-            sutProvider,
-            new TwoFactorAuthenticatorUserVerificationTokenable(user, model.Key));
-
-        var response = await sutProvider.Sut.DeleteAuthenticator(model);
-
-        Assert.IsType<TwoFactorProviderResponseModel>(response);
-        await sutProvider.GetDependency<IUserService>()
-            .Received(1)
-            .DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Authenticator);
-    }
-
-    [Theory, BitAutoData]
-    public async Task DeleteYubiKey_ValidToken_DeletesProvider(
-        User user,
-        TwoFactorYubiKeyDeleteRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
+        user.TwoFactorProviders = null;
         SetupGetUserByPrincipalAsync(sutProvider, user);
         SetupUserVerificationTokenFactoryToUnprotectInto(
-            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.YubiKey));
+            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.WebAuthn));
+        sutProvider.GetDependency<ICompleteTwoFactorWebAuthnRegistrationCommand>()
+            .CompleteTwoFactorWebAuthnRegistrationAsync(default!, default, default!, default!)
+            .ReturnsForAnyArgs(true);
 
-        var response = await sutProvider.Sut.DeleteYubiKey(model);
+        var response = await sutProvider.Sut.PutWebAuthn(model);
 
-        Assert.IsType<TwoFactorProviderResponseModel>(response);
-        await sutProvider.GetDependency<IUserService>()
+        Assert.IsType<TwoFactorWebAuthnResponseModel>(response);
+        await sutProvider.GetDependency<ICompleteTwoFactorWebAuthnRegistrationCommand>()
             .Received(1)
-            .DisableTwoFactorProviderAsync(user, TwoFactorProviderType.YubiKey);
+            .CompleteTwoFactorWebAuthnRegistrationAsync(user, model.Id!.Value, model.Name, model.DeviceResponse);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteYubiKey_ExpiredToken_ThrowsBadRequest(
+    public async Task PutWebAuthn_ExpiredToken_ThrowsBadRequest(
         User user,
-        TwoFactorYubiKeyDeleteRequestModel model,
+        TwoFactorWebAuthnRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
         SetupUserVerificationTokenFactoryToUnprotectInto(sutProvider, new TwoFactorUserVerificationTokenable
         {
             UserId = user.Id,
-            ProviderType = TwoFactorProviderType.YubiKey,
+            ProviderType = TwoFactorProviderType.WebAuthn,
             ExpirationDate = DateTime.UtcNow.AddMinutes(-1),
         });
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteYubiKey(model));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutWebAuthn(model));
         AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-        await sutProvider.GetDependency<IUserService>()
+        await sutProvider.GetDependency<ICompleteTwoFactorWebAuthnRegistrationCommand>()
             .DidNotReceiveWithAnyArgs()
-            .DisableTwoFactorProviderAsync(default, default);
+            .CompleteTwoFactorWebAuthnRegistrationAsync(default!, default, default!, default!);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteYubiKey_TryUnprotectFails_ThrowsBadRequest(
+    public async Task PutWebAuthn_TryUnprotectFails_ThrowsBadRequest(
         User user,
-        TwoFactorYubiKeyDeleteRequestModel model,
+        TwoFactorWebAuthnRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -675,91 +985,95 @@ public class TwoFactorControllerTests
             .TryUnprotect(model.UserVerificationToken, out Arg.Any<TwoFactorUserVerificationTokenable>())
             .Returns(false);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteYubiKey(model));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutWebAuthn(model));
         AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-        await sutProvider.GetDependency<IUserService>()
+        await sutProvider.GetDependency<ICompleteTwoFactorWebAuthnRegistrationCommand>()
             .DidNotReceiveWithAnyArgs()
-            .DisableTwoFactorProviderAsync(default, default);
+            .CompleteTwoFactorWebAuthnRegistrationAsync(default!, default, default!, default!);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteYubiKey_TokenBoundToDifferentUser_ThrowsBadRequest(
+    public async Task PutWebAuthn_TokenBoundToDifferentUser_ThrowsBadRequest(
         User user,
         User otherUser,
-        TwoFactorYubiKeyDeleteRequestModel model,
+        TwoFactorWebAuthnRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
         SetupUserVerificationTokenFactoryToUnprotectInto(
-            sutProvider, ValidUserVerificationTokenableFor(otherUser, TwoFactorProviderType.YubiKey));
+            sutProvider, ValidUserVerificationTokenableFor(otherUser, TwoFactorProviderType.WebAuthn));
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteYubiKey(model));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutWebAuthn(model));
         AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-        await sutProvider.GetDependency<IUserService>()
+        await sutProvider.GetDependency<ICompleteTwoFactorWebAuthnRegistrationCommand>()
             .DidNotReceiveWithAnyArgs()
-            .DisableTwoFactorProviderAsync(default, default);
+            .CompleteTwoFactorWebAuthnRegistrationAsync(default!, default, default!, default!);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteYubiKey_TokenBoundToDifferentProvider_ThrowsBadRequest(
+    public async Task PutWebAuthn_TokenBoundToDifferentProvider_ThrowsBadRequest(
         User user,
-        TwoFactorYubiKeyDeleteRequestModel model,
+        TwoFactorWebAuthnRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
         SetupUserVerificationTokenFactoryToUnprotectInto(
             sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.Duo));
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteYubiKey(model));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutWebAuthn(model));
         AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-        await sutProvider.GetDependency<IUserService>()
+        await sutProvider.GetDependency<ICompleteTwoFactorWebAuthnRegistrationCommand>()
             .DidNotReceiveWithAnyArgs()
-            .DisableTwoFactorProviderAsync(default, default);
+            .CompleteTwoFactorWebAuthnRegistrationAsync(default!, default, default!, default!);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteDuo_ValidToken_DeletesProvider(
+    public async Task DeleteWebAuthn_ValidToken_ReturnsResponse(
         User user,
-        TwoFactorDuoDeleteRequestModel model,
+        TwoFactorWebAuthnDeleteRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
+        user.TwoFactorProviders = null;
         SetupGetUserByPrincipalAsync(sutProvider, user);
         SetupUserVerificationTokenFactoryToUnprotectInto(
-            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.Duo));
+            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.WebAuthn));
+        sutProvider.GetDependency<IDeleteTwoFactorWebAuthnCredentialCommand>()
+            .DeleteTwoFactorWebAuthnCredentialAsync(default!, default)
+            .ReturnsForAnyArgs(true);
 
-        var response = await sutProvider.Sut.DeleteDuo(model);
+        var response = await sutProvider.Sut.DeleteWebAuthn(model);
 
-        Assert.IsType<TwoFactorProviderResponseModel>(response);
-        await sutProvider.GetDependency<IUserService>()
+        Assert.IsType<TwoFactorWebAuthnResponseModel>(response);
+        await sutProvider.GetDependency<IDeleteTwoFactorWebAuthnCredentialCommand>()
             .Received(1)
-            .DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Duo);
+            .DeleteTwoFactorWebAuthnCredentialAsync(user, model.Id!.Value);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteDuo_ExpiredToken_ThrowsBadRequest(
+    public async Task DeleteWebAuthn_ExpiredToken_ThrowsBadRequest(
         User user,
-        TwoFactorDuoDeleteRequestModel model,
+        TwoFactorWebAuthnDeleteRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
         SetupUserVerificationTokenFactoryToUnprotectInto(sutProvider, new TwoFactorUserVerificationTokenable
         {
             UserId = user.Id,
-            ProviderType = TwoFactorProviderType.Duo,
+            ProviderType = TwoFactorProviderType.WebAuthn,
             ExpirationDate = DateTime.UtcNow.AddMinutes(-1),
         });
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteDuo(model));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteWebAuthn(model));
         AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-        await sutProvider.GetDependency<IUserService>()
+        await sutProvider.GetDependency<IDeleteTwoFactorWebAuthnCredentialCommand>()
             .DidNotReceiveWithAnyArgs()
-            .DisableTwoFactorProviderAsync(default, default);
+            .DeleteTwoFactorWebAuthnCredentialAsync(default!, default);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteDuo_TryUnprotectFails_ThrowsBadRequest(
+    public async Task DeleteWebAuthn_TryUnprotectFails_ThrowsBadRequest(
         User user,
-        TwoFactorDuoDeleteRequestModel model,
+        TwoFactorWebAuthnDeleteRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -767,25 +1081,81 @@ public class TwoFactorControllerTests
             .TryUnprotect(model.UserVerificationToken, out Arg.Any<TwoFactorUserVerificationTokenable>())
             .Returns(false);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteDuo(model));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteWebAuthn(model));
         AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-        await sutProvider.GetDependency<IUserService>()
+        await sutProvider.GetDependency<IDeleteTwoFactorWebAuthnCredentialCommand>()
             .DidNotReceiveWithAnyArgs()
-            .DisableTwoFactorProviderAsync(default, default);
+            .DeleteTwoFactorWebAuthnCredentialAsync(default!, default);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteDuo_TokenBoundToDifferentUser_ThrowsBadRequest(
+    public async Task DeleteWebAuthn_TokenBoundToDifferentUser_ThrowsBadRequest(
         User user,
         User otherUser,
-        TwoFactorDuoDeleteRequestModel model,
+        TwoFactorWebAuthnDeleteRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
         SetupUserVerificationTokenFactoryToUnprotectInto(
-            sutProvider, ValidUserVerificationTokenableFor(otherUser, TwoFactorProviderType.Duo));
+            sutProvider, ValidUserVerificationTokenableFor(otherUser, TwoFactorProviderType.WebAuthn));
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteDuo(model));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteWebAuthn(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+        await sutProvider.GetDependency<IDeleteTwoFactorWebAuthnCredentialCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteTwoFactorWebAuthnCredentialAsync(default!, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteWebAuthn_TokenBoundToDifferentProvider_ThrowsBadRequest(
+        User user,
+        TwoFactorWebAuthnDeleteRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupUserVerificationTokenFactoryToUnprotectInto(
+            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.Duo));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteWebAuthn(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+        await sutProvider.GetDependency<IDeleteTwoFactorWebAuthnCredentialCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteTwoFactorWebAuthnCredentialAsync(default!, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteWebAuthnAll_ValidToken_DeletesProvider(
+        User user,
+        TwoFactorWebAuthnDeleteAllRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupUserVerificationTokenFactoryToUnprotectInto(
+            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.WebAuthn));
+
+        var response = await sutProvider.Sut.DeleteWebAuthnAll(model);
+
+        Assert.IsType<TwoFactorProviderResponseModel>(response);
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .DisableTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteWebAuthnAll_ExpiredToken_ThrowsBadRequest(
+        User user,
+        TwoFactorWebAuthnDeleteAllRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupUserVerificationTokenFactoryToUnprotectInto(sutProvider, new TwoFactorUserVerificationTokenable
+        {
+            UserId = user.Id,
+            ProviderType = TwoFactorProviderType.WebAuthn,
+            ExpirationDate = DateTime.UtcNow.AddMinutes(-1),
+        });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteWebAuthnAll(model));
         AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
         await sutProvider.GetDependency<IUserService>()
             .DidNotReceiveWithAnyArgs()
@@ -793,21 +1163,61 @@ public class TwoFactorControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteDuo_TokenBoundToDifferentProvider_ThrowsBadRequest(
+    public async Task DeleteWebAuthnAll_TryUnprotectFails_ThrowsBadRequest(
         User user,
-        TwoFactorDuoDeleteRequestModel model,
+        TwoFactorWebAuthnDeleteAllRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupUserVerificationTokenFactoryToUnprotectInto(
-            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.YubiKey));
+        sutProvider.GetDependency<IDataProtectorTokenFactory<TwoFactorUserVerificationTokenable>>()
+            .TryUnprotect(model.UserVerificationToken, out Arg.Any<TwoFactorUserVerificationTokenable>())
+            .Returns(false);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteDuo(model));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteWebAuthnAll(model));
         AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
         await sutProvider.GetDependency<IUserService>()
             .DidNotReceiveWithAnyArgs()
             .DisableTwoFactorProviderAsync(default, default);
     }
+
+    [Theory, BitAutoData]
+    public async Task DeleteWebAuthnAll_TokenBoundToDifferentUser_ThrowsBadRequest(
+        User user,
+        User otherUser,
+        TwoFactorWebAuthnDeleteAllRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupUserVerificationTokenFactoryToUnprotectInto(
+            sutProvider, ValidUserVerificationTokenableFor(otherUser, TwoFactorProviderType.WebAuthn));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteWebAuthnAll(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceiveWithAnyArgs()
+            .DisableTwoFactorProviderAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteWebAuthnAll_TokenBoundToDifferentProvider_ThrowsBadRequest(
+        User user,
+        TwoFactorWebAuthnDeleteAllRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupUserVerificationTokenFactoryToUnprotectInto(
+            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.Duo));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteWebAuthnAll(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceiveWithAnyArgs()
+            .DisableTwoFactorProviderAsync(default, default);
+    }
+
+    // ---------------------------------------------------------------------
+    // Email
+    // ---------------------------------------------------------------------
 
     [Theory, BitAutoData]
     public async Task GetEmail_Success(
@@ -1139,388 +1549,9 @@ public class TwoFactorControllerTests
             .DisableTwoFactorProviderAsync(default, default);
     }
 
-    [Theory, BitAutoData]
-    public async Task PutYubiKey_ValidToken_ReturnsResponse(
-        User user,
-        UpdateTwoFactorYubicoOtpRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        // Null TwoFactorProviders so the response constructor doesn't choke on AutoFixture junk.
-        user.TwoFactorProviders = null;
-        // Null all keys so ValidateYubiKeyAsync skips its UserManager round-trips.
-        model.Key1 = model.Key2 = model.Key3 = model.Key4 = model.Key5 = null;
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupUserVerificationTokenFactoryToUnprotectInto(
-            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.YubiKey));
-        sutProvider.GetDependency<IUserService>()
-            .CanAccessPremium(default)
-            .ReturnsForAnyArgs(true);
-
-        var response = await sutProvider.Sut.PutYubiKey(model);
-
-        Assert.IsType<TwoFactorYubiKeyResponseModel>(response);
-        await sutProvider.GetDependency<IUserService>()
-            .Received(1)
-            .UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.YubiKey);
-    }
-
-    [Theory, BitAutoData]
-    public async Task PutYubiKey_ExpiredToken_ThrowsBadRequest(
-        User user,
-        UpdateTwoFactorYubicoOtpRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupUserVerificationTokenFactoryToUnprotectInto(sutProvider, new TwoFactorUserVerificationTokenable
-        {
-            UserId = user.Id,
-            ProviderType = TwoFactorProviderType.YubiKey,
-            ExpirationDate = DateTime.UtcNow.AddMinutes(-1),
-        });
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutYubiKey(model));
-        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-        await sutProvider.GetDependency<IUserService>()
-            .DidNotReceiveWithAnyArgs()
-            .UpdateTwoFactorProviderAsync(default, default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task PutYubiKey_TryUnprotectFails_ThrowsBadRequest(
-        User user,
-        UpdateTwoFactorYubicoOtpRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        sutProvider.GetDependency<IDataProtectorTokenFactory<TwoFactorUserVerificationTokenable>>()
-            .TryUnprotect(model.UserVerificationToken, out Arg.Any<TwoFactorUserVerificationTokenable>())
-            .Returns(false);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutYubiKey(model));
-        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-        await sutProvider.GetDependency<IUserService>()
-            .DidNotReceiveWithAnyArgs()
-            .UpdateTwoFactorProviderAsync(default, default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task PutYubiKey_TokenBoundToDifferentUser_ThrowsBadRequest(
-        User user,
-        User otherUser,
-        UpdateTwoFactorYubicoOtpRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupUserVerificationTokenFactoryToUnprotectInto(
-            sutProvider, ValidUserVerificationTokenableFor(otherUser, TwoFactorProviderType.YubiKey));
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutYubiKey(model));
-        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-        await sutProvider.GetDependency<IUserService>()
-            .DidNotReceiveWithAnyArgs()
-            .UpdateTwoFactorProviderAsync(default, default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task PutYubiKey_TokenBoundToDifferentProvider_ThrowsBadRequest(
-        User user,
-        UpdateTwoFactorYubicoOtpRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupUserVerificationTokenFactoryToUnprotectInto(
-            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.Duo));
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutYubiKey(model));
-        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-        await sutProvider.GetDependency<IUserService>()
-            .DidNotReceiveWithAnyArgs()
-            .UpdateTwoFactorProviderAsync(default, default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task PutWebAuthn_ValidToken_ReturnsResponse(
-        User user,
-        TwoFactorWebAuthnRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        user.TwoFactorProviders = null;
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupUserVerificationTokenFactoryToUnprotectInto(
-            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.WebAuthn));
-        sutProvider.GetDependency<ICompleteTwoFactorWebAuthnRegistrationCommand>()
-            .CompleteTwoFactorWebAuthnRegistrationAsync(default!, default, default!, default!)
-            .ReturnsForAnyArgs(true);
-
-        var response = await sutProvider.Sut.PutWebAuthn(model);
-
-        Assert.IsType<TwoFactorWebAuthnResponseModel>(response);
-        await sutProvider.GetDependency<ICompleteTwoFactorWebAuthnRegistrationCommand>()
-            .Received(1)
-            .CompleteTwoFactorWebAuthnRegistrationAsync(user, model.Id!.Value, model.Name, model.DeviceResponse);
-    }
-
-    [Theory, BitAutoData]
-    public async Task PutWebAuthn_ExpiredToken_ThrowsBadRequest(
-        User user,
-        TwoFactorWebAuthnRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupUserVerificationTokenFactoryToUnprotectInto(sutProvider, new TwoFactorUserVerificationTokenable
-        {
-            UserId = user.Id,
-            ProviderType = TwoFactorProviderType.WebAuthn,
-            ExpirationDate = DateTime.UtcNow.AddMinutes(-1),
-        });
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutWebAuthn(model));
-        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-        await sutProvider.GetDependency<ICompleteTwoFactorWebAuthnRegistrationCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .CompleteTwoFactorWebAuthnRegistrationAsync(default!, default, default!, default!);
-    }
-
-    [Theory, BitAutoData]
-    public async Task PutWebAuthn_TryUnprotectFails_ThrowsBadRequest(
-        User user,
-        TwoFactorWebAuthnRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        sutProvider.GetDependency<IDataProtectorTokenFactory<TwoFactorUserVerificationTokenable>>()
-            .TryUnprotect(model.UserVerificationToken, out Arg.Any<TwoFactorUserVerificationTokenable>())
-            .Returns(false);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutWebAuthn(model));
-        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-        await sutProvider.GetDependency<ICompleteTwoFactorWebAuthnRegistrationCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .CompleteTwoFactorWebAuthnRegistrationAsync(default!, default, default!, default!);
-    }
-
-    [Theory, BitAutoData]
-    public async Task PutWebAuthn_TokenBoundToDifferentUser_ThrowsBadRequest(
-        User user,
-        User otherUser,
-        TwoFactorWebAuthnRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupUserVerificationTokenFactoryToUnprotectInto(
-            sutProvider, ValidUserVerificationTokenableFor(otherUser, TwoFactorProviderType.WebAuthn));
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutWebAuthn(model));
-        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-        await sutProvider.GetDependency<ICompleteTwoFactorWebAuthnRegistrationCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .CompleteTwoFactorWebAuthnRegistrationAsync(default!, default, default!, default!);
-    }
-
-    [Theory, BitAutoData]
-    public async Task PutWebAuthn_TokenBoundToDifferentProvider_ThrowsBadRequest(
-        User user,
-        TwoFactorWebAuthnRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupUserVerificationTokenFactoryToUnprotectInto(
-            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.Duo));
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutWebAuthn(model));
-        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-        await sutProvider.GetDependency<ICompleteTwoFactorWebAuthnRegistrationCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .CompleteTwoFactorWebAuthnRegistrationAsync(default!, default, default!, default!);
-    }
-
-    [Theory, BitAutoData]
-    public async Task DeleteWebAuthn_ValidToken_ReturnsResponse(
-        User user,
-        TwoFactorWebAuthnDeleteRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        user.TwoFactorProviders = null;
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupUserVerificationTokenFactoryToUnprotectInto(
-            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.WebAuthn));
-        sutProvider.GetDependency<IDeleteTwoFactorWebAuthnCredentialCommand>()
-            .DeleteTwoFactorWebAuthnCredentialAsync(default!, default)
-            .ReturnsForAnyArgs(true);
-
-        var response = await sutProvider.Sut.DeleteWebAuthn(model);
-
-        Assert.IsType<TwoFactorWebAuthnResponseModel>(response);
-        await sutProvider.GetDependency<IDeleteTwoFactorWebAuthnCredentialCommand>()
-            .Received(1)
-            .DeleteTwoFactorWebAuthnCredentialAsync(user, model.Id!.Value);
-    }
-
-    [Theory, BitAutoData]
-    public async Task DeleteWebAuthn_ExpiredToken_ThrowsBadRequest(
-        User user,
-        TwoFactorWebAuthnDeleteRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupUserVerificationTokenFactoryToUnprotectInto(sutProvider, new TwoFactorUserVerificationTokenable
-        {
-            UserId = user.Id,
-            ProviderType = TwoFactorProviderType.WebAuthn,
-            ExpirationDate = DateTime.UtcNow.AddMinutes(-1),
-        });
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteWebAuthn(model));
-        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-        await sutProvider.GetDependency<IDeleteTwoFactorWebAuthnCredentialCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .DeleteTwoFactorWebAuthnCredentialAsync(default!, default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task DeleteWebAuthn_TryUnprotectFails_ThrowsBadRequest(
-        User user,
-        TwoFactorWebAuthnDeleteRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        sutProvider.GetDependency<IDataProtectorTokenFactory<TwoFactorUserVerificationTokenable>>()
-            .TryUnprotect(model.UserVerificationToken, out Arg.Any<TwoFactorUserVerificationTokenable>())
-            .Returns(false);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteWebAuthn(model));
-        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-        await sutProvider.GetDependency<IDeleteTwoFactorWebAuthnCredentialCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .DeleteTwoFactorWebAuthnCredentialAsync(default!, default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task DeleteWebAuthn_TokenBoundToDifferentUser_ThrowsBadRequest(
-        User user,
-        User otherUser,
-        TwoFactorWebAuthnDeleteRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupUserVerificationTokenFactoryToUnprotectInto(
-            sutProvider, ValidUserVerificationTokenableFor(otherUser, TwoFactorProviderType.WebAuthn));
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteWebAuthn(model));
-        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-        await sutProvider.GetDependency<IDeleteTwoFactorWebAuthnCredentialCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .DeleteTwoFactorWebAuthnCredentialAsync(default!, default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task DeleteWebAuthn_TokenBoundToDifferentProvider_ThrowsBadRequest(
-        User user,
-        TwoFactorWebAuthnDeleteRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupUserVerificationTokenFactoryToUnprotectInto(
-            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.Duo));
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteWebAuthn(model));
-        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-        await sutProvider.GetDependency<IDeleteTwoFactorWebAuthnCredentialCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .DeleteTwoFactorWebAuthnCredentialAsync(default!, default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task DeleteWebAuthnAll_ValidToken_DeletesProvider(
-        User user,
-        TwoFactorWebAuthnDeleteAllRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupUserVerificationTokenFactoryToUnprotectInto(
-            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.WebAuthn));
-
-        var response = await sutProvider.Sut.DeleteWebAuthnAll(model);
-
-        Assert.IsType<TwoFactorProviderResponseModel>(response);
-        await sutProvider.GetDependency<IUserService>()
-            .Received(1)
-            .DisableTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
-    }
-
-    [Theory, BitAutoData]
-    public async Task DeleteWebAuthnAll_ExpiredToken_ThrowsBadRequest(
-        User user,
-        TwoFactorWebAuthnDeleteAllRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupUserVerificationTokenFactoryToUnprotectInto(sutProvider, new TwoFactorUserVerificationTokenable
-        {
-            UserId = user.Id,
-            ProviderType = TwoFactorProviderType.WebAuthn,
-            ExpirationDate = DateTime.UtcNow.AddMinutes(-1),
-        });
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteWebAuthnAll(model));
-        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-        await sutProvider.GetDependency<IUserService>()
-            .DidNotReceiveWithAnyArgs()
-            .DisableTwoFactorProviderAsync(default, default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task DeleteWebAuthnAll_TryUnprotectFails_ThrowsBadRequest(
-        User user,
-        TwoFactorWebAuthnDeleteAllRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        sutProvider.GetDependency<IDataProtectorTokenFactory<TwoFactorUserVerificationTokenable>>()
-            .TryUnprotect(model.UserVerificationToken, out Arg.Any<TwoFactorUserVerificationTokenable>())
-            .Returns(false);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteWebAuthnAll(model));
-        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-        await sutProvider.GetDependency<IUserService>()
-            .DidNotReceiveWithAnyArgs()
-            .DisableTwoFactorProviderAsync(default, default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task DeleteWebAuthnAll_TokenBoundToDifferentUser_ThrowsBadRequest(
-        User user,
-        User otherUser,
-        TwoFactorWebAuthnDeleteAllRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupUserVerificationTokenFactoryToUnprotectInto(
-            sutProvider, ValidUserVerificationTokenableFor(otherUser, TwoFactorProviderType.WebAuthn));
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteWebAuthnAll(model));
-        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-        await sutProvider.GetDependency<IUserService>()
-            .DidNotReceiveWithAnyArgs()
-            .DisableTwoFactorProviderAsync(default, default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task DeleteWebAuthnAll_TokenBoundToDifferentProvider_ThrowsBadRequest(
-        User user,
-        TwoFactorWebAuthnDeleteAllRequestModel model,
-        SutProvider<TwoFactorController> sutProvider)
-    {
-        SetupGetUserByPrincipalAsync(sutProvider, user);
-        SetupUserVerificationTokenFactoryToUnprotectInto(
-            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.Duo));
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteWebAuthnAll(model));
-        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
-        await sutProvider.GetDependency<IUserService>()
-            .DidNotReceiveWithAnyArgs()
-            .DisableTwoFactorProviderAsync(default, default);
-    }
+    // ---------------------------------------------------------------------
+    // Helpers
+    // ---------------------------------------------------------------------
 
     private static void SetupGetUserByPrincipalAsync(SutProvider<TwoFactorController> sutProvider, User user)
     {
