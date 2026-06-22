@@ -8,17 +8,18 @@ BEGIN
     DECLARE @OrgUserIds AS [GuidIdArray];
     INSERT INTO @OrgUserIds
     SELECT DISTINCT
-        UserId
+        [UserId]
     FROM
         [dbo].[OrganizationUserView]
     WHERE
-        OrganizationId = @OrganizationId
+        [OrganizationId] = @OrganizationId
+        AND [UserId] IS NOT NULL
 
     -- Get the IDs of all Sends associated with those users --
     SELECT
-        Id
+        [Id]
     FROM
         [dbo].[SendView]
     WHERE
-        UserId IN (SELECT [Id] FROM @OrgUserIds)
+        [UserId] IN (SELECT [Id] FROM @OrgUserIds)
 END

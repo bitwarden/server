@@ -461,7 +461,7 @@ public class SendControlsSyncPolicyEventTests
         postUpsertedPolicy.OrganizationId = policyUpdate.OrganizationId;
         existingDisableSendPolicy.OrganizationId = policyUpdate.OrganizationId;
         existingSendOptionsPolicy.OrganizationId = policyUpdate.OrganizationId;
-        postUpsertedPolicy.SetDataModel(new SendControlsPolicyData { AllowedSendTypes = [ SendType.Text ] });
+        postUpsertedPolicy.SetDataModel(new SendControlsPolicyData { AllowedSendTypes = [SendType.Text] });
 
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.DisableSend)
@@ -479,13 +479,13 @@ public class SendControlsSyncPolicyEventTests
             Id = Guid.NewGuid(),
             Type = SendType.File
         };
-        var sendIds = new List<Guid>([ compliantSend.Id, nonCompliantSend.Id ]);
+        var sendIds = new List<Guid>([compliantSend.Id, nonCompliantSend.Id]);
         sutProvider.GetDependency<ISendRepository>()
             .GetIdsByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns(sendIds);
         sutProvider.GetDependency<ISendRepository>()
             .GetManyByIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns([ compliantSend, nonCompliantSend ]);
+            .Returns([compliantSend, nonCompliantSend]);
 
         await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(
             new SavePolicyModel(policyUpdate), postUpsertedPolicy, null);

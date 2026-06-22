@@ -34,7 +34,7 @@ public class SendControlsPolicyRequirement : IPolicyRequirement
     /// <summary>
     /// Indicates the types of Send that can be created
     /// </summary>
-    public SendType[]? AllowedSendTypes { get; init;} 
+    public SendType[]? AllowedSendTypes { get; init; }
 }
 
 public class SendControlsPolicyRequirementFactory : BasePolicyRequirementFactory<SendControlsPolicyRequirement>
@@ -53,7 +53,7 @@ public class SendControlsPolicyRequirementFactory : BasePolicyRequirementFactory
                     DisableHideEmail = result.DisableHideEmail || data.DisableHideEmail,
                     WhoCanAccess = result.WhoCanAccess ?? data.WhoCanAccess,
                     AllowedDomains = result.AllowedDomains ?? data.AllowedDomains,
-                    AllowedSendTypes = [.. (result.AllowedSendTypes ?? []).Concat(data.AllowedSendTypes ?? []).Distinct()]
+                    AllowedSendTypes = result.AllowedSendTypes ?? data.AllowedSendTypes,
                 });
     }
 }
