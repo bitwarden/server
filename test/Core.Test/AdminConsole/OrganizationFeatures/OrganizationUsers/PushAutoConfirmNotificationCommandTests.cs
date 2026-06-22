@@ -1,10 +1,17 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
+using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -15,6 +22,23 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers;
 [SutProviderCustomize]
 public class PushAutoConfirmNotificationCommandTests
 {
+    private static void SetupPassingGuards(
+        SutProvider<PushAutoConfirmNotificationCommand> sutProvider,
+        Guid organizationId,
+        OrganizationUser orgUser)
+    {
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { UseAutomaticUserConfirmation = true });
+
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organizationId, PolicyType.AutomaticUserConfirmation)
+            .Returns(new PolicyStatus(organizationId, PolicyType.AutomaticUserConfirmation,
+                new Policy { Enabled = true }));
+
+        orgUser.Type = OrganizationUserType.User;
+    }
+
     [Theory]
     [BitAutoData]
     public async Task PushAsync_SendsNotificationToAdminsAndOwners(
@@ -30,6 +54,7 @@ public class PushAutoConfirmNotificationCommandTests
         }
 
         orgUser.Id = Guid.NewGuid();
+        SetupPassingGuards(sutProvider, organizationId, orgUser);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(organizationId, userId)
@@ -72,6 +97,7 @@ public class PushAutoConfirmNotificationCommandTests
         }
 
         orgUser.Id = Guid.NewGuid();
+        SetupPassingGuards(sutProvider, organizationId, orgUser);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(organizationId, userId)
@@ -114,6 +140,7 @@ public class PushAutoConfirmNotificationCommandTests
         }
 
         orgUser.Id = Guid.NewGuid();
+        SetupPassingGuards(sutProvider, organizationId, orgUser);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(organizationId, userId)
@@ -163,6 +190,7 @@ public class PushAutoConfirmNotificationCommandTests
         }
 
         orgUser.Id = Guid.NewGuid();
+        SetupPassingGuards(sutProvider, organizationId, orgUser);
 
         var allCustomUsers = customUsersWithPermission.Concat(customUsersWithoutPermission).ToList();
 
@@ -206,6 +234,7 @@ public class PushAutoConfirmNotificationCommandTests
         admins[2].UserId = Guid.NewGuid();
 
         orgUser.Id = Guid.NewGuid();
+        SetupPassingGuards(sutProvider, organizationId, orgUser);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(organizationId, userId)
@@ -245,6 +274,7 @@ public class PushAutoConfirmNotificationCommandTests
         };
 
         orgUser.Id = Guid.NewGuid();
+        SetupPassingGuards(sutProvider, organizationId, orgUser);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(organizationId, userId)
@@ -271,8 +301,11 @@ public class PushAutoConfirmNotificationCommandTests
     public async Task PushAsync_OrganizationUserNotFound_ThrowsException(
         SutProvider<PushAutoConfirmNotificationCommand> sutProvider,
         Guid userId,
-        Guid organizationId)
+        Guid organizationId,
+        OrganizationUser orgUser)
     {
+        SetupPassingGuards(sutProvider, organizationId, orgUser);
+
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(organizationId, userId)
             .Returns((OrganizationUser)null);
@@ -286,4 +319,104 @@ public class PushAutoConfirmNotificationCommandTests
             .DidNotReceiveWithAnyArgs()
             .PushAsync(Arg.Any<PushNotification<AutoConfirmPushNotification>>());
     }
+
+    // Guard 1: org ability checks
+
+    [Theory]
+    [BitAutoData]
+    public async Task PushAsync_OrgAbilityIsNull_ReturnsEarlyWithoutNotification(
+        SutProvider<PushAutoConfirmNotificationCommand> sutProvider,
+        Guid userId,
+        Guid organizationId)
+    {
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns((OrganizationAbility?)null);
+
+        await sutProvider.Sut.PushAsync(userId, organizationId);
+
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .DidNotReceiveWithAnyArgs()
+            .PushAsync(Arg.Any<PushNotification<AutoConfirmPushNotification>>());
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetByOrganizationAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PushAsync_UseAutomaticUserConfirmationDisabled_ReturnsEarlyWithoutNotification(
+        SutProvider<PushAutoConfirmNotificationCommand> sutProvider,
+        Guid userId,
+        Guid organizationId)
+    {
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { UseAutomaticUserConfirmation = false });
+
+        await sutProvider.Sut.PushAsync(userId, organizationId);
+
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .DidNotReceiveWithAnyArgs()
+            .PushAsync(Arg.Any<PushNotification<AutoConfirmPushNotification>>());
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetByOrganizationAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
+    }
+
+    // Guard 2: policy check
+
+    [Theory, BitAutoData]
+    public async Task PushAsync_PolicyDisabled_ReturnsEarlyWithoutNotification(
+        Guid organizationId,
+        Guid userId,
+        [Policy(PolicyType.AutomaticUserConfirmation, false)] PolicyStatus disabledPolicy,
+        SutProvider<PushAutoConfirmNotificationCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { UseAutomaticUserConfirmation = true });
+
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organizationId, PolicyType.AutomaticUserConfirmation)
+            .Returns(disabledPolicy);
+
+        await sutProvider.Sut.PushAsync(userId, organizationId);
+
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .DidNotReceiveWithAnyArgs()
+            .PushAsync(Arg.Any<PushNotification<AutoConfirmPushNotification>>());
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetByOrganizationAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
+    }
+
+    // Guard 3: target user role check
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task PushAsync_TargetUserIsNotMember_ReturnsEarlyWithoutNotification(
+        OrganizationUserType privilegedType,
+        SutProvider<PushAutoConfirmNotificationCommand> sutProvider,
+        Guid userId,
+        Guid organizationId,
+        OrganizationUser orgUser)
+    {
+        orgUser.Type = privilegedType;
+        SetupPassingGuards(sutProvider, organizationId, orgUser);
+        orgUser.Type = privilegedType; // override after SetupPassingGuards sets User
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organizationId, userId)
+            .Returns(orgUser);
+
+        await sutProvider.Sut.PushAsync(userId, organizationId);
+
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .DidNotReceiveWithAnyArgs()
+            .PushAsync(Arg.Any<PushNotification<AutoConfirmPushNotification>>());
+    }
+
 }
