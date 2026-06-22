@@ -300,13 +300,6 @@ public class UpdateTwoFactorEmailRequestModel : TwoFactorEmailRequestModel
     public string Token { get; set; }
 }
 
-public class TwoFactorRecoveryRequestModel : TwoFactorEmailRequestModel
-{
-    [Required]
-    [StringLength(32)]
-    public string RecoveryCode { get; set; }
-}
-
 /// <summary>Request body for <c>DELETE /two-factor/authenticator</c>.</summary>
 public class TwoFactorAuthenticatorDeleteRequestModel
 {
