@@ -25,6 +25,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Auth.Controllers;
 
+// TODO: PM-39393 - Clean up Obsolete endpoints in this controller 
 [Route("two-factor")]
 [Authorize(Policies.Web)]
 public class TwoFactorController : Controller
