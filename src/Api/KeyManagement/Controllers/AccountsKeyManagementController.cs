@@ -16,6 +16,7 @@ using Bit.Core.KeyManagement.Commands.Interfaces;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.KeyManagement.UserKey.Models.Data;
+using Bit.Core.KeyManagement.UserKey.Queries.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
@@ -46,6 +47,7 @@ public class AccountsKeyManagementController : Controller
         _webauthnKeyValidator;
     private readonly IRotationValidator<IEnumerable<OtherDeviceKeysUpdateRequestModel>, IEnumerable<Device>> _deviceValidator;
     private readonly IKeyConnectorConfirmationDetailsQuery _keyConnectorConfirmationDetailsQuery;
+    private readonly IKeyRotationDataQuery _keyRotationDataQuery;
     private readonly ISetKeyConnectorKeyCommand _setKeyConnectorKeyCommand;
     private readonly IConvertUserToKeyConnectorCommand _convertUserToKeyConnectorCommand;
 
@@ -53,6 +55,7 @@ public class AccountsKeyManagementController : Controller
         IOrganizationUserRepository organizationUserRepository,
         IEmergencyAccessRepository emergencyAccessRepository,
         IKeyConnectorConfirmationDetailsQuery keyConnectorConfirmationDetailsQuery,
+        IKeyRotationDataQuery keyRotationDataQuery,
         IRegenerateUserAsymmetricKeysCommand regenerateUserAsymmetricKeysCommand,
         IRotateUserAccountKeysCommand rotateUserKeyCommandV2,
         IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> cipherValidator,
@@ -81,6 +84,7 @@ public class AccountsKeyManagementController : Controller
         _webauthnKeyValidator = webAuthnKeyValidator;
         _deviceValidator = deviceValidator;
         _keyConnectorConfirmationDetailsQuery = keyConnectorConfirmationDetailsQuery;
+        _keyRotationDataQuery = keyRotationDataQuery;
         _setKeyConnectorKeyCommand = setKeyConnectorKeyCommand;
         _convertUserToKeyConnectorCommand = convertUserToKeyConnectorCommand;
     }
@@ -248,6 +252,14 @@ public class AccountsKeyManagementController : Controller
 
         var details = await _keyConnectorConfirmationDetailsQuery.Run(orgSsoIdentifier, user.Id);
         return new KeyConnectorConfirmationDetailsResponseModel(details);
+    }
+
+    [HttpGet("key-management/key-rotation-data")]
+    public async Task<KeyRotationDataResponseModel> GetKeyRotationDataAsync()
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
+        var data = await _keyRotationDataQuery.Run(user);
+        return new KeyRotationDataResponseModel(data);
     }
 
     private async Task<BaseRotateUserAccountKeysData> ToBaseDataModelAsync(RotateUserKeysRequestModel request, User user)

@@ -51,6 +51,7 @@ public class OrganizationBillingVNextControllerTests
         var offer = new ChurnMitigationOfferResult(
             CouponId: "churn-15-percent-once",
             PercentOff: 15m,
+            AmountOff: null,
             Duration: "once",
             DurationInMonths: null,
             Name: "Churn 15% off");
@@ -62,6 +63,7 @@ public class OrganizationBillingVNextControllerTests
         Assert.NotNull(okResult.Value);
         Assert.Equal("churn-15-percent-once", okResult.Value!.CouponId);
         Assert.Equal(15m, okResult.Value.PercentOff);
+        Assert.Null(okResult.Value.AmountOff);
         Assert.Equal("once", okResult.Value.Duration);
         Assert.Null(okResult.Value.DurationInMonths);
         Assert.Equal("Churn 15% off", okResult.Value.Name);
