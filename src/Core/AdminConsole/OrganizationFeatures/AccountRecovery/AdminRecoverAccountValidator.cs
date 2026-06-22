@@ -3,15 +3,13 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 
 public class AdminRecoverAccountValidator(
     IOrganizationRepository organizationRepository,
     IPolicyQuery policyQuery,
-    IFeatureService featureService,
     IUserRepository userRepository) : IAdminRecoverAccountValidator
 {
     public async Task<ValidationResult<RecoverAccountRequest>> ValidateAsync(RecoverAccountRequest request)
@@ -31,12 +29,6 @@ public class AdminRecoverAccountValidator(
             {
                 return Invalid(request, new MissingPasswordFieldsError());
             }
-        }
-
-        // If resetting 2FA, feature flag must be enabled
-        if (request.ResetTwoFactor && !featureService.IsEnabled(FeatureFlagKeys.AdminResetTwoFactor))
-        {
-            return Invalid(request, new FeatureDisabledError());
         }
 
         // Org must allow reset password

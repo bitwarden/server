@@ -64,11 +64,11 @@ public class ProviderBillingController(
             return result;
         }
 
-        var reportContent = await providerBillingService.GenerateClientInvoiceReport(invoiceId);
+        var reportContent = await providerBillingService.GenerateClientInvoiceReport(provider.Id, invoiceId);
 
         if (reportContent == null)
         {
-            return Error.ServerError("We had a problem generating your invoice CSV. Please contact support.");
+            return Error.NotFound();
         }
 
         return TypedResults.File(

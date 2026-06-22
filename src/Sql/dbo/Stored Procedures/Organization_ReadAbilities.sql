@@ -32,7 +32,8 @@ BEGIN
         [UsePhishingBlocker],
         [UseDisableSmAdsForUsers],
         [UseMyItems],
-        [UseInviteLinks]
+        [UseInviteLinks],
+        [UsePam]
     FROM
         [dbo].[Organization]
 END
