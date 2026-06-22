@@ -648,27 +648,33 @@ public class AccountsControllerTests : IDisposable
 
     [Theory]
     [BitAutoData]
-    public async Task ResendNewDeviceVerificationEmail_WhenUserNotFound_ShouldFail(
+    public async Task ResendNewDeviceVerificationEmail_WhenUserNotFound_SilentlySucceedsWithoutSendingEmail(
     UnauthenticatedSecretVerificationRequestModel model)
     {
         // Arrange
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult((User)null));
+        _userRepository.GetByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult((User)null));
 
-        // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.ResendNewDeviceOtpAsync(model));
+        // Act
+        await _sut.ResendNewDeviceOtpAsync(model);
+
+        // Assert
+        await _twoFactorEmailService.DidNotReceiveWithAnyArgs().SendNewDeviceVerificationEmailAsync(default);
     }
 
     [Theory, BitAutoData]
-    public async Task ResendNewDeviceVerificationEmail_WhenSecretNotValid_ShouldFail(
+    public async Task ResendNewDeviceVerificationEmail_WhenSecretNotValid_SilentlySucceedsWithoutSendingEmail(
         User user,
         UnauthenticatedSecretVerificationRequestModel model)
     {
         // Arrange
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _userRepository.GetByEmailAsync(model.Email).Returns(Task.FromResult(user));
         _userService.VerifySecretAsync(user, Arg.Any<string>()).Returns(Task.FromResult(false));
 
-        // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(() => _sut.ResendNewDeviceOtpAsync(model));
+        // Act
+        await _sut.ResendNewDeviceOtpAsync(model);
+
+        // Assert
+        await _twoFactorEmailService.DidNotReceiveWithAnyArgs().SendNewDeviceVerificationEmailAsync(default);
     }
 
     [Theory, BitAutoData]
@@ -676,7 +682,7 @@ public class AccountsControllerTests : IDisposable
         UnauthenticatedSecretVerificationRequestModel model)
     {
         // Arrange
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _userRepository.GetByEmailAsync(model.Email).Returns(Task.FromResult(user));
         _userService.VerifySecretAsync(user, Arg.Any<string>()).Returns(Task.FromResult(true));
 
         // Act
@@ -694,34 +700,6 @@ public class AccountsControllerTests : IDisposable
 
         // Act
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.PostKdf(model));
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task PostKdf_WithNullAuthenticationData_ShouldFail(
-        User user, ChangeKdfRequestModel model)
-    {
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        model.AuthenticationData = null;
-
-        // Act
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKdf(model));
-
-        Assert.Contains("AuthenticationData and UnlockData must be provided.", exception.Message);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task PostKdf_WithNullUnlockData_ShouldFail(
-        User user, ChangeKdfRequestModel model)
-    {
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        model.UnlockData = null;
-
-        // Act
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKdf(model));
-
-        Assert.Contains("AuthenticationData and UnlockData must be provided.", exception.Message);
     }
 
     [Theory]

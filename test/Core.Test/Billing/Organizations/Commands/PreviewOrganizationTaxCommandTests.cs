@@ -1437,6 +1437,63 @@ public class PreviewOrganizationTaxCommandTests
             options.Discounts == null));
     }
 
+    // PM-37510 (T7): the plan-change preview copies the existing subscription's already-materialized
+    // (grace-reduced) SM service-account quantity verbatim — no grace recompute happens here. A
+    // migrated Enterprise org billed for only 20 accounts above its 200 free ceiling previews exactly
+    // those 20.
+    [Fact]
+    public async Task Run_OrganizationPlanChange_MigratedOrg_CopiesGraceReducedServiceAccountQuantity()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            PlanType = PlanType.EnterpriseAnnually,
+            GatewayCustomerId = "cus_test123",
+            GatewaySubscriptionId = "sub_test123",
+            UseSecretsManager = true
+        };
+
+        var planChange = new OrganizationSubscriptionPlanChange
+        {
+            Tier = ProductTierType.Enterprise,
+            Cadence = PlanCadenceType.Annually
+        };
+
+        var billingAddress = new BillingAddress { Country = "US", PostalCode = "12345" };
+
+        var plan = new EnterprisePlan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+        _pricingClient.GetPlanOrThrow(planChange.PlanType).Returns(plan);
+
+        var subscriptionItems = new List<SubscriptionItem>
+        {
+            new() { Price = new Price { Id = plan.PasswordManager.StripeSeatPlanId }, Quantity = 10 },
+            new() { Price = new Price { Id = plan.SecretsManager.StripeSeatPlanId }, Quantity = 5 },
+            // Already grace-reduced: 220 accounts - 200 free ceiling => 20 billed.
+            new() { Price = new Price { Id = plan.SecretsManager.StripeServiceAccountPlanId }, Quantity = 20 }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Items = new StripeList<SubscriptionItem> { Data = subscriptionItems },
+            Customer = new Customer { Discount = null }
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var invoice = new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 0 }], Total = 0 };
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(organization, planChange, billingAddress);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.SubscriptionDetails.Items.Any(item =>
+                item.Price == plan.SecretsManager.StripeServiceAccountPlanId && item.Quantity == 20)));
+    }
+
     [Fact]
     public async Task Run_OrganizationPlanChange_ExistingSubscriptionWithDiscount_PreservesCoupon()
     {

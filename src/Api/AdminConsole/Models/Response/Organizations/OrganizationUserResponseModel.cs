@@ -254,3 +254,4 @@ public class OrganizationUserBulkResponseModel : ResponseModel
     public Guid Id { get; set; }
     public string Error { get; set; }
 }
+

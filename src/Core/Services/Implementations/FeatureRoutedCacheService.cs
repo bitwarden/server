@@ -1,6 +1,5 @@
 ﻿using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Models.Data.Organizations;
 
@@ -9,7 +8,6 @@ namespace Bit.Core.Services.Implementations;
 public class FeatureRoutedCacheService(
     IVCurrentInMemoryApplicationCacheService inMemoryApplicationCacheService,
     IOrganizationAbilityCacheService extendedOrgAbilityCacheService,
-    IProviderAbilityCacheService providerAbilityCacheService,
     IFeatureService featureService)
     : IApplicationCacheService
 {
@@ -23,31 +21,6 @@ public class FeatureRoutedCacheService(
 
     public Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync() =>
         inMemoryApplicationCacheService.GetProviderAbilitiesAsync();
-
-    public async Task<ProviderAbility?> GetProviderAbilityAsync(Guid providerId)
-    {
-        if (featureService.IsEnabled(FeatureFlagKeys.ProviderAbilityExtendedCache))
-        {
-            return await providerAbilityCacheService.GetProviderAbilityAsync(providerId);
-        }
-
-        (await GetProviderAbilitiesAsync([providerId])).TryGetValue(providerId, out var providerAbility);
-        return providerAbility;
-    }
-
-    public async Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync(IEnumerable<Guid> providerIds)
-    {
-        if (featureService.IsEnabled(FeatureFlagKeys.ProviderAbilityExtendedCache))
-        {
-            return await providerAbilityCacheService.GetProviderAbilitiesAsync(providerIds);
-        }
-
-        var allProviderAbilities = await inMemoryApplicationCacheService.GetProviderAbilitiesAsync();
-        return providerIds
-            .Distinct()
-            .Where(allProviderAbilities.ContainsKey)
-            .ToDictionary(id => id, id => allProviderAbilities[id]);
-    }
 
     public async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync(IEnumerable<Guid> orgIds)
     {
@@ -68,30 +41,10 @@ public class FeatureRoutedCacheService(
             ? extendedOrgAbilityCacheService.UpsertOrganizationAbilityAsync(organization)
             : inMemoryApplicationCacheService.UpsertOrganizationAbilityAsync(organization);
 
-    public Task UpsertProviderAbilityAsync(Provider provider)
-    {
-        if (featureService.IsEnabled(FeatureFlagKeys.ProviderAbilityExtendedCache))
-        {
-            return providerAbilityCacheService.UpsertProviderAbilityAsync(provider);
-        }
-
-        return inMemoryApplicationCacheService.UpsertProviderAbilityAsync(provider);
-    }
-
     public Task DeleteOrganizationAbilityAsync(Guid organizationId) =>
         featureService.IsEnabled(FeatureFlagKeys.OrgAbilityExtendedCache)
             ? extendedOrgAbilityCacheService.DeleteOrganizationAbilityAsync(organizationId)
             : inMemoryApplicationCacheService.DeleteOrganizationAbilityAsync(organizationId);
-
-    public Task DeleteProviderAbilityAsync(Guid providerId)
-    {
-        if (featureService.IsEnabled(FeatureFlagKeys.ProviderAbilityExtendedCache))
-        {
-            return providerAbilityCacheService.DeleteProviderAbilityAsync(providerId);
-        }
-
-        return inMemoryApplicationCacheService.DeleteProviderAbilityAsync(providerId);
-    }
 
     public async Task BaseUpsertOrganizationAbilityAsync(Organization organization)
     {

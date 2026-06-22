@@ -1,5 +1,6 @@
 ﻿using Bit.Commercial.Core.AdminConsole.Services;
 using Bit.Commercial.Core.Test.AdminConsole.AutoFixture;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -1245,12 +1246,12 @@ public class ProviderServiceTests
     public async Task Delete_Success(Provider provider, SutProvider<ProviderService> sutProvider)
     {
         var providerRepository = sutProvider.GetDependency<IProviderRepository>();
-        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+        var providerAbilityCacheService = sutProvider.GetDependency<IProviderAbilityCacheService>();
 
         await sutProvider.Sut.DeleteAsync(provider);
 
         await providerRepository.Received().DeleteAsync(provider);
-        await applicationCacheService.Received().DeleteProviderAbilityAsync(provider.Id);
+        await providerAbilityCacheService.Received().DeleteProviderAbilityAsync(provider.Id);
     }
 
     [Theory, BitAutoData]
@@ -1328,6 +1329,22 @@ public class ProviderServiceTests
         providerDeleteTokenDataFactory.TryUnprotect(validToken, out validTokenData).Returns(false);
 
         await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteAsync(provider, validToken));
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAsync_ThrowsBadRequestException_WhenTokenExpired(Provider provider, string expiredToken
+        , SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        // Token has a matching provider Id but an expiration date two hours in the past.
+        var expiredTokenData = new ProviderDeleteTokenable(provider, -2);
+        var providerDeleteTokenDataFactory = sutProvider.GetDependency<IDataProtectorTokenFactory<ProviderDeleteTokenable>>();
+        providerDeleteTokenDataFactory.TryUnprotect(expiredToken, out expiredTokenData).Returns(true);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteAsync(provider, expiredToken));
+
+        await sutProvider.GetDependency<IProviderRepository>().DidNotReceive().DeleteAsync(provider);
     }
 
     private static SubscriptionUpdateOptions SubscriptionUpdateRequest(string expectedPlanId, Subscription subscriptionItem) =>

@@ -125,8 +125,13 @@ public class TwoFactorController : Controller
         [FromBody] UpdateTwoFactorAuthenticatorRequestModel model)
     {
         var user = model.ToUser(await _userService.GetUserByPrincipalAsync(User));
-        _twoFactorAuthenticatorDataProtector.TryUnprotect(model.UserVerificationToken, out var decryptedToken);
-        if (!decryptedToken.TokenIsValid(user, model.Key))
+
+        var tokenIsValid =
+            _twoFactorAuthenticatorDataProtector.TryUnprotect(model.UserVerificationToken, out var decryptedToken)
+            && decryptedToken.Valid
+            && decryptedToken.TokenIsValid(user, model.Key);
+
+        if (!tokenIsValid)
         {
             throw new BadRequestException("UserVerificationToken", "User verification failed.");
         }
@@ -156,8 +161,13 @@ public class TwoFactorController : Controller
     [FromBody] TwoFactorAuthenticatorDisableRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
-        _twoFactorAuthenticatorDataProtector.TryUnprotect(model.UserVerificationToken, out var decryptedToken);
-        if (!decryptedToken.TokenIsValid(user, model.Key))
+
+        var tokenIsValid =
+            _twoFactorAuthenticatorDataProtector.TryUnprotect(model.UserVerificationToken, out var decryptedToken)
+            && decryptedToken.Valid
+            && decryptedToken.TokenIsValid(user, model.Key);
+
+        if (!tokenIsValid)
         {
             throw new BadRequestException("UserVerificationToken", "User verification failed.");
         }

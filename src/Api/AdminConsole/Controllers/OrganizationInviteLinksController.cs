@@ -20,7 +20,8 @@ public class OrganizationInviteLinksController(
     IUpdateOrganizationInviteLinkCommand updateOrganizationInviteLinkCommand,
     IDeleteOrganizationInviteLinkCommand deleteOrganizationInviteLinkCommand,
     IRefreshOrganizationInviteLinkCommand refreshOrganizationInviteLinkCommand,
-    IValidateOrganizationInviteLinkEmailDomainQuery validateOrganizationInviteLinkEmailDomainQuery)
+    IValidateOrganizationInviteLinkEmailDomainQuery validateOrganizationInviteLinkEmailDomainQuery,
+    IGetOrganizationInviteLinkPoliciesQuery getOrganizationInviteLinkPoliciesQuery)
     : BaseAdminConsoleController
 {
     [AllowAnonymous]
@@ -36,6 +37,16 @@ public class OrganizationInviteLinksController(
                 status.Sso is null
                     ? null
                     : new OrganizationInviteLinkSsoResponseModel(status.Sso.OrgSsoId, status.Sso.Required))));
+    }
+
+    [AllowAnonymous]
+    [HttpPost("/organizations/invite-link/policies")]
+    public async Task<IResult> GetPolicies([FromBody] GetOrganizationInviteLinkPoliciesRequestModel model)
+    {
+        var result = await getOrganizationInviteLinkPoliciesQuery.GetPoliciesAsync(model.Code);
+        return Handle(result, policies =>
+            TypedResults.Ok(new ListResponseModel<PolicyResponseModel>(
+                policies.Select(p => new PolicyResponseModel(p)))));
     }
 
     [AllowAnonymous]

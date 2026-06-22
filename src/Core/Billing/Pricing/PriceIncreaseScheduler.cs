@@ -62,14 +62,22 @@ public interface IPriceIncreaseScheduler
 
     /// <summary>
     /// Releases any active subscription schedule for the given subscription, cancelling a pending
-    /// deferred price increase. Use when the subscription operation makes the scheduled migration
-    /// irrelevant (e.g., plan upgrade, sponsorship, cancellation). Runs when either
-    /// <c>PM32645_DeferPriceMigrationToRenewal</c> or <c>PM35215_BusinessPlanPriceMigration</c> is
-    /// enabled. Logs and re-throws on failure, requiring manual release via the Stripe Dashboard.
+    /// deferred price increase. When <paramref name="organizationId"/> is provided, the
+    /// organization's cohort assignment is also dropped so it leaves the deferred business
+    /// migration. Use when the subscription operation makes the scheduled migration irrelevant
+    /// (e.g., plan upgrade, sponsorship, cancellation). The release is driven by the presence of
+    /// an active schedule rather than a feature flag, so it safely no-ops when no schedule exists.
+    /// Logs and re-throws if the Stripe release fails, requiring manual release via the Stripe
+    /// Dashboard. A failure to drop the cohort assignment after a successful release is logged for
+    /// manual cleanup but does not fail the operation.
     /// </summary>
     /// <param name="customerId">The Stripe customer ID that owns the subscription.</param>
     /// <param name="subscriptionId">The Stripe subscription ID to release the schedule for.</param>
-    Task Release(string customerId, string subscriptionId);
+    /// <param name="organizationId">
+    /// When provided, the organization's cohort assignment row is also deleted after the Stripe
+    /// schedule is released, dropping it from the deferred business migration.
+    /// </param>
+    Task Release(string customerId, string subscriptionId, Guid? organizationId = null);
 }
 
 public class PriceIncreaseScheduler(
@@ -213,7 +221,7 @@ public class PriceIncreaseScheduler(
         }
     }
 
-    public async Task Release(string customerId, string subscriptionId)
+    public async Task Release(string customerId, string subscriptionId, Guid? organizationId = null)
     {
         try
         {
@@ -226,6 +234,24 @@ public class PriceIncreaseScheduler(
             if (activeSchedule != null)
             {
                 await stripeAdapter.ReleaseSubscriptionScheduleAsync(activeSchedule.Id);
+            }
+
+            if (organizationId is not null)
+            {
+                try
+                {
+                    var assignment = await assignmentRepository.GetByOrganizationIdAsync(organizationId.Value);
+                    if (assignment is not null)
+                    {
+                        await assignmentRepository.DeleteAsync(assignment);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex,
+                        "Released the subscription schedule for subscription {SubscriptionId} but failed to drop the migration cohort assignment for organization {OrganizationId}. Manual cleanup of the cohort assignment is required.",
+                        subscriptionId, organizationId.Value);
+                }
             }
         }
         catch (Exception ex)
