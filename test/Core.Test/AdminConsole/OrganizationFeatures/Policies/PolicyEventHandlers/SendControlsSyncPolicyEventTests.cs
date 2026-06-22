@@ -451,7 +451,7 @@ public class SendControlsSyncPolicyEventTests
     }
 
     [Theory, BitAutoData]
-    public async Task ExecutePostUpsertSideEffectAsync_RestrictSendTypeDisablesNoncompliantSends(
+    public async Task ExecutePostUpsertSideEffectAsync_AllowedSendTypesDisablesNoncompliantSends(
         [PolicyUpdate(PolicyType.SendControls, enabled: true)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SendControls, enabled: true)] Policy postUpsertedPolicy,
         [Policy(PolicyType.DisableSend, enabled: false)] Policy existingDisableSendPolicy,
@@ -461,7 +461,7 @@ public class SendControlsSyncPolicyEventTests
         postUpsertedPolicy.OrganizationId = policyUpdate.OrganizationId;
         existingDisableSendPolicy.OrganizationId = policyUpdate.OrganizationId;
         existingSendOptionsPolicy.OrganizationId = policyUpdate.OrganizationId;
-        postUpsertedPolicy.SetDataModel(new SendControlsPolicyData { RestrictSendType = SendType.Text });
+        postUpsertedPolicy.SetDataModel(new SendControlsPolicyData { AllowedSendTypes = [ SendType.Text ] });
 
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.DisableSend)

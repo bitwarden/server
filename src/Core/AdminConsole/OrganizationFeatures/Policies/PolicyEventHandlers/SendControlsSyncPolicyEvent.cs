@@ -148,7 +148,7 @@ public class SendControlsSyncPolicyEvent(
                 return true;
             }
         }
-        if (policyData.RestrictSendType != null && send.Type != policyData.RestrictSendType)
+        if (policyData.AllowedSendTypes != null && !policyData.AllowedSendTypes.Contains(send.Type))
         {
             return true;
         }
