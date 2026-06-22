@@ -525,7 +525,6 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
             {
                 Email = _userEmail,
                 UserVerificationToken = uvToken,
-                MasterPasswordHash = _masterPasswordHash,
             });
         Assert.Equal(HttpStatusCode.OK, sendResponse.StatusCode);
 
@@ -548,7 +547,6 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
                 Email = _userEmail,
                 Token = emailOtp,
                 UserVerificationToken = uvToken,
-                MasterPasswordHash = _masterPasswordHash,
             });
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -570,7 +568,6 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
             {
                 Email = _userEmail,
                 UserVerificationToken = uvToken,
-                MasterPasswordHash = _masterPasswordHash,
             });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

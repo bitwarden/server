@@ -51,7 +51,7 @@ public class UpdateTwoFactorAuthenticatorRequestModel
     }
 }
 
-public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IValidatableObject
+public class UpdateTwoFactorDuoRequestModel : IValidatableObject
 {
     /*
         String lengths based on Duo's documentation
@@ -65,6 +65,7 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
     public string ClientSecret { get; set; }
     [Required]
     public string Host { get; set; }
+    [Required]
     public string UserVerificationToken { get; set; }
 
     public User ToUser(User existingUser)
@@ -119,7 +120,7 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
         return existingOrg;
     }
 
-    public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         var results = new List<ValidationResult>();
         if (string.IsNullOrWhiteSpace(ClientId))
@@ -140,7 +141,7 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
     }
 }
 
-public class UpdateTwoFactorYubicoOtpRequestModel : SecretVerificationRequestModel, IValidatableObject
+public class UpdateTwoFactorYubicoOtpRequestModel : IValidatableObject
 {
     public string Key1 { get; set; }
     public string Key2 { get; set; }
@@ -149,6 +150,7 @@ public class UpdateTwoFactorYubicoOtpRequestModel : SecretVerificationRequestMod
     public string Key5 { get; set; }
     [Required]
     public bool? Nfc { get; set; }
+    [Required]
     public string UserVerificationToken { get; set; }
 
     public User ToUser(User existingUser)
@@ -190,7 +192,7 @@ public class UpdateTwoFactorYubicoOtpRequestModel : SecretVerificationRequestMod
         return keyValue.Substring(0, 12);
     }
 
-    public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (string.IsNullOrWhiteSpace(Key1) && string.IsNullOrWhiteSpace(Key2) && string.IsNullOrWhiteSpace(Key3) &&
             string.IsNullOrWhiteSpace(Key4) && string.IsNullOrWhiteSpace(Key5))
