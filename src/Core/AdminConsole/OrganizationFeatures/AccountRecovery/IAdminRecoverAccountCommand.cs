@@ -1,6 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Utilities.v2.Results;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 
 /// <summary>
 /// A command used to recover an organization user's account by an organization admin.

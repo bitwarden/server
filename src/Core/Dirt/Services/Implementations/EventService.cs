@@ -25,6 +25,7 @@ public class EventService : IEventService
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IProviderAbilityCacheService _providerAbilityCacheService;
     private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly ICurrentContext _currentContext;
 
@@ -34,12 +35,14 @@ public class EventService : IEventService
         IProviderUserRepository providerUserRepository,
         IApplicationCacheService applicationCacheService,
         IOrganizationAbilityCacheService organizationAbilityCacheService,
+        IProviderAbilityCacheService providerAbilityCacheService,
         ICurrentContext currentContext)
     {
         _eventWriteService = eventWriteService;
         _organizationUserRepository = organizationUserRepository;
         _providerUserRepository = providerUserRepository;
         _applicationCacheService = applicationCacheService;
+        _providerAbilityCacheService = providerAbilityCacheService;
         _organizationAbilityCacheService = organizationAbilityCacheService;
         _currentContext = currentContext;
     }
@@ -92,7 +95,7 @@ public class EventService : IEventService
         }
 
         var providers = await _currentContext.ProviderMembershipAsync(_providerUserRepository, userId);
-        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync(providers.Select(provider => provider.Id));
+        var providerAbilities = await _providerAbilityCacheService.GetProviderAbilitiesAsync(providers.Select(provider => provider.Id));
         var providerEvents = providers.Where(o => CanUseProviderEvents(providerAbilities, o.Id))
             .Select(p => new EventMessage(_currentContext)
             {
@@ -383,7 +386,7 @@ public class EventService : IEventService
     public async Task LogProviderUsersEventAsync(IEnumerable<(ProviderUser, EventType, DateTime?)> events)
     {
         var materializedEvents = events.ToList();
-        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync(
+        var providerAbilities = await _providerAbilityCacheService.GetProviderAbilitiesAsync(
             materializedEvents.Select(materializedEvent => materializedEvent.Item1.ProviderId));
         var eventMessages = new List<IEvent>();
         foreach (var (providerUser, type, date) in materializedEvents)
@@ -415,7 +418,7 @@ public class EventService : IEventService
     public async Task LogProviderOrganizationEventsAsync(IEnumerable<(ProviderOrganization, EventType, DateTime?)> events)
     {
         var materializedEvents = events.ToList();
-        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync(
+        var providerAbilities = await _providerAbilityCacheService.GetProviderAbilitiesAsync(
             materializedEvents.Select(materializedEvent => materializedEvent.Item1.ProviderId));
         var eventMessages = new List<IEvent>();
         foreach (var (providerOrganization, type, date) in materializedEvents)

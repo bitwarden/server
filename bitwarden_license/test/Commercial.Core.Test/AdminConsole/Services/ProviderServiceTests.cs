@@ -1246,12 +1246,12 @@ public class ProviderServiceTests
     public async Task Delete_Success(Provider provider, SutProvider<ProviderService> sutProvider)
     {
         var providerRepository = sutProvider.GetDependency<IProviderRepository>();
-        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+        var providerAbilityCacheService = sutProvider.GetDependency<IProviderAbilityCacheService>();
 
         await sutProvider.Sut.DeleteAsync(provider);
 
         await providerRepository.Received().DeleteAsync(provider);
-        await applicationCacheService.Received().DeleteProviderAbilityAsync(provider.Id);
+        await providerAbilityCacheService.Received().DeleteProviderAbilityAsync(provider.Id);
     }
 
     [Theory, BitAutoData]

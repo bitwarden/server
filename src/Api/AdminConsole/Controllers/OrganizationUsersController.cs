@@ -13,6 +13,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data;
+using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
@@ -46,7 +47,6 @@ using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using AccountRecoveryV2 = Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
 using V1_RevokeOrganizationUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1.IRevokeOrganizationUserCommand;
 using V2_RevokeOrganizationUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
 
@@ -86,7 +86,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
     private readonly IInitPendingOrganizationCommand _initPendingOrganizationCommand;
     private readonly V1_RevokeOrganizationUserCommand _revokeOrganizationUserCommand;
-    private readonly AccountRecoveryV2.IAdminRecoverAccountCommand _adminRecoverAccountCommandV2;
+    private readonly IAdminRecoverAccountCommand _adminRecoverAccountCommand;
     private readonly ISelfRevokeOrganizationUserCommand _selfRevokeOrganizationUserCommand;
     private readonly IUpdateUserResetPasswordEnrollmentCommand _updateUserResetPasswordEnrollmentCommand;
     private readonly IAcceptOrganizationInviteLinkCommand _acceptOrganizationInviteLinkCommand;
@@ -117,7 +117,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         V1_RevokeOrganizationUserCommand revokeOrganizationUserCommand,
         IResendOrganizationInviteCommand resendOrganizationInviteCommand,
         IBulkResendOrganizationInvitesCommand bulkResendOrganizationInvitesCommand,
-        AccountRecoveryV2.IAdminRecoverAccountCommand adminRecoverAccountCommandV2,
+        IAdminRecoverAccountCommand adminRecoverAccountCommand,
         IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand,
         IBulkAutomaticallyConfirmOrganizationUsersCommand bulkAutomaticallyConfirmOrganizationUsersCommand,
         V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext,
@@ -156,7 +156,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
         _initPendingOrganizationCommand = initPendingOrganizationCommand;
         _revokeOrganizationUserCommand = revokeOrganizationUserCommand;
-        _adminRecoverAccountCommandV2 = adminRecoverAccountCommandV2;
+        _adminRecoverAccountCommand = adminRecoverAccountCommand;
         _selfRevokeOrganizationUserCommand = selfRevokeOrganizationUserCommand;
         _updateUserResetPasswordEnrollmentCommand = updateUserResetPasswordEnrollmentCommand;
         _acceptOrganizationInviteLinkCommand = acceptOrganizationInviteLinkCommand;
@@ -520,7 +520,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         }
 
         var commandRequest = model.ToCommandRequest(orgId, targetOrganizationUser);
-        return Handle(await _adminRecoverAccountCommandV2.RecoverAccountAsync(commandRequest));
+        return Handle(await _adminRecoverAccountCommand.RecoverAccountAsync(commandRequest));
     }
 #nullable disable
 
