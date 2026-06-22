@@ -1,4 +1,6 @@
-﻿using Bit.Admin.Billing.Controllers;
+﻿using System.Globalization;
+using System.Text;
+using Bit.Admin.Billing.Controllers;
 using Bit.Admin.Billing.Models.OrganizationPlanMigrationCohorts;
 using Bit.Core;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
@@ -14,6 +16,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Stripe;
@@ -697,5 +700,309 @@ public class OrganizationPlanMigrationCohortsControllerTests
             .Received(1)
             .ReplaceAsync(Arg.Is<OrganizationPlanMigrationCohort>(c =>
                 c.Id == id && c.MigrationPathId == null));
+    }
+
+    // --- Export ---
+
+    // The Export action disposes its StreamWriter/CsvWriter, which closes the underlying
+    // Response.Body. In production that stream is the real response; in the test we need to read
+    // it back afterward, so we use a MemoryStream that survives Dispose.
+    private sealed class NonClosingMemoryStream : MemoryStream
+    {
+        protected override void Dispose(bool disposing) { /* keep buffer readable */ }
+        public override ValueTask DisposeAsync() => ValueTask.CompletedTask;
+        public byte[] Captured => GetBuffer()[..(int)Length];
+    }
+
+    private static NonClosingMemoryStream WithResponseBody(
+        OrganizationPlanMigrationCohortsController sut)
+    {
+        var body = new NonClosingMemoryStream();
+        var httpContext = new DefaultHttpContext();
+        httpContext.Response.Body = body;
+        sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+        return body;
+    }
+
+    private static string ReadBody(NonClosingMemoryStream body) =>
+        Encoding.UTF8.GetString(body.Captured);
+
+    private static async IAsyncEnumerable<CohortAssignmentExportRow> AsAsync(
+        IEnumerable<CohortAssignmentExportRow> rows)
+    {
+        foreach (var row in rows)
+        {
+            yield return row;
+        }
+        await Task.CompletedTask;
+    }
+
+    [Theory, BitAutoData]
+    public async Task Export_FlagDisabled_ReturnsNotFound(
+        Guid id,
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(false);
+
+        var result = await sutProvider.Sut.Export(id);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Export_CohortNotFound_ReturnsNotFound(
+        Guid id,
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(id).Returns((OrganizationPlanMigrationCohort?)null);
+
+        var result = await sutProvider.Sut.Export(id);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Export_SetsCsvContentTypeAndSanitizedFilename(
+        OrganizationPlanMigrationCohort cohort,
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
+    {
+        cohort.Name = "Enterprise, Q3/2026 \"big\" push";
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(cohort.Id).Returns(cohort);
+        sutProvider.GetDependency<IExportCohortAssignmentsQuery>()
+            .GetByCohortIdAsync(cohort.Id)
+            .Returns(AsAsync(Array.Empty<CohortAssignmentExportRow>()));
+
+        WithResponseBody(sutProvider.Sut);
+        var result = await sutProvider.Sut.Export(cohort.Id);
+
+        Assert.IsType<EmptyResult>(result);
+        Assert.Equal("text/csv", sutProvider.Sut.Response.ContentType);
+
+        var disposition = sutProvider.Sut.Response.Headers.ContentDisposition.ToString();
+        var expectedName = $"enterprise-q3-2026-big-push-{DateTime.UtcNow:yyyy-MM-dd}.csv";
+        Assert.Equal($"attachment; filename=\"{expectedName}\"", disposition);
+        // No CRLF or quote characters leaked from the operator-entered name into the header.
+        Assert.DoesNotContain('\r', disposition);
+        Assert.DoesNotContain('\n', disposition);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Export_EmptyCohort_WritesHeaderOnly(
+        OrganizationPlanMigrationCohort cohort,
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(cohort.Id).Returns(cohort);
+        sutProvider.GetDependency<IExportCohortAssignmentsQuery>()
+            .GetByCohortIdAsync(cohort.Id)
+            .Returns(AsAsync(Array.Empty<CohortAssignmentExportRow>()));
+
+        var body = WithResponseBody(sutProvider.Sut);
+        await sutProvider.Sut.Export(cohort.Id);
+
+        var lines = ReadBody(body)
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        Assert.Single(lines);
+        Assert.Equal("OrganizationId,OrganizationName,AssignedAt,ScheduledDate,MigratedDate", lines[0].TrimEnd('\r'));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Export_WritesHeaderAndRows(
+        OrganizationPlanMigrationCohort cohort,
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
+    {
+        var assignedAt = new DateTime(2026, 3, 1, 12, 0, 0, DateTimeKind.Utc);
+        var scheduledDate = new DateTime(2026, 4, 1, 0, 0, 0, DateTimeKind.Utc);
+        var row = new CohortAssignmentExportRow(
+            Id: Guid.NewGuid(),
+            OrganizationId: Guid.NewGuid(),
+            OrganizationName: "Acme Corp",
+            AssignedAt: assignedAt,
+            ScheduledDate: scheduledDate,
+            MigratedDate: null);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(cohort.Id).Returns(cohort);
+        sutProvider.GetDependency<IExportCohortAssignmentsQuery>()
+            .GetByCohortIdAsync(cohort.Id)
+            .Returns(AsAsync(new[] { row }));
+
+        var body = WithResponseBody(sutProvider.Sut);
+        await sutProvider.Sut.Export(cohort.Id);
+
+        var lines = ReadBody(body).Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(2, lines.Length);
+        Assert.Equal("OrganizationId,OrganizationName,AssignedAt,ScheduledDate,MigratedDate", lines[0].TrimEnd('\r'));
+
+        var fields = lines[1].TrimEnd('\r').Split(',');
+        Assert.Equal(row.OrganizationId.ToString(), fields[0]);
+        Assert.Equal("Acme Corp", fields[1]);
+        Assert.Equal(assignedAt.ToString("o", CultureInfo.InvariantCulture), fields[2]);
+        Assert.Equal(scheduledDate.ToString("o", CultureInfo.InvariantCulture), fields[3]);
+        Assert.Equal(string.Empty, fields[4]);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Export_OrganizationName_FormulaInjectionPrefixed(
+        OrganizationPlanMigrationCohort cohort,
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
+    {
+        var row = new CohortAssignmentExportRow(
+            Id: Guid.NewGuid(),
+            OrganizationId: Guid.NewGuid(),
+            OrganizationName: "=cmd|'/c calc'!A1",
+            AssignedAt: new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc),
+            ScheduledDate: null,
+            MigratedDate: null);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(cohort.Id).Returns(cohort);
+        sutProvider.GetDependency<IExportCohortAssignmentsQuery>()
+            .GetByCohortIdAsync(cohort.Id)
+            .Returns(AsAsync(new[] { row }));
+
+        var body = WithResponseBody(sutProvider.Sut);
+        await sutProvider.Sut.Export(cohort.Id);
+
+        var content = ReadBody(body);
+        // The dangerous leading '=' must be neutralized with a single-quote prefix. CsvHelper then
+        // quotes the field because it now contains characters needing escaping.
+        Assert.Contains("'=cmd", content);
+        // The raw, unprefixed formula must NOT appear at the start of a field.
+        Assert.DoesNotContain(",=cmd", content);
+    }
+
+    [Theory]
+    [BitAutoData("=danger", true)]
+    [BitAutoData("+danger", true)]
+    [BitAutoData("-danger", true)]
+    [BitAutoData("@danger", true)]
+    [BitAutoData("Acme Corp", false)]
+    public async Task Export_OrganizationName_SanitizesOnlyFormulaTriggers(
+        string organizationName,
+        bool expectPrefixed,
+        OrganizationPlanMigrationCohort cohort,
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
+    {
+        var row = new CohortAssignmentExportRow(
+            Id: Guid.NewGuid(),
+            OrganizationId: Guid.NewGuid(),
+            OrganizationName: organizationName,
+            AssignedAt: new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc),
+            ScheduledDate: null,
+            MigratedDate: null);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(cohort.Id).Returns(cohort);
+        sutProvider.GetDependency<IExportCohortAssignmentsQuery>()
+            .GetByCohortIdAsync(cohort.Id)
+            .Returns(AsAsync(new[] { row }));
+
+        var body = WithResponseBody(sutProvider.Sut);
+        await sutProvider.Sut.Export(cohort.Id);
+
+        var fields = ReadBody(body)
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries)[1]
+            .TrimEnd('\r')
+            // The name field is the second column; CsvHelper quotes it when prefixed, so strip quotes.
+            .Split(',')[1]
+            .Trim('"');
+
+        Assert.Equal(expectPrefixed ? "'" + organizationName : organizationName, fields);
+    }
+
+    [Theory]
+    [BitAutoData("!!!")]
+    [BitAutoData("   ")]
+    [BitAutoData("日本語")]
+    [BitAutoData("")]
+    public async Task Export_NameSlugsToEmpty_FallsBackToCohortFilename(
+        string cohortName,
+        OrganizationPlanMigrationCohort cohort,
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
+    {
+        cohort.Name = cohortName;
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(cohort.Id).Returns(cohort);
+        sutProvider.GetDependency<IExportCohortAssignmentsQuery>()
+            .GetByCohortIdAsync(cohort.Id)
+            .Returns(AsAsync(Array.Empty<CohortAssignmentExportRow>()));
+
+        WithResponseBody(sutProvider.Sut);
+        await sutProvider.Sut.Export(cohort.Id);
+
+        var disposition = sutProvider.Sut.Response.Headers.ContentDisposition.ToString();
+        var expectedName = $"cohort-{DateTime.UtcNow:yyyy-MM-dd}.csv";
+        Assert.Equal($"attachment; filename=\"{expectedName}\"", disposition);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Export_LogsActorAndCohortId_NeverOrgName(
+        OrganizationPlanMigrationCohort cohort,
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
+    {
+        const string secretOrgName = "Top Secret Org Name";
+        var row = new CohortAssignmentExportRow(
+            Id: Guid.NewGuid(),
+            OrganizationId: Guid.NewGuid(),
+            OrganizationName: secretOrgName,
+            AssignedAt: new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc),
+            ScheduledDate: null,
+            MigratedDate: null);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(cohort.Id).Returns(cohort);
+        sutProvider.GetDependency<IExportCohortAssignmentsQuery>()
+            .GetByCohortIdAsync(cohort.Id)
+            .Returns(AsAsync(new[] { row }));
+
+        var logger = sutProvider.GetDependency<ILogger<OrganizationPlanMigrationCohortsController>>();
+
+        WithResponseBody(sutProvider.Sut);
+        await sutProvider.Sut.Export(cohort.Id);
+
+        // The audit log must record the cohort id (the actor is also included via the log template),
+        // and must NEVER leak an organization name or CSV contents (zero-knowledge logging rule).
+        logger.Received().Log(
+            LogLevel.Information,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(state => state.ToString()!.Contains(cohort.Id.ToString())),
+            Arg.Any<Exception?>(),
+            Arg.Any<Func<object, Exception?, string>>());
+
+        logger.DidNotReceive().Log(
+            Arg.Any<LogLevel>(),
+            Arg.Any<EventId>(),
+            Arg.Is<object>(state => state.ToString()!.Contains(secretOrgName)),
+            Arg.Any<Exception?>(),
+            Arg.Any<Func<object, Exception?, string>>());
     }
 }

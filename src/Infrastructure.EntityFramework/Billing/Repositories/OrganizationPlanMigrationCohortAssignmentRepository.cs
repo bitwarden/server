@@ -72,6 +72,37 @@ public class OrganizationPlanMigrationCohortAssignmentRepository(
         return await query.CountAsync();
     }
 
+    public async Task<IReadOnlyList<CohortAssignmentExportRow>> GetExportRowsByCohortIdAsync(
+        Guid cohortId, DateTime? afterCreationDate, Guid? afterId, int take)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var assignments = dbContext.OrganizationPlanMigrationCohortAssignments
+            .Where(a => a.CohortId == cohortId);
+
+        if (afterCreationDate != null)
+        {
+            assignments = assignments.Where(a =>
+                a.CreationDate > afterCreationDate.Value
+                || (a.CreationDate == afterCreationDate.Value
+                    && a.Id > afterId!.Value));
+        }
+
+        return await assignments
+            .OrderBy(a => a.CreationDate)
+            .ThenBy(a => a.Id)
+            .Take(take)
+            .Select(a => new CohortAssignmentExportRow(
+                a.Id,
+                a.OrganizationId,
+                a.Organization.Name,
+                a.CreationDate,
+                a.ScheduledDate,
+                a.MigratedDate))
+            .ToListAsync();
+    }
+
     public Task<CohortBulkAssignmentSummary> SyncManyAsync(
         IEnumerable<ResolvedCohortBulkAssignmentRow> rows) =>
         throw new NotSupportedException(

@@ -1,4 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Globalization;
+using System.Text;
+using System.Text.RegularExpressions;
 using Bit.Admin.Billing.Models.OrganizationPlanMigrationCohorts;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
@@ -8,6 +11,8 @@ using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Services;
+using CsvHelper;
+using CsvHelper.Configuration;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Stripe;
@@ -22,9 +27,15 @@ public class OrganizationPlanMigrationCohortsController(
     IStripeAdapter stripeAdapter,
     ILogger<OrganizationPlanMigrationCohortsController> logger,
     IFeatureService featureService,
-    IGetCohortAssignmentStateQuery getCohortAssignmentStateQuery) : Controller
+    IGetCohortAssignmentStateQuery getCohortAssignmentStateQuery,
+    IExportCohortAssignmentsQuery exportCohortAssignmentsQuery) : Controller
 {
     private const int _defaultPageSize = 25;
+
+    // How many CSV rows to buffer before flushing to the response stream during an export. Keeps
+    // bytes flowing on large cohorts so the connection doesn't idle into a server write-timeout.
+    // Intentionally independent of the export query's DB page size -- this only bounds buffering.
+    private const int _exportFlushEveryRows = 1000;
 
     private bool PlanMigrationCohortsFeatureEnabled() =>
         featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration);
@@ -112,6 +123,86 @@ public class OrganizationPlanMigrationCohortsController(
 
         var assignmentState = await getCohortAssignmentStateQuery.Run(cohort);
         return View(EditCohortViewModel.From(cohort, CohortFormModel.From(cohort), assignmentState));
+    }
+
+    [HttpGet("{id:guid}/export")]
+    [RequirePermission(Permission.Tools_ManagePlanMigrationCohorts)]
+    public async Task<IActionResult> Export(Guid id)
+    {
+        if (!PlanMigrationCohortsFeatureEnabled()) return NotFound();
+
+        var cohort = await cohortRepository.GetByIdAsync(id);
+        if (cohort == null) return NotFound();
+
+        var fileName = BuildExportFileName(cohort.Name);
+
+        logger.LogInformation(
+            "Cohort CSV export started. Actor: {Actor}, CohortId: {CohortId}",
+            User?.Identity?.Name ?? "unknown",
+            cohort.Id);
+
+        Response.ContentType = "text/csv";
+        Response.Headers.ContentDisposition = $"attachment; filename=\"{fileName}\"";
+
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture) { HasHeaderRecord = false };
+        var writer = new StreamWriter(Response.Body, new UTF8Encoding(false));
+        var csv = new CsvWriter(writer, config);
+
+        foreach (var header in new[]
+                 {
+                     "OrganizationId", "OrganizationName", "AssignedAt", "ScheduledDate", "MigratedDate",
+                 })
+        {
+            csv.WriteField(header);
+        }
+        await csv.NextRecordAsync();
+
+        var sinceFlush = 0;
+        var rowsWritten = 0;
+        var aborted = false;
+        try
+        {
+            await foreach (var row in exportCohortAssignmentsQuery.GetByCohortIdAsync(cohort.Id))
+            {
+                csv.WriteField(row.OrganizationId.ToString());
+                csv.WriteField(SanitizeCsvField(row.OrganizationName));
+                csv.WriteField(row.AssignedAt.ToString("o", CultureInfo.InvariantCulture));
+                csv.WriteField(row.ScheduledDate?.ToString("o", CultureInfo.InvariantCulture) ?? string.Empty);
+                csv.WriteField(row.MigratedDate?.ToString("o", CultureInfo.InvariantCulture) ?? string.Empty);
+                await csv.NextRecordAsync();
+                rowsWritten++;
+
+                if (++sinceFlush >= _exportFlushEveryRows)
+                {
+                    await csv.FlushAsync();
+                    sinceFlush = 0;
+                }
+            }
+
+            await csv.FlushAsync();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Cohort CSV export failed mid-stream after the response started. CohortId: {CohortId}, RowsWritten: {RowsWritten}",
+                cohort.Id,
+                rowsWritten);
+            aborted = true;
+            HttpContext.Abort();
+        }
+        finally
+        {
+            try
+            {
+                await csv.DisposeAsync();
+                await writer.DisposeAsync();
+            }
+            catch when (aborted)
+            {
+            }
+        }
+
+        return new EmptyResult();
     }
 
     [HttpPost("{id:guid}")]
@@ -213,6 +304,32 @@ public class OrganizationPlanMigrationCohortsController(
 
     private static string? NormalizeCouponCode(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string BuildExportFileName(string cohortName)
+    {
+        var slug = Regex.Replace(cohortName ?? string.Empty, "[^a-zA-Z0-9]+", "-")
+            .Trim('-')
+            .ToLowerInvariant();
+
+        if (string.IsNullOrEmpty(slug))
+        {
+            slug = "cohort";
+        }
+
+        return $"{slug}-{DateTime.UtcNow:yyyy-MM-dd}.csv";
+    }
+
+    private static string SanitizeCsvField(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        return value[0] is '=' or '+' or '-' or '@' or '\t' or '\r'
+            ? "'" + value
+            : value;
+    }
 
     // MVC skips IValidatableObject.Validate when any property-level attribute already failed, hiding cross-field
     // rules until the operator resubmits. Run it explicitly so every error surfaces on a single submit.

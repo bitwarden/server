@@ -40,6 +40,25 @@ public class OrganizationPlanMigrationCohortAssignmentRepository(
             commandType: CommandType.StoredProcedure);
     }
 
+    public async Task<IReadOnlyList<CohortAssignmentExportRow>> GetExportRowsByCohortIdAsync(
+        Guid cohortId, DateTime? afterCreationDate, Guid? afterId, int take)
+    {
+        await using var connection = new SqlConnection(ReadOnlyConnectionString);
+
+        var results = await connection.QueryAsync<CohortAssignmentExportRow>(
+            $"[{Schema}].[{Table}_ReadManyExportByCohortId]",
+            new
+            {
+                CohortId = cohortId,
+                AfterCreationDate = afterCreationDate,
+                AfterId = afterId,
+                Take = take,
+            },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToList();
+    }
+
     public async Task<CohortBulkAssignmentSummary> SyncManyAsync(
         IEnumerable<ResolvedCohortBulkAssignmentRow> rows)
     {
