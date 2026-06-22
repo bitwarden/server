@@ -2,13 +2,13 @@
 #nullable disable
 
 using Bit.Api.AdminConsole.Models.Response;
-using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Authorization;
 using Bit.Core.Vault.Models.Data;
+using Bit.SharedWeb.Models.Response;
 
 namespace Bit.Api.Tools.Models.Response;
 

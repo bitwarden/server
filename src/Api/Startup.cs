@@ -37,6 +37,8 @@ using Bit.Core.Enums;
 
 
 #if !OSS
+using Bit.Commercial.Pam.Api;
+using Bit.Commercial.Pam.Api.Endpoints;
 using Bit.Commercial.Core.SecretsManager;
 using Bit.Commercial.Core.Utilities;
 using Bit.Commercial.Infrastructure.EntityFramework.SecretsManager;
@@ -206,6 +208,7 @@ public class Startup
         services.AddCommercialCoreServices();
         services.AddCommercialSecretsManagerServices();
         services.AddCommercialPamServices();
+        services.AddPamApiServices();
         services.AddSecretsManagerEfRepositories();
         Jobs.JobsHostedService.AddCommercialSecretsManagerJobServices(services);
 #endif
@@ -215,15 +218,10 @@ public class Startup
         {
             config.Conventions.Add(new ApiExplorerGroupConvention());
             config.Conventions.Add(new PublicApiControllersModelConvention());
-        })
-        .ConfigureApiBehaviorOptions(options =>
-        {
-            // The PAM controllers are [ApiController]; keep Bitwarden's ErrorResponseModel 400 contract
-            // (produced by ModelStateValidationFilterAttribute) instead of the framework's default
-            // ValidationProblemDetails. Only affects [ApiController] controllers.
-            options.SuppressModelStateInvalidFilter = true;
         });
 
+        // Required for the PAM Minimal API endpoints to be discovered by ApiExplorer/Swagger.
+        services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(globalSettings, Environment);
         Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
         services.AddHostedService<Jobs.JobsHostedService>();
@@ -286,6 +284,11 @@ public class Startup
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapDefaultControllerRoute();
+
+#if !OSS
+            // PAM is a commercial feature; its Minimal API endpoints are only mapped in non-OSS builds.
+            endpoints.MapPamEndpoints();
+#endif
 
             if (!globalSettings.SelfHosted)
             {

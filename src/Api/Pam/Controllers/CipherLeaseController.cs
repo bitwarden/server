@@ -1,7 +1,4 @@
-﻿using Bit.Api.Pam.Models.Request;
-using Bit.Api.Pam.Models.Response;
-using Bit.Api.Vault.Models.Response;
-using Bit.Commercial.Pam.OrganizationFeatures.Commands.Interfaces;
+﻿using Bit.Api.Vault.Models.Response;
 using Bit.Commercial.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Core;
 using Bit.Core.Exceptions;
@@ -15,60 +12,24 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Pam.Controllers;
 
-[ApiController]
+/// <summary>
+/// Hosts the single deprecated full-cipher read-back endpoint. The rest of the <c>ciphers/{id}/lease</c> resource
+/// (pre-check, state, submit) is served as Minimal API endpoints from the Commercial.Pam library. This action stays
+/// in the Api project because it depends on the Vault response models (<see cref="CipherDetailsResponseModel"/>),
+/// which live here; it is scheduled for removal, after which the Api project carries no PAM code.
+/// </summary>
 [Route("ciphers/{id:guid}/lease")]
 [Authorize("Application")]
 [RequireFeature(FeatureFlagKeys.Pam)]
 public class CipherLeaseController(
     IUserService userService,
-    IAccessPreCheckQuery preCheckQuery,
-    IGetCipherAccessStateQuery cipherAccessStateQuery,
-    ISubmitAccessRequestCommand submitAccessRequestCommand,
     IGetLeasedCipherQuery getLeasedCipherQuery,
     IApplicationCacheService applicationCacheService,
     ICollectionCipherRepository collectionCipherRepository,
     ICipherLeaseGate cipherLeaseGate,
     GlobalSettings globalSettings)
-    : ControllerBase
+    : Controller
 {
-    /// <summary>
-    /// Reports whether leasing this cipher would be approved automatically or require human approval, so the client
-    /// can present the appropriate workflow. No request is created.
-    /// </summary>
-    [HttpGet("pre-check")]
-    public async Task<AccessPreCheckResponseModel> PreCheck(Guid id)
-    {
-        var userId = userService.GetProperUserId(User)!.Value;
-        var result = await preCheckQuery.PreCheckAsync(userId, id);
-        return new AccessPreCheckResponseModel(id, result);
-    }
-
-    /// <summary>
-    /// Returns a single snapshot of the caller's lease state for this cipher — their active lease, pending request,
-    /// and approved-but-not-yet-activated request, if any — powering the cipher-view banner and the vault-row badge.
-    /// Side-effect free.
-    /// </summary>
-    [HttpGet("state")]
-    public async Task<CipherAccessStateResponseModel> State(Guid id)
-    {
-        var userId = userService.GetProperUserId(User)!.Value;
-        var result = await cipherAccessStateQuery.GetStateAsync(userId, id);
-        return new CipherAccessStateResponseModel(result);
-    }
-
-    /// <summary>
-    /// Submits a request to lease this cipher. The automatic path creates an already-approved request the requester
-    /// then activates to start the lease; the human path creates a pending request for an approver. Neither mints a
-    /// lease here — the requester activates the approved request (POST <c>access-requests/{id}/activate</c>).
-    /// </summary>
-    [HttpPost("")]
-    public async Task<AccessRequestResultResponseModel> Post(Guid id, AccessRequestCreateRequestModel model)
-    {
-        var userId = userService.GetProperUserId(User)!.Value;
-        var result = await submitAccessRequestCommand.SubmitAsync(userId, id, model.ToSubmission());
-        return new AccessRequestResultResponseModel(result);
-    }
-
     /// <summary>
     /// Returns the cipher with its complete data, but only if the caller currently holds an active lease for it.
     /// This is the read-back counterpart to the partial data sync returns for leasing-gated ciphers. The data is

@@ -1,7 +1,6 @@
 ﻿using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Api.Auth.Models.Response.WebAuthn;
-using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Enums;
@@ -13,6 +12,7 @@ using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
+using Bit.SharedWeb.Models.Response;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

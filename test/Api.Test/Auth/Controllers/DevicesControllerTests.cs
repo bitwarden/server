@@ -1,5 +1,4 @@
 ﻿using Bit.Api.Controllers;
-using Bit.Api.Models.Response;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.UserFeatures.DeviceTrust;
@@ -8,6 +7,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.SharedWeb.Models.Response;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;

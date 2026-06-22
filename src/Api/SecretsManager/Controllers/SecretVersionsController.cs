@@ -1,5 +1,4 @@
-﻿using Bit.Api.Models.Response;
-using Bit.Api.SecretsManager.Models.Request;
+﻿using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
@@ -8,6 +7,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
+using Bit.SharedWeb.Models.Response;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
