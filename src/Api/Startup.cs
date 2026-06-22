@@ -215,6 +215,13 @@ public class Startup
         {
             config.Conventions.Add(new ApiExplorerGroupConvention());
             config.Conventions.Add(new PublicApiControllersModelConvention());
+        })
+        .ConfigureApiBehaviorOptions(options =>
+        {
+            // The PAM controllers are [ApiController]; keep Bitwarden's ErrorResponseModel 400 contract
+            // (produced by ModelStateValidationFilterAttribute) instead of the framework's default
+            // ValidationProblemDetails. Only affects [ApiController] controllers.
+            options.SuppressModelStateInvalidFilter = true;
         });
 
         services.AddSwaggerGen(globalSettings, Environment);

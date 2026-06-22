@@ -17,6 +17,7 @@ namespace Bit.Api.Pam.Controllers;
 /// approver's queue (requests on collections the caller can Manage, plus the decision). Activating an approved request
 /// mints a lease, which from then on lives under the <c>leases</c> resource.
 /// </summary>
+[ApiController]
 [Route("access-requests")]
 [Authorize("Application")]
 [RequireFeature(FeatureFlagKeys.Pam)]
@@ -28,7 +29,7 @@ public class AccessRequestsController(
     IListMyAccessRequestsQuery listMyAccessRequestsQuery,
     IActivateAccessRequestCommand activateAccessRequestCommand,
     ICancelAccessRequestCommand cancelAccessRequestCommand)
-    : Controller
+    : ControllerBase
 {
     /// <summary>
     /// Returns the caller's pending approver queue: requests on collections the caller can Manage that are still
@@ -73,7 +74,7 @@ public class AccessRequestsController(
     /// not decide their own request.
     /// </summary>
     [HttpPost("{id:guid}/decision")]
-    public async Task<AccessRequestDetailsResponseModel> Decide(Guid id, [FromBody] AccessDecisionRequestModel model)
+    public async Task<AccessRequestDetailsResponseModel> Decide(Guid id, AccessDecisionRequestModel model)
     {
         var userId = userService.GetProperUserId(User)!.Value;
         var result = await decideAccessRequestCommand.DecideAsync(userId, id, model.ToSubmission());

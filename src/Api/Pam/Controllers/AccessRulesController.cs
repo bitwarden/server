@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Pam.Controllers;
 
+[ApiController]
 [Route("organizations/{orgId:guid}/access-rules")]
 [Authorize("Application")]
 [RequireFeature(FeatureFlagKeys.Pam)]
@@ -21,7 +22,7 @@ public class AccessRulesController(
     ICreateAccessRuleCommand createCommand,
     IUpdateAccessRuleCommand updateCommand,
     IDeleteAccessRuleCommand deleteCommand)
-    : Controller
+    : ControllerBase
 {
     [HttpGet("")]
     public async Task<ListResponseModel<AccessRuleResponseModel>> GetAll(Guid orgId)
@@ -48,7 +49,7 @@ public class AccessRulesController(
     }
 
     [HttpPost("")]
-    public async Task<AccessRuleResponseModel> Post(Guid orgId, [FromBody] AccessRuleRequestModel model)
+    public async Task<AccessRuleResponseModel> Post(Guid orgId, AccessRuleRequestModel model)
     {
         await EnsureAdminAsync(orgId);
 
@@ -57,7 +58,7 @@ public class AccessRulesController(
     }
 
     [HttpPut("{id:guid}")]
-    public async Task<AccessRuleResponseModel> Put(Guid orgId, Guid id, [FromBody] AccessRuleRequestModel model)
+    public async Task<AccessRuleResponseModel> Put(Guid orgId, Guid id, AccessRuleRequestModel model)
     {
         await EnsureAdminAsync(orgId);
 
