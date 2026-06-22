@@ -374,7 +374,6 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
             {
                 Id = 0,
                 UserVerificationToken = uvToken,
-                MasterPasswordHash = _masterPasswordHash,
             });
         Assert.Equal(HttpStatusCode.OK, disableResponse.StatusCode);
     }
@@ -398,7 +397,6 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
                 Name = "TestKey",
                 DeviceResponse = new { },
                 UserVerificationToken = uvToken,
-                MasterPasswordHash = _masterPasswordHash,
             });
         Assert.Equal(HttpStatusCode.OK, putResponse.StatusCode);
     }

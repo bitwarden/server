@@ -275,19 +275,15 @@ public class TwoFactorWebAuthnRequestModel : TwoFactorWebAuthnDeleteRequestModel
     public string Name { get; set; }
 }
 
-public class TwoFactorWebAuthnDeleteRequestModel : SecretVerificationRequestModel, IValidatableObject
+public class TwoFactorWebAuthnDeleteRequestModel : IValidatableObject
 {
     [Required]
     public int? Id { get; set; }
+    [Required]
     public string UserVerificationToken { get; set; }
 
-    public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        foreach (var validationResult in base.Validate(validationContext))
-        {
-            yield return validationResult;
-        }
-
         if (!Id.HasValue)
         {
             yield return new ValidationResult("Invalid Key Id", new string[] { nameof(Id) });
