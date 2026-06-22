@@ -5,6 +5,7 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.Utilities;
+using Bit.SharedWeb.Models.Response;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
