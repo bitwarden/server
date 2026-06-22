@@ -17,7 +17,7 @@ using CipherType = Bit.Core.Vault.Enums.CipherType;
 
 namespace Bit.Commercial.Pam.Test.Api.Controllers;
 
-// The deprecated GET /ciphers/{id}/lease/cipher endpoint stays in the Api project (it depends on the Vault
+// The deprecated GET /leases/ciphers/{id}/cipher endpoint stays in the Api project (it depends on the Vault
 // response models), so it is tested here as an MVC controller. The rest of the cipher-lease resource lives in
 // the Commercial.Pam Minimal API handler (see CipherLeaseEndpointsHandlerTests).
 [ControllerCustomize(typeof(CipherLeaseController))]
@@ -25,7 +25,7 @@ namespace Bit.Commercial.Pam.Test.Api.Controllers;
 [Bit.Api.Test.Vault.AutoFixture.CipherLeaseGateBypassCustomize]
 public class CipherLeaseControllerTests
 {
-    // GET /ciphers/{id}/lease/cipher is [Obsolete] (deprecated, scheduled for removal) but still fully functional, so
+    // GET /leases/ciphers/{id}/cipher is [Obsolete] (deprecated, scheduled for removal) but still fully functional, so
     // its behaviour stays under test; suppress the obsolete-usage warning for these deliberate calls.
 #pragma warning disable CS0618
     [Theory, BitAutoData]

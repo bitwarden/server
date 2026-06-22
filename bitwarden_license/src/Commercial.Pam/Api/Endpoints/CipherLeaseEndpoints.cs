@@ -5,9 +5,9 @@ using Bit.Commercial.Pam.Api.Models.Request;
 namespace Bit.Commercial.Pam.Api.Endpoints;
 
 /// <summary>
-/// The <c>ciphers/{id}/lease</c> resource: the per-cipher leasing entry points (pre-check, state, submit).
+/// The <c>leases/ciphers/{id}</c> resource: the per-cipher leasing entry points (pre-check, state, submit).
 /// Mirrors the routes the former <c>CipherLeaseController</c> served. <c>id</c> is bound from the group's route
-/// prefix. The deprecated <c>GET …/lease/cipher</c> read-back is hosted by a small MVC controller in the Api
+/// prefix. The deprecated <c>GET …/cipher</c> read-back is hosted by a small MVC controller in the Api
 /// project (it depends on the Api Vault response models).
 /// </summary>
 internal static class CipherLeaseEndpoints

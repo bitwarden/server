@@ -13,12 +13,12 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.Pam.Controllers;
 
 /// <summary>
-/// Hosts the single deprecated full-cipher read-back endpoint. The rest of the <c>ciphers/{id}/lease</c> resource
+/// Hosts the single deprecated full-cipher read-back endpoint. The rest of the <c>leases/ciphers/{id}</c> resource
 /// (pre-check, state, submit) is served as Minimal API endpoints from the Commercial.Pam library. This action stays
 /// in the Api project because it depends on the Vault response models (<see cref="CipherDetailsResponseModel"/>),
 /// which live here; it is scheduled for removal, after which the Api project carries no PAM code.
 /// </summary>
-[Route("ciphers/{id:guid}/lease")]
+[Route("leases/ciphers/{id:guid}")]
 [Authorize("Application")]
 [RequireFeature(FeatureFlagKeys.Pam)]
 public class CipherLeaseController(
