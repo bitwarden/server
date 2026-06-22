@@ -6,10 +6,10 @@ using Bit.Core.Tokens;
 namespace Bit.Core.Auth.Models.Business.Tokenables;
 
 /// <summary>
-/// Single-use proof that a user passed entry-level secret verification (master password or OTP).
+/// Time-limited proof that a user passed entry-level secret verification (master password or OTP).
 /// Issued by per-provider GET endpoints (e.g. <c>GetYubiKey</c>) and replayed on the subsequent
-/// PUT / DELETE so the user does not have to re-verify a second time within the token lifetime.
-/// Bound to <see cref="UserId"/> + <see cref="ProviderType"/> to prevent cross-provider replay.
+/// PUT / DELETE within the token's lifetime so the user does not need to re-verify. Bound to
+/// <see cref="UserId"/> + <see cref="ProviderType"/> to prevent cross-provider replay.
 /// </summary>
 public class TwoFactorUserVerificationTokenable : ExpiringTokenable
 {
