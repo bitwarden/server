@@ -2,7 +2,7 @@
 
 namespace Bit.Api.Auth.Models.Request;
 
-/// <summary>Request body for <c>DELETE /two-factor/webauthn/all</c>.</summary>
+/// <summary>Request model for deleting all of a user's WebAuthn two-factor credentials.</summary>
 public class TwoFactorWebAuthnDeleteAllRequestModel
 {
     /// <summary>Token minted by <c>GetWebAuthn</c>; bound to <c>UserId + ProviderType</c>.</summary>

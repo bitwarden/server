@@ -12,7 +12,7 @@ using Fido2NetLib;
 
 namespace Bit.Api.Auth.Models.Request;
 
-/// <summary>Request body for <c>PUT /two-factor/authenticator</c>.</summary>
+/// <summary>Request model for setting up or updating a user's Authenticator (TOTP) two-factor configuration.</summary>
 public class TwoFactorAuthenticatorUpdateRequestModel
 {
     /// <summary>Six-digit TOTP code from the authenticator app, proving the user enrolled <see cref="Key"/>.</summary>
@@ -322,7 +322,7 @@ public class TwoFactorEmailUpdateRequestModel : TwoFactorEmailSetupRequestModel
     public string Token { get; set; }
 }
 
-/// <summary>Request body for <c>DELETE /two-factor/authenticator</c>.</summary>
+/// <summary>Request model for deleting a user's Authenticator (TOTP) two-factor configuration.</summary>
 public class TwoFactorAuthenticatorDeleteRequestModel
 {
     /// <summary>Token minted by <c>GetAuthenticator</c>; bound to <c>UserId + Key</c>.</summary>
