@@ -13,7 +13,7 @@ using Fido2NetLib;
 namespace Bit.Api.Auth.Models.Request;
 
 /// <summary>Request body for <c>PUT /two-factor/authenticator</c>.</summary>
-public class UpdateTwoFactorAuthenticatorRequestModel
+public class TwoFactorAuthenticatorUpdateRequestModel
 {
     /// <summary>Six-digit TOTP code from the authenticator app, proving the user enrolled <see cref="Key"/>.</summary>
     [Required]
@@ -51,7 +51,7 @@ public class UpdateTwoFactorAuthenticatorRequestModel
     }
 }
 
-public class UpdateTwoFactorDuoRequestModel : IValidatableObject
+public class TwoFactorDuoUpdateRequestModel : IValidatableObject
 {
     /*
         String lengths based on Duo's documentation
@@ -141,7 +141,7 @@ public class UpdateTwoFactorDuoRequestModel : IValidatableObject
     }
 }
 
-public class UpdateTwoFactorYubicoOtpRequestModel : IValidatableObject
+public class TwoFactorYubiKeyUpdateRequestModel : IValidatableObject
 {
     public string Key1 { get; set; }
     public string Key2 { get; set; }
@@ -252,7 +252,7 @@ public class TwoFactorEmailLoginRequestModel : SecretVerificationRequestModel
     }
 }
 
-public class TwoFactorWebAuthnRequestModel : TwoFactorWebAuthnDeleteRequestModel
+public class TwoFactorWebAuthnUpdateRequestModel : TwoFactorWebAuthnDeleteRequestModel
 {
     [Required]
     public AuthenticatorAttestationRawResponse DeviceResponse { get; set; }
@@ -315,7 +315,7 @@ public class TwoFactorEmailSetupRequestModel
 /// Request body for the authenticated setup endpoint that completes Email 2FA enrollment by replaying the
 /// OTP from the previous setup step. Authenticated by the same user-verification token.
 /// </summary>
-public class UpdateTwoFactorEmailRequestModel : TwoFactorEmailSetupRequestModel
+public class TwoFactorEmailUpdateRequestModel : TwoFactorEmailSetupRequestModel
 {
     [Required]
     [StringLength(50)]

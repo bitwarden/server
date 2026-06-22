@@ -119,7 +119,7 @@ public class TwoFactorControllerTests
     [Theory, BitAutoData]
     public async Task PutAuthenticator_ExpiredToken_ThrowsBadRequest(
         User user,
-        UpdateTwoFactorAuthenticatorRequestModel model,
+        TwoFactorAuthenticatorUpdateRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -135,7 +135,7 @@ public class TwoFactorControllerTests
     [Theory, BitAutoData]
     public async Task PutAuthenticator_TryUnprotectFails_ThrowsBadRequest(
         User user,
-        UpdateTwoFactorAuthenticatorRequestModel model,
+        TwoFactorAuthenticatorUpdateRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -151,7 +151,7 @@ public class TwoFactorControllerTests
     public async Task PutAuthenticator_InvalidTokenData_ThrowsBadRequest(
         User user,
         User otherUser,
-        UpdateTwoFactorAuthenticatorRequestModel model,
+        TwoFactorAuthenticatorUpdateRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -164,7 +164,7 @@ public class TwoFactorControllerTests
     [Theory, BitAutoData]
     public async Task PutAuthenticator_ValidToken_ReturnsResponse(
         User user,
-        UpdateTwoFactorAuthenticatorRequestModel model,
+        TwoFactorAuthenticatorUpdateRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -290,7 +290,7 @@ public class TwoFactorControllerTests
     [Theory, BitAutoData]
     public async Task PutYubiKey_ValidToken_ReturnsResponse(
         User user,
-        UpdateTwoFactorYubicoOtpRequestModel model,
+        TwoFactorYubiKeyUpdateRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         // Null TwoFactorProviders so the response constructor doesn't choke on AutoFixture junk.
@@ -315,7 +315,7 @@ public class TwoFactorControllerTests
     [Theory, BitAutoData]
     public async Task PutYubiKey_ExpiredToken_ThrowsBadRequest(
         User user,
-        UpdateTwoFactorYubicoOtpRequestModel model,
+        TwoFactorYubiKeyUpdateRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -336,7 +336,7 @@ public class TwoFactorControllerTests
     [Theory, BitAutoData]
     public async Task PutYubiKey_TryUnprotectFails_ThrowsBadRequest(
         User user,
-        UpdateTwoFactorYubicoOtpRequestModel model,
+        TwoFactorYubiKeyUpdateRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -355,7 +355,7 @@ public class TwoFactorControllerTests
     public async Task PutYubiKey_TokenBoundToDifferentUser_ThrowsBadRequest(
         User user,
         User otherUser,
-        UpdateTwoFactorYubicoOtpRequestModel model,
+        TwoFactorYubiKeyUpdateRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -372,7 +372,7 @@ public class TwoFactorControllerTests
     [Theory, BitAutoData]
     public async Task PutYubiKey_TokenBoundToDifferentProvider_ThrowsBadRequest(
         User user,
-        UpdateTwoFactorYubicoOtpRequestModel model,
+        TwoFactorYubiKeyUpdateRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -532,7 +532,7 @@ public class TwoFactorControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task PutDuo_CannotAccessPremium_ThrowsBadRequestException(User user, UpdateTwoFactorDuoRequestModel request, SutProvider<TwoFactorController> sutProvider)
+    public async Task PutDuo_CannotAccessPremium_ThrowsBadRequestException(User user, TwoFactorDuoUpdateRequestModel request, SutProvider<TwoFactorController> sutProvider)
     {
         // Arrange
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -551,7 +551,7 @@ public class TwoFactorControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task PutDuo_InvalidConfiguration_ThrowsBadRequestException(User user, UpdateTwoFactorDuoRequestModel request, SutProvider<TwoFactorController> sutProvider)
+    public async Task PutDuo_InvalidConfiguration_ThrowsBadRequestException(User user, TwoFactorDuoUpdateRequestModel request, SutProvider<TwoFactorController> sutProvider)
     {
         // Arrange
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -577,7 +577,7 @@ public class TwoFactorControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task PutDuo_Success(User user, UpdateTwoFactorDuoRequestModel request, SutProvider<TwoFactorController> sutProvider)
+    public async Task PutDuo_Success(User user, TwoFactorDuoUpdateRequestModel request, SutProvider<TwoFactorController> sutProvider)
     {
         // Arrange
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -603,7 +603,7 @@ public class TwoFactorControllerTests
 
     [Theory, BitAutoData]
     public async Task PutDuo_ExpiredToken_ThrowsBadRequest(
-        User user, UpdateTwoFactorDuoRequestModel request, SutProvider<TwoFactorController> sutProvider)
+        User user, TwoFactorDuoUpdateRequestModel request, SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
         SetupUserVerificationTokenFactoryToUnprotectInto(sutProvider, new TwoFactorUserVerificationTokenable
@@ -619,7 +619,7 @@ public class TwoFactorControllerTests
 
     [Theory, BitAutoData]
     public async Task PutDuo_TryUnprotectFails_ThrowsBadRequest(
-        User user, UpdateTwoFactorDuoRequestModel request, SutProvider<TwoFactorController> sutProvider)
+        User user, TwoFactorDuoUpdateRequestModel request, SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
         sutProvider.GetDependency<IDataProtectorTokenFactory<TwoFactorUserVerificationTokenable>>()
@@ -632,7 +632,7 @@ public class TwoFactorControllerTests
 
     [Theory, BitAutoData]
     public async Task PutDuo_WrongUserId_ThrowsBadRequest(
-        User user, User otherUser, UpdateTwoFactorDuoRequestModel request, SutProvider<TwoFactorController> sutProvider)
+        User user, User otherUser, TwoFactorDuoUpdateRequestModel request, SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
         SetupUserVerificationTokenFactoryToUnprotectInto(sutProvider,
@@ -644,7 +644,7 @@ public class TwoFactorControllerTests
 
     [Theory, BitAutoData]
     public async Task PutDuo_WrongProviderType_ThrowsBadRequest(
-        User user, UpdateTwoFactorDuoRequestModel request, SutProvider<TwoFactorController> sutProvider)
+        User user, TwoFactorDuoUpdateRequestModel request, SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
         SetupUserVerificationTokenFactoryToUnprotectInto(sutProvider,
@@ -769,7 +769,7 @@ public class TwoFactorControllerTests
 
     [Theory, BitAutoData]
     public async Task PutOrganizationDuo_InvalidConfiguration_ThrowsBadRequestException(
-        User user, Organization organization, UpdateTwoFactorDuoRequestModel request, SutProvider<TwoFactorController> sutProvider)
+        User user, Organization organization, TwoFactorDuoUpdateRequestModel request, SutProvider<TwoFactorController> sutProvider)
     {
         // Arrange
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -795,7 +795,7 @@ public class TwoFactorControllerTests
 
     [Theory, BitAutoData]
     public async Task PutOrganizationDuo_Success(
-        User user, Organization organization, UpdateTwoFactorDuoRequestModel request, SutProvider<TwoFactorController> sutProvider)
+        User user, Organization organization, TwoFactorDuoUpdateRequestModel request, SutProvider<TwoFactorController> sutProvider)
     {
         // Arrange
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -820,7 +820,7 @@ public class TwoFactorControllerTests
 
     [Theory, BitAutoData]
     public async Task PutOrganizationDuo_ManagePolicies_ThrowsNotFoundException(
-        User user, Organization organization, UpdateTwoFactorDuoRequestModel request, SutProvider<TwoFactorController> sutProvider)
+        User user, Organization organization, TwoFactorDuoUpdateRequestModel request, SutProvider<TwoFactorController> sutProvider)
     {
         // Arrange
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -840,7 +840,7 @@ public class TwoFactorControllerTests
 
     [Theory, BitAutoData]
     public async Task PutOrganizationDuo_GetByIdAsync_ThrowsNotFoundException(
-        User user, Organization organization, UpdateTwoFactorDuoRequestModel request, SutProvider<TwoFactorController> sutProvider)
+        User user, Organization organization, TwoFactorDuoUpdateRequestModel request, SutProvider<TwoFactorController> sutProvider)
     {
         // Arrange
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -934,7 +934,7 @@ public class TwoFactorControllerTests
     [Theory, BitAutoData]
     public async Task PutWebAuthn_ValidToken_ReturnsResponse(
         User user,
-        TwoFactorWebAuthnRequestModel model,
+        TwoFactorWebAuthnUpdateRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         user.TwoFactorProviders = null;
@@ -956,7 +956,7 @@ public class TwoFactorControllerTests
     [Theory, BitAutoData]
     public async Task PutWebAuthn_ExpiredToken_ThrowsBadRequest(
         User user,
-        TwoFactorWebAuthnRequestModel model,
+        TwoFactorWebAuthnUpdateRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -977,7 +977,7 @@ public class TwoFactorControllerTests
     [Theory, BitAutoData]
     public async Task PutWebAuthn_TryUnprotectFails_ThrowsBadRequest(
         User user,
-        TwoFactorWebAuthnRequestModel model,
+        TwoFactorWebAuthnUpdateRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -996,7 +996,7 @@ public class TwoFactorControllerTests
     public async Task PutWebAuthn_TokenBoundToDifferentUser_ThrowsBadRequest(
         User user,
         User otherUser,
-        TwoFactorWebAuthnRequestModel model,
+        TwoFactorWebAuthnUpdateRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -1013,7 +1013,7 @@ public class TwoFactorControllerTests
     [Theory, BitAutoData]
     public async Task PutWebAuthn_TokenBoundToDifferentProvider_ThrowsBadRequest(
         User user,
-        TwoFactorWebAuthnRequestModel model,
+        TwoFactorWebAuthnUpdateRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -1333,7 +1333,7 @@ public class TwoFactorControllerTests
     [Theory, BitAutoData]
     public async Task PutEmail_ValidTokenAndOtp_ReturnsResponse(
         User user,
-        UpdateTwoFactorEmailRequestModel model,
+        TwoFactorEmailUpdateRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -1360,7 +1360,7 @@ public class TwoFactorControllerTests
     [Theory, BitAutoData]
     public async Task PutEmail_InvalidOtp_ThrowsBadRequest(
         User user,
-        UpdateTwoFactorEmailRequestModel model,
+        TwoFactorEmailUpdateRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -1386,7 +1386,7 @@ public class TwoFactorControllerTests
     [Theory, BitAutoData]
     public async Task PutEmail_ExpiredToken_ThrowsBadRequest(
         User user,
-        UpdateTwoFactorEmailRequestModel model,
+        TwoFactorEmailUpdateRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -1407,7 +1407,7 @@ public class TwoFactorControllerTests
     [Theory, BitAutoData]
     public async Task PutEmail_TryUnprotectFails_ThrowsBadRequest(
         User user,
-        UpdateTwoFactorEmailRequestModel model,
+        TwoFactorEmailUpdateRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -1426,7 +1426,7 @@ public class TwoFactorControllerTests
     public async Task PutEmail_TokenBoundToDifferentUser_ThrowsBadRequest(
         User user,
         User otherUser,
-        UpdateTwoFactorEmailRequestModel model,
+        TwoFactorEmailUpdateRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);
@@ -1443,7 +1443,7 @@ public class TwoFactorControllerTests
     [Theory, BitAutoData]
     public async Task PutEmail_TokenBoundToDifferentProvider_ThrowsBadRequest(
         User user,
-        UpdateTwoFactorEmailRequestModel model,
+        TwoFactorEmailUpdateRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
     {
         SetupGetUserByPrincipalAsync(sutProvider, user);

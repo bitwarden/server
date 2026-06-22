@@ -127,7 +127,7 @@ public class TwoFactorController : Controller
 
     [HttpPut("authenticator")]
     public async Task<TwoFactorAuthenticatorResponseModel> PutAuthenticator(
-        [FromBody] UpdateTwoFactorAuthenticatorRequestModel model)
+        [FromBody] TwoFactorAuthenticatorUpdateRequestModel model)
     {
         var user = model.ToUser(await _userService.GetUserByPrincipalAsync(User));
 
@@ -155,7 +155,7 @@ public class TwoFactorController : Controller
     [HttpPost("authenticator")]
     [Obsolete("This endpoint is deprecated. Use PUT /authenticator instead.")]
     public async Task<TwoFactorAuthenticatorResponseModel> PostAuthenticator(
-        [FromBody] UpdateTwoFactorAuthenticatorRequestModel model)
+        [FromBody] TwoFactorAuthenticatorUpdateRequestModel model)
     {
         return await PutAuthenticator(model);
     }
@@ -199,7 +199,7 @@ public class TwoFactorController : Controller
     }
 
     [HttpPut("yubikey")]
-    public async Task<TwoFactorYubiKeyResponseModel> PutYubiKey([FromBody] UpdateTwoFactorYubicoOtpRequestModel model)
+    public async Task<TwoFactorYubiKeyResponseModel> PutYubiKey([FromBody] TwoFactorYubiKeyUpdateRequestModel model)
     {
         var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.YubiKey);
         await ValidateUserHasPremiumAsync(user);
@@ -218,7 +218,7 @@ public class TwoFactorController : Controller
 
     [HttpPost("yubikey")]
     [Obsolete("This endpoint is deprecated. Use PUT /yubikey instead.")]
-    public async Task<TwoFactorYubiKeyResponseModel> PostYubiKey([FromBody] UpdateTwoFactorYubicoOtpRequestModel model)
+    public async Task<TwoFactorYubiKeyResponseModel> PostYubiKey([FromBody] TwoFactorYubiKeyUpdateRequestModel model)
     {
         return await PutYubiKey(model);
     }
@@ -242,7 +242,7 @@ public class TwoFactorController : Controller
     }
 
     [HttpPut("duo")]
-    public async Task<TwoFactorDuoResponseModel> PutDuo([FromBody] UpdateTwoFactorDuoRequestModel model)
+    public async Task<TwoFactorDuoResponseModel> PutDuo([FromBody] TwoFactorDuoUpdateRequestModel model)
     {
         var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.Duo);
         await ValidateUserHasPremiumAsync(user);
@@ -260,7 +260,7 @@ public class TwoFactorController : Controller
 
     [HttpPost("duo")]
     [Obsolete("This endpoint is deprecated. Use PUT /duo instead.")]
-    public async Task<TwoFactorDuoResponseModel> PostDuo([FromBody] UpdateTwoFactorDuoRequestModel model)
+    public async Task<TwoFactorDuoResponseModel> PostDuo([FromBody] TwoFactorDuoUpdateRequestModel model)
     {
         return await PutDuo(model);
     }
@@ -303,7 +303,7 @@ public class TwoFactorController : Controller
 
     [HttpPut("~/organizations/{id}/two-factor/duo")]
     public async Task<TwoFactorDuoResponseModel> PutOrganizationDuo(string id,
-        [FromBody] UpdateTwoFactorDuoRequestModel model)
+        [FromBody] TwoFactorDuoUpdateRequestModel model)
     {
         await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.OrganizationDuo);
 
@@ -330,7 +330,7 @@ public class TwoFactorController : Controller
     [HttpPost("~/organizations/{id}/two-factor/duo")]
     [Obsolete("This endpoint is deprecated. Use PUT /organizations/{id}/two-factor/duo instead.")]
     public async Task<TwoFactorDuoResponseModel> PostOrganizationDuo(string id,
-        [FromBody] UpdateTwoFactorDuoRequestModel model)
+        [FromBody] TwoFactorDuoUpdateRequestModel model)
     {
         return await PutOrganizationDuo(id, model);
     }
@@ -359,7 +359,7 @@ public class TwoFactorController : Controller
     }
 
     [HttpPut("webauthn")]
-    public async Task<TwoFactorWebAuthnResponseModel> PutWebAuthn([FromBody] TwoFactorWebAuthnRequestModel model)
+    public async Task<TwoFactorWebAuthnResponseModel> PutWebAuthn([FromBody] TwoFactorWebAuthnUpdateRequestModel model)
     {
         var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.WebAuthn);
 
@@ -376,7 +376,7 @@ public class TwoFactorController : Controller
 
     [HttpPost("webauthn")]
     [Obsolete("This endpoint is deprecated. Use PUT /webauthn instead.")]
-    public async Task<TwoFactorWebAuthnResponseModel> PostWebAuthn([FromBody] TwoFactorWebAuthnRequestModel model)
+    public async Task<TwoFactorWebAuthnResponseModel> PostWebAuthn([FromBody] TwoFactorWebAuthnUpdateRequestModel model)
     {
         return await PutWebAuthn(model);
     }
@@ -483,7 +483,7 @@ public class TwoFactorController : Controller
     }
 
     [HttpPut("email")]
-    public async Task<TwoFactorEmailResponseModel> PutEmail([FromBody] UpdateTwoFactorEmailRequestModel model)
+    public async Task<TwoFactorEmailResponseModel> PutEmail([FromBody] TwoFactorEmailUpdateRequestModel model)
     {
         var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.Email);
         model.ToUser(user);
@@ -501,7 +501,7 @@ public class TwoFactorController : Controller
 
     [HttpPost("email")]
     [Obsolete("This endpoint is deprecated. Use PUT /email instead.")]
-    public async Task<TwoFactorEmailResponseModel> PostEmail([FromBody] UpdateTwoFactorEmailRequestModel model)
+    public async Task<TwoFactorEmailResponseModel> PostEmail([FromBody] TwoFactorEmailUpdateRequestModel model)
     {
         return await PutEmail(model);
     }

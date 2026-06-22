@@ -86,7 +86,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
             });
 
         var response = await _client.PutAsJsonAsync("/two-factor/authenticator",
-            new UpdateTwoFactorAuthenticatorRequestModel
+            new TwoFactorAuthenticatorUpdateRequestModel
             {
                 Token = "123456",
                 Key = _authenticatorKey,
@@ -158,7 +158,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         var totp = new Totp(Base32Encoding.ToBytes(key)).ComputeTotp();
 
         var response = await _client.PutAsJsonAsync("/two-factor/authenticator",
-            new UpdateTwoFactorAuthenticatorRequestModel
+            new TwoFactorAuthenticatorUpdateRequestModel
             {
                 Token = totp,
                 Key = key,
@@ -232,7 +232,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse);
 
         var response = await _client.PutAsJsonAsync("/two-factor/yubikey",
-            new UpdateTwoFactorYubicoOtpRequestModel
+            new TwoFactorYubiKeyUpdateRequestModel
             {
                 Key1 = "ccccccccccbe",
                 Nfc = true,
@@ -278,7 +278,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse);
 
         var response = await _client.PutAsJsonAsync("/two-factor/duo",
-            new UpdateTwoFactorDuoRequestModel
+            new TwoFactorDuoUpdateRequestModel
             {
                 ClientId = new string('a', 20),
                 ClientSecret = new string('b', 40),
@@ -335,7 +335,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
 
         var response = await _client.PutAsJsonAsync(
             $"/organizations/{org.Id}/two-factor/duo",
-            new UpdateTwoFactorDuoRequestModel
+            new TwoFactorDuoUpdateRequestModel
             {
                 ClientId = new string('a', 20),
                 ClientSecret = new string('b', 40),
@@ -539,7 +539,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
             CoreHelpers.CustomProviderName(TwoFactorProviderType.Email));
 
         var response = await _client.PutAsJsonAsync("/two-factor/email",
-            new UpdateTwoFactorEmailRequestModel
+            new TwoFactorEmailUpdateRequestModel
             {
                 Email = _userEmail,
                 Token = emailOtp,
