@@ -31,5 +31,10 @@ public class TwoFactorAuthenticatorResponseModel : ResponseModel
 
     public bool Enabled { get; set; }
     public string Key { get; set; }
+
+    /// <summary>
+    /// User-verification token bound to <c>UserId + Key</c>. Minted by <c>GetAuthenticator</c>
+    /// and replayed on subsequent management calls so the user does not have to re-verify.
+    /// </summary>
     public string UserVerificationToken { get; set; }
 }

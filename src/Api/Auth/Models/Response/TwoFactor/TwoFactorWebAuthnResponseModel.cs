@@ -27,6 +27,11 @@ public class TwoFactorWebAuthnResponseModel : ResponseModel
 
     public bool Enabled { get; set; }
     public IEnumerable<KeyModel> Keys { get; set; }
+
+    /// <summary>
+    /// User-verification token bound to <c>UserId + ProviderType</c>. Minted by the matching GET
+    /// endpoint and replayed on subsequent management calls so the user does not have to re-verify.
+    /// </summary>
     public string UserVerificationToken { get; set; }
 
     public class KeyModel

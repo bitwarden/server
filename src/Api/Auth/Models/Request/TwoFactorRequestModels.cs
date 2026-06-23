@@ -25,7 +25,10 @@ public class TwoFactorAuthenticatorUpdateRequestModel
     [StringLength(50)]
     public string Key { get; set; }
 
-    /// <summary>Token minted by <c>GetAuthenticator</c>; bound to <c>UserId + Key</c>.</summary>
+    /// <summary>
+    /// User-verification token bound to <c>UserId + Key</c>. Minted by <c>GetAuthenticator</c>
+    /// and replayed on subsequent management calls so the user does not have to re-verify.
+    /// </summary>
     [Required]
     public string UserVerificationToken { get; set; }
 
@@ -65,6 +68,11 @@ public class TwoFactorDuoUpdateRequestModel : IValidatableObject
     public string ClientSecret { get; set; }
     [Required]
     public string Host { get; set; }
+
+    /// <summary>
+    /// User-verification token bound to <c>UserId + ProviderType</c>. Minted by the matching GET
+    /// endpoint and replayed on subsequent management calls so the user does not have to re-verify.
+    /// </summary>
     [Required]
     public string UserVerificationToken { get; set; }
 
@@ -150,6 +158,11 @@ public class TwoFactorYubiKeyUpdateRequestModel : IValidatableObject
     public string Key5 { get; set; }
     [Required]
     public bool? Nfc { get; set; }
+
+    /// <summary>
+    /// User-verification token bound to <c>UserId + ProviderType</c>. Minted by the matching GET
+    /// endpoint and replayed on subsequent management calls so the user does not have to re-verify.
+    /// </summary>
     [Required]
     public string UserVerificationToken { get; set; }
 
@@ -263,6 +276,11 @@ public class TwoFactorWebAuthnDeleteRequestModel : IValidatableObject
 {
     [Required]
     public int? Id { get; set; }
+
+    /// <summary>
+    /// User-verification token bound to <c>UserId + ProviderType</c>. Minted by the matching GET
+    /// endpoint and replayed on subsequent management calls so the user does not have to re-verify.
+    /// </summary>
     [Required]
     public string UserVerificationToken { get; set; }
 
@@ -286,6 +304,10 @@ public class TwoFactorEmailSetupRequestModel
     [StringLength(256)]
     public string Email { get; set; }
 
+    /// <summary>
+    /// User-verification token bound to <c>UserId + ProviderType</c>. Minted by the matching GET
+    /// endpoint and replayed on subsequent management calls so the user does not have to re-verify.
+    /// </summary>
     [Required]
     public string UserVerificationToken { get; set; }
 
@@ -325,7 +347,10 @@ public class TwoFactorEmailUpdateRequestModel : TwoFactorEmailSetupRequestModel
 /// <summary>Request model for deleting a user's Authenticator (TOTP) two-factor configuration.</summary>
 public class TwoFactorAuthenticatorDeleteRequestModel
 {
-    /// <summary>Token minted by <c>GetAuthenticator</c>; bound to <c>UserId + Key</c>.</summary>
+    /// <summary>
+    /// User-verification token bound to <c>UserId + Key</c>. Minted by <c>GetAuthenticator</c>
+    /// and replayed on subsequent management calls so the user does not have to re-verify.
+    /// </summary>
     [Required]
     public string UserVerificationToken { get; set; }
 

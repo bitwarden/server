@@ -25,7 +25,7 @@ When a user manages their own 2FA enrollment (configuring a new provider, updati
      → updates enrollment          → removes enrollment            on the next GET
 ```
 
-The GET endpoint is the only step that requires the master-password / OTP secret. After it succeeds, the server mints a short-lived **user-verification token** and returns it alongside the provider's current config. The client replays that token on the subsequent PUT or DELETE; no secret is sent on the write step.
+The GET endpoint is the only step that requires the master-password / OTP secret. After it succeeds, the server mints a short-lived **user-verification token** and returns it alongside the provider's current config. The client replays that token on subsequent management calls (enumerated in the endpoint table below); no secret is sent on those write steps.
 
 ### The token
 
@@ -44,7 +44,7 @@ Minting goes through `ITwoFactorUserVerificationTokenableFactory` so the `IGloba
 
 ### Validation rules
 
-When a PUT or DELETE endpoint receives a `userVerificationToken`, the controller's `ValidateUserVerificationTokenAsync` helper enforces:
+When a management endpoint receives a `userVerificationToken`, the controller's `ValidateUserVerificationTokenAsync` helper enforces:
 
 1. **Unprotection** — the token decrypts and deserializes cleanly. Mangled or unknown tokens are rejected.
 2. **Validity window** — `ExpirationDate > now`. Expired tokens are rejected.
