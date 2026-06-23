@@ -15,11 +15,11 @@
       },
       "Microsoft.AspNetCore.SignalR.Protocols.MessagePack": {
         "type": "Direct",
-        "requested": "[10.0.8, 10.0.8]",
-        "resolved": "10.0.8",
-        "contentHash": "DAtwQToTwksnxFy6dxtYzp6t5kJFJSQe0P0B+zjnN/tszqzMS/ezYmIlnJXe5P6htLeXpXg8K6RjK7YH9YU3sA==",
+        "requested": "[10.0.9, 10.0.9]",
+        "resolved": "10.0.9",
+        "contentHash": "76zErsAXIb113AjnlimhFFs0XBcD8C1wpduP30EXtexlxTebayCppmp/xqpQJAQJBzTUyUo3Vr7dFlJvSnp4Tw==",
         "dependencies": {
-          "MessagePack": "2.5.187"
+          "MessagePack": "2.5.301"
         }
       },
       "Microsoft.AspNetCore.SignalR.StackExchangeRedis": {
@@ -1182,7 +1182,7 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.0, )",
+          "Core": "[2026.6.1, )",
           "Dapper": "[2.1.66, 2.1.66]"
         }
       },
@@ -1190,7 +1190,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper": "[14.0.0, 14.0.0]",
-          "Core": "[2026.6.0, )",
+          "Core": "[2026.6.1, )",
           "Microsoft.EntityFrameworkCore.Relational": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.SqlServer": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.Sqlite": "[8.0.8, 8.0.8]",
@@ -1203,9 +1203,9 @@
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.0, )",
-          "Infrastructure.Dapper": "[2026.6.0, )",
-          "Infrastructure.EntityFramework": "[2026.6.0, )",
+          "Core": "[2026.6.1, )",
+          "Infrastructure.Dapper": "[2026.6.1, )",
+          "Infrastructure.EntityFramework": "[2026.6.1, )",
           "Microsoft.Bot.Builder.Integration.AspNet.Core": "[4.23.0, 4.23.0]",
           "Swashbuckle.AspNetCore.SwaggerGen": "[10.1.7, 10.1.7]"
         }
