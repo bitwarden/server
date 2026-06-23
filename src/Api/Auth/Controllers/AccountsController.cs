@@ -251,9 +251,11 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        // Modern-shape request (MPAD + MPUD set). Try V2 encryption paths if the relevant
-        // feature flag is enabled. If the modern-shape request doesn't match a V2 branch
-        // (e.g., V2 flag off, or modern client doing V1 MP JIT), fall through to V1.
+        // Modern-shape request (MPAD + MPUD set). Try the specialized branches below — TDE
+        // set-password (no keypair) and V2 MP JIT (AccountKeys + flag on). If neither matches,
+        // fall through to SetInitialPasswordV1Async, which uses the V1 command to handle modern
+        // V1 MP JIT requests and all legacy-shape requests (TDE and MP JIT). See its doc comment
+        // for the full list of scenarios.
         if (model.HasAuthAndUnlockData())
         {
             // TDE set-password — no feature-flag gate.
@@ -280,15 +282,28 @@ public class AccountsController : Controller
             }
         }
 
-        // V1 encryption (MP and TDE) — handles both modern clients (sending MPAD + MPUD + legacy Keys/null)
-        // and legacy clients (sending only legacy fields). The model's ToUser() handles the fallback.
-        //
-        // TODO: removal requires that BOTH flags have been removed:
-        //  - https://bitwarden.atlassian.net/browse/PM-27327 (MP)
-        //  - https://bitwarden.atlassian.net/browse/PM-27329 (TDE)
         await SetInitialPasswordV1Async(user, model);
     }
 
+    /// <summary>
+    /// Handles setting an initial password for V1 users in the following scenarios:
+    /// 1. TDE user where request contains legacy fields (MasterPasswordHash + Key)
+    /// 2. MP JIT user where request contains legacy fields (MasterPasswordHash + Key + Keys)
+    /// 3. MP JIT user where request contains MPAD + MPUD + legacy Keys (not AccountKeys)
+    /// </summary>
+    /// <remarks>
+    /// TODO: In order to remove this method, all 3 of those scenarios need to become unused. This means
+    /// removal can only happen when BOTH of the following are true:
+    /// 
+    /// 1. Client-side changes in https://bitwarden.atlassian.net/browse/PM-35599 have been merged
+    ///    and have aged out according to the Bitwarden release support policy. This covers scenarios
+    ///    #1-2 above (legacy TDE and legacy MP JIT).
+    /// 
+    /// 2. The EnableAccountEncryptionV2JitPasswordRegistration feature flag has been unwound in
+    ///    https://bitwarden.atlassian.net/browse/PM-27327 and the client-side portion of the flag removal has
+    ///    aged out according to the Bitwarden release support policy. This covers scenarios #2-3 above (legacy
+    ///    and modern MP JIT).
+    /// </remarks>
     private async Task SetInitialPasswordV1Async(User user, SetInitialPasswordRequestModel model)
     {
         // Defensive: V1 cannot consume AccountKeys (the new key shape). If a request carries
@@ -303,6 +318,7 @@ public class AccountsController : Controller
 
         try
         {
+            // ToUser() handles fallbacks if MPAD + MPUD are not present (i.e. legacy shape)
             user = model.ToUser(user);
         }
         catch (Exception e)

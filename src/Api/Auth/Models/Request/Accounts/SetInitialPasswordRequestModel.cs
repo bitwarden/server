@@ -10,18 +10,15 @@ namespace Bit.Api.Auth.Models.Request.Accounts;
 
 public class SetInitialPasswordRequestModel : IValidatableObject
 {
-    // TODO: removal requires that BOTH flags have been removed:
-    //  - https://bitwarden.atlassian.net/browse/PM-27327 (MP)
-    //  - https://bitwarden.atlassian.net/browse/PM-27329 (TDE)
+    // TODO: legacy MasterPasswordHash, Key, and top-level KDF properties can be removed once client-side
+    // changes in https://bitwarden.atlassian.net/browse/PM-35599 have been merged and have aged out according
+    // to the Bitwarden release support policy. See comment on SetInitialPasswordV1Async() for further details.
     [Obsolete("Use MasterPasswordAuthentication instead")]
     [StringLength(300)]
     public string? MasterPasswordHash { get; set; }
 
     [Obsolete("Use MasterPasswordUnlock instead")]
     public string? Key { get; set; }
-
-    [Obsolete("Use AccountKeys instead")]
-    public KeysRequestModel? Keys { get; set; }
 
     [Obsolete("Use MasterPasswordUnlock instead")]
     public KdfType? Kdf { get; set; }
@@ -35,6 +32,12 @@ public class SetInitialPasswordRequestModel : IValidatableObject
     [Obsolete("Use MasterPasswordUnlock instead")]
     public int? KdfParallelism { get; set; }
 
+    // TODO: legacy Keys can be removed once the EnableAccountEncryptionV2JitPasswordRegistration feature flag
+    // has been unwound in https://bitwarden.atlassian.net/browse/PM-27327. See comment on SetInitialPasswordV1Async()
+    // for further details.
+    [Obsolete("Use AccountKeys instead")]
+    public KeysRequestModel? Keys { get; set; }
+
     public MasterPasswordAuthenticationDataRequestModel? MasterPasswordAuthentication { get; set; }
     public MasterPasswordUnlockDataRequestModel? MasterPasswordUnlock { get; set; }
     public AccountKeysRequestModel? AccountKeys { get; set; }
@@ -47,9 +50,9 @@ public class SetInitialPasswordRequestModel : IValidatableObject
 
     // Reads KDF/key/salt from MasterPasswordUnlock when present (modern clients), and falls
     // back to the top-level legacy properties when not (older clients).
-    // TODO: removal requires that BOTH flags have been removed:
-    //  - https://bitwarden.atlassian.net/browse/PM-27327 (MP)
-    //  - https://bitwarden.atlassian.net/browse/PM-27329 (TDE)
+    //
+    // TODO: Can be removed when its only consumer, SetInitialPasswordV1Async(), is removed. See comment
+    // on that method for removal requirements.
     public User ToUser(User existingUser)
     {
         existingUser.MasterPasswordHint = MasterPasswordHint;
@@ -90,10 +93,9 @@ public class SetInitialPasswordRequestModel : IValidatableObject
             yield break;
         }
 
-        // Legacy-shape validation (older clients without MPAD/MPUD)
-        // TODO: removal requires that BOTH flags have been removed:
-        //  - https://bitwarden.atlassian.net/browse/PM-27327 (MP)
-        //  - https://bitwarden.atlassian.net/browse/PM-27329 (TDE)
+        // TODO: the following legacy shape validation can be removed once client-side changes in
+        // https://bitwarden.atlassian.net/browse/PM-35599 have been merged and have aged out according
+        // to the Bitwarden release support policy. See comment on SetInitialPasswordV1Async() for further details.
         if (string.IsNullOrEmpty(MasterPasswordHash))
         {
             yield return new ValidationResult("MasterPasswordHash must be supplied.");
@@ -138,10 +140,12 @@ public class SetInitialPasswordRequestModel : IValidatableObject
     }
 
     /// <summary>
-    /// True when the request uses the new data shape (MasterPasswordAuthentication + MasterPasswordUnlock).
-    /// This is a shape check, NOT a guarantee that V2 encryption will run. It is possible for V1 encryption
-    /// to run even when the request contains these new data types (see `set-password` endpoint).
-    /// Feature flags and AccountKeys presence determine the actual flow (V1 or V2).
+    /// True when the request uses the modern data shape (MasterPasswordAuthentication + MasterPasswordUnlock).
+    /// This is a shape check, NOT a routing guarantee — modern-shape requests can route to:
+    ///   - The TDE command, when no keypair is present (neither AccountKeys nor Keys)
+    ///   - The V2 MP JIT command, when AccountKeys is present and the V2 MP JIT feature flag is on
+    ///   - The V1 path, otherwise (e.g., modern V1 MP JIT with legacy Keys)
+    /// See the `set-password` endpoint.
     /// </summary>
     public bool HasAuthAndUnlockData()
     {

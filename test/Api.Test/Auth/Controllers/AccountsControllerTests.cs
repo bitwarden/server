@@ -1009,10 +1009,8 @@ public class AccountsControllerTests : IDisposable
         await Assert.ThrowsAsync<Exception>(() => _sut.PostSetPasswordAsync(setInitialPasswordRequestModel));
     }
 
-    // V1 encryption with new data types (transitional path — V2 flags off, modern client carries MPAD/MPUD + legacy Keys)
-    // TODO: removal requires that BOTH flags have been removed:
-    //  - https://bitwarden.atlassian.net/browse/PM-27327 (MP)
-    //  - https://bitwarden.atlassian.net/browse/PM-27329 (TDE)
+    // V1 encryption with new data types (transitional path — modern client carries MPAD/MPUD + legacy Keys, V2 MP JIT flag off)
+    // TODO: removal gated by https://bitwarden.atlassian.net/browse/PM-27327 (MP V2 JIT flag).
     [Theory]
     [BitAutoData]
     public async Task PostSetPasswordAsync_V1_NewClientMpJit_UsesMpadMpudValues_ShouldCallV1CommandAsync(
