@@ -294,11 +294,12 @@ public class ProviderBillingService(
     }
 
     public async Task<byte[]> GenerateClientInvoiceReport(
+        Guid providerId,
         string invoiceId)
     {
         ArgumentException.ThrowIfNullOrEmpty(invoiceId);
 
-        var invoiceItems = await providerInvoiceItemRepository.GetByInvoiceId(invoiceId);
+        var invoiceItems = await providerInvoiceItemRepository.GetByProviderIdAndInvoiceId(providerId, invoiceId);
 
         if (invoiceItems.Count == 0)
         {

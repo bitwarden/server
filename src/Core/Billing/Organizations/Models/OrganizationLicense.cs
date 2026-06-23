@@ -161,6 +161,7 @@ public class OrganizationLicense : ILicense
     public bool UseDisableSmAdsForUsers { get; set; }
     public bool UseMyItems { get; set; }
     public bool UseInviteLinks { get; set; }
+    public bool UsePam { get; set; }
     public string Hash { get; set; }
     public string Signature { get; set; }
     public string Token { get; set; }
@@ -239,7 +240,8 @@ public class OrganizationLicense : ILicense
                     !p.Name.Equals(nameof(UseDisableSmAdsForUsers)) &&
                     !p.Name.Equals(nameof(UsePhishingBlocker)) &&
                     !p.Name.Equals(nameof(UseMyItems)) &&
-                    !p.Name.Equals(nameof(UseInviteLinks)))
+                    !p.Name.Equals(nameof(UseInviteLinks)) &&
+                    !p.Name.Equals(nameof(UsePam)))
                 .OrderBy(p => p.Name)
                 .Select(p => $"{p.Name}:{Core.Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
                 .Aggregate((c, n) => $"{c}|{n}");
@@ -437,6 +439,7 @@ public class OrganizationLicense : ILicense
         var useDisableSmAdsForUsers = claimsPrincipal.GetValue<bool>(nameof(UseDisableSmAdsForUsers));
         var useMyItems = claimsPrincipal.GetValue<bool>(nameof(UseMyItems));
         var useInviteLinks = claimsPrincipal.GetValue<bool>(nameof(UseInviteLinks));
+        var usePam = claimsPrincipal.GetValue<bool>(nameof(UsePam));
         var useRiskInsights = claimsPrincipal.GetValue<bool>(nameof(UseRiskInsights));
 
         var claimedPlanType = claimsPrincipal.GetValue<PlanType>(nameof(PlanType));
@@ -485,6 +488,8 @@ public class OrganizationLicense : ILicense
                    || useMyItems == organization.UseMyItems) &&
                (!claimsPrincipal.HasClaim(c => c.Type == nameof(UseInviteLinks))
                    || useInviteLinks == organization.UseInviteLinks) &&
+               (!claimsPrincipal.HasClaim(c => c.Type == nameof(UsePam))
+                   || usePam == organization.UsePam) &&
                // UseRiskInsights follows the same conditional HasClaim pattern (PM-33980):
                // pre-existing self-host licenses lack this claim and must still validate.
                (!claimsPrincipal.HasClaim(c => c.Type == nameof(UseRiskInsights))
