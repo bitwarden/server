@@ -29,6 +29,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.V
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Organization;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationConfirmation;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Provision;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.SelfRevokeUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
@@ -171,6 +172,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<V2_RevokeUsersCommand.IRevokeOrganizationUserValidator, V2_RevokeUsersCommand.RevokeOrganizationUsersValidator>();
 
         services.AddScoped<ISelfRevokeOrganizationUserCommand, SelfRevokeOrganizationUserCommand>();
+        services.AddScoped<IProvisionStagedOrganizationUsersCommand, ProvisionStagedOrganizationUsersCommand>();
     }
 
     private static void AddOrganizationApiKeyCommandsQueries(this IServiceCollection services)
