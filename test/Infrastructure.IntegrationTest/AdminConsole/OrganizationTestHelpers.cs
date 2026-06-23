@@ -98,6 +98,7 @@ public static class OrganizationTestHelpers
             UseDisableSmAdsForUsers = true,
             UseMyItems = true,
             UseInviteLinks = true,
+            UsePam = true,
         });
     }
 

@@ -520,9 +520,6 @@
   <data name="NoSeatsAvailable" xml:space="preserve">
     <value>No seats available for organization, '{0}'</value>
   </data>
-  <data name="AcceptInviteBeforeUsingSSO" xml:space="preserve">
-    <value>To accept your invite to {0}, you must first log in using your master password. Once your invite has been accepted, you will be able to log in using SSO.</value>
-  </data>
   <data name="OrganizationUserAccessRevoked" xml:space="preserve">
     <value>Your access to organization {0} has been revoked. Please contact your administrator for assistance.</value>
   </data>

@@ -21,7 +21,7 @@ namespace Bit.Api.AdminConsole.Attributes;
 /// <code><![CDATA[
 /// [HttpPut("{id}/recover-account")]
 /// [Authorize<ManageAccountRecoveryRequirement>]
-/// public async Task<IResult> PutRecoverAccount(Guid orgId, Guid id,
+/// public async Task<IResult> RecoverAccount(Guid orgId, Guid id,
 ///     [FromBody] OrganizationUserResetPasswordRequestModel model,
 ///     [InjectOrganizationUser] OrganizationUser targetOrganizationUser)
 ///

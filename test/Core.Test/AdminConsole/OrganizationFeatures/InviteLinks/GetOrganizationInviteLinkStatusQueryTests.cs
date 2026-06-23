@@ -188,7 +188,56 @@ public class GetOrganizationInviteLinkStatusQueryTests
 
         Assert.True(result.IsSuccess);
         Assert.False(result.AsSuccess.SeatsAvailable);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetStatusAsync_SeatsUnavailable_ReturnsSsoNullWithoutCheckingSsoConfig(
+        Guid code,
+        OrganizationInviteLink inviteLink,
+        Organization organization,
+        SsoConfig ssoConfig,
+        SutProvider<GetOrganizationInviteLinkStatusQuery> sutProvider)
+    {
+        organization.Seats = 10;
+        organization.MaxAutoscaleSeats = 10;
+        organization.Identifier = "my-org";
+        organization.UseSso = true;
+        ssoConfig.Enabled = true;
+        inviteLink.OrganizationId = organization.Id;
+
+        SetupMocks(sutProvider, code, inviteLink, organization);
+        SetupOccupiedSeats(sutProvider, organization.Id, 10);
+        sutProvider.GetDependency<ISsoConfigRepository>()
+            .GetByOrganizationIdAsync(organization.Id).Returns(ssoConfig);
+
+        var result = await sutProvider.Sut.GetStatusAsync(code);
+
+        Assert.True(result.IsSuccess);
         Assert.Null(result.AsSuccess.Sso);
+        await sutProvider.GetDependency<ISsoConfigRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetByOrganizationIdAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetStatusAsync_OccupancyAtAutoscaleCeiling_ReturnsSeatsAvailableFalse(
+        Guid code,
+        OrganizationInviteLink inviteLink,
+        Organization organization,
+        SutProvider<GetOrganizationInviteLinkStatusQuery> sutProvider)
+    {
+        // Occupancy has autoscaled past the base seats up to the ceiling.
+        organization.Seats = 5;
+        organization.MaxAutoscaleSeats = 10;
+        inviteLink.OrganizationId = organization.Id;
+
+        SetupMocks(sutProvider, code, inviteLink, organization);
+        SetupOccupiedSeats(sutProvider, organization.Id, 10);
+
+        var result = await sutProvider.Sut.GetStatusAsync(code);
+
+        Assert.True(result.IsSuccess);
+        Assert.False(result.AsSuccess.SeatsAvailable);
     }
 
     [Theory, BitAutoData]
