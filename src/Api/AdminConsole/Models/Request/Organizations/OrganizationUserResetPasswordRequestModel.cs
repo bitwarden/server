@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
+using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 using Bit.Core.Auth.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Api.Request;

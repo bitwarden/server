@@ -15,7 +15,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using OneOf.Types;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 
 public class AdminRecoverAccountCommand(
     IAdminRecoverAccountValidator validator,
