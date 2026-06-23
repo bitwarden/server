@@ -48,7 +48,7 @@ public class OrganizationPlanMigrationCohortAssignmentRepository(
             throw new ArgumentException("afterCreationDate and afterId must both be set or both be null.");
         }
 
-        await using var connection = new SqlConnection(ConnectionString);
+        await using var connection = new SqlConnection(ReadOnlyConnectionString);
 
         var results = await connection.QueryAsync<CohortAssignmentExportRow>(
             $"[{Schema}].[{Table}_ReadManyExportByCohortId]",
