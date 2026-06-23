@@ -23,8 +23,8 @@ BEGIN
         A.[MigratedDate]
     FROM
         [dbo].[OrganizationPlanMigrationCohortAssignment] A
-    INNER JOIN
-        [dbo].[Organization] O ON O.[Id] = A.[OrganizationId]
+    INNER JOIN [dbo].[Organization] O
+        ON O.[Id] = A.[OrganizationId]
     WHERE
         A.[CohortId] = @CohortId
         AND (
