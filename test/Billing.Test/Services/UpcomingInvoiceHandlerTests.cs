@@ -5399,6 +5399,66 @@ public class UpcomingInvoiceHandlerTests
             mail.View.TotalPrice == "$20,736"));
     }
 
+    // PM-37514: a Teams 2019 (ActualUsage) renewal email must quote the same seat count the scheduler
+    // bills — for a sub-5 org that is the occupied count, NOT organization.Seats (the base allotment)
+    // and NOT the seat-overage line. 3 occupied of a 5-base org -> the email quotes 3 seats.
+    [Fact]
+    public async Task HandleAsync_Teams2019Migration_SubFiveOrg_RenewalEmailQuotesOccupiedSeats()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var (invoice, subscription, customer) = BuildBusinessFixture(PlanType.TeamsMonthly2019);
+
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.TeamsMonthly2019,
+            Seats = 5 // base allotment; only 3 are occupied
+        };
+        var source = new Teams2019Plan(isAnnual: false);
+        var target = new TeamsPlan(isAnnual: false);
+        var cohortId = Guid.NewGuid();
+        var cohort = new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "teams-2019-monthly",
+            MigrationPathId = MigrationPathId.Teams2019MonthlyToCurrent,
+            IsActive = true
+        };
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = _organizationId,
+            CohortId = cohortId,
+            ScheduledDate = null
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(customer.Id, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(_organizationId)
+            .Returns(new OrganizationSeatCounts { Users = 3 });
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2019).Returns(source);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(target);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+        _assignmentRepository.GetByOrganizationIdAsync(_organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(cohort);
+        _priceIncreaseScheduler.ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>())
+            .Returns(true);
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — quotes occupied (3), not the 5-seat base allotment.
+        await _mailer.Received(1).SendEmail(Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
+            mail.View.Seats == 3));
+    }
+
     [Fact]
     public async Task HandleAsync_DoesNotRequestCustomerDiscountExpansionDeeperThanStripeAllows()
     {
