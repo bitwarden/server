@@ -108,9 +108,10 @@ public class SendControlsSyncPolicyEvent(
             {
                 await sendRepository.UpdateManyDisabledAsync(disabled, true);
             }
-            if (sendControlsPolicyData.DeletionDays != null)
+            // We only want to update deletion dates if the policy is enabled
+            if (postUpsertedPolicyState.Enabled && sendControlsPolicyData.DeletionHours != null)
             {
-                await sendRepository.UpdateManyDeletionDatesByIdsAsync(sendIdsChunk, sendControlsPolicyData.DeletionDays.GetValueOrDefault(0));
+                await sendRepository.UpdateManyDeletionDatesByIdsAsync(sendIdsChunk, sendControlsPolicyData.DeletionHours.GetValueOrDefault(0));
             }
         }
     }

@@ -461,7 +461,7 @@ public class SendControlsSyncPolicyEventTests
         postUpsertedPolicy.OrganizationId = policyUpdate.OrganizationId;
         existingDisableSendPolicy.OrganizationId = policyUpdate.OrganizationId;
         existingSendOptionsPolicy.OrganizationId = policyUpdate.OrganizationId;
-        postUpsertedPolicy.SetDataModel(new SendControlsPolicyData { DeletionDays = 48 });
+        postUpsertedPolicy.SetDataModel(new SendControlsPolicyData { DeletionHours = 48 });
 
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.DisableSend)
