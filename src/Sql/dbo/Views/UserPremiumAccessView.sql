@@ -13,6 +13,7 @@ FROM
     [dbo].[User] U
 LEFT JOIN 
     [dbo].[OrganizationUser] OU ON OU.[UserId] = U.[Id]
+    AND OU.[Status] = 2 -- Confirmed
 LEFT JOIN 
     [dbo].[Organization] O ON O.[Id] = OU.[OrganizationId]
     AND O.[UsersGetPremium] = 1

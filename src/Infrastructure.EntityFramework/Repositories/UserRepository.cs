@@ -397,7 +397,8 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
                 Id = user.Id,
                 PersonalPremium = user.Premium,
                 OrganizationPremium = user.OrganizationUsers
-                    .Any(ou => ou.Organization != null &&
+                    .Any(ou => ou.Status == OrganizationUserStatusType.Confirmed &&
+                               ou.Organization != null &&
                                ou.Organization.Enabled == true &&
                                ou.Organization.UsersGetPremium == true)
             }).ToList();

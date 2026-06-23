@@ -299,6 +299,34 @@ public class UserRepositoryTests
     }
 
     [Theory, DatabaseData]
+    public async Task GetPremiumAccessAsync_WithRevokedOrganizationUser_ReturnsNoOrganizationPremium(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Revoked User",
+            Email = $"revoked+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            Premium = false
+        });
+
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        await organizationUserRepository.CreateRevokedTestOrganizationUserAsync(organization, user);
+
+        // Act
+        var result = await userRepository.GetPremiumAccessAsync(user.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.OrganizationPremium);
+        Assert.False(result.HasPremiumAccess);
+    }
+
+    [Theory, DatabaseData]
     public async Task GetPremiumAccessAsync_WithMultipleOrganizations_OneProvidesPremium_ReturnsOrganizationPremium(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
