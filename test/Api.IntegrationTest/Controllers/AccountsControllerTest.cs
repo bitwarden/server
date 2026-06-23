@@ -1156,12 +1156,13 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(OrganizationUserStatusType.Accepted, orgUser.Status);
     }
 
-    // Modern TDE client + V1 encryption: request carries MPAD + MPUD with no keypair (no AccountKeys,
-    // no Keys), V2 TDE flag OFF → request routes to the V1 command. TDE users already have an existing
-    // keypair; the V1 path must leave it untouched. KDF/Key/Salt come from MPUD.
+    // V1 TDE user (no V2 cryptographic state) sets their initial password via the TDE command.
+    // Modern TDE request shape: MPAD + MPUD + no keys. The V2RegistrationTDEJIT flag governs SSO+TDE
+    // account creation, not set-password — so this routes to _tdeSetPasswordCommand regardless of
+    // any flag state. The command sets the master password without mutating the existing keypair.
     [Theory]
     [BitAutoData]
-    public async Task PostSetPasswordAsync_V1_WithMpadMpud_TDEDecryption_Success(string organizationSsoIdentifier)
+    public async Task PostSetPasswordAsync_TDE_V1User_Success(string organizationSsoIdentifier)
     {
         // Arrange - Create organization with TDE
         var ownerEmail = $"owner-{Guid.NewGuid()}@bitwarden.com";
@@ -1200,7 +1201,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         await _loginHelper.LoginAsync(userEmail);
 
         // Set up TDE user without master password but with an existing keypair (no V2 state — this is
-        // the pre-V2-TDE-flag world). The V1 path must leave PublicKey/PrivateKey intact.
+        // the pre-V2-TDE-flag world). The TDE command must leave PublicKey/PrivateKey intact.
         user.MasterPassword = null;
         user.Key = null;
         user.PublicKey = "tde-v1-publicKey";
@@ -1208,7 +1209,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         await _userRepository.ReplaceAsync(user);
 
         // Modern TDE request shape: MPAD + MPUD, no AccountKeys (and no Keys).
-        // V2 TDE flag is left OFF (default mock behavior), so this routes to the V1 command.
+        // Routes to the TDE command (no feature-flag gate; V2RegistrationTDEJIT is for SSO+TDE registration).
         var jsonRequest = CreateV2SetPasswordRequestJson(
             userEmail,
             organization.Identifier,
@@ -1237,26 +1238,26 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         var verificationResult = _passwordHasher.VerifyHashedPassword(updatedUser, updatedUser.MasterPassword, _newMasterPasswordHash);
         Assert.Equal(PasswordVerificationResult.Success, verificationResult);
 
-        // Verify KDF settings — ToUser reads from MPUD on the modern shape
+        // Verify KDF settings persisted from MPUD
         Assert.Equal(KdfType.PBKDF2_SHA256, updatedUser.Kdf);
         Assert.Equal(600_000, updatedUser.KdfIterations);
         Assert.Null(updatedUser.KdfMemory);
         Assert.Null(updatedUser.KdfParallelism);
 
         // MasterPasswordSalt column must never be null/empty after a successful set-password.
-        // Modern V1 TDE path persists the MPUD-provided salt (the helper sends userEmail as the salt value).
+        // TDE command persists the MPUD-provided salt (the helper sends userEmail as the salt value).
         Assert.Equal(userEmail, updatedUser.MasterPasswordSalt);
 
         // Verify timestamps are updated
         Assert.Equal(DateTime.UtcNow, updatedUser.RevisionDate, TimeSpan.FromMinutes(1));
         Assert.Equal(DateTime.UtcNow, updatedUser.AccountRevisionDate, TimeSpan.FromMinutes(1));
 
-        // user.Key from MPUD; existing keypair preserved (V1 TDE path does not mutate PublicKey/PrivateKey)
+        // user.Key from MPUD; existing keypair preserved (TDE command does not mutate PublicKey/PrivateKey)
         Assert.Equal(_masterKeyWrappedUserKey, updatedUser.Key);
         Assert.Equal("tde-v1-publicKey", updatedUser.PublicKey);
         Assert.Equal(_mockEncryptedType7String, updatedUser.PrivateKey);
 
-        // V2-only fields must NOT be set on the V1 path
+        // V2 cryptographic state must NOT be set (TDE command doesn't touch it; this is a V1 TDE user)
         Assert.Null(updatedUser.SignedPublicKey);
 
         // Verify User_ChangedPassword event was logged
@@ -1394,8 +1395,6 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     [BitAutoData]
     public async Task PostSetPasswordAsync_V2_TDEDecryption_Success(string organizationSsoIdentifier)
     {
-        _featureService.IsEnabled(FeatureFlagKeys.V2RegistrationTDEJIT).Returns(true);
-
         // Arrange - Create organization with TDE
         var ownerEmail = $"owner-{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(ownerEmail);

@@ -961,7 +961,6 @@ public class AccountsControllerTests : IDisposable
     {
         // Arrange
         UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel, includeTdeSetPassword: true);
-        _featureService.IsEnabled(FeatureFlagKeys.V2RegistrationTDEJIT).Returns(true);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
         _tdeSetPasswordCommand.SetMasterPasswordAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
             .Returns(Task.CompletedTask);
@@ -1067,14 +1066,17 @@ public class AccountsControllerTests : IDisposable
             .SetMasterPasswordAsync(Arg.Any<User>(), Arg.Any<SetInitialMasterPasswordDataModel>());
     }
 
+    // Modern TDE request (MPAD + MPUD, no keys) routes to _tdeSetPasswordCommand regardless of
+    // any feature flag — V2RegistrationTDEJIT governs SSO+TDE registration, not set-password.
+    // The TDE command sets the master password without mutating the user's existing keypair.
     [Theory]
     [BitAutoData]
-    public async Task PostSetPasswordAsync_V1_NewClientTde_UsesMpadMpudValues_DoesNotMutateExistingKeysAsync(
+    public async Task PostSetPasswordAsync_ModernTde_RoutesToTdeCommand_DoesNotMutateExistingKeysAsync(
         User user,
         SetInitialPasswordRequestModel setInitialPasswordRequestModel)
     {
-        // Arrange — modern TDE client: sends MPAD + MPUD with both AccountKeys and Keys null (V2 TDE flag off).
-        // TDE users already have a keypair; Keys?.ToUser is a no-op and the existing keys are left alone.
+        // Arrange — modern TDE client: sends MPAD + MPUD with both AccountKeys and Keys null.
+        // No V2 TDE flag stub; the routing should not depend on the flag.
         UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel, includeTdeSetPassword: true);
 
         const string existingPublicKey = "tdeUserExistingPublicKey";
@@ -1083,30 +1085,31 @@ public class AccountsControllerTests : IDisposable
         user.PrivateKey = existingPrivateKey;
 
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
-                Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
-            .Returns(Task.FromResult(IdentityResult.Success));
+        _tdeSetPasswordCommand.SetMasterPasswordAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
+            .Returns(Task.CompletedTask);
 
         // Act
         await _sut.PostSetPasswordAsync(setInitialPasswordRequestModel);
 
-        // Assert — V1 command called with MPAD hash + MPUD wrapped key
-        await _setInitialMasterPasswordCommandV1.Received(1)
-            .SetInitialMasterPasswordAsync(
+        // Assert — TDE command called with the model data
+        await _tdeSetPasswordCommand.Received(1)
+            .SetMasterPasswordAsync(
                 Arg.Is<User>(u => u == user),
-                Arg.Is<string>(s => s == setInitialPasswordRequestModel.MasterPasswordAuthentication.MasterPasswordAuthenticationHash),
-                Arg.Is<string>(s => s == setInitialPasswordRequestModel.MasterPasswordUnlock.MasterKeyWrappedUserKey),
-                Arg.Is<string>(s => s == setInitialPasswordRequestModel.OrgIdentifier));
+                Arg.Is<SetInitialMasterPasswordDataModel>(d =>
+                    d.MasterPasswordAuthentication != null &&
+                    d.MasterPasswordUnlock != null &&
+                    d.AccountKeys == null &&
+                    d.OrgSsoIdentifier == setInitialPasswordRequestModel.OrgIdentifier));
 
-        // Existing keypair preserved
+        // Existing keypair preserved (TDE command doesn't touch keys)
         Assert.Equal(existingPublicKey, user.PublicKey);
         Assert.Equal(existingPrivateKey, user.PrivateKey);
 
-        // V2 commands not called
+        // Other commands not called
         await _finishSsoJitProvisionMasterPasswordCommand.DidNotReceiveWithAnyArgs()
             .FinishProvisionAsync(Arg.Any<User>(), Arg.Any<SetInitialMasterPasswordDataModel>());
-        await _tdeSetPasswordCommand.DidNotReceiveWithAnyArgs()
-            .SetMasterPasswordAsync(Arg.Any<User>(), Arg.Any<SetInitialMasterPasswordDataModel>());
+        await _setInitialMasterPasswordCommandV1.DidNotReceiveWithAnyArgs()
+            .SetInitialMasterPasswordAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
     }
 
     // Defensive guard: V1 path cannot consume AccountKeys (the new key shape). A request that

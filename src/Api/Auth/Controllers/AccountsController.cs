@@ -256,9 +256,12 @@ public class AccountsController : Controller
         // (e.g., V2 flag off, or modern client doing V1 MP JIT), fall through to V1.
         if (model.HasAuthAndUnlockData())
         {
-            // V2 encryption - TDE user with "manage account recovery" permission
-            if (model.IsTdeSetPasswordRequest() &&
-                _featureService.IsEnabled(FeatureFlagKeys.V2RegistrationTDEJIT))
+            // TDE set-password — no feature-flag gate.
+            // _tdeSetPasswordCommand handles both V1 and V2 TDE users (it sets the master password
+            // without touching cryptographic state). The V2RegistrationTDEJIT flag governs SSO+TDE
+            // account creation, not set-password, so don't reference it here. A TDE user reaching
+            // this endpoint already has keys set up at registration time, regardless of the flag.
+            if (model.IsTdeSetPasswordRequest())
             {
                 await _tdeSetPasswordCommand.SetMasterPasswordAsync(user, model.ToData());
                 return;
