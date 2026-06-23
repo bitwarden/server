@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Billing.Organizations.PlanMigration.Enums;
+namespace Bit.Core.Billing.Organizations.PlanMigration.Enums;
 
 /// <summary>
 /// Stable identifier for a supported <see cref="ValueObjects.MigrationPath"/>.
