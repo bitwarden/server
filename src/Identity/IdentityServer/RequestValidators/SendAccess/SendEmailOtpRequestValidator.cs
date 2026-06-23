@@ -42,6 +42,9 @@ public class SendEmailOtpRequestValidator(
             return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailRequired);
         }
 
+        // Email must be normalized here for consistency across DB vendor specific collation
+        email = email.Trim().ToLowerInvariant();
+
         if (!authMethod.emails.Contains(email, StringComparer.OrdinalIgnoreCase))
         {
             return BuildErrorResult();
