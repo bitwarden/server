@@ -20,10 +20,10 @@ public abstract class BasePolicyRequirementFactory<T> : IPolicyRequirementFactor
 
     /// <summary>
     /// User statuses that are exempt from policy enforcement.
-    /// Invited and Revoked users are exempt by default, which is appropriate in the majority of cases.
+    /// Invited, Revoked, and Staged users are exempt by default, which is appropriate in the majority of cases.
     /// </summary>
     protected virtual IEnumerable<OrganizationUserStatusType> ExemptStatuses { get; } =
-        [OrganizationUserStatusType.Invited, OrganizationUserStatusType.Revoked];
+        [OrganizationUserStatusType.Invited, OrganizationUserStatusType.Revoked, OrganizationUserStatusType.Staged];
 
     /// <summary>
     /// Whether a Provider User for the organization is exempt from policy enforcement.
