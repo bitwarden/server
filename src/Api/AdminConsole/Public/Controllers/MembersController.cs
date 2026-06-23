@@ -2,7 +2,7 @@
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
-using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
@@ -31,7 +31,6 @@ public class MembersController : Controller
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IGroupRepository _groupRepository;
-    private readonly IOrganizationService _organizationService;
     private readonly ICurrentContext _currentContext;
     private readonly IUpdateOrganizationUserCommand _updateOrganizationUserCommand;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
@@ -42,14 +41,12 @@ public class MembersController : Controller
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
     private readonly IRevokeOrganizationUserCommand _revokeOrganizationUserCommandV2;
     private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
-    private readonly IFeatureService _featureService;
     private readonly IInviteOrganizationUsersCommand _inviteOrganizationUsersCommand;
     private readonly TimeProvider _timeProvider;
 
     public MembersController(
         IOrganizationUserRepository organizationUserRepository,
         IGroupRepository groupRepository,
-        IOrganizationService organizationService,
         ICurrentContext currentContext,
         IUpdateOrganizationUserCommand updateOrganizationUserCommand,
         IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
@@ -60,13 +57,11 @@ public class MembersController : Controller
         IResendOrganizationInviteCommand resendOrganizationInviteCommand,
         IRevokeOrganizationUserCommand revokeOrganizationUserCommandV2,
         IRestoreOrganizationUserCommand restoreOrganizationUserCommand,
-        IFeatureService featureService,
         IInviteOrganizationUsersCommand inviteOrganizationUsersCommand,
         TimeProvider timeProvider)
     {
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
-        _organizationService = organizationService;
         _currentContext = currentContext;
         _updateOrganizationUserCommand = updateOrganizationUserCommand;
         _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
@@ -77,7 +72,6 @@ public class MembersController : Controller
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
         _revokeOrganizationUserCommandV2 = revokeOrganizationUserCommandV2;
         _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
-        _featureService = featureService;
         _inviteOrganizationUsersCommand = inviteOrganizationUsersCommand;
         _timeProvider = timeProvider;
     }
@@ -170,43 +164,20 @@ public class MembersController : Controller
             hasStandaloneSecretsManager = await _paymentService.HasSecretsManagerStandalone(organization);
         }
 
-        var invite = model.ToOrganizationUserInvite();
-        if (_featureService.IsEnabled(FeatureFlagKeys.PublicMembersInviteRefactor))
+        var inviteRequest = model.ToInviteRequest(organization!, hasStandaloneSecretsManager, Guid.Empty, _timeProvider.GetUtcNow());
+        var inviteResult = await _inviteOrganizationUsersCommand.InviteImportedOrganizationUsersAsync(inviteRequest) switch
         {
-            return await PostInviteUserAsync_vNext(model, organization!, hasStandaloneSecretsManager);
-        }
+            Success<InviteOrganizationUsersResponse> success => success,
+            Failure<InviteOrganizationUsersResponse> { Error.Message: NoUsersToInviteError.Code } => throw new BadRequestException("This user has already been invited."),
+            Failure<InviteOrganizationUsersResponse> failure => throw MapToBitException(failure.Error),
+            _ => throw new InvalidOperationException()
+        };
 
-        invite.AccessSecretsManager = hasStandaloneSecretsManager;
+        var user = inviteResult.Value.InvitedUsers.First();
+        var collections = model.Collections?.Select(c => c.ToCollectionAccessSelection()).ToList();
+        var response = new MemberResponseModel(user, collections);
 
-        var user = await _organizationService.InviteUserAsync(_currentContext.OrganizationId!.Value, null,
-            systemUser: null, invite, model.ExternalId);
-        var response = new MemberResponseModel(user, invite.Collections);
         return new JsonResult(response);
-    }
-
-    private async Task<IActionResult> PostInviteUserAsync_vNext(
-        MemberCreateRequestModel model,
-        Core.AdminConsole.Entities.Organization organization,
-        bool hasStandaloneSecretsManager)
-    {
-        var request = model.ToInviteRequest(organization, hasStandaloneSecretsManager, Guid.Empty, _timeProvider.GetUtcNow());
-
-        var result = await _inviteOrganizationUsersCommand.InviteImportedOrganizationUsersAsync(request);
-
-        switch (result)
-        {
-            case Success<InviteOrganizationUsersResponse> success:
-                var user = success.Value.InvitedUsers.First();
-                var collections = model.Collections?.Select(c => c.ToCollectionAccessSelection()).ToList();
-                var response = new MemberResponseModel(user, collections);
-                return new JsonResult(response);
-            case Failure<InviteOrganizationUsersResponse> { Error.Message: NoUsersToInviteError.Code }:
-                throw new BadRequestException("This user has already been invited.");
-            case Failure<InviteOrganizationUsersResponse> failure:
-                throw MapToBitException(failure.Error);
-            default:
-                throw new InvalidOperationException();
-        }
     }
 
     /// <summary>
