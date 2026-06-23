@@ -17,6 +17,7 @@ using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
+using Bit.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http;
@@ -2392,6 +2393,30 @@ public class CiphersControllerTests
 
         Assert.NotNull(result);
         Assert.Equal(attachmentId, result.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAttachmentData_LeasingGatedCipher_ThrowsNotFoundAndDoesNotIssueUrl(
+        Guid cipherId, string attachmentId, Guid userId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs((Guid?)userId);
+
+        var cipherDetails = new CipherDetails { Id = cipherId, UserId = userId, Type = CipherType.Login, Data = "{}" };
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId, userId)
+            .Returns(Task.FromResult(cipherDetails));
+
+        // Gated with no valid active lease: the gate withholds the full-access witness.
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .AuthorizeReadAsync(userId, cipherDetails)
+            .ReturnsNull();
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.GetAttachmentData(cipherId, attachmentId));
+
+        // No download URL is ever minted for a gated cipher.
+        await sutProvider.GetDependency<ICipherService>()
+            .DidNotReceiveWithAnyArgs().GetAttachmentDownloadDataAsync(default, default!);
     }
 
     [Theory, BitAutoData]

@@ -509,6 +509,11 @@ public class CipherService : ICipherService
             throw new BadRequestException("You do not have permissions to delete this.");
         }
 
+        if (!orgAdmin)
+        {
+            await _cipherLeaseGate.EnsureCanMutateAsync(deletingUserId, cipher);
+        }
+
         if (!cipher.ContainsAttachment(attachmentId))
         {
             throw new NotFoundException();

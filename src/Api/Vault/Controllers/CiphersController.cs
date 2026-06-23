@@ -1558,6 +1558,13 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
+        // A leasing-gated cipher with no valid active lease must not receive a download URL: the URL
+        // grants the encrypted attachment, decryptable with the org key the caller already holds.
+        if (await _cipherLeaseGate.AuthorizeReadAsync(userId, cipher) is null)
+        {
+            throw new NotFoundException();
+        }
+
         var result = await _cipherService.GetAttachmentDownloadDataAsync(cipher, attachmentId);
         return new AttachmentResponseModel(result);
     }

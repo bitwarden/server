@@ -441,4 +441,65 @@ public class CipherResponseModelTests
         Assert.Null(response.Fields);
         Assert.Null(response.PasswordHistory);
     }
+
+    [Fact]
+    public void Constructor_Partial_OmitsAttachments()
+    {
+        var cipher = new Cipher
+        {
+            Id = Guid.NewGuid(),
+            Type = CipherType.Login,
+            Data = JsonSerializer.Serialize(new CipherLoginData { Name = "2.name|encrypted" }),
+            Attachments = JsonSerializer.Serialize(new Dictionary<string, CipherAttachment.MetaData>
+            {
+                ["attachment-id"] = new CipherAttachment.MetaData
+                {
+                    FileName = "2.file|encrypted",
+                    Key = "2.attachmentKey|encrypted",
+                    Size = 1024,
+                },
+            }),
+            RevisionDate = DateTime.UtcNow,
+            CreationDate = DateTime.UtcNow,
+        };
+
+        var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
+
+        // A leasing-gated (partial) response withholds attachment metadata entirely — including each
+        // attachment's encryption Key — so nothing about the attachment leaks.
+        Assert.Null(response.Attachments);
+        var serialized = JsonSerializer.Serialize(response);
+        Assert.DoesNotContain("2.attachmentKey|encrypted", serialized);
+        Assert.DoesNotContain("2.file|encrypted", serialized);
+    }
+
+    [Fact]
+    public void Constructor_NotPartial_IncludesAttachments()
+    {
+        var cipher = new Cipher
+        {
+            Id = Guid.NewGuid(),
+            Type = CipherType.Login,
+            Data = JsonSerializer.Serialize(new CipherLoginData { Name = "2.name|encrypted" }),
+            Attachments = JsonSerializer.Serialize(new Dictionary<string, CipherAttachment.MetaData>
+            {
+                ["attachment-id"] = new CipherAttachment.MetaData
+                {
+                    FileName = "2.file|encrypted",
+                    Key = "2.attachmentKey|encrypted",
+                    Size = 1024,
+                },
+            }),
+            RevisionDate = DateTime.UtcNow,
+            CreationDate = DateTime.UtcNow,
+        };
+
+        var response = new FullCipherMiniResponseModel(FullCipherAccess.Unrestricted(), cipher, _globalSettings, false);
+
+        // A full-access response still carries attachment metadata.
+        Assert.NotNull(response.Attachments);
+        var attachment = Assert.Single(response.Attachments);
+        Assert.Equal("attachment-id", attachment.Id);
+        Assert.Equal("2.attachmentKey|encrypted", attachment.Key);
+    }
 }

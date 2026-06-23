@@ -2536,4 +2536,39 @@ public class CipherServiceTests
         await sutProvider.GetDependency<ICipherLeaseGate>()
             .DidNotReceiveWithAnyArgs().EnsureCanMutateAsync(default, default!);
     }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAttachmentAsync_ExistingLeasingGatedCipher_ThrowsAndDoesNotDelete(
+        SutProvider<CipherService> sutProvider, Cipher cipher, string attachmentId)
+    {
+        // Personal cipher so the edit-permission check passes and we reach the lease gate.
+        cipher.OrganizationId = null;
+        var deletingUserId = cipher.UserId!.Value;
+
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .EnsureCanMutateAsync(deletingUserId, cipher)
+            .ThrowsAsync(new NotFoundException());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.DeleteAttachmentAsync(cipher, attachmentId, deletingUserId, orgAdmin: false));
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .DidNotReceiveWithAnyArgs().DeleteAttachmentAsync(default, default!);
+        await sutProvider.GetDependency<IAttachmentStorageService>()
+            .DidNotReceiveWithAnyArgs().DeleteAttachmentAsync(default, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAttachmentAsync_OrgAdmin_DoesNotInvokeLeaseGate(
+        SutProvider<CipherService> sutProvider, Cipher cipher, string attachmentId, Guid deletingUserId)
+    {
+        // Admins act through org-wide permissions, so the gate is skipped before the attachment lookup.
+        cipher.Attachments = null;
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.DeleteAttachmentAsync(cipher, attachmentId, deletingUserId, orgAdmin: true));
+
+        await sutProvider.GetDependency<ICipherLeaseGate>()
+            .DidNotReceiveWithAnyArgs().EnsureCanMutateAsync(default, default!);
+    }
 }
