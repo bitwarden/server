@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260521164638_UseRiskInsightsDataMigration")]
+    [Migration("20260623164638_UseRiskInsightsDataMigration")]
     partial class UseRiskInsightsDataMigration
     {
         /// <inheritdoc />
