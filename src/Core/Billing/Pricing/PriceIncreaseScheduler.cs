@@ -1,8 +1,9 @@
-﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.PlanMigration;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
+using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Services;
@@ -12,6 +13,7 @@ using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using static Bit.Core.Billing.Constants.StripeConstants;
+using OrganizationPlan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Core.Billing.Pricing;
 
@@ -548,6 +550,11 @@ public class PriceIncreaseScheduler(
 
         var sourcePlan = await pricingClient.GetPlanOrThrow(migrationPath.FromPlan);
         var targetPlan = await pricingClient.GetPlanOrThrow(migrationPath.ToPlan);
+        // Calculate the target plan seat count based on the migration path policy.
+        var targetPlanSeatCount = migrationPath.SeatCountPolicy == SeatCountPolicy.ActualUsage
+            ? await CalculateTargetPlanSeatCountAsync(organizationId, sourcePlan)
+            : (int?)null;
+
 
         // A packaged source (e.g. Teams Starter) carries its flat bundle at quantity ~1, so bill the org's
         // actual occupied seats on the per-seat target — applied unconditionally and floored at 1.
@@ -583,6 +590,20 @@ public class PriceIncreaseScheduler(
             });
         }
 
+        // Under ActualUsage, a Packaged source's flat base line and seat-overage line both map onto
+        // the Scalable target's seat price. Collapse them into a single seat line billed at the
+        // resolved seat count; non-seat items (e.g. storage) pass through untouched.
+        if (targetPlanSeatCount is { } seatCount)
+        {
+            var targetSeatPriceId = targetPlan.PasswordManager.StripeSeatPlanId;
+            items.RemoveAll(item => item.Price == targetSeatPriceId);
+            items.Add(new SubscriptionSchedulePhaseItemOptions
+            {
+                Price = targetSeatPriceId,
+                Quantity = seatCount
+            });
+        }
+
         // Merge de-duplicates, so a coupon on both the customer and the subscription isn't double-added.
         var discounts = (subscription.Customer?.Discount).MergeDiscountCouponIds(
             subscription.Discounts?.Select(d => d.Coupon.Id),
@@ -606,6 +627,19 @@ public class PriceIncreaseScheduler(
             Discounts = discounts.Count > 0 ? discounts : null,
             ProrationBehavior = ProrationBehavior.None
         };
+    }
+
+    /// <summary>
+    /// Calculates the seat count for a given organization based on the current seat count and
+    /// the seat count policy of the migration path.
+    /// </summary>
+    private async Task<int> CalculateTargetPlanSeatCountAsync(Guid organizationId, OrganizationPlan sourcePlan)
+    {
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+        var occupiedSeatCount = (await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organizationId)).Total;
+        var purchasedSeatCount = organization?.Seats;
+        var targetPlanSeatCount = occupiedSeatCount < sourcePlan.PasswordManager.BaseSeats ? occupiedSeatCount : purchasedSeatCount ?? occupiedSeatCount;
+        return targetPlanSeatCount;
     }
 
     /// <summary>
