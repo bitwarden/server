@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="[10.0.8]" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing" Version="[10.5.0]" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="[10.0.8]" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="[10.6.0]" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(MicrosoftNetTestSdkVersion)" />

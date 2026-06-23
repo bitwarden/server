@@ -485,23 +485,26 @@ public class ProviderBillingServiceTests
 
     [Theory, BitAutoData]
     public async Task GenerateClientInvoiceReport_NullInvoiceId_ThrowsArgumentNullException(
+        Guid providerId,
         SutProvider<ProviderBillingService> sutProvider) =>
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.GenerateClientInvoiceReport(null));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.GenerateClientInvoiceReport(providerId, null));
 
     [Theory, BitAutoData]
     public async Task GenerateClientInvoiceReport_NoInvoiceItems_ReturnsNull(
+        Guid providerId,
         string invoiceId,
         SutProvider<ProviderBillingService> sutProvider)
     {
-        sutProvider.GetDependency<IProviderInvoiceItemRepository>().GetByInvoiceId(invoiceId).Returns([]);
+        sutProvider.GetDependency<IProviderInvoiceItemRepository>().GetByProviderIdAndInvoiceId(providerId, invoiceId).Returns([]);
 
-        var reportContent = await sutProvider.Sut.GenerateClientInvoiceReport(invoiceId);
+        var reportContent = await sutProvider.Sut.GenerateClientInvoiceReport(providerId, invoiceId);
 
         Assert.Null(reportContent);
     }
 
     [Theory, BitAutoData]
     public async Task GenerateClientInvoiceReport_Succeeds(
+        Guid providerId,
         string invoiceId,
         SutProvider<ProviderBillingService> sutProvider)
     {
@@ -520,9 +523,9 @@ public class ProviderBillingServiceTests
             }
         };
 
-        sutProvider.GetDependency<IProviderInvoiceItemRepository>().GetByInvoiceId(invoiceId).Returns(invoiceItems);
+        sutProvider.GetDependency<IProviderInvoiceItemRepository>().GetByProviderIdAndInvoiceId(providerId, invoiceId).Returns(invoiceItems);
 
-        var reportContent = await sutProvider.Sut.GenerateClientInvoiceReport(invoiceId);
+        var reportContent = await sutProvider.Sut.GenerateClientInvoiceReport(providerId, invoiceId);
 
         using var memoryStream = new MemoryStream(reportContent);
 

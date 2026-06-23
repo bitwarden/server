@@ -21,6 +21,7 @@ using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.KeyManagement.UserKey.Models.Data;
+using Bit.Core.KeyManagement.UserKey.Queries.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
@@ -602,6 +603,85 @@ public class AccountsKeyManagementControllerTests
         Assert.Equal("test", result.OrganizationName);
         await sutProvider.GetDependency<IKeyConnectorConfirmationDetailsQuery>().Received(1)
             .Run(orgSsoIdentifier, expectedUser.Id);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetKeyRotationDataAsync_NoUser_Throws(
+        SutProvider<AccountsKeyManagementController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .ReturnsNull();
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.GetKeyRotationDataAsync());
+
+        await sutProvider.GetDependency<IKeyRotationDataQuery>().ReceivedWithAnyArgs(0)
+            .Run(Arg.Any<User>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetKeyRotationDataAsync_Success_MapsDataIntoResponse(
+        SutProvider<AccountsKeyManagementController> sutProvider, User expectedUser)
+    {
+        var data = new KeyRotationData
+        {
+            OrganizationPasswordResetKeyData =
+            [
+                new OrganizationPasswordResetKeyData
+                {
+                    OrganizationId = Guid.NewGuid(), OrganizationName = "Org", OrganizationPublicKey = "org-public-key",
+                },
+            ],
+            EmergencyAccessKeyData =
+            [
+                new EmergencyAccessKeyData
+                {
+                    Id = Guid.NewGuid(), GranteeId = Guid.NewGuid(), GranteeName = "Grantee", PublicKey = "ea-public-key",
+                },
+            ],
+            TrustedDeviceKeyData =
+            [
+                new TrustedDeviceKeyData
+                {
+                    Id = Guid.NewGuid(), EncryptedPublicKey = "device-public-key", EncryptedUserKey = "device-user-key",
+                },
+            ],
+            PasskeyKeyData =
+            [
+                new PasskeyKeyData
+                {
+                    Id = Guid.NewGuid(), EncryptedPublicKey = "passkey-public-key", EncryptedUserKey = "passkey-user-key",
+                },
+            ],
+        };
+
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(expectedUser);
+        sutProvider.GetDependency<IKeyRotationDataQuery>().Run(expectedUser).Returns(data);
+
+        var result = await sutProvider.Sut.GetKeyRotationDataAsync();
+
+        Assert.NotNull(result);
+        Assert.Equal("keyRotationData", result.Object);
+
+        var org = Assert.Single(result.OrganizationPasswordResetKeyData);
+        Assert.Equal("organizationPasswordResetKeyData", org.Object);
+        Assert.Equal("org-public-key", org.OrganizationPublicKey);
+
+        var ea = Assert.Single(result.EmergencyAccessKeyData);
+        Assert.Equal("emergencyAccessKeyData", ea.Object);
+        Assert.Equal("Grantee", ea.GranteeName);
+
+        var device = Assert.Single(result.TrustedDeviceKeyData);
+        Assert.Equal("trustedDeviceKeyData", device.Object);
+        Assert.Equal("device-user-key", device.EncryptedUserKey);
+
+        var passkey = Assert.Single(result.PasskeyKeyData);
+        Assert.Equal("passkeyKeyData", passkey.Object);
+        Assert.Equal("passkey-user-key", passkey.EncryptedUserKey);
+
+        await sutProvider.GetDependency<IKeyRotationDataQuery>().Received(1).Run(expectedUser);
     }
 
     [Theory]
