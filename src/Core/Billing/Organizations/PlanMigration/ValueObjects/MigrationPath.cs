@@ -16,5 +16,16 @@ namespace Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 /// different path; see <see cref="MigrationPathId"/> and its snapshot tests for the
 /// immortality guard.
 /// </para>
+/// <para>
+/// <see cref="SeatCountPolicy"/> defaults to <see cref="Enums.SeatCountPolicy.Preserve"/> so
+/// existing scalable-to-scalable paths keep the source seat quantity. Packaged sources whose
+/// seat total cannot be read from the source line items (e.g. Teams 2019) set
+/// <see cref="Enums.SeatCountPolicy.ActualUsage"/>.
+/// </para>
 /// </remarks>
-public sealed record MigrationPath(MigrationPathId Id, string Name, PlanType FromPlan, PlanType ToPlan);
+public sealed record MigrationPath(
+    MigrationPathId Id,
+    string Name,
+    PlanType FromPlan,
+    PlanType ToPlan,
+    SeatCountPolicy SeatCountPolicy = SeatCountPolicy.Preserve);
