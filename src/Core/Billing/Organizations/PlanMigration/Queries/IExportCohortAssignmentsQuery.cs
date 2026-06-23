@@ -44,7 +44,7 @@ public class ExportCohortAssignmentsQuery(
             }
 
             var last = page[^1];
-            afterCreationDate = last.AssignedAt;
+            afterCreationDate = last.AssignedDate;
             afterId = last.Id;
         }
     }

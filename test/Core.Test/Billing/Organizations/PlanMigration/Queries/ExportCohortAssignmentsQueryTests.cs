@@ -19,7 +19,7 @@ public class ExportCohortAssignmentsQueryTests
             OrganizationId: Guid.NewGuid(),
             OrganizationName: $"org-{sequence}",
             // Strictly increasing so the cursor advances deterministically.
-            AssignedAt: new DateTime(2026, 1, 1).AddMinutes(sequence),
+            AssignedDate: new DateTime(2026, 1, 1).AddMinutes(sequence),
             ScheduledDate: null,
             MigratedDate: null);
 
@@ -87,11 +87,11 @@ public class ExportCohortAssignmentsQueryTests
             .Returns(firstPage);
 
         var firstLast = firstPage[^1];
-        repository.GetExportRowsByCohortIdAsync(cohortId, firstLast.AssignedAt, firstLast.Id, _pageSize)
+        repository.GetExportRowsByCohortIdAsync(cohortId, firstLast.AssignedDate, firstLast.Id, _pageSize)
             .Returns(secondPage);
 
         var secondLast = secondPage[^1];
-        repository.GetExportRowsByCohortIdAsync(cohortId, secondLast.AssignedAt, secondLast.Id, _pageSize)
+        repository.GetExportRowsByCohortIdAsync(cohortId, secondLast.AssignedDate, secondLast.Id, _pageSize)
             .Returns(thirdPage);
 
         var result = await DrainAsync(sutProvider.Sut.GetByCohortIdAsync(cohortId));
@@ -118,7 +118,7 @@ public class ExportCohortAssignmentsQueryTests
             .Returns(firstPage);
 
         var firstLast = firstPage[^1];
-        repository.GetExportRowsByCohortIdAsync(cohortId, firstLast.AssignedAt, firstLast.Id, _pageSize)
+        repository.GetExportRowsByCohortIdAsync(cohortId, firstLast.AssignedDate, firstLast.Id, _pageSize)
             .Returns(new List<CohortAssignmentExportRow>());
 
         var result = await DrainAsync(sutProvider.Sut.GetByCohortIdAsync(cohortId));

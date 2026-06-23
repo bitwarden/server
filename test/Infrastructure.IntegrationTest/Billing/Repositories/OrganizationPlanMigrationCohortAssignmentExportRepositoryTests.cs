@@ -46,7 +46,7 @@ public class OrganizationPlanMigrationCohortAssignmentExportRepositoryTests
         {
             var prev = rows[i - 1];
             var curr = rows[i];
-            if (curr.AssignedAt < prev.AssignedAt)
+            if (curr.AssignedDate < prev.AssignedDate)
             {
                 return false;
             }
@@ -79,7 +79,7 @@ public class OrganizationPlanMigrationCohortAssignmentExportRepositoryTests
             }
 
             var last = page[^1];
-            afterCreationDate = last.AssignedAt;
+            afterCreationDate = last.AssignedDate;
             afterId = last.Id;
         }
 

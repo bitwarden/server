@@ -36,7 +36,7 @@ BEGIN
         A.[Id],
         A.[OrganizationId],
         O.[Name] AS [OrganizationName],
-        A.[CreationDate] AS [AssignedAt],
+        A.[CreationDate] AS [AssignedDate],
         A.[ScheduledDate],
         A.[MigratedDate]
     FROM

@@ -43,7 +43,12 @@ public class OrganizationPlanMigrationCohortAssignmentRepository(
     public async Task<IReadOnlyList<CohortAssignmentExportRow>> GetExportRowsByCohortIdAsync(
         Guid cohortId, DateTime? afterCreationDate, Guid? afterId, int take)
     {
-        await using var connection = new SqlConnection(ReadOnlyConnectionString);
+        if (afterCreationDate is null != (afterId is null))
+        {
+            throw new ArgumentException("afterCreationDate and afterId must both be set or both be null.");
+        }
+
+        await using var connection = new SqlConnection(ConnectionString);
 
         var results = await connection.QueryAsync<CohortAssignmentExportRow>(
             $"[{Schema}].[{Table}_ReadManyExportByCohortId]",

@@ -150,7 +150,7 @@ public class OrganizationPlanMigrationCohortsController(
 
         foreach (var header in new[]
                  {
-                     "OrganizationId", "OrganizationName", "AssignedAt", "ScheduledDate", "MigratedDate",
+                     "OrganizationId", "OrganizationName", "AssignedDate", "ScheduledDate", "MigratedDate",
                  })
         {
             csv.WriteField(header);
@@ -166,7 +166,7 @@ public class OrganizationPlanMigrationCohortsController(
             {
                 csv.WriteField(row.OrganizationId.ToString());
                 csv.WriteField(SanitizeCsvField(row.OrganizationName));
-                csv.WriteField(row.AssignedAt.ToString("o", CultureInfo.InvariantCulture));
+                csv.WriteField(row.AssignedDate.ToString("o", CultureInfo.InvariantCulture));
                 csv.WriteField(row.ScheduledDate?.ToString("o", CultureInfo.InvariantCulture) ?? string.Empty);
                 csv.WriteField(row.MigratedDate?.ToString("o", CultureInfo.InvariantCulture) ?? string.Empty);
                 await csv.NextRecordAsync();
@@ -180,6 +180,15 @@ public class OrganizationPlanMigrationCohortsController(
             }
 
             await csv.FlushAsync();
+        }
+        catch (OperationCanceledException ex) when (HttpContext.RequestAborted.IsCancellationRequested)
+        {
+            logger.LogInformation(ex,
+                "Cohort CSV export cancelled by the client. CohortId: {CohortId}, RowsWritten: {RowsWritten}",
+                cohort.Id,
+                rowsWritten);
+            aborted = true;
+            HttpContext.Abort();
         }
         catch (Exception ex)
         {
@@ -327,6 +336,10 @@ public class OrganizationPlanMigrationCohortsController(
         return $"{slug}-{DateTime.UtcNow:yyyy-MM-dd}.csv";
     }
 
+    // Defends against CSV formula injection: a spreadsheet treats a cell starting with =, +, -, @,
+    // tab, or CR as a formula, so an operator-controlled org name like "=cmd|'/c calc'!A1" could
+    // execute when the export is opened in Excel/Sheets. Prefixing a single quote forces the cell to
+    // render as literal text. https://owasp.org/www-community/attacks/CSV_Injection
     private static string SanitizeCsvField(string? value)
     {
         if (string.IsNullOrEmpty(value))

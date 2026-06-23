@@ -75,6 +75,11 @@ public class OrganizationPlanMigrationCohortAssignmentRepository(
     public async Task<IReadOnlyList<CohortAssignmentExportRow>> GetExportRowsByCohortIdAsync(
         Guid cohortId, DateTime? afterCreationDate, Guid? afterId, int take)
     {
+        if (afterCreationDate is null != (afterId is null))
+        {
+            throw new ArgumentException("afterCreationDate and afterId must both be set or both be null.");
+        }
+
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 

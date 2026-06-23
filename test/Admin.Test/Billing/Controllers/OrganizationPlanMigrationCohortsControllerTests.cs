@@ -14,6 +14,7 @@ using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.Logging;
@@ -724,6 +725,27 @@ public class OrganizationPlanMigrationCohortsControllerTests
         return body;
     }
 
+    // DefaultHttpContext is sealed and HttpContext.Abort() delegates to the request-lifetime feature,
+    // so we record the abort by swapping in a custom feature rather than subclassing. Backs the test
+    // that a mid-stream failure aborts rather than silently truncating.
+    private sealed class AbortTrackingLifetimeFeature : IHttpRequestLifetimeFeature
+    {
+        public bool Aborted { get; private set; }
+        public CancellationToken RequestAborted { get; set; }
+        public void Abort() => Aborted = true;
+    }
+
+    private static AbortTrackingLifetimeFeature WithAbortTrackingResponseBody(
+        OrganizationPlanMigrationCohortsController sut)
+    {
+        var lifetime = new AbortTrackingLifetimeFeature();
+        var httpContext = new DefaultHttpContext();
+        httpContext.Features.Set<IHttpRequestLifetimeFeature>(lifetime);
+        httpContext.Response.Body = new NonClosingMemoryStream();
+        sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+        return lifetime;
+    }
+
     private static string ReadBody(NonClosingMemoryStream body) =>
         Encoding.UTF8.GetString(body.Captured);
 
@@ -735,6 +757,20 @@ public class OrganizationPlanMigrationCohortsControllerTests
             yield return row;
         }
         await Task.CompletedTask;
+    }
+
+    // Yields the supplied rows, then throws -- simulating a failure (DB read, serialization, write)
+    // that surfaces after the response has already started streaming.
+    private static async IAsyncEnumerable<CohortAssignmentExportRow> AsAsyncThenThrow(
+        IEnumerable<CohortAssignmentExportRow> rows,
+        Exception toThrow)
+    {
+        foreach (var row in rows)
+        {
+            yield return row;
+        }
+        await Task.CompletedTask;
+        throw toThrow;
     }
 
     [Theory, BitAutoData]
@@ -816,7 +852,7 @@ public class OrganizationPlanMigrationCohortsControllerTests
         var lines = ReadBody(body)
             .Split('\n', StringSplitOptions.RemoveEmptyEntries);
         Assert.Single(lines);
-        Assert.Equal("OrganizationId,OrganizationName,AssignedAt,ScheduledDate,MigratedDate", lines[0].TrimEnd('\r'));
+        Assert.Equal("OrganizationId,OrganizationName,AssignedDate,ScheduledDate,MigratedDate", lines[0].TrimEnd('\r'));
     }
 
     [Theory, BitAutoData]
@@ -830,7 +866,7 @@ public class OrganizationPlanMigrationCohortsControllerTests
             Id: Guid.NewGuid(),
             OrganizationId: Guid.NewGuid(),
             OrganizationName: "Acme Corp",
-            AssignedAt: assignedAt,
+            AssignedDate: assignedAt,
             ScheduledDate: scheduledDate,
             MigratedDate: null);
 
@@ -848,7 +884,7 @@ public class OrganizationPlanMigrationCohortsControllerTests
 
         var lines = ReadBody(body).Split('\n', StringSplitOptions.RemoveEmptyEntries);
         Assert.Equal(2, lines.Length);
-        Assert.Equal("OrganizationId,OrganizationName,AssignedAt,ScheduledDate,MigratedDate", lines[0].TrimEnd('\r'));
+        Assert.Equal("OrganizationId,OrganizationName,AssignedDate,ScheduledDate,MigratedDate", lines[0].TrimEnd('\r'));
 
         var fields = lines[1].TrimEnd('\r').Split(',');
         Assert.Equal(row.OrganizationId.ToString(), fields[0]);
@@ -867,7 +903,7 @@ public class OrganizationPlanMigrationCohortsControllerTests
             Id: Guid.NewGuid(),
             OrganizationId: Guid.NewGuid(),
             OrganizationName: "=cmd|'/c calc'!A1",
-            AssignedAt: new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc),
+            AssignedDate: new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc),
             ScheduledDate: null,
             MigratedDate: null);
 
@@ -896,6 +932,8 @@ public class OrganizationPlanMigrationCohortsControllerTests
     [BitAutoData("+danger", true)]
     [BitAutoData("-danger", true)]
     [BitAutoData("@danger", true)]
+    [BitAutoData("\tdanger", true)]
+    [BitAutoData("\rdanger", true)]
     [BitAutoData("Acme Corp", false)]
     public async Task Export_OrganizationName_SanitizesOnlyFormulaTriggers(
         string organizationName,
@@ -907,7 +945,7 @@ public class OrganizationPlanMigrationCohortsControllerTests
             Id: Guid.NewGuid(),
             OrganizationId: Guid.NewGuid(),
             OrganizationName: organizationName,
-            AssignedAt: new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc),
+            AssignedDate: new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc),
             ScheduledDate: null,
             MigratedDate: null);
 
@@ -971,7 +1009,7 @@ public class OrganizationPlanMigrationCohortsControllerTests
             Id: Guid.NewGuid(),
             OrganizationId: Guid.NewGuid(),
             OrganizationName: secretOrgName,
-            AssignedAt: new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc),
+            AssignedDate: new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc),
             ScheduledDate: null,
             MigratedDate: null);
 
@@ -1002,6 +1040,97 @@ public class OrganizationPlanMigrationCohortsControllerTests
             Arg.Any<LogLevel>(),
             Arg.Any<EventId>(),
             Arg.Is<object>(state => state.ToString()!.Contains(secretOrgName)),
+            Arg.Any<Exception?>(),
+            Arg.Any<Func<object, Exception?, string>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Export_QueryThrowsMidStream_AbortsAndLogsError(
+        OrganizationPlanMigrationCohort cohort,
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
+    {
+        var row = new CohortAssignmentExportRow(
+            Id: Guid.NewGuid(),
+            OrganizationId: Guid.NewGuid(),
+            OrganizationName: "Acme Corp",
+            AssignedDate: new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc),
+            ScheduledDate: null,
+            MigratedDate: null);
+        var failure = new InvalidOperationException("read replica went away mid-stream");
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(cohort.Id).Returns(cohort);
+        sutProvider.GetDependency<IExportCohortAssignmentsQuery>()
+            .GetByCohortIdAsync(cohort.Id)
+            .Returns(AsAsyncThenThrow(new[] { row }, failure));
+
+        var logger = sutProvider.GetDependency<ILogger<OrganizationPlanMigrationCohortsController>>();
+
+        var lifetime = WithAbortTrackingResponseBody(sutProvider.Sut);
+        await sutProvider.Sut.Export(cohort.Id);
+
+        // The connection must be aborted so the operator gets a visibly broken download rather than
+        // a silently truncated CSV that looks complete.
+        Assert.True(lifetime.Aborted);
+
+        // The failure must be logged at error with the cohort id and rows-written context, and must
+        // carry the original exception so the cause is diagnosable.
+        logger.Received(1).Log(
+            LogLevel.Error,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(state => state.ToString()!.Contains(cohort.Id.ToString())),
+            failure,
+            Arg.Any<Func<object, Exception?, string>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Export_ClientCancelsMidStream_AbortsAndLogsInformationNotError(
+        OrganizationPlanMigrationCohort cohort,
+        SutProvider<OrganizationPlanMigrationCohortsController> sutProvider)
+    {
+        var row = new CohortAssignmentExportRow(
+            Id: Guid.NewGuid(),
+            OrganizationId: Guid.NewGuid(),
+            OrganizationName: "Acme Corp",
+            AssignedDate: new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc),
+            ScheduledDate: null,
+            MigratedDate: null);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationPlanMigrationCohortRepository>()
+            .GetByIdAsync(cohort.Id).Returns(cohort);
+        sutProvider.GetDependency<IExportCohortAssignmentsQuery>()
+            .GetByCohortIdAsync(cohort.Id)
+            .Returns(AsAsyncThenThrow(new[] { row }, new OperationCanceledException()));
+
+        var logger = sutProvider.GetDependency<ILogger<OrganizationPlanMigrationCohortsController>>();
+
+        var lifetime = WithAbortTrackingResponseBody(sutProvider.Sut);
+        // Simulate the operator cancelling the download (closing the tab / hitting stop).
+        lifetime.RequestAborted = new CancellationToken(canceled: true);
+
+        await sutProvider.Sut.Export(cohort.Id);
+
+        Assert.True(lifetime.Aborted);
+
+        // A client cancel is expected, not a failure -- it must be logged at information so it does
+        // not surface as an error in our dashboards.
+        logger.Received(1).Log(
+            LogLevel.Information,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(state => state.ToString()!.Contains("cancelled")),
+            Arg.Any<Exception?>(),
+            Arg.Any<Func<object, Exception?, string>>());
+
+        logger.DidNotReceive().Log(
+            LogLevel.Error,
+            Arg.Any<EventId>(),
+            Arg.Any<object>(),
             Arg.Any<Exception?>(),
             Arg.Any<Func<object, Exception?, string>>());
     }
