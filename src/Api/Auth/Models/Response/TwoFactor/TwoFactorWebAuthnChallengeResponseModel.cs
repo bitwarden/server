@@ -16,6 +16,6 @@ public class TwoFactorWebAuthnChallengeResponseModel : ResponseModel
     /// <summary>FIDO2 registration ceremony options; passed straight to <c>navigator.credentials.create()</c>.</summary>
     public CredentialCreateOptions Options { get; set; } = null!;
 
-    /// <summary>Token to replay on the subsequent PUT so the user does not have to re-verify.</summary>
+    /// <summary>Token to replay on the subsequent PUT or DELETE so the user does not have to re-verify.</summary>
     public string UserVerificationToken { get; set; } = null!;
 }
