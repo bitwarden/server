@@ -336,6 +336,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("UseOrganizationDomains")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("UsePam")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("UsePasswordManager")
                         .HasColumnType("tinyint(1)");
 

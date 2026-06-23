@@ -140,11 +140,10 @@ public static class FeatureFlagKeys
     public const string PublicMembersInviteRefactor = "pm-33398-refactor-members-invite-org-users-command";
     public const string GenerateInviteLink = "pm-32497-generate-invite-link";
     public const string OrgAbilityExtendedCache = "pm-32104-org-ability-extended-cache";
-    public const string ProviderAbilityExtendedCache = "pm-32111-provider-ability-extended-cache";
     public const string PolicyDrawers = "pm-34804-policy-drawers";
     public const string PM35153CollectionSdkDecryption = "pm-35153-collection-sdk-decryption";
     public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
-    public const string PM36859RefactorOrgCollectionsVaultComponent = "pm-36859-refactor-org-collections-vault-component";
+    public const string PM34423StagedStatus = "pm-34423-staged-status";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
@@ -165,6 +164,7 @@ public static class FeatureFlagKeys
     public const string DevicesLastActivityDate = "pm-4516-devices-add-last-activity-date";
     public const string PM34210_DesktopAddDevices = "pm-34210-desktop-add-devices";
     public const string PM37165_RotateUserApiKeyCommand = "pm-37165-rotate-user-api-key-command";
+    public const string PM30806_SelfServiceChangeEmailCommand = "pm-30806-self-service-change-email-command";
 
     /* Autofill Team */
     public const string NotificationRefresh = "notification-refresh";
@@ -212,6 +212,7 @@ public static class FeatureFlagKeys
     public const string NoLogoutOnKeyUpgradeRotation = "pm-31050-no-logout-key-upgrade-rotation";
     public const string EnableAccountEncryptionV2JitPasswordRegistration = "enable-account-encryption-v2-jit-password-registration";
     public const string EnableAccountEncryptionV2PasswordRegistration = "pm-27278-v2-password-registration";
+    public const string CryptoCipherSuiteFips = "crypto-cipher-suite-fips";
 
     /* Mobile Team */
     public const string AndroidImportLoginsFlow = "import-logins-flow";
@@ -277,6 +278,7 @@ public static class FeatureFlagKeys
     public const string PM37785_VaultBatchBar = "pm-37785-vault-batch-bar";
     public const string PM37785_DesktopVaultBatchBar = "pm-37785-desktop-vault-batch-bar";
     public const string PM29968_FillAfterSave = "pm-29968-fill-after-save";
+    public const string PM32380_BtnTextAddCreate = "pm-32380-btn-text-add-create";
 
     /* Secrets Manager Team */
     public const string SecretsVersioning = "sm-1587-secrets-versioning";

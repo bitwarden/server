@@ -158,7 +158,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 UseDisableSmAdsForUsers = e.UseDisableSmAdsForUsers,
                 UsePhishingBlocker = e.UsePhishingBlocker,
                 UseMyItems = e.UseMyItems,
-                UseInviteLinks = e.UseInviteLinks
+                UseInviteLinks = e.UseInviteLinks,
+                UsePam = e.UsePam
             }).ToListAsync();
         }
     }
@@ -386,7 +387,9 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                           od.DomainName == userWithDomain.EmailDomain &&
                           od.VerifiedDate != null &&
                           o.Enabled == true &&
-                          ou.Status != OrganizationUserStatusType.Invited
+                          (ou.Status == OrganizationUserStatusType.Accepted ||
+                           ou.Status == OrganizationUserStatusType.Confirmed ||
+                           ou.Status == OrganizationUserStatusType.Revoked)
                     select o;
 
         return await query.ToArrayAsync();
@@ -446,7 +449,10 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         {
             var dbContext = GetDatabaseContext(scope);
             var users = await dbContext.OrganizationUsers
-                .Where(ou => ou.OrganizationId == organizationId && ou.Status >= 0)
+                .Where(ou => ou.OrganizationId == organizationId &&
+                    (ou.Status == OrganizationUserStatusType.Invited ||
+                     ou.Status == OrganizationUserStatusType.Accepted ||
+                     ou.Status == OrganizationUserStatusType.Confirmed))
                 .CountAsync();
 
             var sponsored = await dbContext.OrganizationSponsorships

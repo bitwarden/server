@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Interfaces;
@@ -25,6 +26,7 @@ public class EventService : IEventService
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IProviderAbilityCacheService _providerAbilityCacheService;
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
 
@@ -33,6 +35,7 @@ public class EventService : IEventService
         IOrganizationUserRepository organizationUserRepository,
         IProviderUserRepository providerUserRepository,
         IApplicationCacheService applicationCacheService,
+        IProviderAbilityCacheService providerAbilityCacheService,
         ICurrentContext currentContext,
         GlobalSettings globalSettings)
     {
@@ -40,6 +43,7 @@ public class EventService : IEventService
         _organizationUserRepository = organizationUserRepository;
         _providerUserRepository = providerUserRepository;
         _applicationCacheService = applicationCacheService;
+        _providerAbilityCacheService = providerAbilityCacheService;
         _currentContext = currentContext;
         _globalSettings = globalSettings;
     }
@@ -92,7 +96,7 @@ public class EventService : IEventService
         }
 
         var providers = await _currentContext.ProviderMembershipAsync(_providerUserRepository, userId);
-        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync(providers.Select(provider => provider.Id));
+        var providerAbilities = await _providerAbilityCacheService.GetProviderAbilitiesAsync(providers.Select(provider => provider.Id));
         var providerEvents = providers.Where(o => CanUseProviderEvents(providerAbilities, o.Id))
             .Select(p => new EventMessage(_currentContext)
             {
@@ -383,7 +387,7 @@ public class EventService : IEventService
     public async Task LogProviderUsersEventAsync(IEnumerable<(ProviderUser, EventType, DateTime?)> events)
     {
         var materializedEvents = events.ToList();
-        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync(
+        var providerAbilities = await _providerAbilityCacheService.GetProviderAbilitiesAsync(
             materializedEvents.Select(materializedEvent => materializedEvent.Item1.ProviderId));
         var eventMessages = new List<IEvent>();
         foreach (var (providerUser, type, date) in materializedEvents)
@@ -415,7 +419,7 @@ public class EventService : IEventService
     public async Task LogProviderOrganizationEventsAsync(IEnumerable<(ProviderOrganization, EventType, DateTime?)> events)
     {
         var materializedEvents = events.ToList();
-        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync(
+        var providerAbilities = await _providerAbilityCacheService.GetProviderAbilitiesAsync(
             materializedEvents.Select(materializedEvent => materializedEvent.Item1.ProviderId));
         var eventMessages = new List<IEvent>();
         foreach (var (providerOrganization, type, date) in materializedEvents)

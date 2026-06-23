@@ -338,6 +338,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("UseOrganizationDomains")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("UsePam")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("UsePasswordManager")
                         .HasColumnType("boolean");
 
