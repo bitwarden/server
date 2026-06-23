@@ -160,7 +160,10 @@ public class SendValidationServiceTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(userId)
             .Returns(new SendOptionsPolicyRequirement { DisableHideEmail = true });
-        
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendControlsPolicyRequirement>(userId)
+            .Returns(new SendControlsPolicyRequirement { WhoCanAccess = SendWhoCanAccessType.Any });
+
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendControlsPolicyRequirement>(userId)
             .Returns(new SendControlsPolicyRequirement { WhoCanAccess = SendWhoCanAccessType.Any });
 
@@ -179,7 +182,10 @@ public class SendValidationServiceTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(userId)
             .Returns(new SendOptionsPolicyRequirement { DisableHideEmail = false });
-        
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendControlsPolicyRequirement>(userId)
+            .Returns(new SendControlsPolicyRequirement { WhoCanAccess = SendWhoCanAccessType.Any });
+
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendControlsPolicyRequirement>(userId)
             .Returns(new SendControlsPolicyRequirement { WhoCanAccess = SendWhoCanAccessType.Any });
 
@@ -201,7 +207,7 @@ public class SendValidationServiceTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(userId)
             .Returns(new SendOptionsPolicyRequirement { DisableHideEmail = false });
-        
+
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendControlsPolicyRequirement>(userId)
             .Returns(new SendControlsPolicyRequirement { DisableSend = false, DisableHideEmail = false, WhoCanAccess = SendWhoCanAccessType.PasswordProtected });
 
@@ -223,7 +229,7 @@ public class SendValidationServiceTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(userId)
             .Returns(new SendOptionsPolicyRequirement { DisableHideEmail = false });
-        
+
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendControlsPolicyRequirement>(userId)
             .Returns(new SendControlsPolicyRequirement { DisableSend = false, DisableHideEmail = false, WhoCanAccess = SendWhoCanAccessType.SpecificPeople });
 
@@ -245,11 +251,44 @@ public class SendValidationServiceTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(userId)
             .Returns(new SendOptionsPolicyRequirement { DisableHideEmail = false });
-        
+
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendControlsPolicyRequirement>(userId)
             .Returns(new SendControlsPolicyRequirement { DisableSend = false, DisableHideEmail = false, WhoCanAccess = SendWhoCanAccessType.SpecificPeople, AllowedDomains = "bitwarden.com" });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ValidateUserCanSaveAsync(userId, send));
         Assert.Equal("Due to an Enterprise Policy your Sends must be protected by email verification and access granted only to the following domain(s): bitwarden.com", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_EmailsExceedsMaxLength_ThrowsBadRequest(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId)
+    {
+        send.Emails = new string('a', 2501);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ValidateUserCanSaveAsync(userId, send));
+        Assert.Contains("2,500 characters", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_EmailsStartsWithProtectedPrefix_ThrowsBadRequest(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId)
+    {
+        send.Emails = Constants.DatabaseFieldProtectedPrefix + "anything";
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ValidateUserCanSaveAsync(userId, send));
+        Assert.Contains("invalid character sequence", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_OversizeEmails_AndUserIdIsNull_StillThrows(
+        SutProvider<SendValidationService> sutProvider, Send send)
+    {
+        // Proves the Emails guards run above the `!userId.HasValue` early return.
+        send.Emails = new string('a', 2501);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ValidateUserCanSaveAsync(null, send));
     }
 }

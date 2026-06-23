@@ -15,7 +15,9 @@ internal static class DeviceSeeder
             Type = deviceType,
             Name = deviceName,
             Identifier = identifier,
-            PushToken = pushToken
+            PushToken = pushToken,
+            // Mirror production creation sites — device creation counts as first activity.
+            LastActivityDate = DateTime.UtcNow,
         };
     }
 }

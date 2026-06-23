@@ -1,12 +1,13 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Api.Models.Response;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 
-namespace Bit.Api.Models.Response;
+namespace Bit.Api.AdminConsole.Models.Response;
 
 public class CollectionResponseModel : ResponseModel
 {

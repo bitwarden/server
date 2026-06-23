@@ -97,6 +97,8 @@ public static class OrganizationTestHelpers
             UsePhishingBlocker = true,
             UseDisableSmAdsForUsers = true,
             UseMyItems = true,
+            UseInviteLinks = true,
+            UsePam = true,
         });
     }
 

@@ -4,7 +4,7 @@ using Bit.Core.Enums;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Bit.Api.Vault.AuthorizationHandlers.Collections;
+namespace Bit.Api.AdminConsole.Authorization.Collections;
 
 /// <summary>
 /// Handles authorization logic for Collection operations.

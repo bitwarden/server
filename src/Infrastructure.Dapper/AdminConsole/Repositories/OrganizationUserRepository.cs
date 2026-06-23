@@ -2,7 +2,6 @@
 using System.Data.Common;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.Utilities.DebuggingInstruments;
@@ -371,13 +370,13 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds)
+    public async Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds, DateTime revisionDate)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
                 "[dbo].[GroupUser_UpdateGroups]",
-                new { OrganizationUserId = orgUserId, GroupIds = groupIds.ToGuidIdArrayTVP() },
+                new { OrganizationUserId = orgUserId, GroupIds = groupIds.ToGuidIdArrayTVP(), RevisionDate = revisionDate },
                 commandType: CommandType.StoredProcedure);
         }
     }
@@ -569,19 +568,6 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         await RestoreManyAsync([id], status);
     }
 
-    public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId, PolicyType policyType)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.QueryAsync<OrganizationUserPolicyDetails>(
-                $"[{Schema}].[{Table}_ReadByUserIdWithPolicyDetails]",
-                new { UserId = userId, PolicyType = policyType },
-                commandType: CommandType.StoredProcedure);
-
-            return results.ToList();
-        }
-    }
-
     public async Task<IEnumerable<OrganizationUserResetPasswordDetails>> GetManyAccountRecoveryDetailsByOrganizationUserAsync(
         Guid organizationId, IEnumerable<Guid> organizationUserIds)
     {
@@ -626,7 +612,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         await using var connection = new SqlConnection(ConnectionString);
 
         await connection.ExecuteAsync(
-            "[dbo].[OrganizationUser_RevokeMany]",
+            "[dbo].[OrganizationUser_UpdateManyRevoke]",
             new
             {
                 OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP(),
@@ -640,7 +626,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         await using var connection = new SqlConnection(ConnectionString);
 
         await connection.ExecuteAsync(
-            "[dbo].[OrganizationUser_RestoreMany]",
+            "[dbo].[OrganizationUser_UpdateManyRestore]",
             new
             {
                 OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP(),
@@ -715,6 +701,27 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         return rowCount > 0;
     }
 
+    public async Task<ICollection<Guid>> ConfirmManyOrganizationUsersAsync(
+        IReadOnlyCollection<AcceptedOrganizationUserToConfirm> usersToConfirm)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var confirmedIds = await connection.QueryAsync<Guid>(
+            $"[{Schema}].[OrganizationUser_UpdateManyStatusKey]",
+            new
+            {
+                UsersJson = JsonSerializer.Serialize(usersToConfirm.Select(u => new
+                {
+                    Id = u.OrganizationUserId,
+                    u.Key,
+                })),
+                RevisionDate = DateTime.UtcNow
+            },
+            commandType: CommandType.StoredProcedure);
+
+        return confirmedIds.ToList();
+    }
+
     public async Task<OrganizationUserUserDetails?> GetDetailsByOrganizationIdUserIdAsync(Guid organizationId, Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -742,5 +749,18 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                 commandType: CommandType.StoredProcedure,
                 transaction: transaction);
         };
+    }
+
+    public async Task<ICollection<OrganizationUser>> GetManyPendingAutoConfirmAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationUser>(
+                "[dbo].[OrganizationUser_ReadByPendingAutoConfirm]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
     }
 }

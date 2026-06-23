@@ -1,18 +1,16 @@
 ﻿using System.Text;
-using Bit.Core;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
@@ -28,30 +26,27 @@ namespace Bit.Identity.Controllers;
 [ExceptionHandlerFilter]
 public class AccountsController : Controller
 {
-    private readonly ICurrentContext _currentContext;
-    private readonly ILogger<AccountsController> _logger;
     private readonly IUserRepository _userRepository;
     private readonly IRegisterUserCommand _registerUserCommand;
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
     private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
     private readonly ISendVerificationEmailForRegistrationCommand _sendVerificationEmailForRegistrationCommand;
-    private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
 
     private readonly byte[]? _defaultKdfHmacKey = null;
-    private static readonly List<UserKdfInformation> _defaultKdfResults =
+    internal static readonly List<UserKdfInformation> _defaultKdfResults =
     [
         // The first result (index 0) should always return the "normal" default.
         new()
         {
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
         },
         // We want more weight for this default, so add it again
         new()
         {
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
         },
         // Add some other possible defaults...
         new()
@@ -67,33 +62,35 @@ public class AccountsController : Controller
         new()
         {
             Kdf = KdfType.Argon2id,
-            KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default,
-            KdfMemory = AuthConstants.ARGON2_MEMORY.Default,
-            KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default,
+            KdfIterations = 3,
+            KdfMemory = 64,
+            KdfParallelism = 4,
+        },
+        // Mobile-friendly Argon2id default, tuned for iOS memory constraints.
+        new()
+        {
+            Kdf = KdfType.Argon2id,
+            KdfIterations = KdfConstants.ARGON2_ITERATIONS.Default,
+            KdfMemory = KdfConstants.ARGON2_MEMORY.Default,
+            KdfParallelism = KdfConstants.ARGON2_PARALLELISM.Default,
         }
     ];
 
     public AccountsController(
-        ICurrentContext currentContext,
-        ILogger<AccountsController> logger,
         IUserRepository userRepository,
         IRegisterUserCommand registerUserCommand,
         IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
         IGetWebAuthnLoginCredentialAssertionOptionsCommand getWebAuthnLoginCredentialAssertionOptionsCommand,
         ISendVerificationEmailForRegistrationCommand sendVerificationEmailForRegistrationCommand,
-        IFeatureService featureService,
         IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,
         GlobalSettings globalSettings
         )
     {
-        _currentContext = currentContext;
-        _logger = logger;
         _userRepository = userRepository;
         _registerUserCommand = registerUserCommand;
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
         _getWebAuthnLoginCredentialAssertionOptionsCommand = getWebAuthnLoginCredentialAssertionOptionsCommand;
         _sendVerificationEmailForRegistrationCommand = sendVerificationEmailForRegistrationCommand;
-        _featureService = featureService;
         _registrationEmailVerificationTokenDataFactory = registrationEmailVerificationTokenDataFactory;
 
         if (CoreHelpers.SettingHasValue(globalSettings.KdfDefaultHashKey))
@@ -226,12 +223,8 @@ public class AccountsController : Controller
 
     private async Task<PasswordPreloginResponseModel> MakePasswordPreloginCall(PasswordPreloginRequestModel model)
     {
-        var kdfInformation = await _userRepository.GetKdfInformationByEmailAsync(model.Email);
-        if (kdfInformation == null)
-        {
-            kdfInformation = GetDefaultKdf(model.Email);
-        }
-        return new PasswordPreloginResponseModel(kdfInformation, model.Email);
+        var kdfInformation = await _userRepository.GetKdfInformationByEmailAsync(model.Email) ?? GetDefaultKdf(model.Email);
+        return new PasswordPreloginResponseModel(kdfInformation, kdfInformation.MasterPasswordSalt);
     }
 
     [HttpGet("webauthn/assertion-options")]
@@ -251,21 +244,24 @@ public class AccountsController : Controller
 
     private UserKdfInformation GetDefaultKdf(string email)
     {
-        if (_defaultKdfHmacKey == null)
-        {
-            return _defaultKdfResults[0];
-        }
+        // Always normalize email before use so casing differences in the request do not affect the response.
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+        var kdfIndex = EnumerationProtectionHelpers.GetIndexForInputHash(_defaultKdfHmacKey, normalizedEmail, _defaultKdfResults.Count);
+        // PM-31702: In the future we may need to generate a deterministic random salt, for the time being we will use email and null.
+        var saltOptions = new string?[] { normalizedEmail, null };
+        // we add the suffix ":salt" so the calculated index is independent of the kdfIndex calculation.
+        var saltIndex = EnumerationProtectionHelpers.GetIndexForInputHash(_defaultKdfHmacKey, normalizedEmail + ":salt", saltOptions.Length);
 
-        // Compute the HMAC hash of the email
-        var hmacMessage = Encoding.UTF8.GetBytes(email.Trim().ToLowerInvariant());
-        using var hmac = new System.Security.Cryptography.HMACSHA256(_defaultKdfHmacKey);
-        var hmacHash = hmac.ComputeHash(hmacMessage);
-        // Convert the hash to a number
-        var hashHex = BitConverter.ToString(hmacHash).Replace("-", string.Empty).ToLowerInvariant();
-        var hashFirst8Bytes = hashHex.Substring(0, 16);
-        var hashNumber = long.Parse(hashFirst8Bytes, System.Globalization.NumberStyles.HexNumber);
-        // Find the default KDF value for this hash number
-        var hashIndex = (int)(Math.Abs(hashNumber) % _defaultKdfResults.Count);
-        return _defaultKdfResults[hashIndex];
+        // deep copy to avoid thread issues with the static list
+        var result = new UserKdfInformation()
+        {
+            Kdf = _defaultKdfResults[kdfIndex].Kdf,
+            KdfIterations = _defaultKdfResults[kdfIndex].KdfIterations,
+            KdfMemory = _defaultKdfResults[kdfIndex].KdfMemory,
+            KdfParallelism = _defaultKdfResults[kdfIndex].KdfParallelism,
+            MasterPasswordSalt = saltOptions[saltIndex]
+        };
+
+        return result;
     }
 }

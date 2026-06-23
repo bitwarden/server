@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using System.Data;
+using System.Security.Cryptography;
 using Bit.Core;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Settings;
@@ -11,6 +12,7 @@ using Bit.Infrastructure.Dapper.Tools.Helpers;
 using Dapper;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Infrastructure.Dapper.Tools.Repositories;
 
@@ -18,22 +20,32 @@ namespace Bit.Infrastructure.Dapper.Tools.Repositories;
 public class SendRepository : Repository<Send, Guid>, ISendRepository
 {
     private readonly IDataProtector _dataProtector;
+    private readonly ILogger<SendRepository> _logger;
 
-    public SendRepository(GlobalSettings globalSettings, IDataProtectionProvider dataProtectionProvider)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString, dataProtectionProvider)
-    { }
+    public SendRepository(GlobalSettings globalSettings, IDataProtectionProvider dataProtectionProvider,
+        ILogger<SendRepository> logger)
+        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString,
+            dataProtectionProvider, logger)
+    {
+    }
 
-    public SendRepository(string connectionString, string readOnlyConnectionString, IDataProtectionProvider dataProtectionProvider)
+    public SendRepository(string connectionString, string readOnlyConnectionString,
+        IDataProtectionProvider dataProtectionProvider, ILogger<SendRepository> logger)
         : base(connectionString, readOnlyConnectionString)
     {
         _dataProtector = dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose);
+        _logger = logger;
     }
 
     public override async Task<Send?> GetByIdAsync(Guid id)
     {
         var send = await base.GetByIdAsync(id);
-        UnprotectData(send);
-        return send;
+        if (send == null)
+        {
+            return null;
+        }
+
+        return UnprotectData(send) ? send : null;
     }
 
     /// <inheritdoc />
@@ -46,9 +58,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
                 new { UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
-            var sends = results.ToList();
-            UnprotectData(sends);
-            return sends;
+            return results.Where(UnprotectData).ToList();
         }
     }
 
@@ -62,9 +72,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
-            var sends = results.ToList();
-            UnprotectData(sends);
-            return sends;
+            return results.Where(UnprotectData).ToList();
         }
     }
 
@@ -78,9 +86,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
                 new { UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
-            var sends = results.ToList();
-            UnprotectData(sends);
-            return sends;
+            return results.Where(UnprotectData).ToList();
         }
     }
 
@@ -94,9 +100,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
-            var sends = results.ToList();
-            UnprotectData(sends);
-            return sends;
+            return results.Where(UnprotectData).ToList();
         }
     }
 
@@ -110,9 +114,9 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
                 new { DeletionDate = deletionDateBefore },
                 commandType: CommandType.StoredProcedure);
 
-            var sends = results.ToList();
-            UnprotectData(sends);
-            return sends;
+            // Don't filter or decrypt here — the cleanup job needs to see every row
+            // (including unrecoverable ones) so it can delete them.
+            return results.ToList();
         }
     }
 
@@ -185,7 +189,6 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
                 cmd.ExecuteNonQuery();
             }
 
-            // Unprotect after save
             foreach (var send in sendsList)
             {
                 UnprotectData(send);
@@ -198,7 +201,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
         using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
             $"[{Schema}].[Send_UpdateDisabledByIds]",
-            new { Ids = ids.ToGuidIdArrayTVP(), Disabled = disabled },
+            new { Ids = ids.ToGuidIdArrayTVP(), Disabled = disabled, RevisionDate = DateTime.UtcNow },
             commandType: CommandType.StoredProcedure);
     }
 
@@ -206,8 +209,8 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
     {
         using var connection = new SqlConnection(ConnectionString);
         var sendIds = await connection.QueryAsync<Guid>(
-            $"[{Schema}].[Send_ReadIdsByOrgId]",
-            new { Id = organizationId },
+            $"[{Schema}].[Send_ReadIdsByOrganizationId]",
+            new { OrganizationId = organizationId },
             commandType: CommandType.StoredProcedure);
         return sendIds;
     }
@@ -219,9 +222,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
             $"[{Schema}].[Send_ReadByIds]",
             new { Ids = ids.ToGuidIdArrayTVP() },
             commandType: CommandType.StoredProcedure);
-        var sends = results.ToList();
-        UnprotectData(sends);
-        return sends;
+        return results.Where(UnprotectData).ToList();
     }
 
     public async Task UpdateManyDeletionDatesByIdsAsync(IEnumerable<Guid> ids, int deletionHours)
@@ -256,37 +257,40 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
 
     private void ProtectData(Send send)
     {
-        if (!send.Emails?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
-        {
-            send.Emails = string.Concat(Constants.DatabaseFieldProtectedPrefix,
-                _dataProtector.Protect(send.Emails!));
-        }
-    }
-
-    private void UnprotectData(Send? send)
-    {
-        if (send == null)
+        if (string.IsNullOrWhiteSpace(send.Emails) ||
+            send.Emails.StartsWith(Constants.DatabaseFieldProtectedPrefix))
         {
             return;
         }
 
-        if (send.Emails?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
+        send.Emails = string.Concat(Constants.DatabaseFieldProtectedPrefix,
+            _dataProtector.Protect(send.Emails));
+    }
+
+    private bool UnprotectData(Send send)
+    {
+        if (string.IsNullOrWhiteSpace(send.Emails) || !send.Emails.StartsWith(Constants.DatabaseFieldProtectedPrefix))
+        {
+            return true;
+        }
+
+        try
         {
             send.Emails = _dataProtector.Unprotect(
                 send.Emails.Substring(Constants.DatabaseFieldProtectedPrefix.Length));
+            return true;
         }
-    }
-
-    private void UnprotectData(IEnumerable<Send> sends)
-    {
-        if (sends == null)
+        catch (CryptographicException ex)
         {
-            return;
-        }
-
-        foreach (var send in sends)
-        {
-            UnprotectData(send);
+            if (send.Emails.Length == 4000)
+            {
+                _logger.LogError(ex, "Emails column for Send {SendId} is max length and may have been truncated.", send.Id);
+            }
+            else
+            {
+                _logger.LogError(ex, "Failed to unprotect Emails for Send {SendId}.", send.Id);
+            }
+            throw;
         }
     }
 }

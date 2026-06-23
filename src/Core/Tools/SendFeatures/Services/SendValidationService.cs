@@ -40,6 +40,27 @@ public class SendValidationService : ISendValidationService
 
     public async Task ValidateUserCanSaveAsync(Guid? userId, Send send)
     {
+        // The below is unrelated to any policy available in the Admin Console but avoids a situation whereby
+        // Emails may be sent as a plain-text string < 4000 chars during Send creation and subsequently protected using
+        // ASP.NET Data Protection with encrypted value violating 4000 char limit
+        if (!string.IsNullOrWhiteSpace(send.Emails))
+        {
+            // The "P|" prefix is a server-internal sentinel for Data-Protection-wrapped values.
+            // Clients must not submit a value starting with this prefix.
+            if (send.Emails.StartsWith(Constants.DatabaseFieldProtectedPrefix))
+            {
+                throw new BadRequestException("The Emails field contains an invalid character sequence.");
+            }
+
+            // 2500 plaintext chars → ~3450 chars after Data Protection wrap (P| + base64 +
+            // ~84-byte binary header/MAC/IV), which fits the NVARCHAR(4000) column with headroom.
+            if (send.Emails.Length > 2500)
+            {
+                throw new BadRequestException(
+                    "The total number of characters in the Emails field must not exceed 2,500 characters.");
+            }
+        }
+
         // The nullable userId is intended to support organization-owned Sends (never implemented).
         // If it's null, we can't enforce policies, because policies are only enforced against a specific user.
         if (!userId.HasValue)
@@ -77,18 +98,20 @@ public class SendValidationService : ISendValidationService
             throw new BadRequestException($"Due to an Enterprise Policy your Sends must be protected by {requiredAccessControl}");
         }
 
-        if (emailsRequired && sendControlsRequirement.AllowedDomains != null)
+        if (emailsRequired && sendControlsRequirement.AllowedDomains != null && !SendAllEmailsHaveAllowedDomains(send.Emails, sendControlsRequirement.AllowedDomains))
         {
-            if (!SendAllEmailsHaveAllowedDomains(send.Emails, sendControlsRequirement.AllowedDomains))
-            {
-                throw new BadRequestException($"Due to an Enterprise Policy your Sends must be protected by email verification and access granted only to the following domain(s): {sendControlsRequirement.AllowedDomains}");
-            }
+            throw new BadRequestException($"Due to an Enterprise Policy your Sends must be protected by email verification and access granted only to the following domain(s): {sendControlsRequirement.AllowedDomains}");
         }
     }
 
     public static bool SendAllEmailsHaveAllowedDomains(string? emailsString, string? domainsString)
     {
         var domains = (domainsString ?? "").Split(",", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        // If we have no domains then any email is fine
+        if (domains.Length == 0)
+        {
+            return true;
+        }
         var emails = (emailsString ?? "").Split(",", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
         return emails.All(email => domains.Any(domain =>
         {
@@ -96,7 +119,7 @@ public class SendValidationService : ISendValidationService
             return emailDomain.Equals(domain, StringComparison.OrdinalIgnoreCase)
                 || emailDomain.EndsWith("." + domain, StringComparison.OrdinalIgnoreCase);
         }));
-    } 
+    }
 
     public async Task<long> StorageRemainingForSendAsync(Send send)
     {

@@ -38,6 +38,14 @@ public class GetOrganizationReportSummaryDataQuery : IGetOrganizationReportSumma
                 throw new BadRequestException("ReportId is required.");
             }
 
+            var report = await _organizationReportRepo.GetByIdAsync(reportId);
+            if (report == null || report.OrganizationId != organizationId)
+            {
+                _logger.LogWarning(Constants.BypassFiltersEventId, "No summary data found for organization {organizationId} and report {reportId}",
+                    organizationId, reportId);
+                throw new NotFoundException("Organization report summary data not found.");
+            }
+
             var summaryDataResponse = await _organizationReportRepo.GetSummaryDataAsync(reportId);
 
             if (summaryDataResponse == null)

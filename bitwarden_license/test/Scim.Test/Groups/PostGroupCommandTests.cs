@@ -43,7 +43,7 @@ public class PostGroupCommandTests
         var group = await sutProvider.Sut.PostGroupAsync(organization, scimGroupRequestModel);
 
         await sutProvider.GetDependency<ICreateGroupCommand>().Received(1).CreateGroupAsync(group, organization, EventSystemUser.SCIM, null);
-        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().UpdateUsersAsync(default, default);
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().UpdateUsersAsync(default, default, default);
 
         AssertHelper.AssertPropertyEqual(expectedResult, group, "Id", "CreationDate", "RevisionDate");
     }
@@ -74,7 +74,7 @@ public class PostGroupCommandTests
         var group = await sutProvider.Sut.PostGroupAsync(organization, scimGroupRequestModel);
 
         await sutProvider.GetDependency<ICreateGroupCommand>().Received(1).CreateGroupAsync(group, organization, EventSystemUser.SCIM, null);
-        await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(Arg.Any<Guid>(), Arg.Is<IEnumerable<Guid>>(arg => arg.All(id => membersUserIds.Contains(id))));
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(group.Id, Arg.Is<IEnumerable<Guid>>(arg => arg.All(id => membersUserIds.Contains(id))), group.RevisionDate);
 
         AssertHelper.AssertPropertyEqual(expectedResult, group, "Id", "CreationDate", "RevisionDate");
     }

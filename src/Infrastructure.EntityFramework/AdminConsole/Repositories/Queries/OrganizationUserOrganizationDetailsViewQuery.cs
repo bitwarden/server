@@ -78,6 +78,8 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         UseDisableSMAdsForUsers = o.UseDisableSmAdsForUsers,
                         UsePhishingBlocker = o.UsePhishingBlocker,
                         UseMyItems = o.UseMyItems,
+                        UseInviteLinks = o.UseInviteLinks,
+                        UsePam = o.UsePam,
                         RevocationReason = ou.RevocationReason
                     };
         return query;

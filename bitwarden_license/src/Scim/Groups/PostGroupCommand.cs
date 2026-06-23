@@ -62,6 +62,6 @@ public class PostGroupCommand : IPostGroupCommand
             return;
         }
 
-        await _groupRepository.UpdateUsersAsync(group.Id, memberIds);
+        await _groupRepository.UpdateUsersAsync(group.Id, memberIds, group.RevisionDate);
     }
 }
