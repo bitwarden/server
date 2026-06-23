@@ -41,10 +41,10 @@ public class Startup
 
         services.AddScoped<IPasswordHasher<Core.Entities.User>, PasswordHasher<Core.Entities.User>>();
 
-        // License infrastructure — only registered when configuration is sufficient to construct
-        // LicensingService without throwing. SingleUserScene accepts ILicensingService? and
-        // no-ops gracefully when the service is absent (e.g. self-hosted dev with no LicenseDirectory).
-        if (!globalSettings.SelfHosted || (globalSettings.Installation.Id != Guid.Empty && CoreHelpers.SettingHasValue(globalSettings.LicenseDirectory)))
+        // License infrastructure — register whenever LicensingService can construct without throwing.
+        // On self-hosted, that requires LicenseDirectory to be configured. SingleUserScene accepts
+        // ILicensingService? and no-ops gracefully when the service is absent.
+        if (!globalSettings.SelfHosted || CoreHelpers.SettingHasValue(globalSettings.LicenseDirectory))
         {
             services.AddLicenseServices();
             services.TryAddSingleton<IMailService, NoopMailService>();
