@@ -1262,7 +1262,7 @@ public class TwoFactorControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task SendEmail_ValidToken_InvokesEmailService(
+    public async Task SendEmailSetup_ValidToken_InvokesEmailService(
         User user,
         TwoFactorEmailSetupRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
@@ -1271,7 +1271,7 @@ public class TwoFactorControllerTests
         SetupUserVerificationTokenFactoryToUnprotectInto(
             sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.Email));
 
-        await sutProvider.Sut.SendEmail(model);
+        await sutProvider.Sut.SendEmailSetup(model);
 
         await sutProvider.GetDependency<ITwoFactorEmailService>()
             .Received(1)
@@ -1279,7 +1279,7 @@ public class TwoFactorControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task SendEmail_ExpiredToken_ThrowsBadRequest(
+    public async Task SendEmailSetup_ExpiredToken_ThrowsBadRequest(
         User user,
         TwoFactorEmailSetupRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
@@ -1292,7 +1292,7 @@ public class TwoFactorControllerTests
             ExpirationDate = DateTime.UtcNow.AddMinutes(-1),
         });
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SendEmail(model));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SendEmailSetup(model));
         AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
         await sutProvider.GetDependency<ITwoFactorEmailService>()
             .DidNotReceiveWithAnyArgs()
@@ -1300,7 +1300,7 @@ public class TwoFactorControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task SendEmail_TryUnprotectFails_ThrowsBadRequest(
+    public async Task SendEmailSetup_TryUnprotectFails_ThrowsBadRequest(
         User user,
         TwoFactorEmailSetupRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
@@ -1310,7 +1310,7 @@ public class TwoFactorControllerTests
             .TryUnprotect(model.UserVerificationToken, out Arg.Any<TwoFactorUserVerificationTokenable>())
             .Returns(false);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SendEmail(model));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SendEmailSetup(model));
         AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
         await sutProvider.GetDependency<ITwoFactorEmailService>()
             .DidNotReceiveWithAnyArgs()
@@ -1318,7 +1318,7 @@ public class TwoFactorControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task SendEmail_TokenBoundToDifferentUser_ThrowsBadRequest(
+    public async Task SendEmailSetup_TokenBoundToDifferentUser_ThrowsBadRequest(
         User user,
         User otherUser,
         TwoFactorEmailSetupRequestModel model,
@@ -1328,7 +1328,7 @@ public class TwoFactorControllerTests
         SetupUserVerificationTokenFactoryToUnprotectInto(
             sutProvider, ValidUserVerificationTokenableFor(otherUser, TwoFactorProviderType.Email));
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SendEmail(model));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SendEmailSetup(model));
         AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
         await sutProvider.GetDependency<ITwoFactorEmailService>()
             .DidNotReceiveWithAnyArgs()
@@ -1336,7 +1336,7 @@ public class TwoFactorControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task SendEmail_TokenBoundToDifferentProvider_ThrowsBadRequest(
+    public async Task SendEmailSetup_TokenBoundToDifferentProvider_ThrowsBadRequest(
         User user,
         TwoFactorEmailSetupRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
@@ -1345,7 +1345,7 @@ public class TwoFactorControllerTests
         SetupUserVerificationTokenFactoryToUnprotectInto(
             sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.YubiKey));
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SendEmail(model));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SendEmailSetup(model));
         AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
         await sutProvider.GetDependency<ITwoFactorEmailService>()
             .DidNotReceiveWithAnyArgs()

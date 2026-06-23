@@ -541,16 +541,16 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     [Fact]
     public async Task PutEmail_ValidTokenAndCode_UpdatesProvider()
     {
-        // Full enrollment chain: GET mints the UV token, SendEmail validates it and triggers
+        // Full enrollment chain: GET mints the UV token, SendEmailSetup validates it and triggers
         // the email service, and PUT consumes the UV token + OTP.
         //
         // The OTP itself cannot be intercepted from the substituted email service — production
         // computes it inside SendTwoFactorSetupEmailAsync (from SecurityStamp + Email metadata
-        // + time window) and ships it out of band via the user's inbox. SendEmail also doesn't
+        // + time window) and ships it out of band via the user's inbox. SendEmailSetup also doesn't
         // persist the Email metadata it temporarily attaches via model.ToUser, so a fresh fetch
-        // post-SendEmail has no metadata for OTP generation.
+        // post-SendEmailSetup has no metadata for OTP generation.
         //
-        // The test reproduces the OTP locally by applying the same in-memory mutation SendEmail
+        // The test reproduces the OTP locally by applying the same in-memory mutation SendEmailSetup
         // applied (Email metadata = _userEmail) and asking UserManager to generate a token. The
         // resulting OTP matches what PutEmail will validate because PutEmail's server-side flow
         // applies the same mutation against the same SecurityStamp before checking.
@@ -594,7 +594,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     }
 
     [Fact]
-    public async Task SendEmail_ValidToken_InvokesEmailService()
+    public async Task SendEmailSetup_ValidToken_InvokesEmailService()
     {
         var getResponse = await _client.PostAsJsonAsync("/two-factor/get-email",
             new { MasterPasswordHash = _masterPasswordHash });
@@ -614,7 +614,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     }
 
     [Fact]
-    public async Task SendEmail_MissingUserVerificationToken_BadRequest()
+    public async Task SendEmailSetup_MissingUserVerificationToken_BadRequest()
     {
         var response = await _client.PostAsJsonAsync("/two-factor/send-email",
             new { Email = _userEmail });
@@ -622,7 +622,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     }
 
     [Fact]
-    public async Task SendEmail_MissingEmail_BadRequest()
+    public async Task SendEmailSetup_MissingEmail_BadRequest()
     {
         var getResponse = await _client.PostAsJsonAsync("/two-factor/get-email",
             new { MasterPasswordHash = _masterPasswordHash });
