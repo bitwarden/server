@@ -271,6 +271,28 @@ public class TwoFactorControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task PutYubiKey_CannotAccessPremium_ThrowsBadRequestException(
+        User user,
+        TwoFactorYubiKeyUpdateRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupUserVerificationTokenFactoryToUnprotectInto(
+            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.YubiKey));
+
+        sutProvider.GetDependency<IUserService>()
+            .CanAccessPremium(default)
+            .ReturnsForAnyArgs(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutYubiKey(model));
+
+        Assert.Equal("Premium status is required.", exception.Message);
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateTwoFactorProviderAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
     public async Task PutYubiKey_ExpiredToken_ThrowsBadRequest(
         User user,
         TwoFactorYubiKeyUpdateRequestModel model,

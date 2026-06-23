@@ -291,6 +291,19 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         Assert.NotNull(refreshed!.GetTwoFactorProvider(TwoFactorProviderType.Duo));
     }
 
+    [Fact]
+    public async Task DeleteDuo_CrossProviderToken_BadRequest()
+    {
+        var user = (await _userRepository.GetByEmailAsync(_userEmail))!;
+        var yubiKeyToken = ProtectUserVerificationToken(user, TwoFactorProviderType.YubiKey);
+
+        var response = await SendJsonAsync(HttpMethod.Delete, "/two-factor/duo",
+            new TwoFactorDuoDeleteRequestModel { UserVerificationToken = yubiKeyToken });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
+    }
+
     // ---------------------------------------------------------------------
     // Organization Duo
     // ---------------------------------------------------------------------
@@ -346,6 +359,22 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var refreshedOrg = await _organizationRepository.GetByIdAsync(org.Id);
         Assert.NotNull(refreshedOrg!.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo));
+    }
+
+    [Fact]
+    public async Task DeleteOrganizationDuo_CrossProviderToken_BadRequest()
+    {
+        // Token-binding check runs before the ManagePolicies / org-membership check, so an
+        // arbitrary org id is fine — the BadRequest fires first.
+        var user = (await _userRepository.GetByEmailAsync(_userEmail))!;
+        var duoToken = ProtectUserVerificationToken(user, TwoFactorProviderType.Duo);
+
+        var response = await SendJsonAsync(HttpMethod.Delete,
+            $"/organizations/{Guid.NewGuid()}/two-factor/duo",
+            new TwoFactorOrganizationDuoDeleteRequestModel { UserVerificationToken = duoToken });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
     }
 
     // ---------------------------------------------------------------------
@@ -494,6 +523,19 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
 
         var refreshed = await _userRepository.GetByEmailAsync(_userEmail);
         Assert.Null(refreshed!.GetTwoFactorProvider(TwoFactorProviderType.Email));
+    }
+
+    [Fact]
+    public async Task DeleteEmail_CrossProviderToken_BadRequest()
+    {
+        var user = (await _userRepository.GetByEmailAsync(_userEmail))!;
+        var duoToken = ProtectUserVerificationToken(user, TwoFactorProviderType.Duo);
+
+        var response = await SendJsonAsync(HttpMethod.Delete, "/two-factor/email",
+            new TwoFactorEmailDeleteRequestModel { UserVerificationToken = duoToken });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
