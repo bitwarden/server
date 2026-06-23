@@ -443,40 +443,63 @@ public class CipherResponseModelTests
     }
 
     [Fact]
-    public void Constructor_DoesNotSetPartialData()
+    public void Constructor_Partial_OmitsAttachments()
     {
         var cipher = new Cipher
         {
             Id = Guid.NewGuid(),
             Type = CipherType.Login,
             Data = JsonSerializer.Serialize(new CipherLoginData { Name = "2.name|encrypted" }),
+            Attachments = JsonSerializer.Serialize(new Dictionary<string, CipherAttachment.MetaData>
+            {
+                ["attachment-id"] = new CipherAttachment.MetaData
+                {
+                    FileName = "2.file|encrypted",
+                    Key = "2.attachmentKey|encrypted",
+                    Size = 1024,
+                },
+            }),
             RevisionDate = DateTime.UtcNow,
             CreationDate = DateTime.UtcNow,
         };
 
         var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
 
-        // PartialData is the declared wire contract for PAM credential leasing; nothing populates it
-        // yet, so every response is still full.
-        Assert.Null(response.PartialData);
-        Assert.Equal(cipher.Data, response.Data);
+        // A leasing-gated (partial) response withholds attachment metadata entirely — including each
+        // attachment's encryption Key — so nothing about the attachment leaks.
+        Assert.Null(response.Attachments);
+        var serialized = JsonSerializer.Serialize(response);
+        Assert.DoesNotContain("2.attachmentKey|encrypted", serialized);
+        Assert.DoesNotContain("2.file|encrypted", serialized);
     }
 
     [Fact]
-    public void Serialize_NullPartialData_OmitsTheProperty()
+    public void Constructor_NotPartial_IncludesAttachments()
     {
         var cipher = new Cipher
         {
             Id = Guid.NewGuid(),
             Type = CipherType.Login,
             Data = JsonSerializer.Serialize(new CipherLoginData { Name = "2.name|encrypted" }),
+            Attachments = JsonSerializer.Serialize(new Dictionary<string, CipherAttachment.MetaData>
+            {
+                ["attachment-id"] = new CipherAttachment.MetaData
+                {
+                    FileName = "2.file|encrypted",
+                    Key = "2.attachmentKey|encrypted",
+                    Size = 1024,
+                },
+            }),
             RevisionDate = DateTime.UtcNow,
             CreationDate = DateTime.UtcNow,
         };
 
-        var json = JsonSerializer.Serialize(new CipherMiniResponseModel(cipher, _globalSettings, false));
+        var response = new FullCipherMiniResponseModel(FullCipherAccess.Unrestricted(), cipher, _globalSettings, false);
 
-        // Null-suppressed, so adding the property leaves existing responses byte-identical.
-        Assert.DoesNotContain("partialData", json, StringComparison.OrdinalIgnoreCase);
+        // A full-access response still carries attachment metadata.
+        Assert.NotNull(response.Attachments);
+        var attachment = Assert.Single(response.Attachments);
+        Assert.Equal("attachment-id", attachment.Id);
+        Assert.Equal("2.attachmentKey|encrypted", attachment.Key);
     }
 }

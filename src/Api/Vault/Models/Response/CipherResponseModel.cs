@@ -41,7 +41,10 @@ public class CipherMiniResponseModel : ResponseModel
         Type = cipher.Type;
         RevisionDate = cipher.RevisionDate;
         OrganizationId = cipher.OrganizationId;
-        Attachments = AttachmentResponseModel.FromCipher(cipher, globalSettings);
+        // Attachment metadata (including each attachment's encryption Key) is withheld from the partial
+        // shape: it is only ever the leasing-gated cipher's response, and the gate also blocks the
+        // attachment download (see CiphersController.GetAttachmentData), so nothing is decryptable.
+        Attachments = partial ? null : AttachmentResponseModel.FromCipher(cipher, globalSettings);
         OrganizationUseTotp = orgUseTotp;
         CreationDate = cipher.CreationDate;
         DeletedDate = cipher.DeletedDate;
