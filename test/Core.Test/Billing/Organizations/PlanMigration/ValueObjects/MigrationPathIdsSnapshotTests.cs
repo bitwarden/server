@@ -41,6 +41,8 @@ public class MigrationPathIdsSnapshotTests
         Assert.Equal((byte)6, (byte)MigrationPathId.Enterprise2019MonthlyToCurrent);
         Assert.Equal((byte)7, (byte)MigrationPathId.TeamsStarterToCurrent);
         Assert.Equal((byte)8, (byte)MigrationPathId.TeamsStarter2023ToCurrent);
+        Assert.Equal((byte)9, (byte)MigrationPathId.Teams2019AnnualToCurrent);
+        Assert.Equal((byte)10, (byte)MigrationPathId.Teams2019MonthlyToCurrent);
     }
 
     [Fact]
@@ -65,6 +67,10 @@ public class MigrationPathIdsSnapshotTests
             MigrationPaths.TeamsStarterToCurrent.Id);
         Assert.Equal(MigrationPathId.TeamsStarter2023ToCurrent,
             MigrationPaths.TeamsStarter2023ToCurrent.Id);
+        Assert.Equal(MigrationPathId.Teams2019AnnualToCurrent,
+            MigrationPaths.Teams2019AnnualToCurrent.Id);
+        Assert.Equal(MigrationPathId.Teams2019MonthlyToCurrent,
+            MigrationPaths.Teams2019MonthlyToCurrent.Id);
     }
 
     [Fact]
@@ -106,6 +112,14 @@ public class MigrationPathIdsSnapshotTests
             MigrationPaths.TeamsStarter2023ToCurrent.FromPlan);
         Assert.Equal(PlanType.TeamsMonthly,
             MigrationPaths.TeamsStarter2023ToCurrent.ToPlan);
+        Assert.Equal(PlanType.TeamsAnnually2019,
+            MigrationPaths.Teams2019AnnualToCurrent.FromPlan);
+        Assert.Equal(PlanType.TeamsAnnually,
+            MigrationPaths.Teams2019AnnualToCurrent.ToPlan);
+        Assert.Equal(PlanType.TeamsMonthly2019,
+            MigrationPaths.Teams2019MonthlyToCurrent.FromPlan);
+        Assert.Equal(PlanType.TeamsMonthly,
+            MigrationPaths.Teams2019MonthlyToCurrent.ToPlan);
     }
 
     [Fact]
@@ -113,7 +127,23 @@ public class MigrationPathIdsSnapshotTests
     {
         // Guards against accidental removal. Increment when intentionally adding a
         // new path.
-        Assert.Equal(8, MigrationPaths.All.Count);
+        Assert.Equal(10, MigrationPaths.All.Count);
+    }
+
+    [Fact]
+    public void MigrationPaths_SeatCountPolicy_IsActualUsageForTeams2019AndPreserveOtherwise()
+    {
+        // Teams 2019 is a packaged base + per-seat-overage plan migrating to a pure per-seat
+        // plan; its Phase 2 seat quantity is resolved from actual usage, not preserved from the
+        // source line items. Every other path preserves the source seat quantity.
+        Assert.Equal(SeatCountPolicy.ActualUsage,
+            MigrationPaths.Teams2019AnnualToCurrent.SeatCountPolicy);
+        Assert.Equal(SeatCountPolicy.ActualUsage,
+            MigrationPaths.Teams2019MonthlyToCurrent.SeatCountPolicy);
+        Assert.Equal(SeatCountPolicy.Preserve,
+            MigrationPaths.Teams2020MonthlyToCurrent.SeatCountPolicy);
+        Assert.Equal(SeatCountPolicy.Preserve,
+            MigrationPaths.Enterprise2019AnnualToCurrent.SeatCountPolicy);
     }
 
     [Fact]
