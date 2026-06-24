@@ -40,6 +40,9 @@ public class SingleOrganizationScene(
         public required string Domain { get; set; }
         [Required]
         public required int Seats { get; set; }
+        public bool EnableSecretsManager { get; set; }
+        public int? SmSeats { get; set; }
+        public int? SmServiceAccounts { get; set; }
     }
 
     public async Task<SceneResult<SingleOrganizationSceneResult>> SeedAsync(Request request)
@@ -66,6 +69,11 @@ public class SingleOrganizationScene(
             orgKeys.PublicKey,
             orgKeys.PrivateKey,
             request.PlanType);
+
+        if (request.EnableSecretsManager)
+        {
+            PlanFeatures.EnableSecretsManager(organization, request.SmSeats, request.SmServiceAccounts);
+        }
 
         await organizationRepository.CreateAsync(organization);
 
