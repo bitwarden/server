@@ -230,7 +230,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
         using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
             $"[{Schema}].[Send_UpdateDeletionDatesByIds]",
-            new { Ids = ids.ToGuidIdArrayTVP(), DeletionHours = deletionHours },
+            new { Ids = ids.ToGuidIdArrayTVP(), DeletionHours = deletionHours, RevisionDate = DateTime.UtcNow },
             commandType: CommandType.StoredProcedure);
     }
 

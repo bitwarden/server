@@ -1,6 +1,7 @@
 CREATE PROCEDURE [dbo].[Send_UpdateDeletionDatesByIds]
     @Ids AS [dbo].[GuidIdArray] READONLY,
-    @DeletionHours INT
+    @DeletionHours INT,
+    @RevisionDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -12,7 +13,7 @@ BEGIN
         [dbo].[Send]
     SET
         [DeletionDate] = DATEADD(HOUR, @DeletionHours, [CreationDate]),
-        [RevisionDate] = GETUTCDATE()
+        [RevisionDate] = @RevisionDate
     WHERE
         [Id] IN (SELECT * FROM @Ids)
 
