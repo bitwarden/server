@@ -51,7 +51,12 @@
             @foreach (var row in Model.Items)
             {
                 <tr>
-                    <td><a asp-action="Edit" asp-route-id="@row.Id">@row.Name</a></td>
+                    <td>
+                        <a asp-action="Edit" asp-route-id="@row.Id">@row.Name</a>
+                        <a asp-action="Export" asp-route-id="@row.Id" class="ms-1" title="Export CSV">
+                            <i class="fa fa-download"></i>
+                        </a>
+                    </td>
                     <td>
                         @if (row.IsChurnOnly)
                         {

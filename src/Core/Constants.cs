@@ -139,11 +139,9 @@ public static class FeatureFlagKeys
     public const string BulkAutoConfirmOnLogin = "pm-35803-browser-auto-confirm-log-in";
     public const string PublicMembersInviteRefactor = "pm-33398-refactor-members-invite-org-users-command";
     public const string GenerateInviteLink = "pm-32497-generate-invite-link";
-    public const string OrgAbilityExtendedCache = "pm-32104-org-ability-extended-cache";
     public const string PolicyDrawers = "pm-34804-policy-drawers";
     public const string PM35153CollectionSdkDecryption = "pm-35153-collection-sdk-decryption";
     public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
-    public const string PM36859RefactorOrgCollectionsVaultComponent = "pm-36859-refactor-org-collections-vault-component";
     public const string PM34423StagedStatus = "pm-34423-staged-status";
 
     /* Architecture */
@@ -165,6 +163,7 @@ public static class FeatureFlagKeys
     public const string DevicesLastActivityDate = "pm-4516-devices-add-last-activity-date";
     public const string PM34210_DesktopAddDevices = "pm-34210-desktop-add-devices";
     public const string PM37165_RotateUserApiKeyCommand = "pm-37165-rotate-user-api-key-command";
+    public const string PM30806_SelfServiceChangeEmailCommand = "pm-30806-self-service-change-email-command";
 
     /* Autofill Team */
     public const string NotificationRefresh = "notification-refresh";
@@ -212,6 +211,7 @@ public static class FeatureFlagKeys
     public const string NoLogoutOnKeyUpgradeRotation = "pm-31050-no-logout-key-upgrade-rotation";
     public const string EnableAccountEncryptionV2JitPasswordRegistration = "enable-account-encryption-v2-jit-password-registration";
     public const string EnableAccountEncryptionV2PasswordRegistration = "pm-27278-v2-password-registration";
+    public const string CryptoCipherSuiteFips = "crypto-cipher-suite-fips";
 
     /* Mobile Team */
     public const string AndroidImportLoginsFlow = "import-logins-flow";

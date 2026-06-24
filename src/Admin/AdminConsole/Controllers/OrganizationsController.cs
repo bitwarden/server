@@ -7,6 +7,7 @@ using Bit.Admin.Enums;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
 using Bit.Core;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
@@ -51,7 +52,7 @@ public class OrganizationsController : Controller
     private readonly IGroupRepository _groupRepository;
     private readonly IPolicyRepository _policyRepository;
     private readonly IStripePaymentService _paymentService;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly GlobalSettings _globalSettings;
     private readonly IProviderRepository _providerRepository;
     private readonly ILogger<OrganizationsController> _logger;
@@ -84,7 +85,7 @@ public class OrganizationsController : Controller
         IGroupRepository groupRepository,
         IPolicyRepository policyRepository,
         IStripePaymentService paymentService,
-        IApplicationCacheService applicationCacheService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         GlobalSettings globalSettings,
         IProviderRepository providerRepository,
         ILogger<OrganizationsController> logger,
@@ -116,7 +117,7 @@ public class OrganizationsController : Controller
         _groupRepository = groupRepository;
         _policyRepository = policyRepository;
         _paymentService = paymentService;
-        _applicationCacheService = applicationCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _globalSettings = globalSettings;
         _providerRepository = providerRepository;
         _logger = logger;
@@ -246,6 +247,8 @@ public class OrganizationsController : Controller
         var canManageMigrationCohortAssignment = CanManagePlanMigrationCohortAssignment();
         List<OrganizationPlanMigrationCohort> visibleCohorts = null;
         OrganizationPlanMigrationCohortAssignment currentAssignment = null;
+        var migrationCohortMismatch = false;
+        var migrationCohortOrphaned = false;
         if (canManageMigrationCohortAssignment)
         {
             var migrationCohorts = await _organizationPlanMigrationCohortRepository.GetManyAsync();
@@ -255,6 +258,30 @@ public class OrganizationsController : Controller
                 .ToList();
             currentAssignment =
                 await _organizationPlanMigrationCohortAssignmentRepository.GetByOrganizationIdAsync(id);
+
+            if (currentAssignment?.CohortId is { } assignedId
+                && visibleCohorts.All(c => c.Id != assignedId))
+            {
+                var assignedCohort = await _organizationPlanMigrationCohortRepository.GetByIdAsync(assignedId);
+                if (assignedCohort != null)
+                {
+                    visibleCohorts.Add(assignedCohort);
+                    // Flag a plan mismatch for display. A null FromId (an unregistered/retired path id during a
+                    // multi-stage rollout) is treated as a mismatch too: the cohort can't be validly applied to
+                    // this plan, so labeling it is correct. The POST resolver mirrors this — it blocks switching
+                    // to a null-path cohort with the same "not compatible" guard, while still letting the current
+                    // value round-trip unchanged.
+                    migrationCohortMismatch = assignedCohort.MigrationPathId.HasValue
+                        && MigrationPaths.FromId(assignedCohort.MigrationPathId.Value)?.FromPlan != organization.PlanType;
+                }
+                else
+                {
+                    migrationCohortOrphaned = true;
+                    _logger.LogWarning(
+                        "Organization {OrganizationId} has a migration cohort assignment referencing missing cohort {CohortId}.",
+                        id, assignedId);
+                }
+            }
         }
 
         var model = new OrganizationEditModel(
@@ -277,6 +304,8 @@ public class OrganizationsController : Controller
         {
             MigrationCohortId = currentAssignment?.CohortId,
             AvailableMigrationCohorts = visibleCohorts,
+            MigrationCohortMismatch = migrationCohortMismatch,
+            MigrationCohortOrphaned = migrationCohortOrphaned,
             MigrationCohortLocked = currentAssignment?.IsLocked() ?? false,
             MigrationCohortLockReason = currentAssignment switch
             {
@@ -401,7 +430,7 @@ public class OrganizationsController : Controller
             }
         }
 
-        await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+        await _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(organization);
 
         if (existingOrganizationData.UseAutomaticUserConfirmation != organization.UseAutomaticUserConfirmation)
         {
@@ -527,7 +556,7 @@ public class OrganizationsController : Controller
         }
 
         await _organizationRepository.DeleteAsync(organization);
-        await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
+        await _organizationAbilityCacheService.DeleteOrganizationAbilityAsync(organization.Id);
 
         return RedirectToAction("Index");
     }

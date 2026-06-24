@@ -3948,6 +3948,205 @@ public class SubscriptionUpdatedHandlerTests
         Assert.NotNull(assignment.MigratedDate);
     }
 
+    // PM-37512: Teams Starter 2023's SM baseline (50) exceeds Teams Current's (20), so the generic grace
+    // machinery writes grace 30 automatically — no SM-specific production code.
+    [Fact]
+    public async Task HandleAsync_BusinessMigration_TeamsStarter2023ToCurrent_WritesGrace30Metadata()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var teamsStarter2023 = new TeamsStarterPlan2023(); // source SM base 50
+        var teamsMonthly = new TeamsPlan(false);           // target SM base 20
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsStarter2023.PasswordManager.StripePlanId },
+                        Plan = new Plan { Id = teamsStarter2023.PasswordManager.StripePlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_grace_ts2023",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.TeamsStarter2023,
+            Plan = teamsStarter2023.Name,
+            Seats = 10,
+            SmServiceAccounts = 50
+        };
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            CohortId = cohortId
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsStarter2023).Returns(teamsStarter2023);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthly);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "TeamsStarter2023",
+            MigrationPathId = MigrationPathId.TeamsStarter2023ToCurrent,
+            IsActive = true
+        });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — grace of 30 (50 - 20) written, merged with existing metadata, no item change.
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            subscription.Id,
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.Metadata[MetadataKeys.MigrationGraceServiceAccounts] == "30" &&
+                options.Metadata["organizationId"] == organizationId.ToString() &&
+                options.Items == null));
+
+        Assert.NotNull(assignment.MigratedDate);
+    }
+
+    // PM-37512: plain Teams Starter's SM baseline (20) already equals Teams Current's (20), so 20 - 20 = 0:
+    // no grace metadata is written, but the migration still completes.
+    [Fact]
+    public async Task HandleAsync_BusinessMigration_TeamsStarterToCurrent_DoesNotWriteGrace()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var teamsStarter = new TeamsStarterPlan(); // source SM base 20
+        var teamsMonthly = new TeamsPlan(false);   // target SM base 20
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsStarter.PasswordManager.StripePlanId },
+                        Plan = new Plan { Id = teamsStarter.PasswordManager.StripePlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_no_grace_ts",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.TeamsStarter,
+            Plan = teamsStarter.Name,
+            Seats = 10,
+            SmServiceAccounts = 20
+        };
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            CohortId = cohortId
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsStarter).Returns(teamsStarter);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthly);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "TeamsStarter",
+            MigrationPathId = MigrationPathId.TeamsStarterToCurrent,
+            IsActive = true
+        });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — no grace metadata write; migration still completes.
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            subscription.Id,
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.Metadata != null &&
+                options.Metadata.ContainsKey(MetadataKeys.MigrationGraceServiceAccounts)));
+
+        Assert.NotNull(assignment.MigratedDate);
+    }
+
     // Grace is the per-path entitlement constant (50 -> 20 => 30), independent of the org's own account count.
     [Fact]
     public async Task HandleAsync_BusinessMigration_TeamsMonthly_OrgAboveBaseline_GraceIsEntitlementBased_NoQuantityForced()
