@@ -490,8 +490,6 @@ public class OrganizationLicense : ILicense
                    || useInviteLinks == organization.UseInviteLinks) &&
                (!claimsPrincipal.HasClaim(c => c.Type == nameof(UsePam))
                    || usePam == organization.UsePam) &&
-               // UseRiskInsights follows the same conditional HasClaim pattern (PM-33980):
-               // pre-existing self-host licenses lack this claim and must still validate.
                (!claimsPrincipal.HasClaim(c => c.Type == nameof(UseRiskInsights))
                    || useRiskInsights == organization.UseRiskInsights);
 
