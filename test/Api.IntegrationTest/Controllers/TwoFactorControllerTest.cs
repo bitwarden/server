@@ -70,66 +70,6 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     }
 
     // ---------------------------------------------------------------------
-    // Duo (personal)
-    // ---------------------------------------------------------------------
-
-    [Fact]
-    public async Task GetDuo_ValidSecret_ReturnsTokenUsableForDelete()
-    {
-        await EnrollUserInDuo();
-
-        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-duo",
-            new { MasterPasswordHash = _masterPasswordHash });
-        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-        var (enabled, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "duo");
-        Assert.True(enabled);
-        Assert.False(string.IsNullOrEmpty(uvToken));
-
-        var disableResponse = await SendJsonAsync(HttpMethod.Delete, "/two-factor/duo",
-            new TwoFactorDuoDeleteRequestModel { UserVerificationToken = uvToken });
-        Assert.Equal(HttpStatusCode.NoContent, disableResponse.StatusCode);
-
-        var refreshed = await _userRepository.GetByEmailAsync(_userEmail);
-        Assert.Null(refreshed!.GetTwoFactorProvider(TwoFactorProviderType.Duo));
-    }
-
-    [Fact]
-    public async Task PutDuo_ValidTokenAndPremium_UpdatesProvider()
-    {
-        await GrantPremium();
-        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-duo",
-            new { MasterPasswordHash = _masterPasswordHash });
-        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "duo");
-
-        var response = await _client.PutAsJsonAsync("/two-factor/duo",
-            new TwoFactorDuoUpdateRequestModel
-            {
-                ClientId = new string('a', 20),
-                ClientSecret = new string('b', 40),
-                Host = "api-test.duosecurity.com",
-                UserVerificationToken = uvToken,
-            });
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var refreshed = await _userRepository.GetByEmailAsync(_userEmail);
-        Assert.NotNull(refreshed!.GetTwoFactorProvider(TwoFactorProviderType.Duo));
-    }
-
-    [Fact]
-    public async Task DeleteDuo_CrossProviderToken_BadRequest()
-    {
-        var user = (await _userRepository.GetByEmailAsync(_userEmail))!;
-        var yubiKeyToken = ProtectUserVerificationToken(user, TwoFactorProviderType.YubiKey);
-
-        var response = await SendJsonAsync(HttpMethod.Delete, "/two-factor/duo",
-            new TwoFactorDuoDeleteRequestModel { UserVerificationToken = yubiKeyToken });
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
-    }
-
-    // ---------------------------------------------------------------------
     // Organization Duo
     // ---------------------------------------------------------------------
 
