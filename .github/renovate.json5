@@ -122,7 +122,6 @@
     },
     {
       matchPackageNames: [
-        "AutoMapper.Extensions.Microsoft.DependencyInjection",
         "AutoMapper",
         "AWSSDK.SimpleEmail",
         "AWSSDK.SQS",
