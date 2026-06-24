@@ -1,4 +1,5 @@
-﻿using Azure.Data.Tables;
+﻿using Azure;
+using Azure.Data.Tables;
 using Bit.Core.Models.Data;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Settings;
@@ -99,6 +100,80 @@ public class EventRepository : IEventRepository
         }
 
         await CreateEventAsync(entity);
+    }
+
+    public async Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId)
+    {
+        // Azure Table Storage caps a single transaction at 100 ops; the outer cap
+        // bounds work per call so the background job can interleave other orgs.
+        const int batchSize = 100;
+        const int maxBatchesPerCall = 18_000;
+        // Bound concurrent transaction submissions so a large organization doesn't
+        // fan out thousands of simultaneous requests and get throttled.
+        const int maxConcurrentBatches = 8;
+
+        var partitionKey = $"OrganizationId={organizationId}";
+        var filter = $"PartitionKey eq '{partitionKey}'";
+        var select = new[] { "PartitionKey", "RowKey" };
+
+        using var throttle = new SemaphoreSlim(maxConcurrentBatches);
+        var batchTasks = new List<Task>();
+        // Counted only after each transaction succeeds, so a partial failure does not
+        // inflate the reported progress.
+        var totalDeleted = 0;
+        var batchCount = 0;
+
+        async Task SubmitBatchAsync(List<TableTransactionAction> batch)
+        {
+            try
+            {
+                await _tableClient.SubmitTransactionAsync(batch);
+                Interlocked.Add(ref totalDeleted, batch.Count);
+            }
+            finally
+            {
+                throttle.Release();
+            }
+        }
+
+        var pending = new List<TableTransactionAction>(batchSize);
+        try
+        {
+            await foreach (var entity in _tableClient.QueryAsync<TableEntity>(filter, select: select))
+            {
+                pending.Add(new TableTransactionAction(TableTransactionActionType.Delete, entity, ETag.All));
+
+                if (pending.Count == batchSize)
+                {
+                    await throttle.WaitAsync();
+                    batchTasks.Add(SubmitBatchAsync(pending));
+                    pending = new List<TableTransactionAction>(batchSize);
+
+                    if (++batchCount >= maxBatchesPerCall)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            if (pending.Count > 0)
+            {
+                await throttle.WaitAsync();
+                batchTasks.Add(SubmitBatchAsync(pending));
+            }
+
+            await Task.WhenAll(batchTasks);
+        }
+        catch
+        {
+            // If enumeration (or a batch) fails, observe any in-flight submissions before
+            // the throttle is disposed so they don't release a disposed semaphore; the
+            // original exception is the one worth surfacing.
+            await Task.WhenAll(batchTasks).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+            throw;
+        }
+
+        return totalDeleted;
     }
 
     public async Task CreateManyAsync(IEnumerable<IEvent>? e)

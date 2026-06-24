@@ -91,6 +91,7 @@ public class JobsHostedService : BaseJobsHostedService
         if (!_globalSettings.SelfHosted)
         {
             jobs.Add(new Tuple<Type, ITrigger>(typeof(AliveJob), everyTopOfTheHourTrigger));
+            jobs.Add(new Tuple<Type, ITrigger>(typeof(CleanUpOrganizationEventsJob), everyFiveMinutesTrigger));
         }
 
         Jobs = jobs;
@@ -102,6 +103,7 @@ public class JobsHostedService : BaseJobsHostedService
         if (!selfHosted)
         {
             services.AddTransient<AliveJob>();
+            services.AddTransient<CleanUpOrganizationEventsJob>();
         }
         services.AddTransient<DatabaseUpdateStatisticsJob>();
         services.AddTransient<DatabaseRebuildlIndexesJob>();

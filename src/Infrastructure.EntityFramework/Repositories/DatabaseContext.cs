@@ -92,6 +92,7 @@ public class DatabaseContext : DbContext
     public DbSet<OrganizationPlanMigrationCohortAssignment> OrganizationPlanMigrationCohortAssignments { get; set; }
     public DbSet<OrganizationReport> OrganizationReports { get; set; }
     public DbSet<OrganizationApplication> OrganizationApplications { get; set; }
+    public DbSet<OrganizationDeleteTask> OrganizationDeleteTasks { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

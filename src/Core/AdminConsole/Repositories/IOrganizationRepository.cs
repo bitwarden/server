@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
@@ -85,4 +86,14 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     /// <param name="confirmOwnerAction">Action to confirm the organization owner, obtained from
     /// <see cref="IOrganizationUserRepository.BuildConfirmOwnerAction"/></param>
     Task InitializeOrganizationAsync(Organization organization, Func<DbConnection, DbTransaction, Task> confirmOwnerAction);
+
+    /// <summary>
+    /// Deletes the organization and, within the same database transaction, enqueues an
+    /// <c>OrganizationDeleteTask</c> of the given type. This guarantees the deletion and the
+    /// cleanup-task record commit atomically, so durable downstream cleanup (e.g. purging
+    /// Table Storage event logs for GDPR) is never lost if the deletion succeeds.
+    /// </summary>
+    /// <param name="organization">The organization to delete.</param>
+    /// <param name="taskType">The type of cleanup task to enqueue.</param>
+    Task DeleteAndCreateDeleteTaskAsync(Organization organization, OrganizationDeleteTaskType taskType);
 }
