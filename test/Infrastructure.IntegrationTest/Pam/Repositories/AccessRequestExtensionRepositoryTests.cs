@@ -89,7 +89,7 @@ public class AccessRequestExtensionRepositoryTests
         var lease = await CreateActiveLeaseAsync(
             accessRequestRepository, accessLeaseRepository, organization.Id, collection.Id, requesterId, now);
         // Revoke the lease so it is no longer active.
-        await accessLeaseRepository.RevokeAsync(lease, BuildHumanDecision(lease.AccessRequestId, now), now);
+        await accessLeaseRepository.RevokeAsync(lease, AccessLeaseStatus.Revoked, BuildHumanDecision(lease.AccessRequestId, now), now);
 
         var extension = BuildExtension(lease, lease.NotAfter.AddHours(1), now);
         var outcome = await accessRequestRepository.CreateApprovedExtensionAsync(
