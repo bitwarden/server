@@ -34,9 +34,9 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         var lease = await _accessLeaseRepository.GetByIdAsync(leaseId);
 
         // Who may end a lease early: the lease's own holder (ending their own access), or anyone who can Manage its
-        // collection (a managing approver or org admin). Either way the lease settles to revoked, recording the actor
-        // as RevokedBy — RevokedBy == RequesterId distinguishes a self-end from an operator revoke. 404 covers both
-        // missing and not-authorized, so a caller can't probe for leases they can't touch.
+        // collection (a managing approver or org admin). The outcome status records the manner — the holder ending
+        // their own access settles to Cancelled, an operator ending it settles to Revoked — while RevokedBy records the
+        // actor either way. 404 covers both missing and not-authorized, so a caller can't probe for leases they can't touch.
         var isHolder = lease is not null && lease.RequesterId == userId;
         if (lease is null ||
             (!isHolder && !await _approverCollectionAccessQuery.CanManageCollectionAsync(userId, lease.CollectionId)))
@@ -48,6 +48,8 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         {
             throw new ConflictException("This lease is not active.");
         }
+
+        var endStatus = isHolder ? AccessLeaseStatus.Cancelled : AccessLeaseStatus.Revoked;
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
@@ -63,7 +65,7 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         };
         auditDecision.SetNewId();
 
-        await _accessLeaseRepository.RevokeAsync(lease, auditDecision, now);
+        await _accessLeaseRepository.RevokeAsync(lease, endStatus, auditDecision, now);
 
         // The active lease just drained; tell every approver of this collection to re-fetch.
         await _approverInboxNotifier.NotifyCollectionApproversAsync(lease.CollectionId);

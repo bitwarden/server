@@ -25,10 +25,11 @@ BEGIN
         LR.[Status],
         LR.[CreationDate],
         LR.[ResolvedDate],
-        PL.[Id] AS [ProducedLeaseId]
+        PL.[Id] AS [ProducedLeaseId],
+        PL.[Status] AS [ProducedLeaseStatus]
     FROM [dbo].[AccessRequest] LR
     OUTER APPLY (
-        SELECT TOP 1 L.[Id]
+        SELECT TOP 1 L.[Id], L.[Status]
         FROM [dbo].[AccessLease] L
         WHERE L.[AccessRequestId] = LR.[Id]
         ORDER BY L.[CreationDate] DESC

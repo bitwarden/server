@@ -1,6 +1,7 @@
 CREATE PROCEDURE [dbo].[AccessLease_Revoke]
     @AccessLeaseId UNIQUEIDENTIFIER,
     @AccessRequestId UNIQUEIDENTIFIER,
+    @Status TINYINT,
     @RevokedBy UNIQUEIDENTIFIER,
     @AccessDecisionId UNIQUEIDENTIFIER,
     @Reason NVARCHAR(MAX) = NULL,
@@ -9,13 +10,15 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Atomically revoke an active lease and capture who/why. The revocation reason has no dedicated column, so it is
-    -- preserved as a human AccessDecision (Deny) against the lease's originating request, keeping the audit trail
-    -- without a schema change. The WHERE guard keeps revocation idempotent if two approvers race.
+    -- Atomically end an active lease and capture who/why. @Status is the end state: 2 (Revoked) when an operator ended
+    -- it, 3 (Cancelled) when the holder ended their own; RevokedDate/RevokedBy record when/who either way. The reason
+    -- has no dedicated column, so it is preserved as a human AccessDecision (Deny) against the lease's originating
+    -- request, keeping the audit trail without a schema change. The WHERE guard keeps the end idempotent if two
+    -- callers race.
     BEGIN TRANSACTION AccessLease_Revoke
 
     UPDATE [dbo].[AccessLease]
-    SET [Status] = 2 /* Revoked */,
+    SET [Status] = @Status,
         [RevokedDate] = @Now,
         [RevokedBy] = @RevokedBy
     WHERE [Id] = @AccessLeaseId AND [Status] = 0 -- Active

@@ -51,9 +51,10 @@ public class RevokeAccessLeaseCommandTests
 
         await sutProvider.Sut.RevokeAsync(lease.RequesterId, lease.Id, "done with it");
 
-        // Settles to revoked with the holder recorded as the revoker (RevokedBy via the audit decision's ApproverId).
+        // Settles to Cancelled (the holder ended their own access) with the holder recorded as the revoker.
         await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1).RevokeAsync(
             lease,
+            AccessLeaseStatus.Cancelled,
             Arg.Is<AccessDecision>(d =>
                 d.AccessRequestId == lease.AccessRequestId &&
                 d.DeciderKind == AccessDeciderKind.Human &&
@@ -86,8 +87,10 @@ public class RevokeAccessLeaseCommandTests
 
         await sutProvider.Sut.RevokeAsync(userId, lease.Id, "policy change");
 
+        // An operator (manager, not the holder) ended it → settles to Revoked.
         await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1).RevokeAsync(
             lease,
+            AccessLeaseStatus.Revoked,
             Arg.Is<AccessDecision>(d =>
                 d.AccessRequestId == lease.AccessRequestId &&
                 d.DeciderKind == AccessDeciderKind.Human &&
