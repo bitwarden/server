@@ -19,7 +19,8 @@ public class AccessRequestEndpointsHandler(
     IDecideAccessRequestCommand decideAccessRequestCommand,
     IListMyAccessRequestsQuery listMyAccessRequestsQuery,
     IActivateAccessRequestCommand activateAccessRequestCommand,
-    ICancelAccessRequestCommand cancelAccessRequestCommand)
+    ICancelAccessRequestCommand cancelAccessRequestCommand,
+    IGetAccessRequestDetailsQuery getAccessRequestDetailsQuery)
 {
     public async Task<ListResponseModel<AccessRequestDetailsResponseModel>> GetInbox(ClaimsPrincipal user)
     {
@@ -43,6 +44,13 @@ public class AccessRequestEndpointsHandler(
         var requests = await listMyAccessRequestsQuery.GetMineAsync(userId);
         return new ListResponseModel<AccessRequestDetailsResponseModel>(
             requests.Select(r => new AccessRequestDetailsResponseModel(r)));
+    }
+
+    public async Task<AccessRequestDetailsResponseModel> GetDetails(ClaimsPrincipal user, Guid id)
+    {
+        var userId = userService.GetProperUserId(user)!.Value;
+        var details = await getAccessRequestDetailsQuery.GetDetailsAsync(userId, id);
+        return new AccessRequestDetailsResponseModel(details);
     }
 
     public async Task<AccessRequestDetailsResponseModel> Decide(ClaimsPrincipal user, Guid id, AccessDecisionRequestModel model)

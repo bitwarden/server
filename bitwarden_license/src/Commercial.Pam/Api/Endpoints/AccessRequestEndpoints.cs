@@ -21,6 +21,10 @@ internal static class AccessRequestEndpoints
         group.MapGet("mine", (AccessRequestEndpointsHandler handler, ClaimsPrincipal user) => handler.GetMine(user))
             .WithName("Pam_AccessRequests_GetMine");
 
+        group.MapGet("{id:guid}",
+            (Guid id, AccessRequestEndpointsHandler handler, ClaimsPrincipal user) => handler.GetDetails(user, id))
+            .WithName("Pam_AccessRequests_GetDetails");
+
         group.MapPost("{id:guid}/decision",
             (Guid id, AccessDecisionRequestModel model, AccessRequestEndpointsHandler handler, ClaimsPrincipal user) =>
                 handler.Decide(user, id, model))

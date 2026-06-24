@@ -5,7 +5,6 @@ using Bit.Commercial.Pam.OrganizationFeatures.Queries;
 using Bit.Commercial.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Commercial.Pam.Services;
 using Bit.Pam.Services;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bit.Commercial.Pam.Utilities;
@@ -29,6 +28,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRequesterNotifier, RequesterNotifier>();
         services.AddScoped<IListInboxRequestsQuery, ListInboxRequestsQuery>();
         services.AddScoped<IListInboxHistoryQuery, ListInboxHistoryQuery>();
+        services.AddScoped<IGetAccessRequestDetailsQuery, GetAccessRequestDetailsQuery>();
         services.AddScoped<IDecideAccessRequestCommand, DecideAccessRequestCommand>();
         services.AddScoped<IActivateAccessRequestCommand, ActivateAccessRequestCommand>();
         services.AddScoped<ICancelAccessRequestCommand, CancelAccessRequestCommand>();
