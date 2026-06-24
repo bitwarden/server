@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Billing.Services;
-using Bit.Core.Utilities;
 using Bit.Seeder.Pipeline;
 using Bit.Seeder.Services;
 
@@ -8,24 +7,11 @@ namespace Bit.Seeder.Steps;
 /// <summary>
 /// Writes a user premium license file to the LicenseDirectory.
 /// Required for self-hosted instances, which validate premium status by reading this file on every login.
-/// Silently no-ops when licenseService is null or LicenseDirectory is not configured.
 /// </summary>
-internal sealed class GenerateSelfHostUserLicenseStep(
-    ILicensingService? licenseService,
-    string licenseDirectory) : IStep
+internal sealed class GenerateSelfHostUserLicenseStep(ILicensingService licenseService) : IStep
 {
     public void Execute(SeederContext context)
     {
-        if (licenseService is null)
-        {
-            return;
-        }
-
-        if (!CoreHelpers.SettingHasValue(licenseDirectory))
-        {
-            return;
-        }
-
         var user = context.Owner;
         if (user is null || !user.Premium)
         {

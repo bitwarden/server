@@ -1,4 +1,11 @@
-﻿using Bit.Seeder;
+﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Models.Business;
+using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Services;
+using Bit.Core.Entities;
+using Bit.Core.Models.Business;
+using Bit.Seeder;
 using Bit.Seeder.Models;
 using Bit.Seeder.Pipeline;
 using Bit.Seeder.Services;
@@ -176,7 +183,8 @@ public class RecipeBuilderValidationTests
         var services = new ServiceCollection();
         var builder = services.AddRecipe("test");
 
-        builder.CreateIndividualUser("user@example.com", premium: true, maxStorageGb: 1);
+        builder.CreateIndividualUser("user@example.com", true, 1, true);
+        services.AddSingleton<ILicensingService, StubLicensingService>();
 
         using var provider = services.BuildServiceProvider();
         var steps = provider.GetKeyedServices<IStep>("test")
@@ -198,6 +206,21 @@ public class RecipeBuilderValidationTests
     /// <summary>
     /// Stub reader for builder validation tests that don't need real fixture data.
     /// </summary>
+    private sealed class StubLicensingService : ILicensingService
+    {
+        public Task ValidateOrganizationsAsync() => throw new NotImplementedException();
+        public Task ValidateUsersAsync() => throw new NotImplementedException();
+        public Task<bool> ValidateUserPremiumAsync(User user) => throw new NotImplementedException();
+        public bool VerifyLicense(ILicense license) => throw new NotImplementedException();
+        public byte[] SignLicense(ILicense license) => throw new NotImplementedException();
+        public Task<OrganizationLicense?> ReadOrganizationLicenseAsync(Organization organization) => throw new NotImplementedException();
+        public Task<OrganizationLicense?> ReadOrganizationLicenseAsync(Guid organizationId) => throw new NotImplementedException();
+        public ClaimsPrincipal? GetClaimsPrincipalFromLicense(ILicense license) => throw new NotImplementedException();
+        public Task<string?> CreateOrganizationTokenAsync(Organization organization, Guid installationId, SubscriptionInfo subscriptionInfo) => throw new NotImplementedException();
+        public Task<string?> CreateUserTokenAsync(User user, SubscriptionInfo subscriptionInfo) => throw new NotImplementedException();
+        public Task WriteUserLicenseAsync(User user, UserLicense license) => throw new NotImplementedException();
+    }
+
     private sealed class StubSeedReader(bool hasOwner) : ISeedReader
     {
         public T Read<T>(string seedName) =>

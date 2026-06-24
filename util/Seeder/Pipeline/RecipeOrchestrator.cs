@@ -39,14 +39,6 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         {
             services.AddSingleton(deps.Progress);
         }
-        if (deps.LicensingService is not null)
-        {
-            services.AddSingleton(deps.LicensingService);
-        }
-        if (deps.GlobalSettings is not null)
-        {
-            services.AddSingleton(deps.GlobalSettings);
-        }
 
         PresetLoader.RegisterRecipe(presetName, reader, services);
 
@@ -65,14 +57,6 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         if (deps.Progress is not null)
         {
             services.AddSingleton(deps.Progress);
-        }
-        if (deps.LicensingService is not null)
-        {
-            services.AddSingleton(deps.LicensingService);
-        }
-        if (deps.GlobalSettings is not null)
-        {
-            services.AddSingleton(deps.GlobalSettings);
         }
 
         var recipeName = "from-options";
@@ -135,23 +119,16 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
         services.AddSingleton(new SeederSettings(options.Password, options.KdfIterations));
+        services.AddSingleton(deps.LicensingService);
         if (deps.Progress is not null)
         {
             services.AddSingleton(deps.Progress);
-        }
-        if (deps.LicensingService is not null)
-        {
-            services.AddSingleton(deps.LicensingService);
-        }
-        if (deps.GlobalSettings is not null)
-        {
-            services.AddSingleton(deps.GlobalSettings);
         }
 
         var recipeName = "individual-from-options";
         var builder = services.AddRecipe(recipeName);
 
-        builder.CreateIndividualUser(email, premium, maxStorageGb);
+        builder.CreateIndividualUser(email, premium, maxStorageGb, options.SelfHosted);
         builder.WithGenerator("individual.example");
 
         if (options.GenerateVault)

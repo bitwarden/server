@@ -46,18 +46,11 @@ public static class ServiceCollectionExtension
             services.TryAddSingleton<IManglerService, NoOpManglerService>();
         }
 
-        // License infrastructure — needed to write premium license files for self-hosted validation.
-        // Skipped when a self-hosted instance is missing its Installation Id, because AddPush (a
-        // LicensingService dependency) throws in that case. Seeding then proceeds without writing
-        // license files rather than failing the entire run.
-        if (!globalSettings.SelfHosted || globalSettings.Installation.Id != Guid.Empty)
-        {
-            services.TryAddSingleton<IWebHostEnvironment>(new DevelopmentWebHostEnvironment());
-            services.AddLicenseServices();
-            services.TryAddSingleton<IMailService, NoopMailService>();
-            services.AddPush(globalSettings);
-            services.TryAddSingleton<ILicensingService, LicensingService>();
-        }
+        services.TryAddSingleton<IWebHostEnvironment>(new DevelopmentWebHostEnvironment());
+        services.AddLicenseServices();
+        services.TryAddSingleton<IMailService, NoopMailService>();
+        services.AddPush(globalSettings);
+        services.TryAddSingleton<ILicensingService, LicensingService>();
     }
 }
 

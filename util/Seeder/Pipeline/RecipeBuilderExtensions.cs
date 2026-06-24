@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Services;
-using Bit.Core.Settings;
 using Bit.Core.Vault.Enums;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
@@ -131,16 +130,18 @@ public static class RecipeBuilderExtensions
     /// <param name="email">User email address (domain is extracted for context)</param>
     /// <param name="premium">Whether the account has premium status</param>
     /// <param name="maxStorageGb">Optional max storage override in GB</param>
+    /// <param name="selfHosted">When true, writes a license file after user creation (required for self-hosted premium validation)</param>
     /// <returns>The builder for fluent chaining</returns>
     public static RecipeBuilder CreateIndividualUser(
-        this RecipeBuilder builder, string email, bool premium, short maxStorageGb)
+        this RecipeBuilder builder, string email, bool premium, short maxStorageGb, bool selfHosted = false)
     {
         builder.HasIndividualUser = true;
         builder.HasOwner = true;
         builder.AddStep(_ => new CreateIndividualUserStep(email, premium, maxStorageGb, emailVerified: premium));
-        builder.AddStep(sp => new GenerateSelfHostUserLicenseStep(
-            sp.GetService<ILicensingService>(),
-            sp.GetService<GlobalSettings>()?.LicenseDirectory ?? string.Empty));
+        if (selfHosted)
+        {
+            builder.AddStep(sp => new GenerateSelfHostUserLicenseStep(sp.GetRequiredService<ILicensingService>()));
+        }
         return builder;
     }
 

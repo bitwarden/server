@@ -3,8 +3,6 @@ using System.Security.Cryptography;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
-using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
@@ -30,8 +28,7 @@ public class SingleUserScene(
     IPasswordHasher<User> passwordHasher,
     IUserRepository userRepository,
     IManglerService manglerService,
-    IGlobalSettings globalSettings,
-    ILicensingService? licenseService = null) : IScene<SingleUserScene.Request, SingleUserSceneResult>
+    ILicensingService licenseService) : IScene<SingleUserScene.Request, SingleUserSceneResult>
 {
     public class Request
     {
@@ -41,6 +38,7 @@ public class SingleUserScene(
         public required string Password { get; set; }
         public bool EmailVerified { get; set; } = false;
         public bool Premium { get; set; } = false;
+        public bool SelfHosted { get; set; } = false;
     }
 
     public async Task<SceneResult<SingleUserSceneResult>> SeedAsync(Request request)
@@ -61,10 +59,7 @@ public class SingleUserScene(
 
         await userRepository.CreateAsync(user);
 
-        // Best-effort license write. Self-hosted instances hold only the public licensing
-        // certificate, so token signing throws there (by design — see LicensingService.SignLicense).
-        // Don't let that failure abort the seed; the user is already persisted.
-        if (request.Premium && licenseService is not null && CoreHelpers.SettingHasValue(globalSettings.LicenseDirectory))
+        if (request.SelfHosted && user.Premium)
         {
             try
             {
