@@ -1,8 +1,8 @@
 ﻿using System.Net;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Bit.Api.Auth.Models.Request;
+using Bit.Api.IntegrationTest.Controllers.TwoFactor;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.Auth.Enums;
@@ -707,84 +707,48 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     // ---------------------------------------------------------------------
 
     private string ProtectUserVerificationToken(User user, TwoFactorProviderType providerType) =>
-        _userVerificationTokenFactory.Protect(new TwoFactorUserVerificationTokenable
-        {
-            UserId = user.Id,
-            ProviderType = providerType,
-            ExpirationDate = DateTime.UtcNow.AddMinutes(30),
-        });
+        TwoFactorIntegrationTestHelpers.ProtectUserVerificationToken(_userVerificationTokenFactory, user, providerType);
 
-    private async Task EnrollUserInAuthenticator() =>
-        await SetUserTwoFactorProvidersJson(
-            $"{{\"0\":{{\"Enabled\":true,\"MetaData\":{{\"Key\":\"{_authenticatorKey}\"}}}}}}");
+    private Task EnrollUserInAuthenticator() =>
+        TwoFactorIntegrationTestHelpers.SetUserTwoFactorProvidersJsonAsync(
+            _userRepository, _userEmail, TwoFactorIntegrationTestHelpers.BuildAuthenticatorProvidersJson(_authenticatorKey));
 
-    private async Task EnrollUserInYubiKey() =>
-        await SetUserTwoFactorProvidersJson(
-            "{\"3\":{\"Enabled\":true,\"MetaData\":{\"Key1\":\"ccccccccccbe\",\"Nfc\":true}}}");
+    private Task EnrollUserInYubiKey() =>
+        TwoFactorIntegrationTestHelpers.SetUserTwoFactorProvidersJsonAsync(
+            _userRepository, _userEmail, TwoFactorIntegrationTestHelpers.BuildYubiKeyProvidersJson());
 
-    private async Task EnrollUserInDuo() =>
-        await SetUserTwoFactorProvidersJson(
-            "{\"2\":{\"Enabled\":true,\"MetaData\":{\"ClientSecret\":\"" + new string('s', 40)
-            + "\",\"ClientId\":\"" + new string('c', 20) + "\",\"Host\":\"api-test.duosecurity.com\"}}}");
+    private Task EnrollUserInDuo() =>
+        TwoFactorIntegrationTestHelpers.SetUserTwoFactorProvidersJsonAsync(
+            _userRepository, _userEmail, TwoFactorIntegrationTestHelpers.BuildDuoProvidersJson());
 
-    private async Task EnrollUserInEmail() =>
-        await SetUserTwoFactorProvidersJson(
-            "{\"1\":{\"Enabled\":true,\"MetaData\":{\"Email\":\"" + _userEmail + "\"}}}");
+    private Task EnrollUserInEmail() =>
+        TwoFactorIntegrationTestHelpers.SetUserTwoFactorProvidersJsonAsync(
+            _userRepository, _userEmail, TwoFactorIntegrationTestHelpers.BuildEmailProvidersJson(_userEmail));
 
-    private async Task EnrollUserInWebAuthn() =>
-        await SetUserTwoFactorProvidersJson(
-            "{\"7\":{\"Enabled\":true,\"MetaData\":{\"Key0\":{\"Name\":\"TestKey\",\"Descriptor\":{\"Id\":\"AAAA\",\"Type\":0,\"Transports\":null},\"PublicKey\":\"AAAA\",\"UserHandle\":\"AAAA\",\"SignatureCounter\":0,\"RegDate\":\"2024-01-01T00:00:00\",\"Migrated\":false,\"AaGuid\":\"00000000-0000-0000-0000-000000000000\"}}}}");
+    private Task EnrollUserInWebAuthn() =>
+        TwoFactorIntegrationTestHelpers.SetUserTwoFactorProvidersJsonAsync(
+            _userRepository, _userEmail, TwoFactorIntegrationTestHelpers.BuildWebAuthnProvidersJson());
 
-    private async Task EnrollOrganizationInDuo(Guid organizationId)
-    {
-        var org = (await _organizationRepository.GetByIdAsync(organizationId))!;
-        org.TwoFactorProviders =
-            "{\"6\":{\"Enabled\":true,\"MetaData\":{\"ClientSecret\":\"" + new string('s', 40)
-            + "\",\"ClientId\":\"" + new string('c', 20) + "\",\"Host\":\"api-test.duosecurity.com\"}}}";
-        await _organizationRepository.UpsertAsync(org);
-    }
+    private Task EnrollOrganizationInDuo(Guid organizationId) =>
+        TwoFactorIntegrationTestHelpers.SetOrganizationTwoFactorProvidersJsonAsync(
+            _organizationRepository, organizationId, TwoFactorIntegrationTestHelpers.BuildOrganizationDuoProvidersJson());
 
-    private async Task SetUserTwoFactorProvidersJson(string providersJson)
-    {
-        var user = (await _userRepository.GetByEmailAsync(_userEmail))!;
-        user.TwoFactorProviders = providersJson;
-        await _userRepository.UpsertAsync(user);
-    }
+    private Task SetUserTwoFactorProvidersJson(string providersJson) =>
+        TwoFactorIntegrationTestHelpers.SetUserTwoFactorProvidersJsonAsync(_userRepository, _userEmail, providersJson);
 
-    private async Task GrantPremium()
-    {
-        var user = (await _userRepository.GetByEmailAsync(_userEmail))!;
-        user.Premium = true;
-        await _userRepository.UpsertAsync(user);
-    }
+    private Task GrantPremium() =>
+        TwoFactorIntegrationTestHelpers.GrantPremiumAsync(_userRepository, _userEmail);
 
-    // GET responses wrap provider state under a per-provider property (e.g. "duo": { "enabled": ... }).
-    // The response models declare parameterized constructors that System.Text.Json cannot map for
-    // deserialization, so the tests pull the fields they need structurally.
-    private static async Task<(bool Enabled, string UserVerificationToken)> ReadEnabledAndUserVerificationTokenAsync(
-        HttpResponseMessage response, string providerKey)
-    {
-        var root = await ReadJsonRootAsync(response);
-        return (
-            root.GetProperty(providerKey).GetProperty("enabled").GetBoolean(),
-            root.GetProperty("userVerificationToken").GetString() ?? string.Empty);
-    }
+    private static Task<(bool Enabled, string UserVerificationToken)> ReadEnabledAndUserVerificationTokenAsync(
+        HttpResponseMessage response, string providerKey) =>
+        TwoFactorIntegrationTestHelpers.ReadEnabledAndUserVerificationTokenAsync(response, providerKey);
 
-    private static async Task<JsonElement> ReadJsonRootAsync(HttpResponseMessage response)
-    {
-        using var document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
-        return document.RootElement.Clone();
-    }
+    private static Task<JsonElement> ReadJsonRootAsync(HttpResponseMessage response) =>
+        TwoFactorIntegrationTestHelpers.ReadJsonRootAsync(response);
 
     private Task<HttpResponseMessage> SendJsonAsync<T>(HttpMethod method, string url, T body) =>
-        SendRawJsonAsync(method, url, JsonSerializer.Serialize(body));
+        TwoFactorIntegrationTestHelpers.SendJsonAsync(_client, method, url, body);
 
-    private async Task<HttpResponseMessage> SendRawJsonAsync(HttpMethod method, string url, string json)
-    {
-        using var message = new HttpRequestMessage(method, url)
-        {
-            Content = new StringContent(json, Encoding.UTF8, "application/json"),
-        };
-        return await _client.SendAsync(message);
-    }
+    private Task<HttpResponseMessage> SendRawJsonAsync(HttpMethod method, string url, string json) =>
+        TwoFactorIntegrationTestHelpers.SendRawJsonAsync(_client, method, url, json);
 }
