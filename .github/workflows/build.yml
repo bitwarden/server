@@ -495,6 +495,59 @@ jobs:
           path: util/MsSqlMigratorUtility/obj/build-output/publish/MsSqlMigratorUtility
           if-no-files-found: error
 
+  build-chainguard:
+    name: Build Chainguard Docker images
+    runs-on: ubuntu-22.04
+    needs: lint
+    permissions:
+      contents: read
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project_name: Admin
+            base_path: ./src
+          - project_name: Api
+            base_path: ./src
+          - project_name: Attachments
+            base_path: ./util
+          - project_name: Billing
+            base_path: ./src
+          - project_name: Events
+            base_path: ./src
+          - project_name: EventsProcessor
+            base_path: ./src
+          - project_name: Icons
+            base_path: ./src
+          - project_name: Identity
+            base_path: ./src
+          - project_name: MsSqlMigratorUtility
+            base_path: ./util
+          - project_name: Notifications
+            base_path: ./src
+          - project_name: Scim
+            base_path: ./bitwarden_license/src
+          - project_name: Sso
+            base_path: ./bitwarden_license/src
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+      - name: Build Chainguard Docker image
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
+        with:
+          context: .
+          file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile.gov
+          platforms: linux/amd64
+          push: false
+
   bitwarden-lite-build:
     name: Trigger Bitwarden lite build
     if: github.event_name != 'pull_request'
