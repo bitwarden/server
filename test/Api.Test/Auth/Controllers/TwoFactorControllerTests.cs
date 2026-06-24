@@ -143,7 +143,8 @@ public class TwoFactorControllerTests
 
         var response = await sutProvider.Sut.PutAuthenticator(model);
 
-        Assert.IsType<TwoFactorAuthenticatorResponseModel>(response);
+        Assert.IsType<TwoFactorAuthenticatorUpdateResponseModel>(response);
+        Assert.NotNull(response.Authenticator);
         await sutProvider.GetDependency<IUserService>()
             .Received(1)
             .UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Authenticator);
@@ -195,7 +196,7 @@ public class TwoFactorControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteAuthenticator_ValidToken_ReturnsResponse(
+    public async Task DeleteAuthenticator_ValidToken_DisablesProvider(
         User user,
         TwoFactorAuthenticatorDeleteRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
@@ -205,9 +206,8 @@ public class TwoFactorControllerTests
             sutProvider,
             new TwoFactorAuthenticatorUserVerificationTokenable(user, model.Key));
 
-        var response = await sutProvider.Sut.DeleteAuthenticator(model);
+        await sutProvider.Sut.DeleteAuthenticator(model);
 
-        Assert.IsType<TwoFactorProviderResponseModel>(response);
         await sutProvider.GetDependency<IUserService>()
             .Received(1)
             .DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Authenticator);
@@ -236,9 +236,9 @@ public class TwoFactorControllerTests
 
         var result = await sutProvider.Sut.GetYubiKey(request);
 
-        Assert.True(result.Enabled);
-        Assert.Equal("ccccccccccbe", result.Key1);
-        Assert.True(result.Nfc);
+        Assert.True(result.YubiKey.Enabled);
+        Assert.Equal("ccccccccccbe", result.YubiKey.Key1);
+        Assert.True(result.YubiKey.Nfc);
         Assert.Equal("protected-yubikey-token", result.UserVerificationToken);
         await sutProvider.GetDependency<IUserService>()
             .DidNotReceiveWithAnyArgs()
@@ -264,7 +264,8 @@ public class TwoFactorControllerTests
 
         var response = await sutProvider.Sut.PutYubiKey(model);
 
-        Assert.IsType<TwoFactorYubiKeyResponseModel>(response);
+        Assert.IsType<TwoFactorYubiKeyUpdateResponseModel>(response);
+        Assert.NotNull(response.YubiKey);
         await sutProvider.GetDependency<IUserService>()
             .Received(1)
             .UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.YubiKey);
@@ -367,7 +368,7 @@ public class TwoFactorControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteYubiKey_ValidToken_DeletesProvider(
+    public async Task DeleteYubiKey_ValidToken_DisablesProvider(
         User user,
         TwoFactorYubiKeyDeleteRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
@@ -376,9 +377,8 @@ public class TwoFactorControllerTests
         SetupUserVerificationTokenFactoryToUnprotectInto(
             sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.YubiKey));
 
-        var response = await sutProvider.Sut.DeleteYubiKey(model);
+        await sutProvider.Sut.DeleteYubiKey(model);
 
-        Assert.IsType<TwoFactorProviderResponseModel>(response);
         await sutProvider.GetDependency<IUserService>()
             .Received(1)
             .DisableTwoFactorProviderAsync(user, TwoFactorProviderType.YubiKey);
@@ -475,6 +475,7 @@ public class TwoFactorControllerTests
         // Assert
         Assert.NotNull(result);
         Assert.IsType<TwoFactorDuoResponseModel>(result);
+        Assert.NotNull(result.Duo);
     }
 
     [Theory, BitAutoData]
@@ -498,12 +499,12 @@ public class TwoFactorControllerTests
 
         var result = await sutProvider.Sut.GetDuo(request);
 
-        Assert.True(result.Enabled);
-        Assert.Equal("example.com", result.Host);
-        Assert.Equal("clientId", result.ClientId);
+        Assert.True(result.Duo.Enabled);
+        Assert.Equal("example.com", result.Duo.Host);
+        Assert.Equal("clientId", result.Duo.ClientId);
         // ClientSecret is masked server-side per PM-9826; non-premium users get the same mask.
-        Assert.StartsWith("secret", result.ClientSecret);
-        Assert.Contains("*", result.ClientSecret);
+        Assert.StartsWith("secret", result.Duo.ClientSecret);
+        Assert.Contains("*", result.Duo.ClientSecret);
         Assert.Equal("protected-duo-token", result.UserVerificationToken);
         // The read path no longer consults premium.
         await sutProvider.GetDependency<IUserService>()
@@ -577,7 +578,8 @@ public class TwoFactorControllerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.IsType<TwoFactorDuoResponseModel>(result);
+        Assert.IsType<TwoFactorDuoUpdateResponseModel>(result);
+        Assert.NotNull(result.Duo);
         Assert.Equal(user.TwoFactorProviders, request.ToUser(user).TwoFactorProviders);
     }
 
@@ -635,7 +637,7 @@ public class TwoFactorControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteDuo_ValidToken_DeletesProvider(
+    public async Task DeleteDuo_ValidToken_DisablesProvider(
         User user,
         TwoFactorDuoDeleteRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
@@ -644,9 +646,8 @@ public class TwoFactorControllerTests
         SetupUserVerificationTokenFactoryToUnprotectInto(
             sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.Duo));
 
-        var response = await sutProvider.Sut.DeleteDuo(model);
+        await sutProvider.Sut.DeleteDuo(model);
 
-        Assert.IsType<TwoFactorProviderResponseModel>(response);
         await sutProvider.GetDependency<IUserService>()
             .Received(1)
             .DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Duo);
@@ -744,7 +745,8 @@ public class TwoFactorControllerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.IsType<TwoFactorDuoResponseModel>(result);
+        Assert.IsType<TwoFactorOrganizationDuoResponseModel>(result);
+        Assert.NotNull(result.Duo);
     }
 
     [Theory, BitAutoData]
@@ -836,7 +838,8 @@ public class TwoFactorControllerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.IsType<TwoFactorDuoResponseModel>(result);
+        Assert.IsType<TwoFactorOrganizationDuoUpdateResponseModel>(result);
+        Assert.NotNull(result.Duo);
         Assert.Equal(organization.TwoFactorProviders, request.ToOrganization(organization).TwoFactorProviders);
     }
 
@@ -940,10 +943,9 @@ public class TwoFactorControllerTests
         organization.TwoFactorProviders = GetOrganizationTwoFactorDuoProvidersJson();
 
         // Act
-        var result = await sutProvider.Sut.DeleteOrganizationDuo(organization.Id.ToString(), request);
+        await sutProvider.Sut.DeleteOrganizationDuo(organization.Id.ToString(), request);
 
         // Assert
-        Assert.IsType<TwoFactorProviderResponseModel>(result);
         await sutProvider.GetDependency<IOrganizationService>()
             .Received(1)
             .DisableTwoFactorProviderAsync(organization, TwoFactorProviderType.OrganizationDuo);
@@ -969,7 +971,8 @@ public class TwoFactorControllerTests
 
         var response = await sutProvider.Sut.PutWebAuthn(model);
 
-        Assert.IsType<TwoFactorWebAuthnResponseModel>(response);
+        Assert.IsType<TwoFactorWebAuthnUpdateResponseModel>(response);
+        Assert.NotNull(response.WebAuthn);
         await sutProvider.GetDependency<ICompleteTwoFactorWebAuthnRegistrationCommand>()
             .Received(1)
             .CompleteTwoFactorWebAuthnRegistrationAsync(user, model.Id!.Value, model.Name, model.DeviceResponse);
@@ -1065,7 +1068,8 @@ public class TwoFactorControllerTests
 
         var response = await sutProvider.Sut.DeleteWebAuthn(model);
 
-        Assert.IsType<TwoFactorWebAuthnResponseModel>(response);
+        Assert.IsType<TwoFactorWebAuthnDeleteResponseModel>(response);
+        Assert.NotNull(response.WebAuthn);
         await sutProvider.GetDependency<IDeleteTwoFactorWebAuthnCredentialCommand>()
             .Received(1)
             .DeleteTwoFactorWebAuthnCredentialAsync(user, model.Id!.Value);
@@ -1146,7 +1150,7 @@ public class TwoFactorControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteWebAuthnAll_ValidToken_DeletesProvider(
+    public async Task DeleteWebAuthnAll_ValidToken_DisablesProvider(
         User user,
         TwoFactorWebAuthnDeleteAllRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
@@ -1155,9 +1159,8 @@ public class TwoFactorControllerTests
         SetupUserVerificationTokenFactoryToUnprotectInto(
             sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.WebAuthn));
 
-        var response = await sutProvider.Sut.DeleteWebAuthnAll(model);
+        await sutProvider.Sut.DeleteWebAuthnAll(model);
 
-        Assert.IsType<TwoFactorProviderResponseModel>(response);
         await sutProvider.GetDependency<IUserService>()
             .Received(1)
             .DisableTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
@@ -1258,6 +1261,7 @@ public class TwoFactorControllerTests
         var response = await sutProvider.Sut.GetEmail(request);
 
         Assert.IsType<TwoFactorEmailResponseModel>(response);
+        Assert.NotNull(response.Email);
         Assert.Equal("protected-email-token", response.UserVerificationToken);
     }
 
@@ -1373,7 +1377,8 @@ public class TwoFactorControllerTests
 
         var response = await sutProvider.Sut.PutEmail(model);
 
-        Assert.IsType<TwoFactorEmailResponseModel>(response);
+        Assert.IsType<TwoFactorEmailUpdateResponseModel>(response);
+        Assert.NotNull(response.Email);
         await sutProvider.GetDependency<IUserService>()
             .Received(1)
             .UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
@@ -1480,7 +1485,7 @@ public class TwoFactorControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteEmail_ValidToken_DeletesProvider(
+    public async Task DeleteEmail_ValidToken_DisablesProvider(
         User user,
         TwoFactorEmailDeleteRequestModel model,
         SutProvider<TwoFactorController> sutProvider)
@@ -1489,9 +1494,8 @@ public class TwoFactorControllerTests
         SetupUserVerificationTokenFactoryToUnprotectInto(
             sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.Email));
 
-        var response = await sutProvider.Sut.DeleteEmail(model);
+        await sutProvider.Sut.DeleteEmail(model);
 
-        Assert.IsType<TwoFactorProviderResponseModel>(response);
         await sutProvider.GetDependency<IUserService>()
             .Received(1)
             .DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Email);

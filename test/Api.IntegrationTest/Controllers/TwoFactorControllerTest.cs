@@ -127,8 +127,9 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
             new { MasterPasswordHash = _masterPasswordHash });
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
         var root = await ReadJsonRootAsync(getResponse);
-        Assert.True(root.GetProperty("enabled").GetBoolean());
-        var key = root.GetProperty("key").GetString()!;
+        var authenticator = root.GetProperty("authenticator");
+        Assert.True(authenticator.GetProperty("enabled").GetBoolean());
+        var key = authenticator.GetProperty("key").GetString()!;
         var uvToken = root.GetProperty("userVerificationToken").GetString()!;
 
         var disableResponse = await SendJsonAsync(HttpMethod.Delete, "/two-factor/authenticator",
@@ -137,7 +138,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
                 Key = key,
                 UserVerificationToken = uvToken,
             });
-        Assert.Equal(HttpStatusCode.OK, disableResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, disableResponse.StatusCode);
 
         var refreshed = await _userRepository.GetByEmailAsync(_userEmail);
         Assert.Null(refreshed!.GetTwoFactorProvider(TwoFactorProviderType.Authenticator));
@@ -153,7 +154,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
             new { MasterPasswordHash = _masterPasswordHash });
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
         var root = await ReadJsonRootAsync(getResponse);
-        var key = root.GetProperty("key").GetString()!;
+        var key = root.GetProperty("authenticator").GetProperty("key").GetString()!;
         var uvToken = root.GetProperty("userVerificationToken").GetString()!;
         var totp = new Totp(Base32Encoding.ToBytes(key)).ComputeTotp();
 
@@ -191,7 +192,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         };
 
         var response = await SendRawJsonAsync(HttpMethod.Delete, "/two-factor/authenticator", body.ToJsonString());
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
         var refreshed = (await _userRepository.GetByEmailAsync(_userEmail))!;
         Assert.Null(refreshed.GetTwoFactorProvider(TwoFactorProviderType.Authenticator));
@@ -210,13 +211,13 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         var getResponse = await _client.PostAsJsonAsync("/two-factor/get-yubikey",
             new { MasterPasswordHash = _masterPasswordHash });
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-        var (enabled, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse);
+        var (enabled, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "yubiKey");
         Assert.True(enabled);
         Assert.False(string.IsNullOrEmpty(uvToken));
 
         var disableResponse = await SendJsonAsync(HttpMethod.Delete, "/two-factor/yubikey",
             new TwoFactorYubiKeyDeleteRequestModel { UserVerificationToken = uvToken });
-        Assert.Equal(HttpStatusCode.OK, disableResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, disableResponse.StatusCode);
 
         var refreshed = await _userRepository.GetByEmailAsync(_userEmail);
         Assert.Null(refreshed!.GetTwoFactorProvider(TwoFactorProviderType.YubiKey));
@@ -229,7 +230,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         var getResponse = await _client.PostAsJsonAsync("/two-factor/get-yubikey",
             new { MasterPasswordHash = _masterPasswordHash });
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse);
+        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "yubiKey");
 
         var response = await _client.PutAsJsonAsync("/two-factor/yubikey",
             new TwoFactorYubiKeyUpdateRequestModel
@@ -256,13 +257,13 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         var getResponse = await _client.PostAsJsonAsync("/two-factor/get-duo",
             new { MasterPasswordHash = _masterPasswordHash });
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-        var (enabled, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse);
+        var (enabled, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "duo");
         Assert.True(enabled);
         Assert.False(string.IsNullOrEmpty(uvToken));
 
         var disableResponse = await SendJsonAsync(HttpMethod.Delete, "/two-factor/duo",
             new TwoFactorDuoDeleteRequestModel { UserVerificationToken = uvToken });
-        Assert.Equal(HttpStatusCode.OK, disableResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, disableResponse.StatusCode);
 
         var refreshed = await _userRepository.GetByEmailAsync(_userEmail);
         Assert.Null(refreshed!.GetTwoFactorProvider(TwoFactorProviderType.Duo));
@@ -275,7 +276,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         var getResponse = await _client.PostAsJsonAsync("/two-factor/get-duo",
             new { MasterPasswordHash = _masterPasswordHash });
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse);
+        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "duo");
 
         var response = await _client.PutAsJsonAsync("/two-factor/duo",
             new TwoFactorDuoUpdateRequestModel
@@ -321,14 +322,14 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
             $"/organizations/{org.Id}/two-factor/get-duo",
             new { MasterPasswordHash = _masterPasswordHash });
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-        var (enabled, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse);
+        var (enabled, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "duo");
         Assert.True(enabled);
         Assert.False(string.IsNullOrEmpty(uvToken));
 
         var disableResponse = await SendJsonAsync(HttpMethod.Delete,
             $"/organizations/{org.Id}/two-factor/duo",
             new TwoFactorOrganizationDuoDeleteRequestModel { UserVerificationToken = uvToken });
-        Assert.Equal(HttpStatusCode.OK, disableResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, disableResponse.StatusCode);
 
         var refreshedOrg = await _organizationRepository.GetByIdAsync(org.Id);
         Assert.Null(refreshedOrg!.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo));
@@ -344,7 +345,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
             $"/organizations/{org.Id}/two-factor/get-duo",
             new { MasterPasswordHash = _masterPasswordHash });
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse);
+        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "duo");
 
         var response = await _client.PutAsJsonAsync(
             $"/organizations/{org.Id}/two-factor/duo",
@@ -389,13 +390,15 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         var getResponse = await _client.PostAsJsonAsync("/two-factor/get-webauthn",
             new { MasterPasswordHash = _masterPasswordHash });
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-        var (enabled, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse);
+        var (enabled, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "webAuthn");
         Assert.True(enabled);
         Assert.False(string.IsNullOrEmpty(uvToken));
 
         // DeleteWebAuthn removes a specific credential by Id, not the whole provider; the
         // delete command is substituted to return true, so this proves UV-token wiring
-        // and route mounting end-to-end.
+        // and route mounting end-to-end. Per-credential DELETE returns the updated parent
+        // state in the body (the one DELETE on this controller that does), so 200 OK with
+        // a nested "webAuthn" payload is expected here.
         var disableResponse = await SendJsonAsync(HttpMethod.Delete, "/two-factor/webauthn",
             new
             {
@@ -403,6 +406,8 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
                 UserVerificationToken = uvToken,
             });
         Assert.Equal(HttpStatusCode.OK, disableResponse.StatusCode);
+        var deleteRoot = await ReadJsonRootAsync(disableResponse);
+        Assert.Equal(JsonValueKind.Object, deleteRoot.GetProperty("webAuthn").ValueKind);
     }
 
     [Fact]
@@ -435,13 +440,13 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         var getResponse = await _client.PostAsJsonAsync("/two-factor/get-webauthn",
             new { MasterPasswordHash = _masterPasswordHash });
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-        var (enabled, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse);
+        var (enabled, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "webAuthn");
         Assert.True(enabled);
         Assert.False(string.IsNullOrEmpty(uvToken));
 
         var disableResponse = await SendJsonAsync(HttpMethod.Delete, "/two-factor/webauthn/all",
             new TwoFactorWebAuthnDeleteAllRequestModel { UserVerificationToken = uvToken });
-        Assert.Equal(HttpStatusCode.OK, disableResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, disableResponse.StatusCode);
 
         var refreshed = await _userRepository.GetByEmailAsync(_userEmail);
         Assert.Null(refreshed!.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn));
@@ -459,11 +464,11 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         var getResponse = await _client.PostAsJsonAsync("/two-factor/get-webauthn",
             new { MasterPasswordHash = _masterPasswordHash });
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse);
+        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "webAuthn");
 
         var disableResponse = await SendJsonAsync(HttpMethod.Delete, "/two-factor/webauthn/all",
             new TwoFactorWebAuthnDeleteAllRequestModel { UserVerificationToken = uvToken });
-        Assert.Equal(HttpStatusCode.OK, disableResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, disableResponse.StatusCode);
 
         var refreshed = await _userRepository.GetByEmailAsync(_userEmail);
         Assert.Null(refreshed!.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn));
@@ -513,13 +518,13 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         var getResponse = await _client.PostAsJsonAsync("/two-factor/get-email",
             new { MasterPasswordHash = _masterPasswordHash });
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-        var (enabled, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse);
+        var (enabled, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "email");
         Assert.True(enabled);
         Assert.False(string.IsNullOrEmpty(uvToken));
 
         var disableResponse = await SendJsonAsync(HttpMethod.Delete, "/two-factor/email",
             new TwoFactorEmailDeleteRequestModel { UserVerificationToken = uvToken });
-        Assert.Equal(HttpStatusCode.OK, disableResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, disableResponse.StatusCode);
 
         var refreshed = await _userRepository.GetByEmailAsync(_userEmail);
         Assert.Null(refreshed!.GetTwoFactorProvider(TwoFactorProviderType.Email));
@@ -557,7 +562,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         var getResponse = await _client.PostAsJsonAsync("/two-factor/get-email",
             new { MasterPasswordHash = _masterPasswordHash });
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse);
+        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "email");
 
         var sendResponse = await _client.PostAsJsonAsync("/two-factor/send-email",
             new
@@ -599,7 +604,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         var getResponse = await _client.PostAsJsonAsync("/two-factor/get-email",
             new { MasterPasswordHash = _masterPasswordHash });
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse);
+        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "email");
         var emailService = _factory.GetService<ITwoFactorEmailService>();
 
         var response = await _client.PostAsJsonAsync("/two-factor/send-email",
@@ -626,7 +631,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     {
         var getResponse = await _client.PostAsJsonAsync("/two-factor/get-email",
             new { MasterPasswordHash = _masterPasswordHash });
-        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse);
+        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "email");
 
         var response = await _client.PostAsJsonAsync("/two-factor/send-email",
             new { UserVerificationToken = uvToken });
@@ -646,7 +651,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     {
         var getResponse = await _client.PostAsJsonAsync("/two-factor/get-email",
             new { MasterPasswordHash = _masterPasswordHash });
-        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse);
+        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "email");
 
         var response = await _client.PutAsJsonAsync("/two-factor/email",
             new { Email = _userEmail, UserVerificationToken = uvToken });
@@ -753,15 +758,15 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         await _userRepository.UpsertAsync(user);
     }
 
-    // Response models (e.g., TwoFactorWebAuthnResponseModel, TwoFactorAuthenticatorResponseModel)
-    // declare a parameterized constructor that System.Text.Json cannot map for deserialization.
-    // Read the fields the tests care about structurally instead.
+    // GET responses wrap provider state under a per-provider property (e.g. "duo": { "enabled": ... }).
+    // The response models declare parameterized constructors that System.Text.Json cannot map for
+    // deserialization, so the tests pull the fields they need structurally.
     private static async Task<(bool Enabled, string UserVerificationToken)> ReadEnabledAndUserVerificationTokenAsync(
-        HttpResponseMessage response)
+        HttpResponseMessage response, string providerKey)
     {
         var root = await ReadJsonRootAsync(response);
         return (
-            root.GetProperty("enabled").GetBoolean(),
+            root.GetProperty(providerKey).GetProperty("enabled").GetBoolean(),
             root.GetProperty("userVerificationToken").GetString() ?? string.Empty);
     }
 

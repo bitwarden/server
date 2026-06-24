@@ -1,40 +1,29 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 
 namespace Bit.Api.Auth.Models.Response.TwoFactor;
 
+/// <summary>
+/// Response for <c>POST /two-factor/get-email</c>. Wraps the provider details and the
+/// user-verification token minted by the GET endpoint.
+/// </summary>
 public class TwoFactorEmailResponseModel : ResponseModel
 {
-    public TwoFactorEmailResponseModel(User user)
+    public TwoFactorEmailResponseModel(User user, string userVerificationToken)
         : base("twoFactorEmail")
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
-
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
-        if (provider?.MetaData?.TryGetValue("Email", out var email) ?? false)
-        {
-            Email = (string)email;
-            Enabled = provider.Enabled;
-        }
-        else
-        {
-            Enabled = false;
-        }
+        Email = new TwoFactorEmailDetails(user);
+        UserVerificationToken = userVerificationToken;
     }
 
-    public bool Enabled { get; set; }
-    public string Email { get; set; }
+    public TwoFactorEmailDetails Email { get; set; }
 
     /// <summary>
-    /// User-verification token bound to <c>UserId + ProviderType</c>. Minted by the matching GET
-    /// endpoint and replayed on subsequent management calls so the user does not have to re-verify.
+    /// User-verification token bound to <c>UserId + ProviderType</c>. Replayed on subsequent
+    /// management calls so the user does not have to re-verify.
     /// </summary>
     public string UserVerificationToken { get; set; }
 }
