@@ -31,10 +31,10 @@ public interface IAccessLeaseRepository
     Task<ICollection<AccessLease>> GetManyActiveByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime now);
 
     /// <summary>
-    /// Returns the ended leases (status Expired or Revoked) on the given collections that ended on or after
-    /// <paramref name="since"/> — the governance history view over a set of caller-manageable collections. A revoked
-    /// lease's end is its revoked date; an expired lease's end is its not-after. Returns an empty collection when none
-    /// qualify.
+    /// Returns the ended leases (status Expired, Revoked, or Cancelled) on the given collections that ended on or after
+    /// <paramref name="since"/> — the governance history view over a set of caller-manageable collections. A
+    /// revoked/cancelled lease's end is its revoked date; an expired lease's end is its not-after. Returns an empty
+    /// collection when none qualify.
     /// </summary>
     Task<ICollection<AccessLease>> GetManyEndedByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime since);
 
@@ -50,9 +50,10 @@ public interface IAccessLeaseRepository
         bool enforceSingleActiveLease);
 
     /// <summary>
-    /// Atomically revokes an active lease (setting its revoked date and revoker) and records the revocation reason as
-    /// a human <paramref name="auditDecision"/> against the lease's originating request. The decision must already
-    /// have its id assigned.
+    /// Atomically ends an active lease — setting its status to <paramref name="endStatus"/> (Revoked when an operator
+    /// ended it, Cancelled when the holder ended their own) along with its revoked date and revoker — and records the
+    /// reason as a human <paramref name="auditDecision"/> against the lease's originating request. The decision must
+    /// already have its id assigned.
     /// </summary>
-    Task RevokeAsync(AccessLease lease, AccessDecision auditDecision, DateTime now);
+    Task RevokeAsync(AccessLease lease, AccessLeaseStatus endStatus, AccessDecision auditDecision, DateTime now);
 }
