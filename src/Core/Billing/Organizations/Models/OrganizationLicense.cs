@@ -440,6 +440,7 @@ public class OrganizationLicense : ILicense
         var useMyItems = claimsPrincipal.GetValue<bool>(nameof(UseMyItems));
         var useInviteLinks = claimsPrincipal.GetValue<bool>(nameof(UseInviteLinks));
         var usePam = claimsPrincipal.GetValue<bool>(nameof(UsePam));
+        var useRiskInsights = claimsPrincipal.GetValue<bool>(nameof(UseRiskInsights));
 
         var claimedPlanType = claimsPrincipal.GetValue<PlanType>(nameof(PlanType));
 
@@ -488,7 +489,9 @@ public class OrganizationLicense : ILicense
                (!claimsPrincipal.HasClaim(c => c.Type == nameof(UseInviteLinks))
                    || useInviteLinks == organization.UseInviteLinks) &&
                (!claimsPrincipal.HasClaim(c => c.Type == nameof(UsePam))
-                   || usePam == organization.UsePam);
+                   || usePam == organization.UsePam) &&
+               (!claimsPrincipal.HasClaim(c => c.Type == nameof(UseRiskInsights))
+                   || useRiskInsights == organization.UseRiskInsights);
 
     }
 

@@ -34,7 +34,8 @@ public class UpgradePremiumToOrganizationCommandTests
             string? stripeSeatPlanId = null,
             string? stripePremiumAccessPlanId = null,
             string? stripeStoragePlanId = null,
-            int baseSeats = 1)
+            int baseSeats = 1,
+            bool hasRiskInsights = false)
         {
             Type = planType;
             ProductTier = ProductTierType.Teams;
@@ -55,6 +56,7 @@ public class UpgradePremiumToOrganizationCommandTests
             HasOrganizationDomains = false;
             HasKeyConnector = false;
             HasScim = false;
+            HasRiskInsights = hasRiskInsights;
             HasResetPassword = false;
             UsersGetPremium = false;
             HasCustomPermissions = false;
@@ -92,8 +94,9 @@ public class UpgradePremiumToOrganizationCommandTests
         string? stripeSeatPlanId = null,
         string? stripePremiumAccessPlanId = null,
         string? stripeStoragePlanId = null,
-        int baseSeats = 1) =>
-        new TestPlan(planType, stripePlanId, stripeSeatPlanId, stripePremiumAccessPlanId, stripeStoragePlanId, baseSeats);
+        int baseSeats = 1,
+        bool hasRiskInsights = false) =>
+        new TestPlan(planType, stripePlanId, stripeSeatPlanId, stripePremiumAccessPlanId, stripeStoragePlanId, baseSeats, hasRiskInsights);
 
     private static PremiumPlan CreateTestPremiumPlan(
         string seatPriceId = "premium-annually",
@@ -847,7 +850,7 @@ public class UpgradePremiumToOrganizationCommandTests
         };
 
         var mockPremiumPlans = CreateTestPremiumPlansList();
-        var mockPlan = CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually");
+        var mockPlan = CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually", hasRiskInsights: true);
 
         _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
@@ -877,6 +880,7 @@ public class UpgradePremiumToOrganizationCommandTests
                 org.Gateway == GatewayType.Stripe &&
                 org.GatewayCustomerId == "cus_123" &&
                 org.GatewaySubscriptionId == "sub_123" &&
+                org.UseRiskInsights == mockPlan.HasRiskInsights &&
                 org.Enabled == true));
     }
 

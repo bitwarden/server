@@ -58,6 +58,7 @@ public class ProviderClientOrganizationSignUpCommandTests
                     o.MaxCollections == plan.PasswordManager.MaxCollections &&
                     o.UsePasswordManager == true &&
                     o.UseSecretsManager == false &&
+                    o.UseRiskInsights == plan.HasRiskInsights &&
                     o.Status == OrganizationStatusType.Created
                 )
             );

@@ -79,6 +79,7 @@ public class BusinessUnitConverter(
         organization.UsersGetPremium = updatedPlan.UsersGetPremium;
         organization.UseCustomPermissions = updatedPlan.HasCustomPermissions;
         organization.UseScim = updatedPlan.HasScim;
+        organization.UseRiskInsights = updatedPlan.HasRiskInsights;
         organization.UseKeyConnector = updatedPlan.HasKeyConnector;
         organization.MaxStorageGb = updatedPlan.PasswordManager.BaseStorageGb;
         organization.BillingEmail = provider.BillingEmail!;
