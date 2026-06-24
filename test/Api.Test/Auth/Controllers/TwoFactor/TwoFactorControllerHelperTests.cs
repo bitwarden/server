@@ -1,4 +1,4 @@
-﻿using Bit.Api.Auth.Controllers;
+using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -8,16 +8,14 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.Auth.Controllers;
+namespace Bit.Api.Test.Auth.Controllers.TwoFactor;
 
+// Tests for the controller's <c>ValidateUserBySecretAsync</c> helper, exercised
+// through any GET endpoint (Duo here, by convention).
 [ControllerCustomize(typeof(TwoFactorController))]
 [SutProviderCustomize]
-public class TwoFactorControllerTests
+public class TwoFactorControllerHelperTests
 {
-    // ---------------------------------------------------------------------
-    // Entry-secret verification (ValidateUserBySecretAsync helper)
-    // ---------------------------------------------------------------------
-
     [Theory, BitAutoData]
     public async Task ValidateUserBySecretAsync_UserNull_ThrowsUnauthorizedException(SecretVerificationRequestModel request, SutProvider<TwoFactorController> sutProvider)
     {
@@ -56,5 +54,4 @@ public class TwoFactorControllerTests
             Assert.Equal("The model state is invalid.", e.Message);
         }
     }
-
 }
