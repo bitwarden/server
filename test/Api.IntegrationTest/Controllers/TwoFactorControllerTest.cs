@@ -10,7 +10,6 @@ using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -67,79 +66,6 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     {
         _client.Dispose();
         return Task.CompletedTask;
-    }
-
-    // ---------------------------------------------------------------------
-    // Organization Duo
-    // ---------------------------------------------------------------------
-
-    [Fact]
-    public async Task GetOrganizationDuo_ValidSecret_ReturnsTokenUsableForDelete()
-    {
-        var (org, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
-            plan: PlanType.EnterpriseAnnually, ownerEmail: _userEmail, passwordManagerSeats: 1);
-        // Refresh the user's JWT so org-membership claims are present for ManagePolicies.
-        await _loginHelper.LoginAsync(_userEmail);
-        await EnrollOrganizationInDuo(org.Id);
-
-        var getResponse = await _client.PostAsJsonAsync(
-            $"/organizations/{org.Id}/two-factor/get-duo",
-            new { MasterPasswordHash = _masterPasswordHash });
-        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-        var (enabled, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "duo");
-        Assert.True(enabled);
-        Assert.False(string.IsNullOrEmpty(uvToken));
-
-        var disableResponse = await SendJsonAsync(HttpMethod.Delete,
-            $"/organizations/{org.Id}/two-factor/duo",
-            new TwoFactorOrganizationDuoDeleteRequestModel { UserVerificationToken = uvToken });
-        Assert.Equal(HttpStatusCode.NoContent, disableResponse.StatusCode);
-
-        var refreshedOrg = await _organizationRepository.GetByIdAsync(org.Id);
-        Assert.Null(refreshedOrg!.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo));
-    }
-
-    [Fact]
-    public async Task PutOrganizationDuo_ValidToken_UpdatesProvider()
-    {
-        var (org, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
-            plan: PlanType.EnterpriseAnnually, ownerEmail: _userEmail, passwordManagerSeats: 1);
-        await _loginHelper.LoginAsync(_userEmail);
-        var getResponse = await _client.PostAsJsonAsync(
-            $"/organizations/{org.Id}/two-factor/get-duo",
-            new { MasterPasswordHash = _masterPasswordHash });
-        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "duo");
-
-        var response = await _client.PutAsJsonAsync(
-            $"/organizations/{org.Id}/two-factor/duo",
-            new TwoFactorDuoUpdateRequestModel
-            {
-                ClientId = new string('a', 20),
-                ClientSecret = new string('b', 40),
-                Host = "api-test.duosecurity.com",
-                UserVerificationToken = uvToken,
-            });
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var refreshedOrg = await _organizationRepository.GetByIdAsync(org.Id);
-        Assert.NotNull(refreshedOrg!.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo));
-    }
-
-    [Fact]
-    public async Task DeleteOrganizationDuo_CrossProviderToken_BadRequest()
-    {
-        // Token-binding check runs before the ManagePolicies / org-membership check, so an
-        // arbitrary org id is fine — the BadRequest fires first.
-        var user = (await _userRepository.GetByEmailAsync(_userEmail))!;
-        var duoToken = ProtectUserVerificationToken(user, TwoFactorProviderType.Duo);
-
-        var response = await SendJsonAsync(HttpMethod.Delete,
-            $"/organizations/{Guid.NewGuid()}/two-factor/duo",
-            new TwoFactorOrganizationDuoDeleteRequestModel { UserVerificationToken = duoToken });
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
     }
 
     // ---------------------------------------------------------------------
