@@ -13,6 +13,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Identity\Identity.csproj" />
     <ProjectReference Include="..\..\util\Migrator\Migrator.csproj" />
+    <ProjectReference Include="..\..\util\MySqlMigrations\MySqlMigrations.csproj" />
+    <ProjectReference Include="..\..\util\PostgresMigrations\PostgresMigrations.csproj" />
     <ProjectReference Include="..\..\util\Seeder\Seeder.csproj" />
     <ProjectReference Include="..\Common\Common.csproj" />
   </ItemGroup>

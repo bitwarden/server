@@ -445,9 +445,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 
     public async Task<OrganizationSeatCounts> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
+        return await ExecuteWithContextAsync(async dbContext =>
         {
-            var dbContext = GetDatabaseContext(scope);
             var users = await dbContext.OrganizationUsers
                 .Where(ou => ou.OrganizationId == organizationId &&
                     (ou.Status == OrganizationUserStatusType.Invited ||
@@ -457,17 +456,16 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 
             var sponsored = await dbContext.OrganizationSponsorships
                 .Where(os => os.SponsoringOrganizationId == organizationId &&
-                    os.IsAdminInitiated &&
-                    (os.ToDelete == false || (os.ToDelete == true && os.ValidUntil != null && os.ValidUntil > DateTime.UtcNow)) &&
-                    (os.SponsoredOrganizationId == null || (os.SponsoredOrganizationId != null && (os.ValidUntil == null || os.ValidUntil > DateTime.UtcNow))))
+                             os.IsAdminInitiated &&
+                             (os.ToDelete == false || (os.ToDelete == true && os.ValidUntil != null &&
+                                                       os.ValidUntil > DateTime.UtcNow)) &&
+                             (os.SponsoredOrganizationId == null || (os.SponsoredOrganizationId != null &&
+                                                                     (os.ValidUntil == null ||
+                                                                      os.ValidUntil > DateTime.UtcNow))))
                 .CountAsync();
 
-            return new OrganizationSeatCounts
-            {
-                Users = users,
-                Sponsored = sponsored
-            };
-        }
+            return new OrganizationSeatCounts { Users = users, Sponsored = sponsored };
+        });
     }
 
     public async Task<IEnumerable<Core.AdminConsole.Entities.Organization>> GetOrganizationsForSubscriptionSyncAsync()
@@ -496,15 +494,15 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 
     public async Task IncrementSeatCountAsync(Guid organizationId, int increaseAmount, DateTime requestDate)
     {
-        using var scope = ServiceScopeFactory.CreateScope();
-        await using var dbContext = GetDatabaseContext(scope);
-
-        await dbContext.Organizations
-            .Where(o => o.Id == organizationId)
-            .ExecuteUpdateAsync(s => s
-                .SetProperty(o => o.Seats, o => o.Seats + increaseAmount)
-                .SetProperty(o => o.SyncSeats, true)
-                .SetProperty(o => o.RevisionDate, requestDate));
+        await ExecuteWithContextAsync(async dbContext =>
+        {
+            await dbContext.Organizations
+                .Where(o => o.Id == organizationId)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(o => o.Seats, o => o.Seats + increaseAmount)
+                    .SetProperty(o => o.SyncSeats, true)
+                    .SetProperty(o => o.RevisionDate, requestDate));
+        });
     }
 
     public async Task InitializeOrganizationAsync(Core.AdminConsole.Entities.Organization organization, Func<DbConnection, DbTransaction, Task> confirmOwnerAction)

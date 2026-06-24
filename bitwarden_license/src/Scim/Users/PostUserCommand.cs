@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using System.Data;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
@@ -10,6 +11,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Platform.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Context;
@@ -27,7 +29,8 @@ public class PostUserCommand(
     IScimContext scimContext,
     IFeatureService featureService,
     IInviteOrganizationUsersCommand inviteOrganizationUsersCommand,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    ITransactionManager transactionManager)
     : IPostUserCommand
 {
     public async Task<OrganizationUserUserDetails?> PostUserAsync(Guid organizationId, ScimUserRequestModel model)
@@ -45,6 +48,8 @@ public class PostUserCommand(
         Guid organizationId,
         ScimProviderType scimProvider)
     {
+        await using var transactionScope = await transactionManager.BeginTransactionAsync(IsolationLevel.Serializable);
+
         var organization = await organizationRepository.GetByIdAsync(organizationId);
 
         if (organization is null)
@@ -81,6 +86,7 @@ public class PostUserCommand(
             ? await organizationUserRepository.GetDetailsByIdAsync(invitedOrganizationUserId.Value)
             : null;
 
+        await transactionScope.CommitAsync();
         return organizationUser;
     }
 
