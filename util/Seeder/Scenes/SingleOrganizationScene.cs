@@ -84,6 +84,8 @@ public class SingleOrganizationScene(
             OrganizationUserStatusType.Confirmed,
             ownerOrgKey);
 
+        organizationUser.AccessSecretsManager = organization.UseSecretsManager;
+
         await organizationUserRepository.CreateAsync(organizationUser);
 
         var apiKey = new OrganizationApiKey
