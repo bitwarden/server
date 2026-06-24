@@ -758,7 +758,7 @@ public class EventService : IEventService
             }));
 
         var providers = await _currentContext.ProviderMembershipAsync(_providerUserRepository, sendOwnerUserId);
-        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync(providers.Select(p => p.Id));
+        var providerAbilities = await _providerAbilityCacheService.GetProviderAbilitiesAsync(providers.Select(p => p.Id));
         events.AddRange(providers.Where(p => CanUseProviderEvents(providerAbilities, p.Id))
             .Select(p => new EventMessage(_currentContext)
             {

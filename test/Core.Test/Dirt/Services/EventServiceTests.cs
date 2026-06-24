@@ -421,7 +421,7 @@ public class EventServiceTests
                 { claimedOrgId, new OrganizationAbility { UseEvents = true, Enabled = true } },
                 { externalOrgId, new OrganizationAbility { UseEvents = true, Enabled = true } },
             });
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IProviderAbilityCacheService>()
             .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, ProviderAbility>());
         sutProvider.GetDependency<ICurrentContext>()
@@ -472,7 +472,7 @@ public class EventServiceTests
             {
                 { orgId, new OrganizationAbility { UseEvents = true, Enabled = true } }
             });
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IProviderAbilityCacheService>()
             .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, ProviderAbility>());
         sutProvider.GetDependency<ICurrentContext>()
@@ -508,7 +508,7 @@ public class EventServiceTests
             {
                 { orgId, new OrganizationAbility { UseEvents = true, Enabled = true } }
             });
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IProviderAbilityCacheService>()
             .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, ProviderAbility>());
         sutProvider.GetDependency<ICurrentContext>()
@@ -538,7 +538,7 @@ public class EventServiceTests
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>());
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IProviderAbilityCacheService>()
             .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, ProviderAbility>
             {
@@ -571,7 +571,7 @@ public class EventServiceTests
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>());
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IProviderAbilityCacheService>()
             .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, ProviderAbility>
             {
