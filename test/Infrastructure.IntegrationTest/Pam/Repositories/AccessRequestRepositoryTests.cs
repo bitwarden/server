@@ -129,7 +129,7 @@ public class AccessRequestRepositoryTests
             Verdict = AccessDecisionVerdict.Deny,
             CreationDate = now,
         };
-        await accessLeaseRepository.RevokeAsync(lease, auditDecision, now);
+        await accessLeaseRepository.RevokeAsync(lease, AccessLeaseStatus.Revoked, auditDecision, now);
 
         var revoked = Assert.Single(await accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
             [collection.Id], now.AddDays(-1)));

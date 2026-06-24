@@ -171,7 +171,7 @@ public class LeaseRepositoryTests
             CreationDate = now,
         };
 
-        await accessLeaseRepository.RevokeAsync(lease, auditDecision, now);
+        await accessLeaseRepository.RevokeAsync(lease, AccessLeaseStatus.Revoked, auditDecision, now);
 
         var persisted = await accessLeaseRepository.GetByIdAsync(lease.Id);
         Assert.NotNull(persisted);
@@ -364,14 +364,14 @@ public class LeaseRepositoryTests
         var (revReq, revDec, revLease) = BuildAutoApproved(
             organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddMinutes(-5), now.AddHours(1));
         await SeedActiveLeaseAsync(accessRequestRepository, accessLeaseRepository, revReq, revDec, revLease, now);
-        await accessLeaseRepository.RevokeAsync(revLease, BuildAuditDecision(revLease, now), now);
+        await accessLeaseRepository.RevokeAsync(revLease, AccessLeaseStatus.Revoked, BuildAuditDecision(revLease, now), now);
 
         // Revoked long before the window — excluded by @Since.
         var (oldReq, oldDec, oldLease) = BuildAutoApproved(
             organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddDays(-200), now.AddDays(-100));
         await SeedActiveLeaseAsync(
             accessRequestRepository, accessLeaseRepository, oldReq, oldDec, oldLease, now.AddDays(-200));
-        await accessLeaseRepository.RevokeAsync(oldLease, BuildAuditDecision(oldLease, now.AddDays(-150)), now.AddDays(-150));
+        await accessLeaseRepository.RevokeAsync(oldLease, AccessLeaseStatus.Revoked, BuildAuditDecision(oldLease, now.AddDays(-150)), now.AddDays(-150));
 
         var result = await accessLeaseRepository.GetManyEndedByCollectionIdsAsync(
             new[] { activeLease.CollectionId, revLease.CollectionId, oldLease.CollectionId }, since);

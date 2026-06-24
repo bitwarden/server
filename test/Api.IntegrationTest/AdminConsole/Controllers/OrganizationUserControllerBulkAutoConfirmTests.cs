@@ -12,6 +12,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.SharedWeb.Models.Response;
 using NSubstitute;
 using Xunit;
 
