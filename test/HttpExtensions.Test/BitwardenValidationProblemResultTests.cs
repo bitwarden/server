@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -35,8 +34,11 @@ public class BitwardenValidationProblemResultTests
     [Fact]
     public async Task ExecuteAsync_WritesProblemDetailsToResponseBody()
     {
-        var validationError = new TestValidationError("email", "Member not claimed", "memberNotClaimed");
-        var result = TypedResults.BitwardenValidationProblem(validationError);
+        var errors = new Dictionary<string, ErrorCode[]>
+        {
+            { "email", [new ErrorCode("memberNotClaimed", "Member not claimed")] }
+        };
+        var result = TypedResults.BitwardenValidationProblem(errors);
 
         var services = new ServiceCollection();
         services.AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(NullLoggerFactory.Instance);
@@ -53,12 +55,10 @@ public class BitwardenValidationProblemResultTests
         var root = document.RootElement;
         Assert.Equal("One or more validation errors occurred.", root.GetProperty("title").GetString());
         Assert.Equal("validation_error", root.GetProperty("type").GetString());
-        var errors = root.GetProperty("errors");
-        var emailErrors = errors.GetProperty("email");
+        var responseErrors = root.GetProperty("errors");
+        var emailErrors = responseErrors.GetProperty("email");
         var firstError = emailErrors[0];
         Assert.Equal("memberNotClaimed", firstError.GetProperty("type").GetString());
         Assert.Equal("Member not claimed", firstError.GetProperty("detail").GetString());
     }
-
-    private sealed record TestValidationError(string PropertyName, string Message, string Type) : IValidationError;
 }

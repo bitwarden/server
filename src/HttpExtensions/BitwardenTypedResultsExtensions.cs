@@ -1,6 +1,4 @@
-﻿using Bit.Core.AdminConsole.Utilities.v2.Validation;
-
-namespace Microsoft.AspNetCore.Http.HttpResults;
+﻿namespace Microsoft.AspNetCore.Http.HttpResults;
 
 public static class BitwardenTypedResultsExtensions
 {
@@ -37,17 +35,6 @@ public static class BitwardenTypedResultsExtensions
                 title: title,
                 type: type,
                 extensions: problemExtensions));
-        }
-
-        public static BitwardenValidationProblemResult BitwardenValidationProblem(IValidationError validationError)
-        {
-            ArgumentNullException.ThrowIfNull(validationError);
-
-            return TypedResults.BitwardenValidationProblem(
-                errors: new Dictionary<string, ErrorCode[]>
-                {
-                    { validationError.PropertyName, [new ErrorCode(validationError.Type, validationError.Message)] }
-                });
         }
     }
 
