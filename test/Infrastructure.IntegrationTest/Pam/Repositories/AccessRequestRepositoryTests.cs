@@ -514,6 +514,64 @@ public class AccessRequestRepositoryTests
         Assert.Equal(AccessRequestStatus.Approved, persisted!.Status);
     }
 
+    [DatabaseTheory, DatabaseData]
+    public async Task GetDetailsByIdAsync_ReturnsDenormalizedFieldsAndDecisionLog(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRequestRepository accessRequestRepository)
+    {
+        // The dedicated request page reads one request by id with the same denormalized projection the inbox reads use
+        // (collection/requester names) plus the full decision log — unlike the caller-scoped "mine" read which omits the
+        // collection/cipher/requester joins.
+        var requester = await userRepository.CreateTestUserAsync("requester");
+        var approver = await userRepository.CreateTestUserAsync("approver");
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var now = DateTime.UtcNow;
+
+        var request = await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, requester.Id, AccessRequestStatus.Pending, now));
+
+        await accessRequestRepository.ResolveWithDecisionAsync(
+            request,
+            new AccessDecision
+            {
+                Id = CoreHelpers.GenerateComb(),
+                AccessRequestId = request.Id,
+                DeciderKind = AccessDeciderKind.Human,
+                ApproverId = approver.Id,
+                Verdict = AccessDecisionVerdict.Approve,
+                Comment = "approved for audit",
+                CreationDate = now,
+            },
+            AccessRequestStatus.Approved,
+            now);
+
+        var details = await accessRequestRepository.GetDetailsByIdAsync(request.Id);
+
+        Assert.NotNull(details);
+        Assert.Equal(request.Id, details!.Id);
+        Assert.Equal(AccessRequestStatus.Approved, details.Status);
+        // Denormalized display fields are populated (unlike the caller-scoped "mine" read).
+        Assert.Equal(collection.Name, details.CollectionName);
+        Assert.Equal(requester.Name, details.RequesterName);
+        Assert.Equal(requester.Email, details.RequesterEmail);
+        // The full decision log projects with the human approver's resolved identity.
+        var decision = Assert.Single(details.Decisions);
+        Assert.Equal(AccessDeciderKind.Human, decision.DeciderKind);
+        Assert.Equal(approver.Id, decision.Id!.Value);
+        Assert.Equal(approver.Email, decision.Email);
+        Assert.Equal("approved for audit", decision.Comment);
+        Assert.Equal(AccessDecisionVerdict.Approve, decision.Verdict);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetDetailsByIdAsync_UnknownId_ReturnsNull(IAccessRequestRepository accessRequestRepository)
+    {
+        Assert.Null(await accessRequestRepository.GetDetailsByIdAsync(Guid.NewGuid()));
+    }
+
     private static AccessRequest BuildRequest(
         Guid organizationId, Guid collectionId, Guid requesterId, AccessRequestStatus status, DateTime creationDate)
         => new()

@@ -19,6 +19,14 @@ public interface IAccessRequestRepository
     Task<AccessRequest?> GetByIdAsync(Guid id);
 
     /// <summary>
+    /// Returns a single request's full <see cref="AccessRequestDetails"/> projection (denormalized display fields,
+    /// produced lease, and the complete decision list) for the dedicated request page, or null if no request has the
+    /// id. Unlike <see cref="GetByIdAsync"/> this populates the display-name fields. Authorization (the caller is the
+    /// requester or can manage the request's collection) is enforced by the calling query, not this read.
+    /// </summary>
+    Task<AccessRequestDetails?> GetDetailsByIdAsync(Guid id);
+
+    /// <summary>
     /// Returns the caller's pending (unresolved) lease request for the cipher, or null if there is none.
     /// </summary>
     Task<AccessRequest?> GetActivePendingByRequesterIdCipherIdAsync(Guid requesterId, Guid cipherId);

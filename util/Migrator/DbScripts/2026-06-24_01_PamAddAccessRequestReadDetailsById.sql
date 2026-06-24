@@ -1,16 +1,14 @@
-CREATE PROCEDURE [dbo].[AccessRequest_ReadDetailsById]
+-- PAM dedicated request page: a get-details-by-id read that returns one access request's full projection (display
+-- fields + produced-lease + decisions) so a shareable link can render a single request. Mirrors the inbox-history
+-- read but keyed by a single @Id with no collection/status filter; authorization (requester or managing approver) is
+-- enforced by the caller.
+
+CREATE OR ALTER PROCEDURE [dbo].[AccessRequest_ReadDetailsById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
 
-    -- A single access request projected for the dedicated request page, returned as two result sets so the caller can
-    -- attach the request's full decision list without an N+1:
-    --   1) the request row with denormalized display fields (cipher/collection names, requester identity). A row that
-    --      produced a lease carries ProducedLeaseId/ProducedLeaseStatus so the client can show (and gate) lease actions.
-    --   2) every decision (human or automatic) for the request, keyed by AccessRequestId and ordered oldest-first;
-    --      DeciderKind says which, and a human decision's identity is denormalized from [User].
-    -- Authorization (requester or managing approver) is enforced by the caller, not this read.
     SELECT
         LR.[Id],
         LR.[ExtensionOfLeaseId],
@@ -56,3 +54,4 @@ BEGIN
     WHERE AD.[AccessRequestId] = @Id
     ORDER BY AD.[CreationDate] ASC
 END
+GO

@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Bit.Commercial.Pam.Api.Endpoints.Handlers;
 using Bit.Commercial.Pam.Api.Models.Request;
 using Bit.Commercial.Pam.Api.Models.Response;
@@ -73,6 +73,22 @@ public class AccessRequestEndpointsHandlerTests
         var result = await sutProvider.Sut.GetMine(_user);
 
         Assert.Empty(result.Data);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetDetails_ReturnsMappedRow(
+        Guid userId, Guid requestId, AccessRequestDetails details, SutProvider<AccessRequestEndpointsHandler> sutProvider)
+    {
+        SetupUser(sutProvider, userId);
+        details.Status = AccessRequestStatus.Approved;
+        // A non-null produced lease would make the response model report "activated"; null keeps the mapped status.
+        details.ProducedLeaseId = null;
+        sutProvider.GetDependency<IGetAccessRequestDetailsQuery>().GetDetailsAsync(userId, requestId).Returns(details);
+
+        var result = await sutProvider.Sut.GetDetails(_user, requestId);
+
+        Assert.Equal(details.Id, result.Id);
+        Assert.Equal(AccessRequestStatusNames.Approved, result.Status);
     }
 
     [Theory, BitAutoData]
