@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.Auth.Enums;
+﻿using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
 
 namespace Bit.Api.Auth.Models.Response.TwoFactor;
@@ -53,10 +50,10 @@ public class TwoFactorYubiKeyDetails
     }
 
     public bool Enabled { get; set; }
-    public string Key1 { get; set; }
-    public string Key2 { get; set; }
-    public string Key3 { get; set; }
-    public string Key4 { get; set; }
-    public string Key5 { get; set; }
+    public string? Key1 { get; set; }
+    public string? Key2 { get; set; }
+    public string? Key3 { get; set; }
+    public string? Key4 { get; set; }
+    public string? Key5 { get; set; }
     public bool Nfc { get; set; }
 }

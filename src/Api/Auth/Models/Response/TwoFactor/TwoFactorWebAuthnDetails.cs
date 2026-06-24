@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.Auth.Enums;
+﻿using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
 
@@ -25,7 +22,7 @@ public class TwoFactorWebAuthnDetails
     }
 
     public bool Enabled { get; set; }
-    public IEnumerable<KeyModel> Keys { get; set; }
+    public IEnumerable<KeyModel>? Keys { get; set; }
 
     public class KeyModel
     {
@@ -36,7 +33,7 @@ public class TwoFactorWebAuthnDetails
             Migrated = data.Migrated;
         }
 
-        public string Name { get; set; }
+        public string? Name { get; set; }
         public int Id { get; set; }
         public bool Migrated { get; set; }
     }

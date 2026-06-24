@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
@@ -28,11 +25,11 @@ public class TwoFactorDuoDetails
     }
 
     public bool Enabled { get; set; }
-    public string Host { get; set; }
-    public string ClientId { get; set; }
-    public string ClientSecret { get; set; }
+    public string? Host { get; set; }
+    public string? ClientId { get; set; }
+    public string? ClientSecret { get; set; }
 
-    private void Build(TwoFactorProvider provider)
+    private void Build(TwoFactorProvider? provider)
     {
         if (provider?.MetaData != null && provider.MetaData.Count > 0)
         {

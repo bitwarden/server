@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.Models.Api;
+﻿using Bit.Core.Models.Api;
 
 namespace Bit.Api.Auth.Models.Response.TwoFactor;
 

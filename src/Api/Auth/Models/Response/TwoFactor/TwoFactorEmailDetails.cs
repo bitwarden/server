@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.Auth.Enums;
+﻿using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
 
 namespace Bit.Api.Auth.Models.Response.TwoFactor;
@@ -29,5 +26,5 @@ public class TwoFactorEmailDetails
     }
 
     public bool Enabled { get; set; }
-    public string Email { get; set; }
+    public string? Email { get; set; }
 }
