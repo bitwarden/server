@@ -550,21 +550,14 @@ public class PriceIncreaseScheduler(
 
         var sourcePlan = await pricingClient.GetPlanOrThrow(migrationPath.FromPlan);
         var targetPlan = await pricingClient.GetPlanOrThrow(migrationPath.ToPlan);
-        // Calculate the target plan seat count based on the migration path policy.
-        var targetPlanSeatCount = migrationPath.SeatCountPolicy == SeatCountPolicy.ActualUsage
-            ? await CalculateTargetPlanSeatCountAsync(organizationId, sourcePlan)
-            : (int?)null;
-
-
-        // A packaged source (e.g. Teams Starter) carries its flat bundle at quantity ~1, so bill the org's
-        // actual occupied seats on the per-seat target — applied unconditionally and floored at 1.
-        var overrideSeatQuantity =
-            sourcePlan.HasNonSeatBasedPasswordManagerPlan()
-                ? Math.Max(1, (await organizationRepository
-                    .GetOccupiedSeatCountByOrganizationIdAsync(organizationId)).Total)
-                : (long?)null;
 
         var targetSeatPriceId = targetPlan.PasswordManager.StripeSeatPlanId;
+
+        // Teams Starter and Teams 2019 are Packaged sources whose base line (and, for Teams 2019, the
+        // seat-overage line) collapse onto the Scalable target's single seat price at a usage-resolved
+        // quantity. Scalable sources preserve their line-item quantities.
+        var isPackagedSource = sourcePlan.HasNonSeatBasedPasswordManagerPlan() ||
+            migrationPath.SeatCountPolicy == SeatCountPolicy.ActualUsage;
 
         var items = new List<SubscriptionSchedulePhaseItemOptions>();
         foreach (var item in subscription.Items.Data)
@@ -578,29 +571,25 @@ public class PriceIncreaseScheduler(
                 return null;
             }
 
-            var quantity =
-                overrideSeatQuantity is { } seats && targetPriceId == targetSeatPriceId
-                    ? seats
-                    : item.Quantity;
+            // Skip the packaged source's seat line(s) here; one collapsed seat line is added below.
+            if (isPackagedSource && targetPriceId == targetSeatPriceId)
+            {
+                continue;
+            }
 
             items.Add(new SubscriptionSchedulePhaseItemOptions
             {
                 Price = targetPriceId,
-                Quantity = quantity
+                Quantity = item.Quantity
             });
         }
 
-        // Under ActualUsage, a Packaged source's flat base line and seat-overage line both map onto
-        // the Scalable target's seat price. Collapse them into a single seat line billed at the
-        // resolved seat count; non-seat items (e.g. storage) pass through untouched.
-        if (targetPlanSeatCount is { } seatCount)
+        if (isPackagedSource)
         {
-            var targetSeatPriceId = targetPlan.PasswordManager.StripeSeatPlanId;
-            items.RemoveAll(item => item.Price == targetSeatPriceId);
             items.Add(new SubscriptionSchedulePhaseItemOptions
             {
                 Price = targetSeatPriceId,
-                Quantity = seatCount
+                Quantity = await CalculateTargetPlanSeatCountAsync(sourcePlan, organizationId)
             });
         }
 
@@ -630,16 +619,28 @@ public class PriceIncreaseScheduler(
     }
 
     /// <summary>
-    /// Calculates the seat count for a given organization based on the current seat count and
-    /// the seat count policy of the migration path.
+    /// Resolves the billed Phase 2 seat count for a Packaged source migrating to a Scalable target.
+    /// Teams Starter is a flat bundle with no seat overage, so it bills the occupied seat count
+    /// (floored at 1). Teams 2019 carries overage beyond a packaged base, so it bills occupied seats
+    /// below the base (unused headroom disappears) and the purchased seat count at or above it.
     /// </summary>
-    private async Task<int> CalculateTargetPlanSeatCountAsync(Guid organizationId, OrganizationPlan sourcePlan)
+    private async Task<int> CalculateTargetPlanSeatCountAsync(OrganizationPlan sourcePlan, Guid organizationId)
     {
+        var occupiedSeatCount = (await organizationRepository
+            .GetOccupiedSeatCountByOrganizationIdAsync(organizationId)).Total;
+
+        // Teams Starter: flat bundle, no overage — bill occupied seats (no base/purchased comparison),
+        // floored at 1.
+        if (sourcePlan.HasNonSeatBasedPasswordManagerPlan())
+        {
+            return Math.Max(1, occupiedSeatCount);
+        }
+
+        // Teams 2019: occupied below the packaged base, otherwise the purchased seat count.
         var organization = await organizationRepository.GetByIdAsync(organizationId);
-        var occupiedSeatCount = (await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organizationId)).Total;
-        var purchasedSeatCount = organization?.Seats;
-        var targetPlanSeatCount = occupiedSeatCount < sourcePlan.PasswordManager.BaseSeats ? occupiedSeatCount : purchasedSeatCount ?? occupiedSeatCount;
-        return targetPlanSeatCount;
+        return occupiedSeatCount < sourcePlan.PasswordManager.BaseSeats
+            ? occupiedSeatCount
+            : organization?.Seats ?? occupiedSeatCount;
     }
 
     /// <summary>
