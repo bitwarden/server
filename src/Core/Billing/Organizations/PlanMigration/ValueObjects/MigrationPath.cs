@@ -1,4 +1,4 @@
-﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 
 namespace Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
@@ -17,9 +17,8 @@ namespace Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 /// immortality guard.
 /// </para>
 /// <para>
-/// <see cref="SeatCountPolicy"/> defaults to <see cref="Enums.SeatCountPolicy.Preserve"/> so
-/// existing scalable-to-scalable paths keep the source seat quantity. Packaged sources whose
-/// seat total cannot be read from the source line items (e.g. Teams 2019) set
+/// <see cref="SeatCountPolicy"/> defaults to <see cref="Enums.SeatCountPolicy.Preserve"/>; Packaged
+/// sources whose line items don't reflect the true seat total set
 /// <see cref="Enums.SeatCountPolicy.ActualUsage"/>.
 /// </para>
 /// </remarks>

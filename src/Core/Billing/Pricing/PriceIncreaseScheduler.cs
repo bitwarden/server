@@ -556,7 +556,7 @@ public class PriceIncreaseScheduler(
         // Teams Starter and Teams 2019 are Packaged sources whose base line (and, for Teams 2019, the
         // seat-overage line) collapse onto the Scalable target's single seat price at a usage-resolved
         // quantity. Scalable sources preserve their line-item quantities.
-        var isPackagedSource = sourcePlan.HasNonSeatBasedPasswordManagerPlan() ||
+        var isPackagedSourcePlan = sourcePlan.HasNonSeatBasedPasswordManagerPlan() ||
             migrationPath.SeatCountPolicy == SeatCountPolicy.ActualUsage;
 
         var items = new List<SubscriptionSchedulePhaseItemOptions>();
@@ -572,7 +572,7 @@ public class PriceIncreaseScheduler(
             }
 
             // Skip the packaged source's seat line(s) here; one collapsed seat line is added below.
-            if (isPackagedSource && targetPriceId == targetSeatPriceId)
+            if (isPackagedSourcePlan && targetPriceId == targetSeatPriceId)
             {
                 continue;
             }
@@ -584,7 +584,7 @@ public class PriceIncreaseScheduler(
             });
         }
 
-        if (isPackagedSource)
+        if (isPackagedSourcePlan)
         {
             items.Add(new SubscriptionSchedulePhaseItemOptions
             {
@@ -619,10 +619,9 @@ public class PriceIncreaseScheduler(
     }
 
     /// <summary>
-    /// Resolves the billed Phase 2 seat count for a Packaged source migrating to a Scalable target.
-    /// Teams Starter is a flat bundle with no seat overage, so it bills the occupied seat count
-    /// (floored at 1). Teams 2019 carries overage beyond a packaged base, so it bills occupied seats
-    /// below the base (unused headroom disappears) and the purchased seat count at or above it.
+    /// Resolves the billed Phase 2 seat count for a Packaged source. Teams Starter (flat bundle)
+    /// bills occupied seats, floored at 1; Teams 2019 (seat overage) bills occupied seats below the
+    /// base and the purchased count at or above it.
     /// </summary>
     private async Task<int> CalculateTargetPlanSeatCountAsync(OrganizationPlan sourcePlan, Guid organizationId)
     {
