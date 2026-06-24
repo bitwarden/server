@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
@@ -10,7 +11,6 @@ using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -27,7 +27,7 @@ public class PushAutoConfirmNotificationCommandTests
         Guid organizationId,
         OrganizationUser orgUser)
     {
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
             .Returns(new OrganizationAbility { UseAutomaticUserConfirmation = true });
 
@@ -329,7 +329,7 @@ public class PushAutoConfirmNotificationCommandTests
         Guid userId,
         Guid organizationId)
     {
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
             .Returns((OrganizationAbility?)null);
 
@@ -350,7 +350,7 @@ public class PushAutoConfirmNotificationCommandTests
         Guid userId,
         Guid organizationId)
     {
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
             .Returns(new OrganizationAbility { UseAutomaticUserConfirmation = false });
 
@@ -373,7 +373,7 @@ public class PushAutoConfirmNotificationCommandTests
         [Policy(PolicyType.AutomaticUserConfirmation, false)] PolicyStatus disabledPolicy,
         SutProvider<PushAutoConfirmNotificationCommand> sutProvider)
     {
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
             .Returns(new OrganizationAbility { UseAutomaticUserConfirmation = true });
 

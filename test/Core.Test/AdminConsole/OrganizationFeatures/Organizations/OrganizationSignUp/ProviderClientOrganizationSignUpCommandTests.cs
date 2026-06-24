@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
@@ -9,7 +10,6 @@ using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -82,7 +82,7 @@ public class ProviderClientOrganizationSignUpCommandTests
                 )
             );
 
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .Received(1)
             .UpsertOrganizationAbilityAsync(Arg.Is<Organization>(o => o.Id == result.Organization.Id));
     }
@@ -148,7 +148,7 @@ public class ProviderClientOrganizationSignUpCommandTests
             .Received(1)
             .DeleteAsync(Arg.Is<Organization>(o => o.Name == signup.Name));
 
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .Received(1)
             .DeleteOrganizationAbilityAsync(Arg.Any<Guid>());
     }
