@@ -1204,6 +1204,9 @@
           "ZiggyCreatures.FusionCache.Serialization.SystemTextJson": "[2.0.2, 2.0.2]"
         }
       },
+      "httpextensions": {
+        "type": "Project"
+      },
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {

@@ -1629,6 +1629,7 @@
           "Commercial.Core": "[2026.6.1, )",
           "Commercial.Infrastructure.EntityFramework": "[2026.6.1, )",
           "Core": "[2026.6.1, )",
+          "HttpExtensions": "[2026.6.1, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.15.3, )",
           "OpenTelemetry.Extensions.Hosting": "[1.15.3, )",
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.15.0, )",
@@ -1707,6 +1708,9 @@
           "ZiggyCreatures.FusionCache.Backplane.StackExchangeRedis": "[2.0.2, 2.0.2]",
           "ZiggyCreatures.FusionCache.Serialization.SystemTextJson": "[2.0.2, 2.0.2]"
         }
+      },
+      "httpextensions": {
+        "type": "Project"
       },
       "infrastructure.dapper": {
         "type": "Project",
