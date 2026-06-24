@@ -169,6 +169,7 @@ public static class FeatureFlagKeys
     public const string FillAssistTargetingRules = "fill-assist-targeting-rules";
     public const string NotificationUndeterminedCipherScenarioLogic = "undetermined-cipher-scenario-logic";
     public const string EnableAutofillTriage = "enable-autofill-triage";
+    public const string PM39071_DefaultPasswordManagerPrompt = "pm-39071-default-password-manager-prompt";
 
     /* Desktop Native Team */
     public const string SSHAgentV2 = "ssh-agent-v2";
