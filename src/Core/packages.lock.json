@@ -115,9 +115,9 @@
       },
       "Braintree": {
         "type": "Direct",
-        "requested": "[5.36.0, 5.36.0]",
-        "resolved": "5.36.0",
-        "contentHash": "K43RjhEU5qXoYYxo0C0o54msQxbdRjVP+hDMZwSXsei4fLBHA2xwS1NCooZ9girCQNjoWOM8bygkHTVGgN+sag==",
+        "requested": "[5.41.0, 5.41.0]",
+        "resolved": "5.41.0",
+        "contentHash": "R8SxvuuUqr0rA2VwAnQSLOghV0ZHfTTC6o2fW/SUXqYY7fPSkKSWyQncwgrgQfFtPMmEK5hP0Lf2dzTTliimpw==",
         "dependencies": {
           "Newtonsoft.Json": "13.0.1",
           "System.Xml.XPath.XmlDocument": "4.3.0"

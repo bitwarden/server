@@ -252,8 +252,8 @@
       },
       "Braintree": {
         "type": "Transitive",
-        "resolved": "5.36.0",
-        "contentHash": "K43RjhEU5qXoYYxo0C0o54msQxbdRjVP+hDMZwSXsei4fLBHA2xwS1NCooZ9girCQNjoWOM8bygkHTVGgN+sag==",
+        "resolved": "5.41.0",
+        "contentHash": "R8SxvuuUqr0rA2VwAnQSLOghV0ZHfTTC6o2fW/SUXqYY7fPSkKSWyQncwgrgQfFtPMmEK5hP0Lf2dzTTliimpw==",
         "dependencies": {
           "Newtonsoft.Json": "13.0.1",
           "System.Xml.XPath.XmlDocument": "4.3.0"
@@ -1370,7 +1370,7 @@
           "Azure.Storage.Blobs.Batch": "[12.23.0, 12.23.0]",
           "Azure.Storage.Queues": "[12.24.0, 12.24.0]",
           "BitPay.Light": "[1.0.1907, 1.0.1907]",
-          "Braintree": "[5.36.0, 5.36.0]",
+          "Braintree": "[5.41.0, 5.41.0]",
           "CsvHelper": "[33.1.0, 33.1.0]",
           "DnsClient": "[1.8.0, 1.8.0]",
           "Duende.IdentityServer": "[7.4.6, 7.4.6]",
