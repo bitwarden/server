@@ -3,7 +3,6 @@ using System.Net.Http.Json;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing.Organizations;
 using Bit.Core.Exceptions;
-using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Billing.Pricing;
@@ -11,18 +10,12 @@ namespace Bit.Core.Billing.Pricing;
 using OrganizationPlan = Bit.Core.Models.StaticStore.Plan;
 using PremiumPlan = Premium.Plan;
 
-public class PricingClient(
-    GlobalSettings globalSettings,
+internal sealed class HttpPricingClient(
     HttpClient httpClient,
-    ILogger<PricingClient> logger) : IPricingClient
+    ILogger<HttpPricingClient> logger) : IPricingClient
 {
     public async Task<OrganizationPlan?> GetPlan(PlanType planType)
     {
-        if (globalSettings.SelfHosted)
-        {
-            return null;
-        }
-
         var lookupKey = GetLookupKey(planType);
 
         if (lookupKey == null)
@@ -60,11 +53,6 @@ public class PricingClient(
 
     public async Task<List<OrganizationPlan>> ListPlans()
     {
-        if (globalSettings.SelfHosted)
-        {
-            return [];
-        }
-
         var response = await httpClient.GetAsync("plans/organization");
 
         if (response.IsSuccessStatusCode)
@@ -90,11 +78,6 @@ public class PricingClient(
 
     public async Task<List<PremiumPlan>> ListPremiumPlans()
     {
-        if (globalSettings.SelfHosted)
-        {
-            return [];
-        }
-
         var response = await httpClient.GetAsync("plans/premium");
 
         if (response.IsSuccessStatusCode)
