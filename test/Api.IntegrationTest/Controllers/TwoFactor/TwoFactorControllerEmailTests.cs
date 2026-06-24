@@ -1,7 +1,5 @@
-﻿using System.Net;
-using System.Text.Json;
+using System.Net;
 using Bit.Api.Auth.Models.Request;
-using Bit.Api.IntegrationTest.Controllers.TwoFactor;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.Auth.Enums;
@@ -18,25 +16,21 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;
+using static Bit.Api.IntegrationTest.Controllers.TwoFactor.TwoFactorIntegrationTestHelpers;
 
-namespace Bit.Api.IntegrationTest.Controllers;
+namespace Bit.Api.IntegrationTest.Controllers.TwoFactor;
 
-public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
-    private const string _masterPasswordHash = "master_password_hash";
-    private const string _authenticatorKey = "JBSWY3DPEHPK3PXP";
-
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
     private readonly LoginHelper _loginHelper;
     private readonly IUserRepository _userRepository;
-    private readonly IOrganizationRepository _organizationRepository;
-    private readonly IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable> _authenticatorTokenFactory;
     private readonly IDataProtectorTokenFactory<TwoFactorUserVerificationTokenable> _userVerificationTokenFactory;
 
     private string _userEmail = null!;
 
-    public TwoFactorControllerTest(ApiApplicationFactory factory)
+    public TwoFactorControllerEmailTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         _factory.SubstituteService<IPushNotificationService>(_ => { });
@@ -50,8 +44,6 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
         _userRepository = _factory.GetService<IUserRepository>();
-        _organizationRepository = _factory.GetService<IOrganizationRepository>();
-        _authenticatorTokenFactory = _factory.GetService<IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable>>();
         _userVerificationTokenFactory = _factory.GetService<IDataProtectorTokenFactory<TwoFactorUserVerificationTokenable>>();
     }
 
@@ -68,23 +60,19 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         return Task.CompletedTask;
     }
 
-    // ---------------------------------------------------------------------
-    // Email
-    // ---------------------------------------------------------------------
-
     [Fact]
     public async Task GetEmail_ValidSecret_ReturnsTokenUsableForDelete()
     {
         await EnrollUserInEmail();
 
         var getResponse = await _client.PostAsJsonAsync("/two-factor/get-email",
-            new { MasterPasswordHash = _masterPasswordHash });
+            new { MasterPasswordHash = MasterPasswordHash });
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
         var (enabled, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "email");
         Assert.True(enabled);
         Assert.False(string.IsNullOrEmpty(uvToken));
 
-        var disableResponse = await SendJsonAsync(HttpMethod.Delete, "/two-factor/email",
+        var disableResponse = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/email",
             new TwoFactorEmailDeleteRequestModel { UserVerificationToken = uvToken });
         Assert.Equal(HttpStatusCode.NoContent, disableResponse.StatusCode);
 
@@ -96,9 +84,9 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     public async Task DeleteEmail_CrossProviderToken_BadRequest()
     {
         var user = (await _userRepository.GetByEmailAsync(_userEmail))!;
-        var duoToken = ProtectUserVerificationToken(user, TwoFactorProviderType.Duo);
+        var duoToken = ProtectUserVerificationToken(_userVerificationTokenFactory, user, TwoFactorProviderType.Duo);
 
-        var response = await SendJsonAsync(HttpMethod.Delete, "/two-factor/email",
+        var response = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/email",
             new TwoFactorEmailDeleteRequestModel { UserVerificationToken = duoToken });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -122,7 +110,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         // resulting OTP matches what PutEmail will validate because PutEmail's server-side flow
         // applies the same mutation against the same SecurityStamp before checking.
         var getResponse = await _client.PostAsJsonAsync("/two-factor/get-email",
-            new { MasterPasswordHash = _masterPasswordHash });
+            new { MasterPasswordHash = MasterPasswordHash });
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
         var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "email");
 
@@ -164,7 +152,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     public async Task SendEmailSetup_ValidToken_InvokesEmailService()
     {
         var getResponse = await _client.PostAsJsonAsync("/two-factor/get-email",
-            new { MasterPasswordHash = _masterPasswordHash });
+            new { MasterPasswordHash = MasterPasswordHash });
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
         var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "email");
         var emailService = _factory.GetService<ITwoFactorEmailService>();
@@ -192,7 +180,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     public async Task SendEmailSetup_MissingEmail_BadRequest()
     {
         var getResponse = await _client.PostAsJsonAsync("/two-factor/get-email",
-            new { MasterPasswordHash = _masterPasswordHash });
+            new { MasterPasswordHash = MasterPasswordHash });
         var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "email");
 
         var response = await _client.PostAsJsonAsync("/two-factor/send-email",
@@ -212,7 +200,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     public async Task PutEmail_MissingToken_BadRequest()
     {
         var getResponse = await _client.PostAsJsonAsync("/two-factor/get-email",
-            new { MasterPasswordHash = _masterPasswordHash });
+            new { MasterPasswordHash = MasterPasswordHash });
         var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "email");
 
         var response = await _client.PutAsJsonAsync("/two-factor/email",
@@ -229,7 +217,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
             new
             {
                 Email = _userEmail,
-                MasterPasswordHash = _masterPasswordHash,
+                MasterPasswordHash = MasterPasswordHash,
             });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -246,54 +234,7 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-
-    // ---------------------------------------------------------------------
-    // Helpers
-    // ---------------------------------------------------------------------
-
-    private string ProtectUserVerificationToken(User user, TwoFactorProviderType providerType) =>
-        TwoFactorIntegrationTestHelpers.ProtectUserVerificationToken(_userVerificationTokenFactory, user, providerType);
-
-    private Task EnrollUserInAuthenticator() =>
-        TwoFactorIntegrationTestHelpers.SetUserTwoFactorProvidersJsonAsync(
-            _userRepository, _userEmail, TwoFactorIntegrationTestHelpers.BuildAuthenticatorProvidersJson(_authenticatorKey));
-
-    private Task EnrollUserInYubiKey() =>
-        TwoFactorIntegrationTestHelpers.SetUserTwoFactorProvidersJsonAsync(
-            _userRepository, _userEmail, TwoFactorIntegrationTestHelpers.BuildYubiKeyProvidersJson());
-
-    private Task EnrollUserInDuo() =>
-        TwoFactorIntegrationTestHelpers.SetUserTwoFactorProvidersJsonAsync(
-            _userRepository, _userEmail, TwoFactorIntegrationTestHelpers.BuildDuoProvidersJson());
-
     private Task EnrollUserInEmail() =>
-        TwoFactorIntegrationTestHelpers.SetUserTwoFactorProvidersJsonAsync(
-            _userRepository, _userEmail, TwoFactorIntegrationTestHelpers.BuildEmailProvidersJson(_userEmail));
-
-    private Task EnrollUserInWebAuthn() =>
-        TwoFactorIntegrationTestHelpers.SetUserTwoFactorProvidersJsonAsync(
-            _userRepository, _userEmail, TwoFactorIntegrationTestHelpers.BuildWebAuthnProvidersJson());
-
-    private Task EnrollOrganizationInDuo(Guid organizationId) =>
-        TwoFactorIntegrationTestHelpers.SetOrganizationTwoFactorProvidersJsonAsync(
-            _organizationRepository, organizationId, TwoFactorIntegrationTestHelpers.BuildOrganizationDuoProvidersJson());
-
-    private Task SetUserTwoFactorProvidersJson(string providersJson) =>
-        TwoFactorIntegrationTestHelpers.SetUserTwoFactorProvidersJsonAsync(_userRepository, _userEmail, providersJson);
-
-    private Task GrantPremium() =>
-        TwoFactorIntegrationTestHelpers.GrantPremiumAsync(_userRepository, _userEmail);
-
-    private static Task<(bool Enabled, string UserVerificationToken)> ReadEnabledAndUserVerificationTokenAsync(
-        HttpResponseMessage response, string providerKey) =>
-        TwoFactorIntegrationTestHelpers.ReadEnabledAndUserVerificationTokenAsync(response, providerKey);
-
-    private static Task<JsonElement> ReadJsonRootAsync(HttpResponseMessage response) =>
-        TwoFactorIntegrationTestHelpers.ReadJsonRootAsync(response);
-
-    private Task<HttpResponseMessage> SendJsonAsync<T>(HttpMethod method, string url, T body) =>
-        TwoFactorIntegrationTestHelpers.SendJsonAsync(_client, method, url, body);
-
-    private Task<HttpResponseMessage> SendRawJsonAsync(HttpMethod method, string url, string json) =>
-        TwoFactorIntegrationTestHelpers.SendRawJsonAsync(_client, method, url, json);
+        SetUserTwoFactorProvidersJsonAsync(
+            _userRepository, _userEmail, BuildEmailProvidersJson(_userEmail));
 }
