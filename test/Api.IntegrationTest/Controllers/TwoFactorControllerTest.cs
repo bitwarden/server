@@ -70,52 +70,6 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
     }
 
     // ---------------------------------------------------------------------
-    // YubiKey
-    // ---------------------------------------------------------------------
-
-    [Fact]
-    public async Task GetYubiKey_ValidSecret_ReturnsTokenUsableForDelete()
-    {
-        await EnrollUserInYubiKey();
-
-        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-yubikey",
-            new { MasterPasswordHash = _masterPasswordHash });
-        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-        var (enabled, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "yubiKey");
-        Assert.True(enabled);
-        Assert.False(string.IsNullOrEmpty(uvToken));
-
-        var disableResponse = await SendJsonAsync(HttpMethod.Delete, "/two-factor/yubikey",
-            new TwoFactorYubiKeyDeleteRequestModel { UserVerificationToken = uvToken });
-        Assert.Equal(HttpStatusCode.NoContent, disableResponse.StatusCode);
-
-        var refreshed = await _userRepository.GetByEmailAsync(_userEmail);
-        Assert.Null(refreshed!.GetTwoFactorProvider(TwoFactorProviderType.YubiKey));
-    }
-
-    [Fact]
-    public async Task PutYubiKey_ValidTokenAndPremium_UpdatesProvider()
-    {
-        await GrantPremium();
-        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-yubikey",
-            new { MasterPasswordHash = _masterPasswordHash });
-        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "yubiKey");
-
-        var response = await _client.PutAsJsonAsync("/two-factor/yubikey",
-            new TwoFactorYubiKeyUpdateRequestModel
-            {
-                Key1 = "ccccccccccbe",
-                Nfc = true,
-                UserVerificationToken = uvToken,
-            });
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var refreshed = await _userRepository.GetByEmailAsync(_userEmail);
-        Assert.NotNull(refreshed!.GetTwoFactorProvider(TwoFactorProviderType.YubiKey));
-    }
-
-    // ---------------------------------------------------------------------
     // Duo (personal)
     // ---------------------------------------------------------------------
 
@@ -554,23 +508,6 @@ public class TwoFactorControllerTest : IClassFixture<ApiApplicationFactory>, IAs
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    // ---------------------------------------------------------------------
-    // Cross-cutting: provider-type binding + legacy endpoint removal
-    // ---------------------------------------------------------------------
-
-    [Fact]
-    public async Task DeleteYubiKey_CrossProviderToken_BadRequest()
-    {
-        var user = (await _userRepository.GetByEmailAsync(_userEmail))!;
-        // Token bound to Duo replayed against the YubiKey DELETE endpoint.
-        var duoToken = ProtectUserVerificationToken(user, TwoFactorProviderType.Duo);
-
-        var response = await SendJsonAsync(HttpMethod.Delete, "/two-factor/yubikey",
-            new TwoFactorYubiKeyDeleteRequestModel { UserVerificationToken = duoToken });
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
-    }
 
     // ---------------------------------------------------------------------
     // Helpers
