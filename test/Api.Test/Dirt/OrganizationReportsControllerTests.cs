@@ -235,7 +235,7 @@ public class OrganizationReportControllerTests
     //         .AccessReports(orgId)
     //         .Returns(true);
     //
-    //     sutProvider.GetDependency<IApplicationCacheService>()
+    //     sutProvider.GetDependency<IOrganizationAbilityCacheService>()
     //         .GetOrganizationAbilityAsync(orgId)
     //         .Returns(new OrganizationAbility { UseRiskInsights = false });
     //
@@ -1642,7 +1642,7 @@ public class OrganizationReportControllerTests
             .Returns(true);
 
         // TODO: Re-enable in PM-37469 when UseRiskInsights access control is restored
-        // sutProvider.GetDependency<IApplicationCacheService>()
+        // sutProvider.GetDependency<IOrganizationAbilityCacheService>()
         //     .GetOrganizationAbilityAsync(orgId)
         //     .Returns(new OrganizationAbility { UseRiskInsights = true });
     }
@@ -1660,7 +1660,7 @@ public class OrganizationReportControllerTests
             .Returns(true);
 
         // TODO: Re-enable in PM-37469 when UseRiskInsights access control is restored
-        // sutProvider.GetDependency<IApplicationCacheService>()
+        // sutProvider.GetDependency<IOrganizationAbilityCacheService>()
         //     .GetOrganizationAbilityAsync(orgId)
         //     .Returns(new OrganizationAbility { UseRiskInsights = true });
     }
