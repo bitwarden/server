@@ -4,9 +4,9 @@ using Bit.Core.Models.Api;
 namespace Bit.Api.Auth.Models.Response.TwoFactor;
 
 /// <summary>
-/// Response for <c>DELETE /two-factor/webauthn</c> (per-credential). The operation modifies
-/// the WebAuthn provider's credentials list rather than destroying the provider, so the
-/// response carries the updated parent state. All other 2FA DELETE endpoints return
+/// Response model carrying the updated WebAuthn provider state after a per-credential
+/// removal. The credential delete shrinks the credential list rather than destroying the
+/// provider, so the caller still gets the parent state back; provider-level deletes return
 /// 204 No Content.
 /// </summary>
 public class TwoFactorWebAuthnDeleteResponseModel : ResponseModel

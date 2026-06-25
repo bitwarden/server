@@ -4,8 +4,8 @@ using Bit.Core.Models.Api;
 namespace Bit.Api.Auth.Models.Response.TwoFactor;
 
 /// <summary>
-/// Response for <c>POST /two-factor/get-yubikey</c>. Wraps the provider details and the
-/// user-verification token minted by the GET endpoint.
+/// Response model carrying YubiKey provider details and the user-verification token minted
+/// by the read step of two-factor enrollment.
 /// </summary>
 public class TwoFactorYubiKeyResponseModel : ResponseModel
 {

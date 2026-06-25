@@ -4,7 +4,7 @@ using Bit.Core.Models.Api;
 namespace Bit.Api.Auth.Models.Response.TwoFactor;
 
 /// <summary>
-/// Response for <c>PUT /two-factor/authenticator</c>. Wraps the post-update provider details.
+/// Response model carrying post-update Authenticator provider details.
 /// </summary>
 public class TwoFactorAuthenticatorUpdateResponseModel : ResponseModel
 {

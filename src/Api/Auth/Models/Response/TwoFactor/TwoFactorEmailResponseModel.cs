@@ -4,8 +4,8 @@ using Bit.Core.Models.Api;
 namespace Bit.Api.Auth.Models.Response.TwoFactor;
 
 /// <summary>
-/// Response for <c>POST /two-factor/get-email</c>. Wraps the provider details and the
-/// user-verification token minted by the GET endpoint.
+/// Response model carrying Email provider details and the user-verification token minted
+/// by the read step of two-factor enrollment.
 /// </summary>
 public class TwoFactorEmailResponseModel : ResponseModel
 {

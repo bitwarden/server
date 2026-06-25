@@ -4,8 +4,8 @@ using Bit.Core.Models.Api;
 namespace Bit.Api.Auth.Models.Response.TwoFactor;
 
 /// <summary>
-/// Response for <c>POST /two-factor/get-duo</c>. Wraps the user-scoped Duo provider details
-/// and the user-verification token minted by the GET endpoint.
+/// Response model carrying user-scoped Duo provider details and the user-verification token
+/// minted by the read step of two-factor enrollment.
 /// </summary>
 public class TwoFactorDuoResponseModel : ResponseModel
 {

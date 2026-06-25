@@ -4,7 +4,7 @@ using Bit.Core.Models.Api;
 namespace Bit.Api.Auth.Models.Response.TwoFactor;
 
 /// <summary>
-/// Response for <c>PUT /two-factor/yubikey</c>. Wraps the post-update provider details.
+/// Response model carrying post-update YubiKey provider details.
 /// </summary>
 public class TwoFactorYubiKeyUpdateResponseModel : ResponseModel
 {

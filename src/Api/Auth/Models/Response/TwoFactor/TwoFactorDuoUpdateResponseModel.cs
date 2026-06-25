@@ -4,7 +4,7 @@ using Bit.Core.Models.Api;
 namespace Bit.Api.Auth.Models.Response.TwoFactor;
 
 /// <summary>
-/// Response for <c>PUT /two-factor/duo</c>. Wraps the post-update user-scoped Duo provider details.
+/// Response model carrying post-update user-scoped Duo provider details.
 /// </summary>
 public class TwoFactorDuoUpdateResponseModel : ResponseModel
 {

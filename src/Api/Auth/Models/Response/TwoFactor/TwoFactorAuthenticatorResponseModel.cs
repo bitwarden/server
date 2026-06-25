@@ -3,8 +3,8 @@
 namespace Bit.Api.Auth.Models.Response.TwoFactor;
 
 /// <summary>
-/// Response for <c>POST /two-factor/get-authenticator</c>. Wraps the provider details
-/// and the user-verification token minted by the GET endpoint.
+/// Response model carrying Authenticator provider details and the user-verification token
+/// minted by the read step of two-factor enrollment.
 /// </summary>
 public class TwoFactorAuthenticatorResponseModel : ResponseModel
 {
