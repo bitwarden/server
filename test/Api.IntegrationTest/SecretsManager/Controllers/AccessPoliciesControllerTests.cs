@@ -8,9 +8,9 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Api;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
-using Bit.SharedWeb.Models.Response;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.SecretsManager.Controllers;

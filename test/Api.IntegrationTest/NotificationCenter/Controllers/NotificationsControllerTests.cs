@@ -11,7 +11,6 @@ using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.NotificationCenter.Enums;
 using Bit.Core.NotificationCenter.Repositories;
 using Bit.Core.Repositories;
-using Bit.SharedWeb.Models.Response;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.NotificationCenter.Controllers;

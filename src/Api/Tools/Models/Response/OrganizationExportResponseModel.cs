@@ -8,7 +8,6 @@ using Bit.Core.Models.Api;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Authorization;
 using Bit.Core.Vault.Models.Data;
-using Bit.SharedWeb.Models.Response;
 
 namespace Bit.Api.Tools.Models.Response;
 

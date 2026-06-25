@@ -13,9 +13,9 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
 using Bit.Core.Tokens;
-using Bit.SharedWeb.Models.Response;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
