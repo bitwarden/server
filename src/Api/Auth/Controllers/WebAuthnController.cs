@@ -10,9 +10,9 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
+using Bit.HttpExtensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

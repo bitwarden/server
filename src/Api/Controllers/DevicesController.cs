@@ -10,10 +10,10 @@ using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.UserFeatures.DeviceTrust;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Bit.HttpExtensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

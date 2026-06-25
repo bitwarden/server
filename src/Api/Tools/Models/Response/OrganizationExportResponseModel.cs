@@ -7,6 +7,7 @@ using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Models.Data;
+using Bit.HttpExtensions;
 
 namespace Bit.Api.Tools.Models.Response;
 

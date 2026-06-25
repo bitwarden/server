@@ -1,7 +1,9 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-namespace Bit.Core.Models.Api;
+using Bit.Core.Models.Api;
+
+namespace Bit.HttpExtensions;
 
 public class ListResponseModel<T> : ResponseModel where T : ResponseModel
 {

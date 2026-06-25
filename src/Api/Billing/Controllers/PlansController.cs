@@ -1,6 +1,6 @@
 ﻿using Bit.Api.Models.Response;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Models.Api;
+using Bit.HttpExtensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

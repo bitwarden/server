@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Bit.Core.Models.Api;
 using Bit.Core.SecretsManager.Entities;
+using Bit.HttpExtensions;
 
 namespace Bit.Api.SecretsManager.Models.Response;
 
