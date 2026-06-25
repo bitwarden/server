@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="und" dir="auto" xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>You're invited to try Bitwarden</title>
+    <style type="text/css">
+      body { margin:0;padding:0;background-color:#e6e9ef;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#333333; }
+      .container { max-width:600px;margin:0 auto;padding:24px; }
+      .header { background-color:#175ddc;border-radius:4px 4px 0 0;padding:20px;text-align:center; }
+      .header img { height:30px; }
+      .content { background-color:#ffffff;padding:32px;border-radius:0 0 4px 4px; }
+      h1 { font-size:24px;line-height:32px;font-weight:normal;margin:0 0 16px 0; }
+      p { font-size:16px;line-height:24px;margin:0 0 16px 0; }
+      .button { display:inline-block;background-color:#175ddc;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:4px;font-size:16px; }
+      .footer { font-size:13px;line-height:20px;color:#6d6d6d;margin-top:24px; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <img alt="Bitwarden" src="https://bitwarden.com/images/logo-horizontal-white.png" width="150" height="30">
+      </div>
+      <div class="content">
+        <h1>You're invited to try Bitwarden</h1>
+        <p>You've been invited to start a {{TrialLength}}-day trial of Bitwarden {{ProductTier}}.</p>
+        <p>
+          <a class="button" href="{{{Url}}}">Get started</a>
+        </p>
+        <p class="footer">Sent by {{SenderEmail}} from the Bitwarden sales team.</p>
+        <p class="footer">&copy; {{CurrentYear}} Bitwarden Inc.</p>
+      </div>
+    </div>
+  </body>
+</html>
