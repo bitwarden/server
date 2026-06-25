@@ -86,15 +86,22 @@ public class TwoFactorControllerWebAuthnTests : IClassFixture<ApiApplicationFact
     }
 
     [Fact]
-    public async Task GetWebAuthnChallenge_ValidSecret_ReturnsTokenUsableForPut()
+    public async Task GetWebAuthnChallenge_ValidToken_ReturnsOptionsForPut()
     {
-        var challengeResponse = await _client.PostAsJsonAsync("/two-factor/get-webauthn-challenge",
+        // get-webauthn mints the UV token; get-webauthn-challenge replays it (no new mint)
+        // and returns the FIDO2 registration options; PUT replays the same token again with
+        // the DeviceResponse to complete enrollment.
+        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-webauthn",
             new { MasterPasswordHash = MasterPasswordHash });
-        Assert.Equal(HttpStatusCode.OK, challengeResponse.StatusCode);
-        var root = await ReadJsonRootAsync(challengeResponse);
-        Assert.Equal(JsonValueKind.Object, root.GetProperty("options").ValueKind);
-        var uvToken = root.GetProperty("userVerificationToken").GetString()!;
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "webAuthn");
         Assert.False(string.IsNullOrEmpty(uvToken));
+
+        var challengeResponse = await _client.PostAsJsonAsync("/two-factor/get-webauthn-challenge",
+            new TwoFactorWebAuthnChallengeRequestModel { UserVerificationToken = uvToken });
+        Assert.Equal(HttpStatusCode.OK, challengeResponse.StatusCode);
+        var challengeRoot = await ReadJsonRootAsync(challengeResponse);
+        Assert.Equal(JsonValueKind.Object, challengeRoot.GetProperty("options").ValueKind);
 
         var putResponse = await _client.PutAsJsonAsync("/two-factor/webauthn",
             new
@@ -105,6 +112,38 @@ public class TwoFactorControllerWebAuthnTests : IClassFixture<ApiApplicationFact
                 UserVerificationToken = uvToken,
             });
         Assert.Equal(HttpStatusCode.OK, putResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetWebAuthnChallenge_ExpiredToken_BadRequest()
+    {
+        var user = (await _userRepository.GetByEmailAsync(_userEmail))!;
+        var expiredToken = _userVerificationTokenFactory.Protect(new TwoFactorUserVerificationTokenable
+        {
+            UserId = user.Id,
+            ProviderType = TwoFactorProviderType.WebAuthn,
+            ExpirationDate = DateTime.UtcNow.AddMinutes(-1),
+        });
+
+        var response = await _client.PostAsJsonAsync("/two-factor/get-webauthn-challenge",
+            new TwoFactorWebAuthnChallengeRequestModel { UserVerificationToken = expiredToken });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task GetWebAuthnChallenge_CrossProviderToken_BadRequest()
+    {
+        var user = (await _userRepository.GetByEmailAsync(_userEmail))!;
+        // Token bound to Duo replayed against the WebAuthn challenge endpoint.
+        var duoToken = ProtectUserVerificationToken(_userVerificationTokenFactory, user, TwoFactorProviderType.Duo);
+
+        var response = await _client.PostAsJsonAsync("/two-factor/get-webauthn-challenge",
+            new TwoFactorWebAuthnChallengeRequestModel { UserVerificationToken = duoToken });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
     }
 
     [Fact]

@@ -4,7 +4,10 @@ using Fido2NetLib;
 namespace Bit.Api.Auth.Models.Response.TwoFactor;
 
 /// <summary>
-/// Envelope around <see cref="CredentialCreateOptions"/> that adds the user-verification token.
+/// Response carrying FIDO2 registration options from the WebAuthn challenge step of
+/// two-factor enrollment. No user-verification token is echoed back — the challenge step
+/// replays the token minted by the WebAuthn GET, and that same token stays valid for the
+/// subsequent update.
 /// </summary>
 public class TwoFactorWebAuthnChallengeResponseModel : ResponseModel
 {
@@ -15,10 +18,4 @@ public class TwoFactorWebAuthnChallengeResponseModel : ResponseModel
 
     /// <summary>FIDO2 registration ceremony options; passed straight to <c>navigator.credentials.create()</c>.</summary>
     public CredentialCreateOptions Options { get; set; } = null!;
-
-    /// <summary>
-    /// User-verification token bound to <c>UserId + ProviderType</c>. Minted by the matching GET
-    /// endpoint and replayed on subsequent management calls so the user does not have to re-verify.
-    /// </summary>
-    public string UserVerificationToken { get; set; } = null!;
 }

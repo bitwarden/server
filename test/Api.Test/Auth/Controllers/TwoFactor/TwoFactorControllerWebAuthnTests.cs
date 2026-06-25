@@ -304,4 +304,98 @@ public class TwoFactorControllerWebAuthnTests
             .DidNotReceiveWithAnyArgs()
             .DisableTwoFactorProviderAsync(default, default);
     }
+
+    [Theory, BitAutoData]
+    public async Task GetWebAuthnChallenge_ValidToken_ReturnsOptions(
+        User user,
+        TwoFactorWebAuthnChallengeRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupUserVerificationTokenFactoryToUnprotectInto(
+            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.WebAuthn));
+        var options = new Fido2NetLib.CredentialCreateOptions();
+        sutProvider.GetDependency<IStartTwoFactorWebAuthnRegistrationCommand>()
+            .StartTwoFactorWebAuthnRegistrationAsync(user)
+            .Returns(options);
+
+        var response = await sutProvider.Sut.GetWebAuthnChallenge(model);
+
+        Assert.IsType<TwoFactorWebAuthnChallengeResponseModel>(response);
+        Assert.Same(options, response.Options);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetWebAuthnChallenge_ExpiredToken_ThrowsBadRequest(
+        User user,
+        TwoFactorWebAuthnChallengeRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupUserVerificationTokenFactoryToUnprotectInto(sutProvider, new TwoFactorUserVerificationTokenable
+        {
+            UserId = user.Id,
+            ProviderType = TwoFactorProviderType.WebAuthn,
+            ExpirationDate = DateTime.UtcNow.AddMinutes(-1),
+        });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.GetWebAuthnChallenge(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+        await sutProvider.GetDependency<IStartTwoFactorWebAuthnRegistrationCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .StartTwoFactorWebAuthnRegistrationAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetWebAuthnChallenge_TryUnprotectFails_ThrowsBadRequest(
+        User user,
+        TwoFactorWebAuthnChallengeRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<TwoFactorUserVerificationTokenable>>()
+            .TryUnprotect(model.UserVerificationToken, out Arg.Any<TwoFactorUserVerificationTokenable>())
+            .Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.GetWebAuthnChallenge(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+        await sutProvider.GetDependency<IStartTwoFactorWebAuthnRegistrationCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .StartTwoFactorWebAuthnRegistrationAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetWebAuthnChallenge_TokenBoundToDifferentUser_ThrowsBadRequest(
+        User user,
+        User otherUser,
+        TwoFactorWebAuthnChallengeRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupUserVerificationTokenFactoryToUnprotectInto(
+            sutProvider, ValidUserVerificationTokenableFor(otherUser, TwoFactorProviderType.WebAuthn));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.GetWebAuthnChallenge(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+        await sutProvider.GetDependency<IStartTwoFactorWebAuthnRegistrationCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .StartTwoFactorWebAuthnRegistrationAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetWebAuthnChallenge_TokenBoundToDifferentProvider_ThrowsBadRequest(
+        User user,
+        TwoFactorWebAuthnChallengeRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupUserVerificationTokenFactoryToUnprotectInto(
+            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.Duo));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.GetWebAuthnChallenge(model));
+        AssertModelStateContains(exception, "UserVerificationToken", "User verification failed.");
+        await sutProvider.GetDependency<IStartTwoFactorWebAuthnRegistrationCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .StartTwoFactorWebAuthnRegistrationAsync(default!);
+    }
 }

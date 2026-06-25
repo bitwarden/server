@@ -341,15 +341,12 @@ public class TwoFactorController : Controller
 
     [HttpPost("get-webauthn-challenge")]
     [ApiExplorerSettings(IgnoreApi = true)] // Disable Swagger due to CredentialCreateOptions not converting properly
-    public async Task<TwoFactorWebAuthnChallengeResponseModel> GetWebAuthnChallenge([FromBody] SecretVerificationRequestModel model)
+    public async Task<TwoFactorWebAuthnChallengeResponseModel> GetWebAuthnChallenge(
+        [FromBody] TwoFactorWebAuthnChallengeRequestModel model)
     {
-        var user = await ValidateUserBySecretAsync(model);
+        var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.WebAuthn);
         var options = await _startTwoFactorWebAuthnRegistrationCommand.StartTwoFactorWebAuthnRegistrationAsync(user);
-        return new TwoFactorWebAuthnChallengeResponseModel
-        {
-            Options = options,
-            UserVerificationToken = MintProtectedUserVerificationToken(user, TwoFactorProviderType.WebAuthn),
-        };
+        return new TwoFactorWebAuthnChallengeResponseModel { Options = options };
     }
 
     [HttpPut("webauthn")]
