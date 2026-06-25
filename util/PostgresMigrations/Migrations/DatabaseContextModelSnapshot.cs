@@ -1062,6 +1062,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .IsUnique()
                         .HasAnnotation("SqlServer:Clustered", false);
 
+                    b.HasIndex("CohortId", "CreationDate", "Id")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
                     b.HasIndex("CohortId", "ScheduledDate", "MigratedDate")
                         .HasAnnotation("SqlServer:Clustered", false);
 

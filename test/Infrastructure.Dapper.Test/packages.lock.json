@@ -1295,7 +1295,7 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.0, )",
+          "Core": "[2026.6.1, )",
           "Dapper": "[2.1.66, 2.1.66]"
         }
       }

@@ -15,7 +15,6 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Entities;
-using Bit.Core.Settings;
 using Bit.Core.Vault.Entities;
 
 namespace Bit.Core.Services;
@@ -27,25 +26,25 @@ public class EventService : IEventService
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IProviderAbilityCacheService _providerAbilityCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly ICurrentContext _currentContext;
-    private readonly GlobalSettings _globalSettings;
 
     public EventService(
         IEventWriteService eventWriteService,
         IOrganizationUserRepository organizationUserRepository,
         IProviderUserRepository providerUserRepository,
         IApplicationCacheService applicationCacheService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         IProviderAbilityCacheService providerAbilityCacheService,
-        ICurrentContext currentContext,
-        GlobalSettings globalSettings)
+        ICurrentContext currentContext)
     {
         _eventWriteService = eventWriteService;
         _organizationUserRepository = organizationUserRepository;
         _providerUserRepository = providerUserRepository;
         _applicationCacheService = applicationCacheService;
         _providerAbilityCacheService = providerAbilityCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _currentContext = currentContext;
-        _globalSettings = globalSettings;
     }
 
     public async Task LogUserEventAsync(Guid userId, EventType type, DateTime? date = null,
@@ -66,7 +65,7 @@ public class EventService : IEventService
         if (includeAcceptedStatusOrgs)
         {
             var orgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
-            var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync(orgUsers.Select(ou => ou.OrganizationId).Distinct());
+            var orgAbilities = await _organizationAbilityCacheService.GetOrganizationAbilitiesAsync(orgUsers.Select(ou => ou.OrganizationId).Distinct());
             orgEvents = orgUsers
                 .Where(ou => ou.Status is OrganizationUserStatusType.Confirmed
                                        or OrganizationUserStatusType.Accepted)
@@ -83,7 +82,7 @@ public class EventService : IEventService
         else
         {
             var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, userId);
-            var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync(orgs.Select(organization => organization.Id));
+            var orgAbilities = await _organizationAbilityCacheService.GetOrganizationAbilitiesAsync(orgs.Select(organization => organization.Id));
             orgEvents = orgs.Where(o => CanUseEvents(orgAbilities, o.Id))
                 .Select(o => new EventMessage(_currentContext)
                 {
@@ -152,7 +151,7 @@ public class EventService : IEventService
 
         if (cipher.OrganizationId.HasValue)
         {
-            var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value);
+            var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value);
             if (!CanUseEvents(orgAbility))
             {
                 return null;
@@ -266,7 +265,7 @@ public class EventService : IEventService
 
     public async Task LogPolicyEventAsync(Policy policy, EventType type, DateTime? date = null)
     {
-        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(policy.OrganizationId);
+        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(policy.OrganizationId);
         if (!CanUseEvents(orgAbility))
         {
             return;
@@ -447,7 +446,7 @@ public class EventService : IEventService
     public async Task LogOrganizationDomainEventAsync(OrganizationDomain organizationDomain, EventType type,
             DateTime? date = null)
     {
-        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationDomain.OrganizationId);
+        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationDomain.OrganizationId);
         if (!CanUseEvents(orgAbility))
         {
             return;
@@ -468,7 +467,7 @@ public class EventService : IEventService
         EventSystemUser systemUser,
         DateTime? date = null)
     {
-        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationDomain.OrganizationId);
+        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationDomain.OrganizationId);
         if (!CanUseEvents(orgAbility))
         {
             return;
@@ -600,7 +599,7 @@ public class EventService : IEventService
     {
         var eventMessages = new List<IEvent>();
         var orgUser = await _organizationUserRepository.GetByIdAsync((Guid)policy.OrganizationUserId);
-        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgUser.OrganizationId);
+        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(orgUser.OrganizationId);
 
         if (!CanUseEvents(orgAbility))
         {
@@ -634,7 +633,7 @@ public class EventService : IEventService
 
     public async Task LogServiceAccountGroupEventAsync(Guid userId, GroupServiceAccountAccessPolicy policy, EventType type, IdentityClientType identityClientType, DateTime? date = null)
     {
-        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(policy.Group.OrganizationId);
+        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(policy.Group.OrganizationId);
         var eventMessages = new List<IEvent>();
 
         if (!CanUseEvents(orgAbility))
@@ -805,7 +804,7 @@ public class EventService : IEventService
     {
         var orgIds = items.Select(selector).Distinct().ToList();
 
-        return await _applicationCacheService.GetOrganizationAbilitiesAsync(orgIds);
+        return await _organizationAbilityCacheService.GetOrganizationAbilitiesAsync(orgIds);
     }
 
 
