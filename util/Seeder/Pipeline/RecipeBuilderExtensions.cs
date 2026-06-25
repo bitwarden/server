@@ -137,7 +137,7 @@ public static class RecipeBuilderExtensions
     {
         builder.HasIndividualUser = true;
         builder.HasOwner = true;
-        builder.AddStep(_ => new CreateIndividualUserStep(email, premium, maxStorageGb, emailVerified: premium));
+        builder.AddStep(_ => new CreateIndividualUserStep(email, premium, maxStorageGb, true));
         if (selfHosted)
         {
             builder.AddStep(sp => new GenerateSelfHostUserLicenseStep(sp.GetRequiredService<ILicensingService>()));
