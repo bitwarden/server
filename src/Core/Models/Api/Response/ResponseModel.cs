@@ -6,9 +6,7 @@ namespace Bit.Core.Models.Api;
 /// Base class for API response models.
 /// </summary>
 /// <remarks>
-/// Deprecated in favor of <c>Bit.HttpExtensions.ResponseModel</c>, which serializes with
-/// System.Text.Json instead of Newtonsoft.Json. New response models should derive from the
-/// HttpExtensions type, and existing models should migrate to it over time.
+/// Deprecated in favor of <c>Bit.HttpExtensions.ResponseModel</c>.
 /// </remarks>
 [Obsolete(
     "Use Bit.HttpExtensions.ResponseModel instead.",

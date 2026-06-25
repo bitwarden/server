@@ -2,6 +2,9 @@
 
 namespace Bit.HttpExtensions;
 
+/// <summary>
+/// Base class for API response models.
+/// </summary>
 public abstract class ResponseModel
 {
     public ResponseModel(string obj)

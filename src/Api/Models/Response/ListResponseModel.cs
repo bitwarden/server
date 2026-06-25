@@ -9,8 +9,7 @@ namespace Bit.Api.Models.Response;
 /// A paginated list response wrapper.
 /// </summary>
 /// <remarks>
-/// Deprecated in favor of <c>Bit.HttpExtensions.ListResponseModel</c>, which serializes with
-/// System.Text.Json instead of Newtonsoft.Json. New endpoints should use the HttpExtensions type.
+/// Deprecated in favor of <c>Bit.HttpExtensions.ListResponseModel</c>.
 /// </remarks>
 [Obsolete(
     "Use Bit.HttpExtensions.ListResponseModel instead.",
