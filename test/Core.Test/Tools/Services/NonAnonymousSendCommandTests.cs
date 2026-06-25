@@ -1445,6 +1445,56 @@ public class NonAnonymousSendCommandTests
         Assert.Equal(new[] { "file", "db" }, callOrder);
     }
 
+    [Theory]
+    [InlineData("Alice@Example.COM,BOB@example.com", "alice@example.com,bob@example.com")]
+    [InlineData("  Spaced@Example.com  ", "spaced@example.com")]
+    [InlineData("a@x.com,,  ,b@x.com", "a@x.com,b@x.com")]
+    public async Task SaveSendAsync_NormalizesEmailAllowList_BeforeSave(string input, string expected)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = default,
+            Type = SendType.Text,
+            UserId = userId,
+            AuthType = AuthType.Email,
+            Emails = input,
+        };
+
+        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
+
+        // Act
+        await _nonAnonymousSendCommand.SaveSendAsync(send);
+
+        // Assert
+        Assert.Equal(expected, send.Emails);
+        await _sendRepository.Received(1).CreateAsync(Arg.Is<Send>(s => s.Emails == expected));
+    }
+
+    [Fact]
+    public async Task SaveSendAsync_NullEmailAllowList_LeavesEmailsNull()
+    {
+        // Arrange — password / no-auth Sends have no email list and must not gain one.
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = default,
+            Type = SendType.Text,
+            UserId = userId,
+            Emails = null,
+        };
+
+        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
+
+        // Act
+        await _nonAnonymousSendCommand.SaveSendAsync(send);
+
+        // Assert
+        Assert.Null(send.Emails);
+        await _sendRepository.Received(1).CreateAsync(Arg.Is<Send>(s => s.Emails == null));
+    }
+
     public static IEnumerable<object[]> SendCreatedEventTypeData()
     {
         yield return new object[] { SendType.Text, AuthType.None, EventType.Send_Created_Text };

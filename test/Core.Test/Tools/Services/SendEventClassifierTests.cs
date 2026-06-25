@@ -103,11 +103,30 @@ public class SendEventClassifierTests
         var userId = Guid.NewGuid();
         var orgId = Guid.NewGuid();
         SetupOrgWithDomains(userId, orgId, "example.com");
-        _userRepository.GetByEmailAsync("Alice@Example.COM").Returns((User?)null);
+        // The accessor email is normalized before lookup, so the user query receives the lowercased form.
+        _userRepository.GetByEmailAsync("alice@example.com").Returns((User?)null);
 
         var context = await _sut.BuildAccessContextAsync(userId, "Alice@Example.COM");
 
         Assert.Equal("example.com", context[orgId].ClaimedDomain);
+    }
+
+    [Fact]
+    public async Task BuildAccessContextAsync_MixedCaseAccessorEmail_ResolvesMemberViaNormalizedLookup()
+    {
+        var userId = Guid.NewGuid();
+        var orgId = Guid.NewGuid();
+        var accessorUserId = Guid.NewGuid();
+        SetupOrgWithDomains(userId, orgId, "example.com");
+        // The User account is keyed on the normalized (trimmed + lowercased) email. Resolution must
+        // normalize the caller's value before lookup, or the member silently renders as External on
+        // case-sensitive providers.
+        SetupAccessorMemberships("alice@example.com", accessorUserId, (orgId, OrganizationUserStatusType.Confirmed));
+
+        var context = await _sut.BuildAccessContextAsync(userId, "  Alice@Example.COM ");
+
+        Assert.Equal(accessorUserId, context[orgId].AccessorUserId);
+        await _userRepository.Received(1).GetByEmailAsync("alice@example.com");
     }
 
     [Fact]

@@ -45,6 +45,8 @@ public class SendEmailOtpRequestValidator(
         // Email must be normalized here for consistency across DB vendor specific collation
         email = email.Trim().ToLowerInvariant();
 
+        // Stays case-insensitive: new Email Verified Sends store a lowercased emails list, but Sends created before
+        // write-time normalization may still hold mixed-case entries (there is no data migration).
         if (!authMethod.emails.Contains(email, StringComparer.OrdinalIgnoreCase))
         {
             return BuildErrorResult();

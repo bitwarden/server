@@ -49,6 +49,10 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
 
     public async Task SaveSendAsync(Send send)
     {
+        // Normalize the email list before persisting so every downstream consumer is correct on
+        // every DB engine. Runs before Data Protection encrypts the emails.
+        send.Emails = NormalizeEmails(send.Emails);
+
         // Make sure user can save Sends
         await _sendValidationService.ValidateUserCanSaveAsync(send.UserId, send);
 
@@ -111,6 +115,23 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         {
             await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Deleted_File);
         }
+    }
+
+    // Returns the comma-separated email list with each entry trimmed and lowercased, or the
+    // original value when there are no emails (password / no-auth Sends). Idempotent, so re-saving an
+    // already-normalized Send is a no-op.
+    private static string NormalizeEmails(string emails)
+    {
+        if (string.IsNullOrWhiteSpace(emails))
+        {
+            return emails;
+        }
+
+        var normalized = emails
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(email => email.ToLowerInvariant());
+
+        return string.Join(",", normalized);
     }
 
     private static EventType ResolveSendCreatedEventType(Send send)

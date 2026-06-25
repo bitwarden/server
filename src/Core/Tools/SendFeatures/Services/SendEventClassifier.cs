@@ -30,7 +30,12 @@ public class SendEventClassifier : ISendEventClassifier
         Guid sendOwnerUserId,
         string? accessorEmail)
     {
-        var accessorDomain = ExtractDomain(accessorEmail);
+        // Normalize the accessor email once, up front, so resolution is correct regardless of the
+        // caller. GetByEmailAsync is case-sensitive on some providers (e.g. SQLite), so a non-normalized
+        // email would silently fail to match a confirmed member and render as External.
+        var normalizedEmail = accessorEmail?.Trim().ToLowerInvariant();
+
+        var accessorDomain = ExtractDomain(normalizedEmail);
         if (accessorDomain is null)
         {
             // Anonymous / password / no-email access: the accessor is not identifiable, so every org
@@ -57,7 +62,7 @@ public class SendEventClassifier : ISendEventClassifier
         // record (email -> user -> confirmed memberships), never via OrganizationUser.Email.
         Guid? accessorUserId = null;
         var accessorMemberOrgIds = new HashSet<Guid>();
-        var accessorUser = await _userRepository.GetByEmailAsync(accessorEmail!);
+        var accessorUser = await _userRepository.GetByEmailAsync(normalizedEmail!);
         if (accessorUser is not null)
         {
             accessorUserId = accessorUser.Id;
@@ -105,20 +110,22 @@ public class SendEventClassifier : ISendEventClassifier
                 g => g.Select(d => d.DomainName).ToHashSet(StringComparer.OrdinalIgnoreCase));
     }
 
+    // Returns the domain part of an already-normalized (trimmed + lowercased) email, or null when the
+    // value is absent or malformed. BuildAccessContextAsync normalizes before calling, so this neither
+    // trims nor lowercases.
     private static string? ExtractDomain(string? email)
     {
-        var trimmed = email?.Trim();
-        if (string.IsNullOrEmpty(trimmed))
+        if (string.IsNullOrEmpty(email))
         {
             return null;
         }
 
-        var atIdx = trimmed.IndexOf('@');
-        if (atIdx < 0 || atIdx == trimmed.Length - 1)
+        var atIdx = email.IndexOf('@');
+        if (atIdx < 0 || atIdx == email.Length - 1)
         {
             return null;
         }
 
-        return trimmed[(atIdx + 1)..].ToLowerInvariant();
+        return email[(atIdx + 1)..];
     }
 }
