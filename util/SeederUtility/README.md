@@ -47,7 +47,12 @@ dotnet run -- individual --subscription premium --first-name Jane --last-name Sm
 
 # Random name — mangling auto-enabled
 dotnet run -- individual --subscription premium --vault
+
+# Self-hosted instance — writes a license file so premium status is recognized
+dotnet run -- individual --subscription premium --first-name Jane --last-name Smith --self-hosted
 ```
+
+Add `--self-hosted` when targeting a self-hosted instance — without it, premium status won't be recognized.
 
 ### `preset` - Fixture-Based Seeding
 

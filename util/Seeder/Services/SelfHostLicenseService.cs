@@ -2,6 +2,7 @@
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Business;
 
 namespace Bit.Seeder.Services;
 
@@ -9,7 +10,7 @@ internal static class SelfHostLicenseService
 {
     internal static async Task WriteLicenseAsync(ILicensingService licenseService, User user)
     {
-        var token = await licenseService.CreateUserTokenAsync(user, null!);
+        var token = await licenseService.CreateUserTokenAsync(user, new SubscriptionInfo());
         if (string.IsNullOrWhiteSpace(token))
         {
             return;
