@@ -1,4 +1,5 @@
-﻿using Bit.Commercial.Pam.Engine;
+﻿using Bit.Commercial.Pam.Api.Endpoints.Handlers;
+using Bit.Commercial.Pam.Engine;
 using Bit.Commercial.Pam.OrganizationFeatures.Commands;
 using Bit.Commercial.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Commercial.Pam.OrganizationFeatures.Queries;
@@ -11,7 +12,7 @@ namespace Bit.Commercial.Pam.Utilities;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddCommercialPamServices(this IServiceCollection services)
+    public static IServiceCollection AddCommercialPamServices(this IServiceCollection services)
     {
         services.AddSingleton<IAccessRuleValidator, AccessRuleValidator>();
         services.AddScoped<ICreateAccessRuleCommand, CreateAccessRuleCommand>();
@@ -41,5 +42,13 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IListLeaseHistoryQuery, ListLeaseHistoryQuery>();
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<ICipherLeaseGate, CipherLeaseGate>();
+
+        // Minimal API endpoint handlers. The endpoints (see PamEndpointsExtensions) resolve these from DI.
+        services.AddScoped<LeaseEndpointsHandler>();
+        services.AddScoped<AccessRequestEndpointsHandler>();
+        services.AddScoped<AccessRuleEndpointsHandler>();
+        services.AddScoped<CipherLeaseEndpointsHandler>();
+
+        return services;
     }
 }
