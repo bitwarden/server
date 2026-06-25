@@ -48,6 +48,18 @@ public static class MigrationPaths
         FromPlan: PlanType.EnterpriseMonthly2019,
         ToPlan: PlanType.EnterpriseMonthly);
 
+    public static readonly MigrationPath TeamsStarterToCurrent = new(
+        Id: MigrationPathId.TeamsStarterToCurrent,
+        Name: nameof(TeamsStarterToCurrent),
+        FromPlan: PlanType.TeamsStarter,
+        ToPlan: PlanType.TeamsMonthly);
+
+    public static readonly MigrationPath TeamsStarter2023ToCurrent = new(
+        Id: MigrationPathId.TeamsStarter2023ToCurrent,
+        Name: nameof(TeamsStarter2023ToCurrent),
+        FromPlan: PlanType.TeamsStarter2023,
+        ToPlan: PlanType.TeamsMonthly);
+
     public static IReadOnlyList<MigrationPath> All { get; } =
     [
         Enterprise2020AnnualToCurrent,
@@ -56,6 +68,8 @@ public static class MigrationPaths
         Teams2020MonthlyToCurrent,
         Enterprise2019AnnualToCurrent,
         Enterprise2019MonthlyToCurrent,
+        TeamsStarterToCurrent,
+        TeamsStarter2023ToCurrent,
     ];
 
     /// <summary>

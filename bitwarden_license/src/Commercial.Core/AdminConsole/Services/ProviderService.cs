@@ -59,8 +59,8 @@ public class ProviderService : IProviderService
     private readonly ICurrentContext _currentContext;
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IDataProtectorTokenFactory<ProviderDeleteTokenable> _providerDeleteTokenDataFactory;
-    private readonly IApplicationCacheService _applicationCacheService;
     private readonly IProviderAbilityCacheService _providerAbilityCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IProviderBillingService _providerBillingService;
     private readonly IPricingClient _pricingClient;
     private readonly IProviderClientOrganizationSignUpCommand _providerClientOrganizationSignUpCommand;
@@ -73,7 +73,8 @@ public class ProviderService : IProviderService
         IOrganizationRepository organizationRepository, GlobalSettings globalSettings,
         ICurrentContext currentContext, IStripeAdapter stripeAdapter,
         IDataProtectorTokenFactory<ProviderDeleteTokenable> providerDeleteTokenDataFactory,
-        IApplicationCacheService applicationCacheService, IProviderAbilityCacheService providerAbilityCacheService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
+        IProviderAbilityCacheService providerAbilityCacheService,
         IProviderBillingService providerBillingService, IPricingClient pricingClient,
         IProviderClientOrganizationSignUpCommand providerClientOrganizationSignUpCommand,
         IPolicyRequirementQuery policyRequirementQuery)
@@ -92,7 +93,7 @@ public class ProviderService : IProviderService
         _currentContext = currentContext;
         _stripeAdapter = stripeAdapter;
         _providerDeleteTokenDataFactory = providerDeleteTokenDataFactory;
-        _applicationCacheService = applicationCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _providerAbilityCacheService = providerAbilityCacheService;
         _providerBillingService = providerBillingService;
         _pricingClient = pricingClient;
@@ -769,7 +770,7 @@ public class ProviderService : IProviderService
             {
                 organization.Enabled = enabled;
                 await _organizationRepository.ReplaceAsync(organization);
-                await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+                await _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(organization);
             }
         }
     }

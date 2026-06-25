@@ -175,4 +175,77 @@ public class OrganizationPlanMigrationPriceMapperTests
 
         Assert.Equal(target.PasswordManager.StripeSeatPlanId, result);
     }
+
+    // PM-37512: a Packaged Teams Starter source carries its flat base price in StripePlanId
+    // (StripeSeatPlanId is null). It must map to the Scalable target's per-seat price.
+    [Fact]
+    public void MapOrNull_PackagedPmBasePrice_ReturnsTargetSeatPlan()
+    {
+        var source = MockPlans.Get(PlanType.TeamsStarter);
+        var target = MockPlans.Get(PlanType.TeamsMonthly);
+
+        var result = OrganizationPlanMigrationPriceMapper.MapOrNull(
+            source.PasswordManager.StripePlanId, source, target);
+
+        Assert.Equal(target.PasswordManager.StripeSeatPlanId, result);
+        Assert.Equal("2023-teams-org-seat-monthly", result);
+    }
+
+    [Fact]
+    public void MapOrNull_PackagedPmBasePrice2023_ReturnsTargetSeatPlan()
+    {
+        var source = MockPlans.Get(PlanType.TeamsStarter2023);
+        var target = MockPlans.Get(PlanType.TeamsMonthly);
+
+        var result = OrganizationPlanMigrationPriceMapper.MapOrNull(
+            source.PasswordManager.StripePlanId, source, target);
+
+        Assert.Equal(target.PasswordManager.StripeSeatPlanId, result);
+        Assert.Equal("2023-teams-org-seat-monthly", result);
+    }
+
+    // The Packaged->Scalable case is guarded by !IsNullOrEmpty(source.StripePlanId). A Scalable source
+    // (StripePlanId null) must not let an unknown price match the case via null == null and mis-map to
+    // the target seat plan; it must still return null.
+    [Fact]
+    public void MapOrNull_ScalableSourceUnknownPrice_DoesNotMisfireToSeatPlan()
+    {
+        var source = MockPlans.Get(PlanType.EnterpriseAnnually2020);
+        var target = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        Assert.Null(source.PasswordManager.StripePlanId);
+
+        var result = OrganizationPlanMigrationPriceMapper.MapOrNull("unmapped-price", source, target);
+
+        Assert.Null(result);
+    }
+
+    // The new base-price case must not steal the storage slot: a packaged source's storage id still
+    // maps to the target storage id.
+    [Fact]
+    public void MapOrNull_PackagedStorageStillMaps()
+    {
+        var source = MockPlans.Get(PlanType.TeamsStarter);
+        var target = MockPlans.Get(PlanType.TeamsMonthly);
+
+        var result = OrganizationPlanMigrationPriceMapper.MapOrNull(
+            source.PasswordManager.StripeStoragePlanId, source, target);
+
+        Assert.Equal(target.PasswordManager.StripeStoragePlanId, result);
+    }
+
+    // The SM service-account slot is unaffected by the new base-price case, and the price ids genuinely
+    // differ for Teams Starter 2023 (0.50 -> 1.00), so this asserts a real swap, not a pass-through.
+    [Fact]
+    public void MapOrNull_PackagedSmServiceAccount_StillMaps()
+    {
+        var source = MockPlans.Get(PlanType.TeamsStarter2023);
+        var target = MockPlans.Get(PlanType.TeamsMonthly);
+
+        var result = OrganizationPlanMigrationPriceMapper.MapOrNull(
+            source.SecretsManager.StripeServiceAccountPlanId, source, target);
+
+        Assert.Equal(target.SecretsManager.StripeServiceAccountPlanId, result);
+        Assert.NotEqual(source.SecretsManager.StripeServiceAccountPlanId, result);
+    }
 }

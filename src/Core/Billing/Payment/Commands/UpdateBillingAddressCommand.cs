@@ -166,6 +166,11 @@ public class UpdateBillingAddressCommand(
 
                             var discountConsumed = i > 0 && activeSchedule.Phases[i - 1].EndDate <= now;
 
+                            // Gate on StartDate > now, not !discountConsumed (false for the active
+                            // phase 0), so we never re-stack onto the current period. Use the fetched
+                            // customer (subscription.Customer may be a bare id here).
+                            var customerDiscount = phase.StartDate > now ? customer.Discount : null;
+
                             phases.Add(new SubscriptionSchedulePhaseOptions
                             {
                                 StartDate = phase.StartDate,
@@ -177,10 +182,8 @@ public class UpdateBillingAddressCommand(
                                 }).ToList(),
                                 Discounts = discountConsumed
                                     ? []
-                                    : phase.Discounts?.Select(d => new SubscriptionSchedulePhaseDiscountOptions
-                                    {
-                                        Coupon = d.CouponId
-                                    }).ToList(),
+                                    : customerDiscount.MergeDiscountCouponIds(
+                                        phase.Discounts?.Select(d => d.CouponId)).ToPhaseDiscountOptions(),
                                 ProrationBehavior = phase.ProrationBehavior,
                                 AutomaticTax = new SubscriptionSchedulePhaseAutomaticTaxOptions
                                 {

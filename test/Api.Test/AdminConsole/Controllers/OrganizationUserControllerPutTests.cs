@@ -3,6 +3,7 @@ using Bit.Api.AdminConsole.Authorization.Collections;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Models.Request;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -278,7 +279,7 @@ public class OrganizationUserControllerPutTests
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(orgId)
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(orgId)
             .Returns(organizationAbility);
         sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(savingUserId);
 
