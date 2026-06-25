@@ -1030,6 +1030,237 @@ public class RegisterUserCommandTests
     }
 
     // -----------------------------------------------------------------------------------------------
+    // RegisterUserViaSalesAssistedToken tests
+    // -----------------------------------------------------------------------------------------------
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaSalesAssistedToken_Succeeds(
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string salesAssistedToken, string name)
+    {
+        // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
+        var tokenable = new SalesAssistedRegistrationTokenable
+        {
+            Email = user.Email,
+            Name = name,
+            ExpirationDate = DateTime.UtcNow.AddDays(1)
+        };
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<SalesAssistedRegistrationTokenable>>()
+            .TryUnprotect(salesAssistedToken, out Arg.Any<SalesAssistedRegistrationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = tokenable;
+                return true;
+            });
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, registerFinishData)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaSalesAssistedToken(user, registerFinishData, salesAssistedToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .CreateUserAsync(Arg.Is<User>(u => u.Name == name && u.EmailVerified == true && u.ApiKey != null), registerFinishData);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendWelcomeEmailAsync(user);
+    }
+
+    // Keystone regression test: this path MUST bypass the open-registration check. When
+    // DisableUserRegistration=true, ValidateOpenRegistrationAllowed() will throw
+    // unconditionally. A passing result here is the executable proof that the call is absent.
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaSalesAssistedToken_WithDisabledUserRegistration_Succeeds(
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string salesAssistedToken, string name)
+    {
+        // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IGlobalSettings>()
+            .DisableUserRegistration = true;
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
+        var tokenable = new SalesAssistedRegistrationTokenable
+        {
+            Email = user.Email,
+            Name = name,
+            ExpirationDate = DateTime.UtcNow.AddDays(1)
+        };
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<SalesAssistedRegistrationTokenable>>()
+            .TryUnprotect(salesAssistedToken, out Arg.Any<SalesAssistedRegistrationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = tokenable;
+                return true;
+            });
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, registerFinishData)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaSalesAssistedToken(user, registerFinishData, salesAssistedToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .CreateUserAsync(Arg.Is<User>(u => u.EmailVerified == true && u.ApiKey != null), registerFinishData);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaSalesAssistedToken_EmailMismatch_ThrowsBadRequestException(
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string salesAssistedToken, string name)
+    {
+        // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
+        var tokenable = new SalesAssistedRegistrationTokenable
+        {
+            Email = "different@example.com",
+            Name = name,
+            ExpirationDate = DateTime.UtcNow.AddDays(1)
+        };
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<SalesAssistedRegistrationTokenable>>()
+            .TryUnprotect(salesAssistedToken, out Arg.Any<SalesAssistedRegistrationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = tokenable;
+                return true;
+            });
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaSalesAssistedToken(user, registerFinishData, salesAssistedToken));
+        Assert.Equal("Invalid or expired sales-assisted registration token.", exception.Message);
+
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceive()
+            .CreateUserAsync(Arg.Any<User>(), Arg.Any<RegisterFinishData>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaSalesAssistedToken_ExpiredToken_ThrowsBadRequestException(
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string salesAssistedToken, string name)
+    {
+        // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
+        var tokenable = new SalesAssistedRegistrationTokenable
+        {
+            Email = user.Email,
+            Name = name,
+            ExpirationDate = DateTime.UtcNow.AddDays(-1)
+        };
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<SalesAssistedRegistrationTokenable>>()
+            .TryUnprotect(salesAssistedToken, out Arg.Any<SalesAssistedRegistrationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = tokenable;
+                return true;
+            });
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaSalesAssistedToken(user, registerFinishData, salesAssistedToken));
+        Assert.Equal("Invalid or expired sales-assisted registration token.", exception.Message);
+
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceive()
+            .CreateUserAsync(Arg.Any<User>(), Arg.Any<RegisterFinishData>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaSalesAssistedToken_MalformedToken_ThrowsBadRequestException(
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string salesAssistedToken)
+    {
+        // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
+        // TryUnprotect fails (returns false) for a malformed/empty token.
+        sutProvider.GetDependency<IDataProtectorTokenFactory<SalesAssistedRegistrationTokenable>>()
+            .TryUnprotect(salesAssistedToken, out Arg.Any<SalesAssistedRegistrationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = null;
+                return false;
+            });
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaSalesAssistedToken(user, registerFinishData, salesAssistedToken));
+        Assert.Equal("Invalid or expired sales-assisted registration token.", exception.Message);
+
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceive()
+            .CreateUserAsync(Arg.Any<User>(), Arg.Any<RegisterFinishData>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaSalesAssistedToken_BlockedDomain_ThrowsBadRequestException(
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string salesAssistedToken)
+    {
+        // Arrange
+        user.Email = "user@blocked-domain.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com")
+            .Returns(true);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaSalesAssistedToken(user, registerFinishData, salesAssistedToken));
+        Assert.Equal("This email address is claimed by an organization using Bitwarden.", exception.Message);
+
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceive()
+            .CreateUserAsync(Arg.Any<User>(), Arg.Any<RegisterFinishData>());
+    }
+
+    // -----------------------------------------------------------------------------------------------
     // Domain blocking tests (BlockClaimedDomainAccountCreation policy)
     // -----------------------------------------------------------------------------------------------
 
