@@ -4182,6 +4182,13 @@ public class SubscriptionUpdatedHandlerTests
             {
                 Data =
                 [
+                    // SM seat line shares the subscription; the fix must pick the PM seat line by price id, not this one.
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsMonthly.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsMonthly.SecretsManager.StripeSeatPlanId },
+                        Quantity = 99
+                    },
                     new SubscriptionItem
                     {
                         Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
