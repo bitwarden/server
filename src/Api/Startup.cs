@@ -37,7 +37,6 @@ using Bit.Core.Enums;
 
 
 #if !OSS
-using Bit.Commercial.Pam.Api;
 using Bit.Commercial.Pam.Api.Endpoints;
 using Bit.Commercial.Core.SecretsManager;
 using Bit.Commercial.Core.Utilities;
@@ -208,7 +207,6 @@ public class Startup
         services.AddCommercialCoreServices();
         services.AddCommercialSecretsManagerServices();
         services.AddCommercialPamServices();
-        services.AddPamApiServices();
         services.AddSecretsManagerEfRepositories();
         Jobs.JobsHostedService.AddCommercialSecretsManagerJobServices(services);
 #endif
