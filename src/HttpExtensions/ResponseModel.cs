@@ -9,10 +9,7 @@ public abstract class ResponseModel
 {
     public ResponseModel(string obj)
     {
-        if (string.IsNullOrWhiteSpace(obj))
-        {
-            throw new ArgumentNullException(nameof(obj));
-        }
+        ArgumentException.ThrowIfNullOrWhiteSpace(obj);
 
         Object = obj;
     }
