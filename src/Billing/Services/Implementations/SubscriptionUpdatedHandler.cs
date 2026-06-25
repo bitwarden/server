@@ -646,6 +646,15 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             }
 
             organization.ChangePlan(targetPlan);
+
+            // Packaged sources (e.g. Teams Starter) store a flat bundle cap in Seats; reconcile to the billed per-seat quantity.
+            if (sourcePlan.HasNonSeatBasedPasswordManagerPlan())
+            {
+                var billedSeatQuantity = subscription.Items
+                    .First(item => item.Price?.Id == targetPriceId).Quantity;
+                organization.Seats = (int)Math.Max(1, billedSeatQuantity);
+            }
+
             await _organizationRepository.ReplaceAsync(organization);
 
             var sourceProvidedServiceAccounts = sourcePlan.SecretsManager?.BaseServiceAccount ?? 0;
