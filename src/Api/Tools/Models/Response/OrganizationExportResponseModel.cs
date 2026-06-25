@@ -2,7 +2,6 @@
 #nullable disable
 
 using Bit.Api.AdminConsole.Models.Response;
-using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;

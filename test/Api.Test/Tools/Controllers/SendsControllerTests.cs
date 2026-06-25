@@ -2,7 +2,6 @@
 using System.Text;
 using System.Text.Json;
 using AutoFixture.Xunit2;
-using Bit.Api.Models.Response;
 using Bit.Api.Tools.Controllers;
 using Bit.Api.Tools.Models;
 using Bit.Api.Tools.Models.Request;
@@ -12,6 +11,7 @@ using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Api;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Core.Tools.Entities;

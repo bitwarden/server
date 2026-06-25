@@ -2,9 +2,9 @@
 #nullable disable
 
 using Bit.Api.Dirt.Models.Response;
-using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.AuthorizationRequirements;

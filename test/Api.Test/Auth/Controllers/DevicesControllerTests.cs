@@ -1,11 +1,11 @@
 ﻿using Bit.Api.Controllers;
-using Bit.Api.Models.Response;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.UserFeatures.DeviceTrust;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
