@@ -24,7 +24,6 @@ public class EventService : IEventService
     private readonly IEventWriteService _eventWriteService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IProviderUserRepository _providerUserRepository;
-    private readonly IApplicationCacheService _applicationCacheService;
     private readonly IProviderAbilityCacheService _providerAbilityCacheService;
     private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly ICurrentContext _currentContext;
@@ -33,7 +32,6 @@ public class EventService : IEventService
         IEventWriteService eventWriteService,
         IOrganizationUserRepository organizationUserRepository,
         IProviderUserRepository providerUserRepository,
-        IApplicationCacheService applicationCacheService,
         IOrganizationAbilityCacheService organizationAbilityCacheService,
         IProviderAbilityCacheService providerAbilityCacheService,
         ICurrentContext currentContext)
@@ -41,7 +39,6 @@ public class EventService : IEventService
         _eventWriteService = eventWriteService;
         _organizationUserRepository = organizationUserRepository;
         _providerUserRepository = providerUserRepository;
-        _applicationCacheService = applicationCacheService;
         _providerAbilityCacheService = providerAbilityCacheService;
         _organizationAbilityCacheService = organizationAbilityCacheService;
         _currentContext = currentContext;
@@ -726,7 +723,7 @@ public class EventService : IEventService
         };
 
         var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, sendOwnerUserId);
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync(orgs.Select(o => o.Id));
+        var orgAbilities = await _organizationAbilityCacheService.GetOrganizationAbilitiesAsync(orgs.Select(o => o.Id));
         events.AddRange(orgs.Where(o => CanUseEvents(orgAbilities, o.Id))
             .Select(o =>
             {

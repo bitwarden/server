@@ -413,7 +413,7 @@ public class EventServiceTests
     {
         var type = EventType.Send_Accessed_Text;
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>
             {
@@ -466,7 +466,7 @@ public class EventServiceTests
     {
         var type = EventType.Send_Accessed_File;
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>
             {
@@ -502,7 +502,7 @@ public class EventServiceTests
         // (Member column shows the owner), and the Send id is still recorded.
         var type = EventType.Send_Created_Text_WithEmailVerification;
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>
             {
@@ -535,7 +535,7 @@ public class EventServiceTests
     {
         // The provider's event log must not credit the owner for a Send access (the owner did not
         // access it). With access context present, the provider row is External (no attribution).
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>());
         sutProvider.GetDependency<IProviderAbilityCacheService>()
@@ -568,7 +568,7 @@ public class EventServiceTests
         Guid ownerUserId, Guid sendId, Guid providerId, SutProvider<EventService> sutProvider)
     {
         // Create/edit/delete (no context): the owner did perform the action, so the provider row keeps them.
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>());
         sutProvider.GetDependency<IProviderAbilityCacheService>()
