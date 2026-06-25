@@ -259,6 +259,14 @@ public static class ServiceCollectionExtensions
                 TwoFactorAuthenticatorUserVerificationTokenable.DataProtectorPurpose,
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable>>>()));
+
+        services.AddSingleton<ISalesAssistedRegistrationTokenableFactory, SalesAssistedRegistrationTokenableFactory>();
+        services.AddSingleton<IDataProtectorTokenFactory<SalesAssistedRegistrationTokenable>>(
+            serviceProvider => new DataProtectorTokenFactory<SalesAssistedRegistrationTokenable>(
+                SalesAssistedRegistrationTokenable.ClearTextPrefix,
+                SalesAssistedRegistrationTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<SalesAssistedRegistrationTokenable>>>()));
     }
 
     public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
