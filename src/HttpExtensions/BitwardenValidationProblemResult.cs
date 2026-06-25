@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 
-namespace Microsoft.AspNetCore.Http.HttpResults;
+namespace Bit.HttpExtensions;
 
 /// <summary>
 /// A Bitwarden-flavored RFC 7807 validation problem result. Wraps an inner
