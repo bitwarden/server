@@ -24,8 +24,6 @@ public class SalesAssistedTrialInvitationEmailView : BaseMailView
     /// </summary>
     public required string Email { get; set; }
 
-    public required bool IsExistingUser { get; set; }
-
     public required ProductTierType ProductTier { get; set; }
 
     /// <summary>
@@ -41,12 +39,11 @@ public class SalesAssistedTrialInvitationEmailView : BaseMailView
     public required string SenderEmail { get; set; }
 
     /// <summary>
-    /// The destination URL for the invitation CTA. Mirrors the three-branch routing in
+    /// The destination URL for the invitation CTA. Mirrors the two-branch new-user routing in
     /// <see cref="Bit.Core.Billing.Models.Mail.TrialInitiationVerifyEmail"/>:
     /// <list type="bullet">
-    /// <item>existing user → <c>create-organization</c>, carrying no <c>salesAssistedToken</c>;</item>
-    /// <item>new user with Password Manager → <c>trial-initiation</c>, carrying the token;</item>
-    /// <item>new user with Secrets Manager only → <c>secrets-manager-trial-initiation</c>, carrying the token.</item>
+    /// <item>PM trial → <c>trial-initiation</c>;</item>
+    /// <item>SM-only trial → <c>secrets-manager-trial-initiation</c>.</item>
     /// </list>
     /// Unlike the legacy <c>HandlebarsMailService</c> flow, the IMailer pattern has no service layer to
     /// URL-encode in, so <see cref="Token"/> and <see cref="Email"/> are encoded here. Failing to encode
@@ -59,15 +56,9 @@ public class SalesAssistedTrialInvitationEmailView : BaseMailView
             var url = $"{_globalSettings.BaseServiceUri.VaultWithHash}/{Route}" +
                       $"?productTier={(int)ProductTier}" +
                       $"&product={string.Join(",", Products.Select(p => (int)p))}" +
-                      $"&trialLength={TrialLength}";
-
-            // The salesAssistedToken query-param name is a cross-team contract with PM-38389's
-            // reader. It must match byte-for-byte. The existing-user branch carries no token.
-            if (!IsExistingUser)
-            {
-                url += $"&salesAssistedToken={WebUtility.UrlEncode(Token)}" +
-                       $"&email={WebUtility.UrlEncode(Email)}";
-            }
+                      $"&trialLength={TrialLength}" +
+                      $"&salesAssistedToken={WebUtility.UrlEncode(Token)}" +
+                      $"&email={WebUtility.UrlEncode(Email)}";
 
             if (PaymentOptional)
             {
@@ -80,24 +71,9 @@ public class SalesAssistedTrialInvitationEmailView : BaseMailView
         }
     }
 
-    /// <summary>
-    /// Currently we only support one product type at a time, despite Products being a collection.
-    /// If we receive both PasswordManager and SecretsManager, we send the user to the PM trial route.
-    /// </summary>
-    private string Route
-    {
-        get
-        {
-            if (IsExistingUser)
-            {
-                return "create-organization";
-            }
-
-            return Products.Any(p => p == ProductType.PasswordManager)
-                ? "trial-initiation"
-                : "secrets-manager-trial-initiation";
-        }
-    }
+    private string Route => Products.Any(p => p == ProductType.PasswordManager)
+        ? "trial-initiation"
+        : "secrets-manager-trial-initiation";
 }
 
 public class SalesAssistedTrialInvitationEmail : BaseMail<SalesAssistedTrialInvitationEmailView>

@@ -23,7 +23,11 @@
       </div>
       <div class="content">
         <h1>You're invited to try Bitwarden</h1>
+        {{#if TrialLength}}
         <p>You've been invited to start a {{TrialLength}}-day trial of Bitwarden {{ProductTier}}.</p>
+        {{else}}
+        <p>You've been invited to start a Bitwarden {{ProductTier}} plan.</p>
+        {{/if}}
         <p>
           <a class="button" href="{{{Url}}}">Get started</a>
         </p>
