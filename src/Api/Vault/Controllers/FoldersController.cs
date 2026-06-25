@@ -5,12 +5,12 @@ using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Api;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Commands.Interfaces;
 using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
-using Bit.SharedWeb.Models.Response;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

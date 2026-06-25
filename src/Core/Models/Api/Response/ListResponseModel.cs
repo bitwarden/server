@@ -1,9 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using Bit.Core.Models.Api;
-
-namespace Bit.SharedWeb.Models.Response;
+namespace Bit.Core.Models.Api;
 
 /// <summary>
 /// A paginated list response wrapper.

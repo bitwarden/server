@@ -10,9 +10,9 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.SharedWeb.Models.Response;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

@@ -9,9 +9,9 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimed
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.SharedWeb.Models.Response;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
