@@ -1,7 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using Bit.HttpExtensions;
+using Bit.Api.Models.Response;
 
 namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 

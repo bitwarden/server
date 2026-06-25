@@ -1,11 +1,11 @@
 ﻿#nullable enable
+using Bit.Api.Models.Response;
 using Bit.Api.NotificationCenter.Models.Request;
 using Bit.Api.NotificationCenter.Models.Response;
 using Bit.Core.Models.Data;
 using Bit.Core.NotificationCenter.Commands.Interfaces;
 using Bit.Core.NotificationCenter.Models.Filter;
 using Bit.Core.NotificationCenter.Queries.Interfaces;
-using Bit.HttpExtensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

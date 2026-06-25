@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
+using Bit.Api.Models.Response;
 using Bit.Api.NotificationCenter.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
@@ -11,7 +12,6 @@ using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.NotificationCenter.Enums;
 using Bit.Core.NotificationCenter.Repositories;
 using Bit.Core.Repositories;
-using Bit.HttpExtensions;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.NotificationCenter.Controllers;

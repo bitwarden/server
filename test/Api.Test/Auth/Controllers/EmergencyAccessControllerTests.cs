@@ -2,6 +2,7 @@
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Response;
+using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
@@ -13,7 +14,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
-using Bit.HttpExtensions;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
