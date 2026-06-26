@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Bit.Commercial.Pam.Api.Endpoints.Handlers;
 using Bit.Commercial.Pam.Api.Models.Request;
 using Bit.Commercial.Pam.Api.Models.Response;

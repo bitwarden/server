@@ -10,7 +10,6 @@ using Bit.Core.Vault.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Repositories;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Commercial.Pam.OrganizationFeatures.Commands;
 
