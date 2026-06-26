@@ -1,4 +1,4 @@
-namespace Bit.Core.Billing.Organizations.PlanMigration.Enums;
+﻿namespace Bit.Core.Billing.Organizations.PlanMigration.Enums;
 
 /// <summary>
 /// Determines how a <see cref="ValueObjects.MigrationPath"/> resolves the Phase 2 seat quantity.

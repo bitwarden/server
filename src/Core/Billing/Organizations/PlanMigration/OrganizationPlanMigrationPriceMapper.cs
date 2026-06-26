@@ -1,4 +1,4 @@
-using Plan = Bit.Core.Models.StaticStore.Plan;
+﻿using Plan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Core.Billing.Organizations.PlanMigration;
 
