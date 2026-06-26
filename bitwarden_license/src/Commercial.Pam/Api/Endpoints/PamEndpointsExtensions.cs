@@ -1,6 +1,7 @@
 ﻿using Bit.Commercial.Pam.Api.Endpoints.Filters;
 using Bit.Core;
 using Bit.Core.Auth.Identity;
+using Bit.Core.Models.Api;
 
 namespace Bit.Commercial.Pam.Api.Endpoints;
 
@@ -32,6 +33,13 @@ public static class PamEndpointsExtensions
         group.RequireFeature(FeatureFlagKeys.Pam);
         group.AddEndpointFilter<PamValidationEndpointFilter>();
         group.WithGroupName("internal");
+
+        // Every PAM endpoint funnels thrown exceptions through PamExceptionHandlerEndpointFilter, which renders
+        // them as ErrorResponseModel. Produces<T> is only available on RouteHandlerBuilder, so document the common
+        // cases once for the whole group by adding the ApiExplorer metadata directly.
+        group.WithMetadata(
+            new ProducesResponseTypeMetadata(StatusCodes.Status400BadRequest, typeof(ErrorResponseModel), ["application/json"]),
+            new ProducesResponseTypeMetadata(StatusCodes.Status404NotFound, typeof(ErrorResponseModel), ["application/json"]));
         return group;
     }
 

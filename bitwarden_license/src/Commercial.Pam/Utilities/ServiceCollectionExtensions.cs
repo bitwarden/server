@@ -1,10 +1,12 @@
-﻿using Bit.Commercial.Pam.Api.Endpoints.Handlers;
+﻿using Bit.Commercial.Pam.Api.Endpoints;
+using Bit.Commercial.Pam.Api.Endpoints.Handlers;
 using Bit.Commercial.Pam.Engine;
 using Bit.Commercial.Pam.OrganizationFeatures.Commands;
 using Bit.Commercial.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Commercial.Pam.OrganizationFeatures.Queries;
 using Bit.Commercial.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Commercial.Pam.Services;
+using Bit.HttpExtensions;
 using Bit.Pam.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -49,6 +51,17 @@ public static class ServiceCollectionExtensions
         services.AddScoped<AccessRuleEndpointsHandler>();
         services.AddScoped<CipherLeaseEndpointsHandler>();
 
+        services.AddPamOpenApiEndpointDataSource();
+
         return services;
     }
+
+    /// <summary>
+    /// Registers the PAM Minimal API endpoints (see <c>MapPamEndpoints</c>) so the offline OpenAPI generator
+    /// (<c>dotnet swagger tofile</c>) can discover them — it never runs the <c>Configure</c> pipeline where the
+    /// endpoints are normally mapped (see <c>MapPamEndpoints</c> in <c>Startup.Configure</c>). The discovery and
+    /// swagger-only gating live in <see cref="EndpointDataSourceServiceCollectionExtensions.AddOpenApiEndpointDataSource"/>.
+    /// </summary>
+    private static IServiceCollection AddPamOpenApiEndpointDataSource(this IServiceCollection services)
+        => services.AddOpenApiEndpointDataSource(endpoints => endpoints.MapPamEndpoints());
 }

@@ -12,6 +12,8 @@ internal static class LeaseEndpoints
 {
     public static RouteGroupBuilder MapLeaseEndpoints(this RouteGroupBuilder group)
     {
+        group.WithTags("Leases");
+
         group.MapGet("active", (LeaseEndpointsHandler handler, ClaimsPrincipal user) => handler.GetActive(user))
             .WithName("Pam_Leases_GetActive");
 

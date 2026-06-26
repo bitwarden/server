@@ -12,6 +12,8 @@ internal static class AccessRequestEndpoints
 {
     public static RouteGroupBuilder MapAccessRequestEndpoints(this RouteGroupBuilder group)
     {
+        group.WithTags("AccessRequests");
+
         group.MapGet("inbox", (AccessRequestEndpointsHandler handler, ClaimsPrincipal user) => handler.GetInbox(user))
             .WithName("Pam_AccessRequests_GetInbox");
 
