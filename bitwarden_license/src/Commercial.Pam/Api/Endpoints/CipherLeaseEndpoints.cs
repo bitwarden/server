@@ -14,6 +14,8 @@ internal static class CipherLeaseEndpoints
 {
     public static RouteGroupBuilder MapCipherLeaseEndpoints(this RouteGroupBuilder group)
     {
+        group.WithTags("CipherLease");
+
         group.MapGet("pre-check", (Guid id, CipherLeaseEndpointsHandler handler, ClaimsPrincipal user) => handler.PreCheck(user, id))
             .WithName("Pam_CipherLease_PreCheck");
 

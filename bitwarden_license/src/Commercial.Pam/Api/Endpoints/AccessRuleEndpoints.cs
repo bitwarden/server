@@ -11,6 +11,8 @@ internal static class AccessRuleEndpoints
 {
     public static RouteGroupBuilder MapAccessRuleEndpoints(this RouteGroupBuilder group)
     {
+        group.WithTags("AccessRules");
+
         group.MapGet("", (Guid orgId, AccessRuleEndpointsHandler handler) => handler.GetAll(orgId))
             .WithName("Pam_AccessRules_GetAll");
 
