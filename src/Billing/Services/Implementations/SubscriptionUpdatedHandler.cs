@@ -20,7 +20,6 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Stripe;
-using Stripe.TestHelpers;
 using static Bit.Core.Billing.Constants.StripeConstants;
 using Event = Stripe.Event;
 
@@ -323,10 +322,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     {
         await _priceIncreaseScheduler.Release(subscription.CustomerId, subscription.Id);
 
-        if (subscription.TestClock != null)
-        {
-            await WaitForTestClockToAdvanceAsync(subscription.TestClock);
-        }
+        await _stripeAdapter.WaitForTestClockToAdvanceAsync(subscription.TestClock);
 
         var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
 
@@ -440,19 +436,6 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         if (subscriptionHasSecretsManagerTrial)
         {
             await _stripeAdapter.DeleteSubscriptionDiscountAsync(subscription.Id);
-        }
-    }
-
-    private async Task WaitForTestClockToAdvanceAsync(TestClock testClock)
-    {
-        while (testClock.Status != "ready")
-        {
-            await Task.Delay(TimeSpan.FromSeconds(2));
-            testClock = await _stripeAdapter.GetTestClockAsync(testClock.Id);
-            if (testClock.Status == "internal_failure")
-            {
-                throw new Exception("Stripe Test Clock encountered an internal failure");
-            }
         }
     }
 
@@ -675,6 +658,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 {
                     [MetadataKeys.MigrationGraceServiceAccounts] = grace.ToString(CultureInfo.InvariantCulture)
                 };
+
+                await _stripeAdapter.WaitForTestClockToAdvanceAsync(subscription.TestClock);
 
                 try
                 {
