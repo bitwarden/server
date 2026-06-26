@@ -4,6 +4,7 @@ using AutoFixture;
 using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
@@ -857,7 +858,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICollectionCipherRepository>()
             .GetManyByUserIdAsync(user.Id).Returns(collectionCiphers);
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility> { { orgId, new OrganizationAbility { Id = orgId } } });
 

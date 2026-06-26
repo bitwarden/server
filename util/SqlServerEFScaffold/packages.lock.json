@@ -1630,6 +1630,7 @@
           "Commercial.Infrastructure.EntityFramework": "[2026.6.1, )",
           "Commercial.Pam": "[2026.6.1, )",
           "Core": "[2026.6.1, )",
+          "HttpExtensions": "[2026.6.1, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.15.3, )",
           "OpenTelemetry.Extensions.Hosting": "[1.15.3, )",
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.15.0, )",
@@ -1661,8 +1662,8 @@
         "type": "Project",
         "dependencies": {
           "Core": "[2026.6.1, )",
-          "Pam.Domain": "[2026.6.1, )",
-          "SharedWeb": "[2026.6.1, )"
+          "HttpExtensions": "[2026.6.1, )",
+          "Pam.Domain": "[2026.6.1, )"
         }
       },
       "core": {
@@ -1721,6 +1722,9 @@
         }
       },
       "data": {
+        "type": "Project"
+      },
+      "httpextensions": {
         "type": "Project"
       },
       "infrastructure.dapper": {

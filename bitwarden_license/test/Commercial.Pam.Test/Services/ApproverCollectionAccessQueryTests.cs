@@ -1,11 +1,11 @@
 ﻿using Bit.Commercial.Pam.Services;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -43,7 +43,7 @@ public class ApproverCollectionAccessQueryTests
         {
             new() { Id = orgId, Type = OrganizationUserType.Owner },
         });
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(orgId)
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(orgId)
             .Returns(new OrganizationAbility { Id = orgId, AllowAdminAccessToAllCollectionItems = true });
         sutProvider.GetDependency<ICollectionRepository>().GetManyByOrganizationIdAsync(orgId)
             .Returns(new List<Collection> { new() { Id = orgCollectionId, OrganizationId = orgId } });
@@ -63,7 +63,7 @@ public class ApproverCollectionAccessQueryTests
         {
             new() { Id = orgId, Type = OrganizationUserType.Owner },
         });
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(orgId)
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(orgId)
             .Returns(new OrganizationAbility { Id = orgId, AllowAdminAccessToAllCollectionItems = false });
 
         var result = await sutProvider.Sut.GetManageableCollectionIdsAsync(userId);

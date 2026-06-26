@@ -1,13 +1,13 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;

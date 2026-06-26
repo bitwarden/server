@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-using Bit.Core.Models.Api;
+using Bit.HttpExtensions;
 using Bit.Pam.Models;
 
 namespace Bit.Commercial.Pam.Api.Models.Response;

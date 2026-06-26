@@ -3,8 +3,8 @@ using Bit.Commercial.Pam.Api.Models.Request;
 using Bit.Commercial.Pam.Api.Models.Response;
 using Bit.Commercial.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Commercial.Pam.OrganizationFeatures.Queries.Interfaces;
-using Bit.Core.Models.Api;
 using Bit.Core.Services;
+using Bit.HttpExtensions;
 
 namespace Bit.Commercial.Pam.Api.Endpoints.Handlers;
 

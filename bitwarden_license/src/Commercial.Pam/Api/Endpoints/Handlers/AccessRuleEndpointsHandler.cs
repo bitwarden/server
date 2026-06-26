@@ -3,7 +3,7 @@ using Bit.Commercial.Pam.Api.Models.Response;
 using Bit.Commercial.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api;
+using Bit.HttpExtensions;
 using Bit.Pam.Repositories;
 
 namespace Bit.Commercial.Pam.Api.Endpoints.Handlers;

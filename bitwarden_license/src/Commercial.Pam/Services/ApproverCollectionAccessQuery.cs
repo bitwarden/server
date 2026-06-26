@@ -1,7 +1,7 @@
-﻿using Bit.Core.Context;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 
 namespace Bit.Commercial.Pam.Services;
 
@@ -9,16 +9,16 @@ public class ApproverCollectionAccessQuery : IApproverCollectionAccessQuery
 {
     private readonly ICollectionRepository _collectionRepository;
     private readonly ICurrentContext _currentContext;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
 
     public ApproverCollectionAccessQuery(
         ICollectionRepository collectionRepository,
         ICurrentContext currentContext,
-        IApplicationCacheService applicationCacheService)
+        IOrganizationAbilityCacheService organizationAbilityCacheService)
     {
         _collectionRepository = collectionRepository;
         _currentContext = currentContext;
-        _applicationCacheService = applicationCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
     }
 
     public async Task<HashSet<Guid>> GetManageableCollectionIdsAsync(Guid userId)
@@ -35,7 +35,7 @@ public class ApproverCollectionAccessQuery : IApproverCollectionAccessQuery
             var canManageAll = org.Permissions.EditAnyCollection;
             if (!canManageAll && org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin)
             {
-                var ability = await _applicationCacheService.GetOrganizationAbilityAsync(org.Id);
+                var ability = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(org.Id);
                 canManageAll = ability?.AllowAdminAccessToAllCollectionItems ?? false;
             }
 

@@ -1155,8 +1155,8 @@
         "type": "Project",
         "dependencies": {
           "Core": "[2026.6.1, )",
-          "Pam.Domain": "[2026.6.1, )",
-          "SharedWeb": "[2026.6.1, )"
+          "HttpExtensions": "[2026.6.1, )",
+          "Pam.Domain": "[2026.6.1, )"
         }
       },
       "core": {
@@ -1215,6 +1215,9 @@
         }
       },
       "data": {
+        "type": "Project"
+      },
+      "httpextensions": {
         "type": "Project"
       },
       "infrastructure.dapper": {

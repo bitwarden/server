@@ -2,6 +2,7 @@
 using Bit.Api.Pam.Controllers;
 using Bit.Api.Vault.Models.Response;
 using Bit.Commercial.Pam.OrganizationFeatures.Queries.Interfaces;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
@@ -62,7 +63,7 @@ public class CipherLeaseControllerTests
         sutProvider.GetDependency<ICollectionCipherRepository>()
             .GetManyByUserIdCipherIdAsync(user.Id, id)
             .Returns(new List<CollectionCipher>());
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
             .Returns(new OrganizationAbility { Id = organizationId });
 

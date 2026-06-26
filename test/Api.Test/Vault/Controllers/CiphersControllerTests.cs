@@ -6,6 +6,7 @@ using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models;
 using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -146,7 +147,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsForAnyArgs(cipherDetails);
 
         sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value).Returns(new OrganizationAbility { Id = cipherDetails.OrganizationId.Value });
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value).Returns(new OrganizationAbility { Id = cipherDetails.OrganizationId.Value });
         var cipherService = sutProvider.GetDependency<ICipherService>();
 
         await sutProvider.Sut.PutCollections_vNext(id, model);
@@ -162,7 +163,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsForAnyArgs(cipherDetails);
 
         sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value).Returns(new OrganizationAbility { Id = cipherDetails.OrganizationId.Value });
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value).Returns(new OrganizationAbility { Id = cipherDetails.OrganizationId.Value });
 
         var result = await sutProvider.Sut.PutCollections_vNext(id, model);
 
@@ -242,7 +243,7 @@ public class CiphersControllerTests
 
         sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organization.Id).Returns(new List<Cipher> { cipherOrgDetails });
 
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(new OrganizationAbility
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(new OrganizationAbility
         {
             Id = organization.Id,
             AllowAdminAccessToAllCollectionItems = allowAdminsAccessToAllItems
@@ -284,7 +285,7 @@ public class CiphersControllerTests
             {
                 new CipherDetails(cipherOrgDetails) { Edit = true, Manage = true }
             });
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility
             {
@@ -322,7 +323,7 @@ public class CiphersControllerTests
             {
                 new CipherDetails(cipherOrgDetails) { Edit = true, Manage = false }
             });
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility
             {
@@ -355,7 +356,7 @@ public class CiphersControllerTests
             {
                 new() { Id = cipherOrgDetails.Id, OrganizationId = cipherOrgDetails.OrganizationId }
             });
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility
             {
@@ -387,7 +388,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherOrgDetails.Id).Returns(cipherOrgDetails);
         sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organization.Id).Returns(new List<Cipher> { cipherOrgDetails });
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(new OrganizationAbility
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(new OrganizationAbility
         {
             Id = organization.Id,
             AllowAdminAccessToAllCollectionItems = true
@@ -484,7 +485,7 @@ public class CiphersControllerTests
                 Manage = true
             }).ToList());
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility
             {
@@ -527,7 +528,7 @@ public class CiphersControllerTests
                 Manage = false
             }).ToList());
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility
             {
@@ -555,7 +556,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyUnassignedOrganizationDetailsByOrganizationIdAsync(organization.Id)
             .Returns(ciphers.Select(c => new CipherOrganizationDetails { Id = c.Id, OrganizationId = organization.Id }).ToList());
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility
             {
@@ -587,7 +588,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organization.Id).Returns(ciphers);
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(new OrganizationAbility
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(new OrganizationAbility
         {
             Id = organization.Id,
             AllowAdminAccessToAllCollectionItems = true
@@ -690,7 +691,7 @@ public class CiphersControllerTests
             {
                 cipherDetails
             });
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility
             {
@@ -727,7 +728,7 @@ public class CiphersControllerTests
             {
                 cipherDetails
             });
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility
             {
@@ -760,7 +761,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyUnassignedOrganizationDetailsByOrganizationIdAsync(organization.Id)
             .Returns(new List<CipherOrganizationDetails> { new() { Id = cipherOrgDetails.Id, OrganizationId = organization.Id } });
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility
             {
@@ -789,7 +790,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherOrgDetails.Id).Returns(cipherOrgDetails);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organization.Id).Returns(new List<Cipher> { cipherOrgDetails });
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(new OrganizationAbility
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(new OrganizationAbility
         {
             Id = organization.Id,
             AllowAdminAccessToAllCollectionItems = true
@@ -845,7 +846,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(userId)
             .Returns(new List<CipherDetails> { cipherDetails });
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility
             {
@@ -879,7 +880,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(userId)
             .Returns(new List<CipherDetails> { cipherDetails });
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility
             {
@@ -951,7 +952,7 @@ public class CiphersControllerTests
                 Manage = true
             }).ToList());
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility
             {
@@ -994,7 +995,7 @@ public class CiphersControllerTests
                 Manage = false
             }).ToList());
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility
             {
@@ -1022,7 +1023,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyUnassignedOrganizationDetailsByOrganizationIdAsync(organization.Id)
             .Returns(ciphers.Select(c => new CipherOrganizationDetails { Id = c.Id, OrganizationId = organization.Id }).ToList());
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility
             {
@@ -1061,7 +1062,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(new User { Id = userId });
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organization.Id).Returns(ciphers);
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(new OrganizationAbility
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(new OrganizationAbility
         {
             Id = organization.Id,
             AllowAdminAccessToAllCollectionItems = true
@@ -1170,7 +1171,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(userId)
             .Returns(new List<CipherDetails> { cipherDetails });
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility
             {
@@ -1208,7 +1209,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(userId)
             .Returns(new List<CipherDetails> { cipherDetails });
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility
             {
@@ -1239,7 +1240,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyUnassignedOrganizationDetailsByOrganizationIdAsync(organization.Id)
             .Returns(new List<CipherOrganizationDetails> { new() { Id = cipherOrgDetails.Id, OrganizationId = organization.Id } });
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility
             {
@@ -1270,7 +1271,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherOrgDetails.Id).Returns(cipherOrgDetails);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organization.Id).Returns(new List<Cipher> { cipherOrgDetails });
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(new OrganizationAbility
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(new OrganizationAbility
         {
             Id = organization.Id,
             AllowAdminAccessToAllCollectionItems = true
@@ -1332,7 +1333,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(userId)
             .Returns(new List<CipherDetails> { cipherDetails });
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility
             {
@@ -1369,7 +1370,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(userId)
             .Returns(new List<CipherDetails> { cipherDetails });
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility
             {
@@ -1439,7 +1440,7 @@ public class CiphersControllerTests
                 Manage = true
             }).ToList());
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility
             {
@@ -1498,7 +1499,7 @@ public class CiphersControllerTests
                 Type = CipherType.Login,
                 Data = JsonSerializer.Serialize(new CipherLoginData())
             }).ToList());
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility
             {
@@ -1540,7 +1541,7 @@ public class CiphersControllerTests
                 ids.All(id => model.Ids.Contains(id.ToString())) && ids.Count() == model.Ids.Count()),
                 userId, organization.Id, true)
             .Returns(cipherOrgDetails);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility
             {
@@ -1574,7 +1575,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organization.Id).Returns(ciphers);
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(new OrganizationAbility
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(new OrganizationAbility
         {
             Id = organization.Id,
             AllowAdminAccessToAllCollectionItems = true
@@ -2050,7 +2051,7 @@ public class CiphersControllerTests
             .GetByIdAsync(cipherId, userId)
             .Returns(sharedCipher);
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
             .Returns(new OrganizationAbility { Id = organizationId });
 
@@ -2125,7 +2126,7 @@ public class CiphersControllerTests
             .GetByIdAsync(cipherId, userId)
             .Returns(sharedCipher);
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
             .Returns(new OrganizationAbility { Id = organizationId });
 
@@ -2201,7 +2202,7 @@ public class CiphersControllerTests
             .GetByIdAsync(cipherId, userId)
             .Returns(sharedCipher);
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
             .Returns(new OrganizationAbility { Id = organizationId });
 
@@ -2281,7 +2282,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organization.Id)
             .Returns(new List<Cipher> { cipherDetails });
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id)
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility { Id = organization.Id, AllowAdminAccessToAllCollectionItems = true });
 
         var expectedUrl = "https://example.com/upload";

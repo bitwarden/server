@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Core\Core.csproj" />
+    <ProjectReference Include="..\..\..\src\HttpExtensions\HttpExtensions.csproj" />
     <ProjectReference Include="..\..\..\src\Pam.Domain\Pam.Domain.csproj" />
   </ItemGroup>
 

@@ -1,6 +1,7 @@
 ﻿using Bit.Api.Vault.Models.Response;
 using Bit.Commercial.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Core;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -24,7 +25,7 @@ namespace Bit.Api.Pam.Controllers;
 public class CipherLeaseController(
     IUserService userService,
     IGetLeasedCipherQuery getLeasedCipherQuery,
-    IApplicationCacheService applicationCacheService,
+    IOrganizationAbilityCacheService organizationAbilityCacheService,
     ICollectionCipherRepository collectionCipherRepository,
     ICipherLeaseGate cipherLeaseGate,
     GlobalSettings globalSettings)
@@ -55,7 +56,7 @@ public class CipherLeaseController(
         }
 
         var organizationAbility = cipher.OrganizationId.HasValue
-            ? await applicationCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value)
+            ? await organizationAbilityCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value)
             : null;
         var collectionCiphers = await collectionCipherRepository.GetManyByUserIdCipherIdAsync(user.Id, id);
 

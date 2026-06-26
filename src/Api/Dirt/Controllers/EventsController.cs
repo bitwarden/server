@@ -2,13 +2,13 @@
 #nullable disable
 
 using Bit.Api.Dirt.Models.Response;
+using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Api.Utilities.DiagnosticTools;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Entities;

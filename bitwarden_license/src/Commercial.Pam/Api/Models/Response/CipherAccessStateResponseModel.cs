@@ -1,5 +1,5 @@
 ﻿using Bit.Commercial.Pam.Models;
-using Bit.Core.Models.Api;
+using Bit.HttpExtensions;
 
 namespace Bit.Commercial.Pam.Api.Models.Response;
 
