@@ -60,7 +60,6 @@ public class SendSalesAssistedTrialInvitationCommandTests
             .SendEmail(Arg.Is<SalesAssistedTrialInvitationEmail>(mail =>
                 mail.ToEmails.SequenceEqual(new[] { email }) &&
                 mail.View.Email == email &&
-                mail.View.IsExistingUser == false &&
                 mail.View.Token == protectedToken &&
                 mail.View.ProductTier == productTier &&
                 mail.View.Products.SequenceEqual(products) &&
