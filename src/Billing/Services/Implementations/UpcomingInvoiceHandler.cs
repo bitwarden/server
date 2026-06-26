@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.PlanMigration;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
@@ -509,25 +510,13 @@ public class UpcomingInvoiceHandler(
     private async Task<int> ResolveSeatCountAsync(
         Subscription subscription, Plan sourcePlan, Organization organization, SeatCountPolicy seatCountPolicy)
     {
-        // A packaged source has no per-seat line, so the fallback below would quote organization.Seats (the
-        // bundle cap). Match the billed quantity instead: the org's actual occupied seats, floored at 1.
-        if (sourcePlan.HasNonSeatBasedPasswordManagerPlan())
-        {
-            var occupied = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-            return Math.Max(1, occupied.Total);
-        }
-
-        // ActualUsage (e.g. Teams 2019): a Packaged source's seat line only counts overage beyond the
-        // base, so the quote must match what the scheduler bills — occupied seats below the base
-        // (unused headroom disappears), otherwise the purchased seat count. Mirrors
-        // PriceIncreaseScheduler.CalculateTargetPlanSeatCountAsync.
-        if (seatCountPolicy == SeatCountPolicy.ActualUsage)
+        // A Packaged source's line items don't reflect the true seat total, so resolve the quote from
+        // actual usage to match what the scheduler bills.
+        if (sourcePlan.IsPackagedMigrationSource(seatCountPolicy))
         {
             var occupied = (await organizationRepository
                 .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)).Total;
-            return occupied < sourcePlan.PasswordManager.BaseSeats
-                ? occupied
-                : organization.Seats ?? occupied;
+            return sourcePlan.ResolveMigratedSeatCount(occupied, organization.Seats);
         }
 
         var seatItem = subscription.Items.Data
