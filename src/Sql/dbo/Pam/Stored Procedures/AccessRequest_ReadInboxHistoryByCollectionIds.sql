@@ -8,7 +8,7 @@ BEGIN
     -- The approver history, returned as two result sets so the caller can attach each request's full decision list
     -- without an N+1:
     --   1) the resolved requests (anything no longer Pending) created on or after @Since, for the supplied
-    --      (caller-manageable) collections, with denormalized display fields. Rows that produced a lease carry
+    --      (caller-manageable) collections, with the denormalized requester identity. Rows that produced a lease carry
     --      ProducedLeaseId/ProducedLeaseStatus so the client can target (and gate) the Revoke action.
     --   2) every decision (human or automatic) for those requests, keyed by AccessRequestId and ordered oldest-first;
     --      DeciderKind says which, and a human decision's identity is denormalized from [User].
@@ -27,14 +27,10 @@ BEGIN
         LR.[ResolvedDate],
         PL.[Id] AS [ProducedLeaseId],
         PL.[Status] AS [ProducedLeaseStatus],
-        JSON_VALUE(C.[Data], '$.Name') AS [CipherName],
-        COL.[Name] AS [CollectionName],
         U.[Name] AS [RequesterName],
         U.[Email] AS [RequesterEmail]
     FROM [dbo].[AccessRequest] LR
     INNER JOIN @CollectionIds CI ON CI.[Id] = LR.[CollectionId]
-    LEFT JOIN [dbo].[Cipher] C ON C.[Id] = LR.[CipherId]
-    LEFT JOIN [dbo].[Collection] COL ON COL.[Id] = LR.[CollectionId]
     LEFT JOIN [dbo].[User] U ON U.[Id] = LR.[RequesterId]
     OUTER APPLY (
         SELECT TOP 1 L.[Id], L.[Status]

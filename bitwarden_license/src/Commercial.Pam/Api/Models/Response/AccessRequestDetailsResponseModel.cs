@@ -4,9 +4,9 @@ using Bit.Pam.Models;
 namespace Bit.Commercial.Pam.Api.Models.Response;
 
 /// <summary>
-/// An access request with its denormalized display fields (cipher/collection names, requester identity), serving the
-/// approver inbox, the caller's own request list, and the cipher access-state snapshot. Fields without a backing
-/// store in v1 (<see cref="RuleId"/>, <see cref="ExpiredAt"/>) are always null.
+/// An access request with its denormalized requester identity, serving the approver inbox, the caller's own request
+/// list, and the cipher access-state snapshot. Fields without a backing store in v1 (<see cref="RuleId"/>,
+/// <see cref="ExpiredAt"/>) are always null.
 /// </summary>
 public class AccessRequestDetailsResponseModel : ResponseModel
 {
@@ -46,8 +46,6 @@ public class AccessRequestDetailsResponseModel : ResponseModel
             ? AccessLeaseStatusNames.From(details.ProducedLeaseStatus.Value)
             : null;
         ExtensionOfLeaseId = details.ExtensionOfLeaseId;
-        CipherName = details.CipherName;
-        CollectionName = details.CollectionName;
         RequesterName = details.RequesterName;
         RequesterEmail = details.RequesterEmail;
     }
@@ -101,10 +99,6 @@ public class AccessRequestDetailsResponseModel : ResponseModel
     /// </summary>
     public DateTime? ActivationDeadline => null;
 
-    /// <summary>The cipher's client-encrypted name. The only cipher attribute exposed by the inbox.</summary>
-    public string? CipherName { get; }
-
-    public string? CollectionName { get; }
     public string? RequesterName { get; }
     public string? RequesterEmail { get; }
 }

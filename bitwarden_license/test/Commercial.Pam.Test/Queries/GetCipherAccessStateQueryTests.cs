@@ -96,10 +96,9 @@ public class GetCipherAccessStateQueryTests
         Assert.Equal(pending.Id, result.PendingRequest!.Id);
         Assert.Equal(pending.ExtensionOfLeaseId, result.PendingRequest.ExtensionOfLeaseId);
         Assert.Equal(AccessRequestStatus.Pending, result.PendingRequest.Status);
-        // Pending has produced no lease and has no resolver yet; display-name fields are not populated.
+        // Pending has produced no lease and has no resolver yet.
         Assert.Null(result.PendingRequest.ProducedLeaseId);
         Assert.Empty(result.PendingRequest.Decisions);
-        Assert.Null(result.PendingRequest.CipherName);
     }
 
     [Theory, BitAutoData]
@@ -124,10 +123,9 @@ public class GetCipherAccessStateQueryTests
         Assert.Equal(approved.NotBefore, result.ApprovedRequest.NotBefore);
         Assert.Equal(approved.NotAfter, result.ApprovedRequest.NotAfter);
         // The approved read excludes activated rows, so no lease id; the caller-scoped snapshot carries no approver
-        // identity or display-name fields.
+        // identity.
         Assert.Null(result.ApprovedRequest.ProducedLeaseId);
         Assert.Empty(result.ApprovedRequest.Decisions);
-        Assert.Null(result.ApprovedRequest.CipherName);
     }
 
     [Theory, BitAutoData]

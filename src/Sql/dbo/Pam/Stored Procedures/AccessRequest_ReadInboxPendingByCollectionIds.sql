@@ -5,9 +5,9 @@ BEGIN
     SET NOCOUNT ON
 
     -- The approver inbox: pending requests for the supplied (caller-manageable) collections, joined with the
-    -- denormalized display fields the client needs (cipher/collection names, requester identity) so it avoids an N+1.
-    -- A pending request has not been decided by anyone yet, so it carries no approvers (the caller leaves the
-    -- request's approvers list empty); only the resolved reads return a second decision result set.
+    -- denormalized requester identity the client needs so it avoids an N+1. A pending request has not been decided by
+    -- anyone yet, so it carries no approvers (the caller leaves the request's approvers list empty); only the resolved
+    -- reads return a second decision result set.
     SELECT
         LR.[Id],
         LR.[ExtensionOfLeaseId],
@@ -23,14 +23,10 @@ BEGIN
         LR.[ResolvedDate],
         PL.[Id] AS [ProducedLeaseId],
         PL.[Status] AS [ProducedLeaseStatus],
-        JSON_VALUE(C.[Data], '$.Name') AS [CipherName],
-        COL.[Name] AS [CollectionName],
         U.[Name] AS [RequesterName],
         U.[Email] AS [RequesterEmail]
     FROM [dbo].[AccessRequest] LR
     INNER JOIN @CollectionIds CI ON CI.[Id] = LR.[CollectionId]
-    LEFT JOIN [dbo].[Cipher] C ON C.[Id] = LR.[CipherId]
-    LEFT JOIN [dbo].[Collection] COL ON COL.[Id] = LR.[CollectionId]
     LEFT JOIN [dbo].[User] U ON U.[Id] = LR.[RequesterId]
     OUTER APPLY (
         SELECT TOP 1 L.[Id], L.[Status]
