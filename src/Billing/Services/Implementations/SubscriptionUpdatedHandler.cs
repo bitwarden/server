@@ -595,7 +595,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
             // A Packaged source (Teams Starter via HasNonSeatBased, Teams 2019 via ActualUsage) is identified
             // by its base price, which is present even when a sub-5 org has no seat-overage line; a Scalable
-            // source by its per-
+            // source by its per-seat price.
             var isPackagedSourcePlan = sourcePlan.IsPackagedMigrationSource(migrationPath.SeatCountPolicy);
             var sourcePriceId = isPackagedSourcePlan
                 ? sourcePlan.PasswordManager.StripePlanId
