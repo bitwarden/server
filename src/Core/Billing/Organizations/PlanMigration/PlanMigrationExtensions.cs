@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Organizations.PlanMigration.Enums;
+﻿using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Plan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Core.Billing.Organizations.PlanMigration;

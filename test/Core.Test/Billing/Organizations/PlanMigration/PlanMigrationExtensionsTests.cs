@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Organizations.PlanMigration;
+﻿using Bit.Core.Billing.Organizations.PlanMigration;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Test.Billing.Mocks.Plans;
 using Xunit;
