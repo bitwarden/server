@@ -9,7 +9,7 @@ using Bit.Core.Billing;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Extensions;
-using Bit.Core.Billing.Organizations.PlanMigration.Enums;
+using Bit.Core.Billing.Organizations.PlanMigration;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Pricing;
@@ -613,9 +613,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             // A Packaged source (Teams Starter via HasNonSeatBased, Teams 2019 via ActualUsage) is identified
             // by its base price, which is present even when a sub-5 org has no seat-overage line; a Scalable
             // source by its per-seat price.
-            var isSourcePlanPackaged = sourcePlan.HasNonSeatBasedPasswordManagerPlan()
-                || migrationPath.SeatCountPolicy == SeatCountPolicy.ActualUsage;
-            var sourcePriceId = isSourcePlanPackaged
+            var sourcePriceId = sourcePlan.IsPackagedMigrationSource(migrationPath.SeatCountPolicy)
                 ? sourcePlan.PasswordManager.StripePlanId
                 : sourcePlan.PasswordManager.StripeSeatPlanId;
             if (string.IsNullOrEmpty(sourcePriceId))
