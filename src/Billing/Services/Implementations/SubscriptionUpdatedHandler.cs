@@ -595,8 +595,9 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
             // A Packaged source (Teams Starter via HasNonSeatBased, Teams 2019 via ActualUsage) is identified
             // by its base price, which is present even when a sub-5 org has no seat-overage line; a Scalable
-            // source by its per-seat price.
-            var sourcePriceId = sourcePlan.IsPackagedMigrationSource(migrationPath.SeatCountPolicy)
+            // source by its per-
+            var isPackagedSourcePlan = sourcePlan.IsPackagedMigrationSource(migrationPath.SeatCountPolicy);
+            var sourcePriceId = isPackagedSourcePlan
                 ? sourcePlan.PasswordManager.StripePlanId
                 : sourcePlan.PasswordManager.StripeSeatPlanId;
             if (string.IsNullOrEmpty(sourcePriceId))
@@ -639,7 +640,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
             // Packaged source plans (Teams Starter's flat bundle cap, Teams 2019's base seat allotment) store a
             // seat count in Seats that doesn't match the billed per-seat quantity; reconcile to what was billed.
-            if (isSourcePlanPackaged)
+            if (isPackagedSourcePlan)
             {
                 var billedSeatQuantity = subscription.Items
                     .First(item => item.Price?.Id == targetPriceId).Quantity;
