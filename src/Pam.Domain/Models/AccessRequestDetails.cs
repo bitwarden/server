@@ -4,9 +4,8 @@ namespace Bit.Pam.Models;
 
 /// <summary>
 /// A lease request projected for the approver inbox: every <see cref="Entities.AccessRequest"/> field plus the
-/// denormalized display data the client needs (cipher/collection names, requester identity), the lease the request
-/// produced (if any), and the human resolver's identity/comment. Populated by a single join in the read procedures so
-/// the client avoids an N+1.
+/// denormalized requester identity the client needs, the lease the request produced (if any), and the human resolver's
+/// identity/comment. Populated by a single join in the read procedures so the client avoids an N+1.
 /// </summary>
 public class AccessRequestDetails
 {
@@ -45,10 +44,6 @@ public class AccessRequestDetails
     /// </summary>
     public List<AccessRequestDecision> Decisions { get; set; } = new();
 
-    /// <summary>The cipher's client-encrypted name. The only cipher attribute the inbox exposes.</summary>
-    public string? CipherName { get; set; }
-
-    public string? CollectionName { get; set; }
     public string? RequesterName { get; set; }
     public string? RequesterEmail { get; set; }
 }

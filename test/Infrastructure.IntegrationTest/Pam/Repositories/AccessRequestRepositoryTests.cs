@@ -33,7 +33,6 @@ public class AccessRequestRepositoryTests
         var row = Assert.Single(pendingRows);
         Assert.Equal(pending.Id, row.Id);
         Assert.Equal(AccessRequestStatus.Pending, row.Status);
-        Assert.Equal(collection.Name, row.CollectionName);
         Assert.Equal(requester.Email, row.RequesterEmail);
     }
 
@@ -352,7 +351,7 @@ public class AccessRequestRepositoryTests
         Assert.Contains(mine, r => r.Id == pending.Id);
         Assert.Contains(mine, r => r.Id == denied.Id);
         // Caller-scoped self-read omits the display-name joins.
-        Assert.All(mine, r => Assert.Null(r.CollectionName));
+        Assert.All(mine, r => Assert.Null(r.RequesterName));
     }
 
     [DatabaseTheory, DatabaseData]
@@ -522,8 +521,8 @@ public class AccessRequestRepositoryTests
         IAccessRequestRepository accessRequestRepository)
     {
         // The dedicated request page reads one request by id with the same denormalized projection the inbox reads use
-        // (collection/requester names) plus the full decision log — unlike the caller-scoped "mine" read which omits the
-        // collection/cipher/requester joins.
+        // (requester identity) plus the full decision log — unlike the caller-scoped "mine" read which omits the
+        // requester display-name join.
         var requester = await userRepository.CreateTestUserAsync("requester");
         var approver = await userRepository.CreateTestUserAsync("approver");
         var organization = await organizationRepository.CreateTestOrganizationAsync();
@@ -553,8 +552,7 @@ public class AccessRequestRepositoryTests
         Assert.NotNull(details);
         Assert.Equal(request.Id, details!.Id);
         Assert.Equal(AccessRequestStatus.Approved, details.Status);
-        // Denormalized display fields are populated (unlike the caller-scoped "mine" read).
-        Assert.Equal(collection.Name, details.CollectionName);
+        // The denormalized requester identity is populated (unlike the caller-scoped "mine" read).
         Assert.Equal(requester.Name, details.RequesterName);
         Assert.Equal(requester.Email, details.RequesterEmail);
         // The full decision log projects with the human approver's resolved identity.
