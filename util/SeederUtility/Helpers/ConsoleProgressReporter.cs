@@ -72,9 +72,9 @@ internal sealed class ConsoleProgressReporter(ProgressContext ctx) : IProgress<S
     /// Progress output is written to stderr so stdout remains clean for downstream consumers
     /// that pipe the final summary rows (org ID, counts, etc.) into other tools.
     /// </remarks>
-    internal static TResult RunWithProgress<TResult>(
+    internal static async Task<TResult> RunWithProgressAsync<TResult>(
         SeederDependencies deps,
-        Func<SeederDependencies, TResult> seed)
+        Func<SeederDependencies, Task<TResult>> seed)
     {
         var console = AnsiConsole.Create(new AnsiConsoleSettings
         {
@@ -82,17 +82,17 @@ internal sealed class ConsoleProgressReporter(ProgressContext ctx) : IProgress<S
         });
 
         TResult result = default!;
-        console.Progress()
+        await console.Progress()
             .Columns(
                 new TaskDescriptionColumn(),
                 new ProgressBarColumn(),
                 new PercentageColumn(),
                 new RemainingTimeColumn(),
                 new SpinnerColumn())
-            .Start(ctx =>
+            .StartAsync(async ctx =>
             {
                 var reporter = new ConsoleProgressReporter(ctx);
-                result = seed(deps with { Progress = reporter });
+                result = await seed(deps with { Progress = reporter });
             });
         return result;
     }

@@ -22,7 +22,8 @@ internal static class OrganizationSeeder
             Seats = seats,
             Status = OrganizationStatusType.Created,
             PublicKey = publicKey,
-            PrivateKey = privateKey
+            PrivateKey = privateKey,
+            LicenseKey = CoreHelpers.SecureRandomString(20),
         };
 
         PlanFeatures.Apply(org, planType);

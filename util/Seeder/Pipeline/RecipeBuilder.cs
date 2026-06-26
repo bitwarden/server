@@ -10,6 +10,7 @@ namespace Bit.Seeder.Pipeline;
 /// Wraps <see cref="IServiceCollection"/> and a recipe name, tracking step count for
 /// deterministic ordering and validation flags for dependency rules.
 /// <strong>Phase Order:</strong> Org → OrgApiKey → Roster → Owner (if no roster owner) → Generator → Users → Groups → Collections → Folders → Ciphers → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
+/// Post-commit steps (e.g. Stripe finalization) run after the bulk commit, in registration order.
 /// </remarks>
 public class RecipeBuilder
 {
@@ -64,7 +65,11 @@ public class RecipeBuilder
     public RecipeBuilder AddStep(Func<IServiceProvider, IStep> factory)
     {
         var order = _stepOrder++;
-        Services.AddKeyedSingleton<IStep>(Name, (sp, _) => new OrderedStep(factory(sp), order));
+        Services.AddKeyedSingleton<OrderedStep>(Name, (sp, _) =>
+        {
+            var step = factory(sp);
+            return new OrderedStep(step, order, isPostCommit: step is IPostCommitStep);
+        });
         return this;
     }
 
@@ -76,7 +81,44 @@ public class RecipeBuilder
     public RecipeBuilder AddStep<T>() where T : class, IStep
     {
         var order = _stepOrder++;
-        Services.AddKeyedSingleton<IStep>(Name, (sp, _) => new OrderedStep(sp.GetRequiredService<T>(), order));
+        Services.AddKeyedSingleton<OrderedStep>(Name, (sp, _) =>
+        {
+            var step = sp.GetRequiredService<T>();
+            return new OrderedStep(step, order, isPostCommit: step is IPostCommitStep);
+        });
+        Services.TryAddSingleton<T>();
+        return this;
+    }
+
+    /// <summary>
+    /// Registers an asynchronous step as a keyed singleton with preserved ordering. Use for
+    /// steps that perform I/O (e.g. calling external services like Stripe).
+    /// </summary>
+    /// <param name="factory">Factory function that creates the step from an IServiceProvider</param>
+    /// <returns>This builder for fluent chaining</returns>
+    public RecipeBuilder AddAsyncStep(Func<IServiceProvider, IAsyncStep> factory)
+    {
+        var order = _stepOrder++;
+        Services.AddKeyedSingleton<OrderedStep>(Name, (sp, _) =>
+        {
+            var step = factory(sp);
+            return new OrderedStep(step, order, isPostCommit: step is IPostCommitStep);
+        });
+        return this;
+    }
+
+    /// <summary>
+    /// Registers an asynchronous step type as a keyed singleton with preserved ordering.
+    /// </summary>
+    /// <typeparam name="T">The step implementation type</typeparam>
+    public RecipeBuilder AddAsyncStep<T>() where T : class, IAsyncStep
+    {
+        var order = _stepOrder++;
+        Services.AddKeyedSingleton<OrderedStep>(Name, (sp, _) =>
+        {
+            var step = sp.GetRequiredService<T>();
+            return new OrderedStep(step, order, isPostCommit: step is IPostCommitStep);
+        });
         Services.TryAddSingleton<T>();
         return this;
     }

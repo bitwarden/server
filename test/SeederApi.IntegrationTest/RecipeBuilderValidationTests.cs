@@ -1,5 +1,4 @@
-﻿using Bit.Seeder;
-using Bit.Seeder.Models;
+﻿using Bit.Seeder.Models;
 using Bit.Seeder.Pipeline;
 using Bit.Seeder.Services;
 using Xunit;
@@ -157,12 +156,11 @@ public class RecipeBuilderValidationTests
         builder.Validate();
 
         using var provider = services.BuildServiceProvider();
-        var steps = provider.GetKeyedServices<IStep>("test").ToList();
+        var orderedSteps = provider.GetKeyedServices<OrderedStep>("test").ToList();
 
-        Assert.Equal(7, steps.Count);
+        Assert.Equal(7, orderedSteps.Count);
 
-        // Verify steps are wrapped in OrderedStep with sequential order values
-        var orderedSteps = steps.Cast<OrderedStep>().ToList();
+        // Verify steps have sequential order values
         for (var i = 0; i < orderedSteps.Count; i++)
         {
             Assert.Equal(i, orderedSteps[i].Order);

@@ -32,7 +32,7 @@ public static class RecipeBuilderExtensions
         OrganizationOverrides? overrides = null)
     {
         builder.HasOrg = true;
-        builder.AddStep(_ => CreateOrganizationStep.FromFixture(fixture, planType, seats, overrides));
+        builder.AddAsyncStep(_ => CreateOrganizationStep.FromFixture(fixture, planType, seats, overrides));
         return builder;
     }
 
@@ -55,7 +55,7 @@ public static class RecipeBuilderExtensions
         OrganizationOverrides? overrides = null)
     {
         builder.HasOrg = true;
-        builder.AddStep(_ => CreateOrganizationStep.FromParams(name, domain, seats, planType, overrides));
+        builder.AddAsyncStep(_ => CreateOrganizationStep.FromParams(name, domain, seats, planType, overrides));
         return builder;
     }
 
@@ -480,6 +480,26 @@ public static class RecipeBuilderExtensions
 
         builder.HasPersonalCiphers = true;
         builder.AddStep(_ => new GeneratePersonalCiphersStep(countPerUser, typeDist, pwDist, density, repromptEveryNthCipher));
+        return builder;
+    }
+
+    /// <summary>
+    /// Finalize organization billing by creating a Stripe customer + trialing subscription via the
+    /// production sign-up helpers. Runs as a post-commit step so the organization row exists when
+    /// the billing service persists Stripe IDs.
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no organization exists.</exception>
+    public static RecipeBuilder FinalizeOrganizationBilling(this RecipeBuilder builder)
+    {
+        if (!builder.HasOrg)
+        {
+            throw new InvalidOperationException(
+                "Organization billing requires an organization. Call UseOrganization() or CreateOrganization() first.");
+        }
+
+        builder.AddAsyncStep<FinalizeOrganizationBillingStep>();
         return builder;
     }
 

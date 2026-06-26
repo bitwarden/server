@@ -17,7 +17,10 @@ public static class GlobalSettingsFactory
         var configBuilder = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-            .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true, reloadOnChange: true)
+            // Default to Development because SeederUtility has no production deployment —
+            // it's a local dev tool. This matches the convention used by every other project
+            // for storing dev-only config (e.g. pricingUri) under appsettings.Development.json.
+            .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development"}.json", optional: true, reloadOnChange: true)
             .AddUserSecrets("bitwarden-Api")
             .AddEnvironmentVariables();
 

@@ -200,6 +200,7 @@ internal static class PresetLoader
             builder.AddPersonalCiphers(0, density: density);
         }
 
+        builder.FinalizeOrganizationBilling();
         builder.Validate();
     }
 

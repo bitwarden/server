@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
+using Bit.Core.Models.StaticStore;
 using Bit.Core.Vault.Entities;
 using Bit.RustSDK;
 using Bit.Seeder.Data;
@@ -53,6 +54,13 @@ public sealed class SeederContext(IServiceProvider services)
     internal OrganizationUser? OwnerOrgUser { get; set; }
 
     internal OrganizationApiKey? OrganizationApiKey { get; set; }
+
+    /// <summary>
+    /// Plan record for <see cref="Organization"/>, fetched from <c>IPricingClient</c> by
+    /// <see cref="Steps.CreateOrganizationStep"/>. Cached here so the post-commit billing
+    /// step doesn't need to refetch. Null if the pricing service is unreachable.
+    /// </summary>
+    internal Plan? Plan { get; set; }
 
     internal List<Organization> Organizations { get; } = [];
 
