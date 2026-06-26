@@ -411,6 +411,36 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
 
     }
 
+    [Theory]
+    [DatabaseData]
+    public async Task GetPolicyDetailsByUserIdAndPolicyTypeAsync_WithStagedUser_ReturnsEmpty(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IPolicyRepository policyRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateAsync(GetDefaultUser());
+        var org = await CreateEnterpriseOrgAsync(organizationRepository);
+        await policyRepository.CreateAsync(new Policy
+        {
+            OrganizationId = org.Id,
+            Type = PolicyType.TwoFactorAuthentication,
+            Enabled = true
+        });
+
+        // Staged members are not subject to organization policies
+        await organizationUserRepository.CreateAsync(GetStagedOrganizationUser(org, user));
+
+        // Act
+        var results = await policyRepository.GetPolicyDetailsByUserIdAndPolicyTypeAsync(
+            user.Id,
+            PolicyType.TwoFactorAuthentication);
+
+        // Assert
+        Assert.Empty(results);
+    }
+
     private static async Task<Organization> CreateEnterpriseOrgAsync(IOrganizationRepository orgRepo)
     {
         return await orgRepo.CreateAsync(new Organization
@@ -461,6 +491,14 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
         UserId = null, // Invited users don't have UserId
         Email = user.Email,
         Status = OrganizationUserStatusType.Invited,
+        Type = OrganizationUserType.User
+    };
+
+    private static OrganizationUser GetStagedOrganizationUser(Organization organization, User user) => new()
+    {
+        OrganizationId = organization.Id,
+        UserId = user.Id,
+        Status = OrganizationUserStatusType.Staged,
         Type = OrganizationUserType.User
     };
 }

@@ -107,4 +107,20 @@ public class OrganizationPlanMigrationCohortRepository(
 
         return Mapper.Map<CoreEntities.OrganizationPlanMigrationCohort>(result);
     }
+
+    public async Task<IReadOnlyList<CoreEntities.OrganizationPlanMigrationCohort>> GetManyByNamesAsync(
+        IEnumerable<string> names)
+    {
+        var normalized = names.Select(n => n.ToLower()).ToList();
+
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var results = await dbContext.OrganizationPlanMigrationCohorts
+            .AsNoTracking()
+            .Where(c => normalized.Contains(c.Name.ToLower()))
+            .ToListAsync();
+
+        return Mapper.Map<List<CoreEntities.OrganizationPlanMigrationCohort>>(results);
+    }
 }

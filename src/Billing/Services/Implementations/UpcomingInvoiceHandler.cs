@@ -240,7 +240,7 @@ public class UpcomingInvoiceHandler(
         {
             ProductTierType.Families =>
                 ScheduleFamiliesPriceMigrationAsync(organization, @event, subscription, plan),
-            ProductTierType.Teams or ProductTierType.Enterprise =>
+            ProductTierType.Teams or ProductTierType.Enterprise or ProductTierType.TeamsStarter =>
                 ScheduleBusinessPlanPriceMigrationAsync(organization, @event, subscription),
             _ => Task.FromResult(false)
         };
@@ -456,7 +456,7 @@ public class UpcomingInvoiceHandler(
         }
 
         var culture = new CultureInfo("en-US");
-        var seats = ResolveSeatCount(subscription, sourcePlan, organization);
+        var seats = await ResolveSeatCountAsync(subscription, sourcePlan, organization);
 
         // SeatPrice is a per-year figure on annual plans and a per-month figure on monthly plans. The per-user
         // monthly line always shows a monthly rate (annual ÷ 12); the recurring total is quoted in the plan's own
@@ -503,8 +503,16 @@ public class UpcomingInvoiceHandler(
             ? amount.ToString("C0", culture)
             : amount.ToString("C2", culture);
 
-    private int ResolveSeatCount(Subscription subscription, Plan sourcePlan, Organization organization)
+    private async Task<int> ResolveSeatCountAsync(Subscription subscription, Plan sourcePlan, Organization organization)
     {
+        // A packaged source has no per-seat line, so the fallback below would quote organization.Seats (the
+        // bundle cap). Match the billed quantity instead: the org's actual occupied seats, floored at 1.
+        if (sourcePlan.HasNonSeatBasedPasswordManagerPlan())
+        {
+            var occupied = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+            return Math.Max(1, occupied.Total);
+        }
+
         var seatItem = subscription.Items.Data
             .FirstOrDefault(item => item.Price?.Id == sourcePlan.PasswordManager.StripeSeatPlanId);
 
@@ -950,6 +958,10 @@ public class UpcomingInvoiceHandler(
                     // Re-including it would cause Stripe to re-apply it.
                     var discountConsumed = i > 0 && activeSchedule.Phases[i - 1].EndDate <= now;
 
+                    // Gate on StartDate > now, not !discountConsumed (false for the active phase 0),
+                    // so we never re-stack the customer coupon onto the already-billing current period.
+                    var customerDiscount = phase.StartDate > now ? subscription.Customer?.Discount : null;
+
                     phases.Add(new SubscriptionSchedulePhaseOptions
                     {
                         StartDate = phase.StartDate,
@@ -961,10 +973,8 @@ public class UpcomingInvoiceHandler(
                         }).ToList(),
                         Discounts = discountConsumed
                             ? []
-                            : phase.Discounts?.Select(d => new SubscriptionSchedulePhaseDiscountOptions
-                            {
-                                Coupon = d.CouponId
-                            }).ToList(),
+                            : customerDiscount.MergeDiscountCouponIds(
+                                phase.Discounts?.Select(d => d.CouponId)).ToPhaseDiscountOptions(),
                         ProrationBehavior = phase.ProrationBehavior,
                         AutomaticTax = new SubscriptionSchedulePhaseAutomaticTaxOptions
                         {

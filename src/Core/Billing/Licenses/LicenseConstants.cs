@@ -48,6 +48,7 @@ public static class OrganizationLicenseConstants
     public const string UsePhishingBlocker = nameof(UsePhishingBlocker);
     public const string UseMyItems = nameof(UseMyItems);
     public const string UseInviteLinks = nameof(UseInviteLinks);
+    public const string UsePam = nameof(UsePam);
 }
 
 public static class UserLicenseConstants

@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -23,7 +24,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
-using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -38,9 +38,8 @@ public class OrganizationService : IOrganizationService
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IMailService _mailService;
-    private readonly IPushNotificationService _pushNotificationService;
     private readonly IEventService _eventService;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IStripePaymentService _paymentService;
     private readonly ISsoUserRepository _ssoUserRepository;
     private readonly IGlobalSettings _globalSettings;
@@ -63,9 +62,8 @@ public class OrganizationService : IOrganizationService
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IMailService mailService,
-        IPushNotificationService pushNotificationService,
         IEventService eventService,
-        IApplicationCacheService applicationCacheService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         IStripePaymentService paymentService,
         ISsoUserRepository ssoUserRepository,
         IGlobalSettings globalSettings,
@@ -87,9 +85,8 @@ public class OrganizationService : IOrganizationService
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _mailService = mailService;
-        _pushNotificationService = pushNotificationService;
         _eventService = eventService;
-        _applicationCacheService = applicationCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _paymentService = paymentService;
         _ssoUserRepository = ssoUserRepository;
         _globalSettings = globalSettings;
@@ -820,7 +817,7 @@ public class OrganizationService : IOrganizationService
         try
         {
             await _organizationRepository.ReplaceAsync(org);
-            await _applicationCacheService.UpsertOrganizationAbilityAsync(org);
+            await _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(org);
 
             if (orgEvent.HasValue)
             {
