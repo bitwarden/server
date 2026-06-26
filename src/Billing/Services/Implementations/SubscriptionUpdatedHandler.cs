@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
@@ -9,6 +9,7 @@ using Bit.Core.Billing;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Extensions;
+using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Pricing;
@@ -608,7 +609,15 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             }
 
             var sourcePlan = await _pricingClient.GetPlanOrThrow(migrationPath.FromPlan);
-            var sourcePriceId = GetPasswordManagerPriceId(sourcePlan);
+
+            // A Packaged source (Teams Starter via HasNonSeatBased, Teams 2019 via ActualUsage) is identified
+            // by its base price, which is present even when a sub-5 org has no seat-overage line; a Scalable
+            // source by its per-seat price.
+            var isSourcePlanPackaged = sourcePlan.HasNonSeatBasedPasswordManagerPlan()
+                || migrationPath.SeatCountPolicy == SeatCountPolicy.ActualUsage;
+            var sourcePriceId = isSourcePlanPackaged
+                ? sourcePlan.PasswordManager.StripePlanId
+                : sourcePlan.PasswordManager.StripeSeatPlanId;
             if (string.IsNullOrEmpty(sourcePriceId))
             {
                 _logger.LogWarning(
@@ -647,8 +656,9 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
             organization.ChangePlan(targetPlan);
 
-            // Packaged sources (e.g. Teams Starter) store a flat bundle cap in Seats; reconcile to the billed per-seat quantity.
-            if (sourcePlan.HasNonSeatBasedPasswordManagerPlan())
+            // Packaged source plans (Teams Starter's flat bundle cap, Teams 2019's base seat allotment) store a
+            // seat count in Seats that doesn't match the billed per-seat quantity; reconcile to what was billed.
+            if (isSourcePlanPackaged)
             {
                 var billedSeatQuantity = subscription.Items
                     .First(item => item.Price?.Id == targetPriceId).Quantity;
