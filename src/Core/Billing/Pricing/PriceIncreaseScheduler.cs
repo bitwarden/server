@@ -556,8 +556,7 @@ public class PriceIncreaseScheduler(
         // Teams Starter and Teams 2019 are Packaged sources whose base line (and, for Teams 2019, the
         // seat-overage line) collapse onto the Scalable target's single seat price at a usage-resolved
         // quantity. Scalable sources preserve their line-item quantities.
-        var isPackagedSourcePlan = sourcePlan.HasNonSeatBasedPasswordManagerPlan() ||
-            migrationPath.SeatCountPolicy == SeatCountPolicy.ActualUsage;
+        var isPackagedSourcePlan = sourcePlan.IsPackagedMigrationSource(migrationPath.SeatCountPolicy);
 
         var items = new List<SubscriptionSchedulePhaseItemOptions>();
         foreach (var item in subscription.Items.Data)
@@ -619,27 +618,16 @@ public class PriceIncreaseScheduler(
     }
 
     /// <summary>
-    /// Resolves the billed Phase 2 seat count for a Packaged source. Teams Starter (flat bundle)
-    /// bills occupied seats, floored at 1; Teams 2019 (seat overage) bills occupied seats below the
-    /// base and the purchased count at or above it.
+    /// Resolves the billed Phase 2 seat count for a Packaged source from the organization's actual usage.
     /// </summary>
     private async Task<int> CalculateTargetPlanSeatCountAsync(OrganizationPlan sourcePlan, Guid organizationId)
     {
+        // Packaged line items don't reflect the true total, so bill by actual usage. organization.Seats
+        // supplies the purchased count ResolveMigratedSeatCount uses for the seat-overage case.
         var occupiedSeatCount = (await organizationRepository
             .GetOccupiedSeatCountByOrganizationIdAsync(organizationId)).Total;
-
-        // Teams Starter: flat bundle, no overage — bill occupied seats (no base/purchased comparison),
-        // floored at 1.
-        if (sourcePlan.HasNonSeatBasedPasswordManagerPlan())
-        {
-            return Math.Max(1, occupiedSeatCount);
-        }
-
-        // Teams 2019: occupied below the packaged base, otherwise the purchased seat count.
         var organization = await organizationRepository.GetByIdAsync(organizationId);
-        return occupiedSeatCount < sourcePlan.PasswordManager.BaseSeats
-            ? occupiedSeatCount
-            : organization?.Seats ?? occupiedSeatCount;
+        return sourcePlan.ResolveMigratedSeatCount(occupiedSeatCount, organization?.Seats);
     }
 
     /// <summary>
