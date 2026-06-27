@@ -1,4 +1,4 @@
-﻿using Bit.Admin.Billing.Models.SalesAssistedTrial;
+using Bit.Admin.Auth.Models.SalesAssistedTrial;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
 using Bit.Core.Billing.TrialInitiation.Registration;
@@ -6,10 +6,10 @@ using Bit.Core.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Admin.Billing.Controllers;
+namespace Bit.Admin.Auth.Controllers;
 
 [Authorize]
-[Route("billing/sales-assisted-trial")]
+[Route("auth/sales-assisted-trial")]
 public class SalesAssistedTrialController(
     ISendSalesAssistedTrialInvitationCommand sendCommand,
     ILogger<SalesAssistedTrialController> logger) : Controller

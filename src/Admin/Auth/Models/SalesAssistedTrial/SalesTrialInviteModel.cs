@@ -1,7 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Billing.Enums;
 
-namespace Bit.Admin.Billing.Models.SalesAssistedTrial;
+namespace Bit.Admin.Auth.Models.SalesAssistedTrial;
 
 public class SalesTrialInviteModel
 {

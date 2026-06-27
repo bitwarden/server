@@ -1,6 +1,6 @@
-﻿using System.Security.Claims;
-using Bit.Admin.Billing.Controllers;
-using Bit.Admin.Billing.Models.SalesAssistedTrial;
+using System.Security.Claims;
+using Bit.Admin.Auth.Controllers;
+using Bit.Admin.Auth.Models.SalesAssistedTrial;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.TrialInitiation.Registration;
 using Bit.Core.Exceptions;
@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 
-namespace Admin.Test.Billing.Controllers;
+namespace Admin.Test.Auth.Controllers;
 
 [ControllerCustomize(typeof(SalesAssistedTrialController))]
 [SutProviderCustomize]
@@ -96,7 +96,6 @@ public class SalesAssistedTrialControllerTests
     {
         const string identityEmail = "actual.sender@bitwarden.com";
         var model = BuildValidModel();
-        // The model has no sender field; ensure the identity value is what reaches the command.
         SetUpAuthenticatedSender(sutProvider, identityEmail);
 
         await sutProvider.Sut.Index(model);
