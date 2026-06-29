@@ -238,6 +238,11 @@
         "resolved": "5.1.1",
         "contentHash": "rpYtIczkzGpf+EkZgDr9CClTdemhsrwA/W5hMoPjLkRFnXzH44zDLoovXeKtmxb1ykXK9aJVODSpiJml8CTw2g=="
       },
+      "CommandDotNet": {
+        "type": "Transitive",
+        "resolved": "7.0.5",
+        "contentHash": "ylfToPNWZLw29qe1NCI6Rc7ixWp3MzKNqmMwERBnfB2iS8U4QI9mgV3Zrj3/ZbIWBhJAZlOwDIR66nGFPggAvg=="
+      },
       "CsvHelper": {
         "type": "Transitive",
         "resolved": "33.1.0",
@@ -1085,6 +1090,19 @@
           "Serilog.Sinks.File": "3.2.0"
         }
       },
+      "Spectre.Console": {
+        "type": "Transitive",
+        "resolved": "0.55.2",
+        "contentHash": "yc0g12YJpmZHofGJLTQX02/uqfzJ6XHRx6pe9rANNjleQptXMHPxD9KI2/DWkXiJWddc+4oizEdGox15c89hhw==",
+        "dependencies": {
+          "Spectre.Console.Ansi": "0.55.2"
+        }
+      },
+      "Spectre.Console.Ansi": {
+        "type": "Transitive",
+        "resolved": "0.55.2",
+        "contentHash": "tN3KEJQQZwLW9HJnG5YTSAxfBwxsmg1wVuGvhGG2rM+pbl+NGaHU8pDcNofPlOXlgpkbpBMxI5t9o9qPfy3sHQ=="
+      },
       "SQLitePCLRaw.bundle_e_sqlite3": {
         "type": "Transitive",
         "resolved": "2.1.6",
@@ -1408,6 +1426,14 @@
           "Core": "[2026.6.1, )",
           "Seeder": "[2026.6.1, )",
           "SharedWeb": "[2026.6.1, )"
+        }
+      },
+      "seederutility": {
+        "type": "Project",
+        "dependencies": {
+          "CommandDotNet": "[7.0.5, 7.0.5]",
+          "Seeder": "[2026.6.1, )",
+          "Spectre.Console": "[0.55.2, 0.55.2]"
         }
       },
       "sharedweb": {

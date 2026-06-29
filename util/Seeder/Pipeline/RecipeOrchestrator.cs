@@ -16,12 +16,21 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
     /// <param name="presetName">Name of the embedded preset (e.g., "dunder-mifflin-full")</param>
     /// <param name="password">Optional password for all seeded accounts</param>
     /// <param name="kdfIterations">Optional KDF iteration count. Defaults to 5,000 for fast seeding.</param>
+    /// <param name="orgNameOverride">Optional organization name. Replaces the fixture/preset-supplied name when provided.</param>
+    /// <param name="ownerEmailOverride">Optional owner email. Replaces the default <c>owner@&lt;domain&gt;</c> when provided.</param>
     /// <returns>Execution result with organization ID and entity counts</returns>
     internal PipelineExecutionResult Execute(
         string presetName,
         string? password = null,
-        int? kdfIterations = null)
+        int? kdfIterations = null,
+        string? orgNameOverride = null,
+        string? ownerEmailOverride = null)
     {
+        EnsureOwnerEmailUnique(
+            ownerEmailOverride,
+            deps.ManglerService.IsEnabled,
+            email => deps.Db.Users.Any(u => u.Email == email));
+
         var reader = new SeedReader();
 
         // Read preset to extract kdfIterations before building services.
@@ -33,7 +42,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
         services.AddSingleton<ISeedReader>(reader);
-        services.AddSingleton(new SeederSettings(password, effectiveKdf));
+        services.AddSingleton(new SeederSettings(password, effectiveKdf, orgNameOverride, ownerEmailOverride));
         services.AddSingleton(deps.Db);
         if (deps.Progress is not null)
         {
@@ -50,10 +59,19 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
     /// </summary>
     internal PipelineExecutionResult Execute(OrganizationVaultOptions options)
     {
+        EnsureOwnerEmailUnique(
+            options.OwnerEmail,
+            deps.ManglerService.IsEnabled,
+            email => deps.Db.Users.Any(u => u.Email == email));
+
         var services = new ServiceCollection();
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
-        services.AddSingleton(new SeederSettings(options.Password, options.KdfIterations));
+        services.AddSingleton(new SeederSettings(
+            options.Password,
+            options.KdfIterations,
+            OrgNameOverride: null,
+            OwnerEmailOverride: options.OwnerEmail));
         if (deps.Progress is not null)
         {
             services.AddSingleton(deps.Progress);
@@ -150,4 +168,29 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         return executor.Execute();
     }
 
+    /// <summary>
+    /// Fails fast when <c>--owner-email</c> resolves to a User.Email that already exists, producing an
+    /// actionable error instead of a SQL unique-constraint exception from the BulkCommitter.
+    /// </summary>
+    /// <remarks>
+    /// Skipped when mangling is enabled — the mangler prepends a per-run unique tag, so collisions are
+    /// effectively impossible regardless of the override value.
+    /// </remarks>
+    internal static void EnsureOwnerEmailUnique(
+        string? ownerEmailOverride,
+        bool manglingEnabled,
+        Func<string, bool> userExists)
+    {
+        if (manglingEnabled || string.IsNullOrWhiteSpace(ownerEmailOverride))
+        {
+            return;
+        }
+
+        if (userExists(ownerEmailOverride))
+        {
+            throw new InvalidOperationException(
+                $"A User with email '{ownerEmailOverride}' already exists in the database. " +
+                "Choose a different --owner-email, delete the existing user, or add --mangle for test isolation.");
+        }
+    }
 }
