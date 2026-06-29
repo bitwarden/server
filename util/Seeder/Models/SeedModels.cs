@@ -15,7 +15,6 @@ internal record SeedVaultItem
     public SeedIdentity? Identity { get; init; }
     public SeedSshKey? SshKey { get; init; }
     public List<SeedField>? Fields { get; init; }
-    public List<SeedPasswordHistory>? PasswordHistory { get; init; }
     public bool? Favorite { get; init; }
     public int? Reprompt { get; init; }
 }
@@ -34,6 +33,7 @@ internal record SeedLogin
     public List<SeedLoginUri>? Uris { get; init; }
     public string? Totp { get; init; }
     public List<SeedFido2Credential>? Fido2Credentials { get; init; }
+    public List<SeedPasswordHistory>? PasswordHistory { get; init; }
 }
 
 internal record SeedFido2Credential

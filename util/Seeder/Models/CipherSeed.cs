@@ -99,7 +99,7 @@ internal record CipherSeed
         Notes = item.Notes,
         Reprompt = item.Reprompt == 1 ? CipherRepromptType.Password : CipherRepromptType.None,
         Fields = MapFields(item.Fields),
-        Login = MapLogin(item.Login, item.PasswordHistory),
+        Login = MapLogin(item.Login),
         Card = MapCard(item.Card),
         Identity = MapIdentity(item.Identity),
         SecureNote = item.Type == "secureNote" ? new SecureNoteViewDto { Type = 0 } : null,
@@ -134,7 +134,7 @@ internal record CipherSeed
         _ => throw new ArgumentException($"Unknown field type: '{type}'", nameof(type))
     };
 
-    private static LoginViewDto? MapLogin(SeedLogin? login, List<SeedPasswordHistory>? passwordHistory) =>
+    private static LoginViewDto? MapLogin(SeedLogin? login) =>
         login == null ? null : new LoginViewDto
         {
             Username = login.Username,
@@ -150,7 +150,7 @@ internal record CipherSeed
                 f.RpId ?? "example.com",
                 f.RpName ?? f.RpId ?? "Example",
                 f.UserName ?? login.Username ?? "user")).ToList(),
-            PasswordHistory = MapPasswordHistory(passwordHistory)
+            PasswordHistory = MapPasswordHistory(login.PasswordHistory)
         };
 
     private static List<PasswordHistoryViewDto>? MapPasswordHistory(List<SeedPasswordHistory>? history) =>

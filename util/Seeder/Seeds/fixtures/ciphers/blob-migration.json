@@ -17,6 +17,10 @@
         ],
         "fido2Credentials": [
           { "rpId": "example.com", "rpName": "Example", "userName": "blobuser@example.com" }
+        ],
+        "passwordHistory": [
+          { "password": "fakeOldPassword1", "lastUsedDate": "2023-06-01T00:00:00.000Z" },
+          { "password": "fakeOldPassword2", "lastUsedDate": "2023-09-01T00:00:00.000Z" }
         ]
       },
       "fields": [
@@ -24,10 +28,6 @@
         { "name": "Hidden Field", "value": "fakeHiddenSecret", "type": "hidden" },
         { "name": "Boolean Field", "value": "true", "type": "boolean" },
         { "name": "Linked Username", "type": "linked", "linkedId": 100 }
-      ],
-      "passwordHistory": [
-        { "password": "fakeOldPassword1", "lastUsedDate": "2023-06-01T00:00:00.000Z" },
-        { "password": "fakeOldPassword2", "lastUsedDate": "2023-09-01T00:00:00.000Z" }
       ]
     },
     {
