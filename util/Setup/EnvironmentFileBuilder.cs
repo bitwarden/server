@@ -83,6 +83,7 @@ public class EnvironmentFileBuilder
         {
             ["globalSettings__baseServiceUri__vault"] = _context.Config.Url,
             ["globalSettings__baseServiceUri__cloudRegion"] = _context.Install?.CloudRegion.ToString(),
+            ["globalSettings__baseServiceUri__internalIdentity"] = "http://bitwarden-identity:5000",
             ["globalSettings__sqlServer__connectionString"] = $"\"{dbConnectionString.Replace("\"", "\\\"")}\"",
             ["globalSettings__identityServer__certificatePassword"] = _context.Install?.IdentityCertPassword,
             ["globalSettings__internalIdentityKey"] = _context.Stub ? "RANDOM_IDENTITY_KEY" :
@@ -120,7 +121,7 @@ public class EnvironmentFileBuilder
         _keyConnectorOverrideValues = new Dictionary<string, string>
         {
             ["keyConnectorSettings__webVaultUri"] = _context.Config.Url,
-            ["keyConnectorSettings__identityServerUri"] = "http://identity:5000",
+            ["keyConnectorSettings__identityServerUri"] = "http://bitwarden-identity:5000",
             ["keyConnectorSettings__database__provider"] = "json",
             ["keyConnectorSettings__database__jsonFilePath"] = "/etc/bitwarden/key-connector/data.json",
             ["keyConnectorSettings__rsaKey__provider"] = "certificate",
