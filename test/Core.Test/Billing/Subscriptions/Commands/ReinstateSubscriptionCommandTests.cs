@@ -3,7 +3,6 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Entities;
-using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stripe;
@@ -14,7 +13,6 @@ namespace Bit.Core.Test.Billing.Subscriptions.Commands;
 
 public class ReinstateSubscriptionCommandTests
 {
-    private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly IPriceIncreaseScheduler _priceIncreaseScheduler = Substitute.For<IPriceIncreaseScheduler>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly ILogger<ReinstateSubscriptionCommand> _logger = Substitute.For<ILogger<ReinstateSubscriptionCommand>>();
@@ -22,7 +20,7 @@ public class ReinstateSubscriptionCommandTests
 
     public ReinstateSubscriptionCommandTests()
     {
-        _command = new ReinstateSubscriptionCommand(_logger, _stripeAdapter, _featureService, _priceIncreaseScheduler);
+        _command = new ReinstateSubscriptionCommand(_logger, _stripeAdapter, _priceIncreaseScheduler);
     }
 
     [Fact]
@@ -40,31 +38,7 @@ public class ReinstateSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task Run_BusinessPlanPriceMigrationFlagOff_FallsThroughToStandardReinstate_NoScheduleCheck()
-    {
-        var user = new User { GatewaySubscriptionId = "sub_1" };
-
-        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>())
-            .Returns(new Subscription
-            {
-                Id = "sub_1",
-                Status = SubscriptionStatus.Active,
-                CancelAt = DateTime.UtcNow.AddDays(30)
-            });
-
-        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
-
-        var result = await _command.Run(user);
-
-        Assert.True(result.Success);
-        await _stripeAdapter.DidNotReceiveWithAnyArgs()
-            .ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>());
-        await _stripeAdapter.Received(1).UpdateSubscriptionAsync("sub_1",
-            Arg.Is<SubscriptionUpdateOptions>(o => o.CancelAtPeriodEnd == false));
-    }
-
-    [Fact]
-    public async Task Run_BusinessPlanPriceMigrationFlagOn_NoSchedule_FallsThroughToStandardReinstate()
+    public async Task Run_NoCancelledDuringDeferredPriceIncreaseMetadata_FallsThroughToStandardReinstate()
     {
         var user = new User { GatewaySubscriptionId = "sub_1" };
 
@@ -79,19 +53,19 @@ public class ReinstateSubscriptionCommandTests
                 Items = new StripeList<SubscriptionItem> { Data = [] }
             });
 
-        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
-
         var result = await _command.Run(user);
 
         Assert.True(result.Success);
         await _stripeAdapter.DidNotReceiveWithAnyArgs()
             .UpdateSubscriptionScheduleAsync(Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
+        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs()
+            .ScheduleForSubscription(Arg.Any<Subscription>());
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync("sub_1",
             Arg.Is<SubscriptionUpdateOptions>(o => o.CancelAtPeriodEnd == false));
     }
 
     [Fact]
-    public async Task Run_BusinessPlanPriceMigrationFlagOn_NoSchedule_CancelledDuringDeferredPriceIncrease_RecreatesScheduleAndClearsFlag()
+    public async Task Run_CancelledDuringDeferredPriceIncrease_RecreatesScheduleAndClearsFlag()
     {
         var user = new User { GatewaySubscriptionId = "sub_1" };
 
@@ -110,8 +84,6 @@ public class ReinstateSubscriptionCommandTests
                 Items = new StripeList<SubscriptionItem> { Data = [] }
             });
 
-        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
-
         var result = await _command.Run(user);
 
         Assert.True(result.Success);
@@ -123,7 +95,7 @@ public class ReinstateSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task Run_BusinessPlanPriceMigrationFlagOn_Organization_CancelledDuringDeferredPriceIncrease_RecreatesScheduleAndClearsFlag()
+    public async Task Run_Organization_CancelledDuringDeferredPriceIncrease_RecreatesScheduleAndClearsFlag()
     {
         var organizationId = Guid.NewGuid();
         var organization = new Organization { Id = organizationId, GatewaySubscriptionId = "sub_1" };
@@ -142,8 +114,6 @@ public class ReinstateSubscriptionCommandTests
                 },
                 Items = new StripeList<SubscriptionItem> { Data = [] }
             });
-
-        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
 
         var result = await _command.Run(organization);
 
