@@ -28,6 +28,12 @@ public class PresetArgs : IArgumentModel
     [Option("password", Description = "Password for all seeded accounts (default: asdfasdfasdf)")]
     public string? Password { get; set; }
 
+    [Option("org-name", Description = "Override the organization display name from the preset/fixture")]
+    public string? OrgName { get; set; }
+
+    [Option("owner-email", Description = "Override the organization owner email (default: owner@<preset-domain>). Must not already exist in the User table; add --mangle to make repeat runs unique.")]
+    public string? OwnerEmail { get; set; }
+
     [Option("kdf-iterations", Description = "KDF iteration count for all seeded users. Overrides the preset value if specified. Use 600000 for production-realistic e2e testing.")]
     public int? KdfIterations { get; set; }
 
@@ -52,6 +58,11 @@ public class PresetArgs : IArgumentModel
         if (KdfIterations.HasValue && KdfIterations.Value < 5_000)
         {
             throw new ArgumentException("KDF iterations must be at least 5,000.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(OwnerEmail) && !OwnerEmail.Contains('@'))
+        {
+            throw new ArgumentException("--owner-email must be a valid email address (must contain '@').");
         }
     }
 }
