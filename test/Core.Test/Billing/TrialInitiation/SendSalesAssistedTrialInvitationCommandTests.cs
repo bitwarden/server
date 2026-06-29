@@ -6,7 +6,6 @@ using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
-using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -33,7 +32,7 @@ public class SendSalesAssistedTrialInvitationCommandTests
         const int tokenLifetimeDays = 5;
         const string protectedToken = "protected-token";
 
-        sutProvider.GetDependency<GlobalSettings>().SalesAssistedRegistrationTokenLifetimeDays = tokenLifetimeDays;
+        sutProvider.GetDependency<Bit.Core.Settings.GlobalSettings>().SalesAssistedRegistrationTokenLifetimeDays = tokenLifetimeDays;
         sutProvider.GetDependency<IUserRepository>()
             .GetByEmailAsync(email)
             .Returns((User?)null);
@@ -113,7 +112,7 @@ public class SendSalesAssistedTrialInvitationCommandTests
         const int trialLength = 7;
         var products = new[] { ProductType.PasswordManager };
 
-        sutProvider.GetDependency<GlobalSettings>().SalesAssistedRegistrationTokenLifetimeDays = tokenLifetimeDays;
+        sutProvider.GetDependency<Bit.Core.Settings.GlobalSettings>().SalesAssistedRegistrationTokenLifetimeDays = tokenLifetimeDays;
         sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(email).Returns((User?)null);
         sutProvider.GetDependency<ISalesAssistedRegistrationTokenableFactory>()
             .CreateToken(email, name)

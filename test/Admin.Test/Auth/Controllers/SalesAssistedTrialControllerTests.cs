@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Bit.Admin.Auth.Controllers;
 using Bit.Admin.Auth.Models.SalesAssistedTrial;
 using Bit.Core.Billing.Enums;
