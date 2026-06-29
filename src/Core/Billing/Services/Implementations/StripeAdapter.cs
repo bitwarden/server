@@ -6,6 +6,7 @@ using Bit.Core.Models.BitStripe;
 using Stripe;
 using Stripe.Tax;
 using Stripe.TestHelpers;
+using static Bit.Core.Billing.Constants.StripeConstants;
 using BillingPortalSessionService = Stripe.BillingPortal.SessionService;
 using CheckoutSessionService = Stripe.Checkout.SessionService;
 using CustomerService = Stripe.CustomerService;
@@ -281,4 +282,22 @@ public class StripeAdapter : IStripeAdapter
      ******************/
     public Task<TestClock> GetTestClockAsync(string testClockId, TestClockGetOptions options = null) =>
         _testClockService.GetAsync(testClockId, options);
+
+    public async Task WaitForTestClockToAdvanceAsync(TestClock testClock)
+    {
+        if (testClock == null)
+        {
+            return;
+        }
+
+        while (testClock.Status != TestClockStatus.Ready)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2));
+            testClock = await _testClockService.GetAsync(testClock.Id);
+            if (testClock.Status == TestClockStatus.InternalFailure)
+            {
+                throw new Exception("Stripe Test Clock encountered an internal failure");
+            }
+        }
+    }
 }

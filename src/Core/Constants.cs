@@ -257,7 +257,6 @@ public static class FeatureFlagKeys
     public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
     public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
     public const string VaultLoadingSkeletons = "pm-25081-vault-skeleton-loaders";
-    public const string BrowserPremiumSpotlight = "pm-23384-browser-premium-spotlight";
     public const string MigrateMyVaultToMyItems = "pm-20558-migrate-myvault-to-myitems";
     public const string PM27632_CipherCrudOperationsToSdk = "pm-27632-cipher-crud-operations-to-sdk";
     public const string PM28191_CipherAdminOpsToSdk = "pm-28191-cipher-admin-ops-to-sdk";
@@ -282,7 +281,6 @@ public static class FeatureFlagKeys
     public const string SecretsVersioning = "sm-1587-secrets-versioning";
 
     /* Innovation Team */
-    public const string ArchiveVaultItems = "pm-19148-innovation-archive";
 
     /* DIRT Team */
     public const string AccessIntelligenceVersion2 = "pm-31920-access-intelligence-azure-file-storage";

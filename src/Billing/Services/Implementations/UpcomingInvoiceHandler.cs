@@ -23,7 +23,6 @@ using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Stripe;
-using Stripe.TestHelpers;
 using Event = Stripe.Event;
 using Plan = Bit.Core.Models.StaticStore.Plan;
 using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
@@ -367,10 +366,7 @@ public class UpcomingInvoiceHandler(
                 return false;
             }
 
-            if (subscription.TestClock != null)
-            {
-                await WaitForTestClockToAdvanceAsync(subscription.TestClock);
-            }
+            await stripeAdapter.WaitForTestClockToAdvanceAsync(subscription.TestClock);
 
             var migrationScheduled = await priceIncreaseScheduler.ScheduleForSubscription(subscription);
 
@@ -665,19 +661,6 @@ public class UpcomingInvoiceHandler(
         }
 
         return discounts;
-    }
-
-    private async Task WaitForTestClockToAdvanceAsync(TestClock testClock)
-    {
-        while (testClock.Status != "ready")
-        {
-            await Task.Delay(TimeSpan.FromSeconds(2));
-            testClock = await stripeAdapter.GetTestClockAsync(testClock.Id);
-            if (testClock.Status == "internal_failure")
-            {
-                throw new Exception("Stripe Test Clock encountered an internal failure");
-            }
-        }
     }
 
     #endregion
