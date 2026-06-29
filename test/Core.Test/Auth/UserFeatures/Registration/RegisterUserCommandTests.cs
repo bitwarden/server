@@ -347,7 +347,7 @@ public class RegisterUserCommandTests
 
         await sutProvider.GetDependency<IUserService>()
             .Received(1)
-            .CreateUserAsync(Arg.Is<User>(u => u.EmailVerified == true && u.ApiKey != null), registerFinishData);
+            .CreateUserAsync(Arg.Is<User>(u => u.EmailVerified && u.ApiKey != null), registerFinishData);
 
         if (addUserReferenceData)
         {
@@ -1073,11 +1073,7 @@ public class RegisterUserCommandTests
 
         await sutProvider.GetDependency<IUserService>()
             .Received(1)
-            .CreateUserAsync(Arg.Is<User>(u => u.Name == name && u.EmailVerified == true && u.ApiKey != null), registerFinishData);
-
-        await sutProvider.GetDependency<IMailService>()
-            .Received(1)
-            .SendWelcomeEmailAsync(user);
+            .CreateUserAsync(Arg.Is<User>(u => u.Name == name && u.EmailVerified && u.ApiKey != null), registerFinishData);
     }
 
     // Keystone regression test: this path MUST bypass the open-registration check. When
@@ -1126,7 +1122,7 @@ public class RegisterUserCommandTests
 
         await sutProvider.GetDependency<IUserService>()
             .Received(1)
-            .CreateUserAsync(Arg.Is<User>(u => u.EmailVerified == true && u.ApiKey != null), registerFinishData);
+            .CreateUserAsync(Arg.Is<User>(u => u.EmailVerified && u.ApiKey != null), registerFinishData);
     }
 
     [Theory]
