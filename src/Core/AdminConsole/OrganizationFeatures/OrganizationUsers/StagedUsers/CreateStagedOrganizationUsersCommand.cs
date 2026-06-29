@@ -25,7 +25,7 @@ public class CreateStagedOrganizationUsersCommand(
         var creationDate = DateTime.UtcNow;
 
         var organizationUsersToCreate = requestedUsers
-            .Where(w => !existingEmails.Add(w.Email))
+            .Where(w => existingEmails.Add(w.Email))
             .Select(s => new OrganizationUser
             {
                 OrganizationId = request.Organization.Id,
