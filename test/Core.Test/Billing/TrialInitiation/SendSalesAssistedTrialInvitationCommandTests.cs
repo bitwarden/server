@@ -6,6 +6,7 @@ using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -29,8 +30,10 @@ public class SendSalesAssistedTrialInvitationCommandTests
         var products = new[] { ProductType.PasswordManager };
         const ProductTierType productTier = ProductTierType.Enterprise;
         const int trialLength = 7;
+        const int tokenLifetimeDays = 5;
         const string protectedToken = "protected-token";
 
+        sutProvider.GetDependency<GlobalSettings>().SalesAssistedRegistrationTokenLifetimeDays = tokenLifetimeDays;
         sutProvider.GetDependency<IUserRepository>()
             .GetByEmailAsync(email)
             .Returns((User?)null);
@@ -65,7 +68,8 @@ public class SendSalesAssistedTrialInvitationCommandTests
                 mail.View.Products.SequenceEqual(products) &&
                 mail.View.TrialLength == trialLength &&
                 mail.View.PaymentOptional == false &&
-                mail.View.SenderEmail == senderEmail));
+                mail.View.SenderEmail == senderEmail &&
+                mail.View.ExpiryDays == tokenLifetimeDays));
     }
 
     [Theory]
@@ -94,6 +98,36 @@ public class SendSalesAssistedTrialInvitationCommandTests
         await sutProvider.GetDependency<IMailer>()
             .DidNotReceiveWithAnyArgs()
             .SendEmail(Arg.Any<SalesAssistedTrialInvitationEmail>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task HandleAsync_ExpiryDays_SourcedFromGlobalSettings_NotTrialLength(
+        string email,
+        string name,
+        string senderEmail,
+        SutProvider<SendSalesAssistedTrialInvitationCommand> sutProvider)
+    {
+        // Arrange — token lifetime and trial length are intentionally different to confirm the right source
+        const int tokenLifetimeDays = 14;
+        const int trialLength = 7;
+        var products = new[] { ProductType.PasswordManager };
+
+        sutProvider.GetDependency<GlobalSettings>().SalesAssistedRegistrationTokenLifetimeDays = tokenLifetimeDays;
+        sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(email).Returns((User?)null);
+        sutProvider.GetDependency<ISalesAssistedRegistrationTokenableFactory>()
+            .CreateToken(email, name)
+            .Returns(new SalesAssistedRegistrationTokenable { Email = email, Name = name });
+
+        // Act
+        await sutProvider.Sut.HandleAsync(email, name, senderEmail, ProductTierType.Enterprise, products, trialLength, false);
+
+        // Assert
+        await sutProvider.GetDependency<IMailer>()
+            .Received(1)
+            .SendEmail(Arg.Is<SalesAssistedTrialInvitationEmail>(mail =>
+                mail.View.ExpiryDays == tokenLifetimeDays &&
+                mail.View.ExpiryDays != trialLength));
     }
 
     [Theory]
