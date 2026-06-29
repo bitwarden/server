@@ -1,4 +1,4 @@
-using Bit.Admin.Auth.Models.SalesAssistedTrial;
+﻿using Bit.Admin.Auth.Models.SalesAssistedTrial;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
 using Bit.Core.Billing.TrialInitiation.Registration;
@@ -8,8 +8,17 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Admin.Auth.Controllers;
 
+// Lives in the Auth area because its primary purpose is registering new users in environments
+// where open registration is disabled (globalSettings__disableUserRegistration=true). The
+// sales-assisted token is the authorization for that constraint — this is an auth concern
+// first, an organization/billing concern second.
+//
+// This differs from the existing trial-initiation buttons on the org edit page
+// (OrganizationsController.Edit), which act on an already-existing organization for a
+// prospect who already has an account. This controller handles the earlier step: inviting a
+// prospect who has no account yet, in an environment where they cannot self-register.
 [Authorize]
-[Route("auth/sales-assisted-trial")]
+[Route("sales-assisted-trial")]
 public class SalesAssistedTrialController(
     ISendSalesAssistedTrialInvitationCommand sendCommand,
     ILogger<SalesAssistedTrialController> logger) : Controller
