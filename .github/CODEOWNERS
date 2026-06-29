@@ -111,6 +111,7 @@ src/Core/Platform/Push/PushType.cs
 
 # PAM
 bitwarden_license/src/Commercial.Pam @bitwarden/team-pam-dev
+bitwarden_license/test/Commercial.Core.Test @bitwarden/team-pam-dev
 
 # SDK
 util/RustSdk @bitwarden/team-sdk-sme
