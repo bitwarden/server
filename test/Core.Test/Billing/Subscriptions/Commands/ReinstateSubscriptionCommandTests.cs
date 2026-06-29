@@ -40,7 +40,7 @@ public class ReinstateSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task Run_PM32645_DeferPriceMigrationToRenewalFlagOff_FallsThroughToStandardReinstate_NoScheduleCheck()
+    public async Task Run_BusinessPlanPriceMigrationFlagOff_FallsThroughToStandardReinstate_NoScheduleCheck()
     {
         var user = new User { GatewaySubscriptionId = "sub_1" };
 
@@ -52,7 +52,7 @@ public class ReinstateSubscriptionCommandTests
                 CancelAt = DateTime.UtcNow.AddDays(30)
             });
 
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(false);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
 
         var result = await _command.Run(user);
 
@@ -64,7 +64,7 @@ public class ReinstateSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task Run_PM32645_DeferPriceMigrationToRenewalFlagOn_NoSchedule_FallsThroughToStandardReinstate()
+    public async Task Run_BusinessPlanPriceMigrationFlagOn_NoSchedule_FallsThroughToStandardReinstate()
     {
         var user = new User { GatewaySubscriptionId = "sub_1" };
 
@@ -79,7 +79,7 @@ public class ReinstateSubscriptionCommandTests
                 Items = new StripeList<SubscriptionItem> { Data = [] }
             });
 
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
 
         var result = await _command.Run(user);
 
@@ -91,7 +91,7 @@ public class ReinstateSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task Run_PM32645_DeferPriceMigrationToRenewalFlagOn_NoSchedule_CancelledDuringDeferredPriceIncrease_RecreatesScheduleAndClearsFlag()
+    public async Task Run_BusinessPlanPriceMigrationFlagOn_NoSchedule_CancelledDuringDeferredPriceIncrease_RecreatesScheduleAndClearsFlag()
     {
         var user = new User { GatewaySubscriptionId = "sub_1" };
 
@@ -110,7 +110,7 @@ public class ReinstateSubscriptionCommandTests
                 Items = new StripeList<SubscriptionItem> { Data = [] }
             });
 
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
 
         var result = await _command.Run(user);
 
@@ -123,7 +123,7 @@ public class ReinstateSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task Run_BusinessPlanPriceMigrationFlagOn_CancelledDuringDeferredPriceIncrease_RecreatesScheduleAndClearsFlag()
+    public async Task Run_BusinessPlanPriceMigrationFlagOn_Organization_CancelledDuringDeferredPriceIncrease_RecreatesScheduleAndClearsFlag()
     {
         var organizationId = Guid.NewGuid();
         var organization = new Organization { Id = organizationId, GatewaySubscriptionId = "sub_1" };
@@ -143,7 +143,6 @@ public class ReinstateSubscriptionCommandTests
                 Items = new StripeList<SubscriptionItem> { Data = [] }
             });
 
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(false);
         _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
 
         var result = await _command.Run(organization);

@@ -508,21 +508,7 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task CancelPremiumAsync_CallsPaymentService(
-        User user,
-        SutProvider<UserService> sutProvider)
-    {
-        user.PremiumExpirationDate = DateTime.UtcNow.AddDays(30);
-
-        await sutProvider.Sut.CancelPremiumAsync(user);
-
-        await sutProvider.GetDependency<IStripePaymentService>()
-            .Received(1)
-            .CancelSubscriptionAsync(user, true);
-    }
-
-    [Theory, BitAutoData]
-    public async Task DeleteAsync_FlagEnabled_WithGatewaySubscription_CallsSubscriberService(
+    public async Task DeleteAsync_WithGatewaySubscription_CallsSubscriberService(
         User user,
         SutProvider<UserService> sutProvider)
     {
@@ -535,10 +521,6 @@ public class UserServiceTests
         sutProvider.GetDependency<IProviderUserRepository>()
             .GetCountByOnlyOwnerAsync(user.Id)
             .Returns(0);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(true);
 
         var result = await sutProvider.Sut.DeleteAsync(user);
 
@@ -550,43 +532,6 @@ public class UserServiceTests
                 user,
                 cancelImmediately: false,
                 Arg.Is<OffboardingSurveyResponse>(r => r.UserId == user.Id));
-
-        await sutProvider.GetDependency<IStripePaymentService>()
-            .DidNotReceiveWithAnyArgs()
-            .CancelSubscriptionAsync(default, default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task DeleteAsync_FlagDisabled_WithGatewaySubscription_CallsCancelPremium(
-        User user,
-        SutProvider<UserService> sutProvider)
-    {
-        user.GatewaySubscriptionId = "sub_test";
-        user.PremiumExpirationDate = DateTime.UtcNow.AddDays(30);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetCountByOnlyOwnerAsync(user.Id)
-            .Returns(0);
-
-        sutProvider.GetDependency<IProviderUserRepository>()
-            .GetCountByOnlyOwnerAsync(user.Id)
-            .Returns(0);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(false);
-
-        var result = await sutProvider.Sut.DeleteAsync(user);
-
-        Assert.True(result.Succeeded);
-
-        await sutProvider.GetDependency<IStripePaymentService>()
-            .Received(1)
-            .CancelSubscriptionAsync(user, true);
-
-        await sutProvider.GetDependency<ISubscriberService>()
-            .DidNotReceiveWithAnyArgs()
-            .CancelSubscription(default, default, default);
     }
 
     [Theory, BitAutoData]

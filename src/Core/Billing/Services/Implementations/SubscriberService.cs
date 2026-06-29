@@ -228,8 +228,7 @@ public class SubscriberService(
         SubscriptionCancellationDetailsOptions? cancellationDetails,
         Dictionary<string, string>? cancellingUserMetadata)
     {
-        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal) ||
-            featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
+        if (featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
         {
             var activeSchedule = await GetActiveScheduleAsync(subscription);
             if (activeSchedule != null)
@@ -264,8 +263,7 @@ public class SubscriberService(
             Metadata = cancellingUserMetadata
         };
 
-        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal) ||
-            featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
+        if (featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
         {
             var activeSchedule = await GetActiveScheduleAsync(subscription);
 

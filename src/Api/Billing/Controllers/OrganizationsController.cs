@@ -50,7 +50,6 @@ public class OrganizationsController(
     ISubscriberService subscriberService,
     IOrganizationInstallationRepository organizationInstallationRepository,
     IPricingClient pricingClient,
-    IFeatureService featureService,
     IReinstateSubscriptionCommand reinstateSubscriptionCommand)
     : Controller
 {
@@ -250,20 +249,13 @@ public class OrganizationsController(
             throw new NotFoundException();
         }
 
-        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        var organization = await organizationRepository.GetByIdAsync(id);
+        if (organization == null)
         {
-            var organization = await organizationRepository.GetByIdAsync(id);
-            if (organization == null)
-            {
-                throw new NotFoundException();
-            }
+            throw new NotFoundException();
+        }
 
-            (await reinstateSubscriptionCommand.Run(organization)).GetValueOrThrow();
-        }
-        else
-        {
-            await organizationService.ReinstateSubscriptionAsync(id);
-        }
+        (await reinstateSubscriptionCommand.Run(organization)).GetValueOrThrow();
     }
 
     /// <summary>

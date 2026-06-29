@@ -171,7 +171,7 @@ public class SubscriberServiceTests
             .Returns(subscription);
 
         var featureService = sutProvider.GetDependency<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(false);
+        featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
 
         var offboardingSurveyResponse = new OffboardingSurveyResponse
         {
@@ -246,7 +246,7 @@ public class SubscriberServiceTests
         stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         var featureService = sutProvider.GetDependency<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(false);
+        featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
 
         await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: false);
 
@@ -263,7 +263,7 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task CancelSubscription_CancelImmediately_FlagOn_WithActiveSchedule_ReleasesScheduleBeforeCancelling(
+    public async Task CancelSubscription_CancelImmediately_PM35215FlagOn_WithActiveSchedule_ReleasesScheduleBeforeCancelling(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -294,7 +294,7 @@ public class SubscriberServiceTests
             });
 
         var featureService = sutProvider.GetDependency<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+        featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
 
         await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: true);
 
@@ -304,7 +304,7 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task CancelSubscription_CancelImmediately_BothFlagsOff_DoesNotCheckOrReleaseSchedule(
+    public async Task CancelSubscription_CancelImmediately_PM35215FlagOff_DoesNotCheckOrReleaseSchedule(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -321,7 +321,6 @@ public class SubscriberServiceTests
         stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         var featureService = sutProvider.GetDependency<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(false);
         featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
 
         await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: true);
@@ -366,7 +365,6 @@ public class SubscriberServiceTests
             });
 
         var featureService = sutProvider.GetDependency<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(false);
         featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
 
         await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: true);
@@ -422,7 +420,7 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task CancelSubscription_CancelImmediately_FlagOn_NoSchedule_ProceedsNormally(
+    public async Task CancelSubscription_CancelImmediately_PM35215FlagOn_NoSchedule_ProceedsNormally(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -441,7 +439,7 @@ public class SubscriberServiceTests
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
         var featureService = sutProvider.GetDependency<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+        featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
 
         await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: true);
 
@@ -451,7 +449,7 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task CancelSubscription_CancelAtEndOfPeriod_FlagOn_TwoPhaseSchedule_ReleasesScheduleAndSetsCancelAtPeriodEnd(
+    public async Task CancelSubscription_CancelAtEndOfPeriod_PM35215FlagOn_TwoPhaseSchedule_ReleasesScheduleAndSetsCancelAtPeriodEnd(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -498,7 +496,7 @@ public class SubscriberServiceTests
             });
 
         var featureService = sutProvider.GetDependency<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+        featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
 
         await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: false);
 
@@ -515,7 +513,7 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task CancelSubscription_CancelAtEndOfPeriod_FlagOn_TwoPhaseSchedule_WithSurvey_ReleasesScheduleAndUpdatesCancellationDetails(
+    public async Task CancelSubscription_CancelAtEndOfPeriod_PM35215FlagOn_TwoPhaseSchedule_WithSurvey_ReleasesScheduleAndUpdatesCancellationDetails(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -563,7 +561,7 @@ public class SubscriberServiceTests
             });
 
         var featureService = sutProvider.GetDependency<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+        featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
 
         var offboardingSurveyResponse = new OffboardingSurveyResponse
         {
@@ -590,7 +588,7 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task CancelSubscription_CancelAtEndOfPeriod_FlagOn_NoSchedule_SetsCancelAtPeriodEnd(
+    public async Task CancelSubscription_CancelAtEndOfPeriod_PM35215FlagOn_NoSchedule_SetsCancelAtPeriodEnd(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -609,7 +607,7 @@ public class SubscriberServiceTests
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
         var featureService = sutProvider.GetDependency<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+        featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
 
         await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: false);
 
@@ -621,7 +619,7 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task CancelSubscription_CancelAtEndOfPeriod_FlagOff_SetsCancelAtPeriodEnd_NoScheduleCheck(
+    public async Task CancelSubscription_CancelAtEndOfPeriod_PM35215FlagOff_SetsCancelAtPeriodEnd_NoScheduleCheck(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -638,7 +636,7 @@ public class SubscriberServiceTests
         stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         var featureService = sutProvider.GetDependency<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(false);
+        featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
 
         await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: false);
 

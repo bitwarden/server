@@ -143,10 +143,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 break;
             case Organization organization:
                 {
-                    if (_featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
-                    {
-                        await HandleScheduleTriggeredFamiliesMigrationAsync(parsedEvent, subscription, organization.Id);
-                    }
+                    await HandleScheduleTriggeredFamiliesMigrationAsync(parsedEvent, subscription, organization.Id);
 
                     await HandleScheduleTriggeredBusinessMigrationAsync(parsedEvent, subscription, organization.Id);
 
