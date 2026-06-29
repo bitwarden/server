@@ -250,6 +250,10 @@ public class ServiceAccountsController : Controller
         }
 
         var result = await _createAccessTokenCommand.CreateAsync(request.ToApiKey(id));
+
+        var userId = _userService.GetProperUserId(User).Value;
+        await _eventService.LogServiceAccountEventAsync(userId, [serviceAccount], EventType.AccessToken_Created, _currentContext.IdentityClientType);
+
         return new AccessTokenCreationResponseModel(result);
     }
 
@@ -266,6 +270,12 @@ public class ServiceAccountsController : Controller
             throw new NotFoundException();
         }
 
-        await _revokeAccessTokensCommand.RevokeAsync(serviceAccount, request.Ids);
+        var revokedAccessTokens = await _revokeAccessTokensCommand.RevokeAsync(serviceAccount, request.Ids);
+
+        if (revokedAccessTokens.Any())
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            await _eventService.LogServiceAccountEventAsync(userId, [serviceAccount], EventType.AccessToken_Revoked, _currentContext.IdentityClientType);
+        }
     }
 }
