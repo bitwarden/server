@@ -7,7 +7,6 @@ using Bit.Core.Billing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Tools.Services;
 using Bit.Core.Vault.Services;
 using Microsoft.Extensions.Logging;

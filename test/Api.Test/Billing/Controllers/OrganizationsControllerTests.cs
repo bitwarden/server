@@ -3,7 +3,6 @@ using AutoFixture.Xunit2;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Billing.Controllers;
 using Bit.Api.Models.Request.Organizations;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
