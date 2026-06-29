@@ -282,7 +282,6 @@ public static class FeatureFlagKeys
     public const string SecretsVersioning = "sm-1587-secrets-versioning";
 
     /* Innovation Team */
-    public const string ArchiveVaultItems = "pm-19148-innovation-archive";
 
     /* DIRT Team */
     public const string AccessIntelligenceVersion2 = "pm-31920-access-intelligence-azure-file-storage";
