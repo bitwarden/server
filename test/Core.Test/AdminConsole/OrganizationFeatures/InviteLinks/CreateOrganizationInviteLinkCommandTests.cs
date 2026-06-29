@@ -1,9 +1,9 @@
 ﻿using System.Text.Json;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Models.Data.Organizations;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -170,7 +170,7 @@ public class CreateOrganizationInviteLinkCommandTests
         Guid organizationId,
         SutProvider<CreateOrganizationInviteLinkCommand> sutProvider)
     {
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
             .Returns((OrganizationAbility?)null);
 
@@ -196,7 +196,7 @@ public class CreateOrganizationInviteLinkCommandTests
         Guid organizationId,
         bool useInviteLinks = true)
     {
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
             .Returns(new OrganizationAbility { UseInviteLinks = useInviteLinks });
     }

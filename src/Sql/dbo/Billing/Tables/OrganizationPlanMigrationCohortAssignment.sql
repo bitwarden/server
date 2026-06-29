@@ -17,3 +17,9 @@ GO
 CREATE NONCLUSTERED INDEX [IX_OrganizationPlanMigrationCohortAssignment_CohortId_ScheduledDate_MigratedDate]
     ON [dbo].[OrganizationPlanMigrationCohortAssignment] ([CohortId] ASC, [ScheduledDate] ASC, [MigratedDate] ASC)
     INCLUDE ([ChurnDiscountAppliedDate]);
+GO
+
+-- Serves the CSV export cursor: cohort filter plus the (CreationDate, Id) keyset seek used by
+-- OrganizationPlanMigrationCohortAssignment_ReadManyExportByCohortId.
+CREATE NONCLUSTERED INDEX [IX_OrganizationPlanMigrationCohortAssignment_CohortId_CreationDate_Id]
+    ON [dbo].[OrganizationPlanMigrationCohortAssignment] ([CohortId] ASC, [CreationDate] ASC, [Id] ASC);
