@@ -351,15 +351,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         // SalesAssistedRegistrationTokenable is the authorization for this path.
         await ValidateEmailDomainNotBlockedAsync(user.Email);
 
-        var validationError = SalesAssistedRegistrationTokenable.ValidateSalesAssistedRegistrationToken(
-            _salesAssistedRegistrationTokenDataFactory, salesAssistedToken, user.Email);
-        if (validationError != null)
-        {
-            throw new BadRequestException("Invalid or expired sales-assisted registration token.");
-        }
-
-        // Token is valid; unprotect to read the name carried by the token.
-        _salesAssistedRegistrationTokenDataFactory.TryUnprotect(salesAssistedToken, out var tokenable);
+        var tokenable = ValidateSalesAssistedRegistrationTokenable(salesAssistedToken, user.Email);
 
         user.EmailVerified = true;
         user.Name = tokenable.Name;
@@ -420,6 +412,18 @@ public class RegisterUserCommand : IRegisterUserCommand
         if (tokenable == null || !tokenable.Valid || !tokenable.TokenIsValid(userEmail))
         {
             throw new BadRequestException("Invalid email verification token.");
+        }
+
+        return tokenable;
+    }
+
+    private SalesAssistedRegistrationTokenable ValidateSalesAssistedRegistrationTokenable(
+        string salesAssistedToken, string email)
+    {
+        _salesAssistedRegistrationTokenDataFactory.TryUnprotect(salesAssistedToken, out var tokenable);
+        if (tokenable == null || !tokenable.Valid || !tokenable.TokenIsValid(email))
+        {
+            throw new BadRequestException("Invalid or expired sales-assisted registration token.");
         }
 
         return tokenable;
