@@ -1,4 +1,4 @@
-using Bit.Core.AdminConsole.Utilities.v2.Results;
+﻿using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Entities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
