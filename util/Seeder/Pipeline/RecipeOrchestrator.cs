@@ -119,6 +119,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         services.AddSingleton(deps.PasswordHasher);
         services.AddSingleton(deps.ManglerService);
         services.AddSingleton(new SeederSettings(options.Password, options.KdfIterations));
+        services.AddSingleton(deps.LicensingService);
         if (deps.Progress is not null)
         {
             services.AddSingleton(deps.Progress);
@@ -127,7 +128,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         var recipeName = "individual-from-options";
         var builder = services.AddRecipe(recipeName);
 
-        builder.CreateIndividualUser(email, premium, maxStorageGb);
+        builder.CreateIndividualUser(email, premium, maxStorageGb, options.SelfHosted);
         builder.WithGenerator("individual.example");
 
         if (options.GenerateVault)
