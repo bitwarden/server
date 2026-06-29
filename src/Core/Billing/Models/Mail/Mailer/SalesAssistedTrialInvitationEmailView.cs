@@ -38,6 +38,44 @@ public class SalesAssistedTrialInvitationEmailView : BaseMailView
 
     public required string SenderEmail { get; set; }
 
+    // Distinct from TrialLength: this is the token lifetime from GlobalSettings, not the trial period.
+    public required int ExpiryDays { get; set; }
+
+    public string HeroTitle => TrialLength > 0
+        ? $"You're invited to start a <b>{TrialLength}-day free trial</b> of {ProductName}"
+        : $"You're invited to try <b>{ProductName}</b>";
+
+    public string ProductName => ProductTier switch
+    {
+        ProductTierType.Families => "Bitwarden Families",
+        ProductTierType.Teams => "Bitwarden Teams",
+        ProductTierType.TeamsStarter => "Bitwarden Teams Starter",
+        ProductTierType.Enterprise => "Bitwarden Enterprise",
+        _ => "Bitwarden"
+    };
+
+    public string SpotImageUrl => ProductTier switch
+    {
+        ProductTierType.Families => "https://assets.bitwarden.com/email/v1/spot-family-homes.png",
+        _ => "https://assets.bitwarden.com/email/v1/spot-enterprise.png"
+    };
+
+    public IEnumerable<string> Features => ProductTier switch
+    {
+        ProductTierType.Families =>
+        [
+            "Securely store and share passwords, credentials, and sensitive data",
+            "Cover up to 6 family members, each with their own personal encrypted vault",
+            "Store up to 5GB of encrypted file attachments",
+        ],
+        _ =>
+        [
+            "Securely store and share passwords, credentials, and sensitive data",
+            "Manage team access with group-based permissions and admin controls",
+            "Connect to your directory service for automated user provisioning",
+        ]
+    };
+
     /// <summary>
     /// The destination URL for the invitation CTA. Mirrors the two-branch new-user routing in
     /// <see cref="Bit.Core.Billing.Models.Mail.TrialInitiationVerifyEmail"/>:

@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Core.Auth.Models.Business.Tokenables;
+﻿using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Mail.Mailer;
 using Bit.Core.Exceptions;
@@ -55,6 +54,7 @@ public class SendSalesAssistedTrialInvitationCommand(
             TrialLength = trialLength,
             PaymentOptional = paymentOptional,
             SenderEmail = senderEmail,
+            ExpiryDays = globalSettings.SalesAssistedRegistrationTokenLifetimeDays,
         };
 
         await mailer.SendEmail(new SalesAssistedTrialInvitationEmail

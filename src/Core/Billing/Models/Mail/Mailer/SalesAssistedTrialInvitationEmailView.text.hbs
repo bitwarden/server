@@ -1,8 +1,13 @@
-You're invited to try Bitwarden
+{{#>FullTextLayout}}
+Your Bitwarden contact, {{SenderEmail}}, has arranged this trial for you.
 
-{{#if TrialLength}}You've been invited to start a {{TrialLength}}-day trial of Bitwarden {{ProductTier}}.{{else}}You've been invited to start a Bitwarden {{ProductTier}} plan.{{/if}}
+{{#if TrialLength}}During your {{TrialLength}}-day free trial of {{ProductName}}, your team can:{{else}}With your {{ProductName}} plan, your team can:{{/if}}
+{{#each Features}}
+  • {{this}}
+{{/each}}
 
 Get started:
-{{Url}}
+{{{Url}}}
 
-Sent by {{SenderEmail}} from the Bitwarden sales team.
+This invitation expires in {{ExpiryDays}} days. Have questions? Reach out to {{SenderEmail}}.
+{{/FullTextLayout}}

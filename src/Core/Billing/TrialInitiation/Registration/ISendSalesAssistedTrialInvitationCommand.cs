@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Core.Billing.Enums;
+﻿using Bit.Core.Billing.Enums;
 
 namespace Bit.Core.Billing.TrialInitiation.Registration;
 
