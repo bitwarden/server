@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities;
@@ -11,7 +12,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 
 public class UpdateOrganizationInviteLinkCommand(
     IOrganizationInviteLinkRepository organizationInviteLinkRepository,
-    IApplicationCacheService applicationCacheService,
+    IOrganizationAbilityCacheService organizationAbilityCacheService,
     TimeProvider timeProvider,
     IOrganizationRepository organizationRepository,
     IEventService eventService)
@@ -53,7 +54,7 @@ public class UpdateOrganizationInviteLinkCommand(
 
     private async Task<bool> OrganizationHasInviteLinksAbilityAsync(Guid organizationId)
     {
-        var ability = await applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+        var ability = await organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
         return ability is not null && ability.UseInviteLinks;
     }
 }

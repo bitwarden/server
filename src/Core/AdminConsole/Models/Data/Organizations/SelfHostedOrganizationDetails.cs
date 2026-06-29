@@ -161,6 +161,7 @@ public class SelfHostedOrganizationDetails : Organization
             UseAutomaticUserConfirmation = UseAutomaticUserConfirmation,
             UseMyItems = UseMyItems,
             UseInviteLinks = UseInviteLinks,
+            UsePam = UsePam,
         };
     }
 }

@@ -1,19 +1,19 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 
 public class OrganizationEnableCommand : IOrganizationEnableCommand
 {
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IOrganizationRepository _organizationRepository;
 
     public OrganizationEnableCommand(
-        IApplicationCacheService applicationCacheService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         IOrganizationRepository organizationRepository)
     {
-        _applicationCacheService = applicationCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _organizationRepository = organizationRepository;
     }
 
@@ -34,6 +34,6 @@ public class OrganizationEnableCommand : IOrganizationEnableCommand
         }
 
         await _organizationRepository.ReplaceAsync(organization);
-        await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+        await _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(organization);
     }
 }

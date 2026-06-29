@@ -1,11 +1,9 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Enums;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserEmail;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -19,9 +17,8 @@ namespace Bit.Core.Test.Auth.UserFeatures.UserEmail;
 [SutProviderCustomize]
 public class ChangeEmailCommandTests
 {
-    // Same-domain pair: lets tests bypass the policy gate via the domain-equality short-circuit
-    // in ChangeEmailCommand.EnsureNewEmailDomainAllowedByPolicyAsync. Tests that specifically
-    // exercise the policy gate use their own different-domain emails.
+    // Shared baseline emails used across most tests. Tests that exercise domain-policy behavior
+    // use explicit scenario-specific addresses.
     private const string _currentEmail = "old@example.com";
     private const string _newEmail = "new@example.com";
 
@@ -60,7 +57,7 @@ public class ChangeEmailCommandTests
     [Theory]
     [BitAutoData("hash")]
     [BitAutoData((string)null)]
-    public async Task ChangeEmailAsync_NonStripeUser_UpdatesFieldsAndPushesSyncSettings(
+    public async Task ChangeEmailAsync_NonStripeUser_UpdatesFields(
         string masterPassword, User user)
     {
         var sutProvider = new SutProvider<ChangeEmailCommand>()
@@ -84,12 +81,6 @@ public class ChangeEmailCommandTests
         Assert.Equal(now, user.RevisionDate);
         Assert.Equal(now, user.AccountRevisionDate);
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
-        // Sessions are not invalidated regardless of master-password presence: this command
-        // assumes the master-password salt has been decoupled from User.Email.
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushSyncSettingsAsync(user.Id);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushLogOutAsync(Arg.Any<Guid>());
         await sutProvider.GetDependency<IStripeSyncService>().DidNotReceive()
             .UpdateCustomerEmailAddressAsync(Arg.Any<string>(), Arg.Any<string>());
     }
@@ -111,8 +102,6 @@ public class ChangeEmailCommandTests
         await sutProvider.GetDependency<IStripeSyncService>().Received(1)
             .UpdateCustomerEmailAddressAsync("cus_123", user.BillingEmailAddress()!);
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushSyncSettingsAsync(user.Id);
     }
 
     [Theory, BitAutoData]
@@ -135,8 +124,6 @@ public class ChangeEmailCommandTests
         await sutProvider.GetDependency<IStripeSyncService>().DidNotReceive()
             .UpdateCustomerEmailAddressAsync(Arg.Any<string>(), Arg.Any<string>());
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushSyncSettingsAsync(user.Id);
     }
 
     [Theory, BitAutoData]
@@ -171,78 +158,28 @@ public class ChangeEmailCommandTests
         Assert.Equal(originalLastEmailChangeDate, user.LastEmailChangeDate);
         // Two persists: initial write, then the rollback write.
         await sutProvider.GetDependency<IUserRepository>().Received(2).ReplaceAsync(user);
-        // No push notification fires if Stripe sync failed.
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushSyncSettingsAsync(Arg.Any<Guid>());
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushLogOutAsync(Arg.Any<Guid>());
-    }
-
-    [Theory]
-    [BitAutoData("no-at-sign")]
-    [BitAutoData("too@many@signs.com")]
-    [BitAutoData("@no-local-part.com")]
-    [BitAutoData("")]
-    public async Task ChangeEmailAsync_NewEmailDomainIsNull_ThrowsBadRequestAndDoesNotPersist(
-        string invalidEmail, SutProvider<ChangeEmailCommand> sutProvider, User user)
-    {
-        user.Email = _currentEmail;
-
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ChangeEmailAsync(user, invalidEmail));
-        Assert.Equal("Invalid email address format.", ex.Message);
-
-        await sutProvider.GetDependency<IOrganizationDomainAllowEmailChangeQuery>().DidNotReceive()
-            .IsAllowedAsync(Arg.Any<User>(), Arg.Any<string>());
-        await sutProvider.GetDependency<IUserRepository>().DidNotReceive().ReplaceAsync(Arg.Any<User>());
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushLogOutAsync(Arg.Any<Guid>());
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushSyncSettingsAsync(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData]
-    public async Task ChangeEmailAsync_NewEmailDomainBlockedByPolicy_ThrowsAndDoesNotPersist(
+    public async Task ChangeEmailAsync_DomainGateThrows_PropagatesAndDoesNotPersist(
         SutProvider<ChangeEmailCommand> sutProvider, User user)
     {
+        // Domain-policy details (denial reasons and message text) belong
+        // to OrganizationDomainAllowEmailChangeQuery.ValidateAllowedAsync and are covered there.
+        // This test just locks in that ChangeEmailCommand defers to that gate and propagates
+        // failures without persisting anything.
         user.Email = _currentEmail;
         const string blockedEmail = "user@blocked-domain.com";
+        var thrown = new BadRequestException("Domain not allowed.");
         sutProvider.GetDependency<IOrganizationDomainAllowEmailChangeQuery>()
-            .IsAllowedAsync(user, "blocked-domain.com")
-            .Returns(OrganizationDomainAllowEmailChangeDenialReason.DomainIsBlockedByPolicy);
+            .ValidateAllowedAsync(user, blockedEmail)
+            .Throws(thrown);
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ChangeEmailAsync(user, blockedEmail));
-        Assert.Equal("This email address is claimed by an organization using Bitwarden.", ex.Message);
+        Assert.Same(thrown, ex);
 
         await sutProvider.GetDependency<IUserRepository>().DidNotReceive().ReplaceAsync(Arg.Any<User>());
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushLogOutAsync(Arg.Any<Guid>());
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushSyncSettingsAsync(Arg.Any<Guid>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task ChangeEmailAsync_UserIsClaimedAndDomainNotVerified_ThrowsAndDoesNotPersist(
-        SutProvider<ChangeEmailCommand> sutProvider, User user)
-    {
-        user.Email = _currentEmail;
-        const string unverifiedEmail = "user@unverified-domain.com";
-        sutProvider.GetDependency<IOrganizationDomainAllowEmailChangeQuery>()
-            .IsAllowedAsync(user, "unverified-domain.com")
-            .Returns(OrganizationDomainAllowEmailChangeDenialReason.UserIsClaimedAndDomainNotVerified);
-
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ChangeEmailAsync(user, unverifiedEmail));
-        Assert.Equal(
-            "Your account is managed by an organization, and this email address isn't on one of the organization's verified domains.",
-            ex.Message);
-
-        await sutProvider.GetDependency<IUserRepository>().DidNotReceive().ReplaceAsync(Arg.Any<User>());
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushLogOutAsync(Arg.Any<Guid>());
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushSyncSettingsAsync(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData]
@@ -252,9 +189,6 @@ public class ChangeEmailCommandTests
         user.Email = _currentEmail;
         user.Gateway = null;
         const string unblockedEmail = "user@unblocked-domain.com";
-        sutProvider.GetDependency<IOrganizationDomainAllowEmailChangeQuery>()
-            .IsAllowedAsync(user, "unblocked-domain.com")
-            .Returns(OrganizationDomainAllowEmailChangeDenialReason.Allowed);
         sutProvider.GetDependency<IUserRepository>()
             .GetByEmailAsync(unblockedEmail)
             .Returns((User)null);
@@ -263,41 +197,8 @@ public class ChangeEmailCommandTests
 
         Assert.Equal(unblockedEmail, user.Email);
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ChangeEmailAsync_SameDomain_SkipsOrganizationDomainQuery(
-        SutProvider<ChangeEmailCommand> sutProvider, User user)
-    {
-        user.Email = _currentEmail;
-        user.Gateway = null;
-        sutProvider.GetDependency<IUserRepository>()
-            .GetByEmailAsync(_newEmail)
-            .Returns((User)null);
-
-        await sutProvider.Sut.ChangeEmailAsync(user, _newEmail);
-
-        await sutProvider.GetDependency<IOrganizationDomainAllowEmailChangeQuery>().DidNotReceive()
-            .IsAllowedAsync(Arg.Any<User>(), Arg.Any<string>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task ChangeEmailAsync_SameDomainDifferentCase_SkipsOrganizationDomainQuery(
-        SutProvider<ChangeEmailCommand> sutProvider, User user)
-    {
-        // Locks in the case-insensitive short-circuit: EmailValidation.GetDomain lowercases the
-        // domain, so swapping casing on the same domain must not re-enter the policy gate.
-        user.Email = "old@Example.com";
-        user.Gateway = null;
-        const string newEmail = "new@example.com";
-        sutProvider.GetDependency<IUserRepository>()
-            .GetByEmailAsync(newEmail)
-            .Returns((User)null);
-
-        await sutProvider.Sut.ChangeEmailAsync(user, newEmail);
-
-        await sutProvider.GetDependency<IOrganizationDomainAllowEmailChangeQuery>().DidNotReceive()
-            .IsAllowedAsync(Arg.Any<User>(), Arg.Any<string>());
+        await sutProvider.GetDependency<IOrganizationDomainAllowEmailChangeQuery>().Received(1)
+            .ValidateAllowedAsync(user, unblockedEmail);
     }
 
     [Theory, BitAutoData]
@@ -337,9 +238,5 @@ public class ChangeEmailCommandTests
         Assert.Same(stripeFailure, thrown);
         // Both ReplaceAsync calls were attempted (initial write + rollback write).
         await sutProvider.GetDependency<IUserRepository>().Received(2).ReplaceAsync(user);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushSyncSettingsAsync(Arg.Any<Guid>());
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushLogOutAsync(Arg.Any<Guid>());
     }
 }
