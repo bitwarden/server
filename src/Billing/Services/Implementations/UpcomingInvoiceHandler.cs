@@ -270,6 +270,10 @@ public class UpcomingInvoiceHandler(
         try
         {
             var scheduled = await priceIncreaseScheduler.SchedulePersonalPriceIncrease(subscription);
+
+            // A false result means no new schedule was created — typically because an earlier upcoming-invoice
+            // event for this renewal already deferred the migration and sent its renewal email. Return true so
+            // the caller skips the generic upcoming-invoice email instead of sending a duplicate.
             if (!scheduled)
             {
                 return true;
@@ -696,6 +700,10 @@ public class UpcomingInvoiceHandler(
         try
         {
             var scheduled = await priceIncreaseScheduler.SchedulePersonalPriceIncrease(subscription);
+
+            // A false result means no new schedule was created — typically because an earlier upcoming-invoice
+            // event for this renewal already deferred the migration and sent its renewal email. Return true so
+            // the caller skips the generic upcoming-invoice email instead of sending a duplicate.
             if (!scheduled)
             {
                 return true;
