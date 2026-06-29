@@ -24,30 +24,21 @@ public class CreateStagedOrganizationUsersCommand(
 
         var creationDate = DateTime.UtcNow;
 
-        var organizationUsersToCreate = new List<OrganizationUser>();
-        foreach (var user in requestedUsers)
-        {
-            // existingEmails doubles as the running "seen" set, so duplicate emails within this batch
-            // are skipped alongside emails already present in the organization.
-            if (!existingEmails.Add(user.Email))
-            {
-                continue;
-            }
-
-            organizationUsersToCreate.Add(new OrganizationUser
+        var organizationUsersToCreate = requestedUsers
+            .Where(w => !existingEmails.Add(w.Email))
+            .Select(s => new OrganizationUser
             {
                 OrganizationId = request.Organization.Id,
                 UserId = null,
-                Email = user.Email.ToLowerInvariant(),
+                Email = s.Email.ToLowerInvariant(),
                 Key = null,
                 Type = OrganizationUserType.User,
                 Status = OrganizationUserStatusType.Staged,
                 // StatusNew is intentionally left null - it is only populated by the revoke flow
-                ExternalId = user.ExternalId,
+                ExternalId = s.ExternalId,
                 CreationDate = creationDate,
                 RevisionDate = creationDate,
-            });
-        }
+            }).ToList();
 
         if (organizationUsersToCreate.Count == 0)
         {
