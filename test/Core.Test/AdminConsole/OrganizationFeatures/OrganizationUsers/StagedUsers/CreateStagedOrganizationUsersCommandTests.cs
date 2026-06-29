@@ -1,5 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Provision;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -9,24 +9,32 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.Provision;
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
 
 [SutProviderCustomize]
-public class ProvisionStagedOrganizationUsersCommandTests
+public class CreateStagedOrganizationUsersCommandTests
 {
+    private static CreateStagedOrganizationUsersRequest BuildRequest(
+        Organization organization, params (string Email, string ExternalId)[] users) =>
+        new()
+        {
+            Organization = organization,
+            EventSystemUser = EventSystemUser.SCIM,
+            Users = users.Select(u => new StagedOrganizationUserRequest { Email = u.Email, ExternalId = u.ExternalId }),
+        };
+
     [Theory, BitAutoData]
-    public async Task ProvisionStagedOrganizationUsersAsync_CreatesStagedRows_WithExpectedFields(
+    public async Task RunAsync_CreatesStagedRows_WithExpectedFields(
         Organization organization,
-        SutProvider<ProvisionStagedOrganizationUsersCommand> sutProvider)
+        SutProvider<CreateStagedOrganizationUsersCommand> sutProvider)
     {
-        var users = new[] { ("user1@example.com", "ext-1"), ("USER2@example.com", "ext-2") };
+        var request = BuildRequest(organization, ("user1@example.com", "ext-1"), ("USER2@example.com", "ext-2"));
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .SelectKnownEmailsAsync(organization.Id, Arg.Any<IEnumerable<string>>(), false)
             .Returns(new List<string>());
 
-        var result = await sutProvider.Sut.ProvisionStagedOrganizationUsersAsync(
-            organization, users, EventSystemUser.SCIM);
+        var result = await sutProvider.Sut.RunAsync(request);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
@@ -45,22 +53,22 @@ public class ProvisionStagedOrganizationUsersCommandTests
                 // Email is normalized to lower-case.
                 created.Any(ou => ou.Email == "user2@example.com" && ou.ExternalId == "ext-2")));
 
-        Assert.Equal(2, result.Count);
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, result.AsSuccess.Count);
     }
 
     [Theory, BitAutoData]
-    public async Task ProvisionStagedOrganizationUsersAsync_EmitsStagedEvent_NotInvitedEvent(
+    public async Task RunAsync_EmitsStagedEvent_NotInvitedEvent(
         Organization organization,
-        SutProvider<ProvisionStagedOrganizationUsersCommand> sutProvider)
+        SutProvider<CreateStagedOrganizationUsersCommand> sutProvider)
     {
-        var users = new[] { ("user@example.com", "ext-1") };
+        var request = BuildRequest(organization, ("user@example.com", "ext-1"));
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .SelectKnownEmailsAsync(organization.Id, Arg.Any<IEnumerable<string>>(), false)
             .Returns(new List<string>());
 
-        await sutProvider.Sut.ProvisionStagedOrganizationUsersAsync(
-            organization, users, EventSystemUser.SCIM);
+        await sutProvider.Sut.RunAsync(request);
 
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
@@ -78,18 +86,17 @@ public class ProvisionStagedOrganizationUsersCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ProvisionStagedOrganizationUsersAsync_DoesNotPerformSeatCheck(
+    public async Task RunAsync_DoesNotPerformSeatCheck(
         Organization organization,
-        SutProvider<ProvisionStagedOrganizationUsersCommand> sutProvider)
+        SutProvider<CreateStagedOrganizationUsersCommand> sutProvider)
     {
-        var users = new[] { ("user@example.com", "ext-1") };
+        var request = BuildRequest(organization, ("user@example.com", "ext-1"));
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .SelectKnownEmailsAsync(organization.Id, Arg.Any<IEnumerable<string>>(), false)
             .Returns(new List<string>());
 
-        await sutProvider.Sut.ProvisionStagedOrganizationUsersAsync(
-            organization, users, EventSystemUser.SCIM);
+        await sutProvider.Sut.RunAsync(request);
 
         // Staged users do not consume a seat, so no occupied-seat lookup should occur. The command also
         // does not depend on IMailService or any autoscale command, so the absence of invite emails and
@@ -100,71 +107,62 @@ public class ProvisionStagedOrganizationUsersCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ProvisionStagedOrganizationUsersAsync_SkipsEmailsAlreadyInOrganization(
+    public async Task RunAsync_SkipsEmailsAlreadyInOrganization(
         Organization organization,
-        SutProvider<ProvisionStagedOrganizationUsersCommand> sutProvider)
+        SutProvider<CreateStagedOrganizationUsersCommand> sutProvider)
     {
-        var users = new[]
-        {
+        var request = BuildRequest(organization,
             ("existing@example.com", "ext-existing"),
-            ("new@example.com", "ext-new"),
-        };
+            ("new@example.com", "ext-new"));
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .SelectKnownEmailsAsync(organization.Id, Arg.Any<IEnumerable<string>>(), false)
             .Returns(new List<string> { "existing@example.com" });
 
-        var result = await sutProvider.Sut.ProvisionStagedOrganizationUsersAsync(
-            organization, users, EventSystemUser.SCIM);
+        var result = await sutProvider.Sut.RunAsync(request);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(created =>
                 created.Count() == 1 && created.Single().Email == "new@example.com"));
 
-        Assert.Single(result);
+        Assert.Single(result.AsSuccess);
     }
 
     [Theory, BitAutoData]
-    public async Task ProvisionStagedOrganizationUsersAsync_DeduplicatesEmailsWithinBatch(
+    public async Task RunAsync_DeduplicatesEmailsWithinBatch(
         Organization organization,
-        SutProvider<ProvisionStagedOrganizationUsersCommand> sutProvider)
+        SutProvider<CreateStagedOrganizationUsersCommand> sutProvider)
     {
-        var users = new[]
-        {
-            ("dup@example.com", "ext-1"),
-            ("DUP@example.com", "ext-2"),
-        };
+        var request = BuildRequest(organization, ("dup@example.com", "ext-1"), ("DUP@example.com", "ext-2"));
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .SelectKnownEmailsAsync(organization.Id, Arg.Any<IEnumerable<string>>(), false)
             .Returns(new List<string>());
 
-        var result = await sutProvider.Sut.ProvisionStagedOrganizationUsersAsync(
-            organization, users, EventSystemUser.SCIM);
+        var result = await sutProvider.Sut.RunAsync(request);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(created => created.Count() == 1));
 
-        Assert.Single(result);
+        Assert.Single(result.AsSuccess);
     }
 
     [Theory, BitAutoData]
-    public async Task ProvisionStagedOrganizationUsersAsync_WhenAllEmailsExist_CreatesNothingAndLogsNoEvents(
+    public async Task RunAsync_WhenAllEmailsExist_CreatesNothingAndLogsNoEvents(
         Organization organization,
-        SutProvider<ProvisionStagedOrganizationUsersCommand> sutProvider)
+        SutProvider<CreateStagedOrganizationUsersCommand> sutProvider)
     {
-        var users = new[] { ("existing@example.com", "ext-1") };
+        var request = BuildRequest(organization, ("existing@example.com", "ext-1"));
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .SelectKnownEmailsAsync(organization.Id, Arg.Any<IEnumerable<string>>(), false)
             .Returns(new List<string> { "existing@example.com" });
 
-        var result = await sutProvider.Sut.ProvisionStagedOrganizationUsersAsync(
-            organization, users, EventSystemUser.SCIM);
+        var result = await sutProvider.Sut.RunAsync(request);
 
-        Assert.Empty(result);
+        Assert.Empty(result.AsSuccess);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceive()
             .CreateManyAsync(Arg.Any<IEnumerable<OrganizationUser>>());

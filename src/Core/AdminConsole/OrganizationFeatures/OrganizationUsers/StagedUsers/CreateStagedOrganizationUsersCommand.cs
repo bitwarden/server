@@ -1,48 +1,49 @@
-﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Provision;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
 
-public class ProvisionStagedOrganizationUsersCommand(
+public class CreateStagedOrganizationUsersCommand(
     IOrganizationUserRepository organizationUserRepository,
     IEventService eventService)
-    : IProvisionStagedOrganizationUsersCommand
+    : ICreateStagedOrganizationUsersCommand
 {
-    public async Task<ICollection<OrganizationUser>> ProvisionStagedOrganizationUsersAsync(
-        Organization organization,
-        IEnumerable<(string Email, string ExternalId)> users,
-        EventSystemUser eventSystemUser)
+    public async Task<CommandResult<ICollection<OrganizationUser>>> RunAsync(
+        CreateStagedOrganizationUsersRequest request)
     {
-        var requestedUsers = users.ToList();
+        var requestedUsers = request.Users.ToList();
 
         var existingEmails = new HashSet<string>(
             await organizationUserRepository.SelectKnownEmailsAsync(
-                organization.Id, requestedUsers.Select(u => u.Email), false),
+                request.Organization.Id,
+                requestedUsers.Select(u => u.Email), false),
             StringComparer.InvariantCultureIgnoreCase);
 
         var creationDate = DateTime.UtcNow;
 
         var organizationUsersToCreate = new List<OrganizationUser>();
-        foreach (var (email, externalId) in requestedUsers)
+        foreach (var user in requestedUsers)
         {
-            if (!existingEmails.Add(email))
+            // existingEmails doubles as the running "seen" set, so duplicate emails within this batch
+            // are skipped alongside emails already present in the organization.
+            if (!existingEmails.Add(user.Email))
             {
                 continue;
             }
 
             organizationUsersToCreate.Add(new OrganizationUser
             {
-                OrganizationId = organization.Id,
+                OrganizationId = request.Organization.Id,
                 UserId = null,
-                Email = email.ToLowerInvariant(),
+                Email = user.Email.ToLowerInvariant(),
                 Key = null,
                 Type = OrganizationUserType.User,
                 Status = OrganizationUserStatusType.Staged,
-                // StatusNew is intentionally left null - it is only populated by the revoke flow when
-                ExternalId = externalId,
+                // StatusNew is intentionally left null - it is only populated by the revoke flow
+                ExternalId = user.ExternalId,
                 CreationDate = creationDate,
                 RevisionDate = creationDate,
             });
@@ -57,7 +58,7 @@ public class ProvisionStagedOrganizationUsersCommand(
 
         await eventService.LogOrganizationUserEventsAsync(
             organizationUsersToCreate.Select(organizationUser =>
-                (organizationUser, EventType.OrganizationUser_Staged, eventSystemUser, (DateTime?)creationDate)));
+                (organizationUser, EventType.OrganizationUser_Staged, request.EventSystemUser, (DateTime?)creationDate)));
 
         return organizationUsersToCreate;
     }
