@@ -6,6 +6,7 @@ namespace Bit.Admin.Auth.Models.SalesAssistedTrial;
 public class SalesTrialInviteModel
 {
     [Required]
+    [EmailAddress]
     public string Email { get; set; } = null!;
 
     public string? Name { get; set; }
