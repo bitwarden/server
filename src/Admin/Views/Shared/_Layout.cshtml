@@ -20,7 +20,8 @@
     var canManageCohorts =
         AccessControlService.UserHasPermission(Permission.Tools_ManagePlanMigrationCohorts)
         && FeatureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration);
-    var canSendSalesAssistedTrial = AccessControlService.UserHasPermission(Permission.Org_InitiateSalesAssistedTrial);
+    var canSendSalesAssistedTrial = AccessControlService.UserHasPermission(Permission.Org_InitiateSalesAssistedTrial)
+        && FeatureService.IsEnabled(FeatureFlagKeys.PM35092AuthSalesAssistedTrials);
 
     var canViewTools = canChargeBraintree || canCreateTransaction || canPromoteAdmin || canPromoteProviderServiceUser ||
                         canGenerateLicense || canManageCohorts || canSendSalesAssistedTrial;
