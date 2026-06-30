@@ -1,4 +1,9 @@
+#!/usr/bin/env pwsh
 # Script for generating and installing the Bitwarden development certificates on Windows.
+
+# Get the dev directory (parent of helpers)
+$DevDir = Split-Path -Parent $PSScriptRoot
+Set-Location $DevDir
 
 $params = @{
     'KeyAlgorithm' = 'RSA';
