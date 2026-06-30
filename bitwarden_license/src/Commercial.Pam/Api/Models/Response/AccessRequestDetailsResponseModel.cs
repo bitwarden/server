@@ -53,9 +53,6 @@ public class AccessRequestDetailsResponseModel : ResponseModel
     public Guid CipherId { get; }
     public Guid CollectionId { get; }
 
-    /// <summary>The access rule that gated the cipher at submit time. Not tracked in v1.</summary>
-    public string? RuleId => null;
-
     public Guid OrganizationId { get; }
     public Guid RequesterId { get; }
 
@@ -95,13 +92,6 @@ public class AccessRequestDetailsResponseModel : ResponseModel
 
     /// <summary>The parent lease if this is an extension request.</summary>
     public Guid? ExtensionOfLeaseId { get; }
-
-    /// <summary>
-    /// Always null in v0: human requests are window-bound, so <see cref="RequestedNotAfter"/> itself bounds when an
-    /// approved request can be activated. A separate deadline only becomes meaningful with on-demand (duration-only)
-    /// human requests, which don't exist yet.
-    /// </summary>
-    public DateTime? ActivationDeadline => null;
 
     public string? RequesterName { get; }
     public string? RequesterEmail { get; }
