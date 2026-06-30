@@ -1,4 +1,6 @@
-﻿namespace Microsoft.AspNetCore.Http.HttpResults;
+﻿using Bit.HttpExtensions;
+
+namespace Microsoft.AspNetCore.Http.HttpResults;
 
 public static class BitwardenTypedResultsExtensions
 {
