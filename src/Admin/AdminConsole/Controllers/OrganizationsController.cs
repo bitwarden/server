@@ -19,6 +19,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
@@ -231,8 +232,22 @@ public class OrganizationsController : Controller
             policies = await _policyRepository.GetManyByOrganizationIdAsync(id);
         }
         var users = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(id);
-        var billingInfo = await _paymentService.GetBillingAsync(organization);
-        var billingHistoryInfo = await _paymentService.GetBillingHistoryAsync(organization);
+        BillingInfo billingInfo = null;
+        BillingHistoryInfo billingHistoryInfo = null;
+        try
+        {
+            billingInfo = await _paymentService.GetBillingAsync(organization);
+            billingHistoryInfo = await _paymentService.GetBillingHistoryAsync(organization);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to load billing information for organization {OrganizationId}. The Stripe customer may have been deleted.",
+                id);
+            TempData["Warning"] =
+                "Billing information could not be loaded. The Stripe customer may have been deleted. " +
+                "You can still edit the organization and set a valid Gateway Customer ID.";
+        }
         var billingSyncConnection = _globalSettings.EnableCloudCommunication ? await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(id, OrganizationConnectionType.CloudBillingSync) : null;
         var secrets = organization.UseSecretsManager ? await _secretRepository.GetSecretsCountByOrganizationIdAsync(id) : -1;
         var projects = organization.UseSecretsManager ? await _projectRepository.GetProjectCountByOrganizationIdAsync(id) : -1;

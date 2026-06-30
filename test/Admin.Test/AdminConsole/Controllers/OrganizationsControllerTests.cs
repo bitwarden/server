@@ -13,6 +13,7 @@ using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Providers.Services;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -24,6 +25,7 @@ using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using Stripe;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Admin.Test.AdminConsole.Controllers;
@@ -1909,6 +1911,33 @@ public class OrganizationsControllerTests
         await sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
             .DidNotReceiveWithAnyArgs()
             .CreateAsync(default);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_BillingLoadThrows_StillRendersPageWithWarning(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // PM-38874: a deleted Stripe customer makes GetBillingAsync throw. The page must still
+        // render so an admin can correct the Gateway Customer ID rather than being locked out.
+        StubEditGetDependencies(sutProvider, organization, currentAssignment: null);
+
+        sutProvider.GetDependency<IStripePaymentService>()
+            .GetBillingAsync(organization)
+            .ThrowsAsync(new StripeException("No such customer: 'cus_deleted'"));
+
+        sutProvider.Sut.TempData =
+            new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.Edit(organization.Id);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<OrganizationEditModel>(view.Model);
+        Assert.Null(model.BillingInfo);
+        Assert.Null(model.BillingHistoryInfo);
+        Assert.True(sutProvider.Sut.TempData.ContainsKey("Warning"));
     }
 
     #endregion
