@@ -332,6 +332,11 @@ public class BusinessUnitConverter(
             Fail("Organization must be on an enterprise plan.");
         }
 
+        if (organization.UseSecretsManager)
+        {
+            Fail("Organization is subscribed to Secrets Manager.");
+        }
+
         var subscription = await subscriberService.GetSubscription(organization);
 
         if (subscription is not
@@ -416,6 +421,11 @@ public class BusinessUnitConverter(
         if (organization.PlanType.GetProductTier() != ProductTierType.Enterprise)
         {
             problems.Add("Organization must be on an enterprise plan.");
+        }
+
+        if (organization.UseSecretsManager)
+        {
+            problems.Add("Organization is subscribed to Secrets Manager. Please contact Customer Support to convert this organization to a business unit.");
         }
 
         var subscription = await subscriberService.GetSubscription(organization);
