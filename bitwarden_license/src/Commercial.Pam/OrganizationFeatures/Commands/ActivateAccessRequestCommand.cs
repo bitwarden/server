@@ -98,6 +98,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
 
         if (outcome == AccessLeaseMintOutcome.SingleActiveLeaseConflict)
         {
+            await _accessRequestRepository.MarkActivationRejectedAsync(request.Id, now);
             throw new ConflictException("Another active lease exists for this item. Try again once it ends.");
         }
 
@@ -111,6 +112,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
             {
                 return winner;
             }
+            await _accessRequestRepository.MarkActivationRejectedAsync(request.Id, now);
             throw new ConflictException("This request can no longer be activated.");
         }
 

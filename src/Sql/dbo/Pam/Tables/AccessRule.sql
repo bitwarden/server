@@ -12,6 +12,9 @@ CREATE TABLE [dbo].[AccessRule] (
     [MaxExtensionDurationSeconds] INT       NULL,
     [CreationDate]      DATETIME2(7)        NOT NULL,
     [RevisionDate]      DATETIME2(7)        NOT NULL,
+    [LastEditedBy]      UNIQUEIDENTIFIER    NULL,
+    [DeletedDate]       DATETIME2(7)        NULL,
+    [DeletedBy]         UNIQUEIDENTIFIER    NULL,
     CONSTRAINT [PK_AccessRule] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_AccessRule_Organization] FOREIGN KEY ([OrganizationId])
         REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE

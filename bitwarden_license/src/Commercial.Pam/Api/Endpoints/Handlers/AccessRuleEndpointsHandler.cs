@@ -46,7 +46,9 @@ public class AccessRuleEndpointsHandler(
     {
         await EnsureAdminAsync(orgId);
 
-        var rule = await createCommand.CreateAsync(model.ToAccessRule(orgId), model.Collections);
+        var toCreate = model.ToAccessRule(orgId);
+        toCreate.LastEditedBy = currentContext.UserId;
+        var rule = await createCommand.CreateAsync(toCreate, model.Collections);
         return new AccessRuleResponseModel(rule);
     }
 
@@ -54,7 +56,9 @@ public class AccessRuleEndpointsHandler(
     {
         await EnsureAdminAsync(orgId);
 
-        var rule = await updateCommand.UpdateAsync(orgId, id, model.ToAccessRule(orgId), model.Collections);
+        var toUpdate = model.ToAccessRule(orgId);
+        toUpdate.LastEditedBy = currentContext.UserId;
+        var rule = await updateCommand.UpdateAsync(orgId, id, toUpdate, model.Collections);
         return new AccessRuleResponseModel(rule);
     }
 
@@ -62,7 +66,7 @@ public class AccessRuleEndpointsHandler(
     {
         await EnsureAdminAsync(orgId);
 
-        await deleteCommand.DeleteAsync(orgId, id);
+        await deleteCommand.DeleteAsync(orgId, id, currentContext.UserId);
     }
 
     private async Task EnsureMemberAsync(Guid orgId)

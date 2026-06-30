@@ -2,5 +2,5 @@
 
 public interface IDeleteAccessRuleCommand
 {
-    Task DeleteAsync(Guid organizationId, Guid id);
+    Task DeleteAsync(Guid organizationId, Guid id, Guid? deletedBy);
 }

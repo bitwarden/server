@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[AccessRequest_Create]
+CREATE OR ALTER PROCEDURE [dbo].[AccessRequest_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @ExtensionOfLeaseId UNIQUEIDENTIFIER = NULL,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -49,3 +49,4 @@ BEGIN
         @RejectedDate
     )
 END
+GO

@@ -11,7 +11,10 @@ CREATE PROCEDURE [dbo].[AccessRule_Create]
     @AllowsExtensions BIT = 0,
     @MaxExtensionDurationSeconds INT = NULL,
     @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
+    @RevisionDate DATETIME2(7),
+    @LastEditedBy UNIQUEIDENTIFIER = NULL,
+    @DeletedDate DATETIME2(7) = NULL,
+    @DeletedBy UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -30,7 +33,10 @@ BEGIN
         [AllowsExtensions],
         [MaxExtensionDurationSeconds],
         [CreationDate],
-        [RevisionDate]
+        [RevisionDate],
+        [LastEditedBy],
+        [DeletedDate],
+        [DeletedBy]
     )
     VALUES
     (
@@ -46,6 +52,9 @@ BEGIN
         @AllowsExtensions,
         @MaxExtensionDurationSeconds,
         @CreationDate,
-        @RevisionDate
+        @RevisionDate,
+        @LastEditedBy,
+        @DeletedDate,
+        @DeletedBy
     )
 END

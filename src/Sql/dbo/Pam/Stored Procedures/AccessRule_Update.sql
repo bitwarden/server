@@ -11,11 +11,16 @@ CREATE PROCEDURE [dbo].[AccessRule_Update]
     @AllowsExtensions BIT = 0,
     @MaxExtensionDurationSeconds INT = NULL,
     @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
+    @RevisionDate DATETIME2(7),
+    @LastEditedBy UNIQUEIDENTIFIER = NULL,
+    @DeletedDate DATETIME2(7) = NULL,
+    @DeletedBy UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON
 
+    -- @DeletedDate / @DeletedBy are accepted to match the entity shape but deliberately not written here; soft-delete
+    -- state is owned solely by AccessRule_DeleteById, so updating a rule can never revive a deleted one.
     UPDATE
         [dbo].[AccessRule]
     SET
@@ -30,7 +35,8 @@ BEGIN
         [AllowsExtensions] = @AllowsExtensions,
         [MaxExtensionDurationSeconds] = @MaxExtensionDurationSeconds,
         [CreationDate] = @CreationDate,
-        [RevisionDate] = @RevisionDate
+        [RevisionDate] = @RevisionDate,
+        [LastEditedBy] = @LastEditedBy
     WHERE
         [Id] = @Id
 END

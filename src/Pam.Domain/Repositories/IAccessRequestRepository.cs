@@ -86,6 +86,14 @@ public interface IAccessRequestRepository
     Task CancelWithDecisionAsync(AccessRequest request, AccessDecision decision, DateTime now);
 
     /// <summary>
+    /// Records the most recent refused activation attempt on an approved request (e.g. single-active-lease contention),
+    /// stamping <see cref="AccessRequest.RejectedDate"/> for the audit trail. Last-only and guarded: a no-op unless the
+    /// request is still <see cref="AccessRequestStatus.Approved"/> with no lease, so it never overwrites a successful
+    /// activation. No decision is written — the actor is always the requester.
+    /// </summary>
+    Task MarkActivationRejectedAsync(Guid requestId, DateTime now);
+
+    /// <summary>
     /// Returns the number of extension requests recorded against the lease (a lease may be extended once, so this is
     /// 0 or 1). Used to gate whether another extension is allowed.
     /// </summary>

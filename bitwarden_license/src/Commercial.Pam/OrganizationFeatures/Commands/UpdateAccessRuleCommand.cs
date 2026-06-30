@@ -58,7 +58,9 @@ public class UpdateAccessRuleCommand : IUpdateAccessRuleCommand
             throw new BadRequestException("A rule with that name already exists.");
         }
 
-        var desiredCollectionIds = await ValidateCollectionsAsync(organizationId, id, collectionIds);
+        // siblings is already filtered to live (non-deleted) rules, so its ids are the rules that genuinely govern.
+        var liveRuleIds = siblings.Select(r => r.Id).ToHashSet();
+        var desiredCollectionIds = await ValidateCollectionsAsync(organizationId, id, collectionIds, liveRuleIds);
 
         // Persist a plain AccessRule: the AccessRuleDetails returned by GetDetailsByIdAsync carries an extra
         // CollectionIds property that the base ReplaceAsync would otherwise forward to AccessRule_Update.
@@ -77,6 +79,7 @@ public class UpdateAccessRuleCommand : IUpdateAccessRuleCommand
             MaxExtensionDurationSeconds = update.MaxExtensionDurationSeconds,
             CreationDate = existing.CreationDate,
             RevisionDate = _timeProvider.GetUtcNow().UtcDateTime,
+            LastEditedBy = update.LastEditedBy,
         };
         await _repository.ReplaceAsync(toPersist);
 
@@ -87,7 +90,7 @@ public class UpdateAccessRuleCommand : IUpdateAccessRuleCommand
     }
 
     private async Task<List<Guid>> ValidateCollectionsAsync(Guid organizationId, Guid accessRuleId,
-        IEnumerable<Guid> collectionIds)
+        IEnumerable<Guid> collectionIds, IReadOnlySet<Guid> liveRuleIds)
     {
         var distinctIds = collectionIds.Distinct().ToList();
         if (distinctIds.Count == 0)
@@ -106,7 +109,10 @@ public class UpdateAccessRuleCommand : IUpdateAccessRuleCommand
             throw new BadRequestException("One or more collections do not belong to this organization.");
         }
 
-        if (collections.Any(c => c.AccessRuleId.HasValue && c.AccessRuleId != accessRuleId))
+        // A collection still pointing at a soft-deleted rule (link preserved for the audit trail) is no longer
+        // governed; only a link to a different LIVE rule is a conflict.
+        if (collections.Any(c =>
+            c.AccessRuleId.HasValue && c.AccessRuleId != accessRuleId && liveRuleIds.Contains(c.AccessRuleId.Value)))
         {
             throw new BadRequestException("One or more collections are already governed by another access rule.");
         }

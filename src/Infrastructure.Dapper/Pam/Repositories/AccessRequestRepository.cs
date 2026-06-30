@@ -149,6 +149,15 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
             commandType: CommandType.StoredProcedure);
     }
 
+    public async Task MarkActivationRejectedAsync(Guid requestId, DateTime now)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.ExecuteAsync(
+            $"[{Schema}].[AccessRequest_MarkActivationRejected]",
+            new { AccessRequestId = requestId, Now = now },
+            commandType: CommandType.StoredProcedure);
+    }
+
     public async Task CancelWithDecisionAsync(AccessRequest request, AccessDecision decision, DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);

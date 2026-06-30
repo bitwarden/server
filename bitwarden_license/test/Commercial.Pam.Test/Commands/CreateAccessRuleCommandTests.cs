@@ -104,19 +104,22 @@ public class CreateAccessRuleCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task CreateAsync_CollectionGovernedByAnotherRule_ThrowsBadRequest(AccessRule rule, Collection collection)
+    public async Task CreateAsync_CollectionGovernedByAnotherRule_ThrowsBadRequest(
+        AccessRule rule, AccessRule otherRule, Collection collection)
     {
         var sutProvider = SetupSutProvider();
         rule.Name = "test";
         rule.Conditions = """{"kind":"human_approval"}""";
+        otherRule.OrganizationId = rule.OrganizationId;
+        otherRule.Name = "other";
         collection.OrganizationId = rule.OrganizationId;
-        collection.AccessRuleId = Guid.NewGuid();
+        collection.AccessRuleId = otherRule.Id;   // governed by another LIVE rule
         sutProvider.GetDependency<IAccessRuleValidator>()
             .Validate(rule.Conditions)
             .Returns(AccessRuleValidationResult.Valid);
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetManyByOrganizationIdAsync(rule.OrganizationId)
-            .Returns(new List<AccessRule>());
+            .Returns(new List<AccessRule> { otherRule });
         sutProvider.GetDependency<ICollectionRepository>()
             .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new List<Collection> { collection });
@@ -125,6 +128,34 @@ public class CreateAccessRuleCommandTests
             () => sutProvider.Sut.CreateAsync(rule, new[] { collection.Id }));
         Assert.Contains("already governed by another access rule", ex.Message);
         await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
+    }
+
+    // A collection still linked to a SOFT-DELETED rule (the link is preserved for the audit trail) is no longer
+    // governed, so a new rule can claim it. A deleted rule is absent from GetManyByOrganizationIdAsync.
+    [Theory, BitAutoData]
+    public async Task CreateAsync_CollectionLinkedToDeletedRule_Succeeds(AccessRule rule, Collection collection)
+    {
+        var sutProvider = SetupSutProvider();
+        rule.Name = "test";
+        rule.Conditions = """{"kind":"human_approval"}""";
+        collection.OrganizationId = rule.OrganizationId;
+        collection.AccessRuleId = Guid.NewGuid();   // points at a rule that is no longer live (soft-deleted)
+        sutProvider.GetDependency<IAccessRuleValidator>()
+            .Validate(rule.Conditions)
+            .Returns(AccessRuleValidationResult.Valid);
+        sutProvider.GetDependency<IAccessRuleRepository>()
+            .GetManyByOrganizationIdAsync(rule.OrganizationId)
+            .Returns(new List<AccessRule>());   // deleted rules are filtered out of this read
+        sutProvider.GetDependency<IAccessRuleRepository>()
+            .CreateAsync(rule)
+            .Returns(rule);
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection> { collection });
+
+        await sutProvider.Sut.CreateAsync(rule, new[] { collection.Id });
+
+        await sutProvider.GetDependency<IAccessRuleRepository>().Received(1).CreateAsync(rule);
     }
 
     [Theory, BitAutoData]
