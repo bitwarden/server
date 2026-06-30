@@ -2486,4 +2486,37 @@ public class CiphersControllerTests
         Assert.Equal(fileName, fileResult.FileDownloadName);
         Assert.Same(stream, fileResult.FileStream);
     }
+
+    [Theory, BitAutoData]
+    public async Task PostAttachment_WithDuplicateFilename_ThrowsBadRequestError(
+        User user, Guid cipherId, string attachmentId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        var fileName = "shared-filename.txt";
+        var metaData = new CipherAttachment.MetaData
+        {
+            AttachmentId = attachmentId,
+            FileName = fileName,
+            Size = 10,
+        };
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        var cipherDetails = new CipherDetails { Id = cipherId, UserId = user.Id, Type = CipherType.Login, Data = "{}", Attachments = JsonSerializer.Serialize(
+            new Dictionary<string, CipherAttachment.MetaData> { { attachmentId, metaData } })};
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId, user.Id)
+            .Returns(Task.FromResult(cipherDetails));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.PostAttachment(cipherId, new AttachmentRequestModel {
+                AdminRequest = false,
+                FileName = fileName,
+                FileSize = 10,
+                Key = "test-key"
+            })
+        );
+        Assert.Equal("Items cannot have multiple attachments with the same file name", exception.Message);
+    }
 }

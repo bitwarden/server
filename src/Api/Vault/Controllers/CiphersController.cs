@@ -1332,6 +1332,11 @@ public class CiphersController : Controller
             throw new BadRequestException($"Max file size is {CipherService.MAX_FILE_SIZE_READABLE}.");
         }
 
+        if (cipher.GetAttachments().Values.Any(v => v.FileName == request.FileName))
+        {
+            throw new BadRequestException("Items cannot have multiple attachments with the same file name");
+        }
+
         var (attachmentId, uploadUrl) = await _cipherService.CreateAttachmentForDelayedUploadAsync(cipher,
             request.Key, request.FileName, request.FileSize, request.AdminRequest, user.Id, request.LastKnownRevisionDate);
 
