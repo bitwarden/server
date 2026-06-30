@@ -221,16 +221,18 @@ public class HubHelpers
 
                 break;
             case PushType.RefreshSecurityTasks:
-                var pendingTasksData =
+            case PushType.RefreshApproverInbox:
+            case PushType.RefreshAccessRequest:
+                var userRefreshData =
                     JsonSerializer.Deserialize<PushNotificationData<UserPushNotification>>(notificationJson,
                         _deserializerOptions);
-                if (pendingTasksData is null)
+                if (userRefreshData is null)
                 {
                     break;
                 }
 
-                await _hubContext.Clients.User(pendingTasksData.Payload.UserId.ToString())
-                    .SendAsync(_receiveMessageMethod, pendingTasksData, cancellationToken);
+                await _hubContext.Clients.User(userRefreshData.Payload.UserId.ToString())
+                    .SendAsync(_receiveMessageMethod, userRefreshData, cancellationToken);
                 break;
             case PushType.PolicyChanged:
                 await policyChangedNotificationHandler(notificationJson, cancellationToken);

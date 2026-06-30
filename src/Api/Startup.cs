@@ -37,9 +37,11 @@ using Bit.Core.Enums;
 
 
 #if !OSS
+using Bit.Commercial.Pam.Api.Endpoints;
 using Bit.Commercial.Core.SecretsManager;
 using Bit.Commercial.Core.Utilities;
 using Bit.Commercial.Infrastructure.EntityFramework.SecretsManager;
+using Bit.Commercial.Pam.Utilities;
 #endif
 
 namespace Bit.Api;
@@ -204,6 +206,7 @@ public class Startup
 #else
         services.AddCommercialCoreServices();
         services.AddCommercialSecretsManagerServices();
+        services.AddCommercialPamServices();
         services.AddSecretsManagerEfRepositories();
         Jobs.JobsHostedService.AddCommercialSecretsManagerJobServices(services);
 #endif
@@ -215,6 +218,8 @@ public class Startup
             config.Conventions.Add(new PublicApiControllersModelConvention());
         });
 
+        // Required for the PAM Minimal API endpoints to be discovered by ApiExplorer/Swagger.
+        services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(globalSettings, Environment);
         Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
         services.AddHostedService<Jobs.JobsHostedService>();
@@ -277,6 +282,11 @@ public class Startup
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapDefaultControllerRoute();
+
+#if !OSS
+            // PAM is a commercial feature; its Minimal API endpoints are only mapped in non-OSS builds.
+            endpoints.MapPamEndpoints();
+#endif
 
             if (!globalSettings.SelfHosted)
             {

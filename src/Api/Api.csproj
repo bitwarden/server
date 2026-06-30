@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\SharedWeb\SharedWeb.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />
+    <ProjectReference Include="..\Pam.Domain\Pam.Domain.csproj" />
     <ProjectReference Include="..\HttpExtensions\HttpExtensions.csproj" />
   </ItemGroup>
 
@@ -31,8 +32,15 @@
       <ItemGroup>
         <ProjectReference Include="..\..\bitwarden_license\src\Commercial.Core\Commercial.Core.csproj" />
         <ProjectReference Include="..\..\bitwarden_license\src\Commercial.Infrastructure.EntityFramework\Commercial.Infrastructure.EntityFramework.csproj" />
+        <ProjectReference Include="..\..\bitwarden_license\src\Commercial.Pam\Commercial.Pam.csproj" />
       </ItemGroup>
     </When>
+    <Otherwise>
+      <!-- PAM is a commercial feature; its API surface is excluded from OSS builds. -->
+      <ItemGroup>
+        <Compile Remove="Pam\**\*.cs" />
+      </ItemGroup>
+    </Otherwise>
   </Choose>
 
   <ItemGroup>

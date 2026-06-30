@@ -59,6 +59,14 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     Task DeleteUserAsync(Guid collectionId, Guid organizationUserId);
     Task UpdateUsersAsync(Guid id, IEnumerable<CollectionAccessSelection> users);
     Task<ICollection<CollectionAccessSelection>> GetManyUsersByIdAsync(Guid id);
+
+    /// <summary>
+    /// Returns the distinct user ids of every confirmed member who can Manage the collection: direct Manage
+    /// assignments, Manage via group, org Owners/Admins (when the organization allows admin access to all collection
+    /// items), and Custom users with the EditAnyCollection permission.
+    /// </summary>
+    Task<ICollection<Guid>> GetManagingUserIdsAsync(Guid collectionId);
+
     Task DeleteManyAsync(IEnumerable<Guid> collectionIds);
 
     /// <summary>

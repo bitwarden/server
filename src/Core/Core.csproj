@@ -78,11 +78,17 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Data\Data.csproj" />
+    <ProjectReference Include="..\Pam.Domain\Pam.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="Resources\" />
     <Folder Include="Properties\" />
   </ItemGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="Infrastructure.IntegrationTest" />
+    <InternalsVisibleTo Include="Commercial.Pam" />
   </ItemGroup>
 </Project>

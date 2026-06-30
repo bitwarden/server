@@ -60,6 +60,7 @@ using Bit.Core.Vault;
 using Bit.Core.Vault.Services;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
+using Bit.Pam.Services;
 using Bit.SharedWeb.Play;
 using DnsClient;
 using Duende.IdentityModel;
@@ -164,6 +165,7 @@ public static class ServiceCollectionExtensions
         services.AddUserServices(globalSettings);
         services.AddTrialInitiationServices();
         services.AddOrganizationServices(globalSettings);
+        services.TryAddScoped<ICipherLeaseGate, NoopCipherLeaseGate>();
         services.AddPolicyServices();
         services.AddScoped<IGroupService, GroupService>();
         services.AddScoped<IEventService, EventService>();

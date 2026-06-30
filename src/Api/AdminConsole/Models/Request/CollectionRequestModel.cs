@@ -18,6 +18,7 @@ public class CreateCollectionRequestModel
     public string ExternalId { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Groups { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Users { get; set; }
+    public Guid? AccessRuleId { get; set; }
 
     public Collection ToCollection(Guid orgId)
     {
@@ -31,6 +32,7 @@ public class CreateCollectionRequestModel
     {
         existingCollection.Name = Name;
         existingCollection.ExternalId = ExternalId;
+        existingCollection.AccessRuleId = AccessRuleId;
         return existingCollection;
     }
 }
@@ -65,7 +67,7 @@ public class UpdateCollectionRequestModel : CreateCollectionRequestModel
             existingCollection.Name = Name;
         }
         existingCollection.ExternalId = ExternalId;
+        existingCollection.AccessRuleId = AccessRuleId;
         return existingCollection;
     }
-
 }

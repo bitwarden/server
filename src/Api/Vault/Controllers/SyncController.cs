@@ -24,6 +24,7 @@ using Bit.Core.Settings;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
+using Bit.Pam.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -51,6 +52,7 @@ public class SyncController : Controller
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
+    private readonly ICipherLeaseGate _cipherLeaseGate;
 
     public SyncController(
         IUserService userService,
@@ -68,7 +70,8 @@ public class SyncController : Controller
         IOrganizationAbilityCacheService organizationAbilityCacheService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IWebAuthnCredentialRepository webAuthnCredentialRepository,
-        IUserAccountKeysQuery userAccountKeysQuery)
+        IUserAccountKeysQuery userAccountKeysQuery,
+        ICipherLeaseGate cipherLeaseGate)
     {
         _userService = userService;
         _folderRepository = folderRepository;
@@ -86,6 +89,7 @@ public class SyncController : Controller
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _webAuthnCredentialRepository = webAuthnCredentialRepository;
         _userAccountKeysQuery = userAccountKeysQuery;
+        _cipherLeaseGate = cipherLeaseGate;
     }
 
     [HttpGet("")]
@@ -122,6 +126,11 @@ public class SyncController : Controller
             collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
         }
 
+        // PAM credential leasing: ciphers reachable only through leasing-enabled collections are delivered
+        // with reduced data during the passive sync. The active GET /ciphers/{id} path is unchanged. The
+        // witness authorizes the non-gated subset; gated ciphers fall through to the partial shape.
+        var fullCipherAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(user.Id, ciphers, collections, collectionCiphersGroupDict);
+
         var userTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
         var organizationClaimingActiveUser = await _userService.GetOrganizationsClaimingUserAsync(user.Id);
@@ -148,7 +157,7 @@ public class SyncController : Controller
         var response = new SyncResponseModel(_globalSettings, user, userAccountKeys, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
             organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
             folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends, webAuthnCredentials,
-            policiesNew, organizationUserDetailsNew);
+            policiesNew, organizationUserDetailsNew, fullCipherAccess);
         return response;
     }
 
