@@ -640,11 +640,12 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
             // Packaged source plans (Teams Starter's flat bundle cap, Teams 2019's base seat allotment) store a
             // seat count in Seats that doesn't match the billed per-seat quantity; reconcile to what was billed.
+            // Also floor Seats on the DB SmSeats value to keep SM <= PM in the persisted record. Idempotent.
             if (isPackagedSourcePlan)
             {
                 var billedSeatQuantity = subscription.Items
                     .First(item => item.Price?.Id == targetPriceId).Quantity;
-                organization.Seats = (int)Math.Max(1, billedSeatQuantity);
+                organization.Seats = (int)Math.Max(Math.Max(1L, billedSeatQuantity), (long)(organization.SmSeats ?? 0));
             }
 
             await _organizationRepository.ReplaceAsync(organization);

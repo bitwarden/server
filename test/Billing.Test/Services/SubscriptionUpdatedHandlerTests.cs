@@ -4367,6 +4367,226 @@ public class SubscriptionUpdatedHandlerTests
         Assert.NotNull(assignment.MigratedDate);
     }
 
+    // PM-39816: the migrated Seats must cover purchased Secrets Manager seats so the current Teams invariant
+    // SM <= PM holds in the persisted record. The DB-domain reconcile floors Seats on the DB SmSeats value,
+    // never lowering SmSeats. Applies to every Packaged source: both Teams Starter PlanTypes (21, 16) and
+    // Teams 2019 (the same target invariant and the same latent bug).
+    [Theory]
+    [InlineData(PlanType.TeamsStarter, 4, 5, 5)]        // SM purchased above billed PM -> raise Seats to 5
+    [InlineData(PlanType.TeamsStarter2023, 4, 5, 5)]    // 2023 starter source
+    [InlineData(PlanType.TeamsMonthly2019, 4, 5, 5)]    // Teams 2019 packaged source
+    [InlineData(PlanType.TeamsStarter, 4, null, 4)]     // no SM seats -> Seats stays at billed (no regression)
+    [InlineData(PlanType.TeamsStarter2023, 4, null, 4)]
+    [InlineData(PlanType.TeamsMonthly2019, 4, null, 4)]
+    [InlineData(PlanType.TeamsStarter, 1, 3, 3)]        // floored billed PM (1), SM 3 -> Seats 3
+    [InlineData(PlanType.TeamsStarter2023, 1, 3, 3)]
+    [InlineData(PlanType.TeamsMonthly2019, 1, 3, 3)]
+    public async Task HandleAsync_BusinessMigration_PackagedSource_FloorsSeatsOnSmSeats(
+        PlanType sourcePlanType, long billedSeats, int? smSeats, int expectedSeats)
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var sourcePlan = MockPlans.Get(sourcePlanType);
+        var teamsMonthly = MockPlans.Get(PlanType.TeamsMonthly);
+        var migrationPathId = sourcePlanType switch
+        {
+            PlanType.TeamsStarter => MigrationPathId.TeamsStarterToCurrent,
+            PlanType.TeamsStarter2023 => MigrationPathId.TeamsStarter2023ToCurrent,
+            PlanType.TeamsMonthly2019 => MigrationPathId.Teams2019MonthlyToCurrent,
+            _ => throw new ArgumentOutOfRangeException(nameof(sourcePlanType))
+        };
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = sourcePlan.PasswordManager.StripePlanId },
+                        Plan = new Plan { Id = sourcePlan.PasswordManager.StripePlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_floor_sm",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                        Quantity = billedSeats
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = sourcePlanType,
+            Plan = sourcePlan.Name,
+            Seats = 10,
+            SmSeats = smSeats,
+            SmServiceAccounts = 20
+        };
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            CohortId = cohortId
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(sourcePlanType).Returns(sourcePlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthly);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = sourcePlanType.ToString(),
+            MigrationPathId = migrationPathId,
+            IsActive = true
+        });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — Seats floored at SmSeats and persisted; SmSeats itself untouched (we raise PM, never lower SM).
+        Assert.Equal(expectedSeats, organization.Seats);
+        Assert.Equal(smSeats, organization.SmSeats);
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
+            o.Id == organizationId &&
+            o.PlanType == PlanType.TeamsMonthly &&
+            o.Seats == expectedSeats &&
+            o.SmSeats == smSeats));
+    }
+
+    // PM-39816 (Risk 4): the Math.Max floor is idempotent. If Stripe replays the event before MigratedDate is
+    // stamped, the reconcile re-runs and must recompute the identical Seats value.
+    [Fact]
+    public async Task HandleAsync_BusinessMigration_TeamsStarter_FloorOnSmSeatsIsIdempotentAcrossRetry()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var teamsStarter = new TeamsStarterPlan();
+        var teamsMonthly = new TeamsPlan(false);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsStarter.PasswordManager.StripePlanId },
+                        Plan = new Plan { Id = teamsStarter.PasswordManager.StripePlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_idem_sm",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                        Quantity = 4
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.TeamsStarter,
+            Plan = teamsStarter.Name,
+            Seats = 10,
+            SmSeats = 5,
+            SmServiceAccounts = 20
+        };
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            CohortId = cohortId
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsStarter).Returns(teamsStarter);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthly);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "TeamsStarter",
+            MigrationPathId = MigrationPathId.TeamsStarterToCurrent,
+            IsActive = true
+        });
+
+        // Act — first apply, then simulate a pre-stamp Stripe retry by clearing MigratedDate so the reconcile re-runs.
+        await _sut.HandleAsync(parsedEvent);
+        Assert.Equal(5, organization.Seats);
+
+        assignment.MigratedDate = null;
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — the replay recomputes the identical floored value.
+        Assert.Equal(5, organization.Seats);
+        Assert.Equal(5, organization.SmSeats);
+    }
+
     [Theory]
     [InlineData(3)]
     [InlineData(7)]
