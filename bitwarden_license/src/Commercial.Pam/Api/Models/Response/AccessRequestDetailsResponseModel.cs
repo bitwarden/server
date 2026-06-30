@@ -23,7 +23,6 @@ public class AccessRequestDetailsResponseModel : ResponseModel
         Status = AccessRequestStatusNames.From(details.Status, details.ProducedLeaseId.HasValue);
         RequestedNotBefore = details.NotBefore.AsUtc();
         RequestedNotAfter = details.NotAfter.AsUtc();
-        RequestedTtlSeconds = (int)(details.NotAfter - details.NotBefore).TotalSeconds;
         Reason = details.Reason;
         SubmittedAt = details.CreationDate.AsUtc();
         ResolvedAt = details.ResolvedDate.AsUtc();
@@ -63,9 +62,14 @@ public class AccessRequestDetailsResponseModel : ResponseModel
     /// <summary><c>pending | approved | activated | denied | canceled | expired</c>.</summary>
     public string Status { get; }
 
+    /// <summary>
+    /// The resolved absolute access window. Both request modes collapse into it at submit (on-demand →
+    /// <c>now</c>..<c>now + duration</c>, scheduled → the chosen start/end), so there is no separate duration or mode
+    /// field; the length is <see cref="RequestedNotAfter"/> minus <see cref="RequestedNotBefore"/>. In v1 the approved
+    /// and leased windows are identical to this one.
+    /// </summary>
     public DateTime RequestedNotBefore { get; }
     public DateTime RequestedNotAfter { get; }
-    public int RequestedTtlSeconds { get; }
     public string? Reason { get; }
     public DateTime SubmittedAt { get; }
     public DateTime? ResolvedAt { get; }
