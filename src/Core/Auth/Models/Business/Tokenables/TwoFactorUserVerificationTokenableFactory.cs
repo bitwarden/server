@@ -16,11 +16,8 @@ public class TwoFactorUserVerificationTokenableFactory : ITwoFactorUserVerificat
 
     /// <inheritdoc />
     public TwoFactorUserVerificationTokenable CreateToken(User user, TwoFactorProviderType providerType) =>
-        new()
-        {
-            UserId = user.Id,
-            ProviderType = providerType,
-            ExpirationDate = DateTime.UtcNow.Add(
-                TimeSpan.FromMinutes(_globalSettings.TwoFactorUserVerificationTokenLifetimeInMinutes)),
-        };
+        new(
+            user,
+            providerType,
+            TimeSpan.FromMinutes(_globalSettings.TwoFactorUserVerificationTokenLifetimeInMinutes));
 }
