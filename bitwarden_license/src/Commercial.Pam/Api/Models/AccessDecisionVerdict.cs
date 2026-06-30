@@ -9,6 +9,9 @@
 /// </remarks>
 public enum AccessDecisionVerdict : byte
 {
+    /// <summary>The request was rejected; no lease is produced.</summary>
     Deny = 0,
+
+    /// <summary>The request was granted; an approved request can then be activated into a lease.</summary>
     Approve = 1,
 }

@@ -14,11 +14,19 @@ public class AccessRequestDetailsResponseModel : ResponseModel
     {
     }
 
+    /// <summary>The access request's unique identifier.</summary>
     public Guid Id { get; set; }
+
+    /// <summary>The cipher access was requested for.</summary>
     public Guid CipherId { get; set; }
+
+    /// <summary>The collection the cipher belongs to, through which the request is governed.</summary>
     public Guid CollectionId { get; set; }
 
+    /// <summary>The organization that owns the cipher.</summary>
     public Guid OrganizationId { get; set; }
+
+    /// <summary>The member who opened the request.</summary>
     public Guid RequesterId { get; set; }
 
     /// <summary><c>pending | approved | activated | denied | cancelled | expired</c>.</summary>
@@ -31,9 +39,17 @@ public class AccessRequestDetailsResponseModel : ResponseModel
     /// and leased windows are identical to this one.
     /// </summary>
     public DateTime RequestedNotBefore { get; set; }
+
+    /// <summary>The end of the resolved access window (UTC); see <see cref="RequestedNotBefore"/>.</summary>
     public DateTime RequestedNotAfter { get; set; }
+
+    /// <summary>The optional justification the requester supplied when opening the request.</summary>
     public string? Reason { get; set; }
+
+    /// <summary>When the request was opened (UTC).</summary>
     public DateTime SubmittedAt { get; set; }
+
+    /// <summary>When the request was approved, denied, or cancelled (UTC); null while pending.</summary>
     public DateTime? ResolvedAt { get; set; }
 
     /// <summary>Distinct from <see cref="ResolvedAt"/>; set when an approved request lapses unactivated. Not tracked in v1.</summary>
@@ -58,6 +74,9 @@ public class AccessRequestDetailsResponseModel : ResponseModel
     /// <summary>The parent lease if this is an extension request.</summary>
     public Guid? ExtensionOfLeaseId { get; set; }
 
+    /// <summary>The requester's display name, denormalized by the server; null only when the user could not be resolved.</summary>
     public string? RequesterName { get; set; }
+
+    /// <summary>The requester's email, denormalized by the server; null only when the user could not be resolved.</summary>
     public string? RequesterEmail { get; set; }
 }

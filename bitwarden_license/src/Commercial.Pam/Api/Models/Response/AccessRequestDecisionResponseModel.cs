@@ -14,17 +14,21 @@ public class AccessRequestDecisionResponseModel
     /// <summary><c>human | automatic</c>.</summary>
     public string DeciderKind { get; set; } = "human";
 
-    /// <summary>The human approver, or null for an automatic decision.</summary>
+    /// <summary>The human approver's user id, or null for an automatic decision.</summary>
     public Guid? Id { get; set; }
 
+    /// <summary>The human approver's display name; null for an automatic decision, or when the user could not be resolved.</summary>
     public string? Name { get; set; }
 
+    /// <summary>The human approver's email; null for an automatic decision, or when the user could not be resolved.</summary>
     public string? Email { get; set; }
 
+    /// <summary>The optional note the approver left with the decision.</summary>
     public string? Comment { get; set; }
 
     /// <summary>The verdict reached (<c>0 = deny, 1 = approve</c>).</summary>
     public AccessDecisionVerdict Verdict { get; set; }
 
+    /// <summary>When the decision was recorded (UTC).</summary>
     public DateTime DecidedAt { get; set; }
 }
