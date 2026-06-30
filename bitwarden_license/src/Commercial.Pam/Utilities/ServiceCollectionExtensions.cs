@@ -42,11 +42,13 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IListMyActiveAccessLeasesQuery, ListMyActiveAccessLeasesQuery>();
         services.AddScoped<IListActiveLeasesQuery, ListActiveLeasesQuery>();
         services.AddScoped<IListLeaseHistoryQuery, ListLeaseHistoryQuery>();
+        services.AddScoped<IListAccessAuditTrailQuery, ListAccessAuditTrailQuery>();
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<ICipherLeaseGate, CipherLeaseGate>();
 
         // Minimal API endpoint handlers. The endpoints (see PamEndpointsExtensions) resolve these from DI.
         services.AddScoped<LeaseEndpointsHandler>();
+        services.AddScoped<AuditEndpointsHandler>();
         services.AddScoped<AccessRequestEndpointsHandler>();
         services.AddScoped<AccessRuleEndpointsHandler>();
         services.AddScoped<CipherLeaseEndpointsHandler>();

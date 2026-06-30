@@ -13,16 +13,17 @@ namespace Bit.Commercial.Pam.Test.Commands;
 public class DeleteAccessRuleCommandTests
 {
     [Theory, BitAutoData]
-    public async Task DeleteAsync_HappyPath_Deletes(
-        AccessRule existing, SutProvider<DeleteAccessRuleCommand> sutProvider)
+    public async Task DeleteAsync_HappyPath_SoftDeletes(
+        AccessRule existing, Guid deletedBy, SutProvider<DeleteAccessRuleCommand> sutProvider)
     {
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetByIdAsync(existing.Id)
             .Returns(existing);
 
-        await sutProvider.Sut.DeleteAsync(existing.OrganizationId, existing.Id);
+        await sutProvider.Sut.DeleteAsync(existing.OrganizationId, existing.Id, deletedBy);
 
-        await sutProvider.GetDependency<IAccessRuleRepository>().Received(1).DeleteAsync(existing);
+        await sutProvider.GetDependency<IAccessRuleRepository>().Received(1)
+            .SoftDeleteAsync(existing.Id, deletedBy, Arg.Any<DateTime>());
     }
 
     [Theory, BitAutoData]
@@ -34,8 +35,9 @@ public class DeleteAccessRuleCommandTests
             .Returns((AccessRule?)null);
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.DeleteAsync(Guid.NewGuid(), Guid.NewGuid()));
-        await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default!);
+            () => sutProvider.Sut.DeleteAsync(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()));
+        await sutProvider.GetDependency<IAccessRuleRepository>()
+            .DidNotReceiveWithAnyArgs().SoftDeleteAsync(default, default, default);
     }
 
     [Theory, BitAutoData]
@@ -47,7 +49,8 @@ public class DeleteAccessRuleCommandTests
             .Returns(existing);
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.DeleteAsync(Guid.NewGuid(), existing.Id));
-        await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default!);
+            () => sutProvider.Sut.DeleteAsync(Guid.NewGuid(), existing.Id, Guid.NewGuid()));
+        await sutProvider.GetDependency<IAccessRuleRepository>()
+            .DidNotReceiveWithAnyArgs().SoftDeleteAsync(default, default, default);
     }
 }

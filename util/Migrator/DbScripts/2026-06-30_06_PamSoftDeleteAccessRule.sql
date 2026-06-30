@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[AccessRule_DeleteById]
+CREATE OR ALTER PROCEDURE [dbo].[AccessRule_DeleteById]
     @Id UNIQUEIDENTIFIER,
     @DeletedBy UNIQUEIDENTIFIER = NULL,
     @DeletedDate DATETIME2(7) = NULL
@@ -30,3 +30,4 @@ BEGIN
         EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
     END
 END
+GO
