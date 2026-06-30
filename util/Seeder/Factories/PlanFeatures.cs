@@ -250,6 +250,7 @@ public static class PlanFeatures
         org.UsePasswordManager = true;
         org.UseSecretsManager = true;
         org.UseRiskInsights = true;
+        org.UseMyItems = true;
         org.UseAdminSponsoredFamilies = true;
         org.SyncSeats = true;
         org.UseInviteLinks = true;

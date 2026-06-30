@@ -12,6 +12,7 @@ using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using static Bit.Core.Billing.Constants.StripeConstants;
+using OrganizationPlan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Core.Billing.Pricing;
 
@@ -549,15 +550,12 @@ public class PriceIncreaseScheduler(
         var sourcePlan = await pricingClient.GetPlanOrThrow(migrationPath.FromPlan);
         var targetPlan = await pricingClient.GetPlanOrThrow(migrationPath.ToPlan);
 
-        // A packaged source (e.g. Teams Starter) carries its flat bundle at quantity ~1, so bill the org's
-        // actual occupied seats on the per-seat target — applied unconditionally and floored at 1.
-        var overrideSeatQuantity =
-            sourcePlan.HasNonSeatBasedPasswordManagerPlan()
-                ? Math.Max(1, (await organizationRepository
-                    .GetOccupiedSeatCountByOrganizationIdAsync(organizationId)).Total)
-                : (long?)null;
-
         var targetSeatPriceId = targetPlan.PasswordManager.StripeSeatPlanId;
+
+        // Teams Starter and Teams 2019 are Packaged sources whose base line (and, for Teams 2019, the
+        // seat-overage line) collapse onto the Scalable target's single seat price at a usage-resolved
+        // quantity. Scalable sources preserve their line-item quantities.
+        var isPackagedSourcePlan = sourcePlan.IsPackagedMigrationSource(migrationPath.SeatCountPolicy);
 
         var items = new List<SubscriptionSchedulePhaseItemOptions>();
         foreach (var item in subscription.Items.Data)
@@ -571,15 +569,25 @@ public class PriceIncreaseScheduler(
                 return null;
             }
 
-            var quantity =
-                overrideSeatQuantity is { } seats && targetPriceId == targetSeatPriceId
-                    ? seats
-                    : item.Quantity;
+            // Skip the packaged source's seat line(s) here; one collapsed seat line is added below.
+            if (isPackagedSourcePlan && targetPriceId == targetSeatPriceId)
+            {
+                continue;
+            }
 
             items.Add(new SubscriptionSchedulePhaseItemOptions
             {
                 Price = targetPriceId,
-                Quantity = quantity
+                Quantity = item.Quantity
+            });
+        }
+
+        if (isPackagedSourcePlan)
+        {
+            items.Add(new SubscriptionSchedulePhaseItemOptions
+            {
+                Price = targetSeatPriceId,
+                Quantity = await CalculateTargetPlanSeatCountAsync(sourcePlan, organizationId)
             });
         }
 
@@ -606,6 +614,19 @@ public class PriceIncreaseScheduler(
             Discounts = discounts.Count > 0 ? discounts : null,
             ProrationBehavior = ProrationBehavior.None
         };
+    }
+
+    /// <summary>
+    /// Resolves the billed Phase 2 seat count for a Packaged source from the organization's actual usage.
+    /// </summary>
+    private async Task<int> CalculateTargetPlanSeatCountAsync(OrganizationPlan sourcePlan, Guid organizationId)
+    {
+        // Packaged line items don't reflect the true total, so bill by actual usage. organization.Seats
+        // supplies the purchased count ResolveMigratedSeatCount uses for the seat-overage case.
+        var occupiedSeatCount = (await organizationRepository
+            .GetOccupiedSeatCountByOrganizationIdAsync(organizationId)).Total;
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+        return sourcePlan.ResolveMigratedSeatCount(occupiedSeatCount, organization?.Seats);
     }
 
     /// <summary>
