@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Core.Services;
 
-namespace Bit.Commercial.Pam.Api.Endpoints.Filters;
+namespace Bit.Services.Pam.Api.Endpoints.Filters;
 
 /// <summary>
 /// Minimal API equivalent of <see cref="Bit.Core.Utilities.RequireFeatureAttribute"/>: gates an endpoint group

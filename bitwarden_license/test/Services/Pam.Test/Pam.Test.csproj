@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Commercial.Pam\Commercial.Pam.csproj" />
+    <ProjectReference Include="..\..\..\src\Services\Pam\Pam.csproj" />
   </ItemGroup>
 
 </Project>

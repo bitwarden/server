@@ -1,9 +1,9 @@
-﻿using Bit.Commercial.Pam.Api.Endpoints.Filters;
+﻿using Bit.Services.Pam.Api.Endpoints.Filters;
 using Bit.Core;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Models.Api;
 
-namespace Bit.Commercial.Pam.Api.Endpoints;
+namespace Bit.Services.Pam.Api.Endpoints;
 
 /// <summary>
 /// Maps the PAM HTTP surface as Minimal API endpoint groups. Each resource group shares the same cross-cutting

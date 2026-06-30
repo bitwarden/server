@@ -1,8 +1,8 @@
-﻿using Bit.Commercial.Pam.Api.Models.Request;
-using Bit.Commercial.Pam.Api.Models.Response;
+﻿using Bit.Services.Pam.Api.Models.Request;
+using Bit.Services.Pam.Api.Models.Response;
 using Bit.HttpExtensions;
 
-namespace Bit.Commercial.Pam.Api.Endpoints.Handlers;
+namespace Bit.Services.Pam.Api.Endpoints.Handlers;
 
 /// <summary>
 /// Handler for the <c>organizations/{orgId}/access-rules</c> resource. The Minimal API endpoints (see

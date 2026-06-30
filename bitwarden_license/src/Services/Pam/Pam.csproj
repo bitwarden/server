@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>Bit.Commercial.Pam</RootNamespace>
+    <RootNamespace>Bit.Services.Pam</RootNamespace>
     <!-- Emit XML docs so the access-rule DTO descriptions flow into the generated OpenAPI spec (the Api project
          includes this file via AddSwaggerGen). Suppress missing-doc warnings (1591/1573) as Core.csproj does, since
          TreatWarningsAsErrors is on. -->
@@ -24,8 +24,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\Core\Core.csproj" />
-    <ProjectReference Include="..\..\..\src\HttpExtensions\HttpExtensions.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Core\Core.csproj" />
+    <ProjectReference Include="..\..\..\..\src\HttpExtensions\HttpExtensions.csproj" />
   </ItemGroup>
 
 </Project>

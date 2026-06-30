@@ -2,7 +2,7 @@
 using Bit.Core.Models.Api;
 using Microsoft.IdentityModel.Tokens;
 
-namespace Bit.Commercial.Pam.Api.Endpoints.Filters;
+namespace Bit.Services.Pam.Api.Endpoints.Filters;
 
 /// <summary>
 /// Minimal API equivalent of the internal-API branch of <c>Bit.Api.Utilities.ExceptionHandlerFilterAttribute</c>.

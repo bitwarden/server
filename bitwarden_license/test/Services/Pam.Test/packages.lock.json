@@ -1234,7 +1234,7 @@
           "ZiggyCreatures.FusionCache": "2.0.2"
         }
       },
-      "commercial.pam": {
+      "pam": {
         "type": "Project",
         "dependencies": {
           "Core": "[2026.6.1, )",

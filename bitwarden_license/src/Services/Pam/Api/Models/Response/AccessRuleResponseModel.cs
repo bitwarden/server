@@ -1,14 +1,28 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Text.Json;
+using Bit.HttpExtensions;
 
-namespace Bit.Commercial.Pam.Api.Models.Request;
+namespace Bit.Services.Pam.Api.Models.Response;
 
-public class AccessRuleRequestModel
+public class AccessRuleResponseModel : ResponseModel
 {
+    public AccessRuleResponseModel()
+        : base("accessRule")
+    {
+    }
+
     /// <summary>
-    /// The rule's display name, shown wherever rules are listed and managed. Required; up to 256 characters.
+    /// The rule's unique identifier.
     /// </summary>
-    [Required]
-    [StringLength(256)]
+    public Guid Id { get; set; }
+
+    /// <summary>
+    /// The organization this rule belongs to.
+    /// </summary>
+    public Guid OrganizationId { get; set; }
+
+    /// <summary>
+    /// The rule's display name, shown wherever rules are listed and managed.
+    /// </summary>
     public string Name { get; set; } = null!;
 
     /// <summary>
@@ -17,18 +31,16 @@ public class AccessRuleRequestModel
     public string? Description { get; set; }
 
     /// <summary>
-    /// When false, the rule is inactive and does not gate access for the collections it governs. Defaults to
-    /// true so a request that omits the field creates an active rule.
+    /// When false, the rule is inactive and does not gate access for the collections it governs.
     /// </summary>
-    public bool Enabled { get; set; } = true;
+    public bool Enabled { get; set; }
 
     /// <summary>
     /// The condition tree that decides how access is granted under this rule — for example requiring human
-    /// approval, or restricting to certain times of day or source IPs. Sent as a JSON object and stored verbatim;
-    /// an empty or null value means the rule imposes no conditions.
+    /// approval, or restricting to certain times of day or source IPs. Returned as a JSON object; null when the
+    /// rule imposes no conditions.
     /// </summary>
-    [Required]
-    public object Conditions { get; set; } = null!;
+    public JsonElement? Conditions { get; set; }
 
     /// <summary>
     /// When true, the rule enforces a per-cipher singleton (at most one active lease per cipher across all users).
@@ -54,15 +66,22 @@ public class AccessRuleRequestModel
     public bool AllowsExtensions { get; set; }
 
     /// <summary>
-    /// The longest a single extension may run, in seconds. Required to be positive when
-    /// <see cref="AllowsExtensions"/> is true.
+    /// The longest a single extension may run, in seconds. Set when <see cref="AllowsExtensions"/> is true.
     /// </summary>
     public int? MaxExtensionDurationSeconds { get; set; }
 
     /// <summary>
-    /// The complete set of collections this rule governs. The rule's associations are replaced to match
-    /// exactly this set; an empty array clears all associations.
+    /// The complete set of collections this rule governs.
     /// </summary>
-    [Required]
     public IEnumerable<Guid> Collections { get; set; } = null!;
+
+    /// <summary>
+    /// When the rule was created (UTC).
+    /// </summary>
+    public DateTime CreationDate { get; set; }
+
+    /// <summary>
+    /// When the rule was last modified (UTC).
+    /// </summary>
+    public DateTime RevisionDate { get; set; }
 }

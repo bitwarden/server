@@ -1,7 +1,7 @@
-﻿using Bit.Commercial.Pam.Api.Endpoints.Handlers;
-using Bit.Commercial.Pam.Api.Models.Request;
+﻿using Bit.Services.Pam.Api.Endpoints.Handlers;
+using Bit.Services.Pam.Api.Models.Request;
 
-namespace Bit.Commercial.Pam.Api.Endpoints;
+namespace Bit.Services.Pam.Api.Endpoints;
 
 /// <summary>
 /// The <c>organizations/{orgId}/access-rules</c> resource: rule CRUD scoped to an organization. <c>orgId</c> is

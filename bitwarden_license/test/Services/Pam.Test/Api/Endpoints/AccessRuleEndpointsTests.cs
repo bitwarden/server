@@ -1,6 +1,6 @@
-﻿using Bit.Commercial.Pam.Api.Endpoints;
-using Bit.Commercial.Pam.Api.Endpoints.Handlers;
-using Bit.Commercial.Pam.Api.Models.Response;
+﻿using Bit.Services.Pam.Api.Endpoints;
+using Bit.Services.Pam.Api.Endpoints.Handlers;
+using Bit.Services.Pam.Api.Models.Response;
 using Bit.Core.Models.Api;
 using Bit.HttpExtensions;
 using Microsoft.AspNetCore.Builder;
@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
-namespace Bit.Commercial.Pam.Test.Api.Endpoints;
+namespace Bit.Services.Pam.Test.Api.Endpoints;
 
 /// <summary>
 /// Locks the access-rule wire contract that the generated OpenAPI spec — and the client bindings built from it —
@@ -24,7 +24,7 @@ public class AccessRuleEndpointsTests
     {
         var builder = WebApplication.CreateSlimBuilder();
         // The handler must be a known service so Minimal API binding treats the handler parameter as injected
-        // (not an inferred request body) — the same registration AddCommercialPamServices performs in the app.
+        // (not an inferred request body) — the same registration AddPamServices performs in the app.
         builder.Services.AddScoped<AccessRuleEndpointsHandler>();
 
         var app = builder.Build();

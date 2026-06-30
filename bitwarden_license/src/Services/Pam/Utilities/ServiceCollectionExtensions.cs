@@ -1,12 +1,12 @@
-﻿using Bit.Commercial.Pam.Api.Endpoints;
-using Bit.Commercial.Pam.Api.Endpoints.Handlers;
+﻿using Bit.Services.Pam.Api.Endpoints;
+using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.HttpExtensions;
 
-namespace Bit.Commercial.Pam.Utilities;
+namespace Bit.Services.Pam.Utilities;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddCommercialPamServices(this IServiceCollection services)
+    public static IServiceCollection AddPamServices(this IServiceCollection services)
     {
         // Minimal API endpoint handlers. The endpoints (see PamEndpointsExtensions) resolve these from DI.
         services.AddScoped<AccessRuleEndpointsHandler>();

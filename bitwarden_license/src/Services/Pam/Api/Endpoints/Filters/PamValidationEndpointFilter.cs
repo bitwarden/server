@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Models.Api;
 
-namespace Bit.Commercial.Pam.Api.Endpoints.Filters;
+namespace Bit.Services.Pam.Api.Endpoints.Filters;
 
 /// <summary>
 /// Minimal API equivalent of the MVC <c>ModelStateValidationFilterAttribute</c>: runs DataAnnotations validation
@@ -10,7 +10,7 @@ namespace Bit.Commercial.Pam.Api.Endpoints.Filters;
 /// </summary>
 public class PamValidationEndpointFilter : IEndpointFilter
 {
-    private const string RequestModelNamespace = "Bit.Commercial.Pam.Api.Models.Request";
+    private const string RequestModelNamespace = "Bit.Services.Pam.Api.Models.Request";
 
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {

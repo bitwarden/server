@@ -1151,7 +1151,7 @@
           "Infrastructure.EntityFramework": "[2026.6.1, )"
         }
       },
-      "commercial.pam": {
+      "pam": {
         "type": "Project",
         "dependencies": {
           "Core": "[2026.6.1, )",
