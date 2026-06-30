@@ -4,9 +4,11 @@
 
 using Bit.Core.Models.BitStripe;
 using Stripe;
-using Stripe.BillingPortal;
 using Stripe.Tax;
 using Stripe.TestHelpers;
+using static Bit.Core.Billing.Constants.StripeConstants;
+using BillingPortalSessionService = Stripe.BillingPortal.SessionService;
+using CheckoutSessionService = Stripe.Checkout.SessionService;
 using CustomerService = Stripe.CustomerService;
 using RefundService = Stripe.RefundService;
 
@@ -30,8 +32,9 @@ public class StripeAdapter : IStripeAdapter
     private readonly RegistrationService _taxRegistrationService;
     private readonly CouponService _couponService;
     private readonly ProductService _productService;
-    private readonly SessionService _billingPortalSessionService;
+    private readonly BillingPortalSessionService _billingPortalSessionService;
     private readonly SubscriptionScheduleService _subscriptionScheduleService;
+    private readonly CheckoutSessionService _checkoutSessionsService;
 
     public StripeAdapter()
     {
@@ -51,8 +54,9 @@ public class StripeAdapter : IStripeAdapter
         _taxRegistrationService = new RegistrationService();
         _couponService = new CouponService();
         _productService = new ProductService();
-        _billingPortalSessionService = new SessionService();
+        _billingPortalSessionService = new BillingPortalSessionService();
         _subscriptionScheduleService = new SubscriptionScheduleService();
+        _checkoutSessionsService = new CheckoutSessionService();
     }
 
     /**************
@@ -99,6 +103,9 @@ public class StripeAdapter : IStripeAdapter
 
     public Task<Subscription> CancelSubscriptionAsync(string id, SubscriptionCancelOptions options = null) =>
         _subscriptionService.CancelAsync(id, options);
+
+    public Task<StripeList<Subscription>> ListSubscriptionsAsync(SubscriptionListOptions options = null) =>
+        _subscriptionService.ListAsync(options);
 
     public Task DeleteSubscriptionDiscountAsync(string subscriptionId) =>
         _subscriptionService.DeleteDiscountAsync(subscriptionId);
@@ -237,17 +244,20 @@ public class StripeAdapter : IStripeAdapter
     public async Task<List<Product>> ListProductsAsync(ProductListOptions options = null) =>
         (await _productService.ListAsync(options)).Data;
 
-    /****************
-     ** SUBSCRIPTION **
-     ****************/
-    public Task<StripeList<Subscription>> ListSubscriptionsAsync(SubscriptionListOptions options = null) =>
-        _subscriptionService.ListAsync(options);
-
     /**********************
      ** BILLING PORTAL **
      **********************/
-    public Task<Session> CreateBillingPortalSessionAsync(SessionCreateOptions options) =>
+    public Task<Stripe.BillingPortal.Session> CreateBillingPortalSessionAsync(Stripe.BillingPortal.SessionCreateOptions options) =>
         _billingPortalSessionService.CreateAsync(options);
+
+    /***********************
+     ** CHECKOUT SESSION **
+     ***********************/
+    public Task<Stripe.Checkout.Session> CreateCheckoutSessionAsync(Stripe.Checkout.SessionCreateOptions options) =>
+        _checkoutSessionsService.CreateAsync(options);
+
+    public Task<Stripe.Checkout.Session> GetCheckoutSessionAsync(string id, Stripe.Checkout.SessionGetOptions options = null) =>
+        _checkoutSessionsService.GetAsync(id, options);
 
     /***************************
      ** SUBSCRIPTION SCHEDULE **
@@ -272,4 +282,22 @@ public class StripeAdapter : IStripeAdapter
      ******************/
     public Task<TestClock> GetTestClockAsync(string testClockId, TestClockGetOptions options = null) =>
         _testClockService.GetAsync(testClockId, options);
+
+    public async Task WaitForTestClockToAdvanceAsync(TestClock testClock)
+    {
+        if (testClock == null)
+        {
+            return;
+        }
+
+        while (testClock.Status != TestClockStatus.Ready)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2));
+            testClock = await _testClockService.GetAsync(testClock.Id);
+            if (testClock.Status == TestClockStatus.InternalFailure)
+            {
+                throw new Exception("Stripe Test Clock encountered an internal failure");
+            }
+        }
+    }
 }

@@ -5,6 +5,7 @@ using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
+using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
@@ -18,6 +19,7 @@ public interface IUpdateBillingAddressCommand
 }
 
 public class UpdateBillingAddressCommand(
+    IFeatureService featureService,
     ILogger<UpdateBillingAddressCommand> logger,
     ISubscriberService subscriberService,
     IStripeAdapter stripeAdapter) : BaseBillingCommand<UpdateBillingAddressCommand>(logger), IUpdateBillingAddressCommand
@@ -58,7 +60,7 @@ public class UpdateBillingAddressCommand(
                         City = billingAddress.City,
                         State = billingAddress.State
                     },
-                    Expand = ["subscriptions"]
+                    Expand = ["subscriptions", "subscriptions.data.test_clock"]
                 });
 
         await EnableAutomaticTaxAsync(subscriber, customer);
@@ -70,23 +72,26 @@ public class UpdateBillingAddressCommand(
         ISubscriber subscriber,
         BillingAddress billingAddress)
     {
-        var determinedTaxExemptStatus = await GetDeterminedTaxExemptStatusAsync(subscriber.GatewayCustomerId!, billingAddress.Country);
-
-        var customer = await stripeAdapter.UpdateCustomerAsync(subscriber.GatewayCustomerId,
-            new CustomerUpdateOptions
+        var updateOptions = new CustomerUpdateOptions
+        {
+            Address = new AddressOptions
             {
-                Address = new AddressOptions
-                {
-                    Country = billingAddress.Country,
-                    PostalCode = billingAddress.PostalCode,
-                    Line1 = billingAddress.Line1,
-                    Line2 = billingAddress.Line2,
-                    City = billingAddress.City,
-                    State = billingAddress.State
-                },
-                Expand = ["subscriptions", "tax_ids"],
-                TaxExempt = determinedTaxExemptStatus
-            });
+                Country = billingAddress.Country,
+                PostalCode = billingAddress.PostalCode,
+                Line1 = billingAddress.Line1,
+                Line2 = billingAddress.Line2,
+                City = billingAddress.City,
+                State = billingAddress.State
+            },
+            Expand = ["subscriptions", "subscriptions.data.test_clock", "tax_ids"]
+        };
+
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
+        {
+            updateOptions.TaxExempt = await GetDeterminedTaxExemptStatusAsync(subscriber.GatewayCustomerId!, billingAddress.Country);
+        }
+
+        var customer = await stripeAdapter.UpdateCustomerAsync(subscriber.GatewayCustomerId, updateOptions);
 
         await EnableAutomaticTaxAsync(subscriber, customer);
 
@@ -136,6 +141,73 @@ public class UpdateBillingAddressCommand(
 
             if (subscription is { AutomaticTax.Enabled: false })
             {
+                if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+                {
+                    var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
+                        new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
+
+                    var activeSchedule = schedules.Data.FirstOrDefault(s =>
+                        s.SubscriptionId == subscription.Id
+                        && s.Status == StripeConstants.SubscriptionScheduleStatus.Active);
+
+                    if (activeSchedule != null)
+                    {
+                        var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+                        var phases = new List<SubscriptionSchedulePhaseOptions>();
+
+                        for (var i = 0; i < activeSchedule.Phases.Count; i++)
+                        {
+                            var phase = activeSchedule.Phases[i];
+
+                            if (phase.EndDate <= now)
+                            {
+                                continue;
+                            }
+
+                            var discountConsumed = i > 0 && activeSchedule.Phases[i - 1].EndDate <= now;
+
+                            // Gate on StartDate > now, not !discountConsumed (false for the active
+                            // phase 0), so we never re-stack onto the current period. Use the fetched
+                            // customer (subscription.Customer may be a bare id here).
+                            var customerDiscount = phase.StartDate > now ? customer.Discount : null;
+
+                            phases.Add(new SubscriptionSchedulePhaseOptions
+                            {
+                                StartDate = phase.StartDate,
+                                EndDate = phase.EndDate,
+                                Items = phase.Items.Select(item => new SubscriptionSchedulePhaseItemOptions
+                                {
+                                    Price = item.PriceId,
+                                    Quantity = item.Quantity
+                                }).ToList(),
+                                Discounts = discountConsumed
+                                    ? []
+                                    : customerDiscount.MergeDiscountCouponIds(
+                                        phase.Discounts?.Select(d => d.CouponId)).ToPhaseDiscountOptions(),
+                                ProrationBehavior = phase.ProrationBehavior,
+                                AutomaticTax = new SubscriptionSchedulePhaseAutomaticTaxOptions
+                                {
+                                    Enabled = true
+                                }
+                            });
+                        }
+
+                        await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
+                            new SubscriptionScheduleUpdateOptions
+                            {
+                                DefaultSettings = new SubscriptionScheduleDefaultSettingsOptions
+                                {
+                                    AutomaticTax = new SubscriptionScheduleDefaultSettingsAutomaticTaxOptions
+                                    {
+                                        Enabled = true
+                                    }
+                                },
+                                Phases = phases
+                            });
+                        return;
+                    }
+                }
+
                 await stripeAdapter.UpdateSubscriptionAsync(subscriber.GatewaySubscriptionId,
                     new SubscriptionUpdateOptions
                     {

@@ -2,8 +2,8 @@
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -182,7 +182,7 @@ public class VerifyOrganizationDomainCommandTests
 
         _ = await sutProvider.Sut.UserVerifyOrganizationDomainAsync(domain);
 
-        await sutProvider.GetDependency<IVNextSavePolicyCommand>()
+        await sutProvider.GetDependency<ISavePolicyCommand>()
             .Received(1)
             .SaveAsync(Arg.Is<SavePolicyModel>(x => x.PolicyUpdate.Type == PolicyType.SingleOrg &&
                                                     x.PolicyUpdate.OrganizationId == domain.OrganizationId &&
@@ -192,7 +192,7 @@ public class VerifyOrganizationDomainCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UserVerifyOrganizationDomainAsync_UsesVNextSavePolicyCommand(
+    public async Task UserVerifyOrganizationDomainAsync_SavesPolicy(
         OrganizationDomain domain, Guid userId, SutProvider<VerifyOrganizationDomainCommand> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationDomainRepository>()
@@ -208,7 +208,7 @@ public class VerifyOrganizationDomainCommandTests
 
         _ = await sutProvider.Sut.UserVerifyOrganizationDomainAsync(domain);
 
-        await sutProvider.GetDependency<IVNextSavePolicyCommand>()
+        await sutProvider.GetDependency<ISavePolicyCommand>()
             .Received(1)
             .SaveAsync(Arg.Is<SavePolicyModel>(m =>
                 m.PolicyUpdate.Type == PolicyType.SingleOrg &&
@@ -235,7 +235,7 @@ public class VerifyOrganizationDomainCommandTests
 
         _ = await sutProvider.Sut.UserVerifyOrganizationDomainAsync(domain);
 
-        await sutProvider.GetDependency<IVNextSavePolicyCommand>()
+        await sutProvider.GetDependency<ISavePolicyCommand>()
             .DidNotReceive()
             .SaveAsync(Arg.Any<SavePolicyModel>());
     }
@@ -253,8 +253,7 @@ public class VerifyOrganizationDomainCommandTests
         }
 
         var mockedUsers = organizationUsers
-            .Where(x => x.Status != OrganizationUserStatusType.Invited &&
-                        x.Status != OrganizationUserStatusType.Revoked).ToList();
+            .Where(x => x.Status is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed).ToList();
 
         organization.Id = domain.OrganizationId;
 
@@ -284,5 +283,52 @@ public class VerifyOrganizationDomainCommandTests
                 x.EmailList.Count(e => e.EndsWith(domain.DomainName)) == mockedUsers.Count &&
                 x.Organization.Id == organization.Id &&
                 x.DomainName == domain.DomainName));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UserVerifyOrganizationDomainAsync_WhenDomainIsVerified_StagedUsersAreNotEmailed(
+        ICollection<OrganizationUserUserDetails> organizationUsers,
+        OrganizationDomain domain,
+        Organization organization,
+        SutProvider<VerifyOrganizationDomainCommand> sutProvider)
+    {
+        // All users belong to the domain; all are Staged except one Confirmed member.
+        foreach (var organizationUser in organizationUsers)
+        {
+            organizationUser.Email = $"{organizationUser.Name}@{domain.DomainName}";
+            organizationUser.Status = OrganizationUserStatusType.Staged;
+        }
+
+        var confirmedUser = organizationUsers.First();
+        confirmedUser.Status = OrganizationUserStatusType.Confirmed;
+
+        organization.Id = domain.OrganizationId;
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .GetClaimedDomainsByDomainNameAsync(domain.DomainName)
+            .Returns([]);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(domain.OrganizationId)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IDnsResolverService>()
+            .ResolveAsync(domain.DomainName, domain.Txt)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .UserId.Returns(Guid.NewGuid());
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(domain.OrganizationId)
+            .Returns(organizationUsers);
+
+        _ = await sutProvider.Sut.UserVerifyOrganizationDomainAsync(domain);
+
+        // Only the confirmed member is emailed; Staged members are excluded.
+        await sutProvider.GetDependency<IMailService>().Received().SendClaimedDomainUserEmailAsync(
+            Arg.Is<ClaimedUserDomainClaimedEmails>(x =>
+                x.EmailList.Count() == 1 &&
+                x.EmailList.Contains(confirmedUser.Email)));
     }
 }

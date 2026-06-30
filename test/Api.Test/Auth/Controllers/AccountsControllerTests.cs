@@ -1,13 +1,18 @@
 ﻿using System.Security.Claims;
 using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
+using Bit.Core.Auth.UserFeatures.TempPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Auth.UserFeatures.UserApiKey.Interfaces;
+using Bit.Core.Auth.UserFeatures.UserEmail;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -16,11 +21,13 @@ using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Bit.Api.Test.Auth.Controllers;
@@ -33,17 +40,21 @@ public class AccountsControllerTests : IDisposable
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IUserService _userService;
     private readonly IProviderUserRepository _providerUserRepository;
-    private readonly IPolicyService _policyService;
-    private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
+    private readonly ISelfServicePasswordChangeCommand _selfServicePasswordChangeCommand;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IFinishSsoJitProvisionMasterPasswordCommand _finishSsoJitProvisionMasterPasswordCommand;
     private readonly ISetInitialMasterPasswordCommandV1 _setInitialMasterPasswordCommandV1;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly ITdeSetPasswordCommand _tdeSetPasswordCommand;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
+    private readonly IReplaceAdminSetTemporaryPasswordCommand _replaceAdminSetTemporaryPasswordCommand;
     private readonly IFeatureService _featureService;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
     private readonly ITwoFactorEmailService _twoFactorEmailService;
     private readonly IChangeKdfCommand _changeKdfCommand;
     private readonly IUserRepository _userRepository;
+    private readonly IRotateUserApiKeyCommand _rotateUserApiKeyCommand;
+    private readonly ISelfServiceChangeEmailCommand _selfServiceChangeEmailCommand;
 
     public AccountsControllerTests()
     {
@@ -51,34 +62,42 @@ public class AccountsControllerTests : IDisposable
         _organizationService = Substitute.For<IOrganizationService>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _providerUserRepository = Substitute.For<IProviderUserRepository>();
-        _policyService = Substitute.For<IPolicyService>();
-        _setInitialMasterPasswordCommand = Substitute.For<ISetInitialMasterPasswordCommand>();
+        _selfServicePasswordChangeCommand = Substitute.For<ISelfServicePasswordChangeCommand>();
+        _policyRequirementQuery = Substitute.For<IPolicyRequirementQuery>();
+        _finishSsoJitProvisionMasterPasswordCommand = Substitute.For<IFinishSsoJitProvisionMasterPasswordCommand>();
         _setInitialMasterPasswordCommandV1 = Substitute.For<ISetInitialMasterPasswordCommandV1>();
         _twoFactorIsEnabledQuery = Substitute.For<ITwoFactorIsEnabledQuery>();
         _tdeSetPasswordCommand = Substitute.For<ITdeSetPasswordCommand>();
         _tdeOffboardingPasswordCommand = Substitute.For<ITdeOffboardingPasswordCommand>();
+        _replaceAdminSetTemporaryPasswordCommand = Substitute.For<IReplaceAdminSetTemporaryPasswordCommand>();
         _featureService = Substitute.For<IFeatureService>();
         _userAccountKeysQuery = Substitute.For<IUserAccountKeysQuery>();
         _twoFactorEmailService = Substitute.For<ITwoFactorEmailService>();
         _changeKdfCommand = Substitute.For<IChangeKdfCommand>();
         _userRepository = Substitute.For<IUserRepository>();
+        _rotateUserApiKeyCommand = Substitute.For<IRotateUserApiKeyCommand>();
+        _selfServiceChangeEmailCommand = Substitute.For<ISelfServiceChangeEmailCommand>();
 
         _sut = new AccountsController(
             _organizationService,
             _organizationUserRepository,
             _providerUserRepository,
             _userService,
-            _policyService,
-            _setInitialMasterPasswordCommand,
+            _selfServicePasswordChangeCommand,
+            _policyRequirementQuery,
+            _finishSsoJitProvisionMasterPasswordCommand,
             _setInitialMasterPasswordCommandV1,
             _tdeSetPasswordCommand,
             _tdeOffboardingPasswordCommand,
+            _replaceAdminSetTemporaryPasswordCommand,
             _twoFactorIsEnabledQuery,
             _featureService,
             _userAccountKeysQuery,
             _twoFactorEmailService,
             _changeKdfCommand,
-            _userRepository
+            _userRepository,
+            _rotateUserApiKeyCommand,
+            _selfServiceChangeEmailCommand
         );
     }
 
@@ -98,9 +117,10 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task PostEmailToken_ShouldInitiateEmailChange()
+    public async Task PostEmailToken_FlagOff_ShouldInitiateEmailChange()
     {
         // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(false);
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
         ConfigureUserServiceToAcceptPasswordFor(user);
@@ -112,12 +132,15 @@ public class AccountsControllerTests : IDisposable
 
         // Assert
         await _userService.Received(1).InitiateEmailChangeAsync(user, newEmail);
+        await _selfServiceChangeEmailCommand.DidNotReceiveWithAnyArgs()
+            .InitiateChangeEmailAsync(default!, default!, default!);
     }
 
     [Fact]
-    public async Task PostEmailToken_WhenValidateClaimedUserDomainAsyncFails_ShouldReturnError()
+    public async Task PostEmailToken_FlagOff_WhenValidateClaimedUserDomainAsyncFails_ShouldReturnError()
     {
         // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(false);
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
         ConfigureUserServiceToAcceptPasswordFor(user);
@@ -139,9 +162,12 @@ public class AccountsControllerTests : IDisposable
         );
     }
 
-    [Fact]
-    public async Task PostEmailToken_WhenNotAuthorized_ShouldThrowUnauthorizedAccessException()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PostEmailToken_WhenNotAuthorized_ShouldThrowUnauthorizedAccessException(bool flagOn)
     {
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(flagOn);
         ConfigureUserServiceToReturnNullPrincipal();
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(
@@ -150,8 +176,9 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task PostEmailToken_WhenInvalidPasssword_ShouldThrowBadRequestException()
+    public async Task PostEmailToken_FlagOff_WhenInvalidPasssword_ShouldThrowBadRequestException()
     {
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(false);
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
         ConfigureUserServiceToRejectPasswordFor(user);
@@ -162,16 +189,81 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task PostEmailToken_FlagOn_DelegatesToSelfServiceChangeEmailCommand()
+    {
+        // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
+        var user = GenerateExampleUser();
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        const string newEmail = "example@user.com";
+        const string masterPasswordHash = "master-password-hash";
+
+        // Act
+        await _sut.PostEmailToken(new EmailTokenRequestModel
+        {
+            MasterPasswordHash = masterPasswordHash,
+            NewEmail = newEmail
+        });
+
+        // Assert
+        await _selfServiceChangeEmailCommand.Received(1)
+            .InitiateChangeEmailAsync(user, masterPasswordHash, newEmail);
+        // Legacy path must NOT run when the flag is on.
+        await _userService.DidNotReceiveWithAnyArgs().InitiateEmailChangeAsync(default!, default!);
+        await _userService.DidNotReceiveWithAnyArgs().ValidateClaimedUserDomainAsync(default!, default!);
+        await _userService.DidNotReceiveWithAnyArgs().CheckPasswordAsync(default!, default!);
+    }
+
+    [Fact]
+    public async Task PostEmailToken_FlagOn_WhenCommandThrows_PropagatesException()
+    {
+        // The command now signals failure by throwing; the controller's job on the flag-on path is
+        // just to let that exception bubble up to the global ASP.NET exception handler.
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
+        var user = GenerateExampleUser();
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        var thrown = new BadRequestException("boom");
+        _selfServiceChangeEmailCommand
+            .InitiateChangeEmailAsync(user, Arg.Any<string>(), Arg.Any<string>())
+            .ThrowsAsync(thrown);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => _sut.PostEmailToken(new EmailTokenRequestModel { NewEmail = "example@user.com" })
+        );
+        Assert.Same(thrown, ex);
+    }
+
+    [Fact]
+    public async Task PostEmailToken_FlagOff_WhenKeyConnectorUser_ShouldThrowBadRequestException()
+    {
+        // Legacy path: the controller short-circuits on UsesKeyConnector before the password check.
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(false);
+        var user = GenerateExampleUser();
+        user.UsesKeyConnector = true;
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => _sut.PostEmailToken(new EmailTokenRequestModel { NewEmail = "example@user.com" })
+        );
+
+        await _selfServiceChangeEmailCommand.DidNotReceiveWithAnyArgs()
+            .InitiateChangeEmailAsync(default!, default!, default!);
+        await _userService.DidNotReceiveWithAnyArgs().InitiateEmailChangeAsync(default!, default!);
+    }
+
+    [Fact]
     public async Task PostEmail_ShouldChangeUserEmail()
     {
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
-        _userService.ChangeEmailAsync(user, default, default, default, default, default)
+        _userService.ChangeEmailAsync(user, Arg.Any<string>(), Arg.Any<string>(),
+                                      Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
                     .Returns(Task.FromResult(IdentityResult.Success));
 
-        await _sut.PostEmail(new EmailRequestModel());
+        await _sut.PostEmail(LegacyEmailRequestModel());
 
-        await _userService.Received(1).ChangeEmailAsync(user, default, default, default, default, default);
+        await _userService.Received(1).ChangeEmailAsync(user, Arg.Any<string>(), Arg.Any<string>(),
+                                                       Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Fact]
@@ -189,13 +281,68 @@ public class AccountsControllerTests : IDisposable
     {
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
-        _userService.ChangeEmailAsync(user, default, default, default, default, default)
+        _userService.ChangeEmailAsync(user, Arg.Any<string>(), Arg.Any<string>(),
+                                      Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
                     .Returns(Task.FromResult(IdentityResult.Failed()));
 
         await Assert.ThrowsAsync<BadRequestException>(
-            () => _sut.PostEmail(new EmailRequestModel())
+            () => _sut.PostEmail(LegacyEmailRequestModel())
         );
     }
+
+    [Fact]
+    public async Task PostEmail_FlagOn_DelegatesToSelfServiceChangeEmailCommand()
+    {
+        // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
+        var user = GenerateExampleUser();
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        const string newEmail = "example@user.com";
+        const string masterPasswordHash = "master-password-hash";
+        const string token = "change-email-token";
+
+        // Act
+        await _sut.PostEmail(new EmailRequestModel
+        {
+            MasterPasswordHash = masterPasswordHash,
+            NewEmail = newEmail,
+            Token = token
+        });
+
+        // Assert
+        await _selfServiceChangeEmailCommand.Received(1)
+            .ChangeEmailAsync(user, masterPasswordHash, newEmail, token);
+        // Legacy path must NOT run when the flag is on.
+        await _userService.DidNotReceiveWithAnyArgs().ChangeEmailAsync(
+            default!, default!, default!, default!, default!, default!);
+    }
+
+    [Fact]
+    public async Task PostEmail_FlagOn_WhenCommandThrows_PropagatesException()
+    {
+        // The command now signals failure by throwing; the controller's job on the flag-on path is
+        // just to let that exception bubble up to the global ASP.NET exception handler.
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
+        var user = GenerateExampleUser();
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        var thrown = new BadRequestException("boom");
+        _selfServiceChangeEmailCommand
+            .ChangeEmailAsync(user, Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+            .ThrowsAsync(thrown);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => _sut.PostEmail(new EmailRequestModel { NewEmail = "example@user.com" })
+        );
+        Assert.Same(thrown, ex);
+    }
+
+    // Returns a model with the legacy-path required fields (NewMasterPasswordHash and Key) populated
+    // so the controller's per-branch validation doesn't fail before reaching the IUserService call.
+    private static EmailRequestModel LegacyEmailRequestModel() => new()
+    {
+        NewMasterPasswordHash = "new-hash",
+        Key = "wrapped-key"
+    };
 
 
     [Fact]
@@ -340,33 +487,68 @@ public class AccountsControllerTests : IDisposable
         );
     }
 
+    // TODO: Delete this test when the PM37165_RotateUserApiKeyCommand flag is cleaned up.
     [Fact]
-    public async Task PostRotateApiKey_ShouldRotateApiKey()
+    public async Task PostRotateApiKey_FlagOff_CallsLegacyUserService()
     {
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
         ConfigureUserServiceToAcceptPasswordFor(user);
+        _featureService.IsEnabled(FeatureFlagKeys.PM37165_RotateUserApiKeyCommand).Returns(false);
+
         await _sut.RotateApiKey(new SecretVerificationRequestModel());
+
+#pragma warning disable CS0618 // asserting the legacy path while it still exists
+        await _userService.Received(1).RotateApiKeyAsync(user);
+#pragma warning restore CS0618
+        await _rotateUserApiKeyCommand.DidNotReceive().RotateApiKeyAsync(Arg.Any<User>());
     }
 
+    // TODO: When the PM37165_RotateUserApiKeyCommand flag is cleaned up, rename this to
+    // PostRotateApiKey_ShouldRotateApiKey (and drop the flag setup) — it becomes the canonical happy-path test.
     [Fact]
-    public async Task PostRotateApiKey_WhenUserDoesNotExist_ShouldThrowUnauthorizedAccessException()
-    {
-        ConfigureUserServiceToReturnNullPrincipal();
-
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(
-            () => _sut.ApiKey(new SecretVerificationRequestModel())
-        );
-    }
-
-    [Fact]
-    public async Task PostRotateApiKey_WhenPasswordCheckFails_ShouldThrowBadRequestException()
+    public async Task PostRotateApiKey_FlagOn_CallsRotateUserApiKeyCommand()
     {
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
+        ConfigureUserServiceToAcceptPasswordFor(user);
+        _featureService.IsEnabled(FeatureFlagKeys.PM37165_RotateUserApiKeyCommand).Returns(true);
+
+        await _sut.RotateApiKey(new SecretVerificationRequestModel());
+
+        await _rotateUserApiKeyCommand.Received(1).RotateApiKeyAsync(user);
+#pragma warning disable CS0618 // asserting the legacy path was NOT called
+        await _userService.DidNotReceive().RotateApiKeyAsync(Arg.Any<User>());
+#pragma warning restore CS0618
+    }
+
+    // Auth/secret guards run before the flag branch, but cover both flag states for parity. When the
+    // PM37165_RotateUserApiKeyCommand flag is cleaned up, drop the [InlineData] rows and convert back to [Fact].
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PostRotateApiKey_WhenUserDoesNotExist_ShouldThrowUnauthorizedAccessException(bool flagOn)
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM37165_RotateUserApiKeyCommand).Returns(flagOn);
+        ConfigureUserServiceToReturnNullPrincipal();
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => _sut.RotateApiKey(new SecretVerificationRequestModel())
+        );
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PostRotateApiKey_WhenPasswordCheckFails_ShouldThrowBadRequestException(bool flagOn)
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM37165_RotateUserApiKeyCommand).Returns(flagOn);
+        var user = GenerateExampleUser();
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
         ConfigureUserServiceToRejectPasswordFor(user);
+
         await Assert.ThrowsAsync<BadRequestException>(
-            () => _sut.ApiKey(new SecretVerificationRequestModel())
+            () => _sut.RotateApiKey(new SecretVerificationRequestModel())
         );
     }
 
@@ -599,27 +781,33 @@ public class AccountsControllerTests : IDisposable
 
     [Theory]
     [BitAutoData]
-    public async Task ResendNewDeviceVerificationEmail_WhenUserNotFound_ShouldFail(
+    public async Task ResendNewDeviceVerificationEmail_WhenUserNotFound_SilentlySucceedsWithoutSendingEmail(
     UnauthenticatedSecretVerificationRequestModel model)
     {
         // Arrange
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult((User)null));
+        _userRepository.GetByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult((User)null));
 
-        // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.ResendNewDeviceOtpAsync(model));
+        // Act
+        await _sut.ResendNewDeviceOtpAsync(model);
+
+        // Assert
+        await _twoFactorEmailService.DidNotReceiveWithAnyArgs().SendNewDeviceVerificationEmailAsync(default);
     }
 
     [Theory, BitAutoData]
-    public async Task ResendNewDeviceVerificationEmail_WhenSecretNotValid_ShouldFail(
+    public async Task ResendNewDeviceVerificationEmail_WhenSecretNotValid_SilentlySucceedsWithoutSendingEmail(
         User user,
         UnauthenticatedSecretVerificationRequestModel model)
     {
         // Arrange
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _userRepository.GetByEmailAsync(model.Email).Returns(Task.FromResult(user));
         _userService.VerifySecretAsync(user, Arg.Any<string>()).Returns(Task.FromResult(false));
 
-        // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(() => _sut.ResendNewDeviceOtpAsync(model));
+        // Act
+        await _sut.ResendNewDeviceOtpAsync(model);
+
+        // Assert
+        await _twoFactorEmailService.DidNotReceiveWithAnyArgs().SendNewDeviceVerificationEmailAsync(default);
     }
 
     [Theory, BitAutoData]
@@ -627,7 +815,7 @@ public class AccountsControllerTests : IDisposable
         UnauthenticatedSecretVerificationRequestModel model)
     {
         // Arrange
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _userRepository.GetByEmailAsync(model.Email).Returns(Task.FromResult(user));
         _userService.VerifySecretAsync(user, Arg.Any<string>()).Returns(Task.FromResult(true));
 
         // Act
@@ -639,7 +827,7 @@ public class AccountsControllerTests : IDisposable
 
     [Theory]
     [BitAutoData]
-    public async Task PostKdf_UserNotFound_ShouldFail(PasswordRequestModel model)
+    public async Task PostKdf_UserNotFound_ShouldFail(ChangeKdfRequestModel model)
     {
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult<User>(null));
 
@@ -649,36 +837,8 @@ public class AccountsControllerTests : IDisposable
 
     [Theory]
     [BitAutoData]
-    public async Task PostKdf_WithNullAuthenticationData_ShouldFail(
-        User user, PasswordRequestModel model)
-    {
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        model.AuthenticationData = null;
-
-        // Act
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKdf(model));
-
-        Assert.Contains("AuthenticationData and UnlockData must be provided.", exception.Message);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task PostKdf_WithNullUnlockData_ShouldFail(
-        User user, PasswordRequestModel model)
-    {
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        model.UnlockData = null;
-
-        // Act
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKdf(model));
-
-        Assert.Contains("AuthenticationData and UnlockData must be provided.", exception.Message);
-    }
-
-    [Theory]
-    [BitAutoData]
     public async Task PostKdf_ChangeKdfFailed_ShouldFail(
-        User user, PasswordRequestModel model)
+        User user, ChangeKdfRequestModel model)
     {
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
         _changeKdfCommand.ChangeKdfAsync(Arg.Any<User>(), Arg.Any<string>(),
@@ -696,7 +856,7 @@ public class AccountsControllerTests : IDisposable
     [Theory]
     [BitAutoData]
     public async Task PostKdf_ChangeKdfSuccess_NoError(
-        User user, PasswordRequestModel model)
+        User user, ChangeKdfRequestModel model)
     {
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
         _changeKdfCommand.ChangeKdfAsync(Arg.Any<User>(), Arg.Any<string>(),
@@ -736,6 +896,44 @@ public class AccountsControllerTests : IDisposable
 
         Assert.NotNull(exception.Message);
         Assert.Contains("User has existing keypair", exception.Message);
+    }
+
+    [Fact]
+    public async Task GetProfile_PoliciesInAcceptedState_FlagEnabled_PopulatesOrganizationsNew()
+    {
+        var user = GenerateExampleUser();
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        _userService.GetOrganizationsClaimingUserAsync(user.Id).Returns(new List<Organization>());
+        _featureService.IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState).Returns(true);
+
+        var acceptedOrganizationId = Guid.NewGuid();
+        var organizationsNew = new List<OrganizationUserOrganizationDetails>
+        {
+            new() { OrganizationId = acceptedOrganizationId }
+        };
+        _organizationUserRepository.GetManyConfirmedAcceptedDetailsByUserAsync(user.Id)
+            .Returns(organizationsNew);
+
+        var result = await _sut.GetProfile();
+
+        await _organizationUserRepository.Received(1).GetManyConfirmedAcceptedDetailsByUserAsync(user.Id);
+        Assert.NotNull(result.OrganizationsNew);
+        var returnedOrganization = Assert.Single(result.OrganizationsNew);
+        Assert.Equal(acceptedOrganizationId, returnedOrganization.Id);
+    }
+
+    [Fact]
+    public async Task GetProfile_PoliciesInAcceptedState_FlagDisabled_OrganizationsNewIsNull()
+    {
+        var user = GenerateExampleUser();
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        _userService.GetOrganizationsClaimingUserAsync(user.Id).Returns(new List<Organization>());
+        _featureService.IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState).Returns(false);
+
+        var result = await _sut.GetProfile();
+
+        await _organizationUserRepository.DidNotReceive().GetManyConfirmedAcceptedDetailsByUserAsync(Arg.Any<Guid>());
+        Assert.Null(result.OrganizationsNew);
     }
 
     // Below are helper functions that currently belong to this
@@ -870,15 +1068,15 @@ public class AccountsControllerTests : IDisposable
         // Arrange
         UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
+        _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
             .Returns(Task.CompletedTask);
 
         // Act
         await _sut.PostSetPasswordAsync(setInitialPasswordRequestModel);
 
         // Assert
-        await _setInitialMasterPasswordCommand.Received(1)
-            .SetInitialMasterPasswordAsync(
+        await _finishSsoJitProvisionMasterPasswordCommand.Received(1)
+            .FinishProvisionAsync(
                 Arg.Is<User>(u => u == user),
                 Arg.Is<SetInitialMasterPasswordDataModel>(d =>
                     d.MasterPasswordAuthentication != null &&
@@ -935,7 +1133,7 @@ public class AccountsControllerTests : IDisposable
         // Arrange
         UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
+        _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
             .Returns(Task.FromException(new Exception("Setting password failed")));
 
         // Act & Assert

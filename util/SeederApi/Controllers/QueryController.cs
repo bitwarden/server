@@ -1,10 +1,12 @@
 ﻿using Bit.SeederApi.Execution;
 using Bit.SeederApi.Models.Request;
 using Bit.SeederApi.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.SeederApi.Controllers;
 
+[Authorize]
 [Route("query")]
 public class QueryController(ILogger<QueryController> logger, IQueryExecutor queryExecutor) : Controller
 {

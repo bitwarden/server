@@ -1,10 +1,10 @@
 ﻿using System.Security.Claims;
 using AutoFixture;
-using Bit.Api.Models.Request;
+using Bit.Api.AdminConsole.Authorization.Collections;
+using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.Tools.Controllers;
 using Bit.Api.Tools.Models.Request.Accounts;
 using Bit.Api.Tools.Models.Request.Organizations;
-using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -32,7 +32,9 @@ public class ImportCiphersControllerTests
     {
         CiphersLimit = 40000,
         CollectionRelationshipsLimit = 80000,
-        CollectionsLimit = 2000
+        CollectionsLimit = 2000,
+        FoldersLimit = 2000,
+        FolderRelationshipsLimit = 80000
     };
 
     /*************************
@@ -142,7 +144,9 @@ public class ImportCiphersControllerTests
             {
                 CiphersLimit = 4,
                 CollectionRelationshipsLimit = 8,
-                CollectionsLimit = 2
+                CollectionsLimit = 2,
+                FoldersLimit = 2,
+                FolderRelationshipsLimit = 8
             };
 
         var userService = sutProvider.GetDependency<Bit.Core.Services.IUserService>();
@@ -228,7 +232,9 @@ public class ImportCiphersControllerTests
                 Arg.Any<List<Collection>>(),
                 Arg.Any<List<CipherDetails>>(),
                 Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
-                Arg.Any<Guid>());
+                Arg.Any<Guid>(),
+                Arg.Any<List<Folder>>(),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>());
     }
 
     [Theory, BitAutoData]
@@ -246,11 +252,6 @@ public class ImportCiphersControllerTests
             .SelfHosted = false;
         sutProvider.GetDependency<GlobalSettings>()
             .ImportCiphersLimitation = _organizationCiphersLimitations;
-
-        var importCiphersLimitation = new GlobalSettings.ImportCiphersLimitationSettings();
-        importCiphersLimitation.CiphersLimit = 40000;
-        importCiphersLimitation.CollectionRelationshipsLimit = 80000;
-        importCiphersLimitation.CollectionsLimit = 2000;
 
         sutProvider.GetDependency<Bit.Core.Services.IUserService>()
             .GetProperUserId(Arg.Any<ClaimsPrincipal>())
@@ -300,7 +301,9 @@ public class ImportCiphersControllerTests
                 Arg.Any<List<Collection>>(),
                 Arg.Any<List<CipherDetails>>(),
                 Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
-                Arg.Any<Guid>());
+                Arg.Any<Guid>(),
+                Arg.Any<List<Folder>>(),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>());
     }
 
     [Theory, BitAutoData]
@@ -503,7 +506,9 @@ public class ImportCiphersControllerTests
                 Arg.Any<List<Collection>>(),
                 Arg.Any<List<CipherDetails>>(),
                 Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
-                Arg.Any<Guid>());
+                Arg.Any<Guid>(),
+                Arg.Any<List<Folder>>(),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>());
     }
 
     [Theory, BitAutoData]
@@ -584,7 +589,9 @@ public class ImportCiphersControllerTests
                 Arg.Any<List<Collection>>(),
                 Arg.Any<List<CipherDetails>>(),
                 Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
-                Arg.Any<Guid>());
+                Arg.Any<Guid>(),
+                Arg.Any<List<Folder>>(),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>());
     }
 
     [Theory, BitAutoData]
@@ -658,7 +665,9 @@ public class ImportCiphersControllerTests
                 Arg.Any<List<Collection>>(),
                 Arg.Any<List<CipherDetails>>(),
                 Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
-                Arg.Any<Guid>());
+                Arg.Any<Guid>(),
+                Arg.Any<List<Folder>>(),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>());
     }
 
     [Theory, BitAutoData]
@@ -734,11 +743,13 @@ public class ImportCiphersControllerTests
                 Arg.Any<List<Collection>>(),
                 Arg.Any<List<CipherDetails>>(),
                 Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
-                Arg.Any<Guid>());
+                Arg.Any<Guid>(),
+                Arg.Any<List<Folder>>(),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>());
     }
 
     [Theory, BitAutoData]
-    public async Task PostImportOrganization_ImportWithNoCollectionsWithCreatePermissionsOnlySuccessAsync(
+    public async Task PostImportOrganization_ImportWithNoCollectionsWithCreatePermissionsOnly_ThrowsBadRequestAsync(
       SutProvider<ImportCiphersController> sutProvider,
       IFixture fixture,
       User user)
@@ -753,7 +764,7 @@ public class ImportCiphersControllerTests
 
         SetupUserService(sutProvider, user);
 
-        // Import model includes new and existing collection
+        // Import model with no collections — previously bypassed all authorization
         var request = new ImportOrganizationCiphersRequestModel
         {
             Collections = new List<CollectionWithIdRequestModel>().ToArray(),   // No collections
@@ -790,20 +801,23 @@ public class ImportCiphersControllerTests
             .GetManyByOrganizationIdAsync(orgId)
             .Returns(new List<Collection>());
 
-        // Act
-        // import ciphers only and no collections
-        // User has Create permissions
-        // expected to be successful
-        await sutProvider.Sut.PostImportOrganization(orgId.ToString(), request);
+        // Act & Assert
+        // With no collections and no AccessImportExport permission,
+        // the import should be rejected — empty collections must not bypass authorization
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.PostImportOrganization(orgId.ToString(), request));
 
-        // Assert
+        Assert.Equal("Not enough privileges to import into this organization.", exception.Message);
+
         await sutProvider.GetDependency<IImportCiphersCommand>()
-            .Received(1)
+            .DidNotReceive()
             .ImportIntoOrganizationalVaultAsync(
                 Arg.Any<List<Collection>>(),
                 Arg.Any<List<CipherDetails>>(),
                 Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
-                Arg.Any<Guid>());
+                Arg.Any<Guid>(),
+                Arg.Any<List<Folder>>(),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>());
     }
 
     private static void SetupUserService(SutProvider<ImportCiphersController> sutProvider, User user)

@@ -59,6 +59,7 @@ public class DatabaseContext : DbContext
     public DbSet<OrganizationIntegration> OrganizationIntegrations { get; set; }
     public DbSet<OrganizationIntegrationConfiguration> OrganizationIntegrationConfigurations { get; set; }
     public DbSet<OrganizationUser> OrganizationUsers { get; set; }
+    public DbSet<OrganizationInviteLink> OrganizationInviteLinks { get; set; }
     public DbSet<Policy> Policies { get; set; }
     public DbSet<Provider> Providers { get; set; }
     public DbSet<Secret> Secret { get; set; }
@@ -87,6 +88,8 @@ public class DatabaseContext : DbContext
     public DbSet<OrganizationMemberBaseDetail> OrganizationMemberBaseDetails { get; set; }
     public DbSet<SecurityTask> SecurityTasks { get; set; }
     public DbSet<OrganizationInstallation> OrganizationInstallations { get; set; }
+    public DbSet<OrganizationPlanMigrationCohort> OrganizationPlanMigrationCohorts { get; set; }
+    public DbSet<OrganizationPlanMigrationCohortAssignment> OrganizationPlanMigrationCohortAssignments { get; set; }
     public DbSet<OrganizationReport> OrganizationReports { get; set; }
     public DbSet<OrganizationApplication> OrganizationApplications { get; set; }
 
@@ -120,7 +123,6 @@ public class DatabaseContext : DbContext
         var eOrganizationDomain = builder.Entity<OrganizationDomain>();
         var aWebAuthnCredential = builder.Entity<WebAuthnCredential>();
         var eOrganizationMemberBaseDetail = builder.Entity<OrganizationMemberBaseDetail>();
-        var eSend = builder.Entity<Send>();
 
         // Shadow property configurations go here
 
@@ -150,7 +152,6 @@ public class DatabaseContext : DbContext
         var dataProtectionConverter = new DataProtectionConverter(dataProtector);
         eUser.Property(c => c.Key).HasConversion(dataProtectionConverter);
         eUser.Property(c => c.MasterPassword).HasConversion(dataProtectionConverter);
-        eSend.Property(c => c.Emails).HasConversion(dataProtectionConverter);
 
         if (Database.IsNpgsql())
         {

@@ -246,7 +246,7 @@ public class CipherRepositoryTests
             OrganizationId = organization.Id,
             Name = "Edit Group",
         });
-        await groupRepository.UpdateUsersAsync(editGroup.Id, new[] { orgUser.Id });
+        await groupRepository.UpdateUsersAsync(editGroup.Id, new[] { orgUser.Id }, DateTime.UtcNow);
 
         // MANAGE
 
@@ -487,7 +487,7 @@ public class CipherRepositoryTests
             OrganizationId = organization.Id,
             Name = "Test Group",
         });
-        await groupRepository.UpdateUsersAsync(group.Id, new[] { orgUser.Id });
+        await groupRepository.UpdateUsersAsync(group.Id, new[] { orgUser.Id }, DateTime.UtcNow);
 
         var (manageCipher, nonManageCipher) = await CreateCipherInOrganizationCollectionWithGroup(
             organization, group, cipherRepository, collectionRepository, collectionCipherRepository, groupRepository);
@@ -626,12 +626,6 @@ public class CipherRepositoryTests
         var deletableCipher = ciphers.SingleOrDefault(x => x.Id == cipher.Id);
         Assert.NotNull(deletableCipher);
         Assert.True(deletableCipher.Manage);
-
-        // Annul
-        await cipherRepository.DeleteAsync(cipher);
-        await organizationUserRepository.DeleteAsync(orgUser);
-        await organizationRepository.DeleteAsync(organization);
-        await userRepository.DeleteAsync(user);
     }
 
     private async Task<(User user, Organization org, OrganizationUser orgUser)> CreateTestUserAndOrganization(
@@ -828,7 +822,7 @@ public class CipherRepositoryTests
             OrganizationId = organization.Id,
             Name = "Edit Group",
         });
-        await groupRepository.UpdateUsersAsync(editGroup.Id, new[] { orgUser1.Id });
+        await groupRepository.UpdateUsersAsync(editGroup.Id, new[] { orgUser1.Id }, DateTime.UtcNow);
 
         // Add collections to Org
         var manageCollection = await collectionRepository.CreateAsync(new Collection
@@ -1034,7 +1028,8 @@ public class CipherRepositoryTests
             ciphers: [cipher],
             collections: [collection],
             collectionCiphers: [collectionCipher],
-            collectionUsers: [collectionUser]);
+            collectionUsers: [collectionUser],
+            []);
 
         // Assert
         var orgCiphers = await cipherRepository.GetManyByOrganizationIdAsync(org.Id);

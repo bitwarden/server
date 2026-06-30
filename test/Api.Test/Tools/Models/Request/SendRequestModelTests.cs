@@ -64,6 +64,7 @@ public class SendRequestModelTests
     {
         var send = new SendRequestModel
         {
+            Key = "test_key",
             DeletionDate = DateTime.UtcNow.AddMinutes(-5)
         };
 
@@ -75,6 +76,7 @@ public class SendRequestModelTests
     {
         var send = new SendRequestModel
         {
+            Key = "test_key",
             DeletionDate = DateTime.UtcNow.AddDays(32)
         };
 
@@ -86,6 +88,7 @@ public class SendRequestModelTests
     {
         var send = new SendRequestModel
         {
+            Key = "test_key",
             ExpirationDate = DateTime.UtcNow.AddMinutes(-5)
         };
 
@@ -97,6 +100,7 @@ public class SendRequestModelTests
     {
         var send = new SendRequestModel
         {
+            Key = "test_key",
             DeletionDate = DateTime.UtcNow.AddDays(1),
             ExpirationDate = DateTime.UtcNow.AddDays(2)
         };
@@ -109,6 +113,7 @@ public class SendRequestModelTests
     {
         var send = new SendRequestModel
         {
+            Key = "test_key",
             DeletionDate = DateTime.UtcNow.AddDays(10),
             ExpirationDate = DateTime.UtcNow.AddDays(5)
         };

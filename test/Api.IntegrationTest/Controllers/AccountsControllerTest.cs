@@ -5,10 +5,16 @@ using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.Services;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Api.Request;
@@ -44,6 +50,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     private readonly LoginHelper _loginHelper;
     private readonly IUserRepository _userRepository;
     private readonly IPushNotificationService _pushNotificationService;
+    private readonly IMailService _mailService;
     private readonly IFeatureService _featureService;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IOrganizationRepository _organizationRepository;
@@ -51,6 +58,8 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     private readonly IUserSignatureKeyPairRepository _userSignatureKeyPairRepository;
     private readonly IEventRepository _eventRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IStripeSyncService _stripeSyncService;
+    private readonly ITwoFactorEmailService _twoFactorEmailService;
 
     private string _ownerEmail = null!;
 
@@ -59,10 +68,14 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         _factory = factory;
         _factory.SubstituteService<IPushNotificationService>(_ => { });
         _factory.SubstituteService<IFeatureService>(_ => { });
+        _factory.SubstituteService<IStripeSyncService>(_ => { });
+        _factory.SubstituteService<IMailService>(_ => { });
+        _factory.SubstituteService<ITwoFactorEmailService>(_ => { });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
         _userRepository = _factory.GetService<IUserRepository>();
         _pushNotificationService = _factory.GetService<IPushNotificationService>();
+        _mailService = _factory.GetService<IMailService>();
         _featureService = _factory.GetService<IFeatureService>();
         _passwordHasher = _factory.GetService<IPasswordHasher<User>>();
         _organizationRepository = _factory.GetService<IOrganizationRepository>();
@@ -70,6 +83,8 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         _userSignatureKeyPairRepository = _factory.GetService<IUserSignatureKeyPairRepository>();
         _eventRepository = _factory.GetService<IEventRepository>();
         _organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        _stripeSyncService = _factory.GetService<IStripeSyncService>();
+        _twoFactorEmailService = _factory.GetService<ITwoFactorEmailService>();
     }
 
     public async Task InitializeAsync()
@@ -82,6 +97,32 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     {
         _client.Dispose();
         return Task.CompletedTask;
+    }
+
+    // Builders for the dual-payload auth + unlock blocks. Tests vary KDF and
+    // salt; everything else is constant. Shared across both the change-KDF and
+    // V2 password-modification tests in this file.
+    private static MasterPasswordAuthenticationDataRequestModel BuildAuthData(KdfRequestModel kdf, string salt) =>
+        new() { Kdf = kdf, MasterPasswordAuthenticationHash = _newMasterPasswordHash, Salt = salt };
+
+    private static MasterPasswordUnlockDataRequestModel BuildUnlockData(KdfRequestModel kdf, string salt) =>
+        new() { Kdf = kdf, MasterKeyWrappedUserKey = _masterKeyWrappedUserKey, Salt = salt };
+
+    // Builds an (auth, unlock) pair where one side is perturbed so the agreement
+    // validator must fire. Used by the V2 *_MismatchedKdfOrSalt_BadRequest tests.
+    //   mismatchKind:  "kdf" | "salt"  — which field disagrees
+    //   perturbedSide: "auth" | "unlock" — which half carries the bad value
+    private (MasterPasswordAuthenticationDataRequestModel auth, MasterPasswordUnlockDataRequestModel unlock)
+        BuildMismatchedAuthAndUnlock(string mismatchKind, string perturbedSide)
+    {
+        var perturbedKdf = mismatchKind == "kdf"
+            ? new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 700_000 }
+            : _defaultKdfRequest;
+        var perturbedSalt = mismatchKind == "salt" ? "different-salt@bitwarden.com" : _ownerEmail;
+
+        return perturbedSide == "auth"
+            ? (BuildAuthData(perturbedKdf, perturbedSalt), BuildUnlockData(_defaultKdfRequest, _ownerEmail))
+            : (BuildAuthData(_defaultKdfRequest, _ownerEmail), BuildUnlockData(perturbedKdf, perturbedSalt));
     }
 
     [Fact]
@@ -210,6 +251,31 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     }
 
     [Theory]
+    [InlineData("authenticationData")]
+    [InlineData("unlockData")]
+    [InlineData("masterPasswordHash")]
+    public async Task PostKdf_MissingRequiredJsonKey_BadRequest(string fieldToOmit)
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var payload = new Dictionary<string, object?>
+        {
+            ["masterPasswordHash"] = _masterPasswordHash,
+            ["authenticationData"] = BuildAuthData(_defaultKdfRequest, _ownerEmail),
+            ["unlockData"] = BuildUnlockData(_defaultKdfRequest, _ownerEmail)
+        };
+        payload.Remove(fieldToOmit);
+
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/kdf");
+        message.Content = JsonContent.Create(payload);
+        var response = await _client.SendAsync(message);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains($"missing required properties including: '{fieldToOmit}'", content);
+    }
+
+    [Theory]
     [InlineData(false, true)]
     [InlineData(true, false)]
     [InlineData(true, true)]
@@ -220,27 +286,24 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         var authenticationData = authenticationDataNull
             ? null
-            : new MasterPasswordAuthenticationDataRequestModel
-            {
-                Kdf = _defaultKdfRequest,
-                MasterPasswordAuthenticationHash = _newMasterPasswordHash,
-                Salt = _ownerEmail
-            };
+            : BuildAuthData(_defaultKdfRequest, _ownerEmail);
 
         var unlockData = unlockDataNull
             ? null
-            : new MasterPasswordUnlockDataRequestModel
-            {
-                Kdf = _defaultKdfRequest,
-                MasterKeyWrappedUserKey = _masterKeyWrappedUserKey,
-                Salt = _ownerEmail
-            };
+            : BuildUnlockData(_defaultKdfRequest, _ownerEmail);
 
         var response = await PostKdfAsync(authenticationData, unlockData);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("AuthenticationData and UnlockData must be provided.", content);
+        if (authenticationDataNull)
+        {
+            Assert.Contains("The AuthenticationData field is required.", content);
+        }
+        if (unlockDataNull)
+        {
+            Assert.Contains("The UnlockData field is required.", content);
+        }
     }
 
     [Fact]
@@ -248,19 +311,8 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     {
         await _loginHelper.LoginAsync(_ownerEmail);
 
-        var authenticationData = new MasterPasswordAuthenticationDataRequestModel
-        {
-            Kdf = _defaultKdfRequest,
-            MasterPasswordAuthenticationHash = _newMasterPasswordHash,
-            Salt = _ownerEmail
-        };
-
-        var unlockData = new MasterPasswordUnlockDataRequestModel
-        {
-            Kdf = _defaultKdfRequest,
-            MasterKeyWrappedUserKey = _masterKeyWrappedUserKey,
-            Salt = _ownerEmail
-        };
+        var authenticationData = BuildAuthData(_defaultKdfRequest, _ownerEmail);
+        var unlockData = BuildUnlockData(_defaultKdfRequest, _ownerEmail);
 
         var requestModel = new PasswordRequestModel
         {
@@ -285,19 +337,8 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     {
         await _loginHelper.LoginAsync(_ownerEmail);
 
-        var authenticationData = new MasterPasswordAuthenticationDataRequestModel
-        {
-            Kdf = _defaultKdfRequest,
-            MasterPasswordAuthenticationHash = _newMasterPasswordHash,
-            Salt = "wrong-salt@bitwarden.com"
-        };
-
-        var unlockData = new MasterPasswordUnlockDataRequestModel
-        {
-            Kdf = _defaultKdfRequest,
-            MasterKeyWrappedUserKey = _masterKeyWrappedUserKey,
-            Salt = _ownerEmail
-        };
+        var authenticationData = BuildAuthData(_defaultKdfRequest, "wrong-salt@bitwarden.com");
+        var unlockData = BuildUnlockData(_defaultKdfRequest, _ownerEmail);
 
         var response = await PostKdfAsync(authenticationData, unlockData);
 
@@ -311,19 +352,8 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     {
         await _loginHelper.LoginAsync(_ownerEmail);
 
-        var authenticationData = new MasterPasswordAuthenticationDataRequestModel
-        {
-            Kdf = _defaultKdfRequest,
-            MasterPasswordAuthenticationHash = _newMasterPasswordHash,
-            Salt = _ownerEmail
-        };
-
-        var unlockData = new MasterPasswordUnlockDataRequestModel
-        {
-            Kdf = _defaultKdfRequest,
-            MasterKeyWrappedUserKey = _masterKeyWrappedUserKey,
-            Salt = "wrong-salt@bitwarden.com"
-        };
+        var authenticationData = BuildAuthData(_defaultKdfRequest, _ownerEmail);
+        var unlockData = BuildUnlockData(_defaultKdfRequest, "wrong-salt@bitwarden.com");
 
         var response = await PostKdfAsync(authenticationData, unlockData);
 
@@ -337,32 +367,23 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     {
         await _loginHelper.LoginAsync(_ownerEmail);
 
-        var authenticationData = new MasterPasswordAuthenticationDataRequestModel
-        {
-            Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600_000 },
-            MasterPasswordAuthenticationHash = _newMasterPasswordHash,
-            Salt = _ownerEmail
-        };
-
-        var unlockData = new MasterPasswordUnlockDataRequestModel
-        {
-            Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600_001 },
-            MasterKeyWrappedUserKey = _masterKeyWrappedUserKey,
-            Salt = _ownerEmail
-        };
+        var authenticationData = BuildAuthData(_defaultKdfRequest, _ownerEmail);
+        var unlockData = BuildUnlockData(
+            new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600_001 },
+            _ownerEmail);
 
         var response = await PostKdfAsync(authenticationData, unlockData);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("KDF settings must be equal for authentication and unlock.", content);
+        Assert.Contains("AuthenticationData and UnlockData must have the same KDF configuration.", content);
     }
 
     [Theory]
-    [InlineData(KdfType.PBKDF2_SHA256, 1, null, null)]
-    [InlineData(KdfType.Argon2id, 4, null, 5)]
-    [InlineData(KdfType.Argon2id, 4, 65, null)]
-    public async Task PostKdf_InvalidKdf_BadRequest(KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism)
+    [InlineData(KdfType.PBKDF2_SHA256, 1, null, null, "KDF iterations must be between")]
+    [InlineData(KdfType.Argon2id, 4, null, 5, "Argon2 memory must be between")]
+    [InlineData(KdfType.Argon2id, 4, 65, null, "Argon2 parallelism must be between")]
+    public async Task PostKdf_InvalidKdf_BadRequest(KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism, string expectedError)
     {
         await _loginHelper.LoginAsync(_ownerEmail);
 
@@ -378,7 +399,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("The model state is invalid", content);
+        Assert.Contains(expectedError, content);
     }
 
     [Fact]
@@ -422,19 +443,8 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
     private async Task<HttpResponseMessage> PostKdfWithKdfRequestAsync(KdfRequestModel kdfRequest)
     {
-        var authenticationData = new MasterPasswordAuthenticationDataRequestModel
-        {
-            Kdf = kdfRequest,
-            MasterPasswordAuthenticationHash = _newMasterPasswordHash,
-            Salt = _ownerEmail
-        };
-
-        var unlockData = new MasterPasswordUnlockDataRequestModel
-        {
-            Kdf = kdfRequest,
-            MasterKeyWrappedUserKey = _masterKeyWrappedUserKey,
-            Salt = _ownerEmail
-        };
+        var authenticationData = BuildAuthData(kdfRequest, _ownerEmail);
+        var unlockData = BuildUnlockData(kdfRequest, _ownerEmail);
 
         return await PostKdfAsync(authenticationData, unlockData);
     }
@@ -455,6 +465,445 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/kdf");
         message.Content = JsonContent.Create(requestModel);
         return await _client.SendAsync(message);
+    }
+
+
+    /// <summary>
+    /// Verifies the dual-payload self-service password change path accepts
+    /// legacy-KDF users — those whose stored KDF predates the current minimum.
+    /// <c>ValidateKdfAndSaltAgreement</c> must check agreement between
+    /// <c>AuthenticationData</c> and <c>UnlockData</c>, not range.
+    /// <para>
+    /// Scope: end-to-end through the V2 path; also asserts the KDF is left
+    /// untouched (a silent server-side bump would corrupt the account, since
+    /// the new auth hash was derived client-side against the legacy KDF) and
+    /// that other-device logout fires.
+    /// </para>
+    /// <para>
+    /// Note: mutating the KDF columns below does not invalidate the seeded
+    /// password — <c>user.MasterPassword</c> is Identity's <c>IPasswordHasher</c>
+    /// output over the wire-sent hash, not derived from <c>user.Kdf</c>.
+    /// </para>
+    /// </summary>
+    [Theory]
+    [InlineData(KdfType.PBKDF2_SHA256, 100_000, null, null)] // plausible legacy: real pre-600k users
+    [InlineData(KdfType.PBKDF2_SHA256, 5_000, null, null)]   // far below minimum: no soft floor either
+    [InlineData(KdfType.Argon2id, 2, 14, 4)]                 // barely sub-minimum: 1mb below memory floor
+    [InlineData(KdfType.Argon2id, 1, 8, 1)]                  // far below minimum: no Argon2-specific gate
+    public async Task PostPassword_V2_LegacyKdfBelowMinimum_Success(
+        KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism)
+    {
+        // Arrange: downgrade the seeded user's KDF to a sub-minimum value to
+        // simulate a real legacy-KDF account that predates the current floor.
+        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(user);
+        user.Kdf = kdf;
+        user.KdfIterations = kdfIterations;
+        user.KdfMemory = kdfMemory;
+        user.KdfParallelism = kdfParallelism;
+        await _userRepository.ReplaceAsync(user);
+
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        // Both halves of the V2 payload echo the user's legacy KDF — agreement,
+        // not range, is what ValidateKdfAndSaltAgreement enforces.
+        var legacyKdfRequest = new KdfRequestModel
+        {
+            KdfType = kdf,
+            Iterations = kdfIterations,
+            Memory = kdfMemory,
+            Parallelism = kdfParallelism,
+        };
+
+        // Populating AuthenticationData + UnlockData routes the controller to
+        // the new SelfServicePasswordChangeCommand (V2) path; the legacy
+        // NewMasterPasswordHash / Key fields are accepted but ignored.
+        var requestModel = new PasswordRequestModel
+        {
+            MasterPasswordHash = _masterPasswordHash,
+            NewMasterPasswordHash = _newMasterPasswordHash,
+            Key = _masterKeyWrappedUserKey,
+            AuthenticationData = BuildAuthData(legacyKdfRequest, _ownerEmail),
+            UnlockData = BuildUnlockData(legacyKdfRequest, _ownerEmail),
+        };
+
+        // Act: hit the real endpoint so model binding, validation, auth filter,
+        // command dispatch, and repository write all run end-to-end.
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/password");
+        message.Content = JsonContent.Create(requestModel);
+        var response = await _client.SendAsync(message);
+
+        // Surface the error body on failure — a bare EnsureSuccessStatusCode
+        // hides the validator message that points at any future range-check regression.
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync();
+            Assert.Fail($"Expected success but got {response.StatusCode}. Error: {errorContent}");
+        }
+
+        // Assert: new password was persisted (rules out a silent no-op success).
+        var updatedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(PasswordVerificationResult.Success,
+            _passwordHasher.VerifyHashedPassword(updatedUser, updatedUser.MasterPassword!, _newMasterPasswordHash));
+
+        // KDF must be unchanged — this flow changes the password only. A silent
+        // bump to current minimum would corrupt the account: the new auth hash
+        // was derived client-side against the legacy KDF.
+        Assert.Equal(kdf, updatedUser.Kdf);
+        Assert.Equal(kdfIterations, updatedUser.KdfIterations);
+        Assert.Equal(kdfMemory, updatedUser.KdfMemory);
+        Assert.Equal(kdfParallelism, updatedUser.KdfParallelism);
+
+        // Other devices are logged out, current session is preserved
+        // (excludeCurrentContextFromPush: true) — self-service-specific behavior.
+        await _pushNotificationService.Received(1).PushLogOutAsync(updatedUser.Id, true);
+
+        // User_ChangedPassword event was logged.
+        var events = await _eventRepository.GetManyByUserAsync(
+            updatedUser.Id, DateTime.UtcNow.AddMinutes(-5), DateTime.UtcNow.AddMinutes(1),
+            new PageOptions { PageSize = 100 });
+        Assert.Contains(events.Data, e => e.Type == EventType.User_ChangedPassword && e.UserId == updatedUser.Id);
+    }
+
+    /// <summary>
+    /// Verifies the boundary validator's agreement checks fire on
+    /// <c>POST /accounts/password</c>: a mismatched KDF or salt between
+    /// <c>AuthenticationData</c> and <c>UnlockData</c> is rejected with 400.
+    /// Complements the legacy-KDF success test by proving the agreement
+    /// invariant isn't passively letting everything through.
+    /// </summary>
+    [Theory]
+    [InlineData("kdf", "unlock", "AuthenticationData and UnlockData must have the same KDF configuration.")]
+    [InlineData("kdf", "auth", "AuthenticationData and UnlockData must have the same KDF configuration.")]
+    [InlineData("salt", "unlock", "Invalid master password salt.")]
+    [InlineData("salt", "auth", "Invalid master password salt.")]
+    public async Task PostPassword_V2_MismatchedKdfOrSalt_BadRequest(
+        string mismatchKind, string perturbedSide, string expectedError)
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var (auth, unlock) = BuildMismatchedAuthAndUnlock(mismatchKind, perturbedSide);
+        var requestModel = new PasswordRequestModel
+        {
+            MasterPasswordHash = _masterPasswordHash,
+            NewMasterPasswordHash = _newMasterPasswordHash,
+            Key = _masterKeyWrappedUserKey,
+            AuthenticationData = auth,
+            UnlockData = unlock,
+        };
+
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/password");
+        message.Content = JsonContent.Create(requestModel);
+        var response = await _client.SendAsync(message);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains(expectedError, content);
+    }
+
+    [Fact]
+    public async Task PostPassword_V2_Unauthorized_ReturnsUnauthorized()
+    {
+        // No LoginAsync — the request is anonymous and must be rejected before
+        // it reaches the action body.
+        var requestModel = new PasswordRequestModel
+        {
+            MasterPasswordHash = _masterPasswordHash,
+            NewMasterPasswordHash = _newMasterPasswordHash,
+            Key = _masterKeyWrappedUserKey,
+            AuthenticationData = BuildAuthData(_defaultKdfRequest, _ownerEmail),
+            UnlockData = BuildUnlockData(_defaultKdfRequest, _ownerEmail),
+        };
+
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/password");
+        message.Content = JsonContent.Create(requestModel);
+        var response = await _client.SendAsync(message);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostPassword_V2_InvalidMasterPasswordHash_BadRequest()
+    {
+        // Self-service change-password verifies the current password before
+        // applying the new one. A wrong current hash must be rejected.
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var requestModel = new PasswordRequestModel
+        {
+            MasterPasswordHash = "wrong-master-password-hash",
+            NewMasterPasswordHash = _newMasterPasswordHash,
+            Key = _masterKeyWrappedUserKey,
+            AuthenticationData = BuildAuthData(_defaultKdfRequest, _ownerEmail),
+            UnlockData = BuildUnlockData(_defaultKdfRequest, _ownerEmail),
+        };
+
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/password");
+        message.Content = JsonContent.Create(requestModel);
+        var response = await _client.SendAsync(message);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Incorrect password", content);
+    }
+
+    /// <summary>
+    /// Verifies the dual-payload admin-set-temporary-password replacement path
+    /// accepts legacy-KDF users — those whose stored KDF predates the current
+    /// minimum. <c>ValidateKdfAndSaltAgreement</c> must check agreement between
+    /// <c>AuthenticationData</c> and <c>UnlockData</c>, not range.
+    /// <para>
+    /// Scope: end-to-end through the V2 path; also asserts the KDF is left
+    /// untouched, <c>ForcePasswordReset</c> is cleared, the event is logged,
+    /// and logout fires.
+    /// </para>
+    /// </summary>
+    [Theory]
+    [InlineData(KdfType.PBKDF2_SHA256, 100_000, null, null)] // plausible legacy: real pre-600k users
+    [InlineData(KdfType.PBKDF2_SHA256, 5_000, null, null)]   // far below minimum: no soft floor either
+    [InlineData(KdfType.Argon2id, 2, 14, 4)]                 // barely sub-minimum: 1mb below memory floor
+    [InlineData(KdfType.Argon2id, 1, 8, 1)]                  // far below minimum: no Argon2-specific gate
+    public async Task PutUpdateTempPassword_V2_LegacyKdfBelowMinimum_Success(
+        KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism)
+    {
+        // Arrange: downgrade KDF and set ForcePasswordReset so the command's
+        // precondition (admin-set temp password is pending) is satisfied.
+        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(user);
+        user.Kdf = kdf;
+        user.KdfIterations = kdfIterations;
+        user.KdfMemory = kdfMemory;
+        user.KdfParallelism = kdfParallelism;
+        user.ForcePasswordReset = true;
+        await _userRepository.ReplaceAsync(user);
+
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var legacyKdfRequest = new KdfRequestModel
+        {
+            KdfType = kdf,
+            Iterations = kdfIterations,
+            Memory = kdfMemory,
+            Parallelism = kdfParallelism,
+        };
+
+        var requestModel = new UpdateTempPasswordRequestModel
+        {
+            NewMasterPasswordHash = _newMasterPasswordHash,
+            Key = _masterKeyWrappedUserKey,
+            AuthenticationData = BuildAuthData(legacyKdfRequest, _ownerEmail),
+            UnlockData = BuildUnlockData(legacyKdfRequest, _ownerEmail),
+        };
+
+        using var message = new HttpRequestMessage(HttpMethod.Put, "/accounts/update-temp-password");
+        message.Content = JsonContent.Create(requestModel);
+        var response = await _client.SendAsync(message);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync();
+            Assert.Fail($"Expected success but got {response.StatusCode}. Error: {errorContent}");
+        }
+
+        var updatedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(PasswordVerificationResult.Success,
+            _passwordHasher.VerifyHashedPassword(updatedUser, updatedUser.MasterPassword!, _newMasterPasswordHash));
+
+        // KDF unchanged — this flow swaps the password only.
+        Assert.Equal(kdf, updatedUser.Kdf);
+        Assert.Equal(kdfIterations, updatedUser.KdfIterations);
+        Assert.Equal(kdfMemory, updatedUser.KdfMemory);
+        Assert.Equal(kdfParallelism, updatedUser.KdfParallelism);
+
+        // The "temp password pending" flag is cleared once the user replaces it.
+        Assert.False(updatedUser.ForcePasswordReset);
+
+        // All sessions (including the current one) are logged out
+        // (excludeCurrentContextFromPush: false, the default) — admin-set temp
+        // password flow.
+        await _pushNotificationService.Received(1).PushLogOutAsync(updatedUser.Id);
+
+        var events = await _eventRepository.GetManyByUserAsync(
+            updatedUser.Id, DateTime.UtcNow.AddMinutes(-5), DateTime.UtcNow.AddMinutes(1),
+            new PageOptions { PageSize = 100 });
+        Assert.Contains(events.Data, e => e.Type == EventType.User_UpdatedTempPassword && e.UserId == updatedUser.Id);
+    }
+
+    /// <summary>
+    /// Verifies the boundary validator's agreement checks fire on
+    /// <c>PUT /accounts/update-temp-password</c>: a mismatched KDF or salt
+    /// between <c>AuthenticationData</c> and <c>UnlockData</c> is rejected
+    /// with 400. ForcePasswordReset state is irrelevant — model validation
+    /// runs before the command's preconditions.
+    /// </summary>
+    [Theory]
+    [InlineData("kdf", "unlock", "AuthenticationData and UnlockData must have the same KDF configuration.")]
+    [InlineData("kdf", "auth", "AuthenticationData and UnlockData must have the same KDF configuration.")]
+    [InlineData("salt", "unlock", "Invalid master password salt.")]
+    [InlineData("salt", "auth", "Invalid master password salt.")]
+    public async Task PutUpdateTempPassword_V2_MismatchedKdfOrSalt_BadRequest(
+        string mismatchKind, string perturbedSide, string expectedError)
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var (auth, unlock) = BuildMismatchedAuthAndUnlock(mismatchKind, perturbedSide);
+        var requestModel = new UpdateTempPasswordRequestModel
+        {
+            NewMasterPasswordHash = _newMasterPasswordHash,
+            Key = _masterKeyWrappedUserKey,
+            AuthenticationData = auth,
+            UnlockData = unlock,
+        };
+
+        using var message = new HttpRequestMessage(HttpMethod.Put, "/accounts/update-temp-password");
+        message.Content = JsonContent.Create(requestModel);
+        var response = await _client.SendAsync(message);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains(expectedError, content);
+    }
+
+    [Fact]
+    public async Task PutUpdateTempPassword_V2_Unauthorized_ReturnsUnauthorized()
+    {
+        // No LoginAsync — anonymous requests must be rejected.
+        var requestModel = new UpdateTempPasswordRequestModel
+        {
+            NewMasterPasswordHash = _newMasterPasswordHash,
+            Key = _masterKeyWrappedUserKey,
+            AuthenticationData = BuildAuthData(_defaultKdfRequest, _ownerEmail),
+            UnlockData = BuildUnlockData(_defaultKdfRequest, _ownerEmail),
+        };
+
+        using var message = new HttpRequestMessage(HttpMethod.Put, "/accounts/update-temp-password");
+        message.Content = JsonContent.Create(requestModel);
+        var response = await _client.SendAsync(message);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutUpdateTempPassword_V2_NoForcePasswordReset_BadRequest()
+    {
+        // Seeded user has ForcePasswordReset = false (the default) — no
+        // admin-set temp password is pending, so the command must reject.
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var requestModel = new UpdateTempPasswordRequestModel
+        {
+            NewMasterPasswordHash = _newMasterPasswordHash,
+            Key = _masterKeyWrappedUserKey,
+            AuthenticationData = BuildAuthData(_defaultKdfRequest, _ownerEmail),
+            UnlockData = BuildUnlockData(_defaultKdfRequest, _ownerEmail),
+        };
+
+        using var message = new HttpRequestMessage(HttpMethod.Put, "/accounts/update-temp-password");
+        message.Content = JsonContent.Create(requestModel);
+        var response = await _client.SendAsync(message);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("User does not have a temporary password to update.", content);
+    }
+
+    /// <summary>
+    /// Verifies <c>PUT /accounts/update-tde-offboarding-password</c> rejects
+    /// sub-minimum KDF values. Unlike the password-change / temp-password
+    /// flows, TDE offboarding sets a brand-new master password and runs the
+    /// full <c>ValidateAuthenticationAndUnlockData</c> validator — range
+    /// enforcement is required by design. Model validation fires before the
+    /// SSO preconditions, so no org setup is needed.
+    /// </summary>
+    [Theory]
+    [InlineData(KdfType.PBKDF2_SHA256, 100_000, null, null, "KDF iterations must be between")]
+    [InlineData(KdfType.Argon2id, 1, 64, 4, "Argon2 iterations must be between")]
+    [InlineData(KdfType.Argon2id, 3, 14, 4, "Argon2 memory must be between")]
+    public async Task PutUpdateTdeOffboardingPassword_V2_BelowMinimumKdf_BadRequest(
+        KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism, string expectedError)
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var subMinKdfRequest = new KdfRequestModel
+        {
+            KdfType = kdf,
+            Iterations = kdfIterations,
+            Memory = kdfMemory,
+            Parallelism = kdfParallelism,
+        };
+
+        // Auth and unlock fully agree on salt and KDF — the only validator
+        // error is the range check firing on the sub-minimum KDF.
+        var requestModel = new UpdateTdeOffboardingPasswordRequestModel
+        {
+            NewMasterPasswordHash = _newMasterPasswordHash,
+            Key = _masterKeyWrappedUserKey,
+            AuthenticationData = BuildAuthData(subMinKdfRequest, _ownerEmail),
+            UnlockData = BuildUnlockData(subMinKdfRequest, _ownerEmail),
+        };
+
+        using var message = new HttpRequestMessage(HttpMethod.Put, "/accounts/update-tde-offboarding-password");
+        message.Content = JsonContent.Create(requestModel);
+        var response = await _client.SendAsync(message);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains(expectedError, content);
+    }
+
+    /// <summary>
+    /// Verifies the boundary validator's agreement checks fire on
+    /// <c>PUT /accounts/update-tde-offboarding-password</c>: a mismatched KDF
+    /// or salt between <c>AuthenticationData</c> and <c>UnlockData</c> is
+    /// rejected with 400 before any SSO precondition is evaluated.
+    /// </summary>
+    [Theory]
+    [InlineData("kdf", "unlock", "AuthenticationData and UnlockData must have the same KDF configuration.")]
+    [InlineData("kdf", "auth", "AuthenticationData and UnlockData must have the same KDF configuration.")]
+    [InlineData("salt", "unlock", "Invalid master password salt.")]
+    [InlineData("salt", "auth", "Invalid master password salt.")]
+    public async Task PutUpdateTdeOffboardingPassword_V2_MismatchedKdfOrSalt_BadRequest(
+        string mismatchKind, string perturbedSide, string expectedError)
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var (auth, unlock) = BuildMismatchedAuthAndUnlock(mismatchKind, perturbedSide);
+        var requestModel = new UpdateTdeOffboardingPasswordRequestModel
+        {
+            NewMasterPasswordHash = _newMasterPasswordHash,
+            Key = _masterKeyWrappedUserKey,
+            AuthenticationData = auth,
+            UnlockData = unlock,
+        };
+
+        using var message = new HttpRequestMessage(HttpMethod.Put, "/accounts/update-tde-offboarding-password");
+        message.Content = JsonContent.Create(requestModel);
+        var response = await _client.SendAsync(message);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains(expectedError, content);
+    }
+
+    [Fact]
+    public async Task PutUpdateTdeOffboardingPassword_V2_Unauthorized_ReturnsUnauthorized()
+    {
+        // No LoginAsync — anonymous requests must be rejected.
+        var requestModel = new UpdateTdeOffboardingPasswordRequestModel
+        {
+            NewMasterPasswordHash = _newMasterPasswordHash,
+            Key = _masterKeyWrappedUserKey,
+            AuthenticationData = BuildAuthData(_defaultKdfRequest, _ownerEmail),
+            UnlockData = BuildUnlockData(_defaultKdfRequest, _ownerEmail),
+        };
+
+        using var message = new HttpRequestMessage(HttpMethod.Put, "/accounts/update-tde-offboarding-password");
+        message.Content = JsonContent.Create(requestModel);
+        var response = await _client.SendAsync(message);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Theory]
@@ -923,10 +1372,22 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    // ===== Email change: legacy path (PM30806_SelfServiceChangeEmailCommand flag OFF) =====
+    // These tests pin the flag OFF to exercise the legacy UserService.ChangeEmailAsync path,
+    // which rotates the master password and wrapped user key as part of the email change. They
+    // share the legacy-shaped PostEmailAsync helper at the end of this block.
+    //
+    // The class-scoped IFeatureService substitute leaks Returns(...) values across tests in this
+    // class, so every test sets the flag explicitly rather than relying on a default.
+    //
+    // TODO: PM-39120 - On flag cleanup, delete this entire block (all four _SelfServiceFlagOff_
+    // tests plus the PostEmailAsync helper). The _SelfServiceFlagOn_ tests further below become
+    // the canonical email-change tests; see the note there.
     [Fact]
-    public async Task PostEmail_Success_UpdatesEmailAndPassword()
+    public async Task PostEmail_SelfServiceFlagOff_UpdatesEmailAndPassword()
     {
         // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(false);
         var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
         await _loginHelper.LoginAsync(_ownerEmail);
 
@@ -949,12 +1410,14 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(_masterKeyWrappedUserKey, updatedUser.Key);
         Assert.Equal(PasswordVerificationResult.Success,
             _passwordHasher.VerifyHashedPassword(updatedUser, updatedUser.MasterPassword!, _newMasterPasswordHash));
+        Assert.Equal(newEmail, updatedUser.MasterPasswordSalt);
     }
 
     [Fact]
-    public async Task PostEmail_WhenInvalidMasterPassword_ReturnsBadRequest()
+    public async Task PostEmail_SelfServiceFlagOff_InvalidMasterPassword_BadRequest()
     {
         // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(false);
         var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
         await _loginHelper.LoginAsync(_ownerEmail);
 
@@ -984,6 +1447,69 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         // Verify email was not changed
         var unchangedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(unchangedUser);
+    }
+
+    [Fact]
+    public async Task PostEmail_SelfServiceFlagOff_StripeSyncFails_MasterPasswordSaltIsRolledBack()
+    {
+        // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(false);
+        var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(user);
+
+        // Set up the user as a Stripe customer to exercise the sync code path in ChangeEmailAsync
+        user.Gateway = GatewayType.Stripe;
+        user.GatewayCustomerId = "cus_test_stripe_fail";
+        await _userRepository.ReplaceAsync(user);
+
+        // Configure the substitute to simulate a Stripe sync failure after the DB write
+        _stripeSyncService
+            .UpdateCustomerEmailAddressAsync(Arg.Any<string>(), Arg.Any<string>())
+            .Returns(Task.FromException(new Exception("Stripe sync failure")));
+
+        var userManager = _factory.GetService<UserManager<User>>();
+        var token = await userManager.GenerateChangeEmailTokenAsync(user, newEmail);
+
+        // Act
+        var response = await PostEmailAsync(newEmail, token);
+
+        // Assert - Stripe failure is surfaced as a bad request
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        // Verify MasterPasswordSalt was rolled back to the original email, not left at newEmail.
+        // ChangeEmailAsync sets MasterPasswordSalt = newEmail and persists before attempting Stripe
+        // sync; on failure it must re-persist MasterPasswordSalt = previousState.Email.
+        var unchangedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(unchangedUser);
+        Assert.Equal(_ownerEmail, unchangedUser.MasterPasswordSalt);
+    }
+
+    [Fact]
+    public async Task PostEmail_SelfServiceFlagOff_MissingNewMasterPasswordHashAndKey_BadRequest()
+    {
+        // With the flag off, the legacy path still requires NewMasterPasswordHash and Key. The
+        // self-service-only payload (no password rotation, no key) must be rejected so legacy
+        // clients can't accidentally bypass key rotation.
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(false);
+        var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(user);
+
+        var userManager = _factory.GetService<UserManager<User>>();
+        var token = await userManager.GenerateChangeEmailTokenAsync(user, newEmail);
+
+        var response = await PostEmailSelfServiceAsync(newEmail, token, _masterPasswordHash);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var unchangedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(unchangedUser);
+        Assert.Equal(_ownerEmail, unchangedUser.Email);
     }
 
     private async Task<HttpResponseMessage> PostEmailAsync(string newEmail, string token)
@@ -1061,5 +1587,446 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         };
 
         return JsonSerializer.Serialize(request, JsonHelpers.CamelCase);
+    }
+
+    // TODO: Delete this test when the PM37165_RotateUserApiKeyCommand flag is cleaned up — the legacy path
+    // it covers will be removed along with UserService.RotateApiKeyAsync.
+    [Fact]
+    public async Task PostRotateApiKey_FlagOff_RotatesApiKey_AndLeavesLastApiKeyRotationDateNull()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM37165_RotateUserApiKeyCommand).Returns(false);
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var before = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(before);
+        var originalApiKey = before.ApiKey;
+
+        var response = await PostRotateApiKeyAsync(_masterPasswordHash);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var after = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(after);
+        Assert.NotEqual(originalApiKey, after.ApiKey);
+        Assert.Equal(30, after.ApiKey.Length);
+        Assert.True(after.RevisionDate > before.RevisionDate);
+        Assert.Null(after.LastApiKeyRotationDate);
+    }
+
+    // TODO: When the PM37165_RotateUserApiKeyCommand flag is cleaned up, rename this to
+    // PostRotateApiKey_RotatesApiKey_AndSetsLastApiKeyRotationDate (and drop the flag setup) — it becomes
+    // the canonical happy-path integration test.
+    [Fact]
+    public async Task PostRotateApiKey_FlagOn_RotatesApiKey_AndSetsLastApiKeyRotationDate()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM37165_RotateUserApiKeyCommand).Returns(true);
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var before = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(before);
+        var originalApiKey = before.ApiKey;
+
+        var response = await PostRotateApiKeyAsync(_masterPasswordHash);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var after = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(after);
+        Assert.NotEqual(originalApiKey, after.ApiKey);
+        Assert.Equal(30, after.ApiKey.Length);
+        Assert.True(after.RevisionDate > before.RevisionDate);
+        Assert.NotNull(after.LastApiKeyRotationDate);
+        Assert.True(after.LastApiKeyRotationDate > DateTime.UtcNow.AddMinutes(-1));
+    }
+
+    // Bad-secret guard runs before the flag branch, but cover both flag states for parity. When the
+    // PM37165_RotateUserApiKeyCommand flag is cleaned up, drop the [InlineData] rows and convert back to [Fact].
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PostRotateApiKey_InvalidMasterPasswordHash_BadRequest_AndDoesNotRotate(bool flagOn)
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM37165_RotateUserApiKeyCommand).Returns(flagOn);
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var before = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(before);
+
+        var response = await PostRotateApiKeyAsync("wrong-master-password-hash");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var after = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(after);
+        Assert.Equal(before.ApiKey, after.ApiKey);
+        Assert.Null(after.LastApiKeyRotationDate);
+    }
+
+    private async Task<HttpResponseMessage> PostRotateApiKeyAsync(string masterPasswordHash)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/rotate-api-key");
+        message.Content = JsonContent.Create(new SecretVerificationRequestModel
+        {
+            MasterPasswordHash = masterPasswordHash
+        });
+        return await _client.SendAsync(message);
+    }
+
+    // ===== Email change: self-service path (PM30806_SelfServiceChangeEmailCommand flag ON) =====
+    // These tests pin the flag ON to exercise SelfServiceChangeEmailCommand, which changes the
+    // email only — the master password, derived security stamp, and wrapped user key are left
+    // untouched. They cover both POST /accounts/email and POST /accounts/email-token and share
+    // the PostEmailSelfServiceAsync / PostEmailTokenAsync helpers at the end of this file.
+    //
+    // TODO: PM-39120 - On flag cleanup, these become the canonical email-change tests: drop the
+    // "_SelfServiceFlagOn_" qualifier from each name and remove the per-test
+    // _featureService.IsEnabled(...).Returns(true) setup. Delete the _SelfServiceFlagOff_ (legacy)
+    // block above wholesale.
+    [Fact]
+    public async Task PostEmail_SelfServiceFlagOn_Success_UpdatesEmailWithoutTouchingPasswordOrKey()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
+        var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var userBefore = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userBefore);
+        var originalKey = userBefore.Key;
+        var originalMasterPassword = userBefore.MasterPassword;
+        var originalSecurityStamp = userBefore.SecurityStamp;
+
+        var userManager = _factory.GetService<UserManager<User>>();
+        var token = await userManager.GenerateChangeEmailTokenAsync(userBefore, newEmail);
+
+        var response = await PostEmailSelfServiceAsync(newEmail, token, _masterPasswordHash);
+
+        response.EnsureSuccessStatusCode();
+
+        var updatedUser = await _userRepository.GetByEmailAsync(newEmail);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(newEmail, updatedUser.Email);
+        Assert.True(updatedUser.EmailVerified);
+        // Post-decoupling self-service flow: the master password, derived security stamp, and
+        // wrapped user key MUST NOT rotate just because the email changed.
+        Assert.Equal(originalKey, updatedUser.Key);
+        Assert.Equal(originalMasterPassword, updatedUser.MasterPassword);
+        Assert.Equal(originalSecurityStamp, updatedUser.SecurityStamp);
+
+        await _pushNotificationService.Received(1).PushSyncSettingsAsync(updatedUser.Id);
+        await _pushNotificationService.DidNotReceive()
+            .PushLogOutAsync(updatedUser.Id, Arg.Any<bool>(), Arg.Any<PushNotificationLogOutReason?>());
+    }
+
+    [Fact]
+    public async Task PostEmail_SelfServiceFlagOn_InvalidMasterPassword_BadRequest_AndDoesNotChangeEmail()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
+        var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(user);
+
+        var userManager = _factory.GetService<UserManager<User>>();
+        var token = await userManager.GenerateChangeEmailTokenAsync(user, newEmail);
+
+        var response = await PostEmailSelfServiceAsync(newEmail, token, "wrong-master-password-hash");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var unchangedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(unchangedUser);
+        Assert.Equal(_ownerEmail, unchangedUser.Email);
+    }
+
+    [Fact]
+    public async Task PostEmail_SelfServiceFlagOn_InvalidToken_BadRequest_AndDoesNotChangeEmail()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
+        var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var response = await PostEmailSelfServiceAsync(newEmail, "not-a-valid-token", _masterPasswordHash);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var unchangedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(unchangedUser);
+        Assert.Equal(_ownerEmail, unchangedUser.Email);
+    }
+
+    [Fact]
+    public async Task PostEmail_SelfServiceFlagOn_KeyConnectorUser_BadRequest_AndDoesNotChangeEmail()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
+        var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(user);
+        user.UsesKeyConnector = true;
+        await _userRepository.ReplaceAsync(user);
+
+        var userManager = _factory.GetService<UserManager<User>>();
+        var token = await userManager.GenerateChangeEmailTokenAsync(user, newEmail);
+
+        var response = await PostEmailSelfServiceAsync(newEmail, token, _masterPasswordHash);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var unchangedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(unchangedUser);
+        Assert.Equal(_ownerEmail, unchangedUser.Email);
+    }
+
+    [Theory]
+    [InlineData(OrganizationUserType.Owner)]
+    [InlineData(OrganizationUserType.Admin)]
+    public async Task PostEmail_SelfServiceFlagOn_KeyConnectorOrgAdminOrOwner_NotUsingKeyConnector_CanChangeEmail(
+        OrganizationUserType userType)
+    {
+        // An owner/admin of a Key Connector organization who doesn't personally use Key Connector must be
+        // able to change their email.
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
+
+        // Make the seeded account the owner of a Key Connector organization, then re-login so the
+        // access token carries the owner claim that ICurrentContext.Organizations is built from.
+        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
+            PlanType.EnterpriseAnnually, _ownerEmail, passwordManagerSeats: 10,
+            paymentMethod: PaymentMethodType.Card);
+        organization.UseKeyConnector = true;
+        organization.UseSso = true;
+        organization.Identifier = $"kc-org-{Guid.NewGuid()}";
+        await _organizationRepository.ReplaceAsync(organization);
+
+        (var currentUserEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory,
+            organization.Id,
+            userType);
+
+        await _loginHelper.LoginAsync(currentUserEmail);
+
+        var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
+        var userBefore = await _userRepository.GetByEmailAsync(currentUserEmail);
+        Assert.NotNull(userBefore);
+        // The org uses Key Connector, but the acting member themselves does not.
+        Assert.False(userBefore.UsesKeyConnector);
+
+        var userManager = _factory.GetService<UserManager<User>>();
+        var token = await userManager.GenerateChangeEmailTokenAsync(userBefore, newEmail);
+
+        var response = await PostEmailSelfServiceAsync(newEmail, token, _masterPasswordHash);
+
+        response.EnsureSuccessStatusCode();
+
+        var updatedUser = await _userRepository.GetByEmailAsync(newEmail);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(newEmail, updatedUser.Email);
+        Assert.True(updatedUser.EmailVerified);
+    }
+
+    [Fact]
+    public async Task PostEmail_SelfServiceFlagOn_UnclaimedUserAtBlockedDomain_ChangingWithinSameDomain_IsBlocked()
+    {
+        // PM-30806 item 2 — regression guard.
+        //
+        // A user registers at a domain while it is still unclaimed and never
+        // joins the organization. An organization later VERIFIES that domain and enables the
+        // BlockClaimedDomainAccountCreation policy. The user then changes to a different local-part at the
+        // SAME (now-blocked) domain.
+        //
+        // The change must be DENIED: a same-domain change no longer bypasses the block-policy gate.
+
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
+
+        var blockedDomain = OrganizationTestHelpers.GenerateRandomDomain();
+
+        // Grandfathered, non-member user whose current email lives at the (soon-to-be) blocked domain.
+        var grandfatheredEmail = $"grandfathered-{Guid.NewGuid()}@{blockedDomain}";
+        await _factory.LoginWithNewAccount(grandfatheredEmail);
+
+        // A SEPARATE organization claims the domain: verify it and enable the block policy.
+        // The grandfathered user is intentionally NOT a member of this org.
+        var orgOwnerEmail = $"org-owner-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(orgOwnerEmail);
+        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
+            PlanType.EnterpriseAnnually, orgOwnerEmail, passwordManagerSeats: 10,
+            paymentMethod: PaymentMethodType.Card);
+        organization.UsePolicies = true;
+        organization.UseOrganizationDomains = true;
+        await _organizationRepository.ReplaceAsync(organization);
+
+        await OrganizationTestHelpers.CreateVerifiedDomainAsync(_factory, organization.Id, blockedDomain);
+
+        var policyRepository = _factory.GetService<IPolicyRepository>();
+        await policyRepository.CreateAsync(new Policy
+        {
+            OrganizationId = organization.Id,
+            Type = PolicyType.BlockClaimedDomainAccountCreation,
+            Enabled = true
+        });
+
+        // Act on the inherited domain user, changing to a new local-part at the SAME blocked domain.
+        await _loginHelper.LoginAsync(grandfatheredEmail);
+        var newEmail = $"changed-{Guid.NewGuid()}@{blockedDomain}";
+
+        var userBefore = await _userRepository.GetByEmailAsync(grandfatheredEmail);
+        Assert.NotNull(userBefore);
+
+        var userManager = _factory.GetService<UserManager<User>>();
+        var token = await userManager.GenerateChangeEmailTokenAsync(userBefore, newEmail);
+
+        var response = await PostEmailSelfServiceAsync(newEmail, token, _masterPasswordHash);
+
+        // The block-claimed-domain policy denies the change, and the email is left unchanged.
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var unchangedUser = await _userRepository.GetByEmailAsync(grandfatheredEmail);
+        Assert.NotNull(unchangedUser);
+        Assert.Equal(grandfatheredEmail, unchangedUser.Email);
+    }
+
+    [Fact]
+    public async Task PostEmailToken_SelfServiceFlagOn_NewEmailAvailable_SendsChangeEmailWithToken()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
+        var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var response = await PostEmailTokenAsync(newEmail, _masterPasswordHash);
+
+        response.EnsureSuccessStatusCode();
+
+        await _mailService.Received(1)
+            .SendChangeEmailEmailAsync(newEmail, Arg.Is<string>(t => !string.IsNullOrEmpty(t)));
+        await _mailService.DidNotReceive()
+            .SendChangeEmailAlreadyExistsEmailAsync(Arg.Any<string>(), newEmail);
+
+        var unchangedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(unchangedUser);
+        Assert.Equal(_ownerEmail, unchangedUser.Email);
+    }
+
+    [Fact]
+    public async Task PostEmailToken_SelfServiceFlagOn_NewEmailInUse_NotifiesCurrentEmailAndDoesNotIssueToken()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
+
+        // Register a second account to take the target email, then log back in as the owner.
+        var existingEmail = $"existing-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(existingEmail);
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var response = await PostEmailTokenAsync(existingEmail, _masterPasswordHash);
+
+        // Success is returned to the caller so the API surface does not leak whether the new
+        // email is already registered; the existing account is notified out-of-band instead.
+        response.EnsureSuccessStatusCode();
+
+        await _mailService.Received(1)
+            .SendChangeEmailAlreadyExistsEmailAsync(_ownerEmail, existingEmail);
+        await _mailService.DidNotReceive()
+            .SendChangeEmailEmailAsync(existingEmail, Arg.Any<string>());
+
+        var unchangedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(unchangedUser);
+        Assert.Equal(_ownerEmail, unchangedUser.Email);
+    }
+
+    [Fact]
+    public async Task PostEmailToken_SelfServiceFlagOn_InvalidMasterPassword_BadRequest_AndDoesNotSendMail()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand).Returns(true);
+        var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var response = await PostEmailTokenAsync(newEmail, "wrong-master-password-hash");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        await _mailService.DidNotReceive()
+            .SendChangeEmailEmailAsync(newEmail, Arg.Any<string>());
+        await _mailService.DidNotReceive()
+            .SendChangeEmailAlreadyExistsEmailAsync(Arg.Any<string>(), newEmail);
+    }
+
+    // Posts the self-service-shaped payload (no new master password / key) to the merged
+    // /accounts/email endpoint. The same endpoint serves both paths; the feature flag picks
+    // which command actually runs.
+    private async Task<HttpResponseMessage> PostEmailSelfServiceAsync(string newEmail, string token, string masterPasswordHash)
+    {
+        var requestModel = new EmailRequestModel
+        {
+            MasterPasswordHash = masterPasswordHash,
+            NewEmail = newEmail,
+            Token = token
+        };
+
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/email");
+        message.Content = JsonContent.Create(requestModel);
+        return await _client.SendAsync(message);
+    }
+
+    private async Task<HttpResponseMessage> PostEmailTokenAsync(string newEmail, string masterPasswordHash)
+    {
+        var requestModel = new EmailTokenRequestModel
+        {
+            MasterPasswordHash = masterPasswordHash,
+            NewEmail = newEmail
+        };
+
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/email-token");
+        message.Content = JsonContent.Create(requestModel);
+
+        return await _client.SendAsync(message);
+    }
+
+    [Fact]
+    public async Task PostResendNewDeviceOtp_ValidEmailAndSecret_OkAndSendsEmail()
+    {
+        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(user);
+
+        var response = await PostResendNewDeviceOtpAsync(_ownerEmail, _masterPasswordHash);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await _twoFactorEmailService.Received(1)
+            .SendNewDeviceVerificationEmailAsync(Arg.Is<User>(u => u.Id == user.Id));
+    }
+
+    [Fact]
+    public async Task PostResendNewDeviceOtp_WrongSecret_SilentlySucceedsWithoutSendingEmail()
+    {
+        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(user);
+
+        var response = await PostResendNewDeviceOtpAsync(_ownerEmail, "wrong-master-password-hash");
+
+        // Silent 200 to avoid account enumeration via response shape.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await _twoFactorEmailService.DidNotReceive()
+            .SendNewDeviceVerificationEmailAsync(Arg.Is<User>(u => u.Id == user.Id));
+    }
+
+    [Fact]
+    public async Task PostResendNewDeviceOtp_UnknownEmail_SilentlySucceeds()
+    {
+        var response = await PostResendNewDeviceOtpAsync(
+            $"does-not-exist-{Guid.NewGuid()}@bitwarden.com",
+            _masterPasswordHash);
+
+        // Silent 200 to avoid account enumeration via response shape.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    private async Task<HttpResponseMessage> PostResendNewDeviceOtpAsync(string email, string masterPasswordHash)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/resend-new-device-otp");
+        message.Content = JsonContent.Create(new UnauthenticatedSecretVerificationRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
+        });
+        return await _client.SendAsync(message);
     }
 }

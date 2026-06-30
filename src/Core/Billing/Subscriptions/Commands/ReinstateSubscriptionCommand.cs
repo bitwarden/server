@@ -1,7 +1,9 @@
 ﻿using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
+using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using Stripe;
@@ -17,11 +19,18 @@ public interface IReinstateSubscriptionCommand
 
 public class ReinstateSubscriptionCommand(
     ILogger<ReinstateSubscriptionCommand> logger,
-    IStripeAdapter stripeAdapter) : BaseBillingCommand<ReinstateSubscriptionCommand>(logger), IReinstateSubscriptionCommand
+    IStripeAdapter stripeAdapter,
+    IFeatureService featureService,
+    IPriceIncreaseScheduler priceIncreaseScheduler) : BaseBillingCommand<ReinstateSubscriptionCommand>(logger), IReinstateSubscriptionCommand
 {
+    private readonly ILogger<ReinstateSubscriptionCommand> _logger = logger;
+    protected override Conflict DefaultConflict => new("We had a problem reinstating your subscription. Please contact support for assistance.");
+
     public Task<BillingCommandResult<None>> Run(ISubscriber subscriber) => HandleAsync<None>(async () =>
     {
-        var subscription = await stripeAdapter.GetSubscriptionAsync(subscriber.GatewaySubscriptionId);
+        var subscription = await stripeAdapter.GetSubscriptionAsync(
+            subscriber.GatewaySubscriptionId,
+            new SubscriptionGetOptions { Expand = ["discounts", "customer.discount"] });
 
         if (subscription is not
             {
@@ -32,9 +41,42 @@ public class ReinstateSubscriptionCommand(
             return new BadRequest("Subscription is not pending cancellation.");
         }
 
+        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal) ||
+            featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
+        {
+            if (subscription.Metadata?.ContainsKey(MetadataKeys.CancelledDuringDeferredPriceIncrease) == true)
+            {
+                _logger.LogInformation(
+                    "{Command}: Subscription ({SubscriptionId}) has pending price increase, clearing flag and recreating schedule",
+                    CommandName, subscription.Id);
+
+                // Clear pending cancellation, cancelling user, and flag BEFORE attaching a schedule.
+                // Stripe discourages direct subscription updates once a schedule is attached as it can create inconsistencies in phases.
+                await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
+                {
+                    CancelAtPeriodEnd = false,
+                    Metadata = new Dictionary<string, string>
+                    {
+                        [MetadataKeys.CancelledDuringDeferredPriceIncrease] = string.Empty,
+                        [MetadataKeys.CancellingUserId] = string.Empty
+                    }
+                });
+
+                await priceIncreaseScheduler.ScheduleForSubscription(subscription);
+
+                return new None();
+            }
+        }
+
+        // The default behavior for non-price-migration subscriptions or subscriptions without
+        // active schedules is to simply not cancel at the end of the period.
         await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
         {
-            CancelAtPeriodEnd = false
+            CancelAtPeriodEnd = false,
+            Metadata = new Dictionary<string, string>
+            {
+                [MetadataKeys.CancellingUserId] = string.Empty
+            }
         });
 
         return new None();

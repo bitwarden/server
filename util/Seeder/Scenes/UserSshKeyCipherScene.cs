@@ -1,5 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Bit.Core.Repositories;
+using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
@@ -21,7 +23,9 @@ public class UserSshKeyCipherScene(IUserRepository userRepository, ICipherReposi
         public string? PublicKey { get; set; }
         public string? Fingerprint { get; set; }
         public bool Reprompt { get; set; }
+        public bool Favorite { get; set; }
         public string? Notes { get; set; }
+        public Guid? FolderId { get; set; }
     }
 
     public class Result
@@ -43,7 +47,33 @@ public class UserSshKeyCipherScene(IUserRepository userRepository, ICipherReposi
             PublicKey = request.PublicKey,
             Fingerprint = request.Fingerprint
         };
-        var cipher = SshKeyCipherSeeder.Create(request.UserKeyB64, request.Name, userId: request.UserId, sshKey: sshKey, notes: request.Notes, reprompt: request.Reprompt);
+        var cipher = SshKeyCipherSeeder.Create(new CipherSeed
+        {
+            Type = CipherType.SSHKey,
+            Name = request.Name,
+            Notes = request.Notes,
+            EncryptionKey = request.UserKeyB64,
+            UserId = request.UserId,
+            SshKey = sshKey
+        });
+        if (request.Reprompt)
+        {
+            cipher.Reprompt = CipherRepromptType.Password;
+        }
+        if (request.Favorite)
+        {
+            cipher.Favorites = JsonSerializer.Serialize(new Dictionary<string, bool>
+            {
+                { request.UserId.ToString().ToUpperInvariant(), true}
+            });
+        }
+        if (request.FolderId.HasValue)
+        {
+            cipher.Folders = CipherComposer.BuildFoldersJson(new Dictionary<Guid, Guid>
+            {
+                { request.UserId, request.FolderId.Value }
+            });
+        }
 
         await cipherRepository.CreateAsync(cipher);
 

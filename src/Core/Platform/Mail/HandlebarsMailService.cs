@@ -12,6 +12,7 @@ using Bit.Core.Auth.Models.Mail;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Mail;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;
@@ -101,7 +102,8 @@ public class HandlebarsMailService : IMailService
         string token,
         ProductTierType productTier,
         IEnumerable<ProductType> products,
-        int trialLength)
+        int trialLength,
+        bool paymentOptional = false)
     {
         var message = CreateDefaultMessage("Verify your email", email);
         var model = new TrialInitiationVerifyEmail
@@ -113,7 +115,8 @@ public class HandlebarsMailService : IMailService
             SiteName = _globalSettings.SiteName,
             ProductTier = productTier,
             Product = products,
-            TrialLength = trialLength
+            TrialLength = trialLength,
+            PaymentOptional = paymentOptional
         };
         await AddMessageContentAsync(message, "Billing.TrialInitiationVerifyEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
@@ -766,13 +769,17 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendAdminResetPasswordEmailAsync(string email, string? userName, string orgName)
+    public async Task SendAdminResetPasswordEmailAsync(string email, string? userName, string orgName, bool resetMasterPassword, bool resetTwoFactor)
     {
-        var message = CreateDefaultMessage("Your admin has initiated account recovery", email);
+        var message = CreateDefaultMessage($"{orgName} has initiated account recovery", email);
         var model = new AdminResetPasswordViewModel()
         {
-            UserName = GetUserIdentifier(email, userName),
+            UserName = email,
             OrgName = CoreHelpers.SanitizeForEmail(orgName, false),
+            ResetMasterPassword = resetMasterPassword,
+            ResetTwoFactor = resetTwoFactor,
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName,
         };
         await AddMessageContentAsync(message, "AdminResetPassword", model);
         message.Category = "AdminResetPassword";
@@ -1635,10 +1642,12 @@ public class HandlebarsMailService : IMailService
         return string.IsNullOrEmpty(userName) ? email : CoreHelpers.SanitizeForEmail(userName, false);
     }
 
-    private string GetCloudVaultSubscriptionUrl(Guid organizationId)
-        => _globalSettings.BaseServiceUri.CloudRegion?.ToLower() switch
-        {
-            "eu" => $"https://vault.bitwarden.eu/#/organizations/{organizationId}/billing/subscription",
-            _ => $"https://vault.bitwarden.com/#/organizations/{organizationId}/billing/subscription"
-        };
+    public string GetCloudVaultSubscriptionUrl(Guid organizationId)
+    {
+        var region = Enum.TryParse<CloudRegion>(_globalSettings.BaseServiceUri.CloudRegion, ignoreCase: true, out var parsed)
+            ? parsed
+            : CloudRegion.US;
+        var regionConfig = CloudRegionConfig.FindByRegion(region);
+        return $"{regionConfig.VaultUrl}/#/organizations/{organizationId}/billing/subscription";
+    }
 }

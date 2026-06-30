@@ -3,12 +3,14 @@ using System.Text.Json;
 using AutoFixture;
 using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -22,6 +24,7 @@ using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Test.Common.AutoFixture;
@@ -405,6 +408,293 @@ public class SyncControllerTests
         Assert.Equal(user.GetMasterPasswordSalt(), result.UserDecryption.MasterPasswordUnlock.Salt);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task Get_BankAccountCiphers_ReturnedWhenFlagEnabledAndClientVersionSupported(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+
+        var bankAccountCipher = new CipherDetails { Type = CipherType.BankAccount, Data = "{}", UserId = user.Id };
+        var loginCipher = new CipherDetails { Type = CipherType.Login, Data = "{}", UserId = user.Id };
+        var ciphers = new List<CipherDetails> { bankAccountCipher, loginCipher };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .ClientVersion.Returns(new Version(Constants.PM32009NewItemTypeMinimumVersion));
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user).Returns(false);
+        userService.HasPremiumFromOrganization(user).Returns(false);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.Contains(result.Ciphers, c => c.Type == CipherType.BankAccount);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_BankAccountCiphers_FilteredWhenFlagDisabled(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+
+        var bankAccountCipher = new CipherDetails { Type = CipherType.BankAccount, Data = "{}", UserId = user.Id };
+        var loginCipher = new CipherDetails { Type = CipherType.Login, Data = "{}", UserId = user.Id };
+        var ciphers = new List<CipherDetails> { bankAccountCipher, loginCipher };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
+
+        // New client version but flag disabled
+        sutProvider.GetDependency<ICurrentContext>()
+            .ClientVersion.Returns(new Version(Constants.PM32009NewItemTypeMinimumVersion));
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(false);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user).Returns(false);
+        userService.HasPremiumFromOrganization(user).Returns(false);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.DoesNotContain(result.Ciphers, c => c.Type == CipherType.BankAccount);
+        Assert.Contains(result.Ciphers, c => c.Type == CipherType.Login);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_BankAccountCiphers_FilteredWhenFlagEnabledButClientVersionTooOld(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+
+        var bankAccountCipher = new CipherDetails { Type = CipherType.BankAccount, Data = "{}", UserId = user.Id };
+        var ciphers = new List<CipherDetails> { bankAccountCipher };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
+
+        // Flag enabled but old client version
+        sutProvider.GetDependency<ICurrentContext>()
+            .ClientVersion.Returns(new Version("2025.1.0"));
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user).Returns(false);
+        userService.HasPremiumFromOrganization(user).Returns(false);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.DoesNotContain(result.Ciphers, c => c.Type == CipherType.BankAccount);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_BankAccountCiphers_FilteredWhenFlagEnabledButClientVersionIsNull(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+
+        var bankAccountCipher = new CipherDetails { Type = CipherType.BankAccount, Data = "{}", UserId = user.Id };
+        var loginCipher = new CipherDetails { Type = CipherType.Login, Data = "{}", UserId = user.Id };
+        var ciphers = new List<CipherDetails> { bankAccountCipher, loginCipher };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
+
+        // Null client version (missing/unparseable Bitwarden-Client-Version header)
+        sutProvider.GetDependency<ICurrentContext>()
+            .ClientVersion.Returns((Version?)null);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user).Returns(false);
+        userService.HasPremiumFromOrganization(user).Returns(false);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.DoesNotContain(result.Ciphers, c => c.Type == CipherType.BankAccount);
+        Assert.Contains(result.Ciphers, c => c.Type == CipherType.Login);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_SSHKeyCiphers_FilteredWhenClientVersionIsNull(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+
+        var sshKeyCipher = new CipherDetails { Type = CipherType.SSHKey, Data = "{}", UserId = user.Id };
+        var loginCipher = new CipherDetails { Type = CipherType.Login, Data = "{}", UserId = user.Id };
+        var ciphers = new List<CipherDetails> { sshKeyCipher, loginCipher };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
+
+        // Null client version (missing/unparseable Bitwarden-Client-Version header)
+        sutProvider.GetDependency<ICurrentContext>()
+            .ClientVersion.Returns((Version?)null);
+
+        // QA override disabled
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.SSHVersionCheckQAOverride).Returns(false);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user).Returns(false);
+        userService.HasPremiumFromOrganization(user).Returns(false);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.DoesNotContain(result.Ciphers, c => c.Type == CipherType.SSHKey);
+        Assert.Contains(result.Ciphers, c => c.Type == CipherType.Login);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_PoliciesInAcceptedState_FlagEnabled_CallsNewRepositoryMethods(
+        User user,
+        ICollection<Policy> policiesAccepted,
+        ICollection<OrganizationUserOrganizationDetails> organizationsAccepted,
+        SutProvider<SyncController> sutProvider)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState).Returns(true);
+
+        var policyRepository = sutProvider.GetDependency<IPolicyRepository>();
+        policyRepository.GetManyConfirmedAcceptedByUserIdAsync(user.Id).Returns(policiesAccepted);
+
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        organizationUserRepository.GetManyConfirmedAcceptedDetailsByUserAsync(user.Id).Returns(organizationsAccepted);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user).Returns(false);
+        userService.HasPremiumFromOrganization(user).Returns(false);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.IsType<SyncResponseModel>(result);
+        await policyRepository.Received(1).GetManyConfirmedAcceptedByUserIdAsync(user.Id);
+        await organizationUserRepository.Received(1).GetManyConfirmedAcceptedDetailsByUserAsync(user.Id);
+        Assert.NotNull(result.PoliciesNew);
+        Assert.NotNull(result.Profile.OrganizationsNew);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_PoliciesInAcceptedState_FlagDisabled_DoesNotCallNewRepositoryMethods(
+        User user,
+        SutProvider<SyncController> sutProvider)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState).Returns(false);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user).Returns(false);
+        userService.HasPremiumFromOrganization(user).Returns(false);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.IsType<SyncResponseModel>(result);
+        var policyRepository = sutProvider.GetDependency<IPolicyRepository>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        await policyRepository.DidNotReceive().GetManyConfirmedAcceptedByUserIdAsync(Arg.Any<Guid>());
+        await organizationUserRepository.DidNotReceive().GetManyConfirmedAcceptedDetailsByUserAsync(Arg.Any<Guid>());
+        Assert.Null(result.PoliciesNew);
+        Assert.Null(result.Profile.OrganizationsNew);
+    }
+
     private async Task AssertMethodsCalledAsync(IUserService userService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IOrganizationUserRepository organizationUserRepository,
@@ -452,5 +742,327 @@ public class SyncControllerTests
             .TwoFactorIsEnabledAsync(default(ITwoFactorProvidersUser));
         await userService.ReceivedWithAnyArgs(1)
             .HasPremiumFromOrganization(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_DriversLicenseCiphers_ReturnedWhenFlagEnabledAndClientVersionSupported(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+
+        var driversLicenseCipher = new CipherDetails { Type = CipherType.DriversLicense, Data = "{}", UserId = user.Id };
+        var loginCipher = new CipherDetails { Type = CipherType.Login, Data = "{}", UserId = user.Id };
+        var ciphers = new List<CipherDetails> { driversLicenseCipher, loginCipher };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .ClientVersion.Returns(new Version(Constants.PM32009NewItemTypeMinimumVersion));
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user).Returns(false);
+        userService.HasPremiumFromOrganization(user).Returns(false);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.Contains(result.Ciphers, c => c.Type == CipherType.DriversLicense);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_DriversLicenseCiphers_FilteredWhenFlagDisabled(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+
+        var driversLicenseCipher = new CipherDetails { Type = CipherType.DriversLicense, Data = "{}", UserId = user.Id };
+        var loginCipher = new CipherDetails { Type = CipherType.Login, Data = "{}", UserId = user.Id };
+        var ciphers = new List<CipherDetails> { driversLicenseCipher, loginCipher };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .ClientVersion.Returns(new Version(Constants.PM32009NewItemTypeMinimumVersion));
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(false);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user).Returns(false);
+        userService.HasPremiumFromOrganization(user).Returns(false);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.DoesNotContain(result.Ciphers, c => c.Type == CipherType.DriversLicense);
+        Assert.Contains(result.Ciphers, c => c.Type == CipherType.Login);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_DriversLicenseCiphers_FilteredWhenFlagEnabledButClientVersionTooOld(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+
+        var driversLicenseCipher = new CipherDetails { Type = CipherType.DriversLicense, Data = "{}", UserId = user.Id };
+        var ciphers = new List<CipherDetails> { driversLicenseCipher };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .ClientVersion.Returns(new Version("2025.1.0"));
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user).Returns(false);
+        userService.HasPremiumFromOrganization(user).Returns(false);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.DoesNotContain(result.Ciphers, c => c.Type == CipherType.DriversLicense);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_DriversLicenseCiphers_FilteredWhenFlagEnabledButClientVersionIsNull(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+
+        var driversLicenseCipher = new CipherDetails { Type = CipherType.DriversLicense, Data = "{}", UserId = user.Id };
+        var loginCipher = new CipherDetails { Type = CipherType.Login, Data = "{}", UserId = user.Id };
+        var ciphers = new List<CipherDetails> { driversLicenseCipher, loginCipher };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .ClientVersion.Returns((Version?)null);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user).Returns(false);
+        userService.HasPremiumFromOrganization(user).Returns(false);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.DoesNotContain(result.Ciphers, c => c.Type == CipherType.DriversLicense);
+        Assert.Contains(result.Ciphers, c => c.Type == CipherType.Login);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_PassportCiphers_ReturnedWhenFlagEnabledAndClientVersionSupported(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+
+        var passportCipher = new CipherDetails { Type = CipherType.Passport, Data = "{}", UserId = user.Id };
+        var loginCipher = new CipherDetails { Type = CipherType.Login, Data = "{}", UserId = user.Id };
+        var ciphers = new List<CipherDetails> { passportCipher, loginCipher };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .ClientVersion.Returns(new Version(Constants.PM32009NewItemTypeMinimumVersion));
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user).Returns(false);
+        userService.HasPremiumFromOrganization(user).Returns(false);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.Contains(result.Ciphers, c => c.Type == CipherType.Passport);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_PassportCiphers_FilteredWhenFlagDisabled(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+
+        var passportCipher = new CipherDetails { Type = CipherType.Passport, Data = "{}", UserId = user.Id };
+        var loginCipher = new CipherDetails { Type = CipherType.Login, Data = "{}", UserId = user.Id };
+        var ciphers = new List<CipherDetails> { passportCipher, loginCipher };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .ClientVersion.Returns(new Version(Constants.PM32009NewItemTypeMinimumVersion));
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(false);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user).Returns(false);
+        userService.HasPremiumFromOrganization(user).Returns(false);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.DoesNotContain(result.Ciphers, c => c.Type == CipherType.Passport);
+        Assert.Contains(result.Ciphers, c => c.Type == CipherType.Login);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_PassportCiphers_FilteredWhenFlagEnabledButClientVersionTooOld(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+
+        var passportCipher = new CipherDetails { Type = CipherType.Passport, Data = "{}", UserId = user.Id };
+        var ciphers = new List<CipherDetails> { passportCipher };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .ClientVersion.Returns(new Version("2025.1.0"));
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user).Returns(false);
+        userService.HasPremiumFromOrganization(user).Returns(false);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.DoesNotContain(result.Ciphers, c => c.Type == CipherType.Passport);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_PassportCiphers_FilteredWhenFlagEnabledButClientVersionIsNull(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+
+        var passportCipher = new CipherDetails { Type = CipherType.Passport, Data = "{}", UserId = user.Id };
+        var loginCipher = new CipherDetails { Type = CipherType.Login, Data = "{}", UserId = user.Id };
+        var ciphers = new List<CipherDetails> { passportCipher, loginCipher };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .ClientVersion.Returns((Version?)null);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user).Returns(false);
+        userService.HasPremiumFromOrganization(user).Returns(false);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.DoesNotContain(result.Ciphers, c => c.Type == CipherType.Passport);
+        Assert.Contains(result.Ciphers, c => c.Type == CipherType.Login);
     }
 }

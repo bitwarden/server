@@ -40,8 +40,13 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.UseSecretsManager = false;
         signup.IsFromSecretsManagerTrial = false;
         signup.IsFromProvider = false;
+        signup.TrialLength = null;
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(signup.Owner.Id)
@@ -84,8 +89,13 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.PremiumAccessAddon = false;
         signup.UseSecretsManager = false;
         signup.IsFromProvider = false;
+        signup.TrialLength = null;
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(signup.Owner.Id)
@@ -134,8 +144,13 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.PremiumAccessAddon = false;
         signup.IsFromSecretsManagerTrial = false;
         signup.IsFromProvider = false;
+        signup.TrialLength = null;
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(signup.Owner.Id)
@@ -179,6 +194,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.PaymentMethodType = PaymentMethodType.Card;
         signup.PremiumAccessAddon = false;
         signup.IsFromProvider = true;
+        signup.TrialLength = null;
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
 
@@ -199,6 +215,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.AdditionalServiceAccounts = 10;
         signup.AdditionalStorageGb = 0;
         signup.IsFromProvider = false;
+        signup.TrialLength = null;
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
 
@@ -219,6 +236,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.PremiumAccessAddon = false;
         signup.AdditionalServiceAccounts = 10;
         signup.IsFromProvider = false;
+        signup.TrialLength = null;
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
 
@@ -239,6 +257,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.PremiumAccessAddon = false;
         signup.AdditionalServiceAccounts = -10;
         signup.IsFromProvider = false;
+        signup.TrialLength = null;
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
 
@@ -267,6 +286,10 @@ public class CloudICloudOrganizationSignUpCommandTests
             .Returns(1);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(signup.Owner.Id)
             .Returns(new SingleOrganizationPolicyRequirement([]));
 
@@ -290,12 +313,17 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.PremiumAccessAddon = false;
         signup.UseSecretsManager = false;
         signup.IsFromProvider = false;
+        signup.TrialLength = null;
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
 
         // User has SingleOrg policy from another org
         organizationUser.UserId = signup.Owner.Id;
         organizationUser.OrganizationId = Guid.NewGuid();
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(signup.Owner.Id)
             .Returns(SingleOrganizationPolicyRequirementTestFactory.EnabledForAnotherOrganization());
@@ -319,8 +347,13 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.PremiumAccessAddon = false;
         signup.UseSecretsManager = false;
         signup.IsFromProvider = false;
+        signup.TrialLength = null;
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
         // No SingleOrg policy
         sutProvider.GetDependency<IPolicyRequirementQuery>()
@@ -336,4 +369,119 @@ public class CloudICloudOrganizationSignUpCommandTests
 
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).CreateAsync(Arg.Any<Organization>());
     }
+
+    [Theory]
+    [BitAutoData(PlanType.FamiliesAnnually)]
+    public async Task SignUpOrganizationAsync_WithTrialLengthAboveMaximum_ThrowsBadRequestException(
+        PlanType planType, OrganizationSignup signup,
+        SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        signup.Plan = planType;
+        signup.TrialLength = 31;
+        signup.AdditionalSeats = 0;
+        signup.PremiumAccessAddon = false;
+        signup.UseSecretsManager = false;
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SignUpOrganizationAsync(signup));
+        Assert.Equal("Trial length must be between 0 and 30 days.", ex.Message);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.FamiliesAnnually)]
+    public async Task SignUpOrganizationAsync_WithNegativeTrialLength_ThrowsBadRequestException(
+        PlanType planType, OrganizationSignup signup,
+        SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        signup.Plan = planType;
+        signup.TrialLength = -1;
+        signup.AdditionalSeats = 0;
+        signup.PremiumAccessAddon = false;
+        signup.UseSecretsManager = false;
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SignUpOrganizationAsync(signup));
+        Assert.Equal("Trial length must be between 0 and 30 days.", ex.Message);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.FamiliesAnnually)]
+    public async Task SignUpOrganizationAsync_WithTrialLengthAtMinimum_Succeeds(
+        PlanType planType, OrganizationSignup signup,
+        SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        signup.Plan = planType;
+        signup.TrialLength = 0;
+        signup.AdditionalSeats = 0;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+        signup.UseSecretsManager = false;
+        signup.IsFromSecretsManagerTrial = false;
+        signup.IsFromProvider = false;
+
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
+
+        await sutProvider.Sut.SignUpOrganizationAsync(signup);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.FamiliesAnnually)]
+    public async Task SignUpOrganizationAsync_WithTrialLengthAtMaximum_Succeeds(
+        PlanType planType, OrganizationSignup signup,
+        SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        signup.Plan = planType;
+        signup.TrialLength = 30;
+        signup.AdditionalSeats = 0;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+        signup.UseSecretsManager = false;
+        signup.IsFromSecretsManagerTrial = false;
+        signup.IsFromProvider = false;
+
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
+
+        await sutProvider.Sut.SignUpOrganizationAsync(signup);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.FamiliesAnnually)]
+    public async Task SignUpOrganizationAsync_WithoutTrialLength_Succeeds(
+        PlanType planType, OrganizationSignup signup,
+        SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        signup.Plan = planType;
+        signup.TrialLength = null;
+        signup.AdditionalSeats = 0;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+        signup.UseSecretsManager = false;
+        signup.IsFromSecretsManagerTrial = false;
+        signup.IsFromProvider = false;
+
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
+
+        await sutProvider.Sut.SignUpOrganizationAsync(signup);
+    }
+
 }

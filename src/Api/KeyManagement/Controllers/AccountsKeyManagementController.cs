@@ -16,6 +16,7 @@ using Bit.Core.KeyManagement.Commands.Interfaces;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.KeyManagement.UserKey.Models.Data;
+using Bit.Core.KeyManagement.UserKey.Queries.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
@@ -46,12 +47,15 @@ public class AccountsKeyManagementController : Controller
         _webauthnKeyValidator;
     private readonly IRotationValidator<IEnumerable<OtherDeviceKeysUpdateRequestModel>, IEnumerable<Device>> _deviceValidator;
     private readonly IKeyConnectorConfirmationDetailsQuery _keyConnectorConfirmationDetailsQuery;
+    private readonly IKeyRotationDataQuery _keyRotationDataQuery;
     private readonly ISetKeyConnectorKeyCommand _setKeyConnectorKeyCommand;
+    private readonly IConvertUserToKeyConnectorCommand _convertUserToKeyConnectorCommand;
 
     public AccountsKeyManagementController(IUserService userService,
         IOrganizationUserRepository organizationUserRepository,
         IEmergencyAccessRepository emergencyAccessRepository,
         IKeyConnectorConfirmationDetailsQuery keyConnectorConfirmationDetailsQuery,
+        IKeyRotationDataQuery keyRotationDataQuery,
         IRegenerateUserAsymmetricKeysCommand regenerateUserAsymmetricKeysCommand,
         IRotateUserAccountKeysCommand rotateUserKeyCommandV2,
         IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> cipherValidator,
@@ -64,7 +68,8 @@ public class AccountsKeyManagementController : Controller
         IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
             webAuthnKeyValidator,
         IRotationValidator<IEnumerable<OtherDeviceKeysUpdateRequestModel>, IEnumerable<Device>> deviceValidator,
-        ISetKeyConnectorKeyCommand setKeyConnectorKeyCommand)
+        ISetKeyConnectorKeyCommand setKeyConnectorKeyCommand,
+        IConvertUserToKeyConnectorCommand convertUserToKeyConnectorCommand)
     {
         _userService = userService;
         _regenerateUserAsymmetricKeysCommand = regenerateUserAsymmetricKeysCommand;
@@ -79,7 +84,9 @@ public class AccountsKeyManagementController : Controller
         _webauthnKeyValidator = webAuthnKeyValidator;
         _deviceValidator = deviceValidator;
         _keyConnectorConfirmationDetailsQuery = keyConnectorConfirmationDetailsQuery;
+        _keyRotationDataQuery = keyRotationDataQuery;
         _setKeyConnectorKeyCommand = setKeyConnectorKeyCommand;
+        _convertUserToKeyConnectorCommand = convertUserToKeyConnectorCommand;
     }
 
     [HttpPost("key-management/regenerate-keys")]
@@ -161,9 +168,17 @@ public class AccountsKeyManagementController : Controller
                 await _rotateUserAccountKeysCommand.MasterPasswordRotateUserAccountKeysAsync(user, dataModel);
                 break;
             case UnlockMethod.Tde:
-                throw new BadRequestException("TDE not implemented");
+                await _rotateUserAccountKeysCommand.TdeRotateUserAccountKeysAsync(user,
+                    new TdeRotateUserAccountKeysData { BaseData = await ToBaseDataModelAsync(request, user) });
+                break;
             case UnlockMethod.KeyConnector:
-                throw new BadRequestException("Key connector not implemented");
+                await _rotateUserAccountKeysCommand.KeyConnectorRotateUserAccountKeysAsync(user,
+                    new KeyConnectorRotateUserAccountKeysData
+                    {
+                        KeyConnectorKeyWrappedUserKey = request.UnlockMethodData.KeyConnectorKeyWrappedUserKey!,
+                        BaseData = await ToBaseDataModelAsync(request, user),
+                    });
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(request.UnlockMethodData.UnlockMethod), "Unrecognized unlock method");
         }
@@ -211,18 +226,7 @@ public class AccountsKeyManagementController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _userService.ConvertToKeyConnectorAsync(user, null);
-        if (result.Succeeded)
-        {
-            return;
-        }
-
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        throw new BadRequestException(ModelState);
+        await _convertUserToKeyConnectorCommand.ConvertAsync(user);
     }
 
     [HttpPost("key-connector/enroll")]
@@ -234,18 +238,7 @@ public class AccountsKeyManagementController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _userService.ConvertToKeyConnectorAsync(user, model.KeyConnectorKeyWrappedUserKey);
-        if (result.Succeeded)
-        {
-            return;
-        }
-
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        throw new BadRequestException(ModelState);
+        await _convertUserToKeyConnectorCommand.ConvertAsync(user, model.KeyConnectorKeyWrappedUserKey);
     }
 
     [HttpGet("key-connector/confirmation-details/{orgSsoIdentifier}")]
@@ -259,6 +252,14 @@ public class AccountsKeyManagementController : Controller
 
         var details = await _keyConnectorConfirmationDetailsQuery.Run(orgSsoIdentifier, user.Id);
         return new KeyConnectorConfirmationDetailsResponseModel(details);
+    }
+
+    [HttpGet("key-management/key-rotation-data")]
+    public async Task<KeyRotationDataResponseModel> GetKeyRotationDataAsync()
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
+        var data = await _keyRotationDataQuery.Run(user);
+        return new KeyRotationDataResponseModel(data);
     }
 
     private async Task<BaseRotateUserAccountKeysData> ToBaseDataModelAsync(RotateUserKeysRequestModel request, User user)

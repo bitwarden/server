@@ -8,7 +8,6 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
@@ -395,7 +394,7 @@ public class PoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Put_UsesVNextSavePolicyCommand(
+    public async Task Put_SavesPolicyWithCorrectArguments(
         SutProvider<PoliciesController> sutProvider, Guid orgId,
         SavePolicyRequest model, Policy policy, Guid userId)
     {
@@ -410,53 +409,15 @@ public class PoliciesControllerTests
             .OrganizationOwner(orgId)
             .Returns(true);
 
-        sutProvider.GetDependency<IVNextSavePolicyCommand>()
+        sutProvider.GetDependency<ISavePolicyCommand>()
             .SaveAsync(Arg.Any<SavePolicyModel>())
             .Returns(policy);
 
         // Act
-        var result = await sutProvider.Sut.Put(orgId, policy.Type, model.Policy);
+        var result = await sutProvider.Sut.Put(orgId, policy.Type, model);
 
         // Assert
-        await sutProvider.GetDependency<IVNextSavePolicyCommand>()
-            .Received(1)
-            .SaveAsync(Arg.Is<SavePolicyModel>(m => m.PolicyUpdate.OrganizationId == orgId &&
-                                                    m.PolicyUpdate.Type == policy.Type &&
-                                                    m.PolicyUpdate.Enabled == model.Policy.Enabled &&
-                                                    m.PerformedBy.UserId == userId &&
-                                                    m.PerformedBy.IsOrganizationOwnerOrProvider == true));
-
-        Assert.NotNull(result);
-        Assert.Equal(policy.Id, result.Id);
-        Assert.Equal(policy.Type, result.Type);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task PutVNext_UsesVNextSavePolicyCommand(
-        SutProvider<PoliciesController> sutProvider, Guid orgId,
-        SavePolicyRequest model, Policy policy, Guid userId)
-    {
-        // Arrange
-        policy.Data = null;
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .UserId
-            .Returns(userId);
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationOwner(orgId)
-            .Returns(true);
-
-        sutProvider.GetDependency<IVNextSavePolicyCommand>()
-            .SaveAsync(Arg.Any<SavePolicyModel>())
-            .Returns(policy);
-
-        // Act
-        var result = await sutProvider.Sut.PutVNext(orgId, policy.Type, model);
-
-        // Assert
-        await sutProvider.GetDependency<IVNextSavePolicyCommand>()
+        await sutProvider.GetDependency<ISavePolicyCommand>()
             .Received(1)
             .SaveAsync(Arg.Is<SavePolicyModel>(m => m.PolicyUpdate.OrganizationId == orgId &&
                                                     m.PolicyUpdate.Type == policy.Type &&

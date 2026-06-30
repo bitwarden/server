@@ -62,9 +62,6 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
         Assert.Equal(PolicyType.TwoFactorAuthentication, result2.PolicyType);
         Assert.Equal(policy.Data, result2.PolicyData);
         Assert.Equal(OrganizationUserStatusType.Confirmed, result2.OrganizationUserStatus);
-
-        await organizationRepository.DeleteAsync(organization);
-        await userRepository.DeleteManyAsync([user1, user2]);
     }
 
     [Theory]
@@ -114,9 +111,6 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
         Assert.Equal(organization.Id, result2.OrganizationId);
         Assert.Equal(PolicyType.MasterPassword, result2.PolicyType);
         Assert.Equal(OrganizationUserStatusType.Invited, result2.OrganizationUserStatus);
-
-        await organizationRepository.DeleteAsync(organization);
-        await userRepository.DeleteManyAsync([user1, user2]);
     }
 
     [Theory]
@@ -178,9 +172,6 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
         Assert.True(result.IsProvider);
         Assert.Equal(user.Id, result.UserId);
         Assert.Equal(organization.Id, result.OrganizationId);
-
-        await organizationRepository.DeleteAsync(organization);
-        await userRepository.DeleteManyAsync([user]);
     }
 
     [Theory]
@@ -212,9 +203,6 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
         var resultsList = results.ToList();
         Assert.Single(resultsList);
         Assert.All(resultsList, r => Assert.Equal(PolicyType.TwoFactorAuthentication, r.PolicyType));
-
-        await organizationRepository.DeleteAsync(organization);
-        await userRepository.DeleteManyAsync([user]);
     }
 
     [Theory]
@@ -246,8 +234,6 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
 
         // Assert
         Assert.Empty(results);
-        await organizationRepository.DeleteAsync(organization);
-        await userRepository.DeleteManyAsync([user]);
     }
 
     [Theory]
@@ -289,9 +275,6 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
 
         // Assert
         Assert.Empty(results);
-
-        await organizationRepository.DeleteAsync(organization);
-        await userRepository.DeleteManyAsync([user]);
     }
 
     [Theory]
@@ -333,9 +316,6 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
 
         // Assert
         Assert.Empty(results);
-
-        await organizationRepository.DeleteAsync(organization);
-        await userRepository.DeleteManyAsync([user]);
     }
 
     [Theory]
@@ -394,6 +374,43 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
         Assert.Contains(organization2.Id, organizationIds);
     }
 
+    [Theory]
+    [DatabaseData]
+    public async Task GetPolicyDetailsByUserIdsAndPolicyType_WhenAUserIsStaged_ThenStagedUserIsExcludedAsync(
+        IUserRepository userRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository,
+        IPolicyRepository policyRepository)
+    {
+        // Arrange
+        var confirmedUser = await userRepository.CreateAsync(GetDefaultUser());
+        var stagedUser = await userRepository.CreateAsync(GetDefaultUser());
+
+        var organization = await CreateEnterpriseOrgAsync(organizationRepository);
+
+        await policyRepository.CreateAsync(new Policy
+        {
+            OrganizationId = organization.Id,
+            Type = PolicyType.TwoFactorAuthentication,
+            Data = string.Empty,
+            Enabled = true
+        });
+
+        var confirmedOrgUser = await organizationUserRepository.CreateAsync(GetConfirmedOrganizationUser(organization, confirmedUser));
+        // Staged members are not subject to organization policies
+        await organizationUserRepository.CreateAsync(GetStagedOrganizationUser(organization, stagedUser));
+
+        // Act
+        var results = await policyRepository.GetPolicyDetailsByUserIdsAndPolicyType(
+            [confirmedUser.Id, stagedUser.Id],
+            PolicyType.TwoFactorAuthentication);
+
+        // Assert
+        var result = Assert.Single(results.ToList());
+        Assert.Equal(confirmedOrgUser.Id, result.OrganizationUserId);
+        Assert.Equal(confirmedUser.Id, result.UserId);
+    }
+
     private static async Task<Organization> CreateEnterpriseOrgAsync(IOrganizationRepository orgRepo)
     {
         return await orgRepo.CreateAsync(new Organization
@@ -445,6 +462,14 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
         Email = user.Email,
         Status = OrganizationUserStatusType.Invited,
         Type = OrganizationUserType.User,
+    };
+
+    private static OrganizationUser GetStagedOrganizationUser(Organization organization, User user) => new()
+    {
+        OrganizationId = organization.Id,
+        UserId = user.Id,
+        Status = OrganizationUserStatusType.Staged,
+        Type = OrganizationUserType.User
     };
 
     private static Policy GetPolicy(PolicyType policyType, Organization organization) => new()

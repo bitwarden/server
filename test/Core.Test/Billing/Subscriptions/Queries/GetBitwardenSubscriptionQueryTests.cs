@@ -580,6 +580,385 @@ public class GetBitwardenSubscriptionQueryTests
         Assert.Equal(19.80m, result.Cart.PasswordManager.Seats.Cost);
     }
 
+    [Fact]
+    public async Task Run_WithSchedulePhase2CartLevelDiscount_IncludesDiscountOnCart()
+    {
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active);
+        subscription.ScheduleId = "sub_sched_test";
+        var premiumPlans = CreatePremiumPlans();
+        var schedule = CreateSubscriptionSchedule(percentOff: 30);
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(CreateInvoicePreview());
+        _stripeAdapter.GetSubscriptionScheduleAsync("sub_sched_test", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        var result = await _query.Run(user);
+
+        Assert.NotNull(result);
+        // A Phase 2 coupon with no AppliesTo restriction is cart-level, so it surfaces on Cart.Discount.
+        Assert.NotNull(result.Cart.Discount);
+        Assert.Equal(BitwardenDiscountType.PercentOff, result.Cart.Discount.Type);
+        Assert.Equal(30, result.Cart.Discount.Value);
+        Assert.Null(result.Cart.PasswordManager.Seats.Discount);
+    }
+
+    [Fact]
+    public async Task Run_WithCustomerLevelDiscountAndSchedulePhase2_BothFlowThrough_CustomerLevelWinsCart()
+    {
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active);
+        subscription.Customer.Discount = CreateDiscount(discountType: "cart");
+        subscription.ScheduleId = "sub_sched_test";
+        var premiumPlans = CreatePremiumPlans();
+        var schedule = CreateSubscriptionSchedule(percentOff: 30);
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(CreateInvoicePreview());
+        _stripeAdapter.GetSubscriptionScheduleAsync("sub_sched_test", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        var result = await _query.Run(user);
+
+        Assert.NotNull(result);
+        // Customer-level discount is added to the coupon list before Phase 2's coupons, so it
+        // wins the singular Cart.Discount slot. The Phase 2 coupon still flows into the tax
+        // estimate via the coupon-id list.
+        Assert.NotNull(result.Cart.Discount);
+        Assert.Equal(20, result.Cart.Discount.Value);
+        await _stripeAdapter.Received(1)
+            .GetSubscriptionScheduleAsync("sub_sched_test", Arg.Any<SubscriptionScheduleGetOptions>());
+    }
+
+    [Fact]
+    public async Task Run_WithScheduleButNoPhase2Discount_ReturnsNoDiscount()
+    {
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active);
+        subscription.ScheduleId = "sub_sched_test";
+        var premiumPlans = CreatePremiumPlans();
+        var schedule = CreateSubscriptionSchedule(includePhase2: false);
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(CreateInvoicePreview());
+        _stripeAdapter.GetSubscriptionScheduleAsync("sub_sched_test", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        var result = await _query.Run(user);
+
+        Assert.NotNull(result);
+        Assert.Null(result.Cart.Discount);
+        Assert.Null(result.Cart.PasswordManager.Seats.Discount);
+    }
+
+    [Fact]
+    public async Task Run_WithScheduleStripeException_Rethrows()
+    {
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active);
+        subscription.ScheduleId = "sub_sched_test";
+        var premiumPlans = CreatePremiumPlans();
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(CreateInvoicePreview());
+        _stripeAdapter.GetSubscriptionScheduleAsync("sub_sched_test", Arg.Any<SubscriptionScheduleGetOptions>())
+            .ThrowsAsync(new StripeException());
+
+        // Schedule fetch failure now propagates because Phase 2 coupons drive both display and
+        // tax-preview accuracy — silently dropping them would inflate the user-facing tax estimate.
+        await Assert.ThrowsAsync<StripeException>(() => _query.Run(user));
+    }
+
+    [Fact]
+    public async Task Run_WithSchedulePhase2AmountOffDiscount_IncludesAmountOffDiscountOnCart()
+    {
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active);
+        subscription.ScheduleId = "sub_sched_test";
+        var premiumPlans = CreatePremiumPlans();
+        var schedule = CreateSubscriptionSchedule(amountOff: 500);
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(CreateInvoicePreview());
+        _stripeAdapter.GetSubscriptionScheduleAsync("sub_sched_test", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        var result = await _query.Run(user);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.Cart.Discount);
+        Assert.Equal(BitwardenDiscountType.AmountOff, result.Cart.Discount.Type);
+        Assert.Equal(500, result.Cart.Discount.Value);
+        Assert.Null(result.Cart.PasswordManager.Seats.Discount);
+    }
+
+    [Fact]
+    public async Task Run_WithSchedulePhase2ProductLevelCoupon_IncludesDiscountOnSeat()
+    {
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active);
+        subscription.ScheduleId = "sub_sched_test";
+        var premiumPlans = CreatePremiumPlans();
+        var schedule = CreateSubscriptionSchedule(
+            percentOff: 25,
+            couponId: "phase2-seat-coupon",
+            appliesToProductId: "prod_premium_seat");
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(CreateInvoicePreview());
+        _stripeAdapter.GetSubscriptionScheduleAsync("sub_sched_test", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        var result = await _query.Run(user);
+
+        Assert.NotNull(result);
+        // A Phase 2 coupon scoped to the seat product partitions to product-level and surfaces on
+        // the seat line item, not on Cart.Discount.
+        Assert.Null(result.Cart.Discount);
+        Assert.NotNull(result.Cart.PasswordManager.Seats.Discount);
+        Assert.Equal(BitwardenDiscountType.PercentOff, result.Cart.PasswordManager.Seats.Discount.Type);
+        Assert.Equal(25, result.Cart.PasswordManager.Seats.Discount.Value);
+    }
+
+    [Fact]
+    public async Task Run_WithCompletedSchedule_ReturnsNoDiscount()
+    {
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active);
+        subscription.ScheduleId = "sub_sched_test";
+        var premiumPlans = CreatePremiumPlans();
+        var schedule = CreateSubscriptionSchedule(percentOff: 30, status: "completed");
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(CreateInvoicePreview());
+        _stripeAdapter.GetSubscriptionScheduleAsync("sub_sched_test", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        var result = await _query.Run(user);
+
+        Assert.NotNull(result);
+        Assert.Null(result.Cart.Discount);
+        Assert.Null(result.Cart.PasswordManager.Seats.Discount);
+    }
+
+    [Fact]
+    public async Task Run_WithSchedulePhase2InvalidCoupon_ReturnsNoDiscount()
+    {
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active);
+        subscription.ScheduleId = "sub_sched_test";
+        var premiumPlans = CreatePremiumPlans();
+        var schedule = CreateSubscriptionSchedule(percentOff: 30, validCoupon: false);
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(CreateInvoicePreview());
+        _stripeAdapter.GetSubscriptionScheduleAsync("sub_sched_test", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        var result = await _query.Run(user);
+
+        Assert.NotNull(result);
+        Assert.Null(result.Cart.Discount);
+        Assert.Null(result.Cart.PasswordManager.Seats.Discount);
+    }
+
+    [Fact]
+    public async Task Run_UserOnLegacyPricing_WithScheduleDiscount_IncludesCouponInTaxPreview()
+    {
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active, legacyPricing: true);
+        subscription.ScheduleId = "sub_sched_test";
+        var premiumPlans = CreatePremiumPlans();
+        var schedule = CreateSubscriptionSchedule(percentOff: 30, couponId: "milestone-2c");
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(CreateInvoicePreview(totalTax: 150));
+        _stripeAdapter.GetSubscriptionScheduleAsync("sub_sched_test", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        await _query.Run(user);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(
+            Arg.Is<InvoiceCreatePreviewOptions>(opts =>
+                opts.Subscription == null &&
+                opts.SubscriptionDetails != null &&
+                opts.Discounts != null &&
+                opts.Discounts.Count == 1 &&
+                opts.Discounts[0].Coupon == "milestone-2c"));
+    }
+
+    [Fact]
+    public async Task Run_UserOnLegacyPricing_WithCustomerLevelDiscountAndScheduleDiscount_IncludesAllCouponIdsInTaxPreview()
+    {
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active, legacyPricing: true);
+        subscription.Customer.Discount = CreateDiscount(discountType: "cart");
+        subscription.Customer.Discount.Coupon.Id = "customer-coupon";
+        subscription.ScheduleId = "sub_sched_test";
+        var premiumPlans = CreatePremiumPlans();
+        var schedule = CreateSubscriptionSchedule(percentOff: 30, couponId: "milestone-2c");
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(CreateInvoicePreview(totalTax: 150));
+        _stripeAdapter.GetSubscriptionScheduleAsync("sub_sched_test", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        await _query.Run(user);
+
+        // Both the customer-level coupon and the Phase 2 schedule coupon must be passed to the
+        // tax-preview override so the estimate matches the actual upcoming-renewal invoice.
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(
+            Arg.Is<InvoiceCreatePreviewOptions>(opts =>
+                opts.Subscription == null &&
+                opts.SubscriptionDetails != null &&
+                opts.Discounts != null &&
+                opts.Discounts.Count == 2 &&
+                opts.Discounts.Any(d => d.Coupon == "customer-coupon") &&
+                opts.Discounts.Any(d => d.Coupon == "milestone-2c")));
+    }
+
+    [Fact]
+    public async Task Run_UserOnLegacyPricing_CustomerCouponAlsoOnSchedulePhase2_PassedOnceToTaxPreview()
+    {
+        // C2 regression: the customer coupon is now also on Phase 2, so GetRelevantCouponsAsync could
+        // return it twice and pass a duplicate to the tax preview. It must appear once.
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active, legacyPricing: true);
+        subscription.Customer.Discount = CreateDiscount(discountType: "cart");
+        subscription.Customer.Discount.Coupon.Id = "shared-coupon";
+        subscription.ScheduleId = "sub_sched_test";
+        var premiumPlans = CreatePremiumPlans();
+        // Phase 2 carries the SAME coupon id as the customer-level discount.
+        var schedule = CreateSubscriptionSchedule(percentOff: 30, couponId: "shared-coupon");
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(CreateInvoicePreview(totalTax: 150));
+        _stripeAdapter.GetSubscriptionScheduleAsync("sub_sched_test", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        await _query.Run(user);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(
+            Arg.Is<InvoiceCreatePreviewOptions>(opts =>
+                opts.Subscription == null &&
+                opts.SubscriptionDetails != null &&
+                opts.Discounts != null &&
+                opts.Discounts.Count == 1 &&
+                opts.Discounts.Count(d => d.Coupon == "shared-coupon") == 1));
+    }
+
+    [Fact]
+    public async Task Run_UserOnLegacyPricing_WithScheduleNoDiscount_DoesNotIncludeCouponInTaxPreview()
+    {
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active, legacyPricing: true);
+        subscription.ScheduleId = "sub_sched_test";
+        var premiumPlans = CreatePremiumPlans();
+        var schedule = CreateSubscriptionSchedule(includePhase2: false);
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(CreateInvoicePreview());
+        _stripeAdapter.GetSubscriptionScheduleAsync("sub_sched_test", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        await _query.Run(user);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(
+            Arg.Is<InvoiceCreatePreviewOptions>(opts =>
+                opts.Subscription == null &&
+                opts.SubscriptionDetails != null &&
+                opts.Discounts == null));
+    }
+
+    [Fact]
+    public async Task Run_UserOnLegacyPricing_WithSchedulePhase2NoDiscount_DoesNotIncludeCouponInTaxPreview()
+    {
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active, legacyPricing: true);
+        subscription.ScheduleId = "sub_sched_test";
+        var premiumPlans = CreatePremiumPlans();
+        var schedule = CreateSubscriptionSchedule();
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(CreateInvoicePreview());
+        _stripeAdapter.GetSubscriptionScheduleAsync("sub_sched_test", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        await _query.Run(user);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(
+            Arg.Is<InvoiceCreatePreviewOptions>(opts =>
+                opts.Subscription == null &&
+                opts.SubscriptionDetails != null &&
+                opts.Discounts == null));
+    }
+
+    [Fact]
+    public async Task Run_WithSchedulePhase2AlreadyStarted_ReturnsNoDiscount()
+    {
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active);
+        subscription.ScheduleId = "sub_sched_test";
+        var premiumPlans = CreatePremiumPlans();
+        var schedule = CreateSubscriptionSchedule(
+            percentOff: 30,
+            phase2StartDate: DateTime.UtcNow.AddDays(-1));
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(CreateInvoicePreview());
+        _stripeAdapter.GetSubscriptionScheduleAsync("sub_sched_test", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        var result = await _query.Run(user);
+
+        Assert.NotNull(result);
+        Assert.Null(result.Cart.Discount);
+        Assert.Null(result.Cart.PasswordManager.Seats.Discount);
+    }
+
     #region Helper Methods
 
     private static User CreateUser()
@@ -724,6 +1103,58 @@ public class GetBitwardenSubscriptionQueryTests
         {
             Id = "in_preview",
             TotalTaxes = taxes
+        };
+    }
+
+    private static SubscriptionSchedule CreateSubscriptionSchedule(
+        bool includePhase2 = true,
+        decimal? percentOff = null,
+        long? amountOff = null,
+        string status = StripeConstants.SubscriptionScheduleStatus.Active,
+        bool validCoupon = true,
+        string couponId = "phase2-coupon",
+        string? appliesToProductId = null,
+        DateTime? phase2StartDate = null)
+    {
+        var phases = new List<SubscriptionSchedulePhase>
+        {
+            new() { StartDate = DateTime.UtcNow.AddMonths(-1), Discounts = [] }
+        };
+
+        if (includePhase2)
+        {
+            var discounts = percentOff != null || amountOff != null
+                ? new List<SubscriptionSchedulePhaseDiscount>
+                {
+                    new()
+                    {
+                        CouponId = couponId,
+                        Coupon = new Coupon
+                        {
+                            Id = couponId,
+                            Valid = validCoupon,
+                            PercentOff = percentOff,
+                            AmountOff = amountOff,
+                            AppliesTo = appliesToProductId != null
+                                ? new CouponAppliesTo { Products = [appliesToProductId] }
+                                : null
+                        }
+                    }
+                }
+                : new List<SubscriptionSchedulePhaseDiscount>();
+
+            phases.Add(new SubscriptionSchedulePhase
+            {
+                StartDate = phase2StartDate ?? DateTime.UtcNow.AddMonths(1),
+                Discounts = discounts
+            });
+        }
+
+        return new SubscriptionSchedule
+        {
+            Id = "sub_sched_test",
+            Status = status,
+            Phases = phases
         };
     }
 

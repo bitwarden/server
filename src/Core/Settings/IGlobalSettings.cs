@@ -13,8 +13,11 @@ public interface IGlobalSettings
     bool EnableCloudCommunication { get; set; }
     string LicenseDirectory { get; set; }
     string LicenseCertificatePassword { get; set; }
+    string LicenseCertificatePath { get; set; }
     int OrganizationInviteExpirationHours { get; set; }
+    int DeviceLastActivityCacheTtlHours { get; set; }
     bool DisableUserRegistration { get; set; }
+    bool SuppressOnboardingInterstitials { get; set; }
     bool EnableNewDeviceVerification { get; set; }
     IInstallationSettings Installation { get; set; }
     IFileStorageSettings Attachment { get; set; }
@@ -26,6 +29,7 @@ public interface IGlobalSettings
     ILaunchDarklySettings LaunchDarkly { get; set; }
     string DatabaseProvider { get; set; }
     GlobalSettings.SqlSettings SqlServer { get; set; }
+    GlobalSettings.StripeSettings Stripe { get; set; }
     string DevelopmentDirectory { get; set; }
     IWebPushSettings WebPush { get; set; }
     GlobalSettings.EventLoggingSettings EventLogging { get; set; }

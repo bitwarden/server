@@ -1,7 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Bit.Core.Repositories;
+using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
 using Bit.Seeder.Factories;
+using Bit.Seeder.Models;
 using Bit.Seeder.Services;
 
 namespace Bit.Seeder.Scenes;
@@ -17,6 +20,9 @@ public class UserSecureNoteCipherScene(IUserRepository userRepository, ICipherRe
         [Required]
         public required string Name { get; set; }
         public string? Notes { get; set; }
+        public bool Reprompt { get; set; }
+        public bool Favorite { get; set; }
+        public Guid? FolderId { get; set; }
     }
 
     public class Result
@@ -32,7 +38,32 @@ public class UserSecureNoteCipherScene(IUserRepository userRepository, ICipherRe
             throw new Exception($"User with ID {request.UserId} not found.");
         }
 
-        var cipher = SecureNoteCipherSeeder.Create(request.UserKeyB64, request.Name, userId: request.UserId, notes: request.Notes);
+        var cipher = SecureNoteCipherSeeder.Create(new CipherSeed
+        {
+            Type = CipherType.SecureNote,
+            Name = request.Name,
+            Notes = request.Notes,
+            EncryptionKey = request.UserKeyB64,
+            UserId = request.UserId
+        });
+        if (request.Reprompt)
+        {
+            cipher.Reprompt = CipherRepromptType.Password;
+        }
+        if (request.Favorite)
+        {
+            cipher.Favorites = JsonSerializer.Serialize(new Dictionary<string, bool>
+            {
+                { request.UserId.ToString().ToUpperInvariant(), true}
+            });
+        }
+        if (request.FolderId.HasValue)
+        {
+            cipher.Folders = CipherComposer.BuildFoldersJson(new Dictionary<Guid, Guid>
+            {
+                { request.UserId, request.FolderId.Value }
+            });
+        }
 
         await cipherRepository.CreateAsync(cipher);
 

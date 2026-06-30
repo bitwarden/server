@@ -36,10 +36,6 @@ public class OrganizationRepositoryTests
         Assert.Equal(2, result.Count);
         Assert.Contains(result, org => org.Id == organization1.Id);
         Assert.Contains(result, org => org.Id == organization2.Id);
-
-        // Clean up
-        await organizationRepository.DeleteAsync(organization1);
-        await organizationRepository.DeleteAsync(organization2);
     }
 
     [Theory, DatabaseData]
@@ -56,6 +52,7 @@ public class OrganizationRepositoryTests
         var user1 = await userRepository.CreateTestUserAsync("test1");
         var user2 = await userRepository.CreateTestUserAsync("test2");
         var user3 = await userRepository.CreateTestUserAsync("test3");
+        var user4 = await userRepository.CreateTestUserAsync("test4");
 
         // Create organization users in different states
         await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user1); // Confirmed state
@@ -68,6 +65,9 @@ public class OrganizationRepositoryTests
             UserId = user3.Id,
             Status = OrganizationUserStatusType.Revoked,
         });
+
+        // Staged users do not consume a seat and must be excluded from the count
+        await organizationUserRepository.CreateStagedTestOrganizationUserAsync(organization, user4);
 
         // Create sponsorships in different states
         await organizationSponsorshipRepository.CreateAsync(new OrganizationSponsorship
@@ -106,9 +106,32 @@ public class OrganizationRepositoryTests
         var result = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
 
         // Assert
-        Assert.Equal(2, result.Users); // Confirmed + Invited users
+        Assert.Equal(2, result.Users); // Confirmed + Invited users (Revoked and Staged excluded)
         Assert.Equal(2, result.Sponsored); // Two valid sponsorships
         Assert.Equal(4, result.Total); // Total occupied seats
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetOccupiedSeatCountByOrganizationIdAsync_WithOnlyStagedUsers_ReturnsZero(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+
+        var user = await userRepository.CreateTestUserAsync("test1");
+
+        // Staged users are provisioned but do not consume a seat
+        await organizationUserRepository.CreateStagedTestOrganizationUserAsync(organization, user);
+
+        // Act
+        var result = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+
+        // Assert
+        Assert.Equal(0, result.Users);
+        Assert.Equal(0, result.Sponsored);
+        Assert.Equal(0, result.Total);
     }
 
     [Theory, DatabaseData]
@@ -212,9 +235,6 @@ public class OrganizationRepositoryTests
         Assert.Equal(organization.Id, updateResult.Id);
         Assert.True(updateResult.SyncSeats);
         Assert.Equal(requestDate.ToString("yyyy-MM-dd HH:mm:ss"), updateResult.RevisionDate.ToString("yyyy-MM-dd HH:mm:ss"));
-
-        // Annul
-        await sutRepository.DeleteAsync(organization);
     }
 
     [DatabaseData, Theory]
@@ -237,9 +257,6 @@ public class OrganizationRepositoryTests
         Assert.Equal(organization.Id, updateResult.Id);
         Assert.True(updateResult.SyncSeats);
         Assert.Equal(requestDate.ToString("yyyy-MM-dd HH:mm:ss"), updateResult.RevisionDate.ToString("yyyy-MM-dd HH:mm:ss"));
-
-        // Annul
-        await sutRepository.DeleteAsync(organization);
     }
 
     [DatabaseData, Theory]
@@ -260,9 +277,6 @@ public class OrganizationRepositoryTests
         Assert.Equal(organization.Id, updateResult.Id);
         Assert.True(updateResult.SyncSeats);
         Assert.Equal(requestDate.ToString("yyyy-MM-dd HH:mm:ss"), updateResult.RevisionDate.ToString("yyyy-MM-dd HH:mm:ss"));
-
-        // Annul
-        await sutRepository.DeleteAsync(organization);
     }
 
     [DatabaseData, Theory]
@@ -281,9 +295,6 @@ public class OrganizationRepositoryTests
         // Assert
         var result = (await sutRepository.GetOrganizationsForSubscriptionSyncAsync()).ToArray();
         Assert.Null(result.FirstOrDefault(x => x.Id == organization.Id));
-
-        // Annul
-        await sutRepository.DeleteAsync(organization);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -400,9 +411,6 @@ public class OrganizationRepositoryTests
         Assert.Equal(organization.UseDisableSmAdsForUsers, result.UseDisableSmAdsForUsers);
         Assert.Equal(organization.UsePhishingBlocker, result.UsePhishingBlocker);
         Assert.Equal(organization.UseMyItems, result.UseMyItems);
-
-        // Clean up
-        await organizationRepository.DeleteAsync(organization);
     }
 
     [Theory, DatabaseData]

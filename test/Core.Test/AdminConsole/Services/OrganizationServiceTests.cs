@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
@@ -1112,7 +1112,7 @@ public class OrganizationServiceTests
     {
         // Arrange
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var eventService = sutProvider.GetDependency<IEventService>();
 
@@ -1155,7 +1155,7 @@ public class OrganizationServiceTests
         await organizationRepository
             .Received(1)
             .ReplaceAsync(Arg.Is<Organization>(org => org == organization));
-        await applicationCacheService
+        await organizationAbilityCacheService
             .Received(1)
             .UpsertOrganizationAbilityAsync(Arg.Is<Organization>(org => org == organization));
         await eventService
@@ -1169,7 +1169,7 @@ public class OrganizationServiceTests
     {
         // Arrange
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var eventService = sutProvider.GetDependency<IEventService>();
 
@@ -1190,7 +1190,7 @@ public class OrganizationServiceTests
         await organizationRepository
             .Received(1)
             .ReplaceAsync(Arg.Is<Organization>(org => org == organization));
-        await applicationCacheService
+        await organizationAbilityCacheService
             .Received(1)
             .UpsertOrganizationAbilityAsync(Arg.Is<Organization>(org => org == organization));
         await eventService
@@ -1229,109 +1229,6 @@ public class OrganizationServiceTests
         await organizationRepository
             .Received(1)
             .GetByIdentifierAsync(Arg.Is<string>(id => id == organization.Identifier));
-    }
-
-    [Theory]
-    [BitAutoData(false, true, false, true)]
-    [BitAutoData(true, false, true, false)]
-    public async Task UpdateCollectionManagementSettingsAsync_WhenSettingsChanged_LogsSpecificEvents(
-        bool newLimitCollectionCreation,
-        bool newLimitCollectionDeletion,
-        bool newLimitItemDeletion,
-        bool newAllowAdminAccessToAllCollectionItems,
-        Organization existingOrganization, SutProvider<OrganizationService> sutProvider)
-    {
-        // Arrange
-        existingOrganization.LimitCollectionCreation = false;
-        existingOrganization.LimitCollectionDeletion = false;
-        existingOrganization.LimitItemDeletion = false;
-        existingOrganization.AllowAdminAccessToAllCollectionItems = false;
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(existingOrganization.Id)
-            .Returns(existingOrganization);
-
-        var settings = new OrganizationCollectionManagementSettings
-        {
-            LimitCollectionCreation = newLimitCollectionCreation,
-            LimitCollectionDeletion = newLimitCollectionDeletion,
-            LimitItemDeletion = newLimitItemDeletion,
-            AllowAdminAccessToAllCollectionItems = newAllowAdminAccessToAllCollectionItems
-        };
-
-        // Act
-        await sutProvider.Sut.UpdateCollectionManagementSettingsAsync(existingOrganization.Id, settings);
-
-        // Assert
-        var eventService = sutProvider.GetDependency<IEventService>();
-        if (newLimitCollectionCreation)
-        {
-            await eventService.Received(1).LogOrganizationEventAsync(
-                Arg.Is<Organization>(org => org.Id == existingOrganization.Id),
-                Arg.Is<EventType>(e => e == EventType.Organization_CollectionManagement_LimitCollectionCreationEnabled));
-        }
-        else
-        {
-            await eventService.DidNotReceive().LogOrganizationEventAsync(
-                Arg.Is<Organization>(org => org.Id == existingOrganization.Id),
-                Arg.Is<EventType>(e => e == EventType.Organization_CollectionManagement_LimitCollectionCreationEnabled));
-        }
-
-        if (newLimitCollectionDeletion)
-        {
-            await eventService.Received(1).LogOrganizationEventAsync(
-                Arg.Is<Organization>(org => org.Id == existingOrganization.Id),
-                Arg.Is<EventType>(e => e == EventType.Organization_CollectionManagement_LimitCollectionDeletionEnabled));
-        }
-        else
-        {
-            await eventService.DidNotReceive().LogOrganizationEventAsync(
-                Arg.Is<Organization>(org => org.Id == existingOrganization.Id),
-                Arg.Is<EventType>(e => e == EventType.Organization_CollectionManagement_LimitCollectionDeletionEnabled));
-        }
-
-        if (newLimitItemDeletion)
-        {
-            await eventService.Received(1).LogOrganizationEventAsync(
-                Arg.Is<Organization>(org => org.Id == existingOrganization.Id),
-                Arg.Is<EventType>(e => e == EventType.Organization_CollectionManagement_LimitItemDeletionEnabled));
-        }
-        else
-        {
-            await eventService.DidNotReceive().LogOrganizationEventAsync(
-                Arg.Is<Organization>(org => org.Id == existingOrganization.Id),
-                Arg.Is<EventType>(e => e == EventType.Organization_CollectionManagement_LimitItemDeletionEnabled));
-        }
-
-        if (newAllowAdminAccessToAllCollectionItems)
-        {
-            await eventService.Received(1).LogOrganizationEventAsync(
-                Arg.Is<Organization>(org => org.Id == existingOrganization.Id),
-                Arg.Is<EventType>(e => e == EventType.Organization_CollectionManagement_AllowAdminAccessToAllCollectionItemsEnabled));
-        }
-        else
-        {
-            await eventService.DidNotReceive().LogOrganizationEventAsync(
-                Arg.Is<Organization>(org => org.Id == existingOrganization.Id),
-                Arg.Is<EventType>(e => e == EventType.Organization_CollectionManagement_AllowAdminAccessToAllCollectionItemsEnabled));
-        }
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateCollectionManagementSettingsAsync_WhenOrganizationNotFound_ThrowsNotFoundException(
-        Guid organizationId, OrganizationCollectionManagementSettings settings, SutProvider<OrganizationService> sutProvider)
-    {
-        // Arrange
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organizationId)
-            .Returns((Organization)null);
-
-        // Act/Assert
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateCollectionManagementSettingsAsync(organizationId, settings));
-
-        await sutProvider.GetDependency<IOrganizationRepository>()
-            .Received(1)
-            .GetByIdAsync(organizationId);
     }
 
     [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually), BitAutoData]

@@ -1,5 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Bit.Core.Repositories;
+using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
@@ -23,6 +25,9 @@ public class UserCardCipherScene(IUserRepository userRepository, ICipherReposito
         public required string ExpYear { get; set; }
         public required string Code { get; set; }
         public string? Notes { get; set; }
+        public bool Reprompt { get; set; }
+        public bool Favorite { get; set; }
+        public Guid? FolderId { get; set; }
     }
 
     public class Result
@@ -46,7 +51,33 @@ public class UserCardCipherScene(IUserRepository userRepository, ICipherReposito
             ExpYear = request.ExpYear,
             Code = request.Code
         };
-        var cipher = CardCipherSeeder.Create(request.UserKeyB64, request.Name, card: card, userId: request.UserId, notes: request.Notes);
+        var cipher = CardCipherSeeder.Create(new CipherSeed
+        {
+            Type = CipherType.Card,
+            Name = request.Name,
+            Notes = request.Notes,
+            EncryptionKey = request.UserKeyB64,
+            UserId = request.UserId,
+            Card = card
+        });
+        if (request.Reprompt)
+        {
+            cipher.Reprompt = CipherRepromptType.Password;
+        }
+        if (request.Favorite)
+        {
+            cipher.Favorites = JsonSerializer.Serialize(new Dictionary<string, bool>
+            {
+                { request.UserId.ToString().ToUpperInvariant(), true}
+            });
+        }
+        if (request.FolderId.HasValue)
+        {
+            cipher.Folders = CipherComposer.BuildFoldersJson(new Dictionary<Guid, Guid>
+            {
+                { request.UserId, request.FolderId.Value }
+            });
+        }
 
         await cipherRepository.CreateAsync(cipher);
 

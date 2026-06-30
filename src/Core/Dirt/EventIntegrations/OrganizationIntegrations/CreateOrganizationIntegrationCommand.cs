@@ -17,11 +17,21 @@ public class CreateOrganizationIntegrationCommand(
     IFusionCache cache)
     : ICreateOrganizationIntegrationCommand
 {
-    public async Task<OrganizationIntegration> CreateAsync(OrganizationIntegration integration)
+    public async Task<bool> CanCreateAsync(OrganizationIntegration integration)
     {
         var existingIntegrations = await integrationRepository
             .GetManyByOrganizationAsync(integration.OrganizationId);
         if (existingIntegrations.Any(i => i.Type == integration.Type))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    public async Task<OrganizationIntegration> CreateAsync(OrganizationIntegration integration)
+    {
+        if (await CanCreateAsync(integration) == false)
         {
             throw new BadRequestException("An integration of this type already exists for this organization.");
         }

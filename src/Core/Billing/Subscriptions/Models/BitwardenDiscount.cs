@@ -33,29 +33,29 @@ public record BitwardenDiscount
     /// </summary>
     public required decimal Value { get; init; }
 
-    public static implicit operator BitwardenDiscount(Discount? discount)
+    public static implicit operator BitwardenDiscount?(Coupon? coupon)
     {
-        if (discount is not
-            {
-                Coupon.Valid: true
-            })
+        if (coupon is not { Valid: true })
         {
-            return null!;
+            return null;
         }
 
-        return discount.Coupon switch
+        return coupon switch
         {
             { AmountOff: > 0 } => new BitwardenDiscount
             {
                 Type = BitwardenDiscountType.AmountOff,
-                Value = discount.Coupon.AmountOff.Value
+                Value = coupon.AmountOff.Value
             },
             { PercentOff: > 0 } => new BitwardenDiscount
             {
                 Type = BitwardenDiscountType.PercentOff,
-                Value = discount.Coupon.PercentOff.Value
+                Value = coupon.PercentOff.Value
             },
-            _ => null!
+            _ => null
         };
     }
+
+    public static implicit operator BitwardenDiscount?(Discount? discount) =>
+        discount?.Coupon;
 }

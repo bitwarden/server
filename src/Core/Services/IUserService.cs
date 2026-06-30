@@ -7,6 +7,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Business;
 using Microsoft.AspNetCore.Identity;
 
@@ -21,19 +22,20 @@ public interface IUserService
     Task<DateTime> GetAccountRevisionDateByIdAsync(Guid userId);
     Task SaveUserAsync(User user, bool push = false);
     Task<IdentityResult> CreateUserAsync(User user);
-    Task<IdentityResult> CreateUserAsync(User user, string masterPasswordHash);
+    Task<IdentityResult> CreateUserAsync(User user, RegisterFinishData registerFinishData);
     Task SendMasterPasswordHintAsync(string email);
     Task SendEmailVerificationAsync(User user);
     Task<IdentityResult> ConfirmEmailAsync(User user, string token);
     Task InitiateEmailChangeAsync(User user, string newEmail);
     Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail, string newMasterPassword,
         string token, string key);
+    [Obsolete("Use ISelfServicePasswordChangeCommand instead. To be removed in PM-33141.")]
     Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint, string key);
     // TODO removed with https://bitwarden.atlassian.net/browse/PM-27328
     [Obsolete("Use ISetKeyConnectorKeyCommand instead. This method will be removed in a future version.")]
     Task<IdentityResult> SetKeyConnectorKeyAsync(User user, string key, string orgIdentifier);
-    Task<IdentityResult> ConvertToKeyConnectorAsync(User user, string keyConnectorKeyWrappedUserKey);
     Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType type, Guid orgId, Guid id, string newMasterPassword, string key);
+    [Obsolete("Use IReplaceAdminSetTemporaryPasswordCommand instead. To be removed in PM-33141.")]
     Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint);
     Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
     Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true, bool logEvent = true);
@@ -42,9 +44,7 @@ public interface IUserService
     Task<IdentityResult> DeleteAsync(User user, string token);
     Task SendDeleteConfirmationAsync(string email);
     Task UpdateLicenseAsync(User user, UserLicense license);
-    Task<string> AdjustStorageAsync(User user, short storageAdjustmentGb);
     Task CancelPremiumAsync(User user, bool? endOfPeriod = null);
-    Task ReinstatePremiumAsync(User user);
     Task EnablePremiumAsync(Guid userId, DateTime? expirationDate);
     Task DisablePremiumAsync(Guid userId, DateTime? expirationDate);
     Task UpdatePremiumExpirationAsync(Guid userId, DateTime? expirationDate);
@@ -74,6 +74,8 @@ public interface IUserService
 
     Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,
         bool validatePassword = true, bool refreshStamp = true);
+    // TODO: Remove this method when the PM37165_RotateUserApiKeyCommand feature flag is cleaned up.
+    [Obsolete("Use IRotateUserApiKeyCommand instead. This method will be removed once the PM37165_RotateUserApiKeyCommand feature flag is removed.")]
     Task RotateApiKeyAsync(User user);
     string GetUserName(ClaimsPrincipal principal);
     Task SendOTPAsync(User user);

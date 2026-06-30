@@ -1,8 +1,10 @@
 ﻿using Bit.Api.Billing.Controllers.VNext;
+using Bit.Api.Billing.Models.Requests.Premium;
 using Bit.Api.Billing.Models.Requests.Storage;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Licenses.Queries;
 using Bit.Core.Billing.Models.Api.Response;
+using Bit.Core.Billing.Models.Api.Response.Premium;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Portal.Commands;
@@ -27,6 +29,7 @@ namespace Bit.Api.Test.Billing.Controllers.VNext;
 
 public class AccountBillingVNextControllerTests
 {
+    private readonly ICreatePremiumCheckoutSessionCommand _createPremiumCheckoutSessionCommand;
     private readonly IUpdatePremiumStorageCommand _updatePremiumStorageCommand;
     private readonly IGetUserLicenseQuery _getUserLicenseQuery;
     private readonly IUpgradePremiumToOrganizationCommand _upgradePremiumToOrganizationCommand;
@@ -37,6 +40,7 @@ public class AccountBillingVNextControllerTests
 
     public AccountBillingVNextControllerTests()
     {
+        _createPremiumCheckoutSessionCommand = Substitute.For<ICreatePremiumCheckoutSessionCommand>();
         _updatePremiumStorageCommand = Substitute.For<IUpdatePremiumStorageCommand>();
         _getUserLicenseQuery = Substitute.For<IGetUserLicenseQuery>();
         _upgradePremiumToOrganizationCommand = Substitute.For<IUpgradePremiumToOrganizationCommand>();
@@ -47,6 +51,7 @@ public class AccountBillingVNextControllerTests
         _sut = new AccountBillingVNextController(
             _createBillingPortalSessionCommand,
             Substitute.For<Core.Billing.Payment.Commands.ICreateBitPayInvoiceForCreditCommand>(),
+            _createPremiumCheckoutSessionCommand,
             Substitute.For<Core.Billing.Premium.Commands.ICreatePremiumCloudHostedSubscriptionCommand>(),
             _currentContext,
             _getApplicableDiscountsQuery,
@@ -267,6 +272,87 @@ public class AccountBillingVNextControllerTests
         // Assert
         var okResult = Assert.IsAssignableFrom<IResult>(result);
         await _updatePremiumStorageCommand.Received(1).Run(user, 5);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreatePremiumCheckoutSessionAsync_MissingAppVersionHeader_ReturnsBadRequest(
+        User user,
+        CreatePremiumCheckoutSessionRequest request)
+    {
+        // Arrange
+        _currentContext.ClientVersion.Returns((Version?)null);
+
+        // Act
+        var result = await _sut.CreatePremiumCheckoutSessionAsync(user, request);
+
+        // Assert
+        Assert.IsType<BadRequest<Core.Models.Api.ErrorResponseModel>>(result);
+        await _createPremiumCheckoutSessionCommand.DidNotReceive().Run(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreatePremiumCheckoutSessionAsync_ReturnsOk(
+        User user,
+        CreatePremiumCheckoutSessionRequest request)
+    {
+        // Arrange
+        var appVersion = "2024.1.0";
+        _currentContext.ClientVersion.Returns(new Version(appVersion));
+
+        var response = new PremiumCheckoutSessionResponseModel("https://checkout.stripe.com/c/pay/cs_123");
+        _createPremiumCheckoutSessionCommand
+            .Run(user, appVersion, request.Platform)
+            .Returns(new BillingCommandResult<PremiumCheckoutSessionResponseModel>(response));
+
+        // Act
+        var result = await _sut.CreatePremiumCheckoutSessionAsync(user, request);
+
+        // Assert
+        var okResult = Assert.IsType<Ok<PremiumCheckoutSessionResponseModel>>(result);
+        Assert.Equal(response.CheckoutSessionUrl, okResult.Value!.CheckoutSessionUrl);
+        await _createPremiumCheckoutSessionCommand.Received(1).Run(user, appVersion, request.Platform);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreatePremiumCheckoutSessionAsync_UserIsPremium_ReturnsBadRequest(
+        User user,
+        CreatePremiumCheckoutSessionRequest request)
+    {
+        // Arrange
+        var appVersion = "2024.1.0";
+        _currentContext.ClientVersion.Returns(new Version(appVersion));
+
+        _createPremiumCheckoutSessionCommand
+            .Run(user, appVersion, request.Platform)
+            .Returns(new BadRequest("User is already a premium user."));
+
+        // Act
+        var result = await _sut.CreatePremiumCheckoutSessionAsync(user, request);
+
+        // Assert
+        Assert.IsType<BadRequest<Core.Models.Api.ErrorResponseModel>>(result);
+        await _createPremiumCheckoutSessionCommand.Received(1).Run(user, appVersion, request.Platform);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreatePremiumCheckoutSessionAsync_ReturnsServerError(
+        User user,
+        CreatePremiumCheckoutSessionRequest request)
+    {
+        // Arrange
+        var appVersion = "2024.1.0";
+        _currentContext.ClientVersion.Returns(new Version(appVersion));
+
+        _createPremiumCheckoutSessionCommand
+            .Run(user, appVersion, request.Platform)
+            .Returns(new Unhandled());
+
+        // Act
+        var result = await _sut.CreatePremiumCheckoutSessionAsync(user, request);
+
+        // Assert
+        Assert.IsType<JsonHttpResult<Core.Models.Api.ErrorResponseModel>>(result);
+        await _createPremiumCheckoutSessionCommand.Received(1).Run(user, appVersion, request.Platform);
     }
 
     [Theory, BitAutoData]

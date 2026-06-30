@@ -7,11 +7,11 @@ using AutoMapper.QueryableExtensions;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
-using LinqToDB.Tools;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -65,6 +65,22 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .FirstOrDefaultAsync();
             return organization;
         }
+    }
+
+    public async Task<ICollection<OrganizationPlanType>> GetPlanTypesByOrganizationIdsAsync(IEnumerable<Guid> ids)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var query = from organization in dbContext.Organizations
+                    where ids.Contains(organization.Id)
+                    select new OrganizationPlanType
+                    {
+                        OrganizationId = organization.Id,
+                        PlanType = organization.PlanType,
+                    };
+
+        return await query.ToArrayAsync();
     }
 
     public async Task<ICollection<Core.AdminConsole.Entities.Organization>> GetManyByEnabledAsync()
@@ -141,7 +157,9 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 UseAutomaticUserConfirmation = e.UseAutomaticUserConfirmation,
                 UseDisableSmAdsForUsers = e.UseDisableSmAdsForUsers,
                 UsePhishingBlocker = e.UsePhishingBlocker,
-                UseMyItems = e.UseMyItems
+                UseMyItems = e.UseMyItems,
+                UseInviteLinks = e.UseInviteLinks,
+                UsePam = e.UsePam
             }).ToListAsync();
         }
     }
@@ -177,7 +195,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 
         var query =
             from o in dbContext.Organizations
-            where o.PlanType.NotIn(disallowedPlanTypes) &&
+            where !disallowedPlanTypes.Contains(o.PlanType) &&
                   !dbContext.ProviderOrganizations.Any(po => po.OrganizationId == o.Id) &&
                   (string.IsNullOrWhiteSpace(name) || EF.Functions.Like(o.Name, $"%{name}%"))
             select o;
@@ -266,6 +284,9 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             await dbContext.NotificationStatuses.Where(ns => ns.Notification.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
             await dbContext.Notifications.Where(n => n.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+
+            await dbContext.Sends.Where(s => s.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
 
             // The below section are 3 SPROCS in SQL Server but are only called by here
@@ -366,7 +387,9 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                           od.DomainName == userWithDomain.EmailDomain &&
                           od.VerifiedDate != null &&
                           o.Enabled == true &&
-                          ou.Status != OrganizationUserStatusType.Invited
+                          (ou.Status == OrganizationUserStatusType.Accepted ||
+                           ou.Status == OrganizationUserStatusType.Confirmed ||
+                           ou.Status == OrganizationUserStatusType.Revoked)
                     select o;
 
         return await query.ToArrayAsync();
@@ -400,7 +423,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                     organization.Seats > 0 &&
                     organization.Status == OrganizationStatusType.Created &&
                     !organization.UseSecretsManager &&
-                    organization.PlanType.In(planTypes)
+                    planTypes.Contains(organization.PlanType)
                 select organization;
 
             return await query.ToArrayAsync();
@@ -426,7 +449,10 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         {
             var dbContext = GetDatabaseContext(scope);
             var users = await dbContext.OrganizationUsers
-                .Where(ou => ou.OrganizationId == organizationId && ou.Status >= 0)
+                .Where(ou => ou.OrganizationId == organizationId &&
+                    (ou.Status == OrganizationUserStatusType.Invited ||
+                     ou.Status == OrganizationUserStatusType.Accepted ||
+                     ou.Status == OrganizationUserStatusType.Confirmed))
                 .CountAsync();
 
             var sponsored = await dbContext.OrganizationSponsorships

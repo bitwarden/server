@@ -46,10 +46,28 @@ public class SubscriptionInfo
             // Active = true only for perpetual/recurring discounts (no end date)
             // This is intentional for Milestone 2 - only perpetual discounts are shown in UI
             Active = discount.End == null;
+            End = discount.End;
+            DurationInMonths = discount.Coupon?.DurationInMonths;
             PercentOff = discount.Coupon?.PercentOff;
             AmountOff = ConvertFromStripeMinorUnits(discount.Coupon?.AmountOff);
             // Stripe's CouponAppliesTo.Products is already IReadOnlyList<string>, so no conversion needed
             AppliesTo = discount.Coupon?.AppliesTo?.Products;
+        }
+
+        /// <summary>
+        /// Creates a BillingCustomerDiscount from a Stripe Coupon object.
+        /// Unlike <see cref="BillingCustomerDiscount(Discount)"/>, this constructor does not have
+        /// access to a Discount wrapper, so Active is unconditionally set to true.
+        /// </summary>
+        public BillingCustomerDiscount(Coupon coupon)
+        {
+            Id = coupon.Id;
+            Active = true;
+            End = null;
+            DurationInMonths = coupon.DurationInMonths;
+            PercentOff = coupon.PercentOff;
+            AmountOff = ConvertFromStripeMinorUnits(coupon.AmountOff);
+            AppliesTo = coupon.AppliesTo?.Products;
         }
 
         /// <summary>
@@ -60,11 +78,24 @@ public class SubscriptionInfo
         public string? Id { get; set; }
 
         /// <summary>
-        /// True only for perpetual/recurring discounts (End == null).
-        /// False for any discount with an expiration date, even if not yet expired.
+        /// When constructed from a Discount, true only for perpetual discounts (End == null).
+        /// When constructed from a Coupon directly, always true (no end-date information available).
         /// Product decision for Milestone 2: only show perpetual discounts in UI.
         /// </summary>
         public bool Active { get; set; }
+
+        /// <summary>
+        /// The instant the discount stops applying, from Stripe's Discount.end.
+        /// Null when the discount has no end date (perpetual) or when constructed from a
+        /// Coupon directly (Phase-2 scheduled discount — no Discount wrapper available).
+        /// </summary>
+        public DateTime? End { get; set; }
+
+        /// <summary>
+        /// For a `repeating` coupon, the number of months the discount applies (Stripe Coupon.duration_in_months).
+        /// Null for `once`/`forever` coupons.
+        /// </summary>
+        public long? DurationInMonths { get; set; }
 
         /// <summary>
         /// Percentage discount applied to the subscription (e.g., 20.0 for 20% off).

@@ -56,6 +56,18 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
         }
     }
 
+    public async Task<ICollection<AdminConsoleEntities.Policy>> GetManyConfirmedAcceptedByUserIdAsync(Guid userId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            var query = new PolicyReadByUserIdConfirmedAndAcceptedQuery(userId);
+            var results = await query.Run(dbContext).ToListAsync();
+            return Mapper.Map<List<AdminConsoleEntities.Policy>>(results);
+        }
+    }
+
     public async Task<IEnumerable<OrganizationPolicyDetails>> GetPolicyDetailsByOrganizationIdAsync(Guid organizationId, PolicyType policyType)
     {
         using var scope = ServiceScopeFactory.CreateScope();
@@ -179,7 +191,9 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
                                          && p.Type == policyType
                                          && o.Enabled
                                          && o.UsePolicies
-                                         && ou.Status != OrganizationUserStatusType.Invited
+                                         && (ou.Status == OrganizationUserStatusType.Accepted ||
+                                             ou.Status == OrganizationUserStatusType.Confirmed ||
+                                             ou.Status == OrganizationUserStatusType.Revoked)
                                          && ou.UserId != null
                                          && userIdsList.Contains(ou.UserId.Value)
                                    select new
@@ -258,8 +272,10 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
 
         // Get organization users (both confirmed/accepted and invited)
         var orgUsersQuery = dbContext.OrganizationUsers
-            .Where(ou => (ou.Status != OrganizationUserStatusType.Invited && ou.UserId == userId) ||
-                         (ou.Status == OrganizationUserStatusType.Invited && ou.Email == userEmail && userEmail != null));
+            .Where(ou => (((ou.Status == OrganizationUserStatusType.Accepted ||
+                            ou.Status == OrganizationUserStatusType.Confirmed ||
+                            ou.Status == OrganizationUserStatusType.Revoked) && ou.UserId == userId) ||
+                         (ou.Status == OrganizationUserStatusType.Invited && ou.Email == userEmail && userEmail != null)));
 
         // Join with policies and organizations
         var query = from policy in dbContext.Policies

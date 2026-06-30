@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Tools.Models.Response;
@@ -43,11 +44,14 @@ public class SyncResponseModel() : ResponseModel("sync")
         bool excludeDomains,
         IEnumerable<Policy> policies,
         IEnumerable<Send> sends,
-        IEnumerable<WebAuthnCredential> webAuthnCredentials)
+        IEnumerable<WebAuthnCredential> webAuthnCredentials,
+        IEnumerable<Policy> policiesNew = null,
+        IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetailsNew = null)
         : this()
     {
         Profile = new ProfileResponseModel(user, userAccountKeysData, organizationUserDetails, providerUserDetails,
-            providerUserOrganizationDetails, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsClaimingingUser);
+            providerUserOrganizationDetails, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsClaimingingUser,
+            organizationUserDetailsNew);
         Folders = folders.Select(f => new FolderResponseModel(f));
         Ciphers = ciphers.Select(cipher =>
             new CipherDetailsResponseModel(
@@ -60,6 +64,7 @@ public class SyncResponseModel() : ResponseModel("sync")
             c => new CollectionDetailsResponseModel(c)) ?? new List<CollectionDetailsResponseModel>();
         Domains = excludeDomains ? null : new DomainsResponseModel(user, false);
         Policies = policies?.Select(p => new PolicyResponseModel(p)) ?? new List<PolicyResponseModel>();
+        PoliciesNew = policiesNew?.Select(p => new PolicyResponseModel(p));
         Sends = sends.Select(s => new SendResponseModel(s));
         var webAuthnPrfOptions = webAuthnCredentials
             .Where(c => c.GetPrfStatus() == WebAuthnPrfStatus.Enabled)
@@ -118,6 +123,12 @@ public class SyncResponseModel() : ResponseModel("sync")
     public IEnumerable<CipherDetailsResponseModel> Ciphers { get; set; }
     public DomainsResponseModel Domains { get; set; }
     public IEnumerable<PolicyResponseModel> Policies { get; set; }
+    /// <summary>
+    /// Policies for organizations where the user is in the Confirmed or Accepted status.
+    /// Null when the <c>pm-34145-policies-in-accepted-state</c> feature flag is disabled.
+    /// New clients should prefer this property and fall back to <see cref="Policies"/> if absent.
+    /// </summary>
+    public IEnumerable<PolicyResponseModel> PoliciesNew { get; set; }
     public IEnumerable<SendResponseModel> Sends { get; set; }
     public UserDecryptionResponseModel UserDecryption { get; set; }
 }

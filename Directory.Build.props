@@ -1,9 +1,9 @@
 <Project>
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
 
-    <Version>2026.3.2</Version>
+    <Version>2026.6.2</Version>
 
     <RootNamespace>Bit.$(MSBuildProjectName)</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -11,6 +11,10 @@
     <Nullable Condition="'$(Nullable)' == '' and '$(IsTestProject)' == 'true'">annotations</Nullable>
     <Nullable Condition="'$(Nullable)' == '' and '$(IsTestProject)' != 'true'">enable</Nullable>
     <TreatWarningsAsErrors Condition="'$(TreatWarningsAsErrors)' == ''">true</TreatWarningsAsErrors>
+    
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);BWA0001</WarningsNotAsErrors>
+    <NuGetAuditLevel>critical</NuGetAuditLevel>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
   <PropertyGroup>

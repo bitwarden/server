@@ -1,9 +1,13 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Payment.Models;
+using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -119,41 +123,62 @@ public class UpgradePremiumToOrganizationCommandTests
 
     private static List<PremiumPlan> CreateTestPremiumPlansList()
     {
-        return new List<PremiumPlan>
-        {
-            // Current available plan
+        return
+        [
             CreateTestPremiumPlan(available: true),
             // Legacy plan from 2020
             CreateTestPremiumPlan("premium-annually-2020", "personal-storage-gb-annually-2020", available: false)
-        };
+        ];
     }
 
 
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
+    private readonly IPriceIncreaseScheduler _priceIncreaseScheduler = Substitute.For<IPriceIncreaseScheduler>();
     private readonly IUserService _userService = Substitute.For<IUserService>();
     private readonly IOrganizationRepository _organizationRepository = Substitute.For<IOrganizationRepository>();
     private readonly IOrganizationUserRepository _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository = Substitute.For<IOrganizationApiKeyRepository>();
     private readonly ICollectionRepository _collectionRepository = Substitute.For<ICollectionRepository>();
-    private readonly IApplicationCacheService _applicationCacheService = Substitute.For<IApplicationCacheService>();
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService = Substitute.For<IOrganizationAbilityCacheService>();
+    private readonly IBraintreeService _braintreeService = Substitute.For<IBraintreeService>();
+    private readonly IGetPaymentMethodQuery _getPaymentMethodQuery = Substitute.For<IGetPaymentMethodQuery>();
     private readonly IPushNotificationService _pushNotificationService = Substitute.For<IPushNotificationService>();
     private readonly ILogger<UpgradePremiumToOrganizationCommand> _logger = Substitute.For<ILogger<UpgradePremiumToOrganizationCommand>>();
+    private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly UpgradePremiumToOrganizationCommand _command;
 
     public UpgradePremiumToOrganizationCommandTests()
     {
+        // Default: card customer with a default payment method and a payment method present
+        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>())
+            .Returns(Task.FromResult(new Customer
+            {
+                Metadata = new Dictionary<string, string>(),
+                InvoiceSettings = new CustomerInvoiceSettings { DefaultPaymentMethodId = "pm_card_123" }
+            }));
+        _getPaymentMethodQuery.Run(Arg.Any<User>()).Returns(new MaskedPaymentMethod(new MaskedCard
+        {
+            Brand = "visa",
+            Last4 = "4242",
+            Expiration = "12/25"
+        }));
+
         _command = new UpgradePremiumToOrganizationCommand(
             _logger,
             _pricingClient,
             _stripeAdapter,
+            _priceIncreaseScheduler,
             _userService,
             _organizationRepository,
             _organizationUserRepository,
             _organizationApiKeyRepository,
             _collectionRepository,
-            _applicationCacheService,
-            _pushNotificationService);
+            _braintreeService,
+            _getPaymentMethodQuery,
+            _organizationAbilityCacheService,
+            _pushNotificationService,
+            _featureService);
     }
 
     private static Core.Billing.Payment.Models.BillingAddress CreateTestBillingAddress() =>
@@ -221,15 +246,15 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
+                Data =
+                [
+                    new SubscriptionItem()
                     {
                         Id = "si_premium",
                         Price = new Price { Id = "premium-annually" },
                         CurrentPeriodEnd = currentPeriodEnd
                     }
-                }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -244,19 +269,20 @@ public class UpgradePremiumToOrganizationCommandTests
             .Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
+        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(Task.FromResult(new Customer()));
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(Task.FromResult(mockSubscription));
         _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
         _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
         _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
-        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         // Act
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -297,15 +323,15 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
+                Data =
+                [
+                    new SubscriptionItem()
                     {
                         Id = "si_premium",
                         Price = new Price { Id = "premium-annually" },
                         CurrentPeriodEnd = currentPeriodEnd
                     }
-                }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -322,19 +348,20 @@ public class UpgradePremiumToOrganizationCommandTests
             .Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(mockPlan);
+        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(Task.FromResult(new Customer()));
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(Task.FromResult(mockSubscription));
         _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
         _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
         _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
-        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         // Act
         var result = await _command.Run(user, "My Families Org", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.FamiliesAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -365,15 +392,15 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
+                Data =
+                [
+                    new SubscriptionItem()
                     {
                         Id = "si_premium",
                         Price = new Price { Id = "premium-annually" },
                         CurrentPeriodEnd = DateTime.UtcNow.AddMonths(1)
                     }
-                }
+                ]
             },
             Metadata = new Dictionary<string, string>
             {
@@ -391,6 +418,7 @@ public class UpgradePremiumToOrganizationCommandTests
             .Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
+        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(Task.FromResult(new Customer()));
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(Task.FromResult(mockSubscription));
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
@@ -399,7 +427,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -425,21 +453,22 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
+                Data =
+                [
+                    new SubscriptionItem()
                     {
                         Id = "si_premium_legacy",
                         Price = new Price { Id = "premium-annually-2020" }, // Legacy price ID
                         CurrentPeriodEnd = currentPeriodEnd
                     },
-                    new SubscriptionItem
+
+                    new SubscriptionItem()
                     {
                         Id = "si_storage_legacy",
                         Price = new Price { Id = "personal-storage-gb-annually-2020" }, // Legacy storage price ID
                         CurrentPeriodEnd = currentPeriodEnd
                     }
-                }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -454,19 +483,20 @@ public class UpgradePremiumToOrganizationCommandTests
             .Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
+        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(Task.FromResult(new Customer()));
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(Task.FromResult(mockSubscription));
         _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
         _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
         _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
-        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         // Act
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -493,21 +523,22 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
+                Data =
+                [
+                    new SubscriptionItem()
                     {
                         Id = "si_premium",
                         Price = new Price { Id = "premium-annually" },
                         CurrentPeriodEnd = currentPeriodEnd
                     },
+
                     new SubscriptionItem
                     {
                         Id = "si_other_product",
                         Price = new Price { Id = "some-other-product-id" }, // Non-premium item
                         CurrentPeriodEnd = currentPeriodEnd
                     }
-                }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -522,19 +553,20 @@ public class UpgradePremiumToOrganizationCommandTests
             .Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
+        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(Task.FromResult(new Customer()));
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(Task.FromResult(mockSubscription));
         _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
         _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
         _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
-        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         // Act
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -560,15 +592,15 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
+                Data =
+                [
+                    new SubscriptionItem()
                     {
                         Id = "si_other",
                         Price = new Price { Id = "some-other-product" }, // Not a premium plan
                         CurrentPeriodEnd = DateTime.UtcNow.AddMonths(1)
                     }
-                }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -601,14 +633,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -624,7 +652,7 @@ public class UpgradePremiumToOrganizationCommandTests
         _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
         _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
         _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
-        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         var billingAddress = new Core.Billing.Payment.Models.BillingAddress { Country = "US", PostalCode = "12345" };
@@ -633,7 +661,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, billingAddress);
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -657,14 +685,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -680,14 +704,14 @@ public class UpgradePremiumToOrganizationCommandTests
         _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
         _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
         _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
-        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         // Act
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -711,14 +735,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -734,14 +754,14 @@ public class UpgradePremiumToOrganizationCommandTests
         _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
         _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
         _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
-        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         // Act
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -764,14 +784,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -787,14 +803,14 @@ public class UpgradePremiumToOrganizationCommandTests
         _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
         _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
         _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
-        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         // Act
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -823,14 +839,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -846,14 +858,14 @@ public class UpgradePremiumToOrganizationCommandTests
         _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
         _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
         _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
-        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         // Act
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -882,14 +894,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -905,14 +913,14 @@ public class UpgradePremiumToOrganizationCommandTests
         _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
         _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
         _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
-        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         // Act
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -935,14 +943,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -958,14 +962,14 @@ public class UpgradePremiumToOrganizationCommandTests
         _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
         _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
         _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
-        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         // Act
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -989,14 +993,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -1012,14 +1012,14 @@ public class UpgradePremiumToOrganizationCommandTests
         _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
         _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
         _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
-        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         // Act
         var result = await _command.Run(user, "My Organization", "encrypted-key", "test-public-key", "test-encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
 
         await _organizationRepository.Received(1).CreateAsync(
             Arg.Is<Organization>(org =>
@@ -1040,14 +1040,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem() { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -1064,14 +1060,14 @@ public class UpgradePremiumToOrganizationCommandTests
         _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
         _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
         _collectionRepository.CreateAsync(Arg.Any<Collection>(), Arg.Any<IEnumerable<CollectionAccessSelection>>(), Arg.Any<IEnumerable<CollectionAccessSelection>>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Collection>()));
-        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         // Act
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", "Default Collection", PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -1098,14 +1094,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -1121,14 +1113,14 @@ public class UpgradePremiumToOrganizationCommandTests
         _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
         _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
         _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
-        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         // Act
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -1151,14 +1143,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -1174,7 +1162,7 @@ public class UpgradePremiumToOrganizationCommandTests
         _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
         _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
         _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
-        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         // Mock collection repository to throw exception
@@ -1189,7 +1177,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", "Default Collection", PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -1220,14 +1208,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -1243,7 +1227,7 @@ public class UpgradePremiumToOrganizationCommandTests
         _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
         _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
         _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
-        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         var billingAddress = new Core.Billing.Payment.Models.BillingAddress
@@ -1257,7 +1241,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", "Default Collection", PlanType.TeamsAnnually, billingAddress);
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         await _stripeAdapter.Received(1).UpdateCustomerAsync(
             "cus_123",
             Arg.Is<CustomerUpdateOptions>(options =>
@@ -1278,14 +1262,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -1302,7 +1282,7 @@ public class UpgradePremiumToOrganizationCommandTests
         _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
         _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
         _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
-        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         var billingAddress = new Core.Billing.Payment.Models.BillingAddress
@@ -1316,7 +1296,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", "Default Collection", PlanType.TeamsAnnually, billingAddress);
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         await _stripeAdapter.Received(1).UpdateCustomerAsync(
             "cus_123",
             Arg.Is<CustomerUpdateOptions>(options =>
@@ -1326,6 +1306,72 @@ public class UpgradePremiumToOrganizationCommandTests
             Arg.Is<TaxIdCreateOptions>(options =>
                 options.Type == "eu_vat" &&
                 options.Value == "DE123456789"));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_WithPayPalCustomer_SetsDefaultIncompletePaymentBehaviorAndPaysInvoiceViaBraintree(User user)
+    {
+        // Arrange
+        user.Premium = true;
+        user.GatewaySubscriptionId = "sub_123";
+        user.GatewayCustomerId = "cus_123";
+
+        var mockSubscription = new Subscription
+        {
+            Id = "sub_123",
+            LatestInvoiceId = "in_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
+            },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        var payPalCustomer = new Customer
+        {
+            Metadata = new Dictionary<string, string>
+            {
+                [Bit.Core.Billing.Utilities.BraintreeCustomerIdKey] = "bt_cus_123"
+            }
+        };
+
+        var mockInvoice = new Invoice { Id = "in_123" };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _pricingClient.ListPremiumPlans().Returns(CreateTestPremiumPlansList());
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually"));
+        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(payPalCustomer);
+        _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.UpdateInvoiceAsync("in_123", Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
+        _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
+        _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
+        _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
+        _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
+
+        // Assert
+        Assert.True(result.Success);
+        var organizationId = result.AsT0;
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            "sub_123",
+            Arg.Is<SubscriptionUpdateOptions>(opts => opts.PaymentBehavior == "default_incomplete"));
+
+        await _stripeAdapter.Received(1).UpdateInvoiceAsync(
+            "in_123",
+            Arg.Is<InvoiceUpdateOptions>(opts =>
+                opts.AutoAdvance == false &&
+                opts.Expand.Contains("customer")));
+
+        await _braintreeService.Received(1).PayInvoice(
+            Arg.Is<SubscriberId>(id => id.IsOrganizationId && id.AsT1.Value == organizationId),
+            mockInvoice);
     }
 
     [Theory, BitAutoData]
@@ -1341,14 +1387,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -1365,7 +1407,7 @@ public class UpgradePremiumToOrganizationCommandTests
         _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
         _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
         _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
-        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         var billingAddress = new Core.Billing.Payment.Models.BillingAddress
@@ -1379,7 +1421,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", "Default Collection", PlanType.TeamsAnnually, billingAddress);
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
 
         await _stripeAdapter.Received(1).UpdateCustomerAsync(
             "cus_123",
@@ -1436,7 +1478,7 @@ public class UpgradePremiumToOrganizationCommandTests
         _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
         _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
         _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
-        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         var billingAddress = new Core.Billing.Payment.Models.BillingAddress
@@ -1454,5 +1496,170 @@ public class UpgradePremiumToOrganizationCommandTests
             Arg.Is<CustomerUpdateOptions>(options =>
                 options.TaxExempt == StripeConstants.TaxExempt.None));
         await _stripeAdapter.DidNotReceive().CreateTaxIdAsync(Arg.Any<string>(), Arg.Any<TaxIdCreateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_WithNoPaymentMethod_ReturnsBadRequest(User user)
+    {
+        // Arrange
+        user.Premium = true;
+        user.GatewaySubscriptionId = "sub_123";
+        user.GatewayCustomerId = "cus_123";
+
+        var mockSubscription = new Subscription
+        {
+            Id = "sub_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
+            },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _pricingClient.ListPremiumPlans().Returns(CreateTestPremiumPlansList());
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually"));
+        _getPaymentMethodQuery.Run(user).Returns((MaskedPaymentMethod?)null);
+
+        // Act
+        var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
+
+        // Assert
+        Assert.True(result.IsT1);
+        Assert.Equal("No payment method found for the user. Please add a payment method to upgrade to Organization plan.", result.AsT1.Response);
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_WithUnverifiedBankAccount_ReturnsBadRequest(User user)
+    {
+        // Arrange
+        user.Premium = true;
+        user.GatewaySubscriptionId = "sub_123";
+        user.GatewayCustomerId = "cus_123";
+
+        _getPaymentMethodQuery.Run(user).Returns(new MaskedPaymentMethod(new MaskedBankAccount
+        {
+            BankName = "Chase",
+            Last4 = "6789",
+            HostedVerificationUrl = "https://verify.stripe.com/abc"
+        }));
+
+        // Act
+        var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
+
+        // Assert
+        Assert.True(result.IsT1);
+        Assert.Equal("Unverified bank accounts are not supported for upgrading to an Organization plan. Please use a card or PayPal.", result.AsT1.Response);
+        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>());
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_WithVerifiedBankAccount_Succeeds(User user)
+    {
+        // Arrange
+        user.Premium = true;
+        user.GatewaySubscriptionId = "sub_123";
+        user.GatewayCustomerId = "cus_123";
+
+        _getPaymentMethodQuery.Run(user).Returns(new MaskedPaymentMethod(new MaskedBankAccount
+        {
+            BankName = "Chase",
+            Last4 = "6789"
+            // No HostedVerificationUrl = verified bank account
+        }));
+
+        var mockSubscription = new Subscription
+        {
+            Id = "sub_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
+            },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        var mockCustomer = new Customer
+        {
+            Metadata = new Dictionary<string, string>(),
+            InvoiceSettings = new CustomerInvoiceSettings { DefaultPaymentMethodId = "pm_bank" }
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _pricingClient.ListPremiumPlans().Returns(CreateTestPremiumPlansList());
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually"));
+        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
+        _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
+        _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
+        _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
+        _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
+
+        // Assert
+        Assert.True(result.IsT0);
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            "sub_123",
+            Arg.Is<SubscriptionUpdateOptions>(opts => opts.PaymentBehavior == null));
+        await _braintreeService.DidNotReceive().PayInvoice(Arg.Any<SubscriberId>(), Arg.Any<Invoice>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_ReleasesScheduleBeforeUpdate(User user)
+    {
+        // Arrange
+        user.Premium = true;
+        user.GatewaySubscriptionId = "sub_123";
+        user.GatewayCustomerId = "cus_123";
+
+        var currentPeriodEnd = DateTime.UtcNow.AddMonths(1);
+        var mockSubscription = new Subscription
+        {
+            Id = "sub_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Id = "si_premium",
+                        Price = new Price { Id = "premium-annually" },
+                        CurrentPeriodEnd = currentPeriodEnd
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        var mockPremiumPlans = CreateTestPremiumPlansList();
+        var mockPlan = CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually");
+
+        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
+        _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+            .Returns(Task.FromResult(mockSubscription));
+        _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
+        _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
+        _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
+        _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
+
+        // Assert
+        Assert.True(result.IsT0);
+        await _priceIncreaseScheduler.Received(1).Release("cus_123", "sub_123");
     }
 }

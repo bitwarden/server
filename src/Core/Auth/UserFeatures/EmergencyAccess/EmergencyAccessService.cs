@@ -9,9 +9,12 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -19,6 +22,7 @@ using Bit.Core.Tokens;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
+using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Auth.UserFeatures.EmergencyAccess;
 
@@ -32,10 +36,10 @@ public class EmergencyAccessService : IEmergencyAccessService
     private readonly ICipherService _cipherService;
     private readonly IMailService _mailService;
     private readonly IUserService _userService;
+    private readonly IMasterPasswordService _masterPasswordService;
     private readonly GlobalSettings _globalSettings;
     private readonly IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> _dataProtectorTokenizer;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
-    private readonly IFeatureService _featureService;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
 
     public EmergencyAccessService(
@@ -47,10 +51,10 @@ public class EmergencyAccessService : IEmergencyAccessService
         ICipherService cipherService,
         IMailService mailService,
         IUserService userService,
+        IMasterPasswordService masterPasswordService,
         GlobalSettings globalSettings,
         IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> dataProtectorTokenizer,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
-        IFeatureService featureService,
         IPolicyRequirementQuery policyRequirementQuery)
     {
         _emergencyAccessRepository = emergencyAccessRepository;
@@ -61,10 +65,10 @@ public class EmergencyAccessService : IEmergencyAccessService
         _cipherService = cipherService;
         _mailService = mailService;
         _userService = userService;
+        _masterPasswordService = masterPasswordService;
         _globalSettings = globalSettings;
         _dataProtectorTokenizer = dataProtectorTokenizer;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
-        _featureService = featureService;
         _policyRequirementQuery = policyRequirementQuery;
     }
 
@@ -85,15 +89,12 @@ public class EmergencyAccessService : IEmergencyAccessService
             throw new BadRequestException("You cannot use Emergency Access Takeover because you are using Key Connector.");
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
-        {
-            var requirement = await _policyRequirementQuery
-                .GetAsync<AutomaticUserConfirmationPolicyRequirement>(grantorUser.Id);
+        var requirement = await _policyRequirementQuery
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(grantorUser.Id);
 
-            if (requirement.GrantorCannotInviteToEmergencyAccess())
-            {
-                throw new BadRequestException("You cannot invite emergency contacts because you are a member of an organization that uses Automatic User Confirmation.");
-            }
+        if (requirement.GrantorCannotInviteToEmergencyAccess())
+        {
+            throw new BadRequestException("You cannot invite emergency contacts because you are a member of an organization that uses Automatic User Confirmation.");
         }
 
         var emergencyAccess = new Entities.EmergencyAccess
@@ -144,25 +145,22 @@ public class EmergencyAccessService : IEmergencyAccessService
             throw new BadRequestException("Emergency Access not valid.");
         }
 
-        if (!_dataProtectorTokenizer.TryUnprotect(token, out var data))
+        var tokenIsValid =
+            _dataProtectorTokenizer.TryUnprotect(token, out var data)
+            && data.Valid
+            && data.IsValid(emergencyAccessId, granteeUser.Email);
+
+        if (!tokenIsValid)
         {
             throw new BadRequestException("Invalid token.");
         }
 
-        if (!data.IsValid(emergencyAccessId, granteeUser.Email))
-        {
-            throw new BadRequestException("Invalid token.");
-        }
+        var granteeRequirement = await _policyRequirementQuery
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(granteeUser.Id);
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+        if (granteeRequirement.GranteeCannotAcceptEmergencyAccess())
         {
-            var requirement = await _policyRequirementQuery
-                .GetAsync<AutomaticUserConfirmationPolicyRequirement>(granteeUser.Id);
-
-            if (requirement.GranteeCannotAcceptEmergencyAccess())
-            {
-                throw new BadRequestException("You cannot accept emergency access invitations because you are a member of an organization that uses Automatic User Confirmation.");
-            }
+            throw new BadRequestException("You cannot accept emergency access invitations because you are a member of an organization that uses Automatic User Confirmation.");
         }
 
         if (emergencyAccess.Status == EmergencyAccessStatusType.Accepted)
@@ -366,7 +364,60 @@ public class EmergencyAccessService : IEmergencyAccessService
         return (emergencyAccess, grantor);
     }
 
-    // TODO PM-21687: rename this to something like FinishRecoveryTakeoverAsync
+    public async Task<IdentityResult> FinishRecoveryTakeoverAsync(
+        Guid emergencyAccessId,
+        User granteeUser,
+        MasterPasswordUnlockData unlockData,
+        MasterPasswordAuthenticationData authenticationData)
+    {
+        var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);
+
+        if (!IsValidRequest(emergencyAccess, granteeUser, EmergencyAccessType.Takeover))
+        {
+            throw new BadRequestException("Emergency Access not valid.");
+        }
+
+        var grantor = await _userRepository.GetByIdAsync(emergencyAccess.GrantorId);
+
+        if (grantor == null)
+        {
+            throw new BadRequestException("Grantor not found when trying to finish recovery takeover.");
+        }
+
+        var identityResult = await _masterPasswordService.PrepareSetInitialOrUpdateExistingMasterPasswordAsync(
+            user: grantor,
+            new SetInitialOrUpdateExistingPasswordData
+            {
+                MasterPasswordUnlock = unlockData,
+                MasterPasswordAuthentication = authenticationData,
+            });
+
+        if (identityResult.IsT1)
+        {
+            return IdentityResult.Failed(identityResult.AsT1);
+        }
+
+        // Disable TwoFactor providers since they will otherwise block logins
+        grantor.SetTwoFactorProviders([]);
+        // Disable New Device Verification since it will otherwise block logins
+        grantor.VerifyDevices = false;
+
+        await _userRepository.ReplaceAsync(grantor);
+
+        // Remove grantor from all organizations unless Owner
+        var orgUser = await _organizationUserRepository.GetManyByUserAsync(grantor.Id);
+        foreach (var o in orgUser)
+        {
+            if (o.Type != OrganizationUserType.Owner)
+            {
+                await _removeOrganizationUserCommand.RemoveUserAsync(o.OrganizationId, grantor.Id);
+            }
+        }
+
+        return IdentityResult.Success;
+    }
+
+    [Obsolete("To be removed in PM-33141")]
     public async Task PasswordAsync(Guid emergencyAccessId, User granteeUser, string newMasterPasswordHash, string key)
     {
         var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);

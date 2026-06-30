@@ -155,7 +155,12 @@ public class OrganizationsControllerPerformanceTests(ITestOutputHelper testOutpu
             AdditionalServiceAccounts = 2,
             MaxAutoscaleSeats = 100,
             PremiumAccessAddon = false,
-            CollectionName = "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk="
+            CollectionName = "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=",
+            Keys = new OrganizationKeysRequestModel
+            {
+                PublicKey = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAl0OaLBJiGh5GJmX8hV/a",
+                EncryptedPrivateKey = "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk="
+            }
         };
 
         var requestContent = new StringContent(JsonSerializer.Serialize(createRequest), Encoding.UTF8, "application/json");

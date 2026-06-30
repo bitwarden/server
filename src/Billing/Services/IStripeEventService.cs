@@ -1,4 +1,5 @@
 ﻿using Stripe;
+using Stripe.Checkout;
 
 namespace Bit.Billing.Services;
 
@@ -69,6 +70,17 @@ public interface IStripeEventService
     /// <param name="expand">Optionally provided to expand the fresh subscription object retrieved from Stripe.</param>
     /// <returns>A Stripe <see cref="Subscription"/>.</returns>
     Task<Subscription> GetSubscription(Event stripeEvent, bool fresh = false, List<string>? expand = null);
+
+    /// <summary>
+    /// Extracts the <see cref="Session"/> object from the Stripe <see cref="Event"/>. When <paramref name="fresh"/> is true,
+    /// uses the session ID extracted from the event to retrieve the most up-to-date session from Stripe's API'
+    /// and optionally expands it with the provided <see cref="expand"/> options.
+    /// </summary>
+    /// <param name="stripeEvent">The Stripe webhook event.</param>
+    /// <param name="fresh">Determines whether to retrieve a fresh copy of the session object from Stripe.</param>
+    /// <param name="expand">Optionally provided to expand the fresh session object retrieved from Stripe.</param>
+    /// <returns>A Stripe <see cref="Session"/>.</returns>
+    Task<Session> GetCheckoutSession(Event stripeEvent, bool fresh = false, List<string>? expand = null);
 
     /// <summary>
     /// Ensures that the customer associated with the Stripe <see cref="Event"/> is in the correct region for this server.
