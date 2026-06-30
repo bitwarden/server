@@ -1,4 +1,4 @@
-using Bit.Core.Settings;
+﻿using Bit.Core.Settings;
 using Bit.SharedWeb.Utilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
