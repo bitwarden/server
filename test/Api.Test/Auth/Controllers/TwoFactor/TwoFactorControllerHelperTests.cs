@@ -1,4 +1,4 @@
-using Bit.Api.Auth.Controllers;
+﻿using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
