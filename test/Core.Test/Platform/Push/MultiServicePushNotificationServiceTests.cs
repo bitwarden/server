@@ -29,7 +29,7 @@ public class MultiServicePushNotificationServiceTests
         );
     }
 
-#if DEBUG // This test requires debug code in the sut to work properly
+#if DEBUG // These tests require debug code in the sut to work properly
     [Fact]
     public async Task PushAsync_CallsAllEngines()
     {

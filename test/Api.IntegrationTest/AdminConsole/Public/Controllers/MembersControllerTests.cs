@@ -5,7 +5,6 @@ using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Public.Response;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
@@ -13,7 +12,6 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.Helpers;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Public.Controllers;
@@ -145,43 +143,6 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(OrganizationUserType.Custom, result.Type);
         AssertHelper.AssertPropertyEqual(new PermissionsModel { AccessReports = true, ManageScim = true },
             result.Permissions);
-    }
-
-    [Fact]
-    public async Task Post_CustomMember_Success()
-    {
-        var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
-        var request = new MemberCreateRequestModel
-        {
-            Email = email,
-            Type = OrganizationUserType.Custom,
-            ExternalId = "myCustomUser",
-            Collections = [],
-            Groups = []
-        };
-
-        var response = await _client.PostAsync("/public/members", JsonContent.Create(request));
-
-        // Assert against the response
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<MemberResponseModel>();
-        Assert.NotNull(result);
-
-        Assert.Equal(email, result.Email);
-        Assert.Equal(OrganizationUserType.Custom, result.Type);
-        Assert.Equal("myCustomUser", result.ExternalId);
-        Assert.Empty(result.Collections);
-
-        // Assert against the database values
-        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
-        var orgUser = await organizationUserRepository.GetByIdAsync(result.Id);
-
-        Assert.NotNull(orgUser);
-        Assert.Equal(email, orgUser.Email);
-        Assert.Equal(OrganizationUserType.Custom, orgUser.Type);
-        Assert.Equal("myCustomUser", orgUser.ExternalId);
-        Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
-        Assert.Equal(_organization.Id, orgUser.OrganizationId);
     }
 
     [Fact]
@@ -404,13 +365,8 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     }
 
     [Fact]
-    public async Task Post_CustomMember_WithPublicMembersInviteRefactor_Success()
+    public async Task Post_CustomMember_Success()
     {
-        var featureService = _factory.GetService<IFeatureService>();
-        featureService
-            .IsEnabled(FeatureFlagKeys.PublicMembersInviteRefactor)
-            .Returns(true);
-
         var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
         var expectedPermissions = new PermissionsModel
         {
@@ -483,13 +439,8 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     }
 
     [Fact]
-    public async Task Post_UserMember_WithPublicMembersInviteRefactor_Success()
+    public async Task Post_UserMember_Success()
     {
-        var featureService = _factory.GetService<IFeatureService>();
-        featureService
-            .IsEnabled(FeatureFlagKeys.PublicMembersInviteRefactor)
-            .Returns(true);
-
         var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
         var request = new MemberCreateRequestModel
         {

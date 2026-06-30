@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
@@ -64,7 +65,7 @@ public class UpgradePremiumToOrganizationCommand(
     ICollectionRepository collectionRepository,
     IBraintreeService braintreeService,
     IGetPaymentMethodQuery getPaymentMethodQuery,
-    IApplicationCacheService applicationCacheService,
+    IOrganizationAbilityCacheService organizationAbilityCacheService,
     IPushNotificationService pushNotificationService,
     IFeatureService featureService)
     : BaseBillingCommand<UpgradePremiumToOrganizationCommand>(logger), IUpgradePremiumToOrganizationCommand
@@ -332,7 +333,7 @@ public class UpgradePremiumToOrganizationCommand(
         });
 
         // Update cache
-        await applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+        await organizationAbilityCacheService.UpsertOrganizationAbilityAsync(organization);
 
         // Create OrganizationUser for the upgrading user as owner
         var organizationUser = new OrganizationUser

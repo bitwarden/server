@@ -1,0 +1,105 @@
+{
+  "$schema": "../../schemas/cipher.schema.json",
+  "items": [
+    {
+      "type": "login",
+      "name": "Blob Login — Full",
+      "notes": "Login with every field populated to exercise blob login type_data, custom fields, passkeys, and password history.",
+      "favorite": true,
+      "login": {
+        "username": "blobuser@example.com",
+        "password": "fakeBlobFullPassword",
+        "totp": "JBSWY3DPEHPK3PXP",
+        "uris": [
+          { "uri": "https://login.example.com", "match": "domain" },
+          { "uri": "https://accounts.example.com/signin", "match": "host" },
+          { "uri": "https://example.com/legacy", "match": "exact" }
+        ],
+        "fido2Credentials": [
+          { "rpId": "example.com", "rpName": "Example", "userName": "blobuser@example.com" }
+        ],
+        "passwordHistory": [
+          { "password": "fakeOldPassword1", "lastUsedDate": "2023-06-01T00:00:00.000Z" },
+          { "password": "fakeOldPassword2", "lastUsedDate": "2023-09-01T00:00:00.000Z" }
+        ]
+      },
+      "fields": [
+        { "name": "Text Field", "value": "plain text value", "type": "text" },
+        { "name": "Hidden Field", "value": "fakeHiddenSecret", "type": "hidden" },
+        { "name": "Boolean Field", "value": "true", "type": "boolean" },
+        { "name": "Linked Username", "type": "linked", "linkedId": 100 }
+      ]
+    },
+    {
+      "type": "login",
+      "name": "Blob Login — Reprompt",
+      "notes": "Master-password reprompt flag must survive the blob round-trip.",
+      "reprompt": 1,
+      "login": {
+        "username": "reprompt@example.com",
+        "password": "fakeRepromptPassword",
+        "uris": [{ "uri": "https://secure.example.com", "match": "domain" }]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Blob Login — Minimal",
+      "login": {
+        "username": "minimal@example.com",
+        "password": "fakeMinimalPassword"
+      }
+    },
+    {
+      "type": "card",
+      "name": "Blob Card",
+      "notes": "Card type_data coverage.",
+      "card": {
+        "cardholderName": "Blob Test User",
+        "brand": "Visa",
+        "number": "4111111111111111",
+        "expMonth": "12",
+        "expYear": "2030",
+        "code": "123"
+      },
+      "fields": [{ "name": "Bank", "value": "Test Bank", "type": "text" }]
+    },
+    {
+      "type": "identity",
+      "name": "Blob Identity",
+      "notes": "Identity type_data with all sub-fields populated.",
+      "identity": {
+        "firstName": "Blob",
+        "middleName": "Test",
+        "lastName": "User",
+        "address1": "123 Test St",
+        "address2": "Apt 4",
+        "city": "Testville",
+        "state": "CA",
+        "postalCode": "90210",
+        "country": "US",
+        "company": "Bitwarden",
+        "email": "identity@example.com",
+        "phone": "+1-555-0100",
+        "ssn": "000-00-0000",
+        "username": "blobidentity",
+        "passportNumber": "X1234567",
+        "licenseNumber": "D1234567"
+      }
+    },
+    {
+      "type": "secureNote",
+      "name": "Blob Secure Note",
+      "notes": "Secure notes carry their content entirely in the notes field — verifies notes survive blob conversion."
+    },
+    {
+      "type": "sshKey",
+      "name": "Blob SSH Key",
+      "notes": "SSH key type_data coverage.",
+      "sshKey": {
+        "privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\nfakeprivatekeymaterialforblobtesting\n-----END OPENSSH PRIVATE KEY-----",
+        "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAfakepublickey blobuser@example.com",
+        "keyFingerprint": "SHA256:fakefingerprintforblobtesting"
+      }
+    }
+  ]
+}
