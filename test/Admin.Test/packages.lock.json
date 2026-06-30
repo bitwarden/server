@@ -91,10 +91,12 @@
       },
       "AutoMapper": {
         "type": "Transitive",
-        "resolved": "14.0.0",
-        "contentHash": "OC+1neAPM4oCCqQj3g2GJ2shziNNhOkxmNB9cVS8jtx4JbgmRzLcUOxB9Tsz6cVPHugdkHgCaCrTjjSI0Z5sCQ==",
+        "resolved": "15.1.3",
+        "contentHash": "PEvv0zFa2qpsCqQQt2mmjXKaKaSff70Nrdu2vo953XtMke2ZASM9KDwlrKcH9xWOUFcR0IOaLXyL/aNnuhyTFQ==",
         "dependencies": {
-          "Microsoft.Extensions.Options": "8.0.0"
+          "Microsoft.Extensions.Logging.Abstractions": "8.0.0",
+          "Microsoft.Extensions.Options": "8.0.0",
+          "Microsoft.IdentityModel.JsonWebTokens": "8.14.0"
         }
       },
       "AWSSDK.Core": {
@@ -1607,11 +1609,11 @@
       "admin": {
         "type": "Project",
         "dependencies": {
-          "Commercial.Core": "[2026.6.1, )",
-          "Commercial.Infrastructure.EntityFramework": "[2026.6.1, )",
-          "Core": "[2026.6.1, )",
-          "Migrator": "[2026.6.1, )",
-          "MySqlMigrations": "[2026.6.1, )",
+          "Commercial.Core": "[2026.6.2, )",
+          "Commercial.Infrastructure.EntityFramework": "[2026.6.2, )",
+          "Core": "[2026.6.2, )",
+          "Migrator": "[2026.6.2, )",
+          "MySqlMigrations": "[2026.6.2, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.15.3, )",
           "OpenTelemetry.Extensions.Hosting": "[1.15.3, )",
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.15.0, )",
@@ -1619,24 +1621,24 @@
           "OpenTelemetry.Instrumentation.Http": "[1.15.0, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.15.0, )",
           "OpenTelemetry.Instrumentation.SqlClient": "[1.12.0-beta.3, )",
-          "PostgresMigrations": "[2026.6.1, )",
-          "SharedWeb": "[2026.6.1, )",
-          "SqliteMigrations": "[2026.6.1, )"
+          "PostgresMigrations": "[2026.6.2, )",
+          "SharedWeb": "[2026.6.2, )",
+          "SqliteMigrations": "[2026.6.2, )"
         }
       },
       "commercial.core": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.1, )",
+          "Core": "[2026.6.2, )",
           "CsvHelper": "[33.1.0, 33.1.0]"
         }
       },
       "commercial.infrastructure.entityframework": {
         "type": "Project",
         "dependencies": {
-          "AutoMapper": "[14.0.0, 14.0.0]",
-          "Core": "[2026.6.1, )",
-          "Infrastructure.EntityFramework": "[2026.6.1, )"
+          "AutoMapper": "[15.1.3, 15.1.3]",
+          "Core": "[2026.6.2, )",
+          "Infrastructure.EntityFramework": "[2026.6.2, )"
         }
       },
       "common": {
@@ -1644,7 +1646,7 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.18.1, )",
           "AutoFixture.Xunit2": "[4.18.1, )",
-          "Core": "[2026.6.1, )",
+          "Core": "[2026.6.2, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[2.2.1, 2.2.1]",
           "Microsoft.Extensions.TimeProvider.Testing": "[10.6.0, 10.6.0]",
           "Microsoft.NET.Test.Sdk": "[18.0.1, )",
@@ -1708,15 +1710,15 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.1, )",
+          "Core": "[2026.6.2, )",
           "Dapper": "[2.1.66, 2.1.66]"
         }
       },
       "infrastructure.entityframework": {
         "type": "Project",
         "dependencies": {
-          "AutoMapper": "[14.0.0, 14.0.0]",
-          "Core": "[2026.6.1, )",
+          "AutoMapper": "[15.1.3, 15.1.3]",
+          "Core": "[2026.6.2, )",
           "Microsoft.EntityFrameworkCore.Relational": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.SqlServer": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.Sqlite": "[8.0.8, 8.0.8]",
@@ -1729,7 +1731,7 @@
       "migrator": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.1, )",
+          "Core": "[2026.6.2, )",
           "Microsoft.Extensions.Logging": "[10.0.8, 10.0.8]",
           "dbup-sqlserver": "[7.2.0, 7.2.0]"
         }
@@ -1737,23 +1739,23 @@
       "mysqlmigrations": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.1, )",
-          "Infrastructure.EntityFramework": "[2026.6.1, )"
+          "Core": "[2026.6.2, )",
+          "Infrastructure.EntityFramework": "[2026.6.2, )"
         }
       },
       "postgresmigrations": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.1, )",
-          "Infrastructure.EntityFramework": "[2026.6.1, )"
+          "Core": "[2026.6.2, )",
+          "Infrastructure.EntityFramework": "[2026.6.2, )"
         }
       },
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.1, )",
-          "Infrastructure.Dapper": "[2026.6.1, )",
-          "Infrastructure.EntityFramework": "[2026.6.1, )",
+          "Core": "[2026.6.2, )",
+          "Infrastructure.Dapper": "[2026.6.2, )",
+          "Infrastructure.EntityFramework": "[2026.6.2, )",
           "Microsoft.Bot.Builder.Integration.AspNet.Core": "[4.23.0, 4.23.0]",
           "Swashbuckle.AspNetCore.SwaggerGen": "[10.1.7, 10.1.7]"
         }
@@ -1761,8 +1763,8 @@
       "sqlitemigrations": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.1, )",
-          "Infrastructure.EntityFramework": "[2026.6.1, )"
+          "Core": "[2026.6.2, )",
+          "Infrastructure.EntityFramework": "[2026.6.2, )"
         }
       }
     }
