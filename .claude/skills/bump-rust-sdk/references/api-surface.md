@@ -1,7 +1,7 @@
 # RustSdk API Surface Inventory
 
-> **Auto-generated from actual source files.** Last updated: 2026-06-30
-> Pinned rev: `c5d5bba159bd222321f3ecfd90f5ae6192c2c8eb` (bitwarden-crypto `3.0.0`)
+> **Auto-generated from actual source files.** Last updated: 2026-02-25
+> Pinned rev: `abba7fdab687753268b63248ec22639dff35d07c`
 
 This documents every type, trait, and function the server's RustSdk imports from
 `bitwarden-crypto`. Use this to assess breaking change impact when bumping revs.
@@ -22,8 +22,7 @@ This documents every type, trait, and function the server's RustSdk imports from
 | `PublicKey`               | `PublicKey::from_der()`                                                                      |
 | `RsaKeyPair`              | Struct literal: `RsaKeyPair { private, public }`                                             |
 | `SpkiPublicKeyBytes`      | `SpkiPublicKeyBytes::from()` — wraps public key DER bytes                                    |
-| `SymmetricCryptoKey`      | `.make(SymmetricKeyAlgorithm::Aes256CbcHmac)`, `::try_from()`, `.to_base64()`                |
-| `SymmetricKeyAlgorithm`   | `SymmetricKeyAlgorithm::Aes256CbcHmac` enum variant — passed to `SymmetricCryptoKey::make()` |
+| `SymmetricCryptoKey`      | `.make_aes256_cbc_hmac_key()`, `::try_from()`, `.to_base64()`                                |
 | `UnsignedSharedKey`       | `::encapsulate_key_unsigned()` (deprecated — wrapped with `#[allow(deprecated)]`)            |
 | `UserKey`                 | `UserKey::new()`, `.make_key_pair()`, `.0` field access                                      |
 
@@ -33,8 +32,7 @@ This documents every type, trait, and function the server's RustSdk imports from
 | ------------------------- | ----------------------------------------------------------------------------------------------- |
 | `BitwardenLegacyKeyBytes` | `BitwardenLegacyKeyBytes::from()` — wraps raw key bytes for `SymmetricCryptoKey::try_from()`    |
 | `EncString`               | `enc_str.parse::<EncString>()`, `.to_string()` — parsed from and serialized to EncString format |
-| `SymmetricCryptoKey`      | `::try_from()`, `.to_base64()` — key construction; `.make(..)` used in tests via `SymmetricKeyAlgorithm` |
-| `SymmetricKeyAlgorithm`   | `SymmetricKeyAlgorithm::Aes256CbcHmac` — **test-only** (imported inside `mod tests`), feeds `make()` |
+| `SymmetricCryptoKey`      | `::try_from()`, `.make_aes256_cbc_hmac_key()`, `.to_base64()` — key construction and testing    |
 
 ### Traits Used
 
