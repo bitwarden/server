@@ -89,7 +89,6 @@ public class EnvironmentFileBuilder
             ["globalSettings__baseServiceUri__internalSso"] = "http://bitwarden-sso:5000",
             ["globalSettings__baseServiceUri__internalAdmin"] = "http://bitwarden-admin:5000",
             ["globalSettings__baseServiceUri__internalVault"] = "http://bitwarden-web:5000",
-            ["globalSettings__baseServiceUri__internalScim"] = "http://bitwarden-scim:5000",
             ["globalSettings__sqlServer__connectionString"] = $"\"{dbConnectionString.Replace("\"", "\\\"")}\"",
             ["globalSettings__identityServer__certificatePassword"] = _context.Install?.IdentityCertPassword,
             ["globalSettings__internalIdentityKey"] = _context.Stub ? "RANDOM_IDENTITY_KEY" :
