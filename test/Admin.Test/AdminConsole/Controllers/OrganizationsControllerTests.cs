@@ -1938,6 +1938,10 @@ public class OrganizationsControllerTests
         Assert.Null(model.BillingInfo);
         Assert.Null(model.BillingHistoryInfo);
         Assert.True(sutProvider.Sut.TempData.ContainsKey("Warning"));
+        Assert.Equal(
+            "Billing information could not be loaded. The Stripe customer may have been deleted. " +
+            "You can still edit the organization and set a valid Gateway Customer ID.",
+            (string)sutProvider.Sut.TempData["Warning"]);
     }
 
     #endregion
