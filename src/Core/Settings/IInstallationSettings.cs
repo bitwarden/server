@@ -6,4 +6,5 @@ public interface IInstallationSettings
     public string Key { get; set; }
     public string IdentityUri { get; set; }
     public string ApiUri { get; }
+    public string FileConfigDirectory { get; set; }
 }
