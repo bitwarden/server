@@ -3112,6 +3112,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterprise2020Annual.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterprise2020Annual.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             }
@@ -3129,6 +3134,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterpriseAnnual.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterpriseAnnual.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             },
@@ -3213,6 +3223,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterprise2020Annual.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterprise2020Annual.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             }
@@ -3230,6 +3245,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterpriseAnnual.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterpriseAnnual.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             },
@@ -3310,6 +3330,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterprise2020Annual.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterprise2020Annual.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             }
@@ -3327,6 +3352,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterpriseAnnual.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterpriseAnnual.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             },
@@ -3870,6 +3900,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = teams2020Monthly.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = teams2020Monthly.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teams2020Monthly.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teams2020Monthly.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             }
@@ -3887,6 +3922,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsMonthly.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsMonthly.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             },
@@ -3970,6 +4010,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = teamsStarter2023.PasswordManager.StripePlanId },
                         Plan = new Plan { Id = teamsStarter2023.PasswordManager.StripePlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsStarter2023.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsStarter2023.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             }
@@ -3987,6 +4032,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsMonthly.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsMonthly.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             },
@@ -4072,6 +4122,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = teamsStarter2023.PasswordManager.StripePlanId },
                         Plan = new Plan { Id = teamsStarter2023.PasswordManager.StripePlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsStarter2023.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsStarter2023.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             }
@@ -4091,6 +4146,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsMonthly.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsMonthly.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             },
@@ -4486,6 +4546,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = teams2020Monthly.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = teams2020Monthly.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teams2020Monthly.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teams2020Monthly.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             }
@@ -4503,6 +4568,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsMonthly.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsMonthly.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             },
@@ -5574,6 +5644,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = enterprise2019Annual.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = enterprise2019Annual.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterprise2019Annual.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterprise2019Annual.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             }
@@ -5591,6 +5666,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterpriseAnnual.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterpriseAnnual.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             },
@@ -5670,6 +5750,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = enterprise2019Monthly.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = enterprise2019Monthly.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterprise2019Monthly.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterprise2019Monthly.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             }
@@ -5687,6 +5772,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = enterpriseMonthly.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = enterpriseMonthly.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterpriseMonthly.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterpriseMonthly.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             },
@@ -5744,11 +5834,12 @@ public class SubscriptionUpdatedHandlerTests
                 options.Metadata["organizationId"] == organizationId.ToString()));
     }
 
-    // PM-37513: an Enterprise 2019 org with no SM line items (PM seat only) still migrates its plan
-    // shape and marks migrated. Grace metadata is computed from plan baselines (150) and written
-    // regardless of SM usage; this confirms that write does not disrupt the no-SM migration path.
+    // PM-39584 (headline): an Enterprise 2019 org with no SM line items (PM seat only) migrates its plan
+    // shape and marks migrated, but the SM grace allowance is NOT written — a PM-only org never carried
+    // Secrets Manager, so it never earned the source plan's base service accounts. This is the bug fix:
+    // the grace write is gated on the migrating subscription actually carrying Secrets Manager.
     [Fact]
-    public async Task HandleAsync_BusinessMigration_EnterpriseAnnual2019NoSecretsManager_MigratesCleanly()
+    public async Task HandleAsync_BusinessMigration_EnterpriseAnnual2019NoSecretsManager_DoesNotWriteGrace()
     {
         // Arrange
         var organizationId = Guid.NewGuid();
@@ -5845,12 +5936,13 @@ public class SubscriptionUpdatedHandlerTests
         await _cohortAssignmentRepository.Received(1).ReplaceAsync(
             Arg.Is<OrganizationPlanMigrationCohortAssignment>(a => a.Id == assignmentId && a.MigratedDate.HasValue));
 
-        // Grace metadata is still written from the plan baselines (200 - 50 = 150) even though this org
-        // carries no SM line items. This is intentional and matches Enterprise 2020 behavior — pinning it
-        // here so the no-SM grace write is a deliberate contract, not an accident a future change silences.
-        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+        // Grace metadata is NOT written: the migrating subscription carries no SM line item, so the org
+        // never had Secrets Manager and never earned the source plan's base service accounts (200 - 50 = 150).
+        // This is the PM-39584 fix — pinning the no-write so a future change cannot reintroduce the leak.
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
             subscription.Id,
             Arg.Is<SubscriptionUpdateOptions>(options =>
-                options.Metadata[MetadataKeys.MigrationGraceServiceAccounts] == "150"));
+                options.Metadata != null &&
+                options.Metadata.ContainsKey(MetadataKeys.MigrationGraceServiceAccounts)));
     }
 }
