@@ -19,27 +19,33 @@ key generation — the C# Seeder drives which fields to encrypt via `EncryptProp
 ## Key Challenge: NPM-to-Git-Rev Mapping
 
 The clients consume sdk-internal via **NPM packages** (`@bitwarden/sdk-internal`), while the
-server consumes it via **Rust git rev pins**. The NPM version (e.g., `0.2.0-main.522`) does not
-directly correspond to a git tag — it encodes a GitHub Actions **workflow run number**.
+server consumes it via **Rust git rev pins**. The NPM version (e.g., `0.2.0-main.841`) does not
+correspond to a git tag, and the `.NNN` suffix is **not** a public GitHub Actions run number —
+it is a counter from a private Azure publish pipeline. Map it by reading the commit baked into
+the published WASM (`main (<short-sha>)`) — see the deterministic method below.
 
 ### Version Format
 
 ```
-0.2.0-main.522
+0.2.0-main.841
 │     │     │
-│     │     └── GitHub Actions run number for publish-wasm-internal workflow
+│     │     └── Opaque publish counter from a private Azure task — NOT a GitHub Actions
+│     │         run_number, and it does NOT track main commits 1:1. Do not infer the SHA from it.
 │     └── Branch name (/ replaced with -)
 └── Base version from sdk-internal
 ```
 
-### How to Find the Git Rev
+### How to Find the Git Rev (deterministic)
+
+The build bakes the commit into the published WASM as `main (<short-sha>)`. Read it directly —
+do not guess from run numbers or timestamps:
 
 1. Determine the target NPM version from the clients repo (see Step 1 below)
-2. Find the `Publish @bitwarden/sdk-internal` workflow ID in the sdk-internal repo
-3. Query the GitHub Actions API for the specific run number
-4. Extract the `head_sha` — that is the git rev to pin in Cargo.toml
+2. Download that exact version's tarball from the npm registry
+3. `grep` `bitwarden_wasm_internal_bg.wasm` for `main (<short-sha>)`
+4. `git rev-parse <short-sha>` in sdk-internal → the full rev to pin in Cargo.toml
 
-The specific API queries are documented in `references/methodology.md`.
+The exact commands (and why timestamp/run_number methods are wrong) are in `references/methodology.md` §3.
 
 ## Process Overview
 
@@ -53,12 +59,13 @@ cd /path/to/clients
 git show web-v2026.2.0:package.json | grep sdk-internal
 ```
 
-This gives the NPM version (e.g., `0.2.0-main.522`). Extract the run number (522).
+This gives the NPM version (e.g., `0.2.0-main.841`).
 
 ### Step 2: Map NPM Version to Git SHA
 
-Query the GitHub Actions API to find the commit that produced that NPM build. See
-`references/methodology.md` for the exact commands.
+Download that NPM version's tarball and read the `main (<short-sha>)` string embedded in
+`bitwarden_wasm_internal_bg.wasm`, then `git rev-parse` it. This is deterministic — see
+`references/methodology.md` §3 for the exact commands.
 
 ### Step 3: Analyze Breaking Changes
 
@@ -74,8 +81,17 @@ Cross-reference each commit against the API surface documented in `references/ap
 ### Step 4: Apply Changes
 
 1. Update `Cargo.toml` — bump the `bitwarden-crypto` rev pin to the new SHA
-2. Fix any compilation errors from breaking changes (type renames, new parameters, etc.)
-3. Add `#[allow(deprecated)]` for any newly-deprecated APIs (with a comment explaining why)
+2. **Check the MSRV.** Compare the target's workspace `rust-version` (root `Cargo.toml`,
+   inherited by `bitwarden-crypto` via `rust-version.workspace = true`) against
+   `util/RustSdk/rust-toolchain.toml`. If the MSRV rose above our pinned channel, bump the
+   channel to match (match the **MSRV**, not sdk-internal's dev toolchain). Skipping this
+   yields a "requires rustc X or newer" build failure.
+3. Run `cargo update -p bitwarden-crypto` to re-resolve `Cargo.lock` for the new rev. The
+   targeted form updates only what the new rev requires (still fixing stale transitive pins
+   like `hybrid-array` that would otherwise cause resolution conflicts); a bare `cargo update`
+   also works but churns unrelated crates and needlessly bloats the lockfile diff.
+4. Fix any compilation errors from breaking changes (type renames, new parameters, etc.)
+5. Add `#[allow(deprecated)]` for any newly-deprecated APIs (with a comment explaining why)
 
 ### Step 5: Build and Verify (Claude)
 
@@ -83,7 +99,7 @@ Cross-reference each commit against the API surface documented in `references/ap
 cd util/RustSdk/rust
 cargo build                # Must compile cleanly
 cargo test                 # All tests must pass (roundtrip test is critical)
-cargo fmt --check          # Formatting must be clean
+cargo fmt --check          # Changed files must be clean
 git diff ../NativeMethods.g.cs  # FFI signatures should be unchanged
 ```
 
@@ -127,9 +143,9 @@ from `bitwarden_crypto`, and rewrite `references/api-surface.md` to match.
 
 ### Reference Files
 
-- **`references/methodology.md`** — Detailed step-by-step commands including GitHub Actions API
-  queries, breaking change analysis checklist, human verification commands, and a worked example
-  from the Feb 2026 bump
+- **`references/methodology.md`** — Detailed step-by-step commands including the deterministic
+  embedded-WASM `main (<short-sha>)` → git-rev mapping, breaking change analysis checklist, human
+  verification commands, and worked examples from the Feb 2026 and June 2026 bumps
 - **`references/api-surface.md`** — Complete inventory of types, traits, and functions the RustSdk
   imports from `bitwarden-crypto`, used to assess breaking change impact
 
@@ -137,7 +153,8 @@ from `bitwarden_crypto`, and rewrite `references/api-surface.md` to match.
 
 | File                              | Change                                          |
 | --------------------------------- | ----------------------------------------------- |
-| `util/RustSdk/rust/Cargo.toml`    | `bitwarden-crypto` rev pin update               |
-| `util/RustSdk/rust/src/*.rs`      | Type renames, new parameters, deprecation fixes |
-| `util/RustSdk/rust/Cargo.lock`    | Auto-regenerated (commit alongside)             |
-| `util/RustSdk/NativeMethods.g.cs` | Should NOT change (verify)                      |
+| `util/RustSdk/rust/Cargo.toml`    | `bitwarden-crypto` rev pin update                       |
+| `util/RustSdk/rust-toolchain.toml`| Bump `channel` if sdk-internal raised its MSRV (`rust-version`) |
+| `util/RustSdk/rust/src/*.rs`      | Type renames, new parameters, deprecation fixes         |
+| `util/RustSdk/rust/Cargo.lock`    | Re-resolved (`cargo update -p bitwarden-crypto`; commit alongside) |
+| `util/RustSdk/NativeMethods.g.cs` | Should NOT change (verify)                              |
