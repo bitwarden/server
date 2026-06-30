@@ -783,7 +783,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpGet("pending-auto-confirm")]
     [Authorize<ManageUsersRequirement>]
-    [RequireFeature(FeatureFlagKeys.BulkAutoConfirmOnLogin)]
     public async Task<ListResponseModel<OrganizationUserPendingAutoConfirmResponseModel>> GetPendingAutoConfirmUsersAsync(Guid orgId)
     {
         var pendingUsers = await _getPendingAutoConfirmUsersQuery.GetPendingAutoConfirmUsersAsync(orgId);
@@ -793,7 +792,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpPost("bulk-auto-confirm")]
     [Authorize<ManageUsersRequirement>]
-    [RequireFeature(FeatureFlagKeys.BulkAutoConfirmOnLogin)]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkAutomaticallyConfirmOrganizationUsersAsync(
         [BindOrganization] Organization organization,
         [FromBody] OrganizationUserBulkConfirmRequestModel model)
