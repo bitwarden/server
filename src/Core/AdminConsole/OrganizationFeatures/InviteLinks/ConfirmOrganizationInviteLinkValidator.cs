@@ -120,10 +120,10 @@ public class ConfirmOrganizationInviteLinkValidator(
     }
 
     private static Error? ValidateExistingMembershipStatus(OrganizationUser? existingOrganizationUser) =>
-        existingOrganizationUser?.Status switch
+        existingOrganizationUser switch
         {
-            OrganizationUserStatusType.Revoked => new OrganizationAccessRevoked(),
-            OrganizationUserStatusType.Confirmed => new AlreadyOrganizationMember(),
+            { RevocationReason: not null } => new OrganizationAccessRevoked(),
+            { Status: OrganizationUserStatusType.Confirmed } => new AlreadyOrganizationMember(),
             _ => null
         };
 

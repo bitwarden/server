@@ -169,7 +169,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     {
         // Arrange
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        revokedOrganizationUser.Status = OrganizationUserStatusType.Revoked;
+        revokedOrganizationUser.RevocationReason = RevocationReason.Manual;
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(organization.Id, user.Id)
@@ -194,7 +194,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     {
         // Arrange
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        revokedEmailInvite.Status = OrganizationUserStatusType.Revoked;
+        revokedEmailInvite.RevocationReason = RevocationReason.Manual;
         revokedEmailInvite.Email = user.Email;
         revokedEmailInvite.UserId = null;
 
@@ -222,6 +222,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         // Arrange
         SetupHappyPath(organization, inviteLink, user, sutProvider);
         existingOrganizationUser.Status = OrganizationUserStatusType.Confirmed;
+        existingOrganizationUser.RevocationReason = null;
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(organization.Id, user.Id)
@@ -250,6 +251,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         // Arrange
         SetupHappyPath(organization, inviteLink, user, sutProvider);
         existingOrganizationUser.Status = status;
+        existingOrganizationUser.RevocationReason = null;
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(organization.Id, user.Id)
@@ -413,6 +415,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         invitedOrganizationUser.Status = OrganizationUserStatusType.Invited;
         invitedOrganizationUser.Email = user.Email;
         invitedOrganizationUser.UserId = null;
+        invitedOrganizationUser.RevocationReason = null;
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationEmailAsync(organization.Id, user.Email)
