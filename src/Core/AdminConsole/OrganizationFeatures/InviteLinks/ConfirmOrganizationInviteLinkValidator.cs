@@ -23,10 +23,9 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 /// <see cref="IConfirmOrganizationInviteLinkValidator"/> for the checks performed.
 /// </summary>
 /// <remarks>
-/// This intentionally mirrors the eligibility checks in <see cref="AcceptOrganizationInviteLinkCommand"/>
-/// without duplicating its write side effects, so the confirmation endpoints can verify a user before
-/// they are given the organization key. Write-time concerns (e.g. creating the default collection,
-/// auto-scaling seats) are left to the consuming command.
+/// This performs the eligibility checks without any write side effects, so the confirmation endpoints
+/// can verify a user before they are given the organization key. Write-time concerns (e.g. creating the
+/// default collection, auto-scaling seats) are left to the consuming command.
 /// </remarks>
 public class ConfirmOrganizationInviteLinkValidator(
     IOrganizationInviteLinkRepository organizationInviteLinkRepository,
