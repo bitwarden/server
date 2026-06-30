@@ -37,8 +37,9 @@ public class CreateOrganizationInviteLinkCommand(
         var inviteLink = new OrganizationInviteLink
         {
             OrganizationId = request.OrganizationId,
-            EncryptedInviteKey = request.EncryptedInviteKey,
-            EncryptedOrgKey = request.EncryptedOrgKey,
+            Invite = request.Invite,
+            // Confirmation isn't supported until Milestone 3; links can only be used to accept for now.
+            SupportsConfirmation = false,
             CreationDate = now,
             RevisionDate = now,
         };

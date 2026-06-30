@@ -31,8 +31,9 @@ public class RefreshOrganizationInviteLinkCommand(
         {
             OrganizationId = existing.OrganizationId,
             AllowedDomains = existing.AllowedDomains,
-            EncryptedInviteKey = request.EncryptedInviteKey,
-            EncryptedOrgKey = request.EncryptedOrgKey,
+            Invite = request.Invite,
+            // Confirmation isn't supported until Milestone 3; links can only be used to accept for now.
+            SupportsConfirmation = false,
             CreationDate = now,
             RevisionDate = now,
         };
