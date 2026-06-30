@@ -70,6 +70,42 @@ curl -X POST http://localhost:5000/seed \
 The `result` contains the data returned by the scene, and `mangleMap` contains ID mappings if ID mangling is enabled.
 Use the `X-Play-Id` header value to later destroy the seeded data.
 
+### Seeding a Parameterized Organization
+
+`SingleOrganizationScene` seeds an organization on a chosen plan and links an existing user as a confirmed owner
+(seed the owner first via `SingleUserScene` and pass its `userId` as `ownerUserId`).
+
+Beyond `planType` and `seats`, the request accepts:
+
+- `overrides` — optional capability/collection-management flags applied **on top of** the plan defaults. Any flag left
+  unset keeps the plan default. Set Secrets Manager via `enableSecretsManager` (with optional `smSeats` /
+  `smServiceAccounts`), not via `overrides`.
+- `gateway`, `gatewayCustomerId`, `gatewaySubscriptionId` — billing gateway identity, so the seeded org resembles a
+  real billed org. `gateway` accepts the `GatewayType` name (e.g. `Stripe`) or its numeric value.
+
+```bash
+curl -X POST http://localhost:5000/seed \
+  -H "Content-Type: application/json" \
+  -H "X-Play-Id: test-run-123" \
+  -d '{
+    "template": "SingleOrganizationScene",
+    "arguments": {
+      "ownerUserId": "42bcf05d-7ad0-4e27-8b53-b3b700acc664",
+      "planType": "Free",
+      "name": "Acme",
+      "domain": "acme.example",
+      "seats": 5,
+      "overrides": {
+        "useSso": true,
+        "useGroups": true
+      },
+      "gateway": "Stripe",
+      "gatewayCustomerId": "cus_123",
+      "gatewaySubscriptionId": "sub_456"
+    }
+  }'
+```
+
 ### Querying Data
 
 Send a POST request to `/query` to execute read-only queries:
