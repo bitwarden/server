@@ -3,6 +3,7 @@ using Bit.Commercial.Pam.Api.Endpoints.Handlers;
 using Bit.Commercial.Pam.Api.Models.Response;
 using Bit.Core.Models.Api;
 using Bit.HttpExtensions;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Routing;
@@ -14,23 +15,27 @@ namespace Bit.Commercial.Pam.Test.Api.Endpoints;
 /// <summary>
 /// Locks the access-rule wire contract that the generated OpenAPI spec — and the client bindings built from it —
 /// depend on. The endpoint bodies are scaffold stubs; the contract (routes, names, methods, return types) is the
-/// thing under test. Endpoints are materialized the same way the offline OpenAPI generator discovers them, via
-/// <see cref="StandaloneEndpointDataSource"/>.
+/// thing under test. Endpoints are materialized by mapping them onto a minimal host and reading its
+/// <see cref="EndpointDataSource"/> — the same metadata the offline OpenAPI generator inspects.
 /// </summary>
 public class AccessRuleEndpointsTests
 {
     private static List<RouteEndpoint> MaterializeEndpoints()
     {
+        var builder = WebApplication.CreateSlimBuilder();
         // The handler must be a known service so Minimal API binding treats the handler parameter as injected
         // (not an inferred request body) — the same registration AddCommercialPamServices performs in the app.
-        var serviceProvider = new ServiceCollection()
-            .AddLogging()
-            .AddRouting()
-            .AddScoped<AccessRuleEndpointsHandler>()
-            .BuildServiceProvider();
+        builder.Services.AddScoped<AccessRuleEndpointsHandler>();
 
-        var source = new StandaloneEndpointDataSource(serviceProvider, [endpoints => endpoints.MapPamEndpoints()]);
-        return source.Endpoints.OfType<RouteEndpoint>().ToList();
+        var app = builder.Build();
+        app.MapPamEndpoints();
+
+        // Enumerating the data sources builds the endpoints — applying the route group's prefix, metadata, and
+        // conventions — without starting the request pipeline, the same set the OpenAPI generator discovers.
+        return ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(dataSource => dataSource.Endpoints)
+            .OfType<RouteEndpoint>()
+            .ToList();
     }
 
     [Fact]
