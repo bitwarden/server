@@ -1216,4 +1216,89 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         };
         SetupCommonRotate(request, upgradeToken);
     }
+
+    [Fact]
+    public async Task GetKeyRotationDataAsync_NotLoggedIn_Unauthorized()
+    {
+        var response = await _client.GetAsync("/accounts/key-management/key-rotation-data");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetKeyRotationDataAsync_NoData_ReturnsEmptyCollections()
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var response = await _client.GetAsync("/accounts/key-management/key-rotation-data");
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<KeyRotationDataResponseModel>();
+
+        Assert.NotNull(result);
+        Assert.Empty(result.OrganizationPasswordResetKeyData);
+        Assert.Empty(result.EmergencyAccessKeyData);
+        Assert.Empty(result.TrustedDeviceKeyData);
+        Assert.Empty(result.PasskeyKeyData);
+    }
+
+    [Fact]
+    public async Task GetKeyRotationDataAsync_WithTrustedDeviceAndGrantedEmergencyAccess_ReturnsFilteredData()
+    {
+        var grantee = await CreateGrantedEmergencyAccessAsync(EmergencyAccessStatusType.Confirmed);
+        await CreateTrustedDeviceAsync();
+
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var response = await _client.GetAsync("/accounts/key-management/key-rotation-data");
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<KeyRotationDataResponseModel>();
+
+        Assert.NotNull(result);
+
+        var emergencyAccess = Assert.Single(result.EmergencyAccessKeyData);
+        Assert.Equal(grantee.Id, emergencyAccess.GranteeId);
+        Assert.Equal(grantee.PublicKey, emergencyAccess.PublicKey);
+
+        var device = Assert.Single(result.TrustedDeviceKeyData);
+        Assert.Equal(_mockEncryptedString, device.EncryptedUserKey);
+    }
+
+    private async Task<User> CreateGrantedEmergencyAccessAsync(EmergencyAccessStatusType emergencyAccessStatus)
+    {
+        var granteeEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(granteeEmail);
+
+        var grantee = await _userRepository.GetByEmailAsync(granteeEmail);
+        var grantor = await _userRepository.GetByEmailAsync(_ownerEmail);
+        await _emergencyAccessRepository.CreateAsync(new EmergencyAccess
+        {
+            GrantorId = grantor!.Id,
+            GranteeId = grantee!.Id,
+            KeyEncrypted = _mockEncryptedString,
+            Status = emergencyAccessStatus,
+            Type = EmergencyAccessType.View,
+            WaitTimeDays = 10,
+            CreationDate = DateTime.UtcNow,
+            RevisionDate = DateTime.UtcNow
+        });
+
+        return grantee;
+    }
+
+    private async Task CreateTrustedDeviceAsync()
+    {
+        var owner = await _userRepository.GetByEmailAsync(_ownerEmail);
+        await _deviceRepository.CreateAsync(new Device
+        {
+            UserId = owner!.Id,
+            Name = "test-device",
+            Type = DeviceType.ChromeBrowser,
+            Identifier = Guid.NewGuid().ToString(),
+            EncryptedUserKey = _mockEncryptedString,
+            EncryptedPublicKey = _mockEncryptedString,
+            EncryptedPrivateKey = _mockEncryptedString,
+        });
+    }
 }

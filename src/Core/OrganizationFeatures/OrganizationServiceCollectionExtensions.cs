@@ -18,6 +18,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Update;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
@@ -50,7 +51,6 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using AccountRecoveryV2 = Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
 using V1_RevokeUsersCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1;
 using V2_RevokeUsersCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
 
@@ -156,8 +156,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IConfirmOrganizationUserCommand, ConfirmOrganizationUserCommand>();
         services.AddScoped<ISendOrganizationConfirmationCommand, SendOrganizationConfirmationCommand>();
         services.AddScoped<IAdminRecoverAccountCommand, AdminRecoverAccountCommand>();
-        services.AddScoped<AccountRecoveryV2.IAdminRecoverAccountCommand, AccountRecoveryV2.AdminRecoverAccountCommand>();
-        services.AddScoped<AccountRecoveryV2.IAdminRecoverAccountValidator, AccountRecoveryV2.AdminRecoverAccountValidator>();
+        services.AddScoped<IAdminRecoverAccountValidator, AdminRecoverAccountValidator>();
         services.AddScoped<IAutomaticallyConfirmOrganizationUserCommand, AutomaticallyConfirmOrganizationUserCommand>();
         services.AddScoped<IAutomaticallyConfirmOrganizationUsersValidator, AutomaticallyConfirmOrganizationUsersValidator>();
         services.AddScoped<IBulkAutomaticallyConfirmOrganizationUsersValidator, BulkAutomaticallyConfirmOrganizationUsersValidator>();
@@ -206,6 +205,8 @@ public static class OrganizationServiceCollectionExtensions
         services.TryAddScoped<IUpdateOrganizationInviteLinkCommand, UpdateOrganizationInviteLinkCommand>();
         services.TryAddScoped<IDeleteOrganizationInviteLinkCommand, DeleteOrganizationInviteLinkCommand>();
         services.TryAddScoped<IRefreshOrganizationInviteLinkCommand, RefreshOrganizationInviteLinkCommand>();
+        services.TryAddScoped<IAcceptOrganizationInviteLinkCommand, AcceptOrganizationInviteLinkCommand>();
+        services.TryAddScoped<IConfirmOrganizationInviteLinkValidator, ConfirmOrganizationInviteLinkValidator>();
     }
 
     private static void AddOrganizationDomainCommandsQueries(this IServiceCollection services)
@@ -228,6 +229,7 @@ public static class OrganizationServiceCollectionExtensions
     {
         services.AddScoped<ICountNewSmSeatsRequiredQuery, CountNewSmSeatsRequiredQuery>();
         services.AddScoped<IAcceptOrgUserCommand, AcceptOrgUserCommand>();
+        services.TryAddScoped<IAcceptOrganizationMembershipValidator, AcceptOrganizationMembershipValidator>();
         services.AddScoped<IPushAutoConfirmNotificationCommand, PushAutoConfirmNotificationCommand>();
         services.AddScoped<IOrganizationUserUserDetailsQuery, OrganizationUserUserDetailsQuery>();
         services.AddScoped<IGetOrganizationUsersClaimedStatusQuery, GetOrganizationUsersClaimedStatusQuery>();

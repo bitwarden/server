@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
@@ -333,6 +334,7 @@ public class CipherServiceTests
         var originalCipher = CoreHelpers.CloneObject(cipher);
         var cipherRepository = sutProvider.GetDependency<ICipherRepository>();
         cipherRepository.ReplaceAsync(cipher, collectionIds).Returns(true);
+        var cipherSyncPushService = sutProvider.GetDependency<ICipherSyncPushService>();
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(Arg.Any<Guid>())
@@ -395,7 +397,7 @@ public class CipherServiceTests
                 c.GetAttachments()[v0AttachmentId].FileName == "AFileNameRe-EncryptedWithOrgKey")
             , collectionIds);
 
-        await pushNotificationService.Received(1).PushSyncCipherUpdateAsync(cipher, collectionIds);
+        await cipherSyncPushService.Received(1).PushSyncCipherUpdateAsync(cipher, collectionIds);
     }
 
     [Theory]
@@ -796,7 +798,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(restoringUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(cipher.OrganizationId.Value)
             .Returns(new OrganizationAbility
             {
@@ -825,7 +827,7 @@ public class CipherServiceTests
 
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().UpsertAsync(default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCipherEventAsync(default, default);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushSyncCipherUpdateAsync(default, default);
+        await sutProvider.GetDependency<ICipherSyncPushService>().DidNotReceiveWithAnyArgs().PushSyncCipherUpdateAsync(default, default);
     }
 
     [Theory]
@@ -849,7 +851,7 @@ public class CipherServiceTests
         Assert.Contains("do not have permissions", exception.Message);
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().UpsertAsync(default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCipherEventAsync(default, default);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushSyncCipherUpdateAsync(default, default);
+        await sutProvider.GetDependency<ICipherSyncPushService>().DidNotReceiveWithAnyArgs().PushSyncCipherUpdateAsync(default, default);
     }
 
     [Theory]
@@ -866,7 +868,7 @@ public class CipherServiceTests
         Assert.NotEqual(DateTime.UtcNow, cipherDetails.RevisionDate);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).UpsertAsync(cipherDetails);
         await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventAsync(cipherDetails, EventType.Cipher_Restored);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncCipherUpdateAsync(cipherDetails, null);
+        await sutProvider.GetDependency<ICipherSyncPushService>().Received(1).PushSyncCipherUpdateAsync(cipherDetails, Array.Empty<Guid>());
     }
 
     [Theory]
@@ -883,7 +885,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(restoringUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value)
             .Returns(new OrganizationAbility
             {
@@ -897,7 +899,7 @@ public class CipherServiceTests
         Assert.NotEqual(DateTime.UtcNow, cipherDetails.RevisionDate);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).UpsertAsync(cipherDetails);
         await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventAsync(cipherDetails, EventType.Cipher_Restored);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncCipherUpdateAsync(cipherDetails, null);
+        await sutProvider.GetDependency<ICipherSyncPushService>().Received(1).PushSyncCipherUpdateAsync(cipherDetails, Array.Empty<Guid>());
     }
 
     [Theory]
@@ -914,7 +916,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(restoringUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value)
             .Returns(new OrganizationAbility
             {
@@ -928,7 +930,7 @@ public class CipherServiceTests
         Assert.Contains("do not have permissions", exception.Message);
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().UpsertAsync(default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCipherEventAsync(default, default);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushSyncCipherUpdateAsync(default, default);
+        await sutProvider.GetDependency<ICipherSyncPushService>().DidNotReceiveWithAnyArgs().PushSyncCipherUpdateAsync(default, default);
     }
 
 
@@ -1047,7 +1049,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(restoringUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>
             {
@@ -1109,7 +1111,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(restoringUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>
             {
@@ -1304,7 +1306,8 @@ public class CipherServiceTests
         await sutProvider.GetDependency<ICipherRepository>().Received(1).DeleteAsync(cipherDetails);
         await sutProvider.GetDependency<IAttachmentStorageService>().Received(1).DeleteAttachmentsForCipherAsync(cipherDetails.Id);
         await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventAsync(cipherDetails, EventType.Cipher_Deleted);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncCipherDeleteAsync(cipherDetails);
+        await sutProvider.GetDependency<ICipherSyncPushService>().Received(1)
+            .PushSyncCipherDeleteAsync(cipherDetails, null);
     }
 
 
@@ -1331,8 +1334,10 @@ public class CipherServiceTests
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default);
         await sutProvider.GetDependency<IAttachmentStorageService>().DidNotReceiveWithAnyArgs().DeleteAttachmentsForCipherAsync(default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCipherEventAsync(default, default);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushSyncCipherDeleteAsync(default);
+        await sutProvider.GetDependency<ICipherSyncPushService>().DidNotReceiveWithAnyArgs()
+            .PushSyncCipherDeleteAsync(default, default);
     }
+
 
     [Theory]
     [OrganizationCipherCustomize]
@@ -1345,7 +1350,8 @@ public class CipherServiceTests
         await sutProvider.GetDependency<ICipherRepository>().Received(1).DeleteAsync(cipherDetails);
         await sutProvider.GetDependency<IAttachmentStorageService>().Received(1).DeleteAttachmentsForCipherAsync(cipherDetails.Id);
         await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventAsync(cipherDetails, EventType.Cipher_Deleted);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncCipherDeleteAsync(cipherDetails);
+        await sutProvider.GetDependency<ICipherSyncPushService>().Received(1)
+            .PushSyncCipherDeleteAsync(cipherDetails, Arg.Any<ICollection<Guid>>());
     }
 
     [Theory]
@@ -1361,7 +1367,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value)
             .Returns(new OrganizationAbility
             {
@@ -1374,7 +1380,8 @@ public class CipherServiceTests
         await sutProvider.GetDependency<ICipherRepository>().Received(1).DeleteAsync(cipherDetails);
         await sutProvider.GetDependency<IAttachmentStorageService>().Received(1).DeleteAttachmentsForCipherAsync(cipherDetails.Id);
         await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventAsync(cipherDetails, EventType.Cipher_Deleted);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncCipherDeleteAsync(cipherDetails);
+        await sutProvider.GetDependency<ICipherSyncPushService>().Received(1)
+            .PushSyncCipherDeleteAsync(cipherDetails, Arg.Any<ICollection<Guid>>());
     }
 
     [Theory]
@@ -1390,7 +1397,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value)
             .Returns(new OrganizationAbility
             {
@@ -1405,7 +1412,8 @@ public class CipherServiceTests
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default);
         await sutProvider.GetDependency<IAttachmentStorageService>().DidNotReceiveWithAnyArgs().DeleteAttachmentsForCipherAsync(default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCipherEventAsync(default, default);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushSyncCipherDeleteAsync(default);
+        await sutProvider.GetDependency<ICipherSyncPushService>().DidNotReceiveWithAnyArgs()
+            .PushSyncCipherDeleteAsync(default, default);
     }
 
     [Theory]
@@ -1546,7 +1554,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>
             {
@@ -1594,7 +1602,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>
             {
@@ -1647,7 +1655,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>
             {
@@ -1660,7 +1668,7 @@ public class CipherServiceTests
 
         Assert.Contains("Cipher does not belong to the input organization.", exception.Message);
 
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
              .Received(1)
              .GetOrganizationAbilitiesAsync(Arg.Is<IEnumerable<Guid>>(ids =>
                  ids.Contains(targetOrgId) &&
@@ -1724,7 +1732,7 @@ public class CipherServiceTests
         Assert.Equal(cipherDetails.RevisionDate, cipherDetails.DeletedDate);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).UpsertAsync(cipherDetails);
         await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventAsync(cipherDetails, EventType.Cipher_SoftDeleted);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncCipherUpdateAsync(cipherDetails, null);
+        await sutProvider.GetDependency<ICipherSyncPushService>().Received(1).PushSyncCipherUpdateAsync(cipherDetails, Array.Empty<Guid>());
     }
 
 
@@ -1771,7 +1779,7 @@ public class CipherServiceTests
 
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceive().UpsertAsync(Arg.Any<Cipher>());
         await sutProvider.GetDependency<IEventService>().DidNotReceive().LogCipherEventAsync(Arg.Any<Cipher>(), Arg.Any<EventType>());
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive().PushSyncCipherUpdateAsync(Arg.Any<Cipher>(), Arg.Any<IEnumerable<Guid>>());
+        await sutProvider.GetDependency<ICipherSyncPushService>().DidNotReceive().PushSyncCipherUpdateAsync(Arg.Any<Cipher>(), Arg.Any<IEnumerable<Guid>>());
     }
 
     [Theory]
@@ -1786,7 +1794,7 @@ public class CipherServiceTests
 
         await sutProvider.GetDependency<ICipherRepository>().Received(1).UpsertAsync(cipherDetails);
         await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventAsync(cipherDetails, EventType.Cipher_SoftDeleted);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncCipherUpdateAsync(cipherDetails, null);
+        await sutProvider.GetDependency<ICipherSyncPushService>().Received(1).PushSyncCipherUpdateAsync(cipherDetails, Array.Empty<Guid>());
     }
 
     [Theory]
@@ -1803,7 +1811,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value)
             .Returns(new OrganizationAbility
             {
@@ -1817,7 +1825,7 @@ public class CipherServiceTests
         Assert.Equal(cipherDetails.RevisionDate, cipherDetails.DeletedDate);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).UpsertAsync(cipherDetails);
         await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventAsync(cipherDetails, EventType.Cipher_SoftDeleted);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncCipherUpdateAsync(cipherDetails, null);
+        await sutProvider.GetDependency<ICipherSyncPushService>().Received(1).PushSyncCipherUpdateAsync(cipherDetails, Array.Empty<Guid>());
     }
 
     [Theory]
@@ -1834,7 +1842,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value)
             .Returns(new OrganizationAbility
             {
@@ -1848,7 +1856,7 @@ public class CipherServiceTests
         Assert.Contains("do not have permissions", exception.Message);
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().UpsertAsync(default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCipherEventAsync(default, default);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushSyncCipherUpdateAsync(default, default);
+        await sutProvider.GetDependency<ICipherSyncPushService>().DidNotReceiveWithAnyArgs().PushSyncCipherUpdateAsync(default, default);
     }
 
     [Theory]
@@ -1974,7 +1982,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>
             {
@@ -2023,7 +2031,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>
             {

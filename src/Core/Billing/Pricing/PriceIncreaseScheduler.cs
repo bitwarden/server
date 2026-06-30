@@ -12,6 +12,7 @@ using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using static Bit.Core.Billing.Constants.StripeConstants;
+using OrganizationPlan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Core.Billing.Pricing;
 
@@ -159,7 +160,7 @@ public class PriceIncreaseScheduler(
             return false;
         }
 
-        var phase2 = await ResolvePhase2ForBusinessAsync(subscription, cohort);
+        var phase2 = await ResolvePhase2ForBusinessAsync(subscription, cohort, organizationId);
         if (phase2 is null)
         {
             return false;
@@ -439,13 +440,9 @@ public class PriceIncreaseScheduler(
             return null;
         }
 
-        List<SubscriptionSchedulePhaseDiscountOptions> discounts = [..
-            subscription.Discounts?.Select(d => new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.Coupon.Id }) ?? []];
-
-        discounts.Add(new SubscriptionSchedulePhaseDiscountOptions
-        {
-            Coupon = CouponIDs.Milestone2SubscriptionDiscount
-        });
+        var discounts = (subscription.Customer?.Discount).MergeDiscountCouponIds(
+            subscription.Discounts?.Select(d => d.Coupon.Id),
+            CouponIDs.Milestone2SubscriptionDiscount).ToPhaseDiscountOptions();
 
         return new SubscriptionSchedulePhaseOptions
         {
@@ -494,16 +491,10 @@ public class PriceIncreaseScheduler(
             });
         }
 
-        List<SubscriptionSchedulePhaseDiscountOptions> discounts = [..
-            subscription.Discounts?.Select(d => new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.Coupon.Id }) ?? []];
-
-        if (oldPlan.Type == PlanType.FamiliesAnnually2019)
-        {
-            discounts.Add(new SubscriptionSchedulePhaseDiscountOptions
-            {
-                Coupon = CouponIDs.Milestone3SubscriptionDiscount
-            });
-        }
+        var discounts = (subscription.Customer?.Discount).MergeDiscountCouponIds(
+            subscription.Discounts?.Select(d => d.Coupon.Id),
+            oldPlan.Type == PlanType.FamiliesAnnually2019 ? CouponIDs.Milestone3SubscriptionDiscount : null)
+            .ToPhaseDiscountOptions();
 
         var startDate = subscription.GetCurrentPeriodEnd();
         if (startDate == null)
@@ -526,7 +517,8 @@ public class PriceIncreaseScheduler(
 
     private async Task<SubscriptionSchedulePhaseOptions?> ResolvePhase2ForBusinessAsync(
         Subscription subscription,
-        OrganizationPlanMigrationCohort cohort)
+        OrganizationPlanMigrationCohort cohort,
+        Guid organizationId)
     {
         // Stripe.NET deserializes an unexpanded "discounts" array as a list of null entries;
         // proceeding would silently drop pre-existing discounts from Phase 2.
@@ -558,6 +550,13 @@ public class PriceIncreaseScheduler(
         var sourcePlan = await pricingClient.GetPlanOrThrow(migrationPath.FromPlan);
         var targetPlan = await pricingClient.GetPlanOrThrow(migrationPath.ToPlan);
 
+        var targetSeatPriceId = targetPlan.PasswordManager.StripeSeatPlanId;
+
+        // Teams Starter and Teams 2019 are Packaged sources whose base line (and, for Teams 2019, the
+        // seat-overage line) collapse onto the Scalable target's single seat price at a usage-resolved
+        // quantity. Scalable sources preserve their line-item quantities.
+        var isPackagedSourcePlan = sourcePlan.IsPackagedMigrationSource(migrationPath.SeatCountPolicy);
+
         var items = new List<SubscriptionSchedulePhaseItemOptions>();
         foreach (var item in subscription.Items.Data)
         {
@@ -569,6 +568,13 @@ public class PriceIncreaseScheduler(
                     subscription.Id, item.Price.Id, migrationPath.Name);
                 return null;
             }
+
+            // Skip the packaged source's seat line(s) here; one collapsed seat line is added below.
+            if (isPackagedSourcePlan && targetPriceId == targetSeatPriceId)
+            {
+                continue;
+            }
+
             items.Add(new SubscriptionSchedulePhaseItemOptions
             {
                 Price = targetPriceId,
@@ -576,26 +582,19 @@ public class PriceIncreaseScheduler(
             });
         }
 
-        var discounts = new List<SubscriptionSchedulePhaseDiscountOptions>();
-
-        if (subscription.Customer?.Discount?.Coupon?.Id is { Length: > 0 } customerCouponId)
+        if (isPackagedSourcePlan)
         {
-            discounts.Add(new SubscriptionSchedulePhaseDiscountOptions { Coupon = customerCouponId });
-        }
-
-        if (subscription.Discounts is not null)
-        {
-            discounts.AddRange(subscription.Discounts.Select(d =>
-                new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.Coupon.Id }));
-        }
-
-        if (!string.IsNullOrEmpty(cohort.ProactiveDiscountCouponCode))
-        {
-            discounts.Add(new SubscriptionSchedulePhaseDiscountOptions
+            items.Add(new SubscriptionSchedulePhaseItemOptions
             {
-                Coupon = cohort.ProactiveDiscountCouponCode
+                Price = targetSeatPriceId,
+                Quantity = await CalculateTargetPlanSeatCountAsync(sourcePlan, organizationId)
             });
         }
+
+        // Merge de-duplicates, so a coupon on both the customer and the subscription isn't double-added.
+        var discounts = (subscription.Customer?.Discount).MergeDiscountCouponIds(
+            subscription.Discounts?.Select(d => d.Coupon.Id),
+            cohort.ProactiveDiscountCouponCode).ToPhaseDiscountOptions();
 
         if (subscription.GetCurrentPeriod() is not { Start: { } currentStart, End: { } currentEnd })
         {
@@ -618,6 +617,19 @@ public class PriceIncreaseScheduler(
     }
 
     /// <summary>
+    /// Resolves the billed Phase 2 seat count for a Packaged source from the organization's actual usage.
+    /// </summary>
+    private async Task<int> CalculateTargetPlanSeatCountAsync(OrganizationPlan sourcePlan, Guid organizationId)
+    {
+        // Packaged line items don't reflect the true total, so bill by actual usage. organization.Seats
+        // supplies the purchased count ResolveMigratedSeatCount uses for the seat-overage case.
+        var occupiedSeatCount = (await organizationRepository
+            .GetOccupiedSeatCountByOrganizationIdAsync(organizationId)).Total;
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+        return sourcePlan.ResolveMigratedSeatCount(occupiedSeatCount, organization?.Seats);
+    }
+
+    /// <summary>
     /// Coordinates the full organization scheduling flow. Resolves the organization, routes
     /// non-business plan types (personal, family, and 2019-era plans) to the personal scheduling
     /// path, then validates cohort eligibility before scheduling.
@@ -636,7 +648,8 @@ public class PriceIncreaseScheduler(
             return false;
         }
 
-        if (organization.PlanType.GetProductTier() is not (ProductTierType.Teams or ProductTierType.Enterprise))
+        if (organization.PlanType.GetProductTier() is not
+            (ProductTierType.Teams or ProductTierType.Enterprise or ProductTierType.TeamsStarter))
         {
             return await SchedulePersonalPriceIncrease(subscription);
         }
