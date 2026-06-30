@@ -1,7 +1,7 @@
-﻿using Bit.Services.Pam.Api.Endpoints.Filters;
-using Bit.Core;
+﻿using Bit.Core;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Models.Api;
+using Bit.Services.Pam.Api.Endpoints.Filters;
 
 namespace Bit.Services.Pam.Api.Endpoints;
 

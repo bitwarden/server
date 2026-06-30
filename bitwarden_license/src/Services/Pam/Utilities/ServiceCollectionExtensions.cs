@@ -1,6 +1,6 @@
-﻿using Bit.Services.Pam.Api.Endpoints;
+﻿using Bit.HttpExtensions;
+using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
-using Bit.HttpExtensions;
 
 namespace Bit.Services.Pam.Utilities;
 

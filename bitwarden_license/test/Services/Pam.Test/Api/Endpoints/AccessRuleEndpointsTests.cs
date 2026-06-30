@@ -1,8 +1,8 @@
-﻿using Bit.Services.Pam.Api.Endpoints;
+﻿using Bit.Core.Models.Api;
+using Bit.HttpExtensions;
+using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Api.Models.Response;
-using Bit.Core.Models.Api;
-using Bit.HttpExtensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Metadata;
