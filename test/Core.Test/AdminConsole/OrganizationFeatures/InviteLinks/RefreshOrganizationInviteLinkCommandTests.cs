@@ -30,7 +30,7 @@ public class RefreshOrganizationInviteLinkCommandTests
         var request = new RefreshOrganizationInviteLinkRequest
         {
             OrganizationId = organizationId,
-            EncryptedInviteKey = "new-encrypted-key-value",
+            Invite = "new-invite-blob-value",
         };
 
         var result = await sutProvider.Sut.RefreshAsync(request);
@@ -41,7 +41,8 @@ public class RefreshOrganizationInviteLinkCommandTests
         Assert.NotEqual(Guid.Empty, link.Id);
         Assert.NotEqual(existingLink.Id, link.Id);
         Assert.NotEqual(existingLink.Code, link.Code);
-        Assert.Equal(request.EncryptedInviteKey, link.EncryptedInviteKey);
+        Assert.Equal(request.Invite, link.Invite);
+        Assert.False(link.SupportsConfirmation);
         Assert.Equal(existingLink.AllowedDomains, link.AllowedDomains);
         Assert.Contains("acme.com", link.GetAllowedDomains());
         Assert.Contains("example.com", link.GetAllowedDomains());
@@ -64,7 +65,7 @@ public class RefreshOrganizationInviteLinkCommandTests
         var request = new RefreshOrganizationInviteLinkRequest
         {
             OrganizationId = organizationId,
-            EncryptedInviteKey = "some-encrypted-key",
+            Invite = "some-invite-blob",
         };
 
         var result = await sutProvider.Sut.RefreshAsync(request);
@@ -87,7 +88,7 @@ public class RefreshOrganizationInviteLinkCommandTests
         var request = new RefreshOrganizationInviteLinkRequest
         {
             OrganizationId = organizationId,
-            EncryptedInviteKey = "some-encrypted-key",
+            Invite = "some-invite-blob",
         };
 
         var result = await sutProvider.Sut.RefreshAsync(request);

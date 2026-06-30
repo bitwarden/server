@@ -25,7 +25,7 @@ public class CreateOrganizationInviteLinkCommandTests
         {
             OrganizationId = organizationId,
             AllowedDomains = ["acme.com", "example.com"],
-            EncryptedInviteKey = "encrypted-key-value",
+            Invite = "invite-blob-value",
         };
 
         var result = await sutProvider.Sut.CreateAsync(request);
@@ -35,7 +35,8 @@ public class CreateOrganizationInviteLinkCommandTests
         Assert.Equal(organizationId, link.OrganizationId);
         Assert.NotEqual(Guid.Empty, link.Id);
         Assert.NotEqual(Guid.Empty, link.Code);
-        Assert.Equal(request.EncryptedInviteKey, link.EncryptedInviteKey);
+        Assert.Equal(request.Invite, link.Invite);
+        Assert.False(link.SupportsConfirmation);
 
         var deserializedDomains = JsonSerializer.Deserialize<List<string>>(link.AllowedDomains);
         Assert.NotNull(deserializedDomains);
@@ -64,7 +65,7 @@ public class CreateOrganizationInviteLinkCommandTests
         {
             OrganizationId = organizationId,
             AllowedDomains = ["acme.com"],
-            EncryptedInviteKey = "encrypted-key",
+            Invite = "invite-blob",
         };
 
         var result = await sutProvider.Sut.CreateAsync(request);
@@ -88,7 +89,7 @@ public class CreateOrganizationInviteLinkCommandTests
         {
             OrganizationId = organizationId,
             AllowedDomains = [],
-            EncryptedInviteKey = "encrypted-key",
+            Invite = "invite-blob",
         };
 
         var result = await sutProvider.Sut.CreateAsync(request);
@@ -112,7 +113,7 @@ public class CreateOrganizationInviteLinkCommandTests
         {
             OrganizationId = organizationId,
             AllowedDomains = [" ", ""],
-            EncryptedInviteKey = "encrypted-key",
+            Invite = "invite-blob",
         };
 
         var result = await sutProvider.Sut.CreateAsync(request);
@@ -132,7 +133,7 @@ public class CreateOrganizationInviteLinkCommandTests
         {
             OrganizationId = organizationId,
             AllowedDomains = null!,
-            EncryptedInviteKey = "encrypted-key",
+            Invite = "invite-blob",
         };
 
         var result = await sutProvider.Sut.CreateAsync(request);
@@ -152,7 +153,7 @@ public class CreateOrganizationInviteLinkCommandTests
         {
             OrganizationId = organizationId,
             AllowedDomains = ["acme.com"],
-            EncryptedInviteKey = "encrypted-key",
+            Invite = "invite-blob",
         };
 
         var result = await sutProvider.Sut.CreateAsync(request);
@@ -178,7 +179,7 @@ public class CreateOrganizationInviteLinkCommandTests
         {
             OrganizationId = organizationId,
             AllowedDomains = ["acme.com"],
-            EncryptedInviteKey = "encrypted-key",
+            Invite = "invite-blob",
         };
 
         var result = await sutProvider.Sut.CreateAsync(request);
