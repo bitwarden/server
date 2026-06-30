@@ -56,7 +56,7 @@ public class ServerSdkCompatibilityExtensionsTests
 
         try
         {
-            var fakeProvider = new FakeLoggerProvider();
+            using var fakeProvider = new FakeLoggerProvider();
             using var provider = CreateProvider(
                 new Dictionary<string, string?>
                 {
@@ -80,7 +80,7 @@ public class ServerSdkCompatibilityExtensionsTests
     [Fact]
     public void FlagDataFilePath_FileMissing_DoesNotLog()
     {
-        var fakeProvider = new FakeLoggerProvider();
+        using var fakeProvider = new FakeLoggerProvider();
         using var provider = CreateProvider(
             new Dictionary<string, string?>
             {
