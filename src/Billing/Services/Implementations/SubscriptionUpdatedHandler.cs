@@ -655,7 +655,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
             var sourceSecretsManagerSeatPlanId = sourcePlan.SecretsManager?.StripeSeatPlanId;
             var previousSubscriptionHasSecretsManager = sourceSecretsManagerSeatPlanId != null &&
-                previousSubscription.Items.Data.Any(item => item.Plan?.Id == sourceSecretsManagerSeatPlanId);
+                previousSubscription.Items.Data.Any(item => item.Price?.Id == sourceSecretsManagerSeatPlanId);
 
             if (grace > 0 && previousSubscriptionHasSecretsManager)
             {
