@@ -9,6 +9,7 @@ using Bit.Core.Billing;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Extensions;
+using Bit.Core.Billing.Organizations.PlanMigration;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Pricing;
@@ -19,7 +20,6 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Stripe;
-using Stripe.TestHelpers;
 using static Bit.Core.Billing.Constants.StripeConstants;
 using Event = Stripe.Event;
 
@@ -322,10 +322,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     {
         await _priceIncreaseScheduler.Release(subscription.CustomerId, subscription.Id);
 
-        if (subscription.TestClock != null)
-        {
-            await WaitForTestClockToAdvanceAsync(subscription.TestClock);
-        }
+        await _stripeAdapter.WaitForTestClockToAdvanceAsync(subscription.TestClock);
 
         var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
 
@@ -439,19 +436,6 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         if (subscriptionHasSecretsManagerTrial)
         {
             await _stripeAdapter.DeleteSubscriptionDiscountAsync(subscription.Id);
-        }
-    }
-
-    private async Task WaitForTestClockToAdvanceAsync(TestClock testClock)
-    {
-        while (testClock.Status != "ready")
-        {
-            await Task.Delay(TimeSpan.FromSeconds(2));
-            testClock = await _stripeAdapter.GetTestClockAsync(testClock.Id);
-            if (testClock.Status == "internal_failure")
-            {
-                throw new Exception("Stripe Test Clock encountered an internal failure");
-            }
         }
     }
 
@@ -608,7 +592,14 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             }
 
             var sourcePlan = await _pricingClient.GetPlanOrThrow(migrationPath.FromPlan);
-            var sourcePriceId = GetPasswordManagerPriceId(sourcePlan);
+
+            // A Packaged source (Teams Starter via HasNonSeatBased, Teams 2019 via ActualUsage) is identified
+            // by its base price, which is present even when a sub-5 org has no seat-overage line; a Scalable
+            // source by its per-seat price.
+            var isPackagedSourcePlan = sourcePlan.IsPackagedMigrationSource(migrationPath.SeatCountPolicy);
+            var sourcePriceId = isPackagedSourcePlan
+                ? sourcePlan.PasswordManager.StripePlanId
+                : sourcePlan.PasswordManager.StripeSeatPlanId;
             if (string.IsNullOrEmpty(sourcePriceId))
             {
                 _logger.LogWarning(
@@ -647,8 +638,9 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
             organization.ChangePlan(targetPlan);
 
-            // Packaged sources (e.g. Teams Starter) store a flat bundle cap in Seats; reconcile to the billed per-seat quantity.
-            if (sourcePlan.HasNonSeatBasedPasswordManagerPlan())
+            // Packaged source plans (Teams Starter's flat bundle cap, Teams 2019's base seat allotment) store a
+            // seat count in Seats that doesn't match the billed per-seat quantity; reconcile to what was billed.
+            if (isPackagedSourcePlan)
             {
                 var billedSeatQuantity = subscription.Items
                     .First(item => item.Price?.Id == targetPriceId).Quantity;
@@ -667,6 +659,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 {
                     [MetadataKeys.MigrationGraceServiceAccounts] = grace.ToString(CultureInfo.InvariantCulture)
                 };
+
+                await _stripeAdapter.WaitForTestClockToAdvanceAsync(subscription.TestClock);
 
                 try
                 {

@@ -26,6 +26,7 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using NSubstitute.ReturnsExtensions;
 using Stripe;
+using Stripe.TestHelpers;
 using Xunit;
 using static Bit.Core.Billing.Constants.StripeConstants;
 using Event = Stripe.Event;
@@ -4048,6 +4049,117 @@ public class SubscriptionUpdatedHandlerTests
         Assert.NotNull(assignment.MigratedDate);
     }
 
+    // PM-39569 / PM-39286: in the test-clock-driven QA migration flow, Stripe rejects writes to a
+    // subscription whose test clock is still advancing. The handler must wait for the clock to settle
+    // BEFORE the grace write; otherwise the write 500s and the org is left plan-changed but with
+    // MigratedDate unstamped (stuck in "Scheduled"). The wait is a no-op in production (TestClock null).
+    [Fact]
+    public async Task HandleAsync_BusinessMigration_WithTestClock_WaitsForClockBeforeGraceWrite()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var teamsStarter2023 = new TeamsStarterPlan2023(); // source SM base 50
+        var teamsMonthly = new TeamsPlan(false);           // target SM base 20
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsStarter2023.PasswordManager.StripePlanId },
+                        Plan = new Plan { Id = teamsStarter2023.PasswordManager.StripePlanId }
+                    }
+                ]
+            }
+        };
+
+        var testClock = new TestClock { Id = "clock_advancing", Status = TestClockStatus.Ready };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_grace_testclock",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle },
+            TestClock = testClock
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.TeamsStarter2023,
+            Plan = teamsStarter2023.Name,
+            Seats = 10,
+            SmServiceAccounts = 50
+        };
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            CohortId = cohortId
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsStarter2023).Returns(teamsStarter2023);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthly);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "TeamsStarter2023",
+            MigrationPathId = MigrationPathId.TeamsStarter2023ToCurrent,
+            IsActive = true
+        });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — the handler waited on the subscription's test clock before writing grace metadata.
+        // The ordering is the regression guard: writing first is exactly what 500s the webhook.
+        await _stripeAdapter.Received(1).WaitForTestClockToAdvanceAsync(testClock);
+
+        Received.InOrder(() =>
+        {
+            _stripeAdapter.WaitForTestClockToAdvanceAsync(testClock);
+            _stripeAdapter.UpdateSubscriptionAsync(
+                subscription.Id,
+                Arg.Is<SubscriptionUpdateOptions>(options =>
+                    options.Metadata[MetadataKeys.MigrationGraceServiceAccounts] == "30"));
+        });
+
+        // And the migration completed: grace written + MigratedDate stamped (org -> Migrated).
+        Assert.NotNull(assignment.MigratedDate);
+    }
+
     // PM-37512: plain Teams Starter's SM baseline (20) already equals Teams Current's (20), so 20 - 20 = 0:
     // no grace metadata is written, but the migration still completes.
     [Fact]
@@ -4246,6 +4358,107 @@ public class SubscriptionUpdatedHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         // Assert — Seats reconciled to the billed seat line item quantity and persisted.
+        Assert.Equal((int)billedSeats, organization.Seats);
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
+            o.Id == organizationId &&
+            o.PlanType == PlanType.TeamsMonthly &&
+            o.Seats == (int)billedSeats));
+
+        Assert.NotNull(assignment.MigratedDate);
+    }
+
+    [Theory]
+    [InlineData(3)]
+    [InlineData(7)]
+    public async Task HandleAsync_BusinessMigration_Teams2019MonthlyToCurrent_ReconcilesSeatsToBilledQuantity(long billedSeats)
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var teams2019 = new Teams2019Plan(false); // packaged source: base + seat-overage prices
+        var teamsMonthly = new TeamsPlan(false);   // per-seat target
+
+        // The pre-migration (Phase 1) subscription carries only the flat base line — a sub-5 org has no
+        // overage line at all. Detection must find the source by its base price.
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teams2019.PasswordManager.StripePlanId },
+                        Plan = new Plan { Id = teams2019.PasswordManager.StripePlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_reconcile_t2019",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                        Quantity = billedSeats
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.TeamsMonthly2019,
+            Plan = teams2019.Name,
+            Seats = 5 // base allotment; reconciliation should overwrite this with the billed quantity
+        };
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            CohortId = cohortId
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2019).Returns(teams2019);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthly);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "Teams2019Monthly",
+            MigrationPathId = MigrationPathId.Teams2019MonthlyToCurrent,
+            IsActive = true
+        });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — handler did not bail (Gap A), plan-shape updated, and Seats reconciled to billed (Gap B).
         Assert.Equal((int)billedSeats, organization.Seats);
         await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
             o.Id == organizationId &&
