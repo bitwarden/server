@@ -12,12 +12,12 @@ using Xunit;
 namespace Bit.Commercial.Pam.Test.Api.Endpoints;
 
 /// <summary>
-/// Locks the access-rule wire contract that the generated OpenAPI spec — and the client bindings built from it —
+/// Locks the access-request wire contract that the generated OpenAPI spec — and the client bindings built from it —
 /// depend on. The endpoint bodies are scaffold stubs; the contract (routes, names, methods, return types) is the
 /// thing under test. Endpoints are materialized the same way the offline OpenAPI generator discovers them, via
 /// <see cref="StandaloneEndpointDataSource"/>.
 /// </summary>
-public class AccessRuleEndpointsTests
+public class AccessRequestEndpointsTests
 {
     private static List<RouteEndpoint> MaterializeEndpoints()
     {
@@ -36,23 +36,25 @@ public class AccessRuleEndpointsTests
     }
 
     [Fact]
-    public void MapPamEndpoints_RegistersTheFiveAccessRuleRoutes_InTheInternalDoc()
+    public void MapPamEndpoints_RegistersTheSevenAccessRequestRoutes_InTheInternalDoc()
     {
         var endpoints = MaterializeEndpoints()
-            .Where(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("AccessRules"))
+            .Where(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("AccessRequests"))
             .ToList();
 
-        Assert.Equal(5, endpoints.Count);
+        Assert.Equal(7, endpoints.Count);
         Assert.All(endpoints, endpoint =>
             Assert.Equal("internal", endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>()?.EndpointGroupName));
     }
 
     [Theory]
-    [InlineData("Pam_AccessRules_GetAll", "GET", "organizations/{orgId:guid}/access-rules")]
-    [InlineData("Pam_AccessRules_Get", "GET", "organizations/{orgId:guid}/access-rules/{id:guid}")]
-    [InlineData("Pam_AccessRules_Post", "POST", "organizations/{orgId:guid}/access-rules")]
-    [InlineData("Pam_AccessRules_Put", "PUT", "organizations/{orgId:guid}/access-rules/{id:guid}")]
-    [InlineData("Pam_AccessRules_Delete", "DELETE", "organizations/{orgId:guid}/access-rules/{id:guid}")]
+    [InlineData("Pam_AccessRequests_GetInbox", "GET", "access-requests/inbox")]
+    [InlineData("Pam_AccessRequests_GetHistory", "GET", "access-requests/history")]
+    [InlineData("Pam_AccessRequests_GetMine", "GET", "access-requests/mine")]
+    [InlineData("Pam_AccessRequests_GetDetails", "GET", "access-requests/{id:guid}")]
+    [InlineData("Pam_AccessRequests_Decide", "POST", "access-requests/{id:guid}/decision")]
+    [InlineData("Pam_AccessRequests_Activate", "POST", "access-requests/{id:guid}/activate")]
+    [InlineData("Pam_AccessRequests_Revoke", "POST", "access-requests/{id:guid}/revoke")]
     public void MapPamEndpoints_RegistersExpectedRoute(string name, string method, string route)
     {
         var endpoints = MaterializeEndpoints();
@@ -60,17 +62,17 @@ public class AccessRuleEndpointsTests
         var endpoint = Assert.Single(
             endpoints,
             e => e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == name);
-        // Trim slashes: the raw pattern carries routing's leading/trailing slashes (e.g. "/.../access-rules/")
+        // Trim slashes: the raw pattern carries routing's leading/trailing slashes (e.g. "/access-requests/inbox")
         // that the generated spec path does not.
         Assert.Equal(route, endpoint.RoutePattern.RawText?.Trim('/'));
         Assert.Contains(method, endpoint.Metadata.GetMetadata<HttpMethodMetadata>()!.HttpMethods);
     }
 
     [Fact]
-    public void AccessRuleGroup_DocumentsErrorResponseModel_For400And404()
+    public void AccessRequestGroup_DocumentsErrorResponseModel_For400And404()
     {
         var endpoint = MaterializeEndpoints()
-            .First(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("AccessRules"));
+            .First(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("AccessRequests"));
         var produces = endpoint.Metadata.GetOrderedMetadata<IProducesResponseTypeMetadata>();
 
         Assert.Contains(produces, p => p.StatusCode == StatusCodes.Status400BadRequest && p.Type == typeof(ErrorResponseModel));
@@ -78,14 +80,16 @@ public class AccessRuleEndpointsTests
     }
 
     [Theory]
-    [InlineData(nameof(AccessRuleEndpointsHandler.GetAll), typeof(Task<ListResponseModel<AccessRuleResponseModel>>))]
-    [InlineData(nameof(AccessRuleEndpointsHandler.Get), typeof(Task<AccessRuleResponseModel>))]
-    [InlineData(nameof(AccessRuleEndpointsHandler.Post), typeof(Task<AccessRuleResponseModel>))]
-    [InlineData(nameof(AccessRuleEndpointsHandler.Put), typeof(Task<AccessRuleResponseModel>))]
-    [InlineData(nameof(AccessRuleEndpointsHandler.Delete), typeof(Task))]
+    [InlineData(nameof(AccessRequestEndpointsHandler.GetInbox), typeof(Task<ListResponseModel<AccessRequestDetailsResponseModel>>))]
+    [InlineData(nameof(AccessRequestEndpointsHandler.GetHistory), typeof(Task<ListResponseModel<AccessRequestDetailsResponseModel>>))]
+    [InlineData(nameof(AccessRequestEndpointsHandler.GetMine), typeof(Task<ListResponseModel<AccessRequestDetailsResponseModel>>))]
+    [InlineData(nameof(AccessRequestEndpointsHandler.GetDetails), typeof(Task<AccessRequestDetailsResponseModel>))]
+    [InlineData(nameof(AccessRequestEndpointsHandler.Decide), typeof(Task<AccessRequestDetailsResponseModel>))]
+    [InlineData(nameof(AccessRequestEndpointsHandler.Activate), typeof(Task<AccessLeaseResponseModel>))]
+    [InlineData(nameof(AccessRequestEndpointsHandler.Revoke), typeof(Task))]
     public void Handler_HasExpectedReturnType(string methodName, Type expectedReturnType)
     {
-        var method = typeof(AccessRuleEndpointsHandler).GetMethod(methodName);
+        var method = typeof(AccessRequestEndpointsHandler).GetMethod(methodName);
 
         Assert.NotNull(method);
         Assert.Equal(expectedReturnType, method!.ReturnType);

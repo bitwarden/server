@@ -9,6 +9,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddCommercialPamServices(this IServiceCollection services)
     {
         // Minimal API endpoint handlers. The endpoints (see PamEndpointsExtensions) resolve these from DI.
+        services.AddScoped<AccessRequestEndpointsHandler>();
         services.AddScoped<AccessRuleEndpointsHandler>();
 
         services.AddPamOpenApiEndpointDataSource();
