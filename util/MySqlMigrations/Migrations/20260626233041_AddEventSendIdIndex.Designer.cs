@@ -4,6 +4,7 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20260626233041_AddEventSendIdIndex")]
+    partial class AddEventSendIdIndex
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -334,9 +337,6 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("UseOrganizationDomains")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<bool>("UsePam")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("UsePasswordManager")
@@ -1055,9 +1055,6 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("OrganizationId")
                         .IsUnique()
-                        .HasAnnotation("SqlServer:Clustered", false);
-
-                    b.HasIndex("CohortId", "CreationDate", "Id")
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("CohortId", "ScheduledDate", "MigratedDate")
