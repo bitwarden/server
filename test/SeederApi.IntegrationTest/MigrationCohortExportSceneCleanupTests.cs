@@ -1,10 +1,9 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.Services;
 using Bit.Seeder.Scenes;
 using Bit.SeederApi.Models.Request;
 using Duende.IdentityModel.Client;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;
 

@@ -1,5 +1,6 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Globalization;
+using AutoMapper;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Entities;
@@ -8,14 +9,13 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using LinqToDB.EntityFrameworkCore;
-using AutoMapper;
+using CoreCohort = Bit.Core.Billing.Organizations.PlanMigration.Entities.OrganizationPlanMigrationCohort;
+using CoreCohortAssignment = Bit.Core.Billing.Organizations.PlanMigration.Entities.OrganizationPlanMigrationCohortAssignment;
+using CoreOrganization = Bit.Core.AdminConsole.Entities.Organization;
 using EfCohort = Bit.Infrastructure.EntityFramework.Billing.Models.OrganizationPlanMigrationCohort;
 using EfCohortAssignment = Bit.Infrastructure.EntityFramework.Billing.Models.OrganizationPlanMigrationCohortAssignment;
 using EfOrganization = Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization;
 using EfPlayItem = Bit.Infrastructure.EntityFramework.Models.PlayItem;
-using CoreCohort = Bit.Core.Billing.Organizations.PlanMigration.Entities.OrganizationPlanMigrationCohort;
-using CoreCohortAssignment = Bit.Core.Billing.Organizations.PlanMigration.Entities.OrganizationPlanMigrationCohortAssignment;
-using CoreOrganization = Bit.Core.AdminConsole.Entities.Organization;
 using MigrationPath = Bit.Core.Billing.Organizations.PlanMigration.Enums.MigrationPathId;
 
 namespace Bit.Seeder.Scenes;
