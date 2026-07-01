@@ -1067,6 +1067,7 @@ public class AccountsControllerTests : IDisposable
     {
         // Arrange
         UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
+        _featureService.IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration).Returns(true);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
         _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
             .Returns(Task.CompletedTask);
@@ -1132,12 +1133,240 @@ public class AccountsControllerTests : IDisposable
     {
         // Arrange
         UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
+        _featureService.IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration).Returns(true);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
         _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
             .Returns(Task.FromException(new Exception("Setting password failed")));
 
         // Act & Assert
         await Assert.ThrowsAsync<Exception>(() => _sut.PostSetPasswordAsync(setInitialPasswordRequestModel));
+    }
+
+    // V1 encryption with new data types (transitional path — modern client carries MPAD/MPUD + legacy Keys, V2 MP JIT flag off)
+    // TODO: removal gated by https://bitwarden.atlassian.net/browse/PM-27327 (MP V2 JIT flag).
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_V1_NewClientMpJit_UsesMpadMpudValues_ShouldCallV1CommandAsync(
+        User user,
+        SetInitialPasswordRequestModel setInitialPasswordRequestModel)
+    {
+        // Arrange — modern MP JIT client: sends MPAD + MPUD + legacy Keys (no AccountKeys, no V2 flag).
+        // ToUser() should map KDF, wrapped user key, and salt from MPUD; legacy Keys?.ToUser sets the keypair.
+        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
+        setInitialPasswordRequestModel.AccountKeys = null;
+        setInitialPasswordRequestModel.Keys = new KeysRequestModel
+        {
+            PublicKey = "newPublicKey",
+            EncryptedPrivateKey = "newEncryptedPrivateKey"
+        };
+        user.PublicKey = null;
+        user.PrivateKey = null;
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
+                user,
+                setInitialPasswordRequestModel.MasterPasswordAuthentication.MasterPasswordAuthenticationHash,
+                setInitialPasswordRequestModel.MasterPasswordUnlock.MasterKeyWrappedUserKey,
+                setInitialPasswordRequestModel.OrgIdentifier)
+            .Returns(Task.FromResult(IdentityResult.Success));
+
+        // Act
+        await _sut.PostSetPasswordAsync(setInitialPasswordRequestModel);
+
+        // Assert — V1 command called with MPAD hash + MPUD wrapped key (not legacy MasterPasswordHash/Key)
+        await _setInitialMasterPasswordCommandV1.Received(1)
+            .SetInitialMasterPasswordAsync(
+                Arg.Is<User>(u => u == user),
+                Arg.Is<string>(s => s == setInitialPasswordRequestModel.MasterPasswordAuthentication.MasterPasswordAuthenticationHash),
+                Arg.Is<string>(s => s == setInitialPasswordRequestModel.MasterPasswordUnlock.MasterKeyWrappedUserKey),
+                Arg.Is<string>(s => s == setInitialPasswordRequestModel.OrgIdentifier));
+
+        // KDF mapped from MPUD
+        Assert.Equal(setInitialPasswordRequestModel.MasterPasswordHint, user.MasterPasswordHint);
+        Assert.Equal(setInitialPasswordRequestModel.MasterPasswordUnlock.Kdf.KdfType, user.Kdf);
+        Assert.Equal(setInitialPasswordRequestModel.MasterPasswordUnlock.Kdf.Iterations, user.KdfIterations);
+
+        // Public/private keys mapped from legacy Keys
+        Assert.Equal("newPublicKey", user.PublicKey);
+        Assert.Equal("newEncryptedPrivateKey", user.PrivateKey);
+
+        // V2 commands not called
+        await _finishSsoJitProvisionMasterPasswordCommand.DidNotReceiveWithAnyArgs()
+            .FinishProvisionAsync(Arg.Any<User>(), Arg.Any<SetInitialMasterPasswordDataModel>());
+        await _tdeSetPasswordCommand.DidNotReceiveWithAnyArgs()
+            .SetMasterPasswordAsync(Arg.Any<User>(), Arg.Any<SetInitialMasterPasswordDataModel>());
+    }
+
+    // Modern TDE request (MPAD + MPUD, no keys) routes to _tdeSetPasswordCommand regardless of
+    // any feature flag — V2RegistrationTDEJIT governs SSO+TDE registration, not set-password.
+    // The TDE command sets the master password without mutating the user's existing keypair.
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_ModernTde_RoutesToTdeCommand_DoesNotMutateExistingKeysAsync(
+        User user,
+        SetInitialPasswordRequestModel setInitialPasswordRequestModel)
+    {
+        // Arrange — modern TDE client: sends MPAD + MPUD with both AccountKeys and Keys null.
+        // No V2 TDE flag stub; the routing should not depend on the flag.
+        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel, includeTdeSetPassword: true);
+
+        const string existingPublicKey = "tdeUserExistingPublicKey";
+        const string existingPrivateKey = "tdeUserExistingPrivateKey";
+        user.PublicKey = existingPublicKey;
+        user.PrivateKey = existingPrivateKey;
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _tdeSetPasswordCommand.SetMasterPasswordAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _sut.PostSetPasswordAsync(setInitialPasswordRequestModel);
+
+        // Assert — TDE command called with the model data
+        await _tdeSetPasswordCommand.Received(1)
+            .SetMasterPasswordAsync(
+                Arg.Is<User>(u => u == user),
+                Arg.Is<SetInitialMasterPasswordDataModel>(d =>
+                    d.MasterPasswordAuthentication != null &&
+                    d.MasterPasswordUnlock != null &&
+                    d.AccountKeys == null &&
+                    d.OrgSsoIdentifier == setInitialPasswordRequestModel.OrgIdentifier));
+
+        // Existing keypair preserved (TDE command doesn't touch keys)
+        Assert.Equal(existingPublicKey, user.PublicKey);
+        Assert.Equal(existingPrivateKey, user.PrivateKey);
+
+        // Other commands not called
+        await _finishSsoJitProvisionMasterPasswordCommand.DidNotReceiveWithAnyArgs()
+            .FinishProvisionAsync(Arg.Any<User>(), Arg.Any<SetInitialMasterPasswordDataModel>());
+        await _setInitialMasterPasswordCommandV1.DidNotReceiveWithAnyArgs()
+            .SetInitialMasterPasswordAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    // Defensive guard: V1 path cannot consume AccountKeys (the new key shape). A request that
+    // carries AccountKeys must be routed through V2; if it lands on V1 (e.g., V2 MP JIT flag off
+    // while a non-Angular caller posted AccountKeys), fail loudly instead of silently dropping the keypair.
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_V1_WithAccountKeys_ShouldThrowBadRequestAsync(
+        User user,
+        SetInitialPasswordRequestModel setInitialPasswordRequestModel)
+    {
+        // Arrange — V2-shape model (MPAD + MPUD + AccountKeys), V2 MP JIT flag left OFF.
+        // Routes past the V2 MP JIT branch (flag off), then the V1 defensive guard fires.
+        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => _sut.PostSetPasswordAsync(setInitialPasswordRequestModel));
+        Assert.Contains("V2 encryption is not enabled", exception.Message);
+
+        // V1 command must NOT be invoked when the defensive guard rejects the request
+        await _setInitialMasterPasswordCommandV1.DidNotReceiveWithAnyArgs()
+            .SetInitialMasterPasswordAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    // MasterPasswordSalt column must never be null/empty after a successful password-set operation.
+    // Modern clients send a salt via MPUD; ToUser should persist that exact value.
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_V1_NewClient_PersistsMpudSaltAsync(
+        User user,
+        SetInitialPasswordRequestModel setInitialPasswordRequestModel)
+    {
+        // Arrange — modern MP JIT client: MPAD + MPUD + legacy Keys (no AccountKeys)
+        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
+        setInitialPasswordRequestModel.AccountKeys = null;
+        setInitialPasswordRequestModel.Keys = new KeysRequestModel
+        {
+            PublicKey = "newPublicKey",
+            EncryptedPrivateKey = "newEncryptedPrivateKey"
+        };
+        user.PublicKey = null;
+        user.PrivateKey = null;
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
+                Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+            .Returns(Task.FromResult(IdentityResult.Success));
+
+        // Act
+        await _sut.PostSetPasswordAsync(setInitialPasswordRequestModel);
+
+        // Assert — user.MasterPasswordSalt matches the MPUD-provided salt
+        Assert.Equal(setInitialPasswordRequestModel.MasterPasswordUnlock.Salt, user.MasterPasswordSalt);
+        Assert.False(string.IsNullOrEmpty(user.MasterPasswordSalt));
+    }
+
+    // For older clients that don't send MPUD, MasterPasswordSalt falls back to the email-derived
+    // V1 salt (email.ToLowerInvariant().Trim()) so the column is never null after a successful set.
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_V1_OldClient_PersistsEmailDerivedSaltAsync(
+        User user,
+        SetInitialPasswordRequestModel setInitialPasswordRequestModel)
+    {
+        // Arrange — legacy-only request shape (no MPAD/MPUD)
+        UpdateSetInitialPasswordRequestModelToV1(setInitialPasswordRequestModel);
+        user.Email = "User@Example.COM ";
+        user.MasterPasswordSalt = null;
+        user.PublicKey = null;
+        user.PrivateKey = null;
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
+                Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+            .Returns(Task.FromResult(IdentityResult.Success));
+
+        // Act
+        await _sut.PostSetPasswordAsync(setInitialPasswordRequestModel);
+
+        // Assert — salt is the email-derived V1 salt (lowercased and trimmed)
+        Assert.Equal("user@example.com", user.MasterPasswordSalt);
+    }
+
+    // Regression test for the V2 MP JIT routing fix: when the V2 MP JIT flag is ON but the request
+    // shape is modern V1 MP JIT (MPAD + MPUD + legacy Keys, no AccountKeys), the V2 MP JIT branch
+    // should NOT fire — its predicate requires AccountKeys != null. The request must fall through to V1.
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_ModernV1MpJit_WithV2MpJitFlagOn_StillRoutesToV1Async(
+        User user,
+        SetInitialPasswordRequestModel setInitialPasswordRequestModel)
+    {
+        // Arrange — modern V1 MP JIT shape: MPAD + MPUD + legacy Keys (no AccountKeys).
+        // V2 MP JIT flag ON to ensure the tightened predicate is what gates the V2 branch.
+        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
+        setInitialPasswordRequestModel.AccountKeys = null;
+        setInitialPasswordRequestModel.Keys = new KeysRequestModel
+        {
+            PublicKey = "newPublicKey",
+            EncryptedPrivateKey = "newEncryptedPrivateKey"
+        };
+        user.PublicKey = null;
+        user.PrivateKey = null;
+
+        _featureService.IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration).Returns(true);
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
+                Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+            .Returns(Task.FromResult(IdentityResult.Success));
+
+        // Act
+        await _sut.PostSetPasswordAsync(setInitialPasswordRequestModel);
+
+        // Assert — V1 command invoked, V2 MP JIT command NOT invoked
+        await _setInitialMasterPasswordCommandV1.Received(1)
+            .SetInitialMasterPasswordAsync(
+                Arg.Is<User>(u => u == user),
+                Arg.Is<string>(s => s == setInitialPasswordRequestModel.MasterPasswordAuthentication.MasterPasswordAuthenticationHash),
+                Arg.Is<string>(s => s == setInitialPasswordRequestModel.MasterPasswordUnlock.MasterKeyWrappedUserKey),
+                Arg.Is<string>(s => s == setInitialPasswordRequestModel.OrgIdentifier));
+
+        await _finishSsoJitProvisionMasterPasswordCommand.DidNotReceiveWithAnyArgs()
+            .FinishProvisionAsync(Arg.Any<User>(), Arg.Any<SetInitialMasterPasswordDataModel>());
     }
 
     private void UpdateSetInitialPasswordRequestModelToV1(SetInitialPasswordRequestModel model)
