@@ -17,15 +17,14 @@ Before starting, read these files to understand the current state:
 - `util/RustSdk/rust/Cargo.toml` — current rev pins
 - `util/RustSdk/rust/src/*.rs` — current API usage
 - `.claude/skills/bump-rust-sdk/references/api-surface.md` — documented API surface
-- `.claude/skills/bump-rust-sdk/references/methodology.md` — detailed process
 
 ## Execution
 
 Follow the skill's process in order:
 
 1. **Identify target** — Find the `@bitwarden/sdk-internal` NPM version at the release tag
-2. **Map to git SHA** — Query the GitHub Actions API for the publish workflow run number
-3. **Analyze breaking changes** — Compare old rev to new rev across the three crates, using the API surface reference
+2. **Map to git SHA** — Read the `main (<short-sha>)` baked into `bitwarden_wasm_internal_bg.wasm` in the published npm tarball, then `git rev-parse` it (not the GitHub Actions run number — that method is gone)
+3. **Analyze breaking changes** — Compare old rev to new rev for `bitwarden-crypto`, using the API surface reference
 4. **Apply changes** — Update Cargo.toml, fix compilation errors, handle deprecations
 5. **Build and verify** — `cargo build`, `cargo test`, `dotnet test test/SeederApi.IntegrationTest/`, `cargo fmt --check`
 6. **Human verification** — Present the SeederUtility and SeederApi test commands to the human. **Do NOT run these yourself.** Wait for the human to confirm.
@@ -33,7 +32,6 @@ Follow the skill's process in order:
 
 ## Important Rules
 
-- All three crate rev pins MUST be the same SHA
 - Do NOT make unrelated formatting or style changes to the Rust source files
 - Do NOT run SeederUtility or SeederApi yourself — the human performs all end-to-end testing
 - Do NOT skip the API surface regeneration step — a Stop hook will block if it is missed
