@@ -689,10 +689,6 @@ public class StripePaymentService : IStripePaymentService
             {
                 Customer = subscriber.GatewayCustomerId,
                 Subscription = subscriber.GatewaySubscriptionId,
-                SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
-                {
-                    BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic }
-                }
             };
 
             var upcomingInvoice = await _stripeAdapter.CreateInvoicePreviewAsync(invoiceCreatePreviewOptions);

@@ -203,10 +203,6 @@ public class GetBitwardenSubscriptionQuery(
             else
             {
                 options.Subscription = subscription.Id;
-                options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
-                {
-                    BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = BillingMode.Classic }
-                };
             }
 
             var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
