@@ -21,6 +21,9 @@ CREATE TABLE [dbo].[AccessRule] (
 );
 GO
 
+-- Filtered to live rules only: a soft-deleted rule (DeletedDate IS NOT NULL) releases its name, so a rule can be
+-- deleted and another created with the same name, while active rules stay unique per organization.
 CREATE UNIQUE NONCLUSTERED INDEX [IX_AccessRule_OrganizationId_Name]
-    ON [dbo].[AccessRule] ([OrganizationId] ASC, [Name] ASC);
+    ON [dbo].[AccessRule] ([OrganizationId] ASC, [Name] ASC)
+    WHERE [DeletedDate] IS NULL;
 GO
