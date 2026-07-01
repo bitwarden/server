@@ -557,6 +557,11 @@ public class PriceIncreaseScheduler(
         // quantity. Scalable sources preserve their line-item quantities.
         var isPackagedSourcePlan = sourcePlan.IsPackagedMigrationSource(migrationPath.SeatCountPolicy);
 
+        // Captured while iterating below: the billed SM seat line quantity used to floor the collapsed PM
+        // seat line (keep SM <= PM). Matched on the source SM seat price id, distinct from the SM
+        // service-account line. Stays 0 when there is no SM seat line.
+        var secretsManagerSeatQuantity = 0L;
+
         var items = new List<SubscriptionSchedulePhaseItemOptions>();
         foreach (var item in subscription.Items.Data)
         {
@@ -567,6 +572,11 @@ public class PriceIncreaseScheduler(
                     "Subscription ({SubscriptionId}) line item price ({PriceId}) has no mapping in migration path {PathName}; skipping schedule",
                     subscription.Id, item.Price.Id, migrationPath.Name);
                 return null;
+            }
+
+            if (sourcePlan.SecretsManager is not null && item.Price.Id == sourcePlan.SecretsManager.StripeSeatPlanId)
+            {
+                secretsManagerSeatQuantity = item.Quantity;
             }
 
             // Skip the packaged source's seat line(s) here; one collapsed seat line is added below.
@@ -587,7 +597,7 @@ public class PriceIncreaseScheduler(
             items.Add(new SubscriptionSchedulePhaseItemOptions
             {
                 Price = targetSeatPriceId,
-                Quantity = await CalculateTargetPlanSeatCountAsync(sourcePlan, organizationId)
+                Quantity = await CalculatePasswordManagerSeatCountAsync(sourcePlan, organizationId, secretsManagerSeatQuantity)
             });
         }
 
@@ -617,16 +627,27 @@ public class PriceIncreaseScheduler(
     }
 
     /// <summary>
-    /// Resolves the billed Phase 2 seat count for a Packaged source from the organization's actual usage.
+    /// Resolves the billed Password Manager seat count for a Packaged source from the organization's actual
+    /// usage, floored at the Stripe Secrets Manager seat line quantity to keep SM &lt;= PM.
     /// </summary>
-    private async Task<int> CalculateTargetPlanSeatCountAsync(OrganizationPlan sourcePlan, Guid organizationId)
+    private async Task<int> CalculatePasswordManagerSeatCountAsync(
+        OrganizationPlan sourcePlan, Guid organizationId, long secretsManagerSeatQuantity)
     {
-        // Packaged line items don't reflect the true total, so bill by actual usage. organization.Seats
-        // supplies the purchased count ResolveMigratedSeatCount uses for the seat-overage case.
+        // Packaged line items don't reflect the true total; bill by actual usage.
         var occupiedSeatCount = (await organizationRepository
             .GetOccupiedSeatCountByOrganizationIdAsync(organizationId)).Total;
         var organization = await organizationRepository.GetByIdAsync(organizationId);
-        return sourcePlan.ResolveMigratedSeatCount(occupiedSeatCount, organization?.Seats);
+        var passwordManagerSeatCount = sourcePlan.ResolveMigratedSeatCount(occupiedSeatCount, organization?.Seats);
+
+        // Floor on the billed Stripe line, not DB SmSeats, so Stripe billing stays correct under drift; log drift.
+        if (secretsManagerSeatQuantity != (organization?.SmSeats ?? 0))
+        {
+            logger.LogWarning(
+                "Secrets Manager seat drift for organization ({OrganizationId}) during business migration: Stripe SM seat line quantity ({StripeSecretsManagerSeats}) does not match Organization.SmSeats ({OrganizationSecretsManagerSeats}); flooring billed Password Manager seats on the Stripe line",
+                organizationId, secretsManagerSeatQuantity, organization?.SmSeats ?? 0);
+        }
+
+        return (int)Math.Max((long)passwordManagerSeatCount, secretsManagerSeatQuantity);
     }
 
     /// <summary>
