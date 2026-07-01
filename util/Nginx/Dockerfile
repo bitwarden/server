@@ -5,8 +5,7 @@ LABEL com.bitwarden.product="bitwarden"
 
 ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
 
-RUN apk add --no-cache curl \
-    shadow \
+RUN apk add --no-cache shadow \
     && apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community gosu 
 
 COPY util/Nginx/nginx.conf /etc/nginx
@@ -23,6 +22,6 @@ EXPOSE 8443
 RUN chmod +x /entrypoint.sh \
     && chmod +x /logrotate.sh
 
-HEALTHCHECK CMD curl --insecure -Lfs https://localhost:8443/alive || curl -Lfs http://localhost:8080/alive || exit 1
+HEALTHCHECK CMD wget --quiet --tries=1 --no-check-certificate --output-document=/dev/null https://localhost:8443/alive || wget --quiet --tries=1 --output-document=/dev/null http://localhost:8080/alive || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]
