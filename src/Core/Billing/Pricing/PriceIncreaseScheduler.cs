@@ -21,9 +21,8 @@ public interface IPriceIncreaseScheduler
     /// <summary>
     /// Creates a two-phase subscription schedule that defers a Premium/Families price increase
     /// to the subscription's renewal date. Phase 1 echoes the current subscription state;
-    /// Phase 2 applies the new price (and discount where applicable). Gated behind the
-    /// <c>PM32645_DeferPriceMigrationToRenewal</c> feature flag. No-ops if the flag is off,
-    /// an active schedule already exists, or the subscription does not match a known personal
+    /// Phase 2 applies the new price (and discount where applicable). No-ops if an active
+    /// schedule already exists, or the subscription does not match a known personal
     /// migration path.
     /// </summary>
     /// <param name="subscription">The Stripe subscription to schedule a price increase for.</param>
@@ -92,11 +91,6 @@ public class PriceIncreaseScheduler(
 {
     public async Task<bool> SchedulePersonalPriceIncrease(Subscription subscription)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
-        {
-            return false;
-        }
-
         if (await ActiveScheduleExistsAsync(subscription))
         {
             return false;
@@ -351,11 +345,6 @@ public class PriceIncreaseScheduler(
 
     private async Task<SubscriptionSchedulePhaseOptions?> ResolvePersonalPhase2Async(Subscription subscription)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
-        {
-            return null;
-        }
-
         // Stripe.NET deserializes an unexpanded "discounts" array as a list of null entries;
         // proceeding would silently drop pre-existing discounts from Phase 2.
         if (subscription.Discounts is { Count: > 0 } && subscription.Discounts.Any(d => d == null))
