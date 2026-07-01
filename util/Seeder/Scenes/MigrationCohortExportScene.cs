@@ -192,11 +192,8 @@ public class MigrationCohortExportScene(
     }
 
     private static List<CoreCohortAssignment> BuildAssignments(
-        IEnumerable<CoreOrganization> organizations, Guid cohortId)
-    {
-        var assignments = new List<CoreCohortAssignment>();
-
-        foreach (var org in organizations)
+        IEnumerable<CoreOrganization> organizations, Guid cohortId) =>
+        organizations.Select(org =>
         {
             // CreationDate defaults to DateTime.UtcNow at construction and is not settable here, so
             // assignments in one bulk batch share a near-identical value. RevisionDate is settable, so
@@ -208,11 +205,8 @@ public class MigrationCohortExportScene(
             };
             assignment.RevisionDate = assignment.CreationDate;
             assignment.SetNewId();
-            assignments.Add(assignment);
-        }
-
-        return assignments;
-    }
+            return assignment;
+        }).ToList();
 
     /// <summary>
     /// Bulk-inserts a <see cref="PlayItem"/> row per organization when the request is part of a play
