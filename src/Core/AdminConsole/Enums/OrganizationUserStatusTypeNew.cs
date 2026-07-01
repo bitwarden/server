@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Entities;
 
-namespace Bit.Core.Enums;
+namespace Bit.Core.AdminConsole.Enums;
 
 /// <summary>
 /// Represents the different stages of a member's lifecycle in an organization.
@@ -14,4 +14,5 @@ public enum OrganizationUserStatusTypeNew : short
     Invited = 0,
     Accepted = 1,
     Confirmed = 2,
+    Staged = 3,
 }

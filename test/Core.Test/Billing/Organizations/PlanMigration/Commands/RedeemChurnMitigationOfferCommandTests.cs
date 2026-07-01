@@ -208,7 +208,7 @@ public class RedeemChurnMitigationOfferCommandTests
     }
 
     [Fact]
-    public async Task Run_MigrationCohort_CustomerLevelDiscount_NotMirroredIntoPhase2Discounts()
+    public async Task Run_MigrationCohort_CustomerLevelDiscount_IsMirroredIntoPhase2Discounts_StacksWithChurnCoupon()
     {
         var organization = CreateOrganization();
         SetupOfferEligible();
@@ -227,7 +227,33 @@ public class RedeemChurnMitigationOfferCommandTests
             "sub_sched_123",
             Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
                 opts.Phases[1].Discounts != null &&
-                opts.Phases[1].Discounts.All(d => d.Coupon != "customer-level-coupon")));
+                opts.Phases[1].Discounts.Any(d => d.Coupon == "customer-level-coupon") &&
+                opts.Phases[1].Discounts.Any(d => d.Coupon == ChurnCouponCode)));
+    }
+
+    [Fact]
+    public async Task Run_MigrationCohort_CustomerDiscount_NotAddedToPhase1()
+    {
+        var organization = CreateOrganization();
+        SetupOfferEligible();
+        SetupMigrationCohortAssignment(organization);
+
+        var subscription = CreateSubscription(customerDiscount: new Discount
+        {
+            Source = new DiscountSource { Coupon = new Coupon { Id = "customer-level-coupon" } }
+        });
+        SetupGetSubscription(organization, subscription);
+        SetupActiveScheduleWithTwoPhases(subscription);
+
+        await _command.Run(organization);
+
+        // Phase 1 is the active phase; the customer coupon must NOT be injected there (it would
+        // re-stack on the already-billed period). It only reaches the future Phase 2.
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sub_sched_123",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.Phases[0].Discounts == null ||
+                opts.Phases[0].Discounts.All(d => d.Coupon != "customer-level-coupon")));
     }
 
     [Fact]
@@ -330,7 +356,7 @@ public class RedeemChurnMitigationOfferCommandTests
     }
 
     [Fact]
-    public async Task Run_ChurnOnlyCohort_CustomerLevelDiscount_NotMirroredIntoSubscriptionDiscounts()
+    public async Task Run_ChurnOnlyCohort_CustomerLevelDiscount_IsMirroredIntoSubscriptionDiscounts_StacksWithChurnCoupon()
     {
         var organization = CreateOrganization();
         SetupOfferEligible();
@@ -347,7 +373,115 @@ public class RedeemChurnMitigationOfferCommandTests
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             subscription.Id,
             Arg.Is<SubscriptionUpdateOptions>(opts =>
-                opts.Discounts.All(d => d.Coupon != "customer-level-coupon")));
+                opts.Discounts.Any(d => d.Coupon == "customer-level-coupon") &&
+                opts.Discounts.Any(d => d.Coupon == ChurnCouponCode)));
+    }
+
+    [Fact]
+    public async Task Run_ChurnOnlyCohort_CustomerDiscountAlsoOnSubscription_NotDoubleAdded()
+    {
+        var organization = CreateOrganization();
+        SetupOfferEligible();
+        SetupChurnOnlyCohortAssignment(organization);
+
+        var subscription = CreateSubscription(customerDiscount: new Discount
+        {
+            Source = new DiscountSource { Coupon = new Coupon { Id = "shared-coupon" } }
+        });
+        // The same coupon id is already present on the subscription's discounts.
+        subscription.Discounts = [new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "shared-coupon" } } }];
+        SetupGetSubscription(organization, subscription);
+
+        await _command.Run(organization);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            subscription.Id,
+            Arg.Is<SubscriptionUpdateOptions>(opts =>
+                opts.Discounts.Count(d => d.Coupon == "shared-coupon") == 1 &&
+                opts.Discounts.Any(d => d.Coupon == ChurnCouponCode)));
+    }
+
+    [Fact]
+    public async Task Run_ChurnOnlyCohort_25PercentForeverCustomer_Plus15PercentOnceChurn_BothStacked()
+    {
+        // PM-38422 repro at the command layer: the 25%-off-forever customer discount must stack with
+        // the 15%-off-once churn coupon, customer coupon first. (Dollar math validated via §6 test clocks.)
+        var organization = CreateOrganization();
+        SetupOfferEligible();
+        SetupChurnOnlyCohortAssignment(organization);
+
+        var subscription = CreateSubscription(customerDiscount: new Discount
+        {
+            Source = new DiscountSource { Coupon = new Coupon { Id = "forever-25" } }
+        });
+        subscription.Discounts = [];
+        SetupGetSubscription(organization, subscription);
+
+        await _command.Run(organization);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            subscription.Id,
+            Arg.Is<SubscriptionUpdateOptions>(opts =>
+                opts.Discounts.Count == 2 &&
+                opts.Discounts[0].Coupon == "forever-25" &&
+                opts.Discounts[1].Coupon == ChurnCouponCode));
+    }
+
+    [Fact]
+    public async Task Run_ChurnOnlyCohort_AlreadyRedeemed_CustomerDiscountStillShadowed_HealsOnRetry()
+    {
+        // H1 self-heal: churn coupon already applied (prior redeem) but the customer coupon still
+        // shadowed — the merged-set guard must NOT short-circuit; the update runs and adds it.
+        var organization = CreateOrganization();
+        SetupOfferEligible();
+        SetupChurnOnlyCohortAssignment(organization);
+
+        var subscription = CreateSubscription(customerDiscount: new Discount
+        {
+            Source = new DiscountSource { Coupon = new Coupon { Id = "customer-level-coupon" } }
+        });
+        subscription.Discounts = [new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = ChurnCouponCode } } }];
+        SetupGetSubscription(organization, subscription);
+
+        await _command.Run(organization);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            subscription.Id,
+            Arg.Is<SubscriptionUpdateOptions>(opts =>
+                opts.Discounts.Any(d => d.Coupon == "customer-level-coupon") &&
+                opts.Discounts.Any(d => d.Coupon == ChurnCouponCode)));
+    }
+
+    [Fact]
+    public async Task Run_ChurnOnlyCohort_MergedSetEqualsCurrent_NoStripeCall_PreservesAppliedDate()
+    {
+        // A true no-op (merged == current): churn coupon AND customer coupon already both present
+        // on the subscription. The Stripe call is skipped and ChurnDiscountAppliedDate is preserved.
+        var organization = CreateOrganization();
+        SetupOfferEligible();
+        var assignment = SetupChurnOnlyCohortAssignment(organization);
+        var originalAppliedDate = DateTime.UtcNow.AddDays(-3);
+        assignment.ChurnDiscountAppliedDate = originalAppliedDate;
+
+        var subscription = CreateSubscription(customerDiscount: new Discount
+        {
+            Source = new DiscountSource { Coupon = new Coupon { Id = "customer-level-coupon" } }
+        });
+        subscription.Discounts =
+        [
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "customer-level-coupon" } } },
+            new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = ChurnCouponCode } } }
+        ];
+        SetupGetSubscription(organization, subscription);
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.Success);
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+        await _assignmentRepository.DidNotReceive().ReplaceAsync(
+            Arg.Any<OrganizationPlanMigrationCohortAssignment>());
+        Assert.Equal(originalAppliedDate, assignment.ChurnDiscountAppliedDate);
     }
 
     [Fact]
@@ -583,6 +717,7 @@ public class RedeemChurnMitigationOfferCommandTests
         _getOfferQuery.Run(Arg.Any<Organization>()).Returns(new ChurnMitigationOfferResult(
             CouponId: ChurnCouponCode,
             PercentOff: 15m,
+            AmountOff: null,
             Duration: "once",
             DurationInMonths: null,
             Name: "Churn 15% off"));

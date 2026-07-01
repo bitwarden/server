@@ -5,6 +5,7 @@ using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
@@ -218,6 +219,57 @@ public class PriceIncreaseSchedulerTests
     }
 
     [Fact]
+    public async Task SchedulePersonalPriceIncrease_Premium_CarriesCustomerDiscountIntoPhase2_WithMilestone2()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        var oldPremium = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            Seat = new Purchasable { StripePriceId = "premium-old-seat", Price = 10, Provided = 1 },
+            Storage = new Purchasable { StripePriceId = "premium-old-storage", Price = 4, Provided = 1 }
+        };
+
+        var newPremium = new PremiumPlan
+        {
+            Name = "Premium",
+            Available = true,
+            Seat = new Purchasable { StripePriceId = "premium-new-seat", Price = 15, Provided = 1 },
+            Storage = new Purchasable { StripePriceId = "premium-new-storage", Price = 4, Provided = 1 }
+        };
+
+        _pricingClient.ListPremiumPlans().Returns([oldPremium, newPremium]);
+
+        var subscription = CreateSubscription("sub_1", "cus_1",
+            CreateSubscriptionItem("premium-old-seat", 1));
+        subscription.Customer = new Customer
+        {
+            Id = "cus_1",
+            Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } }
+        };
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+
+        var sut = CreateSut();
+
+        await sut.SchedulePersonalPriceIncrease(subscription);
+
+        // Customer-level discount is carried into Phase 2 first, then the milestone coupon stacks.
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sched_1",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases.Count == 2 &&
+                o.Phases[1].Discounts.Count == 2 &&
+                o.Phases[1].Discounts[0].Coupon == "retention" &&
+                o.Phases[1].Discounts[1].Coupon == CouponIDs.Milestone2SubscriptionDiscount));
+    }
+
+    [Fact]
     public async Task SchedulePersonalPriceIncrease_PremiumSubscriptionWithStorage_IncludesStorageInPhase2()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
@@ -345,6 +397,93 @@ public class PriceIncreaseSchedulerTests
                 o.Phases[1].Discounts.Count == 2 &&
                 o.Phases[1].Discounts[0].Coupon == "existing-partner-discount" &&
                 o.Phases[1].Discounts[1].Coupon == CouponIDs.Milestone3SubscriptionDiscount));
+    }
+
+    [Fact]
+    public async Task SchedulePersonalPriceIncrease_Families2019_CarriesCustomerDiscountIntoPhase2_WithMilestone3()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        _pricingClient.ListPremiumPlans().Returns([]);
+
+        var families2019 = MockPlans.Get(PlanType.FamiliesAnnually2019);
+        var families2025 = MockPlans.Get(PlanType.FamiliesAnnually2025);
+        var familiesTarget = MockPlans.Get(PlanType.FamiliesAnnually);
+
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesTarget);
+
+        var orgMetadata = new Dictionary<string, string> { { "organizationId", Guid.NewGuid().ToString() } };
+        var subscription = CreateSubscription("sub_1", "cus_1", orgMetadata,
+            CreateSubscriptionItem(families2019.PasswordManager.StripePlanId, 1));
+        subscription.Customer = new Customer
+        {
+            Id = "cus_1",
+            Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } }
+        };
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+
+        var sut = CreateSut();
+
+        await sut.SchedulePersonalPriceIncrease(subscription);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sched_1",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases.Count == 2 &&
+                o.Phases[1].Discounts.Count == 2 &&
+                o.Phases[1].Discounts[0].Coupon == "retention" &&
+                o.Phases[1].Discounts[1].Coupon == CouponIDs.Milestone3SubscriptionDiscount));
+    }
+
+    [Fact]
+    public async Task SchedulePersonalPriceIncrease_Families2025_CarriesCustomerDiscountIntoPhase2_NoMilestone()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        _pricingClient.ListPremiumPlans().Returns([]);
+
+        var families2019 = MockPlans.Get(PlanType.FamiliesAnnually2019);
+        var families2025 = MockPlans.Get(PlanType.FamiliesAnnually2025);
+        var familiesTarget = MockPlans.Get(PlanType.FamiliesAnnually);
+
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesTarget);
+
+        var orgMetadata = new Dictionary<string, string> { { "organizationId", Guid.NewGuid().ToString() } };
+        var subscription = CreateSubscription("sub_1", "cus_1", orgMetadata,
+            CreateSubscriptionItem(families2025.PasswordManager.StripePlanId, 1));
+        subscription.Customer = new Customer
+        {
+            Id = "cus_1",
+            Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } }
+        };
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+
+        var sut = CreateSut();
+
+        await sut.SchedulePersonalPriceIncrease(subscription);
+
+        // 2025 plans do not get milestone-3; the customer discount is still carried (and not null).
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sched_1",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases.Count == 2 &&
+                o.Phases[1].Discounts != null &&
+                o.Phases[1].Discounts.Count == 1 &&
+                o.Phases[1].Discounts[0].Coupon == "retention"));
     }
 
     [Fact]
@@ -692,6 +831,154 @@ public class PriceIncreaseSchedulerTests
         var sut = CreateSut();
 
         await Assert.ThrowsAsync<StripeException>(() => sut.Release("cus_1", "sub_1"));
+    }
+
+    [Fact]
+    public async Task Release_WithOrganizationId_ReleasesScheduleThenDeletesAssignment()
+    {
+        var orgId = Guid.NewGuid();
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data = [CreateSchedule("sched_1", "sub_1", SubscriptionScheduleStatus.Active)]
+            });
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CohortId = Guid.NewGuid()
+        };
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(assignment);
+
+        var sut = CreateSut();
+
+        await sut.Release("cus_1", "sub_1", orgId);
+
+        await _stripeAdapter.Received(1).ReleaseSubscriptionScheduleAsync("sched_1", null);
+        await _assignmentRepository.Received(1).DeleteAsync(assignment);
+    }
+
+    [Fact]
+    public async Task Release_WithOrganizationId_NoAssignmentRow_ReleasesScheduleAndDoesNotDelete()
+    {
+        var orgId = Guid.NewGuid();
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data = [CreateSchedule("sched_1", "sub_1", SubscriptionScheduleStatus.Active)]
+            });
+
+        _assignmentRepository.GetByOrganizationIdAsync(orgId)
+            .Returns((OrganizationPlanMigrationCohortAssignment?)null);
+
+        var sut = CreateSut();
+
+        await sut.Release("cus_1", "sub_1", orgId);
+
+        await _stripeAdapter.Received(1).ReleaseSubscriptionScheduleAsync("sched_1", null);
+        await _assignmentRepository.DidNotReceiveWithAnyArgs()
+            .DeleteAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
+    }
+
+    [Fact]
+    public async Task Release_WithoutOrganizationId_NeverTouchesAssignmentRepository()
+    {
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data = [CreateSchedule("sched_1", "sub_1", SubscriptionScheduleStatus.Active)]
+            });
+
+        var sut = CreateSut();
+
+        await sut.Release("cus_1", "sub_1");
+
+        await _stripeAdapter.Received(1).ReleaseSubscriptionScheduleAsync("sched_1", null);
+        await _assignmentRepository.DidNotReceiveWithAnyArgs()
+            .GetByOrganizationIdAsync(Arg.Any<Guid>());
+        await _assignmentRepository.DidNotReceiveWithAnyArgs()
+            .DeleteAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
+    }
+
+    [Fact]
+    public async Task Release_WithOrganizationId_NoActiveSchedule_StillDeletesAssignment()
+    {
+        var orgId = Guid.NewGuid();
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CohortId = Guid.NewGuid()
+        };
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(assignment);
+
+        var sut = CreateSut();
+
+        await sut.Release("cus_1", "sub_1", orgId);
+
+        await _stripeAdapter.DidNotReceiveWithAnyArgs()
+            .ReleaseSubscriptionScheduleAsync(Arg.Any<string>(), Arg.Any<SubscriptionScheduleReleaseOptions>());
+        await _assignmentRepository.Received(1).DeleteAsync(assignment);
+    }
+
+    [Fact]
+    public async Task Release_WithOrganizationId_StripeReleaseThrows_DoesNotDeleteAndRethrows()
+    {
+        var orgId = Guid.NewGuid();
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data = [CreateSchedule("sched_1", "sub_1", SubscriptionScheduleStatus.Active)]
+            });
+
+        _stripeAdapter.ReleaseSubscriptionScheduleAsync("sched_1", null)
+            .ThrowsAsync(new StripeException("release failed"));
+
+        var sut = CreateSut();
+
+        await Assert.ThrowsAsync<StripeException>(() => sut.Release("cus_1", "sub_1", orgId));
+
+        await _assignmentRepository.DidNotReceiveWithAnyArgs()
+            .DeleteAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
+    }
+
+    [Fact]
+    public async Task Release_WithOrganizationId_AssignmentDeleteThrows_DoesNotRethrow()
+    {
+        var orgId = Guid.NewGuid();
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data = [CreateSchedule("sched_1", "sub_1", SubscriptionScheduleStatus.Active)]
+            });
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CohortId = Guid.NewGuid()
+        };
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(assignment);
+        _assignmentRepository.DeleteAsync(assignment)
+            .ThrowsAsync(new InvalidOperationException("delete failed"));
+
+        var sut = CreateSut();
+
+        // The schedule release succeeded, so a failure to drop the cohort assignment is logged
+        // and swallowed rather than failing the operation.
+        await sut.Release("cus_1", "sub_1", orgId);
+
+        await _stripeAdapter.Received(1).ReleaseSubscriptionScheduleAsync("sched_1", null);
+        await _assignmentRepository.Received(1).DeleteAsync(assignment);
     }
 
     // --- Business path tests ---
@@ -1175,6 +1462,102 @@ public class PriceIncreaseSchedulerTests
 
         await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
             Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task ScheduleBusinessPriceIncrease_CustomerDiscountAlsoInSubscriptionDiscounts_NotDoubleAdded()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+
+        var source = MockPlans.Get(PlanType.EnterpriseAnnually2020);
+        var target = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(source);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(target);
+
+        var orgId = Guid.NewGuid();
+        var subscription = CreateBusinessSubscription("sub_1", "cus_1", orgId,
+            CreateSubscriptionItem(source.PasswordManager.StripeSeatPlanId, 10));
+        // Same coupon id is on BOTH the customer discount and the subscription discounts.
+        subscription.Discounts = [new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } }];
+        subscription.Customer = new Customer
+        {
+            Id = "cus_1",
+            Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } }
+        };
+        var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CohortId = cohort.Id
+        });
+
+        var sut = CreateSut();
+
+        await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
+
+        // Regression for the reference-pattern dedup gap: the shared coupon appears exactly once.
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sched_1",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases[1].Discounts != null &&
+                o.Phases[1].Discounts.Count == 1 &&
+                o.Phases[1].Discounts[0].Coupon == "retention"));
+    }
+
+    [Fact]
+    public async Task ScheduleBusinessPriceIncrease_InvalidCustomerCoupon_StillCarried()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+
+        var source = MockPlans.Get(PlanType.EnterpriseAnnually2020);
+        var target = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(source);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(target);
+
+        var orgId = Guid.NewGuid();
+        var subscription = CreateBusinessSubscription("sub_1", "cus_1", orgId,
+            CreateSubscriptionItem(source.PasswordManager.StripeSeatPlanId, 10));
+        // Coupon.Valid == false must NOT cause the carry-over to be dropped (validity is not gated).
+        subscription.Customer = new Customer
+        {
+            Id = "cus_1",
+            Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention", Valid = false } } }
+        };
+        var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CohortId = cohort.Id
+        });
+
+        var sut = CreateSut();
+
+        await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sched_1",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases[1].Discounts != null &&
+                o.Phases[1].Discounts.Count == 1 &&
+                o.Phases[1].Discounts[0].Coupon == "retention"));
     }
 
     [Fact]
@@ -1694,6 +2077,257 @@ public class PriceIncreaseSchedulerTests
                 o.Phases[1].Items.Any(i => i.Price == target.PasswordManager.StripeSeatPlanId)));
     }
 
+    // PM-37512: the packaged Teams Starter base line (teams-org-starter, qty 1) must swap to the Scalable
+    // per-seat price at the org's occupied seat count — exercises routing, the mapper case, and the override.
+    [Fact]
+    public async Task ScheduleForSubscription_TeamsStarter_RoutesToBusinessPath_CreatesScheduleWithSeatPriceSwap()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+
+        var source = MockPlans.Get(PlanType.TeamsStarter);
+        var target = MockPlans.Get(PlanType.TeamsMonthly);
+
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsStarter).Returns(source);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(target);
+
+        var orgId = Guid.NewGuid();
+        var cohort = CreateCohort(MigrationPathId.TeamsStarterToCurrent);
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CohortId = cohort.Id
+        };
+
+        _organizationRepository.GetByIdAsync(orgId)
+            .Returns(CreateOrganization(orgId, PlanType.TeamsStarter));
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohort.Id).Returns(cohort);
+        _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(orgId)
+            .Returns(new OrganizationSeatCounts { Users = 7 });
+
+        var subscription = CreateBusinessSubscription("sub_1", "cus_1", orgId,
+            CreateSubscriptionItem(source.PasswordManager.StripePlanId, 1));
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+
+        var sut = CreateSut();
+        var result = await sut.ScheduleForSubscription(subscription);
+
+        Assert.True(result);
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sched_1",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases.Count == 2 &&
+                o.Phases[1].Items.Any(i =>
+                    i.Price == target.PasswordManager.StripeSeatPlanId && i.Quantity == 7)));
+    }
+
+    [Fact]
+    public async Task ScheduleForSubscription_TeamsStarter2023_RoutesToBusinessPath_CreatesSchedule()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+
+        var source = MockPlans.Get(PlanType.TeamsStarter2023);
+        var target = MockPlans.Get(PlanType.TeamsMonthly);
+
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsStarter2023).Returns(source);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(target);
+
+        var orgId = Guid.NewGuid();
+        var cohort = CreateCohort(MigrationPathId.TeamsStarter2023ToCurrent);
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CohortId = cohort.Id
+        };
+
+        _organizationRepository.GetByIdAsync(orgId)
+            .Returns(CreateOrganization(orgId, PlanType.TeamsStarter2023));
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohort.Id).Returns(cohort);
+        _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(orgId)
+            .Returns(new OrganizationSeatCounts { Users = 4 });
+
+        var subscription = CreateBusinessSubscription("sub_1", "cus_1", orgId,
+            CreateSubscriptionItem(source.PasswordManager.StripePlanId, 1));
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+
+        var sut = CreateSut();
+        var result = await sut.ScheduleForSubscription(subscription);
+
+        Assert.True(result);
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sched_1",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases.Count == 2 &&
+                o.Phases[1].Items.Any(i =>
+                    i.Price == target.PasswordManager.StripeSeatPlanId && i.Quantity == 4)));
+    }
+
+    // An org whose members are all revoked reports 0 occupied seats; Stripe still needs a valid quantity,
+    // so the override floors at 1.
+    [Fact]
+    public async Task ScheduleBusinessPriceIncrease_TeamsStarter_OccupiedSeatsFlooredAtOne()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+
+        var source = MockPlans.Get(PlanType.TeamsStarter);
+        var target = MockPlans.Get(PlanType.TeamsMonthly);
+
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsStarter).Returns(source);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(target);
+
+        var orgId = Guid.NewGuid();
+        var cohort = CreateCohort(MigrationPathId.TeamsStarterToCurrent);
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CohortId = cohort.Id
+        };
+
+        _organizationRepository.GetByIdAsync(orgId)
+            .Returns(CreateOrganization(orgId, PlanType.TeamsStarter));
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohort.Id).Returns(cohort);
+        _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(orgId)
+            .Returns(new OrganizationSeatCounts { Users = 0 });
+
+        var subscription = CreateBusinessSubscription("sub_1", "cus_1", orgId,
+            CreateSubscriptionItem(source.PasswordManager.StripePlanId, 1));
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+
+        var sut = CreateSut();
+        var result = await sut.ScheduleForSubscription(subscription);
+
+        Assert.True(result);
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sched_1",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases[1].Items.Any(i =>
+                    i.Price == target.PasswordManager.StripeSeatPlanId && i.Quantity == 1)));
+    }
+
+    // Teams Starter's override is unconditional — it bills the occupied count even below the bundle cap,
+    // unlike Teams 2019's <5 rule (PM-37514). Here 3 occupied seats => quantity 3.
+    [Fact]
+    public async Task ScheduleBusinessPriceIncrease_TeamsStarter_AppliesOverrideUnconditionally_NotJustBelowThreshold()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+
+        var source = MockPlans.Get(PlanType.TeamsStarter);
+        var target = MockPlans.Get(PlanType.TeamsMonthly);
+
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsStarter).Returns(source);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(target);
+
+        var orgId = Guid.NewGuid();
+        var cohort = CreateCohort(MigrationPathId.TeamsStarterToCurrent);
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CohortId = cohort.Id
+        };
+
+        _organizationRepository.GetByIdAsync(orgId)
+            .Returns(CreateOrganization(orgId, PlanType.TeamsStarter));
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohort.Id).Returns(cohort);
+        _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(orgId)
+            .Returns(new OrganizationSeatCounts { Users = 3 });
+
+        // Storage line is also present; it must keep its copied quantity (only the seat line is overridden).
+        var subscription = CreateBusinessSubscription("sub_1", "cus_1", orgId,
+            CreateSubscriptionItem(source.PasswordManager.StripePlanId, 1),
+            CreateSubscriptionItem(source.PasswordManager.StripeStoragePlanId, 5));
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+
+        var sut = CreateSut();
+        var result = await sut.ScheduleForSubscription(subscription);
+
+        Assert.True(result);
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sched_1",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases[1].Items.Any(i =>
+                    i.Price == target.PasswordManager.StripeSeatPlanId && i.Quantity == 3) &&
+                o.Phases[1].Items.Any(i =>
+                    i.Price == target.PasswordManager.StripeStoragePlanId && i.Quantity == 5)));
+    }
+
+    // Boundary contrast: a Scalable source (Enterprise 2020) is not packaged, so the seat override is
+    // skipped and the copied quantity (10) is kept even though occupied count is stubbed lower.
+    [Fact]
+    public async Task ScheduleBusinessPriceIncrease_NonStarterScalable_DoesNotOverrideSeatQuantity()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+
+        var source = MockPlans.Get(PlanType.EnterpriseAnnually2020);
+        var target = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(source);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(target);
+
+        var orgId = Guid.NewGuid();
+        var cohort = CreateCohort(MigrationPathId.Enterprise2020AnnualToCurrent);
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CohortId = cohort.Id
+        };
+
+        _organizationRepository.GetByIdAsync(orgId)
+            .Returns(CreateOrganization(orgId, PlanType.EnterpriseAnnually2020));
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohort.Id).Returns(cohort);
+        // Occupied count differs from the copied seat quantity; it must be ignored for Scalable sources.
+        _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(orgId)
+            .Returns(new OrganizationSeatCounts { Users = 4 });
+
+        var subscription = CreateBusinessSubscription("sub_1", "cus_1", orgId,
+            CreateSubscriptionItem(source.PasswordManager.StripeSeatPlanId, 10));
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+
+        var sut = CreateSut();
+        var result = await sut.ScheduleForSubscription(subscription);
+
+        Assert.True(result);
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sched_1",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases[1].Items.Any(i =>
+                    i.Price == target.PasswordManager.StripeSeatPlanId && i.Quantity == 10)));
+        await _organizationRepository.DidNotReceive().GetOccupiedSeatCountByOrganizationIdAsync(orgId);
+    }
+
     [Fact]
     public async Task ScheduleForSubscription_TrackAOrg_NoAssignment_ReturnsFalse()
     {
@@ -1906,6 +2540,129 @@ public class PriceIncreaseSchedulerTests
         Assert.True(result);
         await _stripeAdapter.Received(1)
             .CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>());
+    }
+
+    // PM-37514: Teams 2019 is a Packaged base + seat-overage plan migrating to a Scalable plan
+    // (SeatCountPolicy.ActualUsage). Phase 2 bills the org's actual seat count: occupied seats when
+    // below the Packaged base (unused base headroom disappears), otherwise the purchased seat count
+    // (organization.Seats). The flat base line and the overage line collapse to one seat line.
+    [Theory]
+    [InlineData(3, 5, 3)]   // below base (5): bill occupied, unused headroom disappears
+    [InlineData(5, 5, 5)]   // exactly at base: not below, bill purchased
+    [InlineData(7, 7, 7)]   // above base: bill purchased (== occupied here)
+    [InlineData(6, 8, 8)]   // above base, purchased exceeds occupied: bill purchased
+    public async Task ScheduleBusinessPriceIncrease_Teams2019Monthly_ResolvesSeatQuantityByPolicy(
+        int occupied, int purchased, long expectedSeats)
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+
+        var source = MockPlans.Get(PlanType.TeamsMonthly2019);
+        var target = MockPlans.Get(PlanType.TeamsMonthly);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2019).Returns(source);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(target);
+
+        var orgId = Guid.NewGuid();
+        var periodStart = DateTime.UtcNow;
+        var periodLength = TimeSpan.FromDays(30);
+
+        // The flat base line is always present (quantity ~1); the per-seat overage line only exists
+        // when the org purchased seats beyond the base 5.
+        var items = new List<SubscriptionItem>
+        {
+            CreateSubscriptionItem(source.PasswordManager.StripePlanId, 1, periodStart, periodLength)
+        };
+        if (purchased > source.PasswordManager.BaseSeats)
+        {
+            items.Add(CreateSubscriptionItem(
+                source.PasswordManager.StripeSeatPlanId,
+                purchased - source.PasswordManager.BaseSeats,
+                periodStart, periodLength));
+        }
+        var subscription = CreateBusinessSubscription("sub_1", "cus_1", orgId, items.ToArray());
+        var cohort = CreateCohort(MigrationPathId.Teams2019MonthlyToCurrent);
+
+        _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(orgId)
+            .Returns(new OrganizationSeatCounts { Users = occupied });
+        _organizationRepository.GetByIdAsync(orgId)
+            .Returns(new Organization { Id = orgId, PlanType = PlanType.TeamsMonthly2019, Seats = purchased });
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CohortId = cohort.Id
+        });
+
+        var sut = CreateSut();
+
+        var result = await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
+
+        Assert.True(result);
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sched_1",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                // exactly one seat line on the target per-seat price, at the resolved quantity
+                o.Phases[1].Items.Count(i => i.Price == target.PasswordManager.StripeSeatPlanId) == 1 &&
+                o.Phases[1].Items.Single(i => i.Price == target.PasswordManager.StripeSeatPlanId).Quantity == expectedSeats &&
+                // the flat base price never appears on the target
+                o.Phases[1].Items.All(i => i.Price != source.PasswordManager.StripePlanId)));
+    }
+
+    [Fact]
+    public async Task ScheduleBusinessPriceIncrease_Teams2019MonthlyWithStorage_PreservesStorage()
+    {
+        const int occupiedSeats = 3;
+        // The base number of purchased seats is 5 for Teams 2019
+        const int purchasedSeats = 5;
+        const int additionalStorage = 4;
+
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+
+        var source = MockPlans.Get(PlanType.TeamsMonthly2019);
+        var target = MockPlans.Get(PlanType.TeamsMonthly);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2019).Returns(source);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(target);
+
+        var orgId = Guid.NewGuid();
+        var periodStart = DateTime.UtcNow;
+        var periodLength = TimeSpan.FromDays(30);
+        var subscription = CreateBusinessSubscription("sub_1", "cus_1", orgId,
+            CreateSubscriptionItem(source.PasswordManager.StripePlanId, 1, periodStart, periodLength),
+            CreateSubscriptionItem(source.PasswordManager.StripeStoragePlanId, additionalStorage, periodStart, periodLength));
+        var cohort = CreateCohort(MigrationPathId.Teams2019MonthlyToCurrent);
+
+
+        _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(orgId)
+            .Returns(new OrganizationSeatCounts { Users = occupiedSeats });
+        _organizationRepository.GetByIdAsync(orgId)
+            .Returns(new Organization { Id = orgId, PlanType = PlanType.TeamsMonthly2019, Seats = purchasedSeats });
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
+            .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
+        _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CohortId = cohort.Id
+        });
+
+        var sut = CreateSut();
+
+        var result = await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
+
+        Assert.True(result);
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sched_1",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases[1].Items.Count == 2 &&
+                o.Phases[1].Items.Single(i => i.Price == target.PasswordManager.StripeSeatPlanId).Quantity == occupiedSeats &&
+                o.Phases[1].Items.Any(i => i.Price == target.PasswordManager.StripeStoragePlanId && i.Quantity == additionalStorage)));
     }
 
     private static Subscription CreateSubscription(string id, string customerId, params SubscriptionItem[] items) =>

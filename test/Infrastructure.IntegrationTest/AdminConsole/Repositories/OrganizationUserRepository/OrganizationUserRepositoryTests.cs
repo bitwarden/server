@@ -18,6 +18,63 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.Organizat
 public class OrganizationUserRepositoryTests
 {
     [Theory, DatabaseData]
+    public async Task GetOccupiedSmSeatCountByOrganizationIdAsync_ExcludesRevokedAndStaged(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+
+        var confirmedUser = await userRepository.CreateTestUserAsync("confirmed");
+        var invitedUser = await userRepository.CreateTestUserAsync("invited");
+        var revokedUser = await userRepository.CreateTestUserAsync("revoked");
+        var stagedUser = await userRepository.CreateTestUserAsync("staged");
+
+        // Counted: seat-occupying statuses with Secrets Manager access
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = confirmedUser.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.User,
+            AccessSecretsManager = true
+        });
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = invitedUser.Id,
+            Status = OrganizationUserStatusType.Invited,
+            Type = OrganizationUserType.User,
+            AccessSecretsManager = true
+        });
+
+        // Excluded: Revoked and Staged do not consume a seat, even with Secrets Manager access
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = revokedUser.Id,
+            Status = OrganizationUserStatusType.Revoked,
+            Type = OrganizationUserType.User,
+            AccessSecretsManager = true
+        });
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = stagedUser.Id,
+            Status = OrganizationUserStatusType.Staged,
+            Type = OrganizationUserType.User,
+            AccessSecretsManager = true
+        });
+
+        // Act
+        var count = await organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id);
+
+        // Assert
+        Assert.Equal(2, count); // Confirmed + Invited with SM access (Revoked and Staged excluded)
+    }
+
+    [Theory, DatabaseData]
     public async Task GetCountByOnlyOwnerAsync_WhenUserIsNotInAnyOrg_ReturnsZero(
         IOrganizationUserRepository organizationUserRepository,
         IUserRepository userRepository)
@@ -792,6 +849,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(organization.UseAdminSponsoredFamilies, result.UseAdminSponsoredFamilies);
         Assert.Equal(organization.UseAutomaticUserConfirmation, result.UseAutomaticUserConfirmation);
         Assert.Equal(organization.UseInviteLinks, result.UseInviteLinks);
+        Assert.Equal(organization.UsePam, result.UsePam);
         Assert.Equal(orgUser1.RevocationReason, result.RevocationReason);
     }
 

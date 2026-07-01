@@ -854,6 +854,39 @@ public class GetBitwardenSubscriptionQueryTests
     }
 
     [Fact]
+    public async Task Run_UserOnLegacyPricing_CustomerCouponAlsoOnSchedulePhase2_PassedOnceToTaxPreview()
+    {
+        // C2 regression: the customer coupon is now also on Phase 2, so GetRelevantCouponsAsync could
+        // return it twice and pass a duplicate to the tax preview. It must appear once.
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active, legacyPricing: true);
+        subscription.Customer.Discount = CreateDiscount(discountType: "cart");
+        subscription.Customer.Discount.Source.Coupon.Id = "shared-coupon";
+        subscription.ScheduleId = "sub_sched_test";
+        var premiumPlans = CreatePremiumPlans();
+        // Phase 2 carries the SAME coupon id as the customer-level discount.
+        var schedule = CreateSubscriptionSchedule(percentOff: 30, couponId: "shared-coupon");
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(CreateInvoicePreview(totalTax: 150));
+        _stripeAdapter.GetSubscriptionScheduleAsync("sub_sched_test", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        await _query.Run(user);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(
+            Arg.Is<InvoiceCreatePreviewOptions>(opts =>
+                opts.Subscription == null &&
+                opts.SubscriptionDetails != null &&
+                opts.Discounts != null &&
+                opts.Discounts.Count == 1 &&
+                opts.Discounts.Count(d => d.Coupon == "shared-coupon") == 1));
+    }
+
+    [Fact]
     public async Task Run_UserOnLegacyPricing_WithScheduleNoDiscount_DoesNotIncludeCouponInTaxPreview()
     {
         var user = CreateUser();

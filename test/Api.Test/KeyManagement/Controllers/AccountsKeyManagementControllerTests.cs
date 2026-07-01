@@ -21,6 +21,7 @@ using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.KeyManagement.UserKey.Models.Data;
+using Bit.Core.KeyManagement.UserKey.Queries.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
@@ -477,29 +478,29 @@ public class AccountsKeyManagementControllerTests
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.PostConvertToKeyConnectorAsync());
 
-        await sutProvider.GetDependency<IUserService>().ReceivedWithAnyArgs(0)
-            .ConvertToKeyConnectorAsync(Arg.Any<User>(), Arg.Any<string?>());
+        await sutProvider.GetDependency<IConvertUserToKeyConnectorCommand>().ReceivedWithAnyArgs(0)
+            .ConvertAsync(Arg.Any<User>(), Arg.Any<string?>());
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PostConvertToKeyConnectorAsync_ConvertToKeyConnectorFails_ThrowsBadRequestWithErrorResponse(
+    public async Task PostConvertToKeyConnectorAsync_ConvertToKeyConnectorThrows_PropagatesException(
         SutProvider<AccountsKeyManagementController> sutProvider,
         User expectedUser)
     {
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
             .Returns(expectedUser);
-        sutProvider.GetDependency<IUserService>()
-            .ConvertToKeyConnectorAsync(Arg.Any<User>(), Arg.Any<string?>())
-            .Returns(IdentityResult.Failed(new IdentityError { Description = "convert to key connector error" }));
+        sutProvider.GetDependency<IConvertUserToKeyConnectorCommand>()
+            .When(x => x.ConvertAsync(Arg.Any<User>(), Arg.Any<string?>()))
+            .Do(_ => throw new BadRequestException("convert to key connector error"));
 
-        var badRequestException =
+        var exception =
             await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PostConvertToKeyConnectorAsync());
 
-        Assert.Equal(1, badRequestException.ModelState!.ErrorCount);
-        Assert.Equal("convert to key connector error", badRequestException.ModelState.Root.Errors[0].ErrorMessage);
-        await sutProvider.GetDependency<IUserService>().Received(1)
-            .ConvertToKeyConnectorAsync(Arg.Is(expectedUser), Arg.Any<string?>());
+        Assert.Equal("convert to key connector error", exception.Message);
+        // The no-payload endpoint must omit the wrapped key so ConvertAsync uses its default null.
+        await sutProvider.GetDependency<IConvertUserToKeyConnectorCommand>().Received(1)
+            .ConvertAsync(Arg.Is(expectedUser), Arg.Is<string?>(s => s == null));
     }
 
     [Theory]
@@ -510,14 +511,12 @@ public class AccountsKeyManagementControllerTests
     {
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
             .Returns(expectedUser);
-        sutProvider.GetDependency<IUserService>()
-            .ConvertToKeyConnectorAsync(Arg.Any<User>(), Arg.Any<string?>())
-            .Returns(IdentityResult.Success);
 
         await sutProvider.Sut.PostConvertToKeyConnectorAsync();
 
-        await sutProvider.GetDependency<IUserService>().Received(1)
-            .ConvertToKeyConnectorAsync(Arg.Is(expectedUser), Arg.Any<string?>());
+        // The no-payload endpoint must omit the wrapped key so ConvertAsync uses its default null.
+        await sutProvider.GetDependency<IConvertUserToKeyConnectorCommand>().Received(1)
+            .ConvertAsync(Arg.Is(expectedUser), Arg.Is<string?>(s => s == null));
     }
 
     [Theory]
@@ -530,30 +529,29 @@ public class AccountsKeyManagementControllerTests
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.PostEnrollToKeyConnectorAsync(data));
 
-        await sutProvider.GetDependency<IUserService>().ReceivedWithAnyArgs(0)
-            .ConvertToKeyConnectorAsync(Arg.Any<User>(), Arg.Any<string>());
+        await sutProvider.GetDependency<IConvertUserToKeyConnectorCommand>().ReceivedWithAnyArgs(0)
+            .ConvertAsync(Arg.Any<User>(), Arg.Any<string>());
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PostEnrollToKeyConnectorAsync_ConvertToKeyConnectorFails_ThrowsBadRequestWithErrorResponse(
+    public async Task PostEnrollToKeyConnectorAsync_ConvertToKeyConnectorThrows_PropagatesException(
         SutProvider<AccountsKeyManagementController> sutProvider,
         User expectedUser,
         KeyConnectorEnrollmentRequestModel data)
     {
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
             .Returns(expectedUser);
-        sutProvider.GetDependency<IUserService>()
-            .ConvertToKeyConnectorAsync(Arg.Any<User>(), Arg.Any<string>())
-            .Returns(IdentityResult.Failed(new IdentityError { Description = "convert to key connector error" }));
+        sutProvider.GetDependency<IConvertUserToKeyConnectorCommand>()
+            .When(x => x.ConvertAsync(Arg.Any<User>(), Arg.Any<string>()))
+            .Do(_ => throw new BadRequestException("convert to key connector error"));
 
-        var badRequestException =
+        var exception =
             await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PostEnrollToKeyConnectorAsync(data));
 
-        Assert.Equal(1, badRequestException.ModelState!.ErrorCount);
-        Assert.Equal("convert to key connector error", badRequestException.ModelState.Root.Errors[0].ErrorMessage);
-        await sutProvider.GetDependency<IUserService>().Received(1)
-            .ConvertToKeyConnectorAsync(Arg.Is(expectedUser), Arg.Is(data.KeyConnectorKeyWrappedUserKey));
+        Assert.Equal("convert to key connector error", exception.Message);
+        await sutProvider.GetDependency<IConvertUserToKeyConnectorCommand>().Received(1)
+            .ConvertAsync(Arg.Is(expectedUser), Arg.Is(data.KeyConnectorKeyWrappedUserKey));
     }
 
     [Theory]
@@ -565,14 +563,11 @@ public class AccountsKeyManagementControllerTests
     {
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
             .Returns(expectedUser);
-        sutProvider.GetDependency<IUserService>()
-            .ConvertToKeyConnectorAsync(Arg.Any<User>(), Arg.Any<string>())
-            .Returns(IdentityResult.Success);
 
         await sutProvider.Sut.PostEnrollToKeyConnectorAsync(data);
 
-        await sutProvider.GetDependency<IUserService>().Received(1)
-            .ConvertToKeyConnectorAsync(Arg.Is(expectedUser), Arg.Is(data.KeyConnectorKeyWrappedUserKey));
+        await sutProvider.GetDependency<IConvertUserToKeyConnectorCommand>().Received(1)
+            .ConvertAsync(Arg.Is(expectedUser), Arg.Is(data.KeyConnectorKeyWrappedUserKey));
     }
 
     [Theory]
@@ -608,6 +603,85 @@ public class AccountsKeyManagementControllerTests
         Assert.Equal("test", result.OrganizationName);
         await sutProvider.GetDependency<IKeyConnectorConfirmationDetailsQuery>().Received(1)
             .Run(orgSsoIdentifier, expectedUser.Id);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetKeyRotationDataAsync_NoUser_Throws(
+        SutProvider<AccountsKeyManagementController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .ReturnsNull();
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.GetKeyRotationDataAsync());
+
+        await sutProvider.GetDependency<IKeyRotationDataQuery>().ReceivedWithAnyArgs(0)
+            .Run(Arg.Any<User>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetKeyRotationDataAsync_Success_MapsDataIntoResponse(
+        SutProvider<AccountsKeyManagementController> sutProvider, User expectedUser)
+    {
+        var data = new KeyRotationData
+        {
+            OrganizationPasswordResetKeyData =
+            [
+                new OrganizationPasswordResetKeyData
+                {
+                    OrganizationId = Guid.NewGuid(), OrganizationName = "Org", OrganizationPublicKey = "org-public-key",
+                },
+            ],
+            EmergencyAccessKeyData =
+            [
+                new EmergencyAccessKeyData
+                {
+                    Id = Guid.NewGuid(), GranteeId = Guid.NewGuid(), GranteeName = "Grantee", PublicKey = "ea-public-key",
+                },
+            ],
+            TrustedDeviceKeyData =
+            [
+                new TrustedDeviceKeyData
+                {
+                    Id = Guid.NewGuid(), EncryptedPublicKey = "device-public-key", EncryptedUserKey = "device-user-key",
+                },
+            ],
+            PasskeyKeyData =
+            [
+                new PasskeyKeyData
+                {
+                    Id = Guid.NewGuid(), EncryptedPublicKey = "passkey-public-key", EncryptedUserKey = "passkey-user-key",
+                },
+            ],
+        };
+
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(expectedUser);
+        sutProvider.GetDependency<IKeyRotationDataQuery>().Run(expectedUser).Returns(data);
+
+        var result = await sutProvider.Sut.GetKeyRotationDataAsync();
+
+        Assert.NotNull(result);
+        Assert.Equal("keyRotationData", result.Object);
+
+        var org = Assert.Single(result.OrganizationPasswordResetKeyData);
+        Assert.Equal("organizationPasswordResetKeyData", org.Object);
+        Assert.Equal("org-public-key", org.OrganizationPublicKey);
+
+        var ea = Assert.Single(result.EmergencyAccessKeyData);
+        Assert.Equal("emergencyAccessKeyData", ea.Object);
+        Assert.Equal("Grantee", ea.GranteeName);
+
+        var device = Assert.Single(result.TrustedDeviceKeyData);
+        Assert.Equal("trustedDeviceKeyData", device.Object);
+        Assert.Equal("device-user-key", device.EncryptedUserKey);
+
+        var passkey = Assert.Single(result.PasskeyKeyData);
+        Assert.Equal("passkeyKeyData", passkey.Object);
+        Assert.Equal("passkey-user-key", passkey.EncryptedUserKey);
+
+        await sutProvider.GetDependency<IKeyRotationDataQuery>().Received(1).Run(expectedUser);
     }
 
     [Theory]

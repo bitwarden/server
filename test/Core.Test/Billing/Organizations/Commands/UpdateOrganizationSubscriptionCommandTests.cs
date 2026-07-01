@@ -1058,6 +1058,46 @@ public class UpdateOrganizationSubscriptionCommandTests
     }
 
     [Fact]
+    public async Task Run_WithSchedule_CustomerDiscount_CarriedOntoFuturePhaseOnly()
+    {
+        var organization = CreateOrganization();
+        var subscription = CreateSubscription(
+            customer: new Customer
+            {
+                Id = "cus_123",
+                Address = new Address { Country = "US" },
+                TaxExempt = TaxExempt.None,
+                Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } }
+            },
+            items: [("price_seats", "si_1", 5)]);
+
+        SetupGetSubscription(organization, subscription);
+
+        var schedule = CreateMockSchedule(subscription.Id, [("price_seats", 5)], [("price_seats_new", 5)]);
+        schedule.Phases[1].Discounts = [new SubscriptionSchedulePhaseDiscount { CouponId = "migration-coupon" }];
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new AddItem("price_storage", 3)]
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                // Future phase: customer discount stacks with the existing migration coupon.
+                opts.Phases[1].Discounts.Any(d => d.Coupon == "retention") &&
+                opts.Phases[1].Discounts.Any(d => d.Coupon == "migration-coupon") &&
+                // Active phase: customer discount NOT carried (would double-apply on the current period).
+                (opts.Phases[0].Discounts == null || opts.Phases[0].Discounts.All(d => d.Coupon != "retention"))));
+    }
+
+    [Fact]
     public async Task Run_UpdateItemQuantity_WithSchedule_UpdatesBothPhases()
     {
         var organization = CreateOrganization();
@@ -2160,4 +2200,71 @@ public class UpdateOrganizationSubscriptionCommandTests
         };
     }
 
+    // PM-37510 (T8): a caller-supplied subscription carrying an expanded Customer is reused, so the
+    // command makes zero GetSubscriptionAsync calls of its own.
+    [Fact]
+    public async Task Run_SuppliedSubscriptionWithCustomer_DoesNotRefetch()
+    {
+        var organization = CreateOrganization();
+        var subscription = CreateSubscription(items: [("price_seats", "si_1", 5)]);
+        SetupUpdateSubscription(subscription);
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity("price_seats", 10)]
+        };
+
+        var result = await _command.Run(organization, changeSet, subscription);
+
+        Assert.True(result.Success);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs()
+            .GetSubscriptionAsync(default, default);
+    }
+
+    // PM-37510 (T8): a supplied subscription missing its expanded Customer is not safe to reuse, so
+    // the command re-fetches exactly once.
+    [Fact]
+    public async Task Run_SuppliedSubscriptionWithoutCustomer_RefetchesOnce()
+    {
+        var organization = CreateOrganization();
+        var suppliedWithoutCustomer = CreateSubscription(items: [("price_seats", "si_1", 5)]);
+        suppliedWithoutCustomer.Customer = null;
+
+        var refetched = CreateSubscription(items: [("price_seats", "si_1", 5)]);
+        SetupGetSubscription(organization, refetched);
+        SetupUpdateSubscription(refetched);
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity("price_seats", 10)]
+        };
+
+        var result = await _command.Run(organization, changeSet, suppliedWithoutCustomer);
+
+        Assert.True(result.Success);
+        await _stripeAdapter.Received(1)
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>());
+    }
+
+    // PM-37510 (T8): with no supplied subscription the command fetches exactly once (existing default
+    // behavior preserved).
+    [Fact]
+    public async Task Run_NoSuppliedSubscription_FetchesOnce()
+    {
+        var organization = CreateOrganization();
+        var subscription = CreateSubscription(items: [("price_seats", "si_1", 5)]);
+        SetupGetSubscription(organization, subscription);
+        SetupUpdateSubscription(subscription);
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity("price_seats", 10)]
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+        await _stripeAdapter.Received(1)
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>());
+    }
 }

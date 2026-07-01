@@ -364,4 +364,20 @@ public class HandlebarsMailServiceTests
         await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
             m.ToEmails.Contains(email)));
     }
+
+    [Theory]
+    [InlineData("us", "https://vault.bitwarden.com")]
+    [InlineData("eu", "https://vault.bitwarden.eu")]
+    [InlineData("gov", "https://vault.bitwarden-gov.com")]
+    public void GetCloudVaultSubscriptionUrl_ResolvesPerRegion(string cloudRegion, string expectedVaultBase)
+    {
+        // Arrange
+        _globalSettings.BaseServiceUri.CloudRegion = cloudRegion;
+
+        // Act
+        var result = _sut.GetCloudVaultSubscriptionUrl(Guid.NewGuid());
+
+        // Assert
+        Assert.StartsWith(expectedVaultBase, result);
+    }
 }

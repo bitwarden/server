@@ -263,6 +263,19 @@ jobs:
           fi
           echo "platforms=$PLATFORMS" >> "$GITHUB_OUTPUT"
 
+      - name: Get Azure Key Vault secrets
+        id: get-kv-secrets
+        uses: bitwarden/gh-actions/get-keyvault-secrets@main
+        with:
+          keyvault: gh-org-bitwarden
+          secrets: "DOCKERHUB-OAT"
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          username: bitwarden
+          password: ${{ steps.get-kv-secrets.outputs.DOCKERHUB-OAT }}
+      
       - name: Build Docker image
         id: build-artifacts
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
@@ -306,8 +319,10 @@ jobs:
           sha: ${{ contains(github.event_name, 'pull_request') && github.event.pull_request.head.sha || github.sha }}
           ref: ${{ contains(github.event_name, 'pull_request') && format('refs/pull/{0}/head', github.event.pull_request.number) || github.ref }}
 
-      - name: Log out from GHCR
-        run: docker logout ghcr.io
+      - name: Log out from Docker Hub and GHCR
+        run: |
+          docker logout docker.io
+          docker logout ghcr.io
 
       - name: Log out from Azure
         uses: bitwarden/gh-actions/azure-logout@main

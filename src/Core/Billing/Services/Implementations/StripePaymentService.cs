@@ -782,6 +782,9 @@ public class StripePaymentService : IStripePaymentService
                         fallbackItem.Amount = phase2Item.Price.UnitAmount!.Value / 100M;
                         fallbackItem.ProductId = phase2Item.Price.ProductId;
                         fallbackItem.Name = phase2Item.Price.Nickname;
+                        // A packaged base line (qty 1) collapses onto a scalable seat line whose quantity
+                        // is the migrated seat count; carry it so the Phase 2 preview total is correct.
+                        fallbackItem.Quantity = (int)phase2Item.Quantity;
                         matchedPhase1Items.Add(fallbackItem);
                     }
                     else

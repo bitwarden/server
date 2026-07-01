@@ -795,6 +795,204 @@ public class UpdateBillingAddressCommandTests
     }
 
     [Fact]
+    public async Task Run_PersonalOrganization_FlagOn_SchedulePresent_CarriesCustomerDiscountIntoFuturePhaseOnly()
+    {
+        // C1: carry the customer discount into the FUTURE phase (StartDate > now) only — not the
+        // active phase 0, even though its discountConsumed predicate is false.
+        var organization = new Organization
+        {
+            PlanType = PlanType.FamiliesAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        };
+
+        var input = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345",
+            Line1 = "123 Main St.",
+            City = "New York",
+            State = "NY"
+        };
+
+        var phase1Start = DateTime.UtcNow.AddDays(-10);
+        var phase1End = DateTime.UtcNow.AddDays(5);
+        var phase2End = DateTime.UtcNow.AddDays(370);
+
+        var customer = new Customer
+        {
+            Address = new Address { Country = "US", PostalCode = "12345", Line1 = "123 Main St.", City = "New York", State = "NY" },
+            // The fetched customer carries a customer-level discount.
+            Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } },
+            Subscriptions = new StripeList<Subscription>
+            {
+                Data =
+                [
+                    new Subscription
+                    {
+                        Id = organization.GatewaySubscriptionId,
+                        CustomerId = organization.GatewayCustomerId,
+                        AutomaticTax = new SubscriptionAutomaticTax { Enabled = false }
+                    }
+                ]
+            }
+        };
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+            options.Address.Matches(input) &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock")
+        )).Returns(customer);
+
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data =
+                [
+                    new SubscriptionSchedule
+                    {
+                        Id = "sub_sched_123",
+                        SubscriptionId = organization.GatewaySubscriptionId,
+                        Status = SubscriptionScheduleStatus.Active,
+                        Phases = new List<SubscriptionSchedulePhase>
+                        {
+                            new()
+                            {
+                                StartDate = phase1Start,
+                                EndDate = phase1End,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_old", Quantity = 1 }],
+                                Discounts = [],
+                                ProrationBehavior = "none"
+                            },
+                            new()
+                            {
+                                StartDate = phase1End,
+                                EndDate = phase2End,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_new", Quantity = 1 }],
+                                Discounts = [new SubscriptionSchedulePhaseDiscount { CouponId = "milestone-3" }],
+                                ProrationBehavior = "none"
+                            }
+                        }
+                    }
+                ]
+            });
+
+        var result = await _command.Run(organization, input);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            Arg.Is("sub_sched_123"),
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases.Count == 2 &&
+                // Active phase 0: customer coupon NOT injected.
+                (o.Phases[0].Discounts == null || o.Phases[0].Discounts.All(d => d.Coupon != "retention")) &&
+                // Future phase 1: customer coupon carried in, stacked with the existing milestone.
+                o.Phases[1].Discounts.Any(d => d.Coupon == "retention") &&
+                o.Phases[1].Discounts.Any(d => d.Coupon == "milestone-3")));
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task Run_PersonalOrganization_FlagOn_Phase2Consumed_DiscountsSuppressed_CustomerCouponNotReAdded()
+    {
+        // When phase 1 has ended, phase 2 is active and its discounts are consumed → suppressed to [].
+        // The customer coupon must NOT be re-added to the consumed phase.
+        var organization = new Organization
+        {
+            PlanType = PlanType.FamiliesAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        };
+
+        var input = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345",
+            Line1 = "123 Main St.",
+            City = "New York",
+            State = "NY"
+        };
+
+        // Phase 0 already ended; phase 1 is the active (consumed) phase.
+        var phase0Start = DateTime.UtcNow.AddDays(-370);
+        var phase0End = DateTime.UtcNow.AddDays(-5);
+        var phase1End = DateTime.UtcNow.AddDays(360);
+
+        var customer = new Customer
+        {
+            Address = new Address { Country = "US", PostalCode = "12345", Line1 = "123 Main St.", City = "New York", State = "NY" },
+            Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "retention" } } },
+            Subscriptions = new StripeList<Subscription>
+            {
+                Data =
+                [
+                    new Subscription
+                    {
+                        Id = organization.GatewaySubscriptionId,
+                        CustomerId = organization.GatewayCustomerId,
+                        AutomaticTax = new SubscriptionAutomaticTax { Enabled = false }
+                    }
+                ]
+            }
+        };
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Any<CustomerUpdateOptions>())
+            .Returns(customer);
+
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data =
+                [
+                    new SubscriptionSchedule
+                    {
+                        Id = "sub_sched_123",
+                        SubscriptionId = organization.GatewaySubscriptionId,
+                        Status = SubscriptionScheduleStatus.Active,
+                        Phases = new List<SubscriptionSchedulePhase>
+                        {
+                            new()
+                            {
+                                StartDate = phase0Start,
+                                EndDate = phase0End,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_old", Quantity = 1 }],
+                                Discounts = [],
+                                ProrationBehavior = "none"
+                            },
+                            new()
+                            {
+                                StartDate = phase0End,
+                                EndDate = phase1End,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_new", Quantity = 1 }],
+                                Discounts = [new SubscriptionSchedulePhaseDiscount { CouponId = "milestone-3" }],
+                                ProrationBehavior = "none"
+                            }
+                        }
+                    }
+                ]
+            });
+
+        var result = await _command.Run(organization, input);
+
+        Assert.True(result.IsT0);
+
+        // Only the active (consumed) phase 1 remains updatable; its discounts are suppressed to [],
+        // with no customer coupon re-added.
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            Arg.Is("sub_sched_123"),
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases.Count == 1 &&
+                o.Phases[0].Discounts != null &&
+                o.Phases[0].Discounts.Count == 0));
+    }
+
+    [Fact]
     public async Task Run_PersonalOrganization_FlagOn_NoSchedule_UpdatesSubscriptionDirectly()
     {
         var organization = new Organization

@@ -44,6 +44,7 @@ public class ProviderBillingService(
     IGlobalSettings globalSettings,
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
+    IPriceIncreaseScheduler priceIncreaseScheduler,
     IPricingClient pricingClient,
     IProviderInvoiceItemRepository providerInvoiceItemRepository,
     IProviderOrganizationRepository providerOrganizationRepository,
@@ -58,6 +59,11 @@ public class ProviderBillingService(
         Organization organization,
         string key)
     {
+        await priceIncreaseScheduler.Release(
+            organization.GatewayCustomerId,
+            organization.GatewaySubscriptionId,
+            organization.Id);
+
         await stripeAdapter.UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             new SubscriptionUpdateOptions { CancelAtPeriodEnd = false });
 
@@ -287,11 +293,12 @@ public class ProviderBillingService(
     }
 
     public async Task<byte[]> GenerateClientInvoiceReport(
+        Guid providerId,
         string invoiceId)
     {
         ArgumentException.ThrowIfNullOrEmpty(invoiceId);
 
-        var invoiceItems = await providerInvoiceItemRepository.GetByInvoiceId(invoiceId);
+        var invoiceItems = await providerInvoiceItemRepository.GetByProviderIdAndInvoiceId(providerId, invoiceId);
 
         if (invoiceItems.Count == 0)
         {

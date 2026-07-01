@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -54,4 +55,61 @@ public class OrganizationPlanMigrationCohortAssignmentRepository(
 
         return Mapper.Map<CoreEntities.OrganizationPlanMigrationCohortAssignment>(result);
     }
+
+    public async Task<int> GetCohortNonPendingAssignmentsCountAsync(Guid cohortId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var query =
+            from a in dbContext.OrganizationPlanMigrationCohortAssignments
+            join c in dbContext.OrganizationPlanMigrationCohorts on a.CohortId equals c.Id
+            where a.CohortId == cohortId
+                  && ((c.MigrationPathId != null && (a.ScheduledDate != null || a.MigratedDate != null))
+                      || (c.MigrationPathId == null && a.ChurnDiscountAppliedDate != null))
+            select a.Id;
+
+        return await query.CountAsync();
+    }
+
+    public async Task<IReadOnlyList<CohortAssignmentExportRow>> GetExportRowsByCohortIdAsync(
+        Guid cohortId, DateTime? afterCreationDate, Guid? afterId, int take)
+    {
+        if (afterCreationDate is null != (afterId is null))
+        {
+            throw new ArgumentException("afterCreationDate and afterId must both be set or both be null.");
+        }
+
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var assignments = dbContext.OrganizationPlanMigrationCohortAssignments
+            .Where(a => a.CohortId == cohortId);
+
+        if (afterCreationDate != null)
+        {
+            assignments = assignments.Where(a =>
+                a.CreationDate > afterCreationDate.Value
+                || (a.CreationDate == afterCreationDate.Value
+                    && a.Id > afterId!.Value));
+        }
+
+        return await assignments
+            .OrderBy(a => a.CreationDate)
+            .ThenBy(a => a.Id)
+            .Take(take)
+            .Select(a => new CohortAssignmentExportRow(
+                a.Id,
+                a.OrganizationId,
+                a.Organization.Name,
+                a.CreationDate,
+                a.ScheduledDate,
+                a.MigratedDate))
+            .ToListAsync();
+    }
+
+    public Task<CohortBulkAssignmentSummary> SyncManyAsync(
+        IEnumerable<ResolvedCohortBulkAssignmentRow> rows) =>
+        throw new NotSupportedException(
+            "Bulk cohort assignment sync is only supported on Microsoft SQL Server.");
 }

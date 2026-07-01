@@ -12,12 +12,10 @@ using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
-using Bit.Core.Models.Api;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
@@ -159,24 +157,19 @@ public class ProviderBillingControllerTests
     #region GenerateClientInvoiceReportAsync
 
     [Theory, BitAutoData]
-    public async Task GenerateClientInvoiceReportAsync_NullReportContent_ServerError(
+    public async Task GenerateClientInvoiceReportAsync_NullReportContent_NotFound(
         Provider provider,
         string invoiceId,
         SutProvider<ProviderBillingController> sutProvider)
     {
         ConfigureStableProviderAdminInputs(provider, sutProvider);
 
-        sutProvider.GetDependency<IProviderBillingService>().GenerateClientInvoiceReport(invoiceId)
+        sutProvider.GetDependency<IProviderBillingService>().GenerateClientInvoiceReport(provider.Id, invoiceId)
             .ReturnsNull();
 
         var result = await sutProvider.Sut.GenerateClientInvoiceReportAsync(provider.Id, invoiceId);
 
-        Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
-
-        var response = (JsonHttpResult<ErrorResponseModel>)result;
-
-        Assert.Equal(StatusCodes.Status500InternalServerError, response.StatusCode);
-        Assert.Equal("We had a problem generating your invoice CSV. Please contact support.", response.Value.Message);
+        AssertNotFound(result);
     }
 
     [Theory, BitAutoData]
@@ -189,7 +182,7 @@ public class ProviderBillingControllerTests
 
         var reportContent = "Report"u8.ToArray();
 
-        sutProvider.GetDependency<IProviderBillingService>().GenerateClientInvoiceReport(invoiceId)
+        sutProvider.GetDependency<IProviderBillingService>().GenerateClientInvoiceReport(provider.Id, invoiceId)
             .Returns(reportContent);
 
         var result = await sutProvider.Sut.GenerateClientInvoiceReportAsync(provider.Id, invoiceId);

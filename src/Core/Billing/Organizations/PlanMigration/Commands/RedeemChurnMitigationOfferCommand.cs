@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Services;
@@ -102,29 +103,20 @@ public class RedeemChurnMitigationOfferCommand(
         var phase1 = migrationPhases[0];
         var phase2 = migrationPhases[1];
 
-        var phase2Discounts = phase2.Discounts?
-            .Select(d => new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId })
-            .ToList() ?? [];
+        var currentPhase2CouponIds = phase2.Discounts?.Select(d => d.CouponId).ToList() ?? [];
+        var mergedPhase2CouponIds = (subscription.Customer?.Discount).MergeDiscountCouponIds(
+            currentPhase2CouponIds,
+            churnDiscountCouponCode);
 
-        // Set-union (not append): Stripe does not deduplicate identical coupons in a discounts
-        // array -- appending a coupon already present produces either a double-discount stack
-        // or an API error. Also makes the redeem path idempotent at the Stripe layer.
-        var alreadyApplied = phase2Discounts.Any(d =>
-            string.Equals(d.Coupon, churnDiscountCouponCode, StringComparison.Ordinal));
-
-        // If the coupon is already on Phase 2 from a prior redeem, this entire flow is a no-op:
-        // we skip the Stripe call (Stripe doesn't dedupe identical coupons in a discounts array),
-        // and we preserve the existing ChurnDiscountAppliedDate -- overwriting it would lose the
-        // original redeem timestamp (relevant for Marketing analytics).
-        if (alreadyApplied)
+        // No-op only when the merged set equals Phase 2's current discounts — comparing the merged
+        // set (not just the churn coupon) lets an already-redeemed, still-shadowed org self-heal on retry.
+        if (mergedPhase2CouponIds.SequenceEqual(currentPhase2CouponIds, StringComparer.Ordinal))
         {
             _logger.LogInformation(
-                "{Command}: Coupon already present on Phase 2 of schedule ({ScheduleId}) for Organization ({OrganizationId}); no Stripe update needed",
+                "{Command}: Discounts already present on Phase 2 of schedule ({ScheduleId}) for Organization ({OrganizationId}); no Stripe update needed",
                 CommandName, activeSchedule.Id, organization.Id);
             return new None();
         }
-
-        phase2Discounts.Add(new SubscriptionSchedulePhaseDiscountOptions { Coupon = churnDiscountCouponCode });
 
         var phases = new List<SubscriptionSchedulePhaseOptions>
         {
@@ -140,14 +132,12 @@ public class RedeemChurnMitigationOfferCommand(
                 Items = phase2.Items
                     .Select(i => new SubscriptionSchedulePhaseItemOptions { Price = i.PriceId, Quantity = i.Quantity })
                     .ToList(),
-                Discounts = phase2Discounts,
+                Discounts = mergedPhase2CouponIds.ToPhaseDiscountOptions(),
                 Metadata = phase2.Metadata,
                 ProrationBehavior = phase2.ProrationBehavior
             }
         };
 
-        // Customer-level discounts are not mirrored into the phase Discounts list -- Stripe
-        // preserves them across schedule updates automatically.
         await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
             new SubscriptionScheduleUpdateOptions
             {
@@ -157,8 +147,8 @@ public class RedeemChurnMitigationOfferCommand(
 
         // ChurnDiscountAppliedDate is informational for migration cohorts (eligibility window
         // closes via Stripe's current_phase advance + MigratedDate from SubscriptionUpdatedHandler
-        // when PM-37092 lands). If this write fails after the Stripe call succeeds, the set-union
-        // semantics above make a retry a no-op -- harmless.
+        // when PM-37092 lands). If this write fails after the Stripe call succeeds, the merged-set
+        // no-op guard above makes a retry a no-op -- harmless.
         var nowUtc = DateTime.UtcNow;
         assignment.ChurnDiscountAppliedDate = nowUtc;
         assignment.RevisionDate = nowUtc;
@@ -182,25 +172,22 @@ public class RedeemChurnMitigationOfferCommand(
             return DefaultConflict;
         }
 
-        var existingDiscounts = subscription.Discounts?
-            .Select(d => new SubscriptionDiscountOptions { Coupon = d.Source?.Coupon?.Id })
-            .ToList() ?? [];
+        var currentCouponIds = subscription.Discounts?.Select(d => d.Source.Coupon.Id).ToList() ?? [];
+        var mergedCouponIds = (subscription.Customer?.Discount).MergeDiscountCouponIds(
+            currentCouponIds,
+            churnDiscountCouponCode);
 
-        var alreadyApplied = existingDiscounts.Any(d =>
-            string.Equals(d.Coupon, churnDiscountCouponCode, StringComparison.Ordinal));
-
-        // If the coupon is already on the subscription from a prior redeem, skip the Stripe
-        // call and preserve the existing ChurnDiscountAppliedDate -- overwriting it would lose
-        // the original redeem timestamp.
-        if (alreadyApplied)
+        // No-op only when the merged set equals the current subscription discounts — comparing the
+        // merged set (not just the churn coupon) lets an already-redeemed, still-shadowed org self-heal.
+        if (mergedCouponIds.SequenceEqual(currentCouponIds, StringComparer.Ordinal))
         {
             _logger.LogInformation(
-                "{Command}: Coupon already present on Subscription ({SubscriptionId}) for Organization ({OrganizationId}); no Stripe update needed",
+                "{Command}: Discounts already present on Subscription ({SubscriptionId}) for Organization ({OrganizationId}); no Stripe update needed",
                 CommandName, subscription.Id, organization.Id);
             return new None();
         }
 
-        existingDiscounts.Add(new SubscriptionDiscountOptions { Coupon = churnDiscountCouponCode });
+        var existingDiscounts = mergedCouponIds.ToSubscriptionDiscountOptions();
 
         // Stamp the per-assignment one-shot guard BEFORE mutating Stripe. For a `once`-duration
         // coupon this is the only post-consumption defense against double-application: if Stripe

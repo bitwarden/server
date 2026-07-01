@@ -3,6 +3,7 @@
 
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
@@ -46,7 +47,7 @@ public class SyncController : Controller
     private readonly Version _sshKeyCipherMinimumVersion = new(Constants.SSHKeyCipherMinimumVersion);
     private readonly Version _pm32009NewItemTypeMinimumVersion = new(Constants.PM32009NewItemTypeMinimumVersion);
     private readonly IFeatureService _featureService;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
@@ -64,7 +65,7 @@ public class SyncController : Controller
         GlobalSettings globalSettings,
         ICurrentContext currentContext,
         IFeatureService featureService,
-        IApplicationCacheService applicationCacheService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IWebAuthnCredentialRepository webAuthnCredentialRepository,
         IUserAccountKeysQuery userAccountKeysQuery)
@@ -81,7 +82,7 @@ public class SyncController : Controller
         _globalSettings = globalSettings;
         _currentContext = currentContext;
         _featureService = featureService;
-        _applicationCacheService = applicationCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _webAuthnCredentialRepository = webAuthnCredentialRepository;
         _userAccountKeysQuery = userAccountKeysQuery;
@@ -164,7 +165,7 @@ public class SyncController : Controller
             return new Dictionary<Guid, OrganizationAbility>();
         }
 
-        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync(orgIds);
+        var organizationAbilities = await _organizationAbilityCacheService.GetOrganizationAbilitiesAsync(orgIds);
 
         return organizationAbilities;
     }

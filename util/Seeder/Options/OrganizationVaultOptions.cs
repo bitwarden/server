@@ -21,6 +21,11 @@ public class OrganizationVaultOptions
     public required string Domain { get; init; }
 
     /// <summary>
+    /// Claimed (verified) domains to seed for the organization. Each becomes a verified <see cref="Bit.Core.Entities.OrganizationDomain"/> row.
+    /// </summary>
+    public IReadOnlyList<string> ClaimedDomains { get; init; } = [];
+
+    /// <summary>
     /// Number of member users to create.
     /// </summary>
     public required int Users { get; init; }
@@ -99,6 +104,12 @@ public class OrganizationVaultOptions
     /// Password for all seeded accounts. Defaults to "asdfasdfasdf" if not specified.
     /// </summary>
     public string? Password { get; init; }
+
+    /// <summary>
+    /// Override email for the organization owner. When null, defaults to <c>owner@&lt;Domain&gt;</c>.
+    /// Passed through the mangler, so <c>--mangle</c> applies a unique prefix when enabled.
+    /// </summary>
+    public string? OwnerEmail { get; init; }
 
     /// <summary>
     /// Billing plan type for the organization.

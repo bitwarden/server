@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.PlanMigration;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
@@ -30,13 +31,19 @@ public interface IUpdateOrganizationSubscriptionCommand
     /// </summary>
     /// <param name="organization">The organization whose subscription will be updated.</param>
     /// <param name="changeSet">The set of changes to apply to the subscription.</param>
+    /// <param name="subscription">
+    /// An optional pre-fetched subscription. When supplied and it carries the required expansions
+    /// (an expanded <see cref="Subscription.Customer"/>), it is reused to avoid a redundant Stripe
+    /// call; otherwise the subscription is re-fetched.
+    /// </param>
     /// <returns>
     /// A <see cref="BillingCommandResult{T}"/> containing the updated <see cref="Subscription"/>
     /// on success, or an error result if validation or the Stripe operation fails.
     /// </returns>
     Task<BillingCommandResult<Subscription>> Run(
         Organization organization,
-        OrganizationSubscriptionChangeSet changeSet);
+        OrganizationSubscriptionChangeSet changeSet,
+        Subscription? subscription = null);
 }
 
 public class UpdateOrganizationSubscriptionCommand(
@@ -61,9 +68,10 @@ public class UpdateOrganizationSubscriptionCommand(
 
     public Task<BillingCommandResult<Subscription>> Run(
         Organization organization,
-        OrganizationSubscriptionChangeSet changeSet) => HandleAsync<Subscription>(async () =>
+        OrganizationSubscriptionChangeSet changeSet,
+        Subscription? subscription = null) => HandleAsync<Subscription>(async () =>
     {
-        var subscription = await FetchSubscriptionAsync(organization);
+        subscription = HasRequiredExpansions(subscription) ? subscription : await FetchSubscriptionAsync(organization);
 
         if (subscription is null)
         {
@@ -152,7 +160,8 @@ public class UpdateOrganizationSubscriptionCommand(
                 CommandName, activeSchedule.Id, subscription.Id, migrationPhases.Count);
 
             var (sourcePlan, targetPlan) = await ResolvePhasePlansAsync(organization);
-            var phases = BuildUpdatedPhases(migrationPhases, changeSet.Changes, sourcePlan, targetPlan);
+            var phases = BuildUpdatedPhases(migrationPhases, changeSet.Changes, sourcePlan, targetPlan,
+                subscription.Customer?.Discount);
 
             await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
                 new SubscriptionScheduleUpdateOptions
@@ -204,6 +213,11 @@ public class UpdateOrganizationSubscriptionCommand(
 
         return updatedSubscription;
     });
+
+    // PM-37510: the command body dereferences subscription.Customer for tax reconciliation, so a
+    // reused subscription is only safe when Customer is expanded. test_clock is optional here.
+    private static bool HasRequiredExpansions(Subscription? subscription) =>
+        subscription is { Customer: not null };
 
     private async Task<Subscription?> FetchSubscriptionAsync(Organization organization)
     {
@@ -342,7 +356,8 @@ public class UpdateOrganizationSubscriptionCommand(
         List<SubscriptionSchedulePhase> migrationPhases,
         IReadOnlyList<OrganizationSubscriptionChange> changes,
         Plan sourcePlan,
-        Plan targetPlan)
+        Plan targetPlan,
+        Discount? customerDiscount)
     {
         var phase1IsPostMigration = migrationPhases.Count == 1
             && IsPostMigrationPhase(migrationPhases[0], sourcePlan, targetPlan);
@@ -354,7 +369,8 @@ public class UpdateOrganizationSubscriptionCommand(
             phase1, changes,
             source: sourcePlan,
             target: phase1IsPostMigration ? targetPlan : sourcePlan,
-            suppressDiscounts: phase1IsPostMigration));
+            suppressDiscounts: phase1IsPostMigration,
+            customerDiscount: null));
 
         if (migrationPhases.Count >= 2)
         {
@@ -362,7 +378,8 @@ public class UpdateOrganizationSubscriptionCommand(
                 migrationPhases[1], changes,
                 source: sourcePlan,
                 target: targetPlan,
-                suppressDiscounts: false));
+                suppressDiscounts: false,
+                customerDiscount: customerDiscount));
         }
 
         return phases;
@@ -401,16 +418,22 @@ public class UpdateOrganizationSubscriptionCommand(
         IReadOnlyList<OrganizationSubscriptionChange> changes,
         Plan source,
         Plan target,
-        bool suppressDiscounts) =>
+        bool suppressDiscounts,
+        Discount? customerDiscount) =>
         new()
         {
             StartDate = sourcePhase.StartDate,
             EndDate = sourcePhase.EndDate,
             Items = ApplyChangesToPhaseItems(sourcePhase.Items, changes, source, target),
+            // A future phase carries the customer-level discount so it stacks at renewal; the active
+            // phase (customerDiscount is null) mirrors verbatim — re-adding would double-apply now.
             Discounts = suppressDiscounts
                 ? []
-                : sourcePhase.Discounts?.Select(d =>
-                    new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),
+                : customerDiscount is null
+                    ? sourcePhase.Discounts?.Select(d =>
+                        new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList()
+                    : customerDiscount.MergeDiscountCouponIds(sourcePhase.Discounts?.Select(d => d.CouponId))
+                        .ToPhaseDiscountOptions(),
             Metadata = sourcePhase.Metadata,
             ProrationBehavior = sourcePhase.ProrationBehavior
         };

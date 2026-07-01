@@ -10,12 +10,13 @@ For CLI flag details, see the [SeederUtility reference](../../../../SeederUtilit
 
 ## Scenarios
 
-| Scenario                                    | Problem                                                        | Command type   |
-| ------------------------------------------- | -------------------------------------------------------------- | -------------- |
-| [Fresh database](fresh-database.md)         | I need a working database with realistic data                  | `preset`       |
-| [Permission testing](permission-testing.md) | I'm building a feature that touches collections or permissions | `preset`       |
-| [Scale testing](scale-testing.md)           | Will my code survive at 250 / 1,000 / 5,000+ users?            | `preset`       |
-| [Bug reproduction](bug-reproduction.md)     | I need to reproduce a customer's org shape                     | `organization` |
+| Scenario                                    | Problem                                                             | Command type   |
+| ------------------------------------------- | ------------------------------------------------------------------- | -------------- |
+| [Fresh database](fresh-database.md)         | I need a working database with realistic data                       | `preset`       |
+| [Permission testing](permission-testing.md) | I'm building a feature that touches collections or permissions      | `preset`       |
+| [Scale testing](scale-testing.md)           | Will my code survive at 250 / 1,000 / 5,000+ users?                 | `preset`       |
+| [Bug reproduction](bug-reproduction.md)     | I need to reproduce a customer's org shape                          | `organization` |
+| [Blob-migration testing](blob-migration.md) | I need to verify the SDK V1→V2 blob-encryption migration end-to-end | `preset`       |
 
 ## Contributing a Scenario
 

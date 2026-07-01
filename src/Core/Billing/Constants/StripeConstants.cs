@@ -112,6 +112,7 @@ public static class StripeConstants
         public const string CancelledDuringDeferredPriceIncrease = "cancelled_during_deferred_price_increase";
         public const string MigrationCohortId = "migration_cohort_id";
         public const string MigrationCohortName = "migration_cohort_name";
+        public const string MigrationGraceServiceAccounts = "migration_grace_service_accounts";
         public const string CancellingUserId = "cancellingUserId";
     }
 
@@ -200,6 +201,13 @@ public static class StripeConstants
         public const string Active = "active";
         public const string Expired = "expired";
         public const string Scheduled = "scheduled";
+    }
+
+    public static class TestClockStatus
+    {
+        public const string Advancing = "advancing";
+        public const string InternalFailure = "internal_failure";
+        public const string Ready = "ready";
     }
 
     public static class ValidateTaxLocationTiming
