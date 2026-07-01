@@ -81,7 +81,7 @@ public enum EventType : int
     OrganizationUser_Revoked_TwoFactorNonCompliance = 1520,
     OrganizationUser_Revoked_SingleOrganizationNonCompliance = 1521,
     OrganizationUser_NotificationBannerActionClicked = 1522,
-    OrganizationUser_InviteLinkAccepted = 1523, // User accepted an organization invite via invite link
+    OrganizationUser_InviteLinkAccepted = 1524, // User accepted an organization invite via invite link
 
     Organization_Updated = 1600,
     Organization_PurgedVault = 1601,
