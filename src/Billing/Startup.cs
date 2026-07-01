@@ -81,6 +81,8 @@ public class Startup
         // Services
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
+        services.AddPush(globalSettings);
+        services.AddPushRegistration();
         services.AddDistributedCache(globalSettings);
         services.AddBillingOperations();
         services.AddCommercialCoreServices();
