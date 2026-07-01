@@ -42,6 +42,7 @@ public class RegisterUserCommand : IRegisterUserCommand
     private readonly IValidateRedemptionTokenCommand _validateRedemptionTokenCommand;
 
     private readonly IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> _emergencyAccessInviteTokenDataFactory;
+    private readonly IDataProtectorTokenFactory<SalesAssistedRegistrationTokenable> _salesAssistedRegistrationTokenDataFactory;
 
     private readonly string _disabledUserRegistrationExceptionMsg = "Open registration has been disabled by the system administrator.";
 
@@ -59,7 +60,8 @@ public class RegisterUserCommand : IRegisterUserCommand
             IUserService userService,
             IMailService mailService,
             IValidateRedemptionTokenCommand validateRedemptionTokenCommand,
-            IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> emergencyAccessInviteTokenDataFactory)
+            IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> emergencyAccessInviteTokenDataFactory,
+            IDataProtectorTokenFactory<SalesAssistedRegistrationTokenable> salesAssistedRegistrationTokenDataFactory)
     {
         _logger = logger;
         _globalSettings = globalSettings;
@@ -77,6 +79,7 @@ public class RegisterUserCommand : IRegisterUserCommand
 
         _validateRedemptionTokenCommand = validateRedemptionTokenCommand;
         _emergencyAccessInviteTokenDataFactory = emergencyAccessInviteTokenDataFactory;
+        _salesAssistedRegistrationTokenDataFactory = salesAssistedRegistrationTokenDataFactory;
 
         _providerServiceDataProtector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
     }
@@ -340,6 +343,29 @@ public class RegisterUserCommand : IRegisterUserCommand
         return result;
     }
 
+    public async Task<IdentityResult> RegisterUserViaSalesAssistedToken(User user, RegisterFinishData registerFinishData,
+        string salesAssistedToken)
+    {
+        // ValidateOpenRegistrationAllowed() is intentionally absent. When configured,
+        // disableUserRegistration=true causes it to throw unconditionally. The
+        // SalesAssistedRegistrationTokenable is the authorization for this path.
+        await ValidateEmailDomainNotBlockedAsync(user.Email);
+
+        var tokenable = ValidateSalesAssistedRegistrationTokenable(salesAssistedToken, user.Email);
+
+        user.EmailVerified = true;
+        user.Name = tokenable.Name;
+        user.ApiKey = CoreHelpers.SecureRandomString(30); // API key can't be null.
+
+        var result = await _userService.CreateUserAsync(user, registerFinishData);
+        if (result == IdentityResult.Success)
+        {
+            await SendWelcomeEmailAsync(user);
+        }
+
+        return result;
+    }
+
     private void ValidateOpenRegistrationAllowed()
     {
         // We validate open registration on send of initial email and here b/c a user could technically start the
@@ -386,6 +412,18 @@ public class RegisterUserCommand : IRegisterUserCommand
         if (tokenable == null || !tokenable.Valid || !tokenable.TokenIsValid(userEmail))
         {
             throw new BadRequestException("Invalid email verification token.");
+        }
+
+        return tokenable;
+    }
+
+    private SalesAssistedRegistrationTokenable ValidateSalesAssistedRegistrationTokenable(
+        string salesAssistedToken, string email)
+    {
+        _salesAssistedRegistrationTokenDataFactory.TryUnprotect(salesAssistedToken, out var tokenable);
+        if (tokenable == null || !tokenable.Valid || !tokenable.TokenIsValid(email))
+        {
+            throw new BadRequestException("Invalid or expired sales-assisted registration token.");
         }
 
         return tokenable;
