@@ -241,6 +241,8 @@ public class OrganizationsController : Controller
         }
         catch (Exception ex)
         {
+            billingInfo = null;
+            billingHistoryInfo = null;
             _logger.LogError(ex,
                 "Failed to load billing information for organization {OrganizationId}. The Stripe customer may have been deleted.",
                 id);

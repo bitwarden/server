@@ -9,6 +9,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
@@ -1926,6 +1927,42 @@ public class OrganizationsControllerTests
 
         sutProvider.GetDependency<IStripePaymentService>()
             .GetBillingAsync(organization)
+            .ThrowsAsync(new StripeException("No such customer: 'cus_deleted'"));
+
+        sutProvider.Sut.TempData =
+            new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.Edit(organization.Id);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<OrganizationEditModel>(view.Model);
+        Assert.Null(model.BillingInfo);
+        Assert.Null(model.BillingHistoryInfo);
+        Assert.True(sutProvider.Sut.TempData.ContainsKey("Warning"));
+        Assert.Equal(
+            "Billing information could not be loaded. The Stripe customer may have been deleted. " +
+            "You can still edit the organization and set a valid Gateway Customer ID.",
+            (string)sutProvider.Sut.TempData["Warning"]);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_BillingHistoryLoadThrows_StillRendersPageWithWarning(
+        Organization organization,
+        BillingInfo billingInfo,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // PM-38874: GetBillingAsync can succeed while GetBillingHistoryAsync throws. The catch must
+        // reset both values so the billing section is hidden and the page renders, rather than
+        // falling through with a non-null BillingInfo and a null BillingHistoryInfo (which would NRE).
+        StubEditGetDependencies(sutProvider, organization, currentAssignment: null);
+
+        sutProvider.GetDependency<IStripePaymentService>()
+            .GetBillingAsync(organization)
+            .Returns(billingInfo);
+        sutProvider.GetDependency<IStripePaymentService>()
+            .GetBillingHistoryAsync(organization)
             .ThrowsAsync(new StripeException("No such customer: 'cus_deleted'"));
 
         sutProvider.Sut.TempData =
