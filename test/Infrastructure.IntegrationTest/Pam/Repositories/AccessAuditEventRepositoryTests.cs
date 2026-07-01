@@ -1,5 +1,4 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Repositories;
+﻿using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
 using Bit.Pam.Entities;
@@ -15,7 +14,7 @@ public class AccessAuditEventRepositoryTests
     // request denial: the Deny decision the revoke writes (against a still-Approved request) must surface as
     // LeaseRevoked, never RequestDenied. This is the projection's subtlest correctness rule.
     [DatabaseTheory, DatabaseData]
-    public async Task GetManyByCollectionIds_ProjectsRequestAndLeaseLifecycle_AndRevokeIsNotADenial(
+    public async Task GetManyByOrganizationId_ProjectsRequestAndLeaseLifecycle_AndRevokeIsNotADenial(
         IOrganizationRepository organizationRepository,
         IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository,
@@ -33,8 +32,8 @@ public class AccessAuditEventRepositoryTests
         await accessLeaseRepository.RevokeAsync(
             lease, AccessLeaseStatus.Revoked, BuildAuditDecision(lease, revokerId, "policy change", now), now);
 
-        var events = await accessAuditEventRepository.GetManyByCollectionIdsAsync(
-            new[] { request.CollectionId }, now.AddDays(-90), now);
+        var events = await accessAuditEventRepository.GetManyByOrganizationIdAsync(
+            organization.Id, now.AddDays(-90), now);
 
         Assert.Contains(events, e =>
             e.Kind == AccessAuditEventKind.RequestSubmitted && e.AccessRequestId == request.Id && e.ActorId == requesterId);
@@ -58,7 +57,7 @@ public class AccessAuditEventRepositoryTests
     // A genuinely denied request (resolved with a Deny decision) projects RequestDenied naming the approver; a
     // requester's own withdrawal projects RequestCancelled with no approver.
     [DatabaseTheory, DatabaseData]
-    public async Task GetManyByCollectionIds_ProjectsDeniedAndCancelledRequests(
+    public async Task GetManyByOrganizationId_ProjectsDeniedAndCancelledRequests(
         IOrganizationRepository organizationRepository,
         IAccessRequestRepository accessRequestRepository,
         IAccessAuditEventRepository accessAuditEventRepository)
@@ -78,8 +77,8 @@ public class AccessAuditEventRepositoryTests
             BuildPending(organization.Id, collectionId, now));
         await accessRequestRepository.CancelAsync(cancelled.Id, now);
 
-        var events = await accessAuditEventRepository.GetManyByCollectionIdsAsync(
-            new[] { collectionId }, now.AddDays(-90), now);
+        var events = await accessAuditEventRepository.GetManyByOrganizationIdAsync(
+            organization.Id, now.AddDays(-90), now);
 
         Assert.Contains(events, e =>
             e.Kind == AccessAuditEventKind.RequestDenied && e.AccessRequestId == denied.Id
@@ -89,33 +88,34 @@ public class AccessAuditEventRepositoryTests
             && e.ActorId == cancelled.RequesterId);
     }
 
-    // The trail is scoped to the supplied collections: an event on a collection outside the set never appears.
+    // The trail is org-wide but scoped to a single organization: an event in another org never appears.
     [DatabaseTheory, DatabaseData]
-    public async Task GetManyByCollectionIds_ScopesToGivenCollections(
+    public async Task GetManyByOrganizationId_ScopesToOrganization(
         IOrganizationRepository organizationRepository,
         IAccessRequestRepository accessRequestRepository,
         IAccessAuditEventRepository accessAuditEventRepository)
     {
         var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var otherOrganization = await organizationRepository.CreateTestOrganizationAsync();
         var now = DateTime.UtcNow;
-        var inScope = Guid.NewGuid();
-        var outOfScope = Guid.NewGuid();
 
-        var visible = await accessRequestRepository.CreateAsync(BuildPending(organization.Id, inScope, now));
-        var hidden = await accessRequestRepository.CreateAsync(BuildPending(organization.Id, outOfScope, now));
+        var visible = await accessRequestRepository.CreateAsync(
+            BuildPending(organization.Id, Guid.NewGuid(), now));
+        var hidden = await accessRequestRepository.CreateAsync(
+            BuildPending(otherOrganization.Id, Guid.NewGuid(), now));
 
-        var events = await accessAuditEventRepository.GetManyByCollectionIdsAsync(
-            new[] { inScope }, now.AddDays(-90), now);
+        var events = await accessAuditEventRepository.GetManyByOrganizationIdAsync(
+            organization.Id, now.AddDays(-90), now);
 
         Assert.Contains(events, e => e.AccessRequestId == visible.Id);
         Assert.DoesNotContain(events, e => e.AccessRequestId == hidden.Id);
-        Assert.All(events, e => Assert.Equal(inScope, e.CollectionId));
+        Assert.All(events, e => Assert.Equal(organization.Id, e.OrganizationId));
     }
 
     // A refused activation (no lease minted, window still live) projects LeaseActivationRejected with the requester as
     // actor -- and must not be mistaken for the expired-unactivated case, which needs the window to have lapsed.
     [DatabaseTheory, DatabaseData]
-    public async Task GetManyByCollectionIds_ProjectsLeaseActivationRejected(
+    public async Task GetManyByOrganizationId_ProjectsLeaseActivationRejected(
         IOrganizationRepository organizationRepository,
         IAccessRequestRepository accessRequestRepository,
         IAccessAuditEventRepository accessAuditEventRepository)
@@ -129,8 +129,8 @@ public class AccessAuditEventRepositoryTests
         await accessRequestRepository.CreateAutoApprovedAsync(request, decision);
         await accessRequestRepository.MarkActivationRejectedAsync(request.Id, now);
 
-        var events = await accessAuditEventRepository.GetManyByCollectionIdsAsync(
-            new[] { request.CollectionId }, now.AddDays(-90), now);
+        var events = await accessAuditEventRepository.GetManyByOrganizationIdAsync(
+            organization.Id, now.AddDays(-90), now);
 
         Assert.Contains(events, e =>
             e.Kind == AccessAuditEventKind.LeaseActivationRejected
@@ -139,12 +139,12 @@ public class AccessAuditEventRepositoryTests
             e.Kind == AccessAuditEventKind.RequestExpiredUnactivated && e.AccessRequestId == request.Id);
     }
 
-    // A rule governing a manageable collection projects RuleCreated (actor = its creator); a later edit by a different
-    // admin projects RuleUpdated naming that editor. Both scope through Collection.AccessRuleId.
+    // A rule projects RuleCreated (actor = its creator) as soon as it is created -- it need NOT govern any collection,
+    // because the trail is org-scoped (this is the regression case: a standalone rule used to be invisible). A later
+    // edit by a different admin projects RuleUpdated naming that editor (latest-edit model).
     [DatabaseTheory, DatabaseData]
-    public async Task GetManyByCollectionIds_ProjectsRuleCreatedAndUpdated(
+    public async Task GetManyByOrganizationId_ProjectsRuleCreatedAndUpdated_WithoutCollectionAssociation(
         IOrganizationRepository organizationRepository,
-        ICollectionRepository collectionRepository,
         IAccessRuleRepository accessRuleRepository,
         IAccessAuditEventRepository accessAuditEventRepository)
     {
@@ -152,16 +152,6 @@ public class AccessAuditEventRepositoryTests
         var now = DateTime.UtcNow;
         var creatorId = Guid.NewGuid();
         var editorId = Guid.NewGuid();
-
-        var collection = new Collection
-        {
-            Id = CoreHelpers.GenerateComb(),
-            OrganizationId = organization.Id,
-            Name = "audit-rule-collection",
-            CreationDate = now,
-            RevisionDate = now,
-        };
-        await collectionRepository.CreateAsync(collection);
 
         var rule = new AccessRule
         {
@@ -174,11 +164,9 @@ public class AccessAuditEventRepositoryTests
             LastEditedBy = creatorId,
         };
         await accessRuleRepository.CreateAsync(rule);
-        await accessRuleRepository.SetCollectionAssociationsAsync(
-            organization.Id, rule.Id, new[] { collection.Id }, Array.Empty<Guid>());
 
-        var afterCreate = await accessAuditEventRepository.GetManyByCollectionIdsAsync(
-            new[] { collection.Id }, now.AddDays(-90), now);
+        var afterCreate = await accessAuditEventRepository.GetManyByOrganizationIdAsync(
+            organization.Id, now.AddDays(-90), now);
         Assert.Contains(afterCreate, e =>
             e.Kind == AccessAuditEventKind.RuleCreated && e.AccessRuleId == rule.Id && e.ActorId == creatorId);
         Assert.DoesNotContain(afterCreate, e =>
@@ -189,18 +177,17 @@ public class AccessAuditEventRepositoryTests
         rule.LastEditedBy = editorId;
         await accessRuleRepository.ReplaceAsync(rule);
 
-        var afterUpdate = await accessAuditEventRepository.GetManyByCollectionIdsAsync(
-            new[] { collection.Id }, now.AddDays(-90), now.AddMinutes(10));
+        var afterUpdate = await accessAuditEventRepository.GetManyByOrganizationIdAsync(
+            organization.Id, now.AddDays(-90), now.AddMinutes(10));
         Assert.Contains(afterUpdate, e =>
             e.Kind == AccessAuditEventKind.RuleUpdated && e.AccessRuleId == rule.Id && e.ActorId == editorId);
     }
 
-    // Soft-deleting a rule projects RuleDeleted naming the deleter; its earlier RuleCreated survives (the collection
-    // link is preserved), the delete is not emitted as a RuleUpdated, and the rule drops out of the normal detail read.
+    // Soft-deleting a rule projects RuleDeleted naming the deleter; its earlier RuleCreated survives, the delete is
+    // not emitted as a RuleUpdated, and the rule drops out of the normal detail read.
     [DatabaseTheory, DatabaseData]
-    public async Task GetManyByCollectionIds_ProjectsRuleDeleted_PreservesHistory_AndIsNotAnUpdate(
+    public async Task GetManyByOrganizationId_ProjectsRuleDeleted_PreservesHistory_AndIsNotAnUpdate(
         IOrganizationRepository organizationRepository,
-        ICollectionRepository collectionRepository,
         IAccessRuleRepository accessRuleRepository,
         IAccessAuditEventRepository accessAuditEventRepository)
     {
@@ -208,16 +195,6 @@ public class AccessAuditEventRepositoryTests
         var now = DateTime.UtcNow;
         var creatorId = Guid.NewGuid();
         var deleterId = Guid.NewGuid();
-
-        var collection = new Collection
-        {
-            Id = CoreHelpers.GenerateComb(),
-            OrganizationId = organization.Id,
-            Name = "audit-deleted-rule-collection",
-            CreationDate = now,
-            RevisionDate = now,
-        };
-        await collectionRepository.CreateAsync(collection);
 
         var rule = new AccessRule
         {
@@ -230,17 +207,14 @@ public class AccessAuditEventRepositoryTests
             LastEditedBy = creatorId,
         };
         await accessRuleRepository.CreateAsync(rule);
-        await accessRuleRepository.SetCollectionAssociationsAsync(
-            organization.Id, rule.Id, new[] { collection.Id }, Array.Empty<Guid>());
-
         await accessRuleRepository.SoftDeleteAsync(rule.Id, deleterId, now.AddMinutes(5));
 
-        var events = await accessAuditEventRepository.GetManyByCollectionIdsAsync(
-            new[] { collection.Id }, now.AddDays(-90), now.AddMinutes(10));
+        var events = await accessAuditEventRepository.GetManyByOrganizationIdAsync(
+            organization.Id, now.AddDays(-90), now.AddMinutes(10));
 
         Assert.Contains(events, e =>
             e.Kind == AccessAuditEventKind.RuleDeleted && e.AccessRuleId == rule.Id && e.ActorId == deleterId);
-        // History survives the soft-delete: the creation event is still projected through the preserved link.
+        // History survives the soft-delete: the creation event is still projected.
         Assert.Contains(events, e =>
             e.Kind == AccessAuditEventKind.RuleCreated && e.AccessRuleId == rule.Id);
         // A delete is not an edit: RevisionDate is left untouched, so no RuleUpdated is synthesized.
