@@ -3,7 +3,9 @@ using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
+using Bit.Api.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
@@ -35,7 +37,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
                 .IsEnabled(FeatureFlagKeys.GenerateInviteLink)
                 .Returns(true);
         });
-        _factory.SubstituteService<IApplicationCacheService>(cacheService =>
+        _factory.SubstituteService<IOrganizationAbilityCacheService>(cacheService =>
         {
             cacheService
                 .GetOrganizationAbilityAsync(Arg.Any<Guid>())
@@ -262,5 +264,30 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         Assert.NotNull(status);
         Assert.Equal(_organization.Name, status.OrganizationName);
         Assert.True(status.SeatsAvailable);
+    }
+
+    [Fact]
+    public async Task GetPolicies_WithExistingLink_ReturnsListResponseModel()
+    {
+        var createRequest = new CreateOrganizationInviteLinkRequestModel
+        {
+            AllowedDomains = ["acme.com"],
+            EncryptedInviteKey = _validEncryptedKey,
+        };
+        var createResponse = await _client.PostAsJsonAsync(
+            $"/organizations/{_organization.Id}/invite-link", createRequest);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        var created = await createResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkResponseModel>();
+        Assert.NotNull(created);
+
+        var anonClient = _factory.CreateClient();
+        var policiesResponse = await anonClient.PostAsJsonAsync(
+            "/organizations/invite-link/policies",
+            new GetOrganizationInviteLinkPoliciesRequestModel { Code = created.Code });
+
+        Assert.Equal(HttpStatusCode.OK, policiesResponse.StatusCode);
+        var body = await policiesResponse.Content.ReadFromJsonAsync<ListResponseModel<PolicyResponseModel>>();
+        Assert.NotNull(body);
+        Assert.NotNull(body.Data);
     }
 }

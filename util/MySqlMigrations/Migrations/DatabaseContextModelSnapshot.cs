@@ -336,6 +336,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("UseOrganizationDomains")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("UsePam")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("UsePasswordManager")
                         .HasColumnType("tinyint(1)");
 
@@ -1052,6 +1055,9 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("OrganizationId")
                         .IsUnique()
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("CohortId", "CreationDate", "Id")
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("CohortId", "ScheduledDate", "MigratedDate")

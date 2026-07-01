@@ -39,7 +39,7 @@ public class IndividualCommand
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            Console.Error.WriteLine($"Error: {ex.Message}");
+            Console.Error.WriteLine($"Error: {ex}");
             Environment.Exit(1);
         }
     }

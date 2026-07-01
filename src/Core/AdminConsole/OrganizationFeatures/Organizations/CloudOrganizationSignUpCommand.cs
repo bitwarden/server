@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -17,7 +18,6 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
@@ -37,7 +37,7 @@ public class CloudOrganizationSignUpCommand(
     IStripePaymentService paymentService,
     IOrganizationRepository organizationRepository,
     IOrganizationApiKeyRepository organizationApiKeyRepository,
-    IApplicationCacheService applicationCacheService,
+    IOrganizationAbilityCacheService organizationAbilityCacheService,
     IPushRegistrationService pushRegistrationService,
     IPushNotificationService pushNotificationService,
     ICollectionRepository collectionRepository,
@@ -269,7 +269,7 @@ public class CloudOrganizationSignUpCommand(
                 Type = OrganizationApiKeyType.Default,
                 RevisionDate = DateTime.UtcNow,
             });
-            await applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+            await organizationAbilityCacheService.UpsertOrganizationAbilityAsync(organization);
 
             // ownerId == default if the org is created by a provider - in this case it's created without an
             // owner and the first owner is immediately invited afterwards
@@ -327,10 +327,10 @@ public class CloudOrganizationSignUpCommand(
                 await paymentService.CancelAndRecoverChargesAsync(organization);
             }
 
-            if (organization.Id != default(Guid))
+            if (organization.Id != Guid.Empty)
             {
                 await organizationRepository.DeleteAsync(organization);
-                await applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
+                await organizationAbilityCacheService.DeleteOrganizationAbilityAsync(organization.Id);
             }
 
             throw;

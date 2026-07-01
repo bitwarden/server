@@ -6,7 +6,9 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.PlanMigration;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
+using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Payment.Queries;
@@ -23,7 +25,6 @@ using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Stripe;
-using Stripe.TestHelpers;
 using Event = Stripe.Event;
 using Plan = Bit.Core.Models.StaticStore.Plan;
 using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
@@ -63,7 +64,7 @@ public class UpcomingInvoiceHandler(
                     [
                         "subscriptions",
                         "subscriptions.data.customer",
-                        "subscriptions.data.discounts",
+                        "subscriptions.data.discounts.coupon",
                         "subscriptions.data.test_clock",
                         "tax",
                         "tax_ids"
@@ -240,7 +241,7 @@ public class UpcomingInvoiceHandler(
         {
             ProductTierType.Families =>
                 ScheduleFamiliesPriceMigrationAsync(organization, @event, subscription, plan),
-            ProductTierType.Teams or ProductTierType.Enterprise =>
+            ProductTierType.Teams or ProductTierType.Enterprise or ProductTierType.TeamsStarter =>
                 ScheduleBusinessPlanPriceMigrationAsync(organization, @event, subscription),
             _ => Task.FromResult(false)
         };
@@ -367,10 +368,7 @@ public class UpcomingInvoiceHandler(
                 return false;
             }
 
-            if (subscription.TestClock != null)
-            {
-                await WaitForTestClockToAdvanceAsync(subscription.TestClock);
-            }
+            await stripeAdapter.WaitForTestClockToAdvanceAsync(subscription.TestClock);
 
             var migrationScheduled = await priceIncreaseScheduler.ScheduleForSubscription(subscription);
 
@@ -421,7 +419,8 @@ public class UpcomingInvoiceHandler(
             var sourcePlan = await pricingClient.GetPlanOrThrow(migrationPath.FromPlan);
             var targetPlan = await pricingClient.GetPlanOrThrow(migrationPath.ToPlan);
 
-            await SendBusinessRenewalEmailAsync(organization, subscription, sourcePlan, targetPlan, cohort);
+            await SendBusinessRenewalEmailAsync(
+                organization, subscription, sourcePlan, targetPlan, cohort, migrationPath.SeatCountPolicy);
         }
         catch (Exception exception)
         {
@@ -441,7 +440,8 @@ public class UpcomingInvoiceHandler(
         Subscription subscription,
         Plan sourcePlan,
         Plan targetPlan,
-        OrganizationPlanMigrationCohort cohort)
+        OrganizationPlanMigrationCohort cohort,
+        SeatCountPolicy seatCountPolicy)
     {
         var renewalDate = subscription.GetCurrentPeriodEnd();
         if (renewalDate is null)
@@ -456,7 +456,7 @@ public class UpcomingInvoiceHandler(
         }
 
         var culture = new CultureInfo("en-US");
-        var seats = ResolveSeatCount(subscription, sourcePlan, organization);
+        var seats = await ResolveSeatCountAsync(subscription, sourcePlan, organization, seatCountPolicy);
 
         // SeatPrice is a per-year figure on annual plans and a per-month figure on monthly plans. The per-user
         // monthly line always shows a monthly rate (annual ÷ 12); the recurring total is quoted in the plan's own
@@ -465,15 +465,22 @@ public class UpcomingInvoiceHandler(
         var perUserMonthly = targetPlan.IsAnnual ? seatPrice / 12 : seatPrice;
         var total = seatPrice * seats;
 
-        var discounts = await ResolveDiscountsAsync(cohort, organization);
+        var discounts = await ResolveDiscountsAsync(cohort, subscription, organization, culture);
 
-        var totalPercentOff = discounts.Where(discount => discount.IsPercentage).Sum(discount => discount.Value);
-        if (totalPercentOff > 0)
+        foreach (var discount in discounts.Where(discount => discount.IsPercentage))
         {
-            total = total * (100 - totalPercentOff) / 100;
+            total = total * (100 - discount.Value) / 100;
         }
 
         var totalAmountOff = discounts.Where(discount => !discount.IsPercentage).Sum(discount => discount.Value);
+        if (total - totalAmountOff < 0)
+        {
+            // Discounts drove the quote below zero (e.g. a fixed-amount coupon larger than the discounted seat
+            // total). We clamp to $0 for display, but a $0 renewal quote is anomalous and worth surfacing.
+            logger.LogWarning(
+                "Renewal email total for Organization ({OrganizationId}) went below zero after discounts and was clamped to 0",
+                organization.Id);
+        }
         total = Math.Max(0, total - totalAmountOff);
 
         await mailer.SendEmail(new BusinessPlanRenewal2020MigrationMail
@@ -496,8 +503,26 @@ public class UpcomingInvoiceHandler(
             ? amount.ToString("C0", culture)
             : amount.ToString("C2", culture);
 
-    private int ResolveSeatCount(Subscription subscription, Plan sourcePlan, Organization organization)
+    private async Task<int> ResolveSeatCountAsync(
+        Subscription subscription, Plan sourcePlan, Organization organization, SeatCountPolicy seatCountPolicy)
     {
+        // A Packaged source's line items don't reflect the true seat total, so resolve the quote from
+        // actual usage to match what the scheduler bills.
+        if (sourcePlan.IsPackagedMigrationSource(seatCountPolicy))
+        {
+            var occupied = (await organizationRepository
+                .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)).Total;
+            var passwordManagerSeats = sourcePlan.ResolveMigratedSeatCount(occupied, organization.Seats);
+
+            // Floor the quote on the Stripe SM seat line so the email matches the billed PM seats (SM <= PM).
+            var secretsManagerSeatQuantity = subscription.Items.Data
+                .FirstOrDefault(item =>
+                    sourcePlan.SecretsManager is not null &&
+                    item.Price?.Id == sourcePlan.SecretsManager.StripeSeatPlanId)?.Quantity ?? 0;
+
+            return (int)Math.Max((long)passwordManagerSeats, secretsManagerSeatQuantity);
+        }
+
         var seatItem = subscription.Items.Data
             .FirstOrDefault(item => item.Price?.Id == sourcePlan.PasswordManager.StripeSeatPlanId);
 
@@ -519,60 +544,137 @@ public class UpcomingInvoiceHandler(
 
     private async Task<List<Discount>> ResolveDiscountsAsync(
         OrganizationPlanMigrationCohort cohort,
-        Organization organization)
+        Subscription subscription,
+        Organization organization,
+        CultureInfo culture)
     {
-        if (string.IsNullOrEmpty(cohort.ProactiveDiscountCouponCode))
+        var discounts = new List<Discount>();
+        var seenCouponIds = new HashSet<string>();
+
+        Discount? MapCoupon(Coupon? coupon, string couponId)
         {
-            return [];
+            if (coupon?.PercentOff is { } percentOff)
+            {
+                return new Discount(IsPercentage: true, Value: percentOff, Display: $"{percentOff}%");
+            }
+
+            if (coupon?.AmountOff is { } amountOffMinorUnits)
+            {
+                var amountOff = amountOffMinorUnits / 100M;
+                return new Discount(IsPercentage: false, Value: amountOff, Display: FormatCurrency(amountOff, culture));
+            }
+
+            logger.LogError(
+                "Discount coupon ({CouponId}) for Organization ({OrganizationId}) resolved with neither PercentOff nor AmountOff; it will not be reflected in the renewal email",
+                couponId, organization.Id);
+            return null;
         }
 
-        Coupon? coupon;
+        void AddIfNew(Coupon? coupon, string couponId)
+        {
+            if (string.IsNullOrEmpty(couponId) || !seenCouponIds.Add(couponId))
+            {
+                return;
+            }
+
+            var discount = MapCoupon(coupon, couponId);
+            if (discount is not null)
+            {
+                discounts.Add(discount);
+            }
+        }
+
+        async Task ResolveAndAddAsync(Coupon? expandedCoupon, string? couponId)
+        {
+            if (string.IsNullOrEmpty(couponId) || seenCouponIds.Contains(couponId))
+            {
+                return;
+            }
+
+            if (expandedCoupon is not null)
+            {
+                AddIfNew(expandedCoupon, couponId);
+                return;
+            }
+
+            try
+            {
+                var coupon = await stripeAdapter.GetCouponAsync(couponId);
+                AddIfNew(coupon, couponId);
+            }
+            catch (StripeException exception)
+            {
+                logger.LogError(
+                    exception,
+                    "Could not retrieve discount coupon ({CouponId}) for Organization ({OrganizationId}); the renewal email will not reflect it | Code = {Code}",
+                    couponId, organization.Id, exception.StripeError?.Code);
+            }
+        }
+
+        await ResolveAndAddAsync(expandedCoupon: null, cohort.ProactiveDiscountCouponCode);
+
+        foreach (var discount in subscription.Discounts ?? [])
+        {
+            if (discount is null)
+            {
+                logger.LogError(
+                    "Subscription ({SubscriptionId}) for Organization ({OrganizationId}) returned a null discount entry; 'discounts.coupon' is likely no longer expanded and the renewal email may omit a discount",
+                    subscription.Id, organization.Id);
+                continue;
+            }
+
+            if (discount.Coupon is not { } coupon)
+            {
+                logger.LogError(
+                    "Subscription ({SubscriptionId}) discount ({DiscountId}) for Organization ({OrganizationId}) has no expanded Coupon; 'discounts.coupon' is likely no longer expanded and the renewal email may omit a discount",
+                    subscription.Id, discount.Id, organization.Id);
+                continue;
+            }
+
+            AddIfNew(coupon, coupon.Id);
+        }
+
         try
         {
-            coupon = await stripeAdapter.GetCouponAsync(cohort.ProactiveDiscountCouponCode);
+            var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
+                new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
+
+            var activeSchedule = schedules?.Data?.FirstOrDefault(s =>
+                s.SubscriptionId == subscription.Id && s.Status == SubscriptionScheduleStatus.Active);
+
+            if (activeSchedule != null)
+            {
+                var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+                var migrationPhases = activeSchedule.Phases?.Where(phase => phase.EndDate > now).ToList() ?? [];
+
+                SubscriptionSchedulePhase? postRenewalPhase = null;
+                switch (migrationPhases.Count)
+                {
+                    case 2:
+                        postRenewalPhase = migrationPhases[1];
+                        break;
+                    default:
+                        logger.LogWarning(
+                            "Schedule ({ScheduleId}) for Organization ({OrganizationId}) has {PhaseCount} unexpired phase(s); expected 2, so post-renewal discounts were not read for the renewal email",
+                            activeSchedule.Id, organization.Id, migrationPhases.Count);
+                        break;
+                }
+
+                foreach (var phaseDiscount in postRenewalPhase?.Discounts ?? [])
+                {
+                    await ResolveAndAddAsync(phaseDiscount?.Coupon, phaseDiscount?.CouponId);
+                }
+            }
         }
         catch (StripeException exception)
         {
-            // The cohort has a discount configured but Stripe could not return it, so the email will quote the
-            // undiscounted (higher) price. Log as an error so a customer being mis-quoted reaches alerting.
             logger.LogError(
                 exception,
-                "Could not retrieve proactive discount coupon ({CouponId}) for Organization ({OrganizationId}); sending price-only renewal email which will quote the undiscounted price | Code = {Code}",
-                cohort.ProactiveDiscountCouponCode, organization.Id, exception.StripeError?.Code);
-            return [];
+                "Could not list subscription schedules for Organization ({OrganizationId}) subscription ({SubscriptionId}); the renewal email may not reflect schedule-phase discounts | Code = {Code}",
+                organization.Id, subscription.Id, exception.StripeError?.Code);
         }
 
-        var culture = new CultureInfo("en-US");
-
-        if (coupon?.PercentOff is { } percentOff)
-        {
-            return [new Discount(IsPercentage: true, Value: percentOff, Display: $"{percentOff}%")];
-        }
-
-        // Stripe reports amount-off coupons in minor units (cents); convert to dollars for display and math.
-        if (coupon?.AmountOff is { } amountOffMinorUnits)
-        {
-            var amountOff = amountOffMinorUnits / 100M;
-            return [new Discount(IsPercentage: false, Value: amountOff, Display: FormatCurrency(amountOff, culture))];
-        }
-
-        logger.LogError(
-            "Proactive discount coupon ({CouponId}) for Organization ({OrganizationId}) resolved with neither PercentOff nor AmountOff; sending price-only renewal email, which will not reflect any discount",
-            cohort.ProactiveDiscountCouponCode, organization.Id);
-        return [];
-    }
-
-    private async Task WaitForTestClockToAdvanceAsync(TestClock testClock)
-    {
-        while (testClock.Status != "ready")
-        {
-            await Task.Delay(TimeSpan.FromSeconds(2));
-            testClock = await stripeAdapter.GetTestClockAsync(testClock.Id);
-            if (testClock.Status == "internal_failure")
-            {
-                throw new Exception("Stripe Test Clock encountered an internal failure");
-            }
-        }
+        return discounts;
     }
 
     #endregion
@@ -853,6 +955,10 @@ public class UpcomingInvoiceHandler(
                     // Re-including it would cause Stripe to re-apply it.
                     var discountConsumed = i > 0 && activeSchedule.Phases[i - 1].EndDate <= now;
 
+                    // Gate on StartDate > now, not !discountConsumed (false for the active phase 0),
+                    // so we never re-stack the customer coupon onto the already-billing current period.
+                    var customerDiscount = phase.StartDate > now ? subscription.Customer?.Discount : null;
+
                     phases.Add(new SubscriptionSchedulePhaseOptions
                     {
                         StartDate = phase.StartDate,
@@ -864,10 +970,8 @@ public class UpcomingInvoiceHandler(
                         }).ToList(),
                         Discounts = discountConsumed
                             ? []
-                            : phase.Discounts?.Select(d => new SubscriptionSchedulePhaseDiscountOptions
-                            {
-                                Coupon = d.CouponId
-                            }).ToList(),
+                            : customerDiscount.MergeDiscountCouponIds(
+                                phase.Discounts?.Select(d => d.CouponId)).ToPhaseDiscountOptions(),
                         ProrationBehavior = phase.ProrationBehavior,
                         AutomaticTax = new SubscriptionSchedulePhaseAutomaticTaxOptions
                         {

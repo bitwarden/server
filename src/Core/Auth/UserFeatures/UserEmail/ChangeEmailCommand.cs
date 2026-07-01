@@ -1,26 +1,21 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Enums;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
-using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Auth.UserFeatures.UserEmail;
 
 public class ChangeEmailCommand(
         IUserRepository userRepository,
-        IPushNotificationService pushService,
         IStripeSyncService stripeSyncService,
         IOrganizationDomainAllowEmailChangeQuery organizationDomainAllowEmailChangeQuery,
         TimeProvider timeProvider,
         ILogger<ChangeEmailCommand> logger) : IChangeEmailCommand
 {
     private readonly IUserRepository _userRepository = userRepository;
-    private readonly IPushNotificationService _pushService = pushService;
     private readonly IStripeSyncService _stripeSyncService = stripeSyncService;
     private readonly IOrganizationDomainAllowEmailChangeQuery _organizationDomainAllowEmailChangeQuery = organizationDomainAllowEmailChangeQuery;
     private readonly TimeProvider _timeProvider = timeProvider;
@@ -29,7 +24,7 @@ public class ChangeEmailCommand(
     /// <inheritdoc />
     public async Task ChangeEmailAsync(User user, string newEmail)
     {
-        await EnsureNewEmailDomainAllowedAsync(user, newEmail);
+        await _organizationDomainAllowEmailChangeQuery.ValidateAllowedAsync(user, newEmail);
 
         var existingUser = await _userRepository.GetByEmailAsync(newEmail);
         if (existingUser != null && existingUser.Id != user.Id)
@@ -83,38 +78,6 @@ public class ChangeEmailCommand(
                 }
                 throw;
             }
-        }
-        await _pushService.PushSyncSettingsAsync(user.Id);
-    }
-
-    /// <summary>
-    /// Defers domain-allowance checks to <see cref="IOrganizationDomainAllowEmailChangeQuery"/>;
-    /// see query for the full set of rejection reasons.
-    /// </summary>
-    private async Task EnsureNewEmailDomainAllowedAsync(User user, string newEmail)
-    {
-        // If the new email domain is the same as the current email domain, we can skip
-        // the checks since it would be a noop in terms of policy and claiming organizations.
-        // Null check for nullable reference types, but the email should always be valid at this point in the code.
-        var newDomain = EmailValidation.GetDomain(newEmail);
-        if (newDomain == EmailValidation.GetDomain(user.Email))
-        {
-            return;
-        }
-
-        var denialReason = await _organizationDomainAllowEmailChangeQuery.IsAllowedAsync(user, newDomain);
-        var errorMessage = denialReason switch
-        {
-            OrganizationDomainAllowEmailChangeDenialReason.Allowed => null,
-            OrganizationDomainAllowEmailChangeDenialReason.UserIsClaimedAndDomainNotVerified =>
-                "Your account is managed by an organization, and this email address isn't on one of the organization's verified domains.",
-            OrganizationDomainAllowEmailChangeDenialReason.DomainIsBlockedByPolicy =>
-                "This email address is claimed by an organization using Bitwarden.",
-            _ => throw new InvalidOperationException($"Unhandled {nameof(OrganizationDomainAllowEmailChangeDenialReason)}: {denialReason}."),
-        };
-        if (errorMessage is not null)
-        {
-            throw new BadRequestException(errorMessage);
         }
     }
 }

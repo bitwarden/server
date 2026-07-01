@@ -123,6 +123,12 @@
           "System.Xml.XPath.XmlDocument": "4.3.0"
         }
       },
+      "CsvHelper": {
+        "type": "Direct",
+        "requested": "[33.1.0, 33.1.0]",
+        "resolved": "33.1.0",
+        "contentHash": "kqfTOZGrn7NarNeXgjh86JcpTHUoeQDMB8t9NVa/ZtlSYiV1rxfRnQ49WaJsob4AiGrbK0XDzpyKkBwai4F8eg=="
+      },
       "DnsClient": {
         "type": "Direct",
         "requested": "[1.8.0, 1.8.0]",

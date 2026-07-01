@@ -127,6 +127,12 @@
                                                 Manage Migration Cohorts
                                             </a>
                                         }
+                                        @if (canManageCohorts)
+                                        {
+                                            <a class="dropdown-item" asp-controller="OrganizationPlanMigrationCohortAssignments" asp-action="Index">
+                                                Bulk Assign Cohorts
+                                            </a>
+                                        }
                                     </ul>
                                 </li>
                             }

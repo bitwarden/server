@@ -15,6 +15,7 @@ public struct SingleOrganizationSceneResult
     public Guid OrganizationId { get; init; }
     public Guid OrganizationUserId { get; init; }
     public string ApiKey { get; init; }
+    public string OrganizationKeyB64 { get; init; }
 }
 
 /// <summary>
@@ -39,12 +40,18 @@ public class SingleOrganizationScene(
         public required string Domain { get; set; }
         [Required]
         public required int Seats { get; set; }
+        public bool EnableSecretsManager { get; set; }
+        public int? SmSeats { get; set; }
+        public int? SmServiceAccounts { get; set; }
     }
 
     public async Task<SceneResult<SingleOrganizationSceneResult>> SeedAsync(Request request)
     {
-        var user = await userRepository.GetByIdAsync(request.OwnerUserId)
-            ?? throw new InvalidOperationException($"User {request.OwnerUserId} not found.");
+        var user = await userRepository.GetByIdAsync(request.OwnerUserId);
+        if (user == null)
+        {
+            throw new Exception($"User with ID {request.OwnerUserId} not found.");
+        }
 
         if (string.IsNullOrEmpty(user.PublicKey))
         {
@@ -63,6 +70,11 @@ public class SingleOrganizationScene(
             orgKeys.PrivateKey,
             request.PlanType);
 
+        if (request.EnableSecretsManager)
+        {
+            PlanFeatures.EnableSecretsManager(organization, request.SmSeats, request.SmServiceAccounts);
+        }
+
         await organizationRepository.CreateAsync(organization);
 
         var ownerOrgKey = RustSdkService.GenerateUserOrganizationKey(user.PublicKey, orgKeys.Key);
@@ -71,6 +83,8 @@ public class SingleOrganizationScene(
             OrganizationUserType.Owner,
             OrganizationUserStatusType.Confirmed,
             ownerOrgKey);
+
+        organizationUser.AccessSecretsManager = organization.UseSecretsManager;
 
         await organizationUserRepository.CreateAsync(organizationUser);
 
@@ -90,7 +104,8 @@ public class SingleOrganizationScene(
             {
                 OrganizationId = organization.Id,
                 OrganizationUserId = organizationUser.Id,
-                ApiKey = apiKey.ApiKey
+                ApiKey = apiKey.ApiKey,
+                OrganizationKeyB64 = orgKeys.Key
             },
             mangleMap: manglerService.GetMangleMap());
     }

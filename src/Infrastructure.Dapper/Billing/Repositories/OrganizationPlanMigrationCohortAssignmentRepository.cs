@@ -1,7 +1,10 @@
 ﻿using System.Data;
+using System.Text.Json;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
+using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
@@ -34,6 +37,49 @@ public class OrganizationPlanMigrationCohortAssignmentRepository(
         return await connection.ExecuteScalarAsync<int>(
             $"[{Schema}].[{Table}_ReadNonPendingCountByCohortId]",
             new { CohortId = cohortId },
+            commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task<IReadOnlyList<CohortAssignmentExportRow>> GetExportRowsByCohortIdAsync(
+        Guid cohortId, DateTime? afterCreationDate, Guid? afterId, int take)
+    {
+        if (afterCreationDate is null != (afterId is null))
+        {
+            throw new ArgumentException("afterCreationDate and afterId must both be set or both be null.");
+        }
+
+        await using var connection = new SqlConnection(ReadOnlyConnectionString);
+
+        var results = await connection.QueryAsync<CohortAssignmentExportRow>(
+            $"[{Schema}].[{Table}_ReadManyExportByCohortId]",
+            new
+            {
+                CohortId = cohortId,
+                AfterCreationDate = afterCreationDate,
+                AfterId = afterId,
+                Take = take,
+            },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToList();
+    }
+
+    public async Task<CohortBulkAssignmentSummary> SyncManyAsync(
+        IEnumerable<ResolvedCohortBulkAssignmentRow> rows)
+    {
+        var payload = rows.Select(row => new
+        {
+            Id = row.CohortId.HasValue ? CoreHelpers.GenerateComb() : (Guid?)null,
+            row.OrganizationId,
+            row.CohortId,
+        });
+        var jsonData = JsonSerializer.Serialize(payload);
+
+        await using var connection = new SqlConnection(ConnectionString);
+
+        return await connection.QuerySingleAsync<CohortBulkAssignmentSummary>(
+            $"[{Schema}].[{Table}_UpdateManySync]",
+            new { JsonData = jsonData, RevisionDate = DateTime.UtcNow },
             commandType: CommandType.StoredProcedure);
     }
 }

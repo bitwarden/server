@@ -338,6 +338,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("UseOrganizationDomains")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("UsePam")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("UsePasswordManager")
                         .HasColumnType("boolean");
 
@@ -1057,6 +1060,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasIndex("OrganizationId")
                         .IsUnique()
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("CohortId", "CreationDate", "Id")
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("CohortId", "ScheduledDate", "MigratedDate")

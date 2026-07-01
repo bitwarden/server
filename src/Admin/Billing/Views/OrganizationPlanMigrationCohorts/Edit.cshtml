@@ -78,6 +78,9 @@
 <div class="d-flex mt-4">
     <button type="submit" class="btn btn-primary" form="cohort-form">Save</button>
     <a asp-action="Index" class="btn btn-secondary ms-2">Cancel</a>
+    <a asp-action="Export" asp-route-id="@Model.FormModel.Id" class="btn btn-secondary ms-2">
+        <i class="fa fa-download"></i> Export CSV
+    </a>
     <div class="ms-auto d-flex">
         <form method="post" asp-action="Delete" asp-route-id="@Model.FormModel.Id"
               onsubmit="return confirm('Are you sure you want to delete this cohort?')">

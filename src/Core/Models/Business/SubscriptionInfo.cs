@@ -46,6 +46,8 @@ public class SubscriptionInfo
             // Active = true only for perpetual/recurring discounts (no end date)
             // This is intentional for Milestone 2 - only perpetual discounts are shown in UI
             Active = discount.End == null;
+            End = discount.End;
+            DurationInMonths = discount.Coupon?.DurationInMonths;
             PercentOff = discount.Coupon?.PercentOff;
             AmountOff = ConvertFromStripeMinorUnits(discount.Coupon?.AmountOff);
             // Stripe's CouponAppliesTo.Products is already IReadOnlyList<string>, so no conversion needed
@@ -61,6 +63,8 @@ public class SubscriptionInfo
         {
             Id = coupon.Id;
             Active = true;
+            End = null;
+            DurationInMonths = coupon.DurationInMonths;
             PercentOff = coupon.PercentOff;
             AmountOff = ConvertFromStripeMinorUnits(coupon.AmountOff);
             AppliesTo = coupon.AppliesTo?.Products;
@@ -79,6 +83,19 @@ public class SubscriptionInfo
         /// Product decision for Milestone 2: only show perpetual discounts in UI.
         /// </summary>
         public bool Active { get; set; }
+
+        /// <summary>
+        /// The instant the discount stops applying, from Stripe's Discount.end.
+        /// Null when the discount has no end date (perpetual) or when constructed from a
+        /// Coupon directly (Phase-2 scheduled discount — no Discount wrapper available).
+        /// </summary>
+        public DateTime? End { get; set; }
+
+        /// <summary>
+        /// For a `repeating` coupon, the number of months the discount applies (Stripe Coupon.duration_in_months).
+        /// Null for `once`/`forever` coupons.
+        /// </summary>
+        public long? DurationInMonths { get; set; }
 
         /// <summary>
         /// Percentage discount applied to the subscription (e.g., 20.0 for 20% off).
@@ -130,6 +147,7 @@ public class SubscriptionInfo
             GracePeriod = sub?.CollectionMethod == "charge_automatically"
                 ? 14
                 : 30;
+            ServiceAccountGrace = sub?.GetMigrationGraceServiceAccounts() ?? 0;
         }
 
         public DateTime? TrialStartDate { get; set; }
@@ -146,6 +164,12 @@ public class SubscriptionInfo
         public DateTime? SuspensionDate { get; set; }
         public DateTime? UnpaidPeriodEndDate { get; set; }
         public int GracePeriod { get; set; }
+
+        /// <summary>
+        /// The count of permanently-free Secrets Manager service accounts granted beyond the plan baseline
+        /// during a pricing migration. Read from Stripe subscription metadata; 0 when none was granted.
+        /// </summary>
+        public int ServiceAccountGrace { get; set; }
 
         public class BillingSubscriptionItem
         {

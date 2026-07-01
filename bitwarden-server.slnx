@@ -21,6 +21,7 @@
     <Project Path="src/Core/Core.csproj" />
     <Project Path="src/Events/Events.csproj" />
     <Project Path="src/EventsProcessor/EventsProcessor.csproj" />
+    <Project Path="src/HttpExtensions/HttpExtensions.csproj" />
     <Project Path="src/Icons/Icons.csproj" />
     <Project Path="src/Identity/Identity.csproj" />
     <Project Path="src/Infrastructure.Dapper/Infrastructure.Dapper.csproj" />
@@ -51,6 +52,7 @@
     <Project Path="test/Admin.Test/Admin.Test.csproj" />
     <Project Path="test/Api.IntegrationTest/Api.IntegrationTest.csproj" />
     <Project Path="test/Api.Test/Api.Test.csproj" />
+    <Project Path="test/Billing.IntegrationTest/Billing.IntegrationTest.csproj" />
     <Project Path="test/Billing.Test/Billing.Test.csproj" />
     <Project Path="test/Common/Common.csproj" />
     <Project Path="test/Core.IntegrationTest/Core.IntegrationTest.csproj" />
@@ -58,6 +60,7 @@
     <Project Path="test/Events.IntegrationTest/Events.IntegrationTest.csproj" />
     <Project Path="test/Events.Test/Events.Test.csproj" />
     <Project Path="test/EventsProcessor.Test/EventsProcessor.Test.csproj" />
+    <Project Path="test/HttpExtensions.Test/HttpExtensions.Test.csproj" />
     <Project Path="test/Icons.Test/Icons.Test.csproj" />
     <Project Path="test/Identity.IntegrationTest/Identity.IntegrationTest.csproj" />
     <Project Path="test/Identity.Test/Identity.Test.csproj" />
