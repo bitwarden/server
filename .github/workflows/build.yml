@@ -286,6 +286,47 @@ jobs:
           push: true
           tags: ${{ steps.image-tags.outputs.tags }}
 
+      - name: Generate Gov image tag
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        id: gov-tag
+        env:
+          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
+          SHA: ${{ github.sha }}
+        run: |
+          SHORT_SHA=$(git rev-parse --short "${SHA}")
+          echo "gov_tag=registry.gamewarden.io/bitwarden/${PROJECT_NAME}:gov-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Get Gov registry secrets from Key Vault
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        id: get-kv-secrets
+        uses: bitwarden/gh-actions/get-keyvault-secrets@main
+        with:
+          keyvault: gh-deploy
+          secrets: "GOV-REGISTRY-USERNAME,GOV-REGISTRY-PASSWORD"
+
+      - name: Log in to Gov registry
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
+        with:
+          registry: registry.gamewarden.io
+          username: ${{ steps.get-kv-secrets.outputs.GOV-REGISTRY-USERNAME }}
+          password: ${{ steps.get-kv-secrets.outputs.GOV-REGISTRY-PASSWORD }}
+
+      - name: Build Docker image for Gov
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        id: build-image-gov
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
+        with:
+          context: .
+          file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile.gov
+          platforms: ${{ steps.platforms.outputs.platforms }}
+          push: true
+          tags: ${{ steps.gov-tag.outputs.gov_tag }}
+
+      - name: Log out from Gov registry
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: docker logout registry.gamewarden.io
+
       - name: Install Cosign
         if: github.event_name != 'pull_request' && env.is_publish_branch == 'true'
         uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
