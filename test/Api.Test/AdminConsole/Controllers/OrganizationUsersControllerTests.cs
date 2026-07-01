@@ -7,6 +7,8 @@ using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
@@ -759,5 +761,63 @@ public class OrganizationUsersControllerTests
         await sutProvider.GetDependency<IBulkResendOrganizationInvitesCommand>()
             .Received(1)
             .BulkResendInvitesAsync(organizationId, userId, bulkRequestModel.Ids);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmInviteLink_WithValidInput_ReturnsOk(
+        User user,
+        ConfirmOrganizationInviteLinkRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        sutProvider.GetDependency<IConfirmOrganizationInviteLinkCommand>()
+            .ConfirmAsync(Arg.Any<ConfirmOrganizationInviteLinkRequest>())
+            .Returns(new CommandResult(new None()));
+
+        var result = await sutProvider.Sut.ConfirmInviteLink(model);
+
+        Assert.IsType<Ok>(result);
+        await sutProvider.GetDependency<IConfirmOrganizationInviteLinkCommand>()
+            .Received(1)
+            .ConfirmAsync(Arg.Is<ConfirmOrganizationInviteLinkRequest>(r =>
+                r.Code == model.Code &&
+                r.User == user &&
+                r.OrgUserKey == model.OrgUserKey &&
+                r.ResetPasswordKey == model.ResetPasswordKey &&
+                r.DefaultUserCollectionName == model.DefaultUserCollectionName));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmInviteLink_WhenCommandReturnsError_ReturnsBadRequest(
+        User user,
+        ConfirmOrganizationInviteLinkRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        sutProvider.GetDependency<IConfirmOrganizationInviteLinkCommand>()
+            .ConfirmAsync(Arg.Any<ConfirmOrganizationInviteLinkRequest>())
+            .Returns(new CommandResult(new EmailDomainNotAllowed()));
+
+        var result = await sutProvider.Sut.ConfirmInviteLink(model);
+
+        Assert.IsType<BadRequest<ErrorResponseModel>>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmInviteLink_WhenUserNotFound_Throws(
+        ConfirmOrganizationInviteLinkRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns((User?)null);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.ConfirmInviteLink(model));
     }
 }
