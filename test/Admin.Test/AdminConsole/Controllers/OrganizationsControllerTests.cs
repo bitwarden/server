@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
@@ -1927,7 +1928,10 @@ public class OrganizationsControllerTests
 
         sutProvider.GetDependency<IStripePaymentService>()
             .GetBillingAsync(organization)
-            .ThrowsAsync(new StripeException("No such customer: 'cus_deleted'"));
+            .ThrowsAsync(new StripeException
+            {
+                StripeError = new StripeError { Code = StripeConstants.ErrorCodes.ResourceMissing }
+            });
 
         sutProvider.Sut.TempData =
             new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
@@ -1963,7 +1967,10 @@ public class OrganizationsControllerTests
             .Returns(billingInfo);
         sutProvider.GetDependency<IStripePaymentService>()
             .GetBillingHistoryAsync(organization)
-            .ThrowsAsync(new StripeException("No such customer: 'cus_deleted'"));
+            .ThrowsAsync(new StripeException
+            {
+                StripeError = new StripeError { Code = StripeConstants.ErrorCodes.ResourceMissing }
+            });
 
         sutProvider.Sut.TempData =
             new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
@@ -1979,6 +1986,39 @@ public class OrganizationsControllerTests
             "Billing information could not be loaded. The Stripe customer may have been deleted. " +
             "You can still edit the organization and set a valid Gateway Customer ID.",
             (string)sutProvider.Sut.TempData["Warning"]);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_BillingLoadThrowsUnexpectedError_StillRendersPageWithErrorToast(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // PM-38874: a billing-load failure that is NOT a missing Stripe customer (resource_missing)
+        // must fall through to the generic catch, which surfaces a neutral error toast rather than
+        // asserting the customer was deleted.
+        StubEditGetDependencies(sutProvider, organization, currentAssignment: null);
+
+        sutProvider.GetDependency<IStripePaymentService>()
+            .GetBillingAsync(organization)
+            .ThrowsAsync(new StripeException { StripeError = new StripeError { Code = "api_error" } });
+
+        sutProvider.Sut.TempData =
+            new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.Edit(organization.Id);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<OrganizationEditModel>(view.Model);
+        Assert.Null(model.BillingInfo);
+        Assert.Null(model.BillingHistoryInfo);
+        Assert.False(sutProvider.Sut.TempData.ContainsKey("Warning"));
+        Assert.True(sutProvider.Sut.TempData.ContainsKey("Error"));
+        Assert.Equal(
+            "Billing information could not be loaded. You can still edit the organization or try reloading the page. " +
+            "Contact support if the problem persists.",
+            (string)sutProvider.Sut.TempData["Error"]);
     }
 
     #endregion
