@@ -653,7 +653,11 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             var targetProvidedServiceAccounts = targetPlan.SecretsManager?.BaseServiceAccount ?? 0;
             var grace = Math.Max(0, sourceProvidedServiceAccounts - targetProvidedServiceAccounts);
 
-            if (grace > 0)
+            var sourceSecretsManagerSeatPlanId = sourcePlan.SecretsManager?.StripeSeatPlanId;
+            var previousSubscriptionHasSecretsManager = sourceSecretsManagerSeatPlanId != null &&
+                previousSubscription.Items.Data.Any(item => item.Price?.Id == sourceSecretsManagerSeatPlanId);
+
+            if (grace > 0 && previousSubscriptionHasSecretsManager)
             {
                 var metadata = new Dictionary<string, string>(subscription.Metadata)
                 {
