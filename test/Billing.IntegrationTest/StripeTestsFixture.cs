@@ -658,6 +658,93 @@ public class StripeTestsFixture : IAsyncDisposable
     }
 
     /// <summary>
+    /// Purchases premium, wraps the resulting Stripe subscription in a
+    /// <see cref="SubscriptionSchedule"/>, and appends a future Phase 2 whose
+    /// Discounts reference a product-scoped Stripe coupon (bound to the Premium
+    /// product via <c>applies_to.products</c>). Any pre-existing coupon with the
+    /// same id is deleted first so the test is re-runnable.
+    ///
+    /// Exercises the schedule Phase-2 read path in
+    /// <see cref="GetBitwardenSubscriptionQuery"/> — the <c>phases.discounts.coupon.applies_to</c>
+    /// expand, plus the <c>d.Coupon</c> reader that <see cref="SubscriptionSchedulePhaseDiscount"/>
+    /// actually exposes (as opposed to the wire-invalid <c>d.Discount.Source.Coupon</c>
+    /// path the SDK bump initially introduced).
+    /// </summary>
+    public async Task<HttpClient> PreparePremiumUserWithProductScopedPhase2CouponAsync(
+        string email, string couponId)
+    {
+        var stripeClient = CreateStripeClient();
+
+        try { await stripeClient.V1.Coupons.DeleteAsync(couponId); }
+        catch (StripeException ex) when (ex.StripeError?.Code == "resource_missing") { /* first run */ }
+
+        await stripeClient.V1.Coupons.CreateAsync(new CouponCreateOptions
+        {
+            Id = couponId,
+            Name = "IT Phase2 Premium Coupon",
+            PercentOff = 10,
+            Duration = "once",
+            AppliesTo = new CouponAppliesToOptions
+            {
+                Products = [StripeConstants.ProductIDs.Premium],
+            },
+        });
+
+        var client = await PreparePremiumUserAsync(email);
+
+        string subscriptionId;
+        using (var scope = Api.Services.CreateScope())
+        {
+            var user = await scope.ServiceProvider.GetRequiredService<IUserRepository>()
+                .GetByEmailAsync(email);
+            subscriptionId = user!.GatewaySubscriptionId!;
+        }
+
+        // Wrap the existing subscription in a schedule so `subscription.ScheduleId`
+        // is populated on the GET path.
+        var schedule = await stripeClient.V1.SubscriptionSchedules.CreateAsync(new SubscriptionScheduleCreateOptions
+        {
+            FromSubscription = subscriptionId,
+        });
+
+        // Append a future Phase 2 that carries the product-scoped coupon.
+        // FromSubscription seeds Phase 1 from the current sub; we mirror its items
+        // and add a follow-up phase with a matching item and the new coupon.
+        var phase1 = schedule.Phases[0];
+        var phase1EndDate = phase1.EndDate;
+        var phase1Items = phase1.Items
+            .Select(i => new SubscriptionSchedulePhaseItemOptions
+            {
+                Price = i.PriceId,
+                Quantity = i.Quantity,
+            })
+            .ToList();
+
+        await stripeClient.V1.SubscriptionSchedules.UpdateAsync(schedule.Id,
+            new SubscriptionScheduleUpdateOptions
+            {
+                Phases =
+                [
+                    new SubscriptionSchedulePhaseOptions
+                    {
+                        StartDate = phase1.StartDate,
+                        EndDate = phase1EndDate,
+                        Items = phase1Items,
+                    },
+                    new SubscriptionSchedulePhaseOptions
+                    {
+                        StartDate = phase1EndDate,
+                        EndDate = phase1EndDate.AddYears(1),
+                        Items = phase1Items,
+                        Discounts = [new SubscriptionSchedulePhaseDiscountOptions { Coupon = couponId }],
+                    },
+                ],
+            });
+
+        return client;
+    }
+
+    /// <summary>
     /// Creates a no-op Stripe Checkout Session attached to the given customer for
     /// webhook tests that simulate <c>checkout.session.completed</c>.
     /// </summary>

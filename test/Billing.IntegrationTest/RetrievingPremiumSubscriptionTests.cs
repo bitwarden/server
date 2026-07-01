@@ -97,4 +97,33 @@ public class RetrievingPremiumSubscriptionTests(StripeTestsFixture fixture) : IC
 
         Assert.Null(cart["discount"]);
     }
+
+    [BillingFact]
+    public async Task Subscription_WithProductScopedPhase2ScheduleCoupon_AttributesDiscountToSeatsCartItem()
+    {
+        // Regression coverage for GetBitwardenSubscriptionQuery.GetSchedulePhase2CouponIdsAsync.
+        // SubscriptionSchedulePhaseDiscount exposes `Coupon` directly (unlike
+        // Subscription.Discounts[], which the 2025-09-30.clover refactor wrapped
+        // under `Discount.Source.Coupon`). The SDK bump initially misapplied the
+        // Source.Coupon pattern here — Stripe rejects `phases.discounts.source`
+        // with a 500, and even if it didn't the reader `d.Discount.Source.Coupon`
+        // wouldn't populate. The fix uses `phases.discounts.coupon.applies_to`
+        // (4 levels, includes applies_to inline) with `d.Coupon` in the reader.
+        var couponId = $"prod_scoped_phase2_{Guid.NewGuid():N}";
+        var client = await fixture.PreparePremiumUserWithProductScopedPhase2CouponAsync(
+            "premium-phase2-product-coupon@example.com", couponId);
+
+        var response = await client.GetAsync("/account/billing/vnext/subscription");
+        await Assert.SuccessResponseAsync(response);
+
+        var subscription = (await response.Content.ReadFromJsonAsync<JsonObject>())!;
+        var cart = subscription["cart"]!;
+
+        var seatsDiscount = cart["passwordManager"]!["seats"]!["discount"];
+        Assert.NotNull(seatsDiscount);
+        Assert.Equal("percent-off", seatsDiscount["type"]!.GetValue<string>());
+        Assert.Equal(10m, seatsDiscount["value"]!.GetValue<decimal>());
+
+        Assert.Null(cart["discount"]);
+    }
 }

@@ -305,11 +305,12 @@ public class GetBitwardenSubscriptionQuery(
             var schedule = await stripeAdapter.GetSubscriptionScheduleAsync(subscription.ScheduleId,
                 new SubscriptionScheduleGetOptions
                 {
-                    // Stops at 4 levels: `phases.discounts.source.coupon.applies_to`
-                    // would be 5, over Stripe's 4-level expand cap (the 2025-09-30.clover
-                    // change wrapped Coupon under Discount.Source). AppliesTo is filled
-                    // in by GetRelevantCouponsAsync's per-coupon refetch step.
-                    Expand = ["phases.discounts.source.coupon"]
+                    // `SubscriptionSchedulePhaseDiscount` exposes `Coupon` directly (not
+                    // wrapped under `Source` like the 2025-09-30.clover Discount refactor).
+                    // Expanding through `phases.discounts.coupon.applies_to` fits Stripe's
+                    // 4-level cap and includes applies_to inline; no per-coupon refetch
+                    // is needed for the phase-2 branch.
+                    Expand = ["phases.discounts.coupon.applies_to"]
                 });
 
             if (schedule.Status != SubscriptionScheduleStatus.Active || schedule.Phases.Count < 2)
@@ -329,8 +330,8 @@ public class GetBitwardenSubscriptionQuery(
             }
 
             return phase2.Discounts?
-                .Where(d => d?.Discount?.Source?.Coupon?.Valid == true)
-                .Select(d => d.Discount!.Source!.Coupon!.Id)
+                .Where(d => d?.Coupon?.Valid == true)
+                .Select(d => d.Coupon!.Id)
                 .ToList() ?? [];
         }
         catch (StripeException stripeException)

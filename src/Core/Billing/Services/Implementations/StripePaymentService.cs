@@ -728,11 +728,12 @@ public class StripePaymentService : IStripePaymentService
             var schedule = await _stripeAdapter.GetSubscriptionScheduleAsync(subscription.ScheduleId,
                 new SubscriptionScheduleGetOptions
                 {
-                    // `phases.discounts.source.coupon` stops at 4 levels: appending
-                    // `.applies_to` would put it at 5, over Stripe's 4-level expand cap
-                    // (the 2025-09-30.clover change wrapped Coupon under Discount.Source).
-                    // AppliesTo is filled in by FetchCouponWithAppliesToAsync below.
-                    Expand = ["phases.discounts.source.coupon", "phases.items.price"]
+                    // `SubscriptionSchedulePhaseDiscount` exposes `Coupon` directly (not
+                    // wrapped under `Source` like the 2025-09-30.clover Discount refactor).
+                    // Expanding through `phases.discounts.coupon.applies_to` fits Stripe's
+                    // 4-level cap and includes applies_to inline; no separate coupon
+                    // refetch is needed for the phase-2 branch.
+                    Expand = ["phases.discounts.coupon.applies_to", "phases.items.price"]
                 });
 
             if (schedule.Status != StripeConstants.SubscriptionScheduleStatus.Active || schedule.Phases.Count < 2)
@@ -806,15 +807,11 @@ public class StripePaymentService : IStripePaymentService
 
             // Override discount with Phase 2 discount
             var phase2Discount = phase2.Discounts?.FirstOrDefault();
-            if (phase2Discount?.Discount?.Source?.Coupon != null)
+            if (phase2Discount?.Coupon != null)
             {
-                // The schedule expand stops at `.coupon` (4 levels), so the returned
-                // Coupon lacks AppliesTo — which BillingCustomerDiscount reads. Refetch
-                // the coupon rooted at Coupons.Retrieve, where `applies_to` sits 1 level
-                // deep and comfortably under Stripe's 4-level expand cap.
-                var enrichedCoupon = await FetchCouponWithAppliesToAsync(phase2Discount.Discount.Source.Coupon.Id)
-                    ?? phase2Discount.Discount.Source.Coupon;
-                subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(enrichedCoupon);
+                // Coupon comes populated (with AppliesTo) from the parent
+                // `phases.discounts.coupon.applies_to` expand — see comment above.
+                subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(phase2Discount.Coupon);
             }
         }
         catch (StripeException ex)
