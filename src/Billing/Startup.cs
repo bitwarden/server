@@ -51,7 +51,12 @@ public class Startup
         services.AddTestPlayIdTracking(globalSettings);
 
         // PayPal IPN Client
-        services.AddHttpClient<IPayPalIPNClient, PayPalIPNClient>();
+        services.AddHttpClient<IPayPalIPNClient, PayPalIPNClient>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(10);
+            // PayPal rejects postback verification requests that do not include a descriptive User-Agent (HTTP 403).
+            client.DefaultRequestHeaders.Add("User-Agent", "Bitwarden-IPN-VerificationScript");
+        });
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();

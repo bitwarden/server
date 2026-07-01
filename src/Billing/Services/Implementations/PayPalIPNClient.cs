@@ -15,13 +15,15 @@ public class PayPalIPNClient : IPayPalIPNClient
         ILogger<PayPalIPNClient> logger)
     {
         _httpClient = httpClient;
+        // PayPal IPN postback verification must target the dedicated ipnpb host; the legacy www.paypal.com/cgi-bin/webscr
+        // endpoint redirects and is not the documented postback target.
         _ipnEndpoint = new Uri(billingSettings.Value.PayPal.Production
-            ? "https://www.paypal.com/cgi-bin/webscr"
-            : "https://www.sandbox.paypal.com/cgi-bin/webscr");
+            ? "https://ipnpb.paypal.com/cgi-bin/webscr"
+            : "https://ipnpb.sandbox.paypal.com/cgi-bin/webscr");
         _logger = logger;
     }
 
-    public async Task<bool> VerifyIPN(string transactionId, string formData)
+    public async Task<PayPalIPNVerificationResult> VerifyIPN(string transactionId, string formData)
     {
         LogInfo(transactionId, $"Verifying IPN against {_ipnEndpoint}");
 
@@ -36,40 +38,51 @@ public class PayPalIPNClient : IPayPalIPNClient
 
         requestMessage.Content = new StringContent(requestContent, Encoding.UTF8, "application/x-www-form-urlencoded");
 
-        var response = await _httpClient.SendAsync(requestMessage);
+        HttpResponseMessage response;
+
+        try
+        {
+            response = await _httpClient.SendAsync(requestMessage);
+        }
+        // Any failure to reach PayPal (network error, timeout, etc.) is transient and must not be treated as a forged
+        // message: report it as Unverified so the caller can fail open instead of dropping a legitimate payment.
+        catch (Exception exception)
+        {
+            LogError(transactionId, $"Verification request failed | {exception.Message}");
+            return PayPalIPNVerificationResult.Unverified;
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            LogError(transactionId, $"Unsuccessful Response | Status Code: {response.StatusCode}");
+            return PayPalIPNVerificationResult.Unverified;
+        }
 
         var responseContent = await response.Content.ReadAsStringAsync();
 
-        if (response.IsSuccessStatusCode)
+        return responseContent switch
         {
-            return responseContent switch
-            {
-                "VERIFIED" => Verified(),
-                "INVALID" => Invalid(),
-                _ => Unhandled(responseContent)
-            };
-        }
+            "VERIFIED" => Verified(),
+            "INVALID" => Invalid(),
+            _ => Unhandled(responseContent)
+        };
 
-        LogError(transactionId, $"Unsuccessful Response | Status Code: {response.StatusCode} | Content: {responseContent}");
-
-        return false;
-
-        bool Verified()
+        PayPalIPNVerificationResult Verified()
         {
             LogInfo(transactionId, "Verified");
-            return true;
+            return PayPalIPNVerificationResult.Verified;
         }
 
-        bool Invalid()
+        PayPalIPNVerificationResult Invalid()
         {
             LogError(transactionId, "Verification Invalid");
-            return false;
+            return PayPalIPNVerificationResult.Invalid;
         }
 
-        bool Unhandled(string content)
+        PayPalIPNVerificationResult Unhandled(string content)
         {
             LogWarning(transactionId, $"Unhandled Response Content: {content}");
-            return false;
+            return PayPalIPNVerificationResult.Unverified;
         }
     }
 
