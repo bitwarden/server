@@ -6,7 +6,6 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 
 namespace Bit.Admin.AdminConsole.Models;
@@ -59,7 +58,6 @@ public class OrganizationViewModel
     public Organization Organization { get; set; }
     public Provider Provider { get; set; }
     public IEnumerable<OrganizationConnection> Connections { get; set; }
-    [StrictEmailAddress]
     public string Owners { get; set; }
     public string Admins { get; set; }
     public int UserInvitedCount { get; set; }
