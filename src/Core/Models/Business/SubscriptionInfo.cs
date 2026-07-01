@@ -147,6 +147,7 @@ public class SubscriptionInfo
             GracePeriod = sub?.CollectionMethod == "charge_automatically"
                 ? 14
                 : 30;
+            ServiceAccountGrace = sub?.GetMigrationGraceServiceAccounts() ?? 0;
         }
 
         public DateTime? TrialStartDate { get; set; }
@@ -163,6 +164,12 @@ public class SubscriptionInfo
         public DateTime? SuspensionDate { get; set; }
         public DateTime? UnpaidPeriodEndDate { get; set; }
         public int GracePeriod { get; set; }
+
+        /// <summary>
+        /// The count of permanently-free Secrets Manager service accounts granted beyond the plan baseline
+        /// during a pricing migration. Read from Stripe subscription metadata; 0 when none was granted.
+        /// </summary>
+        public int ServiceAccountGrace { get; set; }
 
         public class BillingSubscriptionItem
         {
