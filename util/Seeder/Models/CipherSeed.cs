@@ -79,6 +79,21 @@ internal record CipherSeed
     public SshKeyViewDto? SshKey { get; init; }
 
     /// <summary>
+    /// Plaintext bank account data. Non-null when Type is BankAccount.
+    /// </summary>
+    public BankAccountViewDto? BankAccount { get; init; }
+
+    /// <summary>
+    /// Plaintext driver's license data. Non-null when Type is DriversLicense.
+    /// </summary>
+    public DriversLicenseViewDto? DriversLicense { get; init; }
+
+    /// <summary>
+    /// Plaintext passport data. Non-null when Type is Passport.
+    /// </summary>
+    public PassportViewDto? Passport { get; init; }
+
+    /// <summary>
     /// Validates that required fields are set before factory consumption.
     /// Call after populating EncryptionKey via <c>with</c>.
     /// </summary>
