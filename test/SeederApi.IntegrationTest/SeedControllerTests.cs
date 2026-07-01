@@ -1,8 +1,10 @@
 ﻿using System.Net;
+using System.Text.Json;
 using Bit.Seeder.Scenes;
 using Bit.SeederApi.Models.Request;
 using Bit.SeederApi.Models.Response;
 using Duende.IdentityModel.Client;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest;
@@ -220,6 +222,79 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
         // Verify the response contains MangleMap and Result fields
         Assert.Contains("mangleMap", jsonString, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("result", jsonString, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task SeedEndpoint_MigrationCohortExportScene_PersistsCohortOrgsAndAssignmentsToDatabase()
+    {
+        const int orgCount = 5;
+        var cohortName = $"PM-36965 Export Test {Guid.NewGuid()}";
+        var namePrefix = $"pm36965-{Guid.NewGuid():N}-";
+
+        var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
+        {
+            Template = "MigrationCohortExportScene",
+            Arguments = JsonSerializer.SerializeToElement(new MigrationCohortExportScene.Request
+            {
+                CohortName = cohortName,
+                OrgCount = orgCount,
+                NamePrefix = namePrefix
+            })
+        }, Guid.NewGuid().ToString());
+
+        response.EnsureSuccessStatusCode();
+
+        // Read the data back straight from the database -- proving the rows actually landed,
+        // not merely that the API reported success.
+        var db = _factory.GetDatabaseContext();
+
+        var cohort = await db.OrganizationPlanMigrationCohorts
+            .SingleOrDefaultAsync(c => c.Name == cohortName);
+        Assert.NotNull(cohort);
+        Assert.True(cohort.IsActive);
+
+        var orgs = await db.Organizations
+            .Where(o => o.Name.StartsWith(namePrefix))
+            .ToListAsync();
+        Assert.Equal(orgCount, orgs.Count);
+        Assert.All(orgs, o => Assert.False(o.Enabled)); // seeded orgs are inert
+
+        var assignments = await db.OrganizationPlanMigrationCohortAssignments
+            .Where(a => a.CohortId == cohort.Id)
+            .ToListAsync();
+        Assert.Equal(orgCount, assignments.Count);
+
+        // Every seeded org has exactly one assignment to this cohort.
+        var orgIds = orgs.Select(o => o.Id).ToHashSet();
+        Assert.Equal(orgIds, assignments.Select(a => a.OrganizationId).ToHashSet());
+
+        // This factory registers NeverPlayIdServices, so play-id recording is a no-op: no PlayItem
+        // rows are written for a seed that carries no active play id.
+        Assert.Equal(0, await db.PlayItem.CountAsync(p => orgIds.Contains(p.OrganizationId!.Value)));
+    }
+
+    [Fact]
+    public async Task SeedEndpoint_MigrationCohortExportScene_ReusesExistingCohortByName()
+    {
+        var cohortName = $"PM-36965 Reuse {Guid.NewGuid()}";
+
+        async Task<JsonElement> SeedAsync() =>
+            (await (await _client.PostAsJsonAsync("/seed", new SeedRequestModel
+            {
+                Template = "MigrationCohortExportScene",
+                Arguments = JsonSerializer.SerializeToElement(
+                    new MigrationCohortExportScene.Request { CohortName = cohortName, OrgCount = 2 })
+            }, Guid.NewGuid().ToString()))
+            .EnsureSuccessStatusCode()
+            .Content.ReadFromJsonAsync<JsonElement>());
+
+        var first = (await SeedAsync()).GetProperty("result");
+        var second = (await SeedAsync()).GetProperty("result");
+
+        // Second run finds the cohort by name and reuses it rather than creating a duplicate.
+        Assert.True(first.GetProperty("cohortCreated").GetBoolean());
+        Assert.False(second.GetProperty("cohortCreated").GetBoolean());
+        Assert.Equal(first.GetProperty("cohortId").GetGuid(), second.GetProperty("cohortId").GetGuid());
     }
 
     private class BatchDeleteResponse
