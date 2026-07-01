@@ -13,7 +13,8 @@ internal record CipherSeed
     /// <summary>
     /// Drives factory dispatch in <see cref="Steps.CreateCiphersStep"/>. Individual
     /// factories do not read this field — each hard-codes its own type. Exactly one
-    /// matching type-specific DTO (Login, Card, Identity, SecureNote, SshKey) must be non-null.
+    /// matching type-specific DTO (Login, Card, Identity, SecureNote, SshKey, BankAccount,
+    /// DriversLicense, Passport) must be non-null.
     /// </summary>
     public required CipherType Type { get; init; }
 
