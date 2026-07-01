@@ -1,6 +1,8 @@
 ﻿using System.Runtime.InteropServices;
 using Bit.Admin.Auth.Jobs;
 using Bit.Admin.Tools.Jobs;
+using Bit.Core.Dirt.Services;
+using Bit.Core.Dirt.Services.Implementations;
 using Bit.Core.Jobs;
 using Bit.Core.Settings;
 using Quartz;
@@ -91,7 +93,7 @@ public class JobsHostedService : BaseJobsHostedService
         if (!_globalSettings.SelfHosted)
         {
             jobs.Add(new Tuple<Type, ITrigger>(typeof(AliveJob), everyTopOfTheHourTrigger));
-            jobs.Add(new Tuple<Type, ITrigger>(typeof(CleanUpOrganizationEventsJob), everyFiveMinutesTrigger));
+            jobs.Add(new Tuple<Type, ITrigger>(typeof(OrganizationDeleteTasksJob), everyFiveMinutesTrigger));
         }
 
         Jobs = jobs;
@@ -103,7 +105,8 @@ public class JobsHostedService : BaseJobsHostedService
         if (!selfHosted)
         {
             services.AddTransient<AliveJob>();
-            services.AddTransient<CleanUpOrganizationEventsJob>();
+            services.AddTransient<OrganizationDeleteTasksJob>();
+            services.AddTransient<IOrganizationDeleteTaskHandler, EventsCleanupOrganizationDeleteTaskHandler>();
         }
         services.AddTransient<DatabaseUpdateStatisticsJob>();
         services.AddTransient<DatabaseRebuildlIndexesJob>();

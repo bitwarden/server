@@ -1,4 +1,19 @@
-﻿CREATE PROCEDURE [dbo].[Organization_DeleteById]
+-- Generalize the atomic OrganizationDeleteTask enqueue in Organization_DeleteById so
+-- any number of task types can be enqueued in the same transaction as the delete.
+-- Adds a table-valued parameter; the existing scalar params are retained (defaulted)
+-- so callers on the previous server version keep working during a rolling deployment.
+
+-- User-defined table type carrying the tasks to enqueue.
+IF TYPE_ID('[dbo].[OrganizationDeleteTaskArray]') IS NULL
+BEGIN
+    CREATE TYPE [dbo].[OrganizationDeleteTaskArray] AS TABLE (
+        [Id]           UNIQUEIDENTIFIER NOT NULL,
+        [TaskType]     TINYINT          NOT NULL,
+        [CreationDate] DATETIME2(7)     NOT NULL);
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[Organization_DeleteById]
     @Id UNIQUEIDENTIFIER,
     @OrganizationDeleteTaskId UNIQUEIDENTIFIER = NULL,
     @OrganizationDeleteTaskType TINYINT = NULL,
@@ -217,3 +232,4 @@ BEGIN
 
     COMMIT TRANSACTION Organization_DeleteById
 END
+GO

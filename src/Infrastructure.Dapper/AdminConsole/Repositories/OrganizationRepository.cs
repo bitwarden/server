@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
@@ -32,22 +33,37 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
     }
 
     public override Task DeleteAsync(Organization organization)
-        => DeleteInternalAsync(organization, null);
+        => DeleteInternalAsync(organization, []);
 
-    public Task DeleteAndCreateDeleteTaskAsync(Organization organization, OrganizationDeleteTaskType taskType)
-        => DeleteInternalAsync(organization, taskType);
+    public Task DeleteAndCreateDeleteTasksAsync(Organization organization,
+        IEnumerable<OrganizationDeleteTaskType> taskTypes)
+        => DeleteInternalAsync(organization, taskTypes);
 
-    private async Task DeleteInternalAsync(Organization organization, OrganizationDeleteTaskType? taskType)
+    private async Task DeleteInternalAsync(Organization organization,
+        IEnumerable<OrganizationDeleteTaskType> taskTypes)
     {
+        var creationDate = DateTime.UtcNow;
+        var deleteTasks = taskTypes
+            .Select(taskType =>
+            {
+                var task = new OrganizationDeleteTask
+                {
+                    OrganizationId = organization.Id,
+                    TaskType = taskType,
+                    CreationDate = creationDate,
+                };
+                task.SetNewId();
+                return task;
+            })
+            .ToList();
+
         using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
             "[dbo].[Organization_DeleteById]",
             new
             {
                 organization.Id,
-                OrganizationDeleteTaskId = taskType.HasValue ? CoreHelpers.GenerateComb() : (Guid?)null,
-                OrganizationDeleteTaskType = (byte?)taskType,
-                OrganizationDeleteTaskCreationDate = taskType.HasValue ? DateTime.UtcNow : (DateTime?)null,
+                OrganizationDeleteTasks = deleteTasks.ToTvp(),
             },
             commandType: CommandType.StoredProcedure);
     }
