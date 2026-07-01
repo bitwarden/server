@@ -4367,6 +4367,107 @@ public class SubscriptionUpdatedHandlerTests
         Assert.NotNull(assignment.MigratedDate);
     }
 
+    [Theory]
+    [InlineData(3)]
+    [InlineData(7)]
+    public async Task HandleAsync_BusinessMigration_Teams2019MonthlyToCurrent_ReconcilesSeatsToBilledQuantity(long billedSeats)
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var teams2019 = new Teams2019Plan(false); // packaged source: base + seat-overage prices
+        var teamsMonthly = new TeamsPlan(false);   // per-seat target
+
+        // The pre-migration (Phase 1) subscription carries only the flat base line — a sub-5 org has no
+        // overage line at all. Detection must find the source by its base price.
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teams2019.PasswordManager.StripePlanId },
+                        Plan = new Plan { Id = teams2019.PasswordManager.StripePlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_reconcile_t2019",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                        Quantity = billedSeats
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.TeamsMonthly2019,
+            Plan = teams2019.Name,
+            Seats = 5 // base allotment; reconciliation should overwrite this with the billed quantity
+        };
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            CohortId = cohortId
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2019).Returns(teams2019);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthly);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "Teams2019Monthly",
+            MigrationPathId = MigrationPathId.Teams2019MonthlyToCurrent,
+            IsActive = true
+        });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — handler did not bail (Gap A), plan-shape updated, and Seats reconciled to billed (Gap B).
+        Assert.Equal((int)billedSeats, organization.Seats);
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
+            o.Id == organizationId &&
+            o.PlanType == PlanType.TeamsMonthly &&
+            o.Seats == (int)billedSeats));
+
+        Assert.NotNull(assignment.MigratedDate);
+    }
+
     // PM-39562: gate is false for a per-seat source, so Seats stays put even when it differs from the billed quantity.
     [Fact]
     public async Task HandleAsync_BusinessMigration_PerSeatSource_LeavesSeatsUnchanged()
