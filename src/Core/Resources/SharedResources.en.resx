@@ -526,9 +526,6 @@
   <data name="OrganizationUserUnknownStatus" xml:space="preserve">
     <value>Your access to organization {0} is in an unknown state. Please contact your administrator for assistance.</value>
   </data>
-  <data name="UserAlreadyExistsInviteProcess" xml:space="preserve">
-    <value>You were removed from the organization managing single sign-on for your account. Contact the organization administrator for help regaining access to your account.</value>
-  </data>
   <data name="UserAlreadyExistsKeyConnector" xml:space="preserve">
     <value>You were removed from the organization managing single sign-on for your account. Create a new account to continue using Bitwarden.</value>
   </data>
