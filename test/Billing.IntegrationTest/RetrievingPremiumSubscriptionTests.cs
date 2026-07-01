@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Json;
 using System.Text.Json.Nodes;
+using Bit.Core.Billing.Constants;
 using Bit.Test.Common.Helpers;
 
 namespace Bit.Billing.IntegrationTest;
@@ -36,5 +37,64 @@ public class RetrievingPremiumSubscriptionTests(StripeTestsFixture fixture) : IC
         var paymentMethod = (await response.Content.ReadFromJsonAsync<JsonObject>())!;
         Assert.Equal("card", paymentMethod["type"]!.GetValue<string>());
         Assert.Equal("visa", paymentMethod["brand"]!.GetValue<string>());
+    }
+
+    [BillingFact]
+    public async Task Coupon_AppliesTo_RequiresExplicitExpansion()
+    {
+        // Documents the empirical Stripe rule that governs how deep the expand
+        // paths in GetBitwardenSubscriptionQuery and StripePaymentService can
+        // be truncated: `Coupon.applies_to` is an *expandable* sub-object, not
+        // inline data. Without an explicit `.applies_to` in the expand list,
+        // Stripe returns `applies_to: null` — even when the coupon was created
+        // with a non-empty Products list.
+        //
+        // Consequence for our expand paths: any product-scoped coupon reached
+        // through a truncated path (e.g. `customer.discount.source.coupon` at
+        // 4 levels, without `.applies_to` because 5 levels is over Stripe's
+        // cap) will carry `AppliesTo = null` in the response, and
+        // GetBitwardenSubscriptionQuery.PartitionCouponsByScope will silently
+        // misclassify it as cart-level. If Stripe ever flips this to inline,
+        // this test flips too — and the truncations become safe.
+        var couponId = $"applies_to_probe_{Guid.NewGuid():N}";
+        var inline = await fixture.CreateAndReloadProductScopedCouponAsync(couponId);
+        var expanded = await fixture.ReloadCouponWithAppliesToExpandedAsync(couponId);
+
+        // With explicit expansion the products list is populated.
+        Assert.NotNull(expanded);
+        Assert.NotNull(expanded.Products);
+        Assert.Contains(StripeConstants.ProductIDs.Premium, expanded.Products);
+
+        // Without expansion Stripe returns applies_to as null. This is the
+        // constraint that forces any expand path reaching a Coupon to include
+        // `.applies_to` when the caller depends on AppliesTo.Products.
+        Assert.Null(inline);
+    }
+
+    [BillingFact]
+    public async Task Subscription_WithProductScopedSubscriptionCoupon_AttributesDiscountToSeatsCartItem()
+    {
+        // Regression coverage for GetBitwardenSubscriptionQuery's cart-attribution logic.
+        // A subscription-level coupon whose `applies_to.products` includes the Premium
+        // product must land on `cart.passwordManager.seats.discount` (product-level),
+        // not on `cart.discount` (cart-level). If GetRelevantCouponsAsync's per-coupon
+        // refetch step ever stopped populating Coupon.AppliesTo, PartitionCouponsByScope
+        // would silently misclassify this coupon and this test would fail.
+        var couponId = $"prod_scoped_sub_{Guid.NewGuid():N}";
+        var client = await fixture.PreparePremiumUserWithProductScopedSubscriptionCouponAsync(
+            "premium-sub-product-coupon@example.com", couponId);
+
+        var response = await client.GetAsync("/account/billing/vnext/subscription");
+        await Assert.SuccessResponseAsync(response);
+
+        var subscription = (await response.Content.ReadFromJsonAsync<JsonObject>())!;
+        var cart = subscription["cart"]!;
+
+        var seatsDiscount = cart["passwordManager"]!["seats"]!["discount"];
+        Assert.NotNull(seatsDiscount);
+        Assert.Equal("percent-off", seatsDiscount["type"]!.GetValue<string>());
+        Assert.Equal(10m, seatsDiscount["value"]!.GetValue<decimal>());
+
+        Assert.Null(cart["discount"]);
     }
 }

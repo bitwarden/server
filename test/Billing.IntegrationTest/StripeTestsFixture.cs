@@ -547,6 +547,117 @@ public class StripeTestsFixture : IAsyncDisposable
     }
 
     /// <summary>
+    /// Creates a Stripe coupon whose <c>applies_to.products</c> scopes it to the
+    /// Premium product, then re-fetches it with an <em>empty</em> expand list and
+    /// returns the retrieved <see cref="CouponAppliesTo"/>. Any pre-existing coupon
+    /// with the same id is deleted first so the test is re-runnable.
+    ///
+    /// Isolates the load-bearing invariant behind
+    /// <see cref="GetBitwardenSubscriptionQuery"/> and
+    /// <see cref="StripePaymentService"/> dropping <c>.applies_to</c> from
+    /// <c>customer.discount.source.coupon.applies_to</c> (and
+    /// <c>phases.discounts.source.coupon.applies_to</c>) expand paths that would
+    /// otherwise exceed Stripe's 4-level cap: <c>Coupon.applies_to</c> arrives
+    /// inline on the Coupon JSON regardless of whether the caller expanded it.
+    /// If Stripe changes that contract, this returns a null / empty products list
+    /// and every downstream product-vs-cart discount classification silently flips.
+    /// </summary>
+    public async Task<CouponAppliesTo?> CreateAndReloadProductScopedCouponAsync(string couponId)
+    {
+        var stripeClient = CreateStripeClient();
+
+        try { await stripeClient.V1.Coupons.DeleteAsync(couponId); }
+        catch (StripeException ex) when (ex.StripeError?.Code == "resource_missing") { /* first run */ }
+
+        await stripeClient.V1.Coupons.CreateAsync(new CouponCreateOptions
+        {
+            Id = couponId,
+            Name = "Integration Test Product-Scoped Coupon",
+            PercentOff = 10,
+            Duration = "once",
+            AppliesTo = new CouponAppliesToOptions
+            {
+                Products = [StripeConstants.ProductIDs.Premium],
+            },
+        });
+
+        // No Expand at all — the whole point is to prove applies_to is inline.
+        // (Passing an empty array serializes as `expand=` on the wire, which
+        // Stripe rejects as an attempt to unset the parameter.)
+        var reloaded = await stripeClient.V1.Coupons.GetAsync(couponId);
+
+        return reloaded.AppliesTo;
+    }
+
+    /// <summary>
+    /// Companion to <see cref="CreateAndReloadProductScopedCouponAsync"/> that fetches
+    /// the same coupon with <c>Expand = ["applies_to"]</c>. Used to confirm that when
+    /// the direct-probe test finds <c>AppliesTo</c> null without expansion, the same
+    /// coupon does carry the products list when the caller explicitly expands
+    /// <c>applies_to</c> — pinning the empirical rule.
+    /// </summary>
+    public async Task<CouponAppliesTo?> ReloadCouponWithAppliesToExpandedAsync(string couponId)
+    {
+        var stripeClient = CreateStripeClient();
+        var reloaded = await stripeClient.V1.Coupons.GetAsync(couponId, new CouponGetOptions
+        {
+            Expand = ["applies_to"],
+        });
+        return reloaded.AppliesTo;
+    }
+
+    /// <summary>
+    /// Purchases premium and attaches a product-scoped Stripe coupon (bound to the
+    /// Premium product via <c>applies_to.products</c>) to the resulting subscription's
+    /// discount list. Any pre-existing coupon with the same id is deleted first so
+    /// the test is re-runnable.
+    ///
+    /// Exercises <see cref="GetBitwardenSubscriptionQuery.GetRelevantCouponsAsync"/>'s
+    /// per-coupon enrichment step end-to-end: the parent subscription fetch stops at
+    /// <c>discounts.source.coupon.applies_to</c>, so the seat-scoped coupon should
+    /// land on <c>cart.passwordManager.seats.discount</c> (product-level) rather than
+    /// <c>cart.discount</c> (cart-level).
+    /// </summary>
+    public async Task<HttpClient> PreparePremiumUserWithProductScopedSubscriptionCouponAsync(
+        string email, string couponId)
+    {
+        var stripeClient = CreateStripeClient();
+
+        try { await stripeClient.V1.Coupons.DeleteAsync(couponId); }
+        catch (StripeException ex) when (ex.StripeError?.Code == "resource_missing") { /* first run */ }
+
+        await stripeClient.V1.Coupons.CreateAsync(new CouponCreateOptions
+        {
+            Id = couponId,
+            Name = "IT Product-Scoped Premium Coupon",
+            PercentOff = 10,
+            Duration = "once",
+            AppliesTo = new CouponAppliesToOptions
+            {
+                Products = [StripeConstants.ProductIDs.Premium],
+            },
+        });
+
+        var client = await PreparePremiumUserAsync(email);
+
+        string subscriptionId;
+        using (var scope = Api.Services.CreateScope())
+        {
+            var user = await scope.ServiceProvider.GetRequiredService<IUserRepository>()
+                .GetByEmailAsync(email);
+            subscriptionId = user!.GatewaySubscriptionId!;
+        }
+
+        await stripeClient.V1.Subscriptions.UpdateAsync(subscriptionId,
+            new SubscriptionUpdateOptions
+            {
+                Discounts = [new SubscriptionDiscountOptions { Coupon = couponId }],
+            });
+
+        return client;
+    }
+
+    /// <summary>
     /// Creates a no-op Stripe Checkout Session attached to the given customer for
     /// webhook tests that simulate <c>checkout.session.completed</c>.
     /// </summary>

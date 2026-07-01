@@ -645,7 +645,11 @@ public class StripePaymentService : IStripePaymentService
         }
 
         var subscription = await _stripeAdapter.GetSubscriptionAsync(subscriber.GatewaySubscriptionId,
-            new SubscriptionGetOptions { Expand = ["customer.discount.source.coupon.applies_to", "discounts.source.coupon.applies_to", "test_clock"] });
+            // `customer.discount.source.coupon` stops at 4 levels: appending `.applies_to`
+            // would put it at 5, over Stripe's 4-level expand cap (the 2025-09-30.clover
+            // change wrapped Coupon under Discount.Source). AppliesTo is filled in by
+            // EnsureDiscountCouponAppliesToAsync's per-coupon refetch below.
+            new SubscriptionGetOptions { Expand = ["customer.discount.source.coupon", "discounts.source.coupon.applies_to", "test_clock"] });
 
         if (subscription == null)
         {
@@ -665,6 +669,7 @@ public class StripePaymentService : IStripePaymentService
 
         if (discount != null)
         {
+            await EnsureDiscountCouponAppliesToAsync(discount);
             subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(discount);
         }
 
@@ -723,7 +728,11 @@ public class StripePaymentService : IStripePaymentService
             var schedule = await _stripeAdapter.GetSubscriptionScheduleAsync(subscription.ScheduleId,
                 new SubscriptionScheduleGetOptions
                 {
-                    Expand = ["phases.discounts.source.coupon.applies_to", "phases.items.price"]
+                    // `phases.discounts.source.coupon` stops at 4 levels: appending
+                    // `.applies_to` would put it at 5, over Stripe's 4-level expand cap
+                    // (the 2025-09-30.clover change wrapped Coupon under Discount.Source).
+                    // AppliesTo is filled in by FetchCouponWithAppliesToAsync below.
+                    Expand = ["phases.discounts.source.coupon", "phases.items.price"]
                 });
 
             if (schedule.Status != StripeConstants.SubscriptionScheduleStatus.Active || schedule.Phases.Count < 2)
@@ -799,7 +808,13 @@ public class StripePaymentService : IStripePaymentService
             var phase2Discount = phase2.Discounts?.FirstOrDefault();
             if (phase2Discount?.Discount?.Source?.Coupon != null)
             {
-                subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(phase2Discount.Discount.Source.Coupon);
+                // The schedule expand stops at `.coupon` (4 levels), so the returned
+                // Coupon lacks AppliesTo — which BillingCustomerDiscount reads. Refetch
+                // the coupon rooted at Coupons.Retrieve, where `applies_to` sits 1 level
+                // deep and comfortably under Stripe's 4-level expand cap.
+                var enrichedCoupon = await FetchCouponWithAppliesToAsync(phase2Discount.Discount.Source.Coupon.Id)
+                    ?? phase2Discount.Discount.Source.Coupon;
+                subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(enrichedCoupon);
             }
         }
         catch (StripeException ex)
@@ -813,6 +828,44 @@ public class StripePaymentService : IStripePaymentService
                 ex.StripeError?.Code);
         }
     }
+
+    /// <summary>
+    /// Overlays a fresh Coupon fetch (with <c>Expand = ["applies_to"]</c>) onto the
+    /// Coupon inside <paramref name="discount"/> so downstream readers (e.g.
+    /// <see cref="SubscriptionInfo.BillingCustomerDiscount(Discount)"/>) find
+    /// <c>Coupon.AppliesTo.Products</c> populated.
+    ///
+    /// Required because two stable Stripe rules combine to make the natural
+    /// single-fetch expand impossible after the 2025-09-30.clover API version:
+    /// <list type="bullet">
+    ///   <item><description><c>expand</c> has a max depth of 4
+    ///     (<see href="https://docs.stripe.com/expand"/>).</description></item>
+    ///   <item><description><c>coupon.applies_to</c> is expandable, not inline
+    ///     (<see href="https://docs.stripe.com/api/coupons/object"/>).</description></item>
+    /// </list>
+    /// The clover release wrapped Coupon under <c>Discount.Source</c>, so the
+    /// formerly-at-the-cap path <c>customer.discount.coupon.applies_to</c> became
+    /// the over-the-cap path <c>customer.discount.source.coupon.applies_to</c>.
+    /// Rooting the refetch at Coupons.Retrieve keeps <c>applies_to</c> only 1
+    /// level deep.
+    /// </summary>
+    private async Task EnsureDiscountCouponAppliesToAsync(Discount discount)
+    {
+        if (discount.Source?.Coupon is not { Id: not null and not "" } coupon)
+        {
+            return;
+        }
+
+        var enriched = await FetchCouponWithAppliesToAsync(coupon.Id);
+        if (enriched != null)
+        {
+            coupon.AppliesTo = enriched.AppliesTo;
+        }
+    }
+
+    private async Task<Coupon> FetchCouponWithAppliesToAsync(string couponId) =>
+        await _stripeAdapter.GetCouponAsync(couponId,
+            new CouponGetOptions { Expand = ["applies_to"] });
 
     public async Task<bool> HasSecretsManagerStandalone(Organization organization) =>
         await HasSecretsManagerStandaloneAsync(gatewayCustomerId: organization.GatewayCustomerId,
