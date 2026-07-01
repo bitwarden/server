@@ -9,6 +9,7 @@ using Bit.Core.Utilities;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using LinqToDB.EntityFrameworkCore;
 using AutoMapper;
+using EfCohort = Bit.Infrastructure.EntityFramework.Billing.Models.OrganizationPlanMigrationCohort;
 using EfCohortAssignment = Bit.Infrastructure.EntityFramework.Billing.Models.OrganizationPlanMigrationCohortAssignment;
 using EfOrganization = Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization;
 using EfPlayItem = Bit.Infrastructure.EntityFramework.Models.PlayItem;
@@ -37,13 +38,14 @@ public readonly struct MigrationCohortExportSceneResult
 /// <c>OrganizationPlanMigrationCohortAssignment</c> has a FK to <c>Organization</c> with a UNIQUE
 /// constraint on <c>OrganizationId</c> -- every assignment needs its own real organization row.
 ///
-/// Organizations and assignments are bulk-inserted via LinqToDB <c>BulkCopy</c> (the same path
-/// <see cref="Pipeline.BulkCommitter"/> uses) so counts in the tens of thousands stay fast. Each
-/// organization's <c>CreationDate</c> is spread across distinct seconds. The export, however, orders
-/// on the <em>assignment's</em> <c>(CreationDate, Id)</c>, and the assignment's <c>CreationDate</c>
-/// has an internal setter unreachable from this assembly, so every assignment shares a near-identical
-/// <c>DateTime.UtcNow</c> and the cursor advances on the <c>Id</c> tiebreaker. That is exactly the
-/// bulk-loaded case the export's stored procedure is documented to handle, so it remains correct.
+/// The cohort, organizations, and assignments are bulk-inserted via LinqToDB <c>BulkCopy</c> (the same
+/// path <see cref="Pipeline.BulkCommitter"/> uses) so counts in the tens of thousands stay fast, all
+/// inside a single transaction so a mid-sequence failure leaves the database untouched rather than
+/// partly seeded. Each organization's <c>CreationDate</c> is spread across distinct seconds. The
+/// export, however, orders on the <em>assignment's</em> <c>(CreationDate, Id)</c>, and assignments
+/// created in one bulk batch share a near-identical <c>CreationDate</c>, so the cursor advances on the
+/// <c>Id</c> tiebreaker. That is exactly the bulk-loaded case the export's stored procedure is
+/// documented to handle, so it remains correct.
 ///
 /// Cleanup: <c>BulkCopy</c> bypasses the repository <c>CreateAsync</c> hook that normally records
 /// play-id tracking rows, so this scene bulk-inserts the <see cref="PlayItem"/> rows itself when the
@@ -71,13 +73,19 @@ public class MigrationCohortExportScene(
     /// <summary>Anchor for the spread CreationDate, matching the SQL seed script's baseline.</summary>
     private static readonly DateTime _creationAnchor = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
+    private const int MinOrgCount = 1;
+    private const int MaxOrgCount = 100_000;
+
     public class Request
     {
         [Required]
         public required string CohortName { get; set; }
 
+        // The scene enforces this range explicitly in SeedAsync -- the SeederApi executes scenes by
+        // deserializing arguments and calling SeedAsync directly, so DataAnnotations here are not run
+        // by the framework. The attribute documents the contract and applies if validation is wired up.
         [Required]
-        [Range(1, 100_000)]
+        [Range(MinOrgCount, MaxOrgCount)]
         public required int OrgCount { get; set; }
 
         /// <summary>
@@ -96,12 +104,32 @@ public class MigrationCohortExportScene(
 
     public async Task<SceneResult<MigrationCohortExportSceneResult>> SeedAsync(Request request)
     {
-        var (cohort, cohortCreated) = await GetOrCreateCohortAsync(request);
+        if (request.OrgCount is < MinOrgCount or > MaxOrgCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(request), request.OrgCount,
+                $"{nameof(request.OrgCount)} must be between {MinOrgCount} and {MaxOrgCount}.");
+        }
 
+        var existingCohort = await cohortRepository.GetByNameAsync(request.CohortName);
+        var cohortCreated = existingCohort is null;
+
+        var cohort = existingCohort ?? BuildCohort(request);
         var organizations = BuildOrganizations(request);
         var assignments = BuildAssignments(organizations, cohort.Id);
 
+        // Wrap every write in one transaction so the scene is all-or-nothing: a mid-sequence failure
+        // (e.g. a timeout on a large assignment insert) rolls back the cohort and organizations rather
+        // than leaving orphaned rows or organizations without their play-id tracking. LinqToDB's
+        // BulkCopy honors the EF transaction opened here (see UserRepository for the same pattern).
+        await using var transaction = await db.Database.BeginTransactionAsync();
+
         // BulkCopy maps Core entities to their EF counterparts (navigation properties are ignored).
+        if (cohortCreated)
+        {
+            db.BulkCopy([mapper.Map<EfCohort>(cohort)]);
+        }
+
         db.BulkCopy(organizations.Select(mapper.Map<EfOrganization>));
         db.BulkCopy(assignments.Select(mapper.Map<EfCohortAssignment>));
 
@@ -109,6 +137,8 @@ public class MigrationCohortExportScene(
         // up. BulkCopy bypasses the repository CreateAsync hook that normally does this, so the scene
         // inserts the PlayItem rows directly -- and in bulk, to keep the fast path fast.
         RecordOrganizationsForPlayId(organizations);
+
+        await transaction.CommitAsync();
 
         return new SceneResult<MigrationCohortExportSceneResult>(
             result: new MigrationCohortExportSceneResult
@@ -121,14 +151,8 @@ public class MigrationCohortExportScene(
             mangleMap: []);
     }
 
-    private async Task<(CoreCohort Cohort, bool Created)> GetOrCreateCohortAsync(Request request)
+    private static CoreCohort BuildCohort(Request request)
     {
-        var existing = await cohortRepository.GetByNameAsync(request.CohortName);
-        if (existing is not null)
-        {
-            return (existing, false);
-        }
-
         var cohort = new CoreCohort
         {
             Name = request.CohortName,
@@ -136,9 +160,7 @@ public class MigrationCohortExportScene(
             IsActive = true,
         };
         cohort.SetNewId();
-
-        var created = await cohortRepository.CreateAsync(cohort);
-        return (created, true);
+        return cohort;
     }
 
     private static List<CoreOrganization> BuildOrganizations(Request request)
@@ -176,8 +198,9 @@ public class MigrationCohortExportScene(
 
         foreach (var org in organizations)
         {
-            // CreationDate has an internal setter and defaults to DateTime.UtcNow at construction;
-            // it cannot be set from this assembly. RevisionDate is settable, so align it for tidiness.
+            // CreationDate defaults to DateTime.UtcNow at construction and is not settable here, so
+            // assignments in one bulk batch share a near-identical value. RevisionDate is settable, so
+            // align it for tidiness.
             var assignment = new CoreCohortAssignment
             {
                 OrganizationId = org.Id,

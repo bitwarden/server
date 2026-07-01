@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Text.Json;
+using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Seeder.Scenes;
 using Bit.SeederApi.Models.Request;
 using Bit.SeederApi.Models.Response;
@@ -252,6 +253,8 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
             .SingleOrDefaultAsync(c => c.Name == cohortName);
         Assert.NotNull(cohort);
         Assert.True(cohort.IsActive);
+        // Default request => a migration cohort on the default path.
+        Assert.Equal(MigrationPathId.Enterprise2020AnnualToCurrent, cohort.MigrationPathId);
 
         var orgs = await db.Organizations
             .Where(o => o.Name.StartsWith(namePrefix))
@@ -295,6 +298,75 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
         Assert.True(first.GetProperty("cohortCreated").GetBoolean());
         Assert.False(second.GetProperty("cohortCreated").GetBoolean());
         Assert.Equal(first.GetProperty("cohortId").GetGuid(), second.GetProperty("cohortId").GetGuid());
+    }
+
+    [Fact]
+    public async Task SeedEndpoint_MigrationCohortExportScene_NullMigrationPathId_CreatesChurnOnlyCohort()
+    {
+        var cohortName = $"PM-36965 Churn {Guid.NewGuid()}";
+        var namePrefix = $"pm36965-{Guid.NewGuid():N}-";
+
+        var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
+        {
+            Template = "MigrationCohortExportScene",
+            Arguments = JsonSerializer.SerializeToElement(new MigrationCohortExportScene.Request
+            {
+                CohortName = cohortName,
+                OrgCount = 2,
+                NamePrefix = namePrefix,
+                MigrationPathId = null
+            })
+        }, Guid.NewGuid().ToString());
+
+        response.EnsureSuccessStatusCode();
+
+        var db = _factory.GetDatabaseContext();
+        var cohort = await db.OrganizationPlanMigrationCohorts.SingleAsync(c => c.Name == cohortName);
+
+        // A null path persists as null: a churn-only cohort, not the default migration path.
+        Assert.Null(cohort.MigrationPathId);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(100_001)]
+    public async Task SeedEndpoint_MigrationCohortExportScene_OrgCountOutOfRange_ReturnsBadRequest(int orgCount)
+    {
+        var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
+        {
+            Template = "MigrationCohortExportScene",
+            Arguments = JsonSerializer.SerializeToElement(new MigrationCohortExportScene.Request
+            {
+                CohortName = $"PM-36965 Range {Guid.NewGuid()}",
+                OrgCount = orgCount
+            })
+        }, Guid.NewGuid().ToString());
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task SeedEndpoint_MigrationCohortExportScene_OrgCountLowerBound_Succeeds()
+    {
+        var cohortName = $"PM-36965 Min {Guid.NewGuid()}";
+        var namePrefix = $"pm36965-{Guid.NewGuid():N}-";
+
+        var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
+        {
+            Template = "MigrationCohortExportScene",
+            Arguments = JsonSerializer.SerializeToElement(new MigrationCohortExportScene.Request
+            {
+                CohortName = cohortName,
+                OrgCount = 1,
+                NamePrefix = namePrefix
+            })
+        }, Guid.NewGuid().ToString());
+
+        response.EnsureSuccessStatusCode();
+
+        var db = _factory.GetDatabaseContext();
+        Assert.Equal(1, await db.Organizations.CountAsync(o => o.Name.StartsWith(namePrefix)));
     }
 
     private class BatchDeleteResponse
