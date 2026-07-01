@@ -94,7 +94,7 @@ public class PostUserCommand(
         var email = invite.Emails.Single();
         var externalId = model.ExternalIdForInvite();
 
-        if (string.IsNullOrWhiteSpace(email) || !model.Active)
+        if (string.IsNullOrWhiteSpace(email))
         {
             throw new BadRequestException();
         }
