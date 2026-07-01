@@ -142,15 +142,15 @@ public class OrganizationReportsController : Controller
 
         await AuthorizeAsync(organizationId);
 
-        var isAccessIntelligenceV2 = _featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2);
+        var isNewArchitecture = _featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceNewArchitecture);
 
-        var latestReport = isAccessIntelligenceV2
+        var latestReport = isNewArchitecture
             ? await _getOrganizationReportQuery.ReadLatestOrganizationReportAsync(organizationId)
             : await _getOrganizationReportQuery.GetLatestOrganizationReportAsync(organizationId);
 
         var response = new OrganizationReportResponseModel(latestReport);
 
-        if (isAccessIntelligenceV2)
+        if (isNewArchitecture)
         {
             var fileData = latestReport.GetReportFile();
             if (fileData is { Validated: true })
@@ -449,7 +449,7 @@ public class OrganizationReportsController : Controller
             throw new NotFoundException();
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2) && !fileData.Validated)
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceNewArchitecture) && !fileData.Validated)
         {
             throw new NotFoundException();
         }
