@@ -7,4 +7,5 @@ public class AdminSettings
 {
     public virtual string Admins { get; set; }
     public int? DeleteTrashDaysAgo { get; set; }
+    public bool RunDatabaseMigrations { get; set; }
 }

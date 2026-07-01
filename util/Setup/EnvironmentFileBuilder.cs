@@ -20,6 +20,7 @@ public class EnvironmentFileBuilder
         _context = context;
         _globalValues = new Dictionary<string, string>
         {
+            ["adminSettings__runDatabaseMigrations"] = "true",
             ["ASPNETCORE_ENVIRONMENT"] = "Production",
             ["globalSettings__selfHosted"] = "true",
             ["globalSettings__baseServiceUri__vault"] = "http://localhost",

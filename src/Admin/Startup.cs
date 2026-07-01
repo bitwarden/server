@@ -35,6 +35,7 @@ public class Startup
     {
         // Options
         services.AddOptions();
+        services.TryAddSingleton(TimeProvider.System);
 
         // Settings
         var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
@@ -119,16 +120,10 @@ public class Startup
         // Jobs service
         Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
         services.AddHostedService<Jobs.JobsHostedService>();
-        if (globalSettings.SelfHosted)
+        services.AddHostedService<HostedServices.DatabaseMigrationHostedService>();
+        if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Mail.ConnectionString))
         {
-            services.AddHostedService<HostedServices.DatabaseMigrationHostedService>();
-        }
-        else
-        {
-            if (CoreHelpers.SettingHasValue(globalSettings.Mail.ConnectionString))
-            {
-                services.AddHostedService<HostedServices.AzureQueueMailHostedService>();
-            }
+            services.AddHostedService<HostedServices.AzureQueueMailHostedService>();
         }
     }
 
