@@ -20,19 +20,13 @@ public class AccessAuditEventRepository : BaseRepository, IAccessAuditEventRepos
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<ICollection<AccessAuditEvent>> GetManyByCollectionIdsAsync(
-        IEnumerable<Guid> collectionIds, DateTime since, DateTime now)
+    public async Task<ICollection<AccessAuditEvent>> GetManyByOrganizationIdAsync(
+        Guid organizationId, DateTime since, DateTime now)
     {
-        var ids = collectionIds.ToList();
-        if (ids.Count == 0)
-        {
-            return new List<AccessAuditEvent>();
-        }
-
         await using var connection = new SqlConnection(ConnectionString);
         var results = await connection.QueryAsync<AccessAuditEvent>(
-            "[dbo].[AccessAuditEvent_ReadManyByCollectionIds]",
-            new { CollectionIds = ids.ToGuidIdArrayTVP(), Since = since, Now = now },
+            "[dbo].[AccessAuditEvent_ReadManyByOrganizationId]",
+            new { OrganizationId = organizationId, Since = since, Now = now },
             commandType: CommandType.StoredProcedure);
 
         return results.ToList();
