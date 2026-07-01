@@ -88,12 +88,14 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     Task InitializeOrganizationAsync(Organization organization, Func<DbConnection, DbTransaction, Task> confirmOwnerAction);
 
     /// <summary>
-    /// Deletes the organization and, within the same database transaction, enqueues an
-    /// <c>OrganizationDeleteTask</c> of the given type. This guarantees the deletion and the
-    /// cleanup-task record commit atomically, so durable downstream cleanup (e.g. purging
-    /// Table Storage event logs for GDPR) is never lost if the deletion succeeds.
+    /// Deletes the organization and, within the same database transaction, enqueues one
+    /// <c>OrganizationDeleteTask</c> per supplied task type. This guarantees the deletion and the
+    /// cleanup-task records commit atomically, so durable downstream cleanup (e.g. purging
+    /// Table Storage event logs for GDPR) is never lost if the deletion succeeds. Any team can
+    /// enqueue its own cleanup type by adding it to <paramref name="taskTypes"/> without changing
+    /// this signature. An empty collection deletes the organization without enqueuing any task.
     /// </summary>
     /// <param name="organization">The organization to delete.</param>
-    /// <param name="taskType">The type of cleanup task to enqueue.</param>
-    Task DeleteAndCreateDeleteTaskAsync(Organization organization, OrganizationDeleteTaskType taskType);
+    /// <param name="taskTypes">The cleanup task types to enqueue, one row created per type.</param>
+    Task DeleteAndCreateDeleteTasksAsync(Organization organization, IEnumerable<OrganizationDeleteTaskType> taskTypes);
 }
