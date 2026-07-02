@@ -43,6 +43,10 @@ public class AccessAuditEvent
     public string? CipherName { get; set; }
     public string? CollectionName { get; set; }
 
+    /// <summary>The access rule's name — plaintext org configuration (not vault data), for rule administration events
+    /// (created / updated / deleted). Null for non-rule events, or when the rule row is gone.</summary>
+    public string? RuleName { get; set; }
+
     /// <summary>True when there is no human actor — a system / automatic event. Drives the automated-vs-human filter.</summary>
     public bool Automated => ActorId is null;
 }
