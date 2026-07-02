@@ -56,7 +56,17 @@ internal sealed class RecipeExecutor
             context.Ciphers.Count,
             context.Folders.Count);
 
-        _committer.Commit(context);
+        var progress = context.GetProgress();
+        progress?.Report(new PhaseStarted(SeederPhases.CommittingToDatabase, null));
+        try
+        {
+            _committer.Commit(context);
+        }
+        finally
+        {
+            progress?.Report(new PhaseCompleted(SeederPhases.CommittingToDatabase));
+        }
+
         return result;
     }
 }

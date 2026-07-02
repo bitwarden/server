@@ -46,6 +46,12 @@ public class CipherViewDto
     [JsonPropertyName("bankAccount")]
     public BankAccountViewDto? BankAccount { get; set; }
 
+    [JsonPropertyName("driversLicense")]
+    public DriversLicenseViewDto? DriversLicense { get; set; }
+
+    [JsonPropertyName("passport")]
+    public PassportViewDto? Passport { get; set; }
+
     [JsonPropertyName("favorite")]
     public bool Favorite { get; set; }
 
@@ -87,6 +93,19 @@ public class LoginViewDto
 
     [JsonPropertyName("fido2Credentials")]
     public List<Fido2CredentialViewDto>? Fido2Credentials { get; set; }
+
+    [JsonPropertyName("passwordHistory")]
+    public List<PasswordHistoryViewDto>? PasswordHistory { get; set; }
+}
+
+public class PasswordHistoryViewDto
+{
+    [EncryptProperty]
+    [JsonPropertyName("password")]
+    public required string Password { get; set; }
+
+    [JsonPropertyName("lastUsedDate")]
+    public DateTime LastUsedDate { get; set; } = DateTime.UtcNow;
 }
 
 public class Fido2CredentialViewDto
@@ -170,6 +189,8 @@ public static class CipherTypes
     public const int Identity = 4;
     public const int SshKey = 5;
     public const int BankAccount = 6;
+    public const int DriversLicense = 7;
+    public const int Passport = 8;
 }
 
 public static class RepromptTypes
@@ -347,4 +368,88 @@ public record BankAccountViewDto
 
     [JsonPropertyName("bankContactPhone")]
     public string? BankContactPhone { get; init; }
+}
+
+/// <summary>
+/// Drivers License cipher data. Uses record for composition via `with` expressions.
+/// </summary>
+public record DriversLicenseViewDto
+{
+    [JsonPropertyName("firstName")]
+    public string? FirstName { get; init; }
+
+    [JsonPropertyName("middleName")]
+    public string? MiddleName { get; init; }
+
+    [JsonPropertyName("lastName")]
+    public string? LastName { get; init; }
+
+    [JsonPropertyName("dateOfBirth")]
+    public string? DateOfBirth { get; init; }
+
+    [JsonPropertyName("licenseNumber")]
+    public string? LicenseNumber { get; init; }
+
+    [JsonPropertyName("issuingCountry")]
+    public string? IssuingCountry { get; init; }
+
+    [JsonPropertyName("issuingState")]
+    public string? IssuingState { get; init; }
+
+    [JsonPropertyName("issueDate")]
+    public string? IssueDate { get; init; }
+
+    [JsonPropertyName("issuingAuthority")]
+    public string? IssuingAuthority { get; init; }
+
+    [JsonPropertyName("expirationDate")]
+    public string? ExpirationDate { get; init; }
+
+    [JsonPropertyName("licenseClass")]
+    public string? LicenseClass { get; init; }
+}
+
+/// <summary>
+/// Passport cipher data. Uses record for composition via `with` expressions.
+/// </summary>
+public record PassportViewDto
+{
+    [JsonPropertyName("surname")]
+    public string? Surname { get; init; }
+
+    [JsonPropertyName("givenName")]
+    public string? GivenName { get; init; }
+
+    [JsonPropertyName("dateOfBirth")]
+    public string? DateOfBirth { get; init; }
+
+    [JsonPropertyName("sex")]
+    public string? Sex { get; init; }
+
+    [JsonPropertyName("birthPlace")]
+    public string? BirthPlace { get; init; }
+
+    [JsonPropertyName("nationality")]
+    public string? Nationality { get; init; }
+
+    [JsonPropertyName("passportNumber")]
+    public string? PassportNumber { get; init; }
+
+    [JsonPropertyName("passportType")]
+    public string? PassportType { get; init; }
+
+    [JsonPropertyName("issuingCountry")]
+    public string? IssuingCountry { get; init; }
+
+    [JsonPropertyName("issuingAuthority")]
+    public string? IssuingAuthority { get; init; }
+
+    [JsonPropertyName("issueDate")]
+    public string? IssueDate { get; init; }
+
+    [JsonPropertyName("expirationDate")]
+    public string? ExpirationDate { get; init; }
+
+    [JsonPropertyName("nationalIdentificationNumber")]
+    public string? NationalIdentificationNumber { get; init; }
 }

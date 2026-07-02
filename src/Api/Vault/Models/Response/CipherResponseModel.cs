@@ -26,6 +26,19 @@ public class CipherMiniResponseModel : ResponseModel
         Id = cipher.Id;
         Type = cipher.Type;
         Data = cipher.Data;
+        RevisionDate = cipher.RevisionDate;
+        OrganizationId = cipher.OrganizationId;
+        Attachments = AttachmentResponseModel.FromCipher(cipher, globalSettings);
+        OrganizationUseTotp = orgUseTotp;
+        CreationDate = cipher.CreationDate;
+        DeletedDate = cipher.DeletedDate;
+        Reprompt = cipher.Reprompt.GetValueOrDefault(CipherRepromptType.None);
+        Key = cipher.Key;
+
+        if (cipher.IsDataBlobEncrypted())
+        {
+            return;
+        }
 
         CipherData cipherData;
         switch (cipher.Type)
@@ -60,6 +73,16 @@ public class CipherMiniResponseModel : ResponseModel
                 cipherData = bankAccountData;
                 BankAccount = new CipherBankAccountModel(bankAccountData);
                 break;
+            case CipherType.DriversLicense:
+                var driversLicenseData = JsonSerializer.Deserialize<CipherDriversLicenseData>(cipher.Data);
+                cipherData = driversLicenseData;
+                DriversLicense = new CipherDriversLicenseModel(driversLicenseData);
+                break;
+            case CipherType.Passport:
+                var passportData = JsonSerializer.Deserialize<CipherPassportData>(cipher.Data);
+                cipherData = passportData;
+                Passport = new CipherPassportModel(passportData);
+                break;
             default:
                 throw new ArgumentException("Unsupported " + nameof(Type) + ".");
         }
@@ -68,14 +91,6 @@ public class CipherMiniResponseModel : ResponseModel
         Notes = cipherData.Notes;
         Fields = cipherData.Fields?.Select(f => new CipherFieldModel(f));
         PasswordHistory = cipherData.PasswordHistory?.Select(ph => new CipherPasswordHistoryModel(ph));
-        RevisionDate = cipher.RevisionDate;
-        OrganizationId = cipher.OrganizationId;
-        Attachments = AttachmentResponseModel.FromCipher(cipher, globalSettings);
-        OrganizationUseTotp = orgUseTotp;
-        CreationDate = cipher.CreationDate;
-        DeletedDate = cipher.DeletedDate;
-        Reprompt = cipher.Reprompt.GetValueOrDefault(CipherRepromptType.None);
-        Key = cipher.Key;
     }
 
     public Guid Id { get; set; }
@@ -106,6 +121,12 @@ public class CipherMiniResponseModel : ResponseModel
 
     [Obsolete("Use Data instead.")]
     public CipherBankAccountModel BankAccount { get; set; }
+
+    [Obsolete("Use Data instead.")]
+    public CipherDriversLicenseModel DriversLicense { get; set; }
+
+    [Obsolete("Use Data instead.")]
+    public CipherPassportModel Passport { get; set; }
 
     [Obsolete("Use Data instead.")]
     public IEnumerable<CipherFieldModel> Fields { get; set; }

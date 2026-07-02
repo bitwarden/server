@@ -3,6 +3,7 @@
 
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
@@ -16,6 +17,7 @@ using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -43,9 +45,9 @@ public class SyncController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly ICurrentContext _currentContext;
     private readonly Version _sshKeyCipherMinimumVersion = new(Constants.SSHKeyCipherMinimumVersion);
-    private readonly Version _bankAccountCipherMinimumVersion = new(Constants.BankAccountCipherMinimumVersion);
+    private readonly Version _pm32009NewItemTypeMinimumVersion = new(Constants.PM32009NewItemTypeMinimumVersion);
     private readonly IFeatureService _featureService;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
@@ -63,7 +65,7 @@ public class SyncController : Controller
         GlobalSettings globalSettings,
         ICurrentContext currentContext,
         IFeatureService featureService,
-        IApplicationCacheService applicationCacheService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IWebAuthnCredentialRepository webAuthnCredentialRepository,
         IUserAccountKeysQuery userAccountKeysQuery)
@@ -80,7 +82,7 @@ public class SyncController : Controller
         _globalSettings = globalSettings;
         _currentContext = currentContext;
         _featureService = featureService;
-        _applicationCacheService = applicationCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _webAuthnCredentialRepository = webAuthnCredentialRepository;
         _userAccountKeysQuery = userAccountKeysQuery;
@@ -135,9 +137,18 @@ public class SyncController : Controller
             userAccountKeys = await _userAccountKeysQuery.Run(user);
         }
 
+        IEnumerable<Policy> policiesNew = null;
+        IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetailsNew = null;
+        if (_featureService.IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState))
+        {
+            policiesNew = await _policyRepository.GetManyConfirmedAcceptedByUserIdAsync(user.Id);
+            organizationUserDetailsNew = await _organizationUserRepository.GetManyConfirmedAcceptedDetailsByUserAsync(user.Id);
+        }
+
         var response = new SyncResponseModel(_globalSettings, user, userAccountKeys, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
             organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
-            folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends, webAuthnCredentials);
+            folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends, webAuthnCredentials,
+            policiesNew, organizationUserDetailsNew);
         return response;
     }
 
@@ -154,7 +165,7 @@ public class SyncController : Controller
             return new Dictionary<Guid, OrganizationAbility>();
         }
 
-        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync(orgIds);
+        var organizationAbilities = await _organizationAbilityCacheService.GetOrganizationAbilitiesAsync(orgIds);
 
         return organizationAbilities;
     }
@@ -171,9 +182,11 @@ public class SyncController : Controller
 
         if (!_featureService.IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes)
             || _currentContext.ClientVersion == null
-            || _currentContext.ClientVersion < _bankAccountCipherMinimumVersion)
+            || _currentContext.ClientVersion < _pm32009NewItemTypeMinimumVersion)
         {
             unsupportedTypes.Add(Core.Vault.Enums.CipherType.BankAccount);
+            unsupportedTypes.Add(Core.Vault.Enums.CipherType.DriversLicense);
+            unsupportedTypes.Add(Core.Vault.Enums.CipherType.Passport);
         }
 
         return unsupportedTypes.Count == 0

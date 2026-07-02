@@ -7,6 +7,7 @@ using AutoMapper.QueryableExtensions;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -64,6 +65,22 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .FirstOrDefaultAsync();
             return organization;
         }
+    }
+
+    public async Task<ICollection<OrganizationPlanType>> GetPlanTypesByOrganizationIdsAsync(IEnumerable<Guid> ids)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var query = from organization in dbContext.Organizations
+                    where ids.Contains(organization.Id)
+                    select new OrganizationPlanType
+                    {
+                        OrganizationId = organization.Id,
+                        PlanType = organization.PlanType,
+                    };
+
+        return await query.ToArrayAsync();
     }
 
     public async Task<ICollection<Core.AdminConsole.Entities.Organization>> GetManyByEnabledAsync()
@@ -140,7 +157,9 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 UseAutomaticUserConfirmation = e.UseAutomaticUserConfirmation,
                 UseDisableSmAdsForUsers = e.UseDisableSmAdsForUsers,
                 UsePhishingBlocker = e.UsePhishingBlocker,
-                UseMyItems = e.UseMyItems
+                UseMyItems = e.UseMyItems,
+                UseInviteLinks = e.UseInviteLinks,
+                UsePam = e.UsePam
             }).ToListAsync();
         }
     }
@@ -368,7 +387,9 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                           od.DomainName == userWithDomain.EmailDomain &&
                           od.VerifiedDate != null &&
                           o.Enabled == true &&
-                          ou.Status != OrganizationUserStatusType.Invited
+                          (ou.Status == OrganizationUserStatusType.Accepted ||
+                           ou.Status == OrganizationUserStatusType.Confirmed ||
+                           ou.Status == OrganizationUserStatusType.Revoked)
                     select o;
 
         return await query.ToArrayAsync();
@@ -428,7 +449,10 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         {
             var dbContext = GetDatabaseContext(scope);
             var users = await dbContext.OrganizationUsers
-                .Where(ou => ou.OrganizationId == organizationId && ou.Status >= 0)
+                .Where(ou => ou.OrganizationId == organizationId &&
+                    (ou.Status == OrganizationUserStatusType.Invited ||
+                     ou.Status == OrganizationUserStatusType.Accepted ||
+                     ou.Status == OrganizationUserStatusType.Confirmed))
                 .CountAsync();
 
             var sponsored = await dbContext.OrganizationSponsorships

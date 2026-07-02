@@ -8,9 +8,11 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Billing.Tax.Utilities;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Braintree;
 using Microsoft.Extensions.Logging;
@@ -25,6 +27,7 @@ namespace Bit.Core.Billing.Organizations.Services;
 
 public class OrganizationBillingService(
     IBraintreeGateway braintreeGateway,
+    IFeatureService featureService,
     IGlobalSettings globalSettings,
     IHasPaymentMethodQuery hasPaymentMethodQuery,
     ILogger<OrganizationBillingService> logger,
@@ -39,39 +42,18 @@ public class OrganizationBillingService(
     {
         var (organization, customerSetup, subscriptionSetup, owner) = sale;
 
-        // Validate all provided coupons. Fail fast if any coupon is invalid.
-        // Validation includes user-specific eligibility checks to ensure the owner has never had premium
-        // and that this is for a Families subscription.
-        // Only validate discounts if owner is provided (i.e., the user performing the upgrade is an owner).
-        var validatedCoupons = new List<string>();
-        if (customerSetup?.Coupons is { Length: > 0 } && owner != null)
+        if (customerSetup is { SystemCoupons.Length: > 0, DiscountCoupons.Length: > 0 })
         {
-            // Only Families plans support user-provided coupons
-            if (subscriptionSetup.PlanType.GetProductTier() == ProductTierType.Families)
-            {
-                validatedCoupons = customerSetup.Coupons
-                    .Where(c => !string.IsNullOrWhiteSpace(c))
-                    .Select(c => c.Trim())
-                    .ToList();
-
-                if (validatedCoupons.Count > 0)
-                {
-                    var allValid = await subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
-                        owner, validatedCoupons, DiscountTierType.Families);
-
-                    if (!allValid)
-                    {
-                        throw new BadRequestException("Discount expired. Please review your cart total and try again");
-                    }
-                }
-            }
+            throw new BadRequestException("A subscription cannot be created with both system and discount coupons.");
         }
+
+        var coupons = await GetCouponsForCreateSubscriptionAsync(customerSetup, owner, subscriptionSetup);
 
         var customer = string.IsNullOrEmpty(organization.GatewayCustomerId) && customerSetup != null
             ? await CreateCustomerAsync(organization, customerSetup, subscriptionSetup.PlanType)
             : await GetCustomerWhileEnsuringCorrectTaxExemptionAsync(organization, subscriptionSetup);
 
-        var subscription = await CreateSubscriptionAsync(organization, customer, subscriptionSetup, validatedCoupons);
+        var subscription = await CreateSubscriptionAsync(organization, customer, subscriptionSetup, coupons);
 
         if (subscription.Status is StripeConstants.SubscriptionStatus.Trialing or StripeConstants.SubscriptionStatus.Active)
         {
@@ -79,6 +61,41 @@ public class OrganizationBillingService(
             organization.ExpirationDate = subscription.GetCurrentPeriodEnd();
             await organizationRepository.ReplaceAsync(organization);
         }
+    }
+
+    private async Task<List<string>> GetCouponsForCreateSubscriptionAsync(CustomerSetup? customerSetup, User? owner, SubscriptionSetup subscriptionSetup)
+    {
+        // system coupons always take priority, if present
+        var systemCoupons = customerSetup?.SystemCoupons?
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Select(c => c.Trim())
+            .ToList() ?? [];
+
+        if (systemCoupons.Count > 0)
+        {
+            return systemCoupons;
+        }
+
+        // discount coupons only allowed for families organizations
+        if (customerSetup?.DiscountCoupons is not { Length: > 0 } ||
+            owner == null ||
+            subscriptionSetup.PlanType.GetProductTier() != ProductTierType.Families)
+        {
+            return [];
+        }
+
+        var discountCoupons = customerSetup.DiscountCoupons
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Select(c => c.Trim())
+            .ToList();
+
+        // run validation for families discounts
+        if (!await subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(owner, discountCoupons, DiscountTierType.Families))
+        {
+            throw new BadRequestException("Discount expired. Please review your cart total and try again");
+        }
+
+        return discountCoupons;
     }
 
     public async Task UpdateSubscriptionPlanFrequency(
@@ -244,10 +261,13 @@ public class OrganizationBillingService(
                 ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
             };
 
-            if (planType.GetProductTier() is not ProductTierType.Free and not ProductTierType.Families &&
-                !TaxHelpers.IsDirectTaxCountry(customerSetup.TaxInformation.Country))
+            if (!featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
             {
-                customerCreateOptions.TaxExempt = StripeConstants.TaxExempt.Reverse;
+                if (planType.GetProductTier() is not ProductTierType.Free and not ProductTierType.Families &&
+                    !TaxHelpers.IsDirectTaxCountry(customerSetup.TaxInformation.Country))
+                {
+                    customerCreateOptions.TaxExempt = StripeConstants.TaxExempt.Reverse;
+                }
             }
 
             if (!string.IsNullOrEmpty(customerSetup.TaxInformation.TaxId))
@@ -446,12 +466,14 @@ public class OrganizationBillingService(
             {
                 ["organizationId"] = organization.Id.ToString(),
                 ["trialInitiationPath"] = !string.IsNullOrEmpty(subscriptionSetup.InitiationPath) &&
-                    subscriptionSetup.InitiationPath.Contains("trial from marketing website")
+                                          subscriptionSetup.InitiationPath.Contains("trial from marketing website")
                     ? "marketing-initiated"
                     : "product-initiated"
             },
             OffSession = true,
-            TrialPeriodDays = subscriptionSetup.SkipTrial ? 0 : plan.TrialPeriodDays
+            TrialPeriodDays = subscriptionSetup.SkipTrial
+                ? 0
+                : subscriptionSetup.TrialLength ?? plan.TrialPeriodDays
         };
 
         var hasPaymentMethod = await hasPaymentMethodQuery.Run(organization);
@@ -489,7 +511,7 @@ public class OrganizationBillingService(
         var customer = await subscriberService.GetCustomerOrThrow(organization,
             new CustomerGetOptions { Expand = ["tax", "tax_ids"] });
 
-        if (subscriptionSetup.PlanType.GetProductTier() is
+        if (featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax) || subscriptionSetup.PlanType.GetProductTier() is
                 not (ProductTierType.Teams or
                 ProductTierType.TeamsStarter or
                 ProductTierType.Enterprise))

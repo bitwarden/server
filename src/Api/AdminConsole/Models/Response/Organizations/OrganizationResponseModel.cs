@@ -77,6 +77,8 @@ public class OrganizationResponseModel : ResponseModel
         UseDisableSmAdsForUsers = organization.UseDisableSmAdsForUsers;
         UsePhishingBlocker = organization.UsePhishingBlocker;
         UseMyItems = organization.UseMyItems;
+        UseInviteLinks = organization.UseInviteLinks;
+        UsePam = organization.UsePam;
     }
 
     public Guid Id { get; set; }
@@ -129,6 +131,8 @@ public class OrganizationResponseModel : ResponseModel
     public bool UseDisableSmAdsForUsers { get; set; }
     public bool UsePhishingBlocker { get; set; }
     public bool UseMyItems { get; set; }
+    public bool UseInviteLinks { get; set; }
+    public bool UsePam { get; set; }
 }
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
@@ -142,6 +146,7 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
             CoreHelpers.ReadableBytesSize(organization.Storage.Value) : null;
         StorageGb = organization.Storage.HasValue ?
             Math.Round(organization.Storage.Value / 1073741824D, 2) : 0; // 1 GB
+        ExemptFromBillingAutomation = organization.ExemptFromBillingAutomation;
     }
 
     public OrganizationSubscriptionResponseModel(
@@ -151,6 +156,7 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
         bool hideSensitiveData) : this(organization, plan)
     {
         Subscription = subscription.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
+        SmServiceAccountsGrace = subscription.Subscription?.ServiceAccountGrace;
         UpcomingInvoice = subscription.UpcomingInvoice != null ? new BillingSubscriptionUpcomingInvoice(subscription.UpcomingInvoice) : null;
         CustomerDiscount = subscription.CustomerDiscount != null ? new BillingCustomerDiscount(subscription.CustomerDiscount) : null;
         Expiration = DateTime.UtcNow.AddYears(1); // Not used, so just give it a value.
@@ -215,6 +221,14 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
     public BillingSubscriptionUpcomingInvoice UpcomingInvoice { get; set; }
 
     /// <summary>
+    /// The count of permanently-free Secrets Manager service accounts granted beyond the plan baseline during a
+    /// pricing migration. Clients subtract this from <see cref="OrganizationResponseModel.SmServiceAccounts"/> so the
+    /// migration-grace allotment is not billed. Null on self-hosted and when there is no gateway subscription;
+    /// a concrete count (including 0 for a non-migrated cloud organization) otherwise.
+    /// </summary>
+    public int? SmServiceAccountsGrace { get; set; }
+
+    /// <summary>
     /// Date when a self-hosted organization's subscription expires, without any grace period.
     /// </summary>
     public DateTime? ExpirationWithoutGracePeriod { get; set; }
@@ -223,4 +237,6 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
     /// Date when a self-hosted organization expires (includes grace period).
     /// </summary>
     public DateTime? Expiration { get; set; }
+
+    public bool ExemptFromBillingAutomation { get; set; }
 }
