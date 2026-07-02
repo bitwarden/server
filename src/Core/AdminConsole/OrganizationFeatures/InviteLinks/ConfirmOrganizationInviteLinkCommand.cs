@@ -64,15 +64,7 @@ public class ConfirmOrganizationInviteLinkCommand(
             return new ResetPasswordKeyRequired();
         }
 
-        CommandResult<OrganizationUser> membershipResult;
-        if (existingOrganizationUser is not null)
-        {
-            membershipResult = await ConfirmExistingMembershipAsync(existingOrganizationUser, user, request.OrgUserKey);
-        }
-        else
-        {
-            membershipResult = await CreateConfirmedMembershipAsync(organization, user, request.OrgUserKey);
-        }
+        var membershipResult = await AddUserToOrganizationAsync(request, existingOrganizationUser, user, organization);
         if (membershipResult.IsError)
         {
             return membershipResult.AsError;
@@ -89,6 +81,17 @@ public class ConfirmOrganizationInviteLinkCommand(
         }
 
         return new None();
+    }
+
+    private async Task<CommandResult<OrganizationUser>> AddUserToOrganizationAsync(ConfirmOrganizationInviteLinkRequest request,
+        OrganizationUser? existingOrganizationUser, User user, Organization organization)
+    {
+        if (existingOrganizationUser is not null)
+        {
+            return await ConfirmExistingMembershipAsync(existingOrganizationUser, user, request.OrgUserKey);
+        }
+
+        return await CreateConfirmedMembershipAsync(organization, user, request.OrgUserKey);
     }
 
     /// <summary>
