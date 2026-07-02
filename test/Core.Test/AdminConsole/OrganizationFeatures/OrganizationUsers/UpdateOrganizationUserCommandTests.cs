@@ -2,6 +2,8 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
@@ -285,7 +287,7 @@ public class UpdateOrganizationUserCommandTests
     [Theory]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.Owner)]
-    public async Task UpdateUserAsync_WhenDemotingPrivilegedUserToUser_WithDefaultCollectionName_CreatesDefaultCollection(
+    public async Task UpdateUserAsync_WhenDemotingPrivilegedUserToUser_WithDefaultCollectionName_AndUseMyItemsEnabled_AndPolicyEnabled_CreatesDefaultCollection(
         OrganizationUserType existingUserType,
         Organization organization,
         OrganizationUser oldUserData,
@@ -293,8 +295,10 @@ public class UpdateOrganizationUserCommandTests
         string defaultUserCollectionName,
         SutProvider<UpdateOrganizationUserCommand> sutProvider)
     {
+        organization.UseMyItems = true;
         newUserData.Type = OrganizationUserType.User;
         Setup(sutProvider, organization, newUserData, oldUserData);
+        SetupDataOwnershipPolicy(sutProvider, newUserData.UserId!.Value, OrganizationDataOwnershipState.Enabled);
 
         await sutProvider.Sut.UpdateUserAsync(newUserData, existingUserType, null, null, null, defaultUserCollectionName);
 
@@ -302,6 +306,49 @@ public class UpdateOrganizationUserCommandTests
             newUserData.OrganizationId,
             Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(newUserData.Id)),
             defaultUserCollectionName);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task UpdateUserAsync_WhenDemotingPrivilegedUserToUser_WithDefaultCollectionName_AndUseMyItemsDisabled_DoesNotCreateDefaultCollection(
+        OrganizationUserType existingUserType,
+        Organization organization,
+        OrganizationUser oldUserData,
+        OrganizationUser newUserData,
+        string defaultUserCollectionName,
+        SutProvider<UpdateOrganizationUserCommand> sutProvider)
+    {
+        organization.UseMyItems = false;
+        newUserData.Type = OrganizationUserType.User;
+        Setup(sutProvider, organization, newUserData, oldUserData);
+
+        await sutProvider.Sut.UpdateUserAsync(newUserData, existingUserType, null, null, null, defaultUserCollectionName);
+
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive().CreateDefaultCollectionsAsync(
+            Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task UpdateUserAsync_WhenDemotingPrivilegedUserToUser_WithDefaultCollectionName_AndPolicyDisabled_DoesNotCreateDefaultCollection(
+        OrganizationUserType existingUserType,
+        Organization organization,
+        OrganizationUser oldUserData,
+        OrganizationUser newUserData,
+        string defaultUserCollectionName,
+        SutProvider<UpdateOrganizationUserCommand> sutProvider)
+    {
+        organization.UseMyItems = true;
+        newUserData.Type = OrganizationUserType.User;
+        Setup(sutProvider, organization, newUserData, oldUserData);
+        SetupDataOwnershipPolicy(sutProvider, newUserData.UserId!.Value, OrganizationDataOwnershipState.Disabled);
+
+        await sutProvider.Sut.UpdateUserAsync(newUserData, existingUserType, null, null, null, defaultUserCollectionName);
+
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive().CreateDefaultCollectionsAsync(
+            Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
     }
 
     [Theory]
@@ -361,5 +408,14 @@ public class UpdateOrganizationUserCommandTests
                 oldUser.OrganizationId,
                 Arg.Is<IEnumerable<Guid>>(i => i.Contains(oldUser.Id)))
             .Returns(true);
+    }
+
+    private void SetupDataOwnershipPolicy(SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Guid userId, OrganizationDataOwnershipState state)
+    {
+        var requirement = new OrganizationDataOwnershipPolicyRequirement(state, []);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId)
+            .Returns(requirement);
     }
 }

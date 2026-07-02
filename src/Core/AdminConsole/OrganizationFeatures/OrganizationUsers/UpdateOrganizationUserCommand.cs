@@ -1,5 +1,7 @@
 ﻿#nullable enable
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
@@ -27,6 +29,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
     private readonly IPricingClient _pricingClient;
     private readonly TimeProvider _timeProvider;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
 
     public UpdateOrganizationUserCommand(
         IEventService eventService,
@@ -39,7 +42,8 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         IGroupRepository groupRepository,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IPricingClient pricingClient,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IPolicyRequirementQuery policyRequirementQuery)
     {
         _eventService = eventService;
         _organizationService = organizationService;
@@ -52,6 +56,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
         _pricingClient = pricingClient;
         _timeProvider = timeProvider;
+        _policyRequirementQuery = policyRequirementQuery;
     }
 
     /// <summary>
@@ -148,7 +153,11 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
 
         var isDemotedFromPrivilegedRole = existingUserType is OrganizationUserType.Admin or OrganizationUserType.Owner
             && organizationUser.Type is not (OrganizationUserType.Admin or OrganizationUserType.Owner);
-        if (isDemotedFromPrivilegedRole && !string.IsNullOrWhiteSpace(defaultUserCollectionName))
+        if (isDemotedFromPrivilegedRole
+            && organizationUser.UserId.HasValue
+            && organization.UseMyItems
+            && !string.IsNullOrWhiteSpace(defaultUserCollectionName)
+            && (await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId.Value)).State == OrganizationDataOwnershipState.Enabled)
         {
             await _collectionRepository.CreateDefaultCollectionsAsync(
                 organizationUser.OrganizationId,
