@@ -88,7 +88,6 @@ public class OrganizationReportsController : Controller
     /// <returns>An <see cref="OrganizationReportFileResponseModel"/> with upload URL when the request
     /// includes a file size, or an <see cref="OrganizationReportResponseModel"/> otherwise.</returns>
     [HttpPost("{organizationId}")]
-    [RequestSizeLimit(Constants.FileSize501mb)]
     public async Task<IActionResult> CreateOrganizationReportAsync(
         Guid organizationId,
         [FromBody] AddOrganizationReportRequestModel request)
@@ -104,6 +103,9 @@ public class OrganizationReportsController : Controller
         // gracefully.
         if (request.FileSize.HasValue)
         {
+            // This caps the claimed file-size value only. The file itself is uploaded separately to
+            // blob storage via UploadReportFileAsync, so no large body flows through this endpoint and
+            // no request-body size limit belongs here (that limit lives on the upload endpoint).
             if (request.FileSize.Value > Constants.FileSize501mb)
             {
                 throw new BadRequestException("Max file size is 500 MB.");
