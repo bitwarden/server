@@ -110,6 +110,10 @@ src/Admin/Views/Tools @bitwarden/team-billing-dev
 # The PushType enum is expected to be editted by anyone without need for Platform review
 src/Core/Platform/Push/PushType.cs
 
+# PAM
+bitwarden_license/src/Services/Pam @bitwarden/team-pam-dev
+bitwarden_license/test/Services/Pam.Test @bitwarden/team-pam-dev
+
 # SDK
 util/RustSdk @bitwarden/team-sdk-sme
 
