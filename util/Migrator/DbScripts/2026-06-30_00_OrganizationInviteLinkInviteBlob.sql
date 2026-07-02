@@ -1,25 +1,24 @@
--- Replace EncryptedInviteKey/EncryptedOrgKey with an Invite blob column and a SupportsConfirmation flag
+-- Replace EncryptedInviteKey/EncryptedOrgKey with an Invite blob column and a SupportsConfirmation flag.
+-- Mirrors the EF migration (drop EncryptedOrgKey, rename EncryptedInviteKey -> Invite, add SupportsConfirmation
+-- at the end) so the resulting column order stays consistent across all supported databases.
 
--- Drop the old key columns
+-- Drop the org key column
+IF COL_LENGTH('[dbo].[OrganizationInviteLink]', 'EncryptedOrgKey') IS NOT NULL
+BEGIN
+    ALTER TABLE [dbo].[OrganizationInviteLink]
+        DROP COLUMN [EncryptedOrgKey];
+END
+GO
+
+-- Rename EncryptedInviteKey -> Invite (preserves the column's position, NOT NULL-ness, and data)
 IF COL_LENGTH('[dbo].[OrganizationInviteLink]', 'EncryptedInviteKey') IS NOT NULL
+    AND COL_LENGTH('[dbo].[OrganizationInviteLink]', 'Invite') IS NULL
 BEGIN
-    ALTER TABLE [dbo].[OrganizationInviteLink]
-        DROP COLUMN [EncryptedInviteKey], [EncryptedOrgKey];
+    EXEC sp_rename '[dbo].[OrganizationInviteLink].[EncryptedInviteKey]', 'Invite', 'COLUMN';
 END
 GO
 
--- Clear throwaway rows so [Invite] can be added NOT NULL without a default (flag never enabled in production)
-DELETE FROM [dbo].[OrganizationInviteLink];
-GO
-
--- Add the new columns
-IF COL_LENGTH('[dbo].[OrganizationInviteLink]', 'Invite') IS NULL
-BEGIN
-    ALTER TABLE [dbo].[OrganizationInviteLink]
-        ADD [Invite] NVARCHAR(MAX) NOT NULL;
-END
-GO
-
+-- Add the SupportsConfirmation flag at the end
 IF COL_LENGTH('[dbo].[OrganizationInviteLink]', 'SupportsConfirmation') IS NULL
 BEGIN
     ALTER TABLE [dbo].[OrganizationInviteLink]
