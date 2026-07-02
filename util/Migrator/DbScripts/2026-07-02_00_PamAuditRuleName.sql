@@ -1,4 +1,7 @@
-CREATE PROCEDURE [dbo].[AccessAuditEvent_ReadManyByOrganizationId]
+-- Add the rule name to the synthesized access-audit trail so rule administration events (created / updated / deleted)
+-- can show which rule they concern in the governance client's "Item" column. Joins [AccessRule] by id without a
+-- DeletedDate filter, so a soft-deleted rule's name still surfaces on its RuleDeleted event.
+CREATE OR ALTER PROCEDURE [dbo].[AccessAuditEvent_ReadManyByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER,
     @Since DATETIME2(7),
     @Now DATETIME2(7)
@@ -367,3 +370,4 @@ BEGIN
     LEFT JOIN [dbo].[AccessRule] RUL ON RUL.[Id] = E.[AccessRuleId]
     ORDER BY E.[OccurredAt] DESC
 END
+GO

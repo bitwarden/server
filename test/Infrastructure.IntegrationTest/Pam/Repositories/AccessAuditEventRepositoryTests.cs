@@ -168,7 +168,8 @@ public class AccessAuditEventRepositoryTests
         var afterCreate = await accessAuditEventRepository.GetManyByOrganizationIdAsync(
             organization.Id, now.AddDays(-90), now);
         Assert.Contains(afterCreate, e =>
-            e.Kind == AccessAuditEventKind.RuleCreated && e.AccessRuleId == rule.Id && e.ActorId == creatorId);
+            e.Kind == AccessAuditEventKind.RuleCreated && e.AccessRuleId == rule.Id && e.ActorId == creatorId
+            && e.RuleName == "audit-rule");
         Assert.DoesNotContain(afterCreate, e =>
             e.Kind == AccessAuditEventKind.RuleUpdated && e.AccessRuleId == rule.Id);
 
@@ -180,7 +181,8 @@ public class AccessAuditEventRepositoryTests
         var afterUpdate = await accessAuditEventRepository.GetManyByOrganizationIdAsync(
             organization.Id, now.AddDays(-90), now.AddMinutes(10));
         Assert.Contains(afterUpdate, e =>
-            e.Kind == AccessAuditEventKind.RuleUpdated && e.AccessRuleId == rule.Id && e.ActorId == editorId);
+            e.Kind == AccessAuditEventKind.RuleUpdated && e.AccessRuleId == rule.Id && e.ActorId == editorId
+            && e.RuleName == "audit-rule");
     }
 
     // Soft-deleting a rule projects RuleDeleted naming the deleter; its earlier RuleCreated survives, the delete is
@@ -213,7 +215,8 @@ public class AccessAuditEventRepositoryTests
             organization.Id, now.AddDays(-90), now.AddMinutes(10));
 
         Assert.Contains(events, e =>
-            e.Kind == AccessAuditEventKind.RuleDeleted && e.AccessRuleId == rule.Id && e.ActorId == deleterId);
+            e.Kind == AccessAuditEventKind.RuleDeleted && e.AccessRuleId == rule.Id && e.ActorId == deleterId
+            && e.RuleName == "audit-deleted-rule");
         // History survives the soft-delete: the creation event is still projected.
         Assert.Contains(events, e =>
             e.Kind == AccessAuditEventKind.RuleCreated && e.AccessRuleId == rule.Id);

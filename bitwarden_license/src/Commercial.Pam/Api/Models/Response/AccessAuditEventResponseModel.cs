@@ -35,6 +35,7 @@ public class AccessAuditEventResponseModel : ResponseModel
         RequesterEmail = auditEvent.RequesterEmail;
         CipherName = auditEvent.CipherName;
         CollectionName = auditEvent.CollectionName;
+        RuleName = auditEvent.RuleName;
         Automated = auditEvent.Automated;
     }
 
@@ -73,6 +74,9 @@ public class AccessAuditEventResponseModel : ResponseModel
     /// <summary>The cipher and collection names — encrypted; the client decrypts them.</summary>
     public string? CipherName { get; }
     public string? CollectionName { get; }
+
+    /// <summary>The access rule's name — plaintext org configuration (not vault data), for rule administration events.</summary>
+    public string? RuleName { get; }
 
     /// <summary>True when there is no human actor — a system / automatic event.</summary>
     public bool Automated { get; }
