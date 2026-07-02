@@ -80,8 +80,9 @@ public class OrganizationReportsController : Controller
 
     /// <summary>
     /// Creates a new organization report for the specified organization.
-    /// When the request includes a file size, validates it and returns a presigned upload URL for the
-    /// report file along with the created report metadata. Otherwise, creates the report with inline data.
+    /// When the new architecture is enabled and the request includes a file size, validates it and
+    /// returns a presigned upload URL for the report file along with the created report metadata.
+    /// Otherwise, creates the report with inline data.
     /// </summary>
     /// <param name="organizationId">The unique identifier of the organization.</param>
     /// <param name="request">The request model containing report data and optional file metadata.</param>
@@ -96,12 +97,14 @@ public class OrganizationReportsController : Controller
 
         await AuthorizeAsync(organizationId);
 
-        // Select the create path from the shape of the request rather than the file-storage
-        // flag. The client evaluates that flag from its config cache, which can lag the server
-        // by up to an hour (pronounced in self-hosted), so gating here would 500 whenever the
-        // two disagree. Honoring whatever the client actually sent lets flag staleness degrade
-        // gracefully.
-        if (request.FileSize.HasValue)
+        // File storage only exists under the new architecture, so gate the file path on the (stable)
+        // AccessIntelligenceNewArchitecture flag. Within that, select the path from the request shape
+        // rather than the file-storage flag (AccessIntelligenceVersion2): the client chooses its shape
+        // from that flag via a config cache that can lag the server by up to an hour (pronounced in
+        // self-hosted), so branching on it here would 500 whenever the two disagree. Honoring the shape
+        // lets file-storage flag staleness degrade gracefully.
+        var isNewArchitecture = _featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceNewArchitecture);
+        if (isNewArchitecture && request.FileSize.HasValue)
         {
             // This caps the claimed file-size value only. The file itself is uploaded separately to
             // blob storage via UploadReportFileAsync, so no large body flows through this endpoint and
@@ -203,7 +206,7 @@ public class OrganizationReportsController : Controller
     /// <param name="request">The request model containing updated report data.</param>
     /// <returns>An <see cref="OrganizationReportResponseModel"/> with the updated report.</returns>
     [HttpPatch("{organizationId}/{reportId}")]
-    [RequireFeature(FeatureFlagKeys.AccessIntelligenceVersion2)]
+    [RequireFeature(FeatureFlagKeys.AccessIntelligenceNewArchitecture)]
     public async Task<IActionResult> UpdateOrganizationReportAsync(
         Guid organizationId,
         Guid reportId,
@@ -281,13 +284,13 @@ public class OrganizationReportsController : Controller
     /// <summary>
     /// Renews the file upload URL for an organization report that has not yet been validated.
     /// Returns a fresh presigned upload URL for the report file, allowing the client to retry
-    /// an upload after the original URL has expired. Requires the Access Intelligence V2 feature flag.
+    /// an upload after the original URL has expired. Requires the Access Intelligence new-architecture feature flag.
     /// </summary>
     /// <param name="organizationId">The unique identifier of the organization.</param>
     /// <param name="reportId">The unique identifier of the report with the pending file upload.</param>
     /// <param name="reportFileId">The identifier of the report file entry to renew the upload URL for.</param>
     /// <returns>An <see cref="OrganizationReportFileResponseModel"/> with the renewed upload URL.</returns>
-    [RequireFeature(FeatureFlagKeys.AccessIntelligenceVersion2)]
+    [RequireFeature(FeatureFlagKeys.AccessIntelligenceNewArchitecture)]
     [HttpGet("{organizationId}/{reportId}/file/renew")]
     public async Task<OrganizationReportFileResponseModel> RenewFileUploadUrlAsync(
         Guid organizationId, Guid reportId, [FromQuery] string reportFileId)
@@ -317,12 +320,12 @@ public class OrganizationReportsController : Controller
     /// Handles Azure Event Grid webhook notifications for blob storage events.
     /// When a <c>Microsoft.Storage.BlobCreated</c> event is received, validates the uploaded
     /// report file against the corresponding organization report. Orphaned blobs (with no
-    /// matching report) are deleted. Requires the Access Intelligence V2 feature flag.
+    /// matching report) are deleted. Requires the Access Intelligence new-architecture feature flag.
     /// This endpoint is anonymous to allow Azure Event Grid to call it directly.
     /// </summary>
     /// <returns>An <see cref="ObjectResult"/> acknowledging the Event Grid event.</returns>
     [AllowAnonymous]
-    [RequireFeature(FeatureFlagKeys.AccessIntelligenceVersion2)]
+    [RequireFeature(FeatureFlagKeys.AccessIntelligenceNewArchitecture)]
     [HttpPost("file/validate/azure")]
     public async Task<ObjectResult> AzureValidateFileAsync()
     {
@@ -368,12 +371,12 @@ public class OrganizationReportsController : Controller
     /// <summary>
     /// Uploads a report data file for a self-hosted organization report via multipart form data.
     /// Validates the uploaded file size against the expected size (with a 1 MB leeway) and marks
-    /// the report file as validated upon success. Requires the Access Intelligence V2 feature flag.
+    /// the report file as validated upon success. Requires the Access Intelligence new-architecture feature flag.
     /// </summary>
     /// <param name="organizationId">The unique identifier of the organization.</param>
     /// <param name="reportId">The unique identifier of the report to attach the file to.</param>
     /// <param name="reportFileId">The identifier of the report file entry to upload against.</param>
-    [RequireFeature(FeatureFlagKeys.AccessIntelligenceVersion2)]
+    [RequireFeature(FeatureFlagKeys.AccessIntelligenceNewArchitecture)]
     [HttpPost("{organizationId}/{reportId}/file")]
     [SelfHosted(SelfHostedOnly = true)]
     [RequestSizeLimit(Constants.FileSize501mb)]
