@@ -20,6 +20,7 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     RID=linux-arm64 ; \
     elif [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
     RID=linux-arm ; \
+    else echo "Unsupported TARGETPLATFORM: $TARGETPLATFORM" >&2 && exit 1 ; \
     fi \
     && echo "RID=$RID" > /tmp/rid.txt
 
