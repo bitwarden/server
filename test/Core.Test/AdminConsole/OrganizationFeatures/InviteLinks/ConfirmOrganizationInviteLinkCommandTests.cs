@@ -6,7 +6,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -240,23 +239,6 @@ public class ConfirmOrganizationInviteLinkCommandTests
             .CreateDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
     }
 
-    [Theory, BitAutoData]
-    public async Task ConfirmAsync_OnSuccess_RemovesEmergencyAccess(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        OrganizationUser existingOrganizationUser,
-        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
-    {
-        SetupHappyPath(organization, inviteLink, user, existingOrganizationUser, sutProvider);
-
-        var result = await sutProvider.Sut.ConfirmAsync(BuildRequest(inviteLink, user));
-
-        Assert.True(result.IsSuccess);
-        await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
-            .Received(1)
-            .DeleteAllByUserIdAsync(user.Id);
-    }
 
     private static ConfirmOrganizationInviteLinkRequest BuildRequest(OrganizationInviteLink inviteLink, User user) =>
         new()

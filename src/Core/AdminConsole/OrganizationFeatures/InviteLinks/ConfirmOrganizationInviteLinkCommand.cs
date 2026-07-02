@@ -5,7 +5,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
-using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -35,7 +34,6 @@ public class ConfirmOrganizationInviteLinkCommand(
     IOrganizationService organizationService,
     IStripePaymentService stripePaymentService,
     IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand,
-    IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand,
     ILogger<ConfirmOrganizationInviteLinkCommand> logger)
     : IConfirmOrganizationInviteLinkCommand
 {
@@ -89,10 +87,6 @@ public class ConfirmOrganizationInviteLinkCommand(
             await updateUserResetPasswordEnrollmentCommand.UpdateUserResetPasswordEnrollmentAsync(
                 organization.Id, user.Id, request.ResetPasswordKey, user.Id);
         }
-
-        // The user is now a confirmed member of an organization, so any emergency access they granted or
-        // were granted is removed.
-        await deleteEmergencyAccessCommand.DeleteAllByUserIdAsync(user.Id);
 
         return new None();
     }
