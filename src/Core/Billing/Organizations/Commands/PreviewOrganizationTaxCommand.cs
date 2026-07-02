@@ -221,7 +221,11 @@ public class PreviewOrganizationTaxCommand(
                 var options = GetBaseOptions(billingAddress, planChange.Tier != ProductTierType.Families);
 
                 var subscription = await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
-                    new SubscriptionGetOptions { Expand = ["customer"] });
+                    // `customer.discount.source.coupon` is 4 levels — Stripe's cap. Needed
+                    // because `Discount.source` is expandable, not inline, after the
+                    // 2025-09-30.clover Discount refactor; without it, the read below
+                    // NREs on `Discount.Source`.
+                    new SubscriptionGetOptions { Expand = ["customer.discount.source.coupon"] });
 
                 if (subscription.Customer.Discount != null)
                 {
@@ -322,7 +326,11 @@ public class PreviewOrganizationTaxCommand(
             }
 
             var subscription = await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
-                new SubscriptionGetOptions { Expand = ["customer.tax_ids"] });
+                // `customer.discount.source.coupon` is 4 levels — Stripe's cap. Needed
+                // because `Discount.source` is expandable, not inline, after the
+                // 2025-09-30.clover Discount refactor; without it, the read below
+                // NREs on `Discount.Source`.
+                new SubscriptionGetOptions { Expand = ["customer.tax_ids", "customer.discount.source.coupon"] });
 
             var options = GetBaseOptions(subscription.Customer,
                 organization.GetProductUsageType() == ProductUsageType.Business);
