@@ -864,6 +864,25 @@ public class StripeTestsFixture : IAsyncDisposable
     }
 
     /// <summary>
+    /// Reads back the subscription's current sub-level discount coupon ids. Used
+    /// by redeem tests that need to verify the merged set on Stripe after the
+    /// call — e.g. asserting the customer coupon survived the merge into the
+    /// subscription's Discounts list.
+    /// </summary>
+    public async Task<List<string>> GetSubscriptionDiscountCouponIdsAsync(string subscriptionId)
+    {
+        var stripeClient = CreateStripeClient();
+        var subscription = await stripeClient.V1.Subscriptions.GetAsync(subscriptionId, new SubscriptionGetOptions
+        {
+            Expand = ["discounts.source.coupon"],
+        });
+        return subscription.Discounts?
+            .Where(d => d?.Source?.Coupon?.Id is not null)
+            .Select(d => d.Source.Coupon.Id)
+            .ToList() ?? [];
+    }
+
+    /// <summary>
     /// Attaches a product-scoped Stripe coupon to a subscription's Discounts list
     /// via the typed SDK (no raw-HTTP legacy header needed for the subscription
     /// endpoint — <c>SubscriptionUpdateOptions.Discounts</c> is still typed).
