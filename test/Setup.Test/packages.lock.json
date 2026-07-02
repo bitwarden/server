@@ -1419,7 +1419,7 @@
       "migrator": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.1, )",
+          "Core": "[2026.6.2, )",
           "Microsoft.Extensions.Logging": "[10.0.8, 10.0.8]",
           "dbup-sqlserver": "[7.2.0, 7.2.0]"
         }
@@ -1427,10 +1427,10 @@
       "setup": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.1, )",
+          "Core": "[2026.6.2, )",
           "Handlebars.Net": "[2.1.6, 2.1.6]",
           "Microsoft.Extensions.Logging": "[10.0.8, 10.0.8]",
-          "Migrator": "[2026.6.1, )",
+          "Migrator": "[2026.6.2, )",
           "YamlDotNet": "[11.2.1, 11.2.1]"
         }
       }

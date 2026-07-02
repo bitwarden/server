@@ -1554,7 +1554,7 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.1, )",
+          "Core": "[2026.6.2, )",
           "Dapper": "[2.1.66, 2.1.66]"
         }
       },
@@ -1562,7 +1562,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper": "[14.0.0, 14.0.0]",
-          "Core": "[2026.6.1, )",
+          "Core": "[2026.6.2, )",
           "Microsoft.EntityFrameworkCore.Relational": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.SqlServer": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.Sqlite": "[8.0.8, 8.0.8]",
@@ -1575,7 +1575,7 @@
       "migrator": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.1, )",
+          "Core": "[2026.6.2, )",
           "Microsoft.Extensions.Logging": "[10.0.8, 10.0.8]",
           "dbup-sqlserver": "[7.2.0, 7.2.0]"
         }
@@ -1583,22 +1583,22 @@
       "mysqlmigrations": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.1, )",
-          "Infrastructure.EntityFramework": "[2026.6.1, )"
+          "Core": "[2026.6.2, )",
+          "Infrastructure.EntityFramework": "[2026.6.2, )"
         }
       },
       "postgresmigrations": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.1, )",
-          "Infrastructure.EntityFramework": "[2026.6.1, )"
+          "Core": "[2026.6.2, )",
+          "Infrastructure.EntityFramework": "[2026.6.2, )"
         }
       },
       "sqlitemigrations": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.1, )",
-          "Infrastructure.EntityFramework": "[2026.6.1, )"
+          "Core": "[2026.6.2, )",
+          "Infrastructure.EntityFramework": "[2026.6.2, )"
         }
       }
     }
