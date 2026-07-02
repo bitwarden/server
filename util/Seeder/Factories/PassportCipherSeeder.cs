@@ -6,24 +6,20 @@ namespace Bit.Seeder.Factories;
 
 internal static class PassportCipherSeeder
 {
-    internal static Cipher Create(
-        string encryptionKey,
-        string name,
-        PassportViewDto passport,
-        Guid? organizationId = null,
-        Guid? userId = null,
-        string? notes = null)
+    internal static Cipher Create(CipherSeed options)
     {
         var cipherView = new CipherViewDto
         {
-            OrganizationId = organizationId,
-            Name = name,
-            Notes = notes,
+            OrganizationId = options.OrganizationId,
+            Name = options.Name,
+            Notes = options.Notes,
             Type = CipherTypes.Passport,
-            Passport = passport
+            Passport = options.Passport,
+            Fields = options.Fields,
+            Reprompt = (int)options.Reprompt
         };
 
-        var encrypted = CipherEncryption.Encrypt(cipherView, encryptionKey);
-        return CipherEncryption.CreateEntity(encrypted, encrypted.ToPassportData(), CipherType.Passport, organizationId, userId);
+        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!);
+        return CipherEncryption.CreateEntity(encrypted, encrypted.ToPassportData(), CipherType.Passport, options.OrganizationId, options.UserId);
     }
 }

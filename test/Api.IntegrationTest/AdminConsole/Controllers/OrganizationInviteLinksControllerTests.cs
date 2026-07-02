@@ -5,6 +5,7 @@ using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
@@ -36,7 +37,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
                 .IsEnabled(FeatureFlagKeys.GenerateInviteLink)
                 .Returns(true);
         });
-        _factory.SubstituteService<IApplicationCacheService>(cacheService =>
+        _factory.SubstituteService<IOrganizationAbilityCacheService>(cacheService =>
         {
             cacheService
                 .GetOrganizationAbilityAsync(Arg.Any<Guid>())

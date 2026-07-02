@@ -1,5 +1,6 @@
 ﻿using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using Azure;
 using Azure.Storage.Blobs;
 using Bit.Core.Settings;
 using Bit.SharedWeb.Utilities;
@@ -334,6 +335,197 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         Assert.Equal("UpdatedConfig", revertedAppProtector.Unprotect(updatedConfigData));
     }
 
+    [Fact]
+    public async Task UnprotectCertificateMissingFromBlobStorage_Throws()
+    {
+        // The previous implementation returned null on BlobNotFound and that null reached
+        // UnprotectKeysWithAnyCertificate, so pods came up, failed to unprotect existing keys
+        // with a NullReferenceException, and auto-generated their own keys — producing a
+        // divergent key ring across a rolling deploy. The current implementation throws
+        // InvalidOperationException at startup with the call-site context ("Unprotect 0") in
+        // the message so operators can tell which entry went wrong from the log alone.
+        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
+            .WithPortBinding(10000, true)
+            .Build();
+
+        await azurite.StartAsync();
+
+        var azuriteConnectionString = $"DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://{azurite.Hostname}:{azurite.GetMappedPublicPort(10000)}/devstoreaccount1;";
+
+        var blobServiceClient = new BlobServiceClient(azuriteConnectionString);
+
+        var certificates = await blobServiceClient.CreateBlobContainerAsync("certificates");
+        var dataProtection = await blobServiceClient.CreateBlobContainerAsync("aspnet-dataprotection");
+
+        await certificates.Value.UploadBlobAsync("dataprotection.pfx", new BinaryData(FakeInitialCert));
+        await dataProtection.Value.UploadBlobAsync("keys.xml", new BinaryData(KeysData));
+
+        // The unprotect cert blob "mynewcert.pfx" is intentionally never uploaded.
+        var exception = Assert.Throws<InvalidOperationException>(() => CreateApp(new Dictionary<string, string?>
+        {
+            { "GlobalSettings:Storage:ConnectionString", azuriteConnectionString },
+            { "GlobalSettings:DataProtection:CertificatePassword", "Alongside-Unworthy-Query3-Cozy" },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:FileName", "mynewcert.pfx" },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:Password", "Undergrad-Police0-Maturely-Countless" },
+        }));
+        Assert.Contains("Unable to download certificate from azure blob storage", exception.Message);
+        Assert.Contains("Unprotect 0", exception.Message);
+        Assert.IsType<RequestFailedException>(exception.InnerException);
+    }
+
+    [Fact]
+    public async Task UnprotectCertificatePasswordIncorrect_Throws()
+    {
+        // The previous implementation swallowed the X509 load failure and returned null, which
+        // reached UnprotectKeysWithAnyCertificate with the same downstream effects as a missing
+        // blob: pods failed to unprotect existing keys with a NullReferenceException and
+        // auto-generated their own divergent keys across a rolling deploy. The current
+        // implementation throws InvalidOperationException at startup with the call-site context
+        // ("Unprotect 0") in the message and the underlying CryptographicException as the inner
+        // exception so operators can tell which entry went wrong from the log alone.
+        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
+            .WithPortBinding(10000, true)
+            .Build();
+
+        await azurite.StartAsync();
+
+        var azuriteConnectionString = $"DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://{azurite.Hostname}:{azurite.GetMappedPublicPort(10000)}/devstoreaccount1;";
+
+        var blobServiceClient = new BlobServiceClient(azuriteConnectionString);
+
+        var certificates = await blobServiceClient.CreateBlobContainerAsync("certificates");
+        var dataProtection = await blobServiceClient.CreateBlobContainerAsync("aspnet-dataprotection");
+
+        await certificates.Value.UploadBlobAsync("dataprotection.pfx", new BinaryData(FakeInitialCert));
+        await dataProtection.Value.UploadBlobAsync("keys.xml", new BinaryData(KeysData));
+
+        // The unprotect cert blob is uploaded, but the configured password does not match the
+        // password the cert was exported with ("Alongside-Unworthy-Query3-Cozy").
+        await certificates.Value.UploadBlobAsync("mynewcert.pfx", new BinaryData(FakeInitialCert));
+
+        var exception = Assert.Throws<InvalidOperationException>(() => CreateApp(new Dictionary<string, string?>
+        {
+            { "GlobalSettings:Storage:ConnectionString", azuriteConnectionString },
+            { "GlobalSettings:DataProtection:CertificatePassword", "Alongside-Unworthy-Query3-Cozy" },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:FileName", "mynewcert.pfx" },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:Password", "Wrong-Password-For-Cert" },
+        }));
+        Assert.Contains("Unable to load certificate downloaded from azure blob storage", exception.Message);
+        Assert.Contains("Unprotect 0", exception.Message);
+        Assert.IsType<CryptographicException>(exception.InnerException);
+    }
+
+    [Fact]
+    public async Task ProtectionCertificateMissingFromBlobStorage_Throws()
+    {
+        // The previous implementation passed a null certificate to ProtectKeysWithCertificate
+        // and the call threw with an opaque error. The current implementation throws
+        // InvalidOperationException with the call-site context ("protect") in the message and
+        // the underlying RequestFailedException as the inner exception so operators can tell
+        // which cert went wrong from the log alone.
+        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
+            .WithPortBinding(10000, true)
+            .Build();
+
+        await azurite.StartAsync();
+
+        var azuriteConnectionString = $"DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://{azurite.Hostname}:{azurite.GetMappedPublicPort(10000)}/devstoreaccount1;";
+
+        var blobServiceClient = new BlobServiceClient(azuriteConnectionString);
+        await blobServiceClient.CreateBlobContainerAsync("certificates");
+        await blobServiceClient.CreateBlobContainerAsync("aspnet-dataprotection");
+
+        // The protection cert blob (default name "dataprotection.pfx") is intentionally never uploaded.
+        var exception = Assert.Throws<InvalidOperationException>(() => CreateApp(new Dictionary<string, string?>
+        {
+            { "GlobalSettings:Storage:ConnectionString", azuriteConnectionString },
+            { "GlobalSettings:DataProtection:CertificatePassword", "Alongside-Unworthy-Query3-Cozy" },
+        }));
+        Assert.Contains("Unable to download certificate from azure blob storage", exception.Message);
+        Assert.Contains("protect", exception.Message);
+        Assert.IsType<RequestFailedException>(exception.InnerException);
+    }
+
+    [Fact]
+    public void ThumbprintPlaceholder_InDevelopment_DoesNotThrow()
+    {
+        // In local development, developers often have a placeholder thumbprint like "____"
+        // in their config because no real cert exists on their machine. The previous
+        // implementation threw InvalidOperationException at startup whenever GetCertificate
+        // returned null, even in Development — making local development impossible with a
+        // thumbprint configured. The current implementation defers the null check to the
+        // non-development guard further down, so Development environments start up cleanly
+        // and data protection simply uses its ephemeral default storage.
+        using var services = CreateApp(
+            new Dictionary<string, string?>
+            {
+                { "GlobalSettings:Storage:ConnectionString", "UseDevelopmentStorage=true" },
+                { "GlobalSettings:DataProtection:CertificateThumbprint", "___________" },
+            },
+            environmentName: "Development"
+        );
+
+        // No exception during startup; a protector can be successfully created.
+        var protector = services.GetRequiredService<IDataProtectionProvider>().CreateProtector("Test");
+        var roundTripped = protector.Unprotect(protector.Protect("hello"));
+        Assert.Equal("hello", roundTripped);
+    }
+
+    [Fact]
+    public void ThumbprintNotFound_InProduction_ThrowsWithThumbprintHint()
+    {
+        // When a thumbprint is configured in a non-development environment but the certificate
+        // is not present in the current user's certificate store, the error message should
+        // name the missing thumbprint so operators can tell immediately what to install rather
+        // than being directed to check the blob storage connection string (which is irrelevant
+        // to the thumbprint path).
+        var exception = Assert.Throws<InvalidOperationException>(() => CreateApp(
+            new Dictionary<string, string?>
+            {
+                { "GlobalSettings:Storage:ConnectionString", "UseDevelopmentStorage=true" },
+                { "GlobalSettings:DataProtection:CertificateThumbprint", "___________" },
+            },
+            environmentName: "Production"
+        ));
+        Assert.Contains("___________", exception.Message);
+        Assert.Contains("certificate store", exception.Message);
+    }
+
+    [Fact]
+    public async Task ProtectionCertificatePasswordIncorrect_Throws()
+    {
+        // The previous implementation swallowed the X509 load failure and returned null, which
+        // ProtectKeysWithCertificate rejected with an opaque error. The current implementation
+        // throws InvalidOperationException with the call-site context ("protect") in the message
+        // and the underlying CryptographicException as the inner exception so operators can tell
+        // which cert went wrong from the log alone.
+        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
+            .WithPortBinding(10000, true)
+            .Build();
+
+        await azurite.StartAsync();
+
+        var azuriteConnectionString = $"DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://{azurite.Hostname}:{azurite.GetMappedPublicPort(10000)}/devstoreaccount1;";
+
+        var blobServiceClient = new BlobServiceClient(azuriteConnectionString);
+
+        var certificates = await blobServiceClient.CreateBlobContainerAsync("certificates");
+        await blobServiceClient.CreateBlobContainerAsync("aspnet-dataprotection");
+
+        // The protection cert blob is uploaded, but the configured password does not match the
+        // password the cert was exported with ("Alongside-Unworthy-Query3-Cozy").
+        await certificates.Value.UploadBlobAsync("dataprotection.pfx", new BinaryData(FakeInitialCert));
+
+        var exception = Assert.Throws<InvalidOperationException>(() => CreateApp(new Dictionary<string, string?>
+        {
+            { "GlobalSettings:Storage:ConnectionString", azuriteConnectionString },
+            { "GlobalSettings:DataProtection:CertificatePassword", "Wrong-Password-For-Cert" },
+        }));
+        Assert.Contains("Unable to load certificate downloaded from azure blob storage", exception.Message);
+        Assert.Contains("protect", exception.Message);
+        Assert.IsType<CryptographicException>(exception.InnerException);
+    }
+
     private record TestSetupContext(BlobContainerClient Certificates, BlobContainerClient DataProtection, IConfigurationBuilder Config);
 
     private record TestRunContext(IServiceProvider Services, IDataProtector Protector);
@@ -387,14 +579,14 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         test(runContext);
     }
 
-    private static ServiceProvider CreateApp(Dictionary<string, string?> initialData)
+    private static ServiceProvider CreateApp(Dictionary<string, string?> initialData, string environmentName = "Production")
     {
         var configurationBuilder = new ConfigurationBuilder()
             .AddInMemoryCollection(initialData);
-        return CreateApp(configurationBuilder);
+        return CreateApp(configurationBuilder, environmentName);
     }
 
-    private static ServiceProvider CreateApp(IConfigurationBuilder configurationBuilder)
+    private static ServiceProvider CreateApp(IConfigurationBuilder configurationBuilder, string environmentName = "Production")
     {
         var services = new ServiceCollection();
 
@@ -404,7 +596,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         configuration.GetSection("GlobalSettings").Bind(globalSettings);
 
         var environment = Substitute.For<IWebHostEnvironment>();
-        environment.EnvironmentName.Returns("Production");
+        environment.EnvironmentName.Returns(environmentName);
 
         services.AddCustomDataProtectionServices(
             environment,

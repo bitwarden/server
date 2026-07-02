@@ -46,7 +46,7 @@ public class PresetCommand
         Console.Error.WriteLine($"Seeding organization from preset '{args.Name}'...");
         var result = ConsoleProgressReporter.RunWithProgress(
             deps.ToDependencies(),
-            d => new OrganizationRecipe(d).Seed(args.Name!, args.Password, args.KdfIterations));
+            d => new OrganizationRecipe(d).Seed(args.Name!, args.Password, args.KdfIterations, args.OrgName, args.OwnerEmail));
 
         ConsoleOutput.PrintRow("Organization", result.OrganizationId);
         if (result.OwnerEmail is not null)
