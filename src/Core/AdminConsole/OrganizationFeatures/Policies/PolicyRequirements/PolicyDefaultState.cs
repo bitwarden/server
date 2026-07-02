@@ -1,4 +1,4 @@
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
 /// <summary>
 /// Whether a policy is enabled or disabled by default: it determines how the policy domain interprets the absence of a
