@@ -81,6 +81,7 @@ public enum EventType : int
     OrganizationUser_Revoked_TwoFactorNonCompliance = 1520,
     OrganizationUser_Revoked_SingleOrganizationNonCompliance = 1521,
     OrganizationUser_NotificationBannerActionClicked = 1522,
+    OrganizationUser_InviteLinkAccepted = 1524, // User accepted an organization invite via invite link
 
     Organization_Updated = 1600,
     Organization_PurgedVault = 1601,
@@ -107,6 +108,11 @@ public enum EventType : int
     Organization_AutoConfirmDisabled_Admin = 1621,
     Organization_AutoConfirmEnabled_Portal = 1622,
     Organization_AutoConfirmDisabled_Portal = 1623,
+    Organization_InviteLinkCreated = 1624, // Admin generated an organization invite link
+    Organization_InviteLinkDomainsEdited = 1625, // Admin edited the domains of an organization invite link
+    Organization_InviteLinkDeleted = 1626, // Admin deleted an organization invite link
+    Organization_InviteLinkClientCopied = 1627, // Admin copied an organization invite link (client-side event)
+    Organization_InviteLinkRefreshed = 1628, // Admin refreshed an organization invite link
 
     Policy_Updated = 1700,
 
