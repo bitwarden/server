@@ -80,14 +80,13 @@ public class OrganizationReportsController : Controller
 
     /// <summary>
     /// Creates a new organization report for the specified organization.
-    /// When the Access Intelligence V2 feature flag is enabled, validates the file size and returns
-    /// a presigned upload URL for the report file along with the created report metadata.
-    /// Otherwise, creates the report with inline data.
+    /// When the request includes a file size, validates it and returns a presigned upload URL for the
+    /// report file along with the created report metadata. Otherwise, creates the report with inline data.
     /// </summary>
     /// <param name="organizationId">The unique identifier of the organization.</param>
     /// <param name="request">The request model containing report data and optional file metadata.</param>
-    /// <returns>An <see cref="OrganizationReportFileResponseModel"/> with upload URL when V2 is enabled,
-    /// or an <see cref="OrganizationReportResponseModel"/> otherwise.</returns>
+    /// <returns>An <see cref="OrganizationReportFileResponseModel"/> with upload URL when the request
+    /// includes a file size, or an <see cref="OrganizationReportResponseModel"/> otherwise.</returns>
     [HttpPost("{organizationId}")]
     [RequestSizeLimit(Constants.FileSize501mb)]
     public async Task<IActionResult> CreateOrganizationReportAsync(
@@ -98,13 +97,13 @@ public class OrganizationReportsController : Controller
 
         await AuthorizeAsync(organizationId);
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2))
+        // Select the create path from the shape of the request rather than the file-storage
+        // flag. The client evaluates that flag from its config cache, which can lag the server
+        // by up to an hour (pronounced in self-hosted), so gating here would 500 whenever the
+        // two disagree. Honoring whatever the client actually sent lets flag staleness degrade
+        // gracefully.
+        if (request.FileSize.HasValue)
         {
-            if (!request.FileSize.HasValue)
-            {
-                throw new BadRequestException("File size is required.");
-            }
-
             if (request.FileSize.Value > Constants.FileSize501mb)
             {
                 throw new BadRequestException("Max file size is 500 MB.");

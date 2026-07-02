@@ -248,23 +248,20 @@ public class OrganizationReportControllerTests
     //         .GetLatestOrganizationReportAsync(Arg.Any<Guid>());
     // }
 
-    // CreateOrganizationReportAsync - V1 (flag off)
+    // CreateOrganizationReportAsync - path selected by request shape (FileSize), not the flag (PM-39402)
 
     [Theory, BitAutoData]
-    public async Task CreateOrganizationReportAsync_V1_WithValidRequest_ReturnsOkResult(
+    public async Task CreateOrganizationReportAsync_WithoutFileSize_TakesInlinePath(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
         AddOrganizationReportRequestModel request,
         OrganizationReport expectedReport)
     {
         // Arrange
+        request.FileSize = null;
         expectedReport.ReportFile = null;
 
         SetupAuthorization(sutProvider, orgId);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
-            .Returns(false);
 
         sutProvider.GetDependency<IAddOrganizationReportCommand>()
             .AddOrganizationReportAsync(Arg.Any<AddOrganizationReportRequest>())
@@ -277,36 +274,14 @@ public class OrganizationReportControllerTests
         var okResult = Assert.IsType<OkObjectResult>(result);
         var expectedResponse = new OrganizationReportResponseModel(expectedReport);
         Assert.Equivalent(expectedResponse, okResult.Value);
-    }
 
-    [Theory, BitAutoData]
-    public async Task CreateOrganizationReportAsync_V1_WithoutAccess_ThrowsNotFoundException(
-        SutProvider<OrganizationReportsController> sutProvider,
-        Guid orgId,
-        AddOrganizationReportRequestModel request)
-    {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
-            .Returns(false);
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(false);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.CreateOrganizationReportAsync(orgId, request));
-
-        await sutProvider.GetDependency<IAddOrganizationReportCommand>()
+        await sutProvider.GetDependency<ICreateOrganizationReportCommand>()
             .DidNotReceive()
-            .AddOrganizationReportAsync(Arg.Any<AddOrganizationReportRequest>());
+            .CreateAsync(Arg.Any<AddOrganizationReportRequest>());
     }
 
-    // CreateOrganizationReportAsync - V2 (flag on)
-
     [Theory, BitAutoData]
-    public async Task CreateOrganizationReportAsync_V2_WithValidRequest_ReturnsFileResponseModel(
+    public async Task CreateOrganizationReportAsync_WithFileSize_TakesFileCreatePath(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
         AddOrganizationReportRequestModel request,
@@ -319,7 +294,7 @@ public class OrganizationReportControllerTests
         var reportFile = new ReportFile { Id = "file-id", FileName = "report.json", Size = 1024, Validated = false };
         expectedReport.SetReportFile(reportFile);
 
-        SetupV2Authorization(sutProvider, orgId);
+        SetupAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<ICreateOrganizationReportCommand>()
             .CreateAsync(Arg.Any<AddOrganizationReportRequest>())
@@ -342,19 +317,95 @@ public class OrganizationReportControllerTests
         Assert.Equal(uploadUrl, response.ReportFileUploadUrl);
         Assert.Equal(FileUploadType.Azure, response.FileUploadType);
         Assert.NotNull(response.ReportResponse);
+
+        await sutProvider.GetDependency<IAddOrganizationReportCommand>()
+            .DidNotReceive()
+            .AddOrganizationReportAsync(Arg.Any<AddOrganizationReportRequest>());
+    }
+
+    // Regression (PM-39402): path selection must be independent of the file-storage flag, so a stale
+    // client that disagrees with the server no longer 500s during a flag toggle.
+
+    [Theory, BitAutoData]
+    public async Task CreateOrganizationReportAsync_WithFileSize_FlagOff_StillTakesFileCreatePath(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        AddOrganizationReportRequestModel request,
+        OrganizationReport expectedReport,
+        string uploadUrl)
+    {
+        // Arrange - client sent a file-shaped body while the server's file-storage flag is off.
+        request.FileSize = 1024;
+
+        var reportFile = new ReportFile { Id = "file-id", FileName = "report.json", Size = 1024, Validated = false };
+        expectedReport.SetReportFile(reportFile);
+
+        SetupAuthorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(false);
+
+        sutProvider.GetDependency<ICreateOrganizationReportCommand>()
+            .CreateAsync(Arg.Any<AddOrganizationReportRequest>())
+            .Returns(expectedReport);
+
+        sutProvider.GetDependency<IOrganizationReportStorageService>()
+            .GetReportFileUploadUrlAsync(expectedReport, Arg.Any<ReportFile>())
+            .Returns(uploadUrl);
+
+        // Act
+        var result = await sutProvider.Sut.CreateOrganizationReportAsync(orgId, request);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.IsType<OrganizationReportFileResponseModel>(okResult.Value);
+
+        await sutProvider.GetDependency<ICreateOrganizationReportCommand>()
+            .Received(1)
+            .CreateAsync(Arg.Any<AddOrganizationReportRequest>());
     }
 
     [Theory, BitAutoData]
-    public async Task CreateOrganizationReportAsync_V2_EmptyOrgId_ThrowsBadRequestException(
+    public async Task CreateOrganizationReportAsync_WithoutFileSize_FlagOn_StillTakesInlinePath(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        AddOrganizationReportRequestModel request,
+        OrganizationReport expectedReport)
+    {
+        // Arrange - client sent an inline body while the server's file-storage flag is on.
+        request.FileSize = null;
+        expectedReport.ReportFile = null;
+
+        SetupAuthorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(true);
+
+        sutProvider.GetDependency<IAddOrganizationReportCommand>()
+            .AddOrganizationReportAsync(Arg.Any<AddOrganizationReportRequest>())
+            .Returns(expectedReport);
+
+        // Act
+        var result = await sutProvider.Sut.CreateOrganizationReportAsync(orgId, request);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.IsType<OrganizationReportResponseModel>(okResult.Value);
+
+        await sutProvider.GetDependency<IAddOrganizationReportCommand>()
+            .Received(1)
+            .AddOrganizationReportAsync(Arg.Any<AddOrganizationReportRequest>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateOrganizationReportAsync_EmptyOrgId_ThrowsBadRequestException(
         SutProvider<OrganizationReportsController> sutProvider,
         AddOrganizationReportRequestModel request)
     {
         // Arrange
         var emptyOrgId = Guid.Empty;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
-            .Returns(true);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -364,35 +415,13 @@ public class OrganizationReportControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task CreateOrganizationReportAsync_V2_MissingFileSize_ThrowsBadRequestException(
-        SutProvider<OrganizationReportsController> sutProvider,
-        Guid orgId,
-        AddOrganizationReportRequestModel request)
-    {
-        // Arrange
-        request.FileSize = null;
-
-        SetupV2Authorization(sutProvider, orgId);
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.CreateOrganizationReportAsync(orgId, request));
-
-        Assert.Equal("File size is required.", exception.Message);
-    }
-
-    [Theory, BitAutoData]
-    public async Task CreateOrganizationReportAsync_V2_WithoutAccess_ThrowsNotFoundException(
+    public async Task CreateOrganizationReportAsync_WithoutAccess_ThrowsNotFoundException(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
         AddOrganizationReportRequestModel request)
     {
         // Arrange
         request.FileSize = 1024;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
-            .Returns(true);
 
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
@@ -405,6 +434,10 @@ public class OrganizationReportControllerTests
         await sutProvider.GetDependency<ICreateOrganizationReportCommand>()
             .DidNotReceive()
             .CreateAsync(Arg.Any<AddOrganizationReportRequest>());
+
+        await sutProvider.GetDependency<IAddOrganizationReportCommand>()
+            .DidNotReceive()
+            .AddOrganizationReportAsync(Arg.Any<AddOrganizationReportRequest>());
     }
 
     // GetOrganizationReportAsync
@@ -1488,10 +1521,10 @@ public class OrganizationReportControllerTests
         Assert.Equal("Invalid content.", exception.Message);
     }
 
-    // CreateOrganizationReportAsync - V2 file size cap
+    // CreateOrganizationReportAsync - file size cap
 
     [Theory, BitAutoData]
-    public async Task CreateOrganizationReportAsync_V2_FileSizeExceedsLimit_ThrowsBadRequestException(
+    public async Task CreateOrganizationReportAsync_FileSizeExceedsLimit_ThrowsBadRequestException(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
         AddOrganizationReportRequestModel request)
@@ -1499,7 +1532,7 @@ public class OrganizationReportControllerTests
         // Arrange
         request.FileSize = Constants.FileSize501mb + 1;
 
-        SetupV2Authorization(sutProvider, orgId);
+        SetupAuthorization(sutProvider, orgId);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
