@@ -1568,4 +1568,72 @@ public class StripePaymentServiceTests
         Assert.Equal(4, item.Quantity); // carried from Phase 2, not the base line's 1
         Assert.Equal(16m, item.Amount * item.Quantity);
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_WithMigrationGraceMetadata_MapsServiceAccountGrace(
+        SutProvider<StripePaymentService> sutProvider,
+        User subscriber)
+    {
+        // Arrange — a migrated subscription carries the free service-account grace in metadata.
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
+            Customer = new Customer { Discount = null },
+            Discounts = new List<Discount>(),
+            Items = new StripeList<SubscriptionItem> { Data = [] },
+            Metadata = new Dictionary<string, string>
+            {
+                { MetadataKeys.MigrationGraceServiceAccounts, "30" }
+            }
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(subscriber.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert — grace is read off metadata onto the wrapper using the already-fetched subscription.
+        Assert.Equal(30, result.Subscription!.ServiceAccountGrace);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_WithoutMigrationGraceMetadata_ServiceAccountGraceIsZero(
+        SutProvider<StripePaymentService> sutProvider,
+        User subscriber)
+    {
+        // Arrange — Metadata intentionally left null (non-migrated subscription); the read must not throw.
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
+            Customer = new Customer { Discount = null },
+            Discounts = new List<Discount>(),
+            Items = new StripeList<SubscriptionItem> { Data = [] }
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(subscriber.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert
+        Assert.Equal(0, result.Subscription!.ServiceAccountGrace);
+    }
 }
