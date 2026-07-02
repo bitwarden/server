@@ -62,8 +62,6 @@ using Bit.Infrastructure.EntityFramework;
 using Bit.SharedWeb.Play;
 using DnsClient;
 using Duende.IdentityModel;
-using LaunchDarkly.Sdk.Server;
-using LaunchDarkly.Sdk.Server.Interfaces;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -76,7 +74,6 @@ using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Azure.Cosmos.Fluent;
 using Microsoft.Extensions.Caching.Cosmos;
 using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -294,7 +291,7 @@ public static class ServiceCollectionExtensions
             return new LookupClient(options);
         });
         services.AddSingleton<IDnsResolverService, DnsResolverService>();
-        services.AddOptionality();
+        services.ApplyServerCompatibilityLayer();
         services.AddTokenizers();
         services.AddScoped<IApplicationCacheService, FeatureRoutedCacheService>();
         services.AddOrganizationAbilityCache(globalSettings);
@@ -517,23 +514,6 @@ public static class ServiceCollectionExtensions
         return identityServerBuilder;
     }
 
-    public static GlobalSettings AddGlobalSettingsServices(this IServiceCollection services,
-        IConfiguration configuration, IHostEnvironment environment)
-    {
-        var globalSettings = new GlobalSettings();
-        ConfigurationBinder.Bind(configuration.GetSection("GlobalSettings"), globalSettings);
-
-        if (environment.IsDevelopment() && configuration.GetValue<bool>("developSelfHosted"))
-        {
-            // Override settings with selfHostedOverride settings
-            ConfigurationBinder.Bind(configuration.GetSection("Dev:SelfHostOverride:GlobalSettings"), globalSettings);
-        }
-
-        services.AddSingleton(s => globalSettings);
-        services.AddSingleton<IGlobalSettings, GlobalSettings>(s => globalSettings);
-        return globalSettings;
-    }
-
     public static void UseDefaultMiddleware(this IApplicationBuilder app,
         IWebHostEnvironment env, GlobalSettings globalSettings)
     {
@@ -749,19 +729,6 @@ public static class ServiceCollectionExtensions
         {
             services.AddKeyedSingleton("persistent", (s, _) => s.GetRequiredService<IDistributedCache>());
         }
-    }
-
-    public static IServiceCollection AddOptionality(this IServiceCollection services)
-    {
-        services.AddSingleton<ILdClient>(s =>
-        {
-            return new LdClient(LaunchDarklyFeatureService.GetConfiguredClient(
-                s.GetRequiredService<GlobalSettings>()));
-        });
-
-        services.AddScoped<IFeatureService, LaunchDarklyFeatureService>();
-
-        return services;
     }
 
     private static (SupportedDatabaseProviders provider, string connectionString)
