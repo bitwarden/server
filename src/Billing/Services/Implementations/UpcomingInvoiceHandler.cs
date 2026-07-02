@@ -512,7 +512,15 @@ public class UpcomingInvoiceHandler(
         {
             var occupied = (await organizationRepository
                 .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)).Total;
-            return sourcePlan.ResolveMigratedSeatCount(occupied, organization.Seats);
+            var passwordManagerSeats = sourcePlan.ResolveMigratedSeatCount(occupied, organization.Seats);
+
+            // Floor the quote on the Stripe SM seat line so the email matches the billed PM seats (SM <= PM).
+            var secretsManagerSeatQuantity = subscription.Items.Data
+                .FirstOrDefault(item =>
+                    sourcePlan.SecretsManager is not null &&
+                    item.Price?.Id == sourcePlan.SecretsManager.StripeSeatPlanId)?.Quantity ?? 0;
+
+            return (int)Math.Max((long)passwordManagerSeats, secretsManagerSeatQuantity);
         }
 
         var seatItem = subscription.Items.Data
