@@ -39,10 +39,18 @@ public class StripeTestsFixture : IAsyncDisposable
     /// </summary>
     protected virtual ApiApplicationFactory CreateApi()
     {
-        return new ApiApplicationFactory
+        var api = new ApiApplicationFactory
         {
             StripeEnabled = true,
         };
+        // Stripe test-mode caps at ~25 req/s per account. Our tests parallel-fire
+        // real Stripe calls in bursts that exceed that on every full-suite run. The
+        // Stripe SDK retries 429s that carry `Stripe-Should-Retry: true`, so simply
+        // giving it more retries lets bursts naturally drain via the Retry-After
+        // header. The production default of 2 isn't enough under test load;
+        // MaxParallelThreads=2 in xunit.runner.json further reduces peak rate.
+        api.UpdateConfiguration("globalSettings:stripe:maxNetworkRetries", "5");
+        return api;
     }
 
     /// <summary>
