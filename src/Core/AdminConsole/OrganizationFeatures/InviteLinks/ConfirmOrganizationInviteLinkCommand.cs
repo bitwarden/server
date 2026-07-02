@@ -61,7 +61,7 @@ public class ConfirmOrganizationInviteLinkCommand(
         var autoEnrollEnabled = resetPasswordRequirement.AutoEnrollEnabled(organization.Id);
         if (autoEnrollEnabled && !OrganizationUser.IsValidResetPasswordKey(request.ResetPasswordKey))
         {
-            return new ResetPasswordKeyRequired();
+            return new ConfirmResetPasswordKeyRequired();
         }
 
         var membershipResult = await AddUserToOrganizationAsync(request, existingOrganizationUser, user, organization);
@@ -166,7 +166,7 @@ public class ConfirmOrganizationInviteLinkCommand(
             // Known business failures (no payment method, autoscale cap, etc.) map to a 400.
             // Infrastructure failures propagate so they surface as 5xx with a correlation id.
             logger.LogWarning(ex, "Could not auto-add seat while confirming invite link for organization {OrganizationId}", organization.Id);
-            return new SeatAddFailed();
+            return new ConfirmSeatAddFailed();
         }
     }
 

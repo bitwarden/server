@@ -146,7 +146,7 @@ public class ConfirmOrganizationInviteLinkCommandTests
         var result = await sutProvider.Sut.ConfirmAsync(BuildRequest(inviteLink, user));
 
         Assert.True(result.IsError);
-        Assert.IsType<SeatAddFailed>(result.AsError);
+        Assert.IsType<ConfirmSeatAddFailed>(result.AsError);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .CreateAsync(Arg.Any<OrganizationUser>());
@@ -170,7 +170,7 @@ public class ConfirmOrganizationInviteLinkCommandTests
         var result = await sutProvider.Sut.ConfirmAsync(request);
 
         Assert.True(result.IsError);
-        Assert.IsType<ResetPasswordKeyRequired>(result.AsError);
+        Assert.IsType<ConfirmResetPasswordKeyRequired>(result.AsError);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .ReplaceAsync(Arg.Any<OrganizationUser>());
