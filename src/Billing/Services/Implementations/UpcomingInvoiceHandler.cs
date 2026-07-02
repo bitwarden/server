@@ -493,7 +493,9 @@ public class UpcomingInvoiceHandler(
                 PerUserMonthlyPrice = FormatCurrency(perUserMonthly, culture),
                 IsAnnual = targetPlan.IsAnnual,
                 TotalPrice = FormatCurrency(total, culture),
-                DiscountLines = [.. discounts.Select(discount => discount.Display)]
+                DiscountLines = [.. discounts.Select(discount => discount.Display)],
+                ProactiveDiscountMonths = discounts
+                    .FirstOrDefault(discount => discount.CouponId == cohort.ProactiveDiscountCouponCode)?.Months ?? 0
             }
         });
     }
