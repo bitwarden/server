@@ -50,8 +50,17 @@ internal static class TwoFactorIntegrationTestHelpers
     public static string BuildEmailProvidersJson(string email) =>
         "{\"1\":{\"Enabled\":true,\"MetaData\":{\"Email\":\"" + email + "\"}}}";
 
-    public static string BuildWebAuthnProvidersJson() =>
-        "{\"7\":{\"Enabled\":true,\"MetaData\":{\"Key0\":{\"Name\":\"TestKey\",\"Descriptor\":{\"Id\":\"AAAA\",\"Type\":0,\"Transports\":null},\"PublicKey\":\"AAAA\",\"UserHandle\":\"AAAA\",\"SignatureCounter\":0,\"RegDate\":\"2024-01-01T00:00:00\",\"Migrated\":false,\"AaGuid\":\"00000000-0000-0000-0000-000000000000\"}}}}";
+    public static string BuildWebAuthnProvidersJson(int credentialCount = 1)
+    {
+        // DeleteTwoFactorWebAuthnCredentialCommand refuses per-credential deletion when only one
+        // credential remains, so tests that exercise per-credential DELETE against the real
+        // command need at least two seeded credentials.
+        var credentials = string.Join(",", Enumerable.Range(0, credentialCount).Select(BuildWebAuthnCredentialJson));
+        return "{\"7\":{\"Enabled\":true,\"MetaData\":{" + credentials + "}}}";
+    }
+
+    private static string BuildWebAuthnCredentialJson(int index) =>
+        $"\"Key{index}\":{{\"Name\":\"TestKey{index}\",\"Descriptor\":{{\"Id\":\"AAAA\",\"Type\":0,\"Transports\":null}},\"PublicKey\":\"AAAA\",\"UserHandle\":\"AAAA\",\"SignatureCounter\":0,\"RegDate\":\"2024-01-01T00:00:00\",\"Migrated\":false,\"AaGuid\":\"00000000-0000-0000-0000-000000000000\"}}";
 
     public static string BuildOrganizationDuoProvidersJson() =>
         "{\"6\":{\"Enabled\":true,\"MetaData\":{\"ClientSecret\":\"" + new string('s', 40)

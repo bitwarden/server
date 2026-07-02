@@ -35,8 +35,6 @@ public class TwoFactorControllerWebAuthnTests : IClassFixture<ApiApplicationFact
             svc.ValidateDuoConfiguration(default, default, default).ReturnsForAnyArgs(true));
         _factory.SubstituteService<ICompleteTwoFactorWebAuthnRegistrationCommand>(svc =>
             svc.CompleteTwoFactorWebAuthnRegistrationAsync(default!, default, default!, default!).ReturnsForAnyArgs(true));
-        _factory.SubstituteService<IDeleteTwoFactorWebAuthnCredentialCommand>(svc =>
-            svc.DeleteTwoFactorWebAuthnCredentialAsync(default!, default).ReturnsForAnyArgs(true));
         _factory.SubstituteService<ITwoFactorEmailService>(_ => { });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
@@ -60,7 +58,10 @@ public class TwoFactorControllerWebAuthnTests : IClassFixture<ApiApplicationFact
     [Fact]
     public async Task GetWebAuthn_ValidSecret_ReturnsTokenUsableForDelete()
     {
-        await EnrollUserInWebAuthn();
+        // Seed two credentials so per-credential DELETE succeeds against the real
+        // DeleteTwoFactorWebAuthnCredentialCommand (which refuses to remove the final credential
+        // to prevent lockout — that refusal path has its own test below).
+        await EnrollUserInWebAuthnWithTwoCredentials();
 
         var getResponse = await _client.PostAsJsonAsync("/two-factor/get-webauthn",
             new { MasterPasswordHash = MasterPasswordHash });
@@ -69,11 +70,8 @@ public class TwoFactorControllerWebAuthnTests : IClassFixture<ApiApplicationFact
         Assert.True(enabled);
         Assert.False(string.IsNullOrEmpty(uvToken));
 
-        // DeleteWebAuthn removes a specific credential by Id, not the whole provider; the
-        // delete command is substituted to return true, so this proves UV-token wiring
-        // and route mounting end-to-end. Per-credential DELETE returns the updated parent
-        // state in the body (the one DELETE on this controller that does), so 200 OK with
-        // a nested "webAuthn" payload is expected here.
+        // Per-credential DELETE returns the updated parent state in the body (the one DELETE on
+        // this controller that does), so 200 OK with a nested "webAuthn" payload is expected here.
         var disableResponse = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/webauthn",
             new
             {
@@ -83,6 +81,13 @@ public class TwoFactorControllerWebAuthnTests : IClassFixture<ApiApplicationFact
         Assert.Equal(HttpStatusCode.OK, disableResponse.StatusCode);
         var deleteRoot = await ReadJsonRootAsync(disableResponse);
         Assert.Equal(JsonValueKind.Object, deleteRoot.GetProperty("webAuthn").ValueKind);
+
+        // Key0 was removed, Key1 remains — the "refuse last credential" guard didn't fire because
+        // there was more than one credential seeded.
+        var refreshed = (await _userRepository.GetByEmailAsync(_userEmail))!;
+        var remaining = refreshed.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn)!;
+        Assert.False(remaining.MetaData.ContainsKey("Key0"));
+        Assert.True(remaining.MetaData.ContainsKey("Key1"));
     }
 
     [Fact]
@@ -220,7 +225,68 @@ public class TwoFactorControllerWebAuthnTests : IClassFixture<ApiApplicationFact
         Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
     }
 
+    [Fact]
+    public async Task DeleteWebAuthnAll_WrongUserToken_BadRequest()
+    {
+        // Mint a token bound to a different (unrelated) user, then replay it against the current
+        // authenticated principal's endpoint. The token unprotects but TokenIsValid(user) fails
+        // because UserId doesn't match.
+        var otherUserEmail = $"two-factor-other-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(otherUserEmail);
+        var otherUser = (await _userRepository.GetByEmailAsync(otherUserEmail))!;
+        var tokenForOtherUser = ProtectUserVerificationToken(
+            _userVerificationTokenFactory, otherUser, TwoFactorProviderType.WebAuthn);
+
+        var response = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/webauthn/all",
+            new TwoFactorWebAuthnDeleteAllRequestModel { UserVerificationToken = tokenForOtherUser });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task DeleteWebAuthnAll_TamperedToken_BadRequest()
+    {
+        // A random string can't be unprotected by the data protector; TryUnprotect returns false
+        // and TwoFactorUserVerificationTokenable.Validate short-circuits to false.
+        var response = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/webauthn/all",
+            new TwoFactorWebAuthnDeleteAllRequestModel { UserVerificationToken = "not-a-real-token" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task DeleteWebAuthn_LastCredential_BadRequest()
+    {
+        // With exactly one credential enrolled, per-credential DELETE must refuse (the guard that
+        // prevents accidental lockout — /webauthn/all is the sanctioned path for removing the last).
+        await EnrollUserInWebAuthn();
+
+        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-webauthn",
+            new { MasterPasswordHash = MasterPasswordHash });
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "webAuthn");
+
+        var response = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/webauthn",
+            new
+            {
+                Id = 0,
+                UserVerificationToken = uvToken,
+            });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Unable to delete WebAuthn credential.", await response.Content.ReadAsStringAsync());
+
+        var refreshed = (await _userRepository.GetByEmailAsync(_userEmail))!;
+        Assert.NotNull(refreshed.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn));
+    }
+
     private Task EnrollUserInWebAuthn() =>
         SetUserTwoFactorProvidersJsonAsync(
             _userRepository, _userEmail, BuildWebAuthnProvidersJson());
+
+    private Task EnrollUserInWebAuthnWithTwoCredentials() =>
+        SetUserTwoFactorProvidersJsonAsync(
+            _userRepository, _userEmail, BuildWebAuthnProvidersJson(credentialCount: 2));
 }

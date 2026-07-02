@@ -38,8 +38,6 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
             svc.ValidateDuoConfiguration(default, default, default).ReturnsForAnyArgs(true));
         _factory.SubstituteService<ICompleteTwoFactorWebAuthnRegistrationCommand>(svc =>
             svc.CompleteTwoFactorWebAuthnRegistrationAsync(default!, default, default!, default!).ReturnsForAnyArgs(true));
-        _factory.SubstituteService<IDeleteTwoFactorWebAuthnCredentialCommand>(svc =>
-            svc.DeleteTwoFactorWebAuthnCredentialAsync(default!, default).ReturnsForAnyArgs(true));
         _factory.SubstituteService<ITwoFactorEmailService>(_ => { });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
@@ -94,6 +92,32 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
     }
 
     [Fact]
+    public async Task DeleteEmail_WrongUserToken_BadRequest()
+    {
+        var otherUserEmail = $"two-factor-other-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(otherUserEmail);
+        var otherUser = (await _userRepository.GetByEmailAsync(otherUserEmail))!;
+        var tokenForOtherUser = ProtectUserVerificationToken(
+            _userVerificationTokenFactory, otherUser, TwoFactorProviderType.Email);
+
+        var response = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/email",
+            new TwoFactorEmailDeleteRequestModel { UserVerificationToken = tokenForOtherUser });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task DeleteEmail_TamperedToken_BadRequest()
+    {
+        var response = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/email",
+            new TwoFactorEmailDeleteRequestModel { UserVerificationToken = "not-a-real-token" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
     public async Task PutEmail_ValidTokenAndCode_UpdatesProvider()
     {
         // Full enrollment chain: GET mints the UV token, SendEmailSetup validates it and triggers
@@ -114,6 +138,11 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
         var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "email");
 
+        // Received-call bookkeeping is per-substitute and IClassFixture keeps the same substitute
+        // for the whole test class, so clear here to isolate this test's ordering assertion.
+        var emailService = _factory.GetService<ITwoFactorEmailService>();
+        emailService.ClearReceivedCalls();
+
         var sendResponse = await _client.PostAsJsonAsync("/two-factor/send-email",
             new
             {
@@ -121,6 +150,8 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
                 UserVerificationToken = uvToken,
             });
         Assert.Equal(HttpStatusCode.OK, sendResponse.StatusCode);
+        // Ordering: send-email fires SendTwoFactorSetupEmailAsync before PUT is exercised.
+        await emailService.Received(1).SendTwoFactorSetupEmailAsync(Arg.Any<User>());
 
         var userManager = _factory.GetService<UserManager<User>>();
         var userForOtp = (await _userRepository.GetByEmailAsync(_userEmail))!;

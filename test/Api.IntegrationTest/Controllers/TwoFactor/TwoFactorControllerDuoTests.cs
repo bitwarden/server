@@ -34,8 +34,6 @@ public class TwoFactorControllerDuoTests : IClassFixture<ApiApplicationFactory>,
             svc.ValidateDuoConfiguration(default, default, default).ReturnsForAnyArgs(true));
         _factory.SubstituteService<ICompleteTwoFactorWebAuthnRegistrationCommand>(svc =>
             svc.CompleteTwoFactorWebAuthnRegistrationAsync(default!, default, default!, default!).ReturnsForAnyArgs(true));
-        _factory.SubstituteService<IDeleteTwoFactorWebAuthnCredentialCommand>(svc =>
-            svc.DeleteTwoFactorWebAuthnCredentialAsync(default!, default).ReturnsForAnyArgs(true));
         _factory.SubstituteService<ITwoFactorEmailService>(_ => { });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
@@ -110,6 +108,107 @@ public class TwoFactorControllerDuoTests : IClassFixture<ApiApplicationFactory>,
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task DeleteDuo_WrongUserToken_BadRequest()
+    {
+        // Token minted for a different user and replayed by the current authenticated principal.
+        // TokenIsValid pins UserId, so the token unprotects but fails validation.
+        var otherUserEmail = $"two-factor-other-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(otherUserEmail);
+        var otherUser = (await _userRepository.GetByEmailAsync(otherUserEmail))!;
+        var tokenForOtherUser = ProtectUserVerificationToken(
+            _userVerificationTokenFactory, otherUser, TwoFactorProviderType.Duo);
+
+        var response = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/duo",
+            new TwoFactorDuoDeleteRequestModel { UserVerificationToken = tokenForOtherUser });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task PutDuo_WrongUserToken_BadRequest()
+    {
+        // No GrantPremium() needed — UV token validation runs before the premium check, so this
+        // test never reaches the premium branch.
+        var otherUserEmail = $"two-factor-other-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(otherUserEmail);
+        var otherUser = (await _userRepository.GetByEmailAsync(otherUserEmail))!;
+        var tokenForOtherUser = ProtectUserVerificationToken(
+            _userVerificationTokenFactory, otherUser, TwoFactorProviderType.Duo);
+
+        var response = await _client.PutAsJsonAsync("/two-factor/duo",
+            new TwoFactorDuoUpdateRequestModel
+            {
+                ClientId = new string('a', 20),
+                ClientSecret = new string('b', 40),
+                Host = "api-test.duosecurity.com",
+                UserVerificationToken = tokenForOtherUser,
+            });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task DeleteDuo_TamperedToken_BadRequest()
+    {
+        // Garbage cipher text can't be unprotected; TryUnprotect returns false and Validate
+        // short-circuits.
+        var response = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/duo",
+            new TwoFactorDuoDeleteRequestModel { UserVerificationToken = "not-a-real-token" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task PutDuo_NoPremium_BadRequest()
+    {
+        // Deliberately skip GrantPremium — PutDuo enforces premium after UV token validation.
+        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-duo",
+            new { MasterPasswordHash = MasterPasswordHash });
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "duo");
+
+        var response = await _client.PutAsJsonAsync("/two-factor/duo",
+            new TwoFactorDuoUpdateRequestModel
+            {
+                ClientId = new string('a', 20),
+                ClientSecret = new string('b', 40),
+                Host = "api-test.duosecurity.com",
+                UserVerificationToken = uvToken,
+            });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Premium status is required.", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task DeleteDuo_ValidTokenReusedTwice_BothSucceed()
+    {
+        // The UV token is intentionally non-single-use — a still-valid token can be replayed
+        // for the lifetime of its expiration window. This locks that behavior in so a future
+        // change to single-use semantics has to update this assertion consciously.
+        await EnrollUserInDuo();
+
+        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-duo",
+            new { MasterPasswordHash = MasterPasswordHash });
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "duo");
+
+        var firstDelete = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/duo",
+            new TwoFactorDuoDeleteRequestModel { UserVerificationToken = uvToken });
+        Assert.Equal(HttpStatusCode.NoContent, firstDelete.StatusCode);
+
+        // Re-enroll and replay the same UV token. It's still within its 30-minute expiration and
+        // remains bound to (user, Duo), so validation still passes.
+        await EnrollUserInDuo();
+        var secondDelete = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/duo",
+            new TwoFactorDuoDeleteRequestModel { UserVerificationToken = uvToken });
+        Assert.Equal(HttpStatusCode.NoContent, secondDelete.StatusCode);
     }
 
     private Task EnrollUserInDuo() =>

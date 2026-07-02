@@ -36,8 +36,6 @@ public class TwoFactorControllerAuthenticatorTests : IClassFixture<ApiApplicatio
             svc.ValidateDuoConfiguration(default, default, default).ReturnsForAnyArgs(true));
         _factory.SubstituteService<ICompleteTwoFactorWebAuthnRegistrationCommand>(svc =>
             svc.CompleteTwoFactorWebAuthnRegistrationAsync(default!, default, default!, default!).ReturnsForAnyArgs(true));
-        _factory.SubstituteService<IDeleteTwoFactorWebAuthnCredentialCommand>(svc =>
-            svc.DeleteTwoFactorWebAuthnCredentialAsync(default!, default).ReturnsForAnyArgs(true));
         _factory.SubstituteService<ITwoFactorEmailService>(_ => { });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
@@ -152,6 +150,79 @@ public class TwoFactorControllerAuthenticatorTests : IClassFixture<ApiApplicatio
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var refreshed = await _userRepository.GetByEmailAsync(_userEmail);
         Assert.NotNull(refreshed!.GetTwoFactorProvider(TwoFactorProviderType.Authenticator));
+    }
+
+    [Fact]
+    public async Task PutAuthenticator_WrongUserToken_BadRequest()
+    {
+        // Token minted for a different user and replayed by the current authenticated principal.
+        // Authenticator's TokenIsValid pins UserId, so the token unprotects but fails validation.
+        var otherUserEmail = $"two-factor-other-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(otherUserEmail);
+        var otherUser = (await _userRepository.GetByEmailAsync(otherUserEmail))!;
+        var tokenForOtherUser = _authenticatorTokenFactory.Protect(
+            new TwoFactorAuthenticatorUserVerificationTokenable(otherUser, AuthenticatorKey));
+
+        var response = await _client.PutAsJsonAsync("/two-factor/authenticator",
+            new TwoFactorAuthenticatorUpdateRequestModel
+            {
+                Token = "123456",
+                Key = AuthenticatorKey,
+                UserVerificationToken = tokenForOtherUser,
+            });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task DeleteAuthenticator_WrongUserToken_BadRequest()
+    {
+        var otherUserEmail = $"two-factor-other-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(otherUserEmail);
+        var otherUser = (await _userRepository.GetByEmailAsync(otherUserEmail))!;
+        var tokenForOtherUser = _authenticatorTokenFactory.Protect(
+            new TwoFactorAuthenticatorUserVerificationTokenable(otherUser, AuthenticatorKey));
+
+        var response = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/authenticator",
+            new TwoFactorAuthenticatorDeleteRequestModel
+            {
+                Key = AuthenticatorKey,
+                UserVerificationToken = tokenForOtherUser,
+            });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task PutAuthenticator_TamperedToken_BadRequest()
+    {
+        // Garbage cipher text can't be unprotected by the Authenticator data protector.
+        var response = await _client.PutAsJsonAsync("/two-factor/authenticator",
+            new TwoFactorAuthenticatorUpdateRequestModel
+            {
+                Token = "123456",
+                Key = AuthenticatorKey,
+                UserVerificationToken = "not-a-real-token",
+            });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task DeleteAuthenticator_TamperedToken_BadRequest()
+    {
+        var response = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/authenticator",
+            new TwoFactorAuthenticatorDeleteRequestModel
+            {
+                Key = AuthenticatorKey,
+                UserVerificationToken = "not-a-real-token",
+            });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
     }
 
     [Fact]

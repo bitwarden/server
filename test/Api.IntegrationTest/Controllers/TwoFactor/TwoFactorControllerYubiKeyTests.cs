@@ -34,8 +34,6 @@ public class TwoFactorControllerYubiKeyTests : IClassFixture<ApiApplicationFacto
             svc.ValidateDuoConfiguration(default, default, default).ReturnsForAnyArgs(true));
         _factory.SubstituteService<ICompleteTwoFactorWebAuthnRegistrationCommand>(svc =>
             svc.CompleteTwoFactorWebAuthnRegistrationAsync(default!, default, default!, default!).ReturnsForAnyArgs(true));
-        _factory.SubstituteService<IDeleteTwoFactorWebAuthnCredentialCommand>(svc =>
-            svc.DeleteTwoFactorWebAuthnCredentialAsync(default!, default).ReturnsForAnyArgs(true));
         _factory.SubstituteService<ITwoFactorEmailService>(_ => { });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
@@ -110,6 +108,76 @@ public class TwoFactorControllerYubiKeyTests : IClassFixture<ApiApplicationFacto
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task DeleteYubiKey_WrongUserToken_BadRequest()
+    {
+        var otherUserEmail = $"two-factor-other-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(otherUserEmail);
+        var otherUser = (await _userRepository.GetByEmailAsync(otherUserEmail))!;
+        var tokenForOtherUser = ProtectUserVerificationToken(
+            _userVerificationTokenFactory, otherUser, TwoFactorProviderType.YubiKey);
+
+        var response = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/yubikey",
+            new TwoFactorYubiKeyDeleteRequestModel { UserVerificationToken = tokenForOtherUser });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task PutYubiKey_WrongUserToken_BadRequest()
+    {
+        // No GrantPremium() needed — UV token validation runs before the premium check, so this
+        // test never reaches the premium branch.
+        var otherUserEmail = $"two-factor-other-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(otherUserEmail);
+        var otherUser = (await _userRepository.GetByEmailAsync(otherUserEmail))!;
+        var tokenForOtherUser = ProtectUserVerificationToken(
+            _userVerificationTokenFactory, otherUser, TwoFactorProviderType.YubiKey);
+
+        var response = await _client.PutAsJsonAsync("/two-factor/yubikey",
+            new TwoFactorYubiKeyUpdateRequestModel
+            {
+                Key1 = "ccccccccccbe",
+                Nfc = true,
+                UserVerificationToken = tokenForOtherUser,
+            });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task DeleteYubiKey_TamperedToken_BadRequest()
+    {
+        var response = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/yubikey",
+            new TwoFactorYubiKeyDeleteRequestModel { UserVerificationToken = "not-a-real-token" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task PutYubiKey_NoPremium_BadRequest()
+    {
+        // Deliberately skip GrantPremium — PutYubiKey enforces premium after UV token validation.
+        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-yubikey",
+            new { MasterPasswordHash = MasterPasswordHash });
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "yubiKey");
+
+        var response = await _client.PutAsJsonAsync("/two-factor/yubikey",
+            new TwoFactorYubiKeyUpdateRequestModel
+            {
+                Key1 = "ccccccccccbe",
+                Nfc = true,
+                UserVerificationToken = uvToken,
+            });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Premium status is required.", await response.Content.ReadAsStringAsync());
     }
 
     private Task EnrollUserInYubiKey() =>
