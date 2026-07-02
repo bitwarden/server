@@ -18,7 +18,8 @@
     var canConvertToBusinessUnit = AccessControlService.UserHasPermission(Permission.Org_Billing_ConvertToBusinessUnit) &&
                                    Model.Organization.PlanType.GetProductTier() == ProductTierType.Enterprise &&
                                    !string.IsNullOrEmpty(Model.Organization.GatewaySubscriptionId) &&
-                                   Model.Provider is null or { Type: ProviderType.BusinessUnit, Status: ProviderStatusType.Pending };
+                                   Model.Provider is null or { Type: ProviderType.BusinessUnit, Status: ProviderStatusType.Pending } &&
+                                   !Model.Organization.UseSecretsManager;
 }
 
 @section Scripts {
