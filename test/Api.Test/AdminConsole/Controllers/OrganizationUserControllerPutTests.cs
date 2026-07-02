@@ -35,7 +35,12 @@ public class OrganizationUserControllerPutTests
         // Arrange
         Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, currentCollectionAccess: []);
 
-        // Authorize all changes for basic happy path test
+        // Authorize all changes for basic happy path test. The controller authorizes the posted collections
+        // as a single bulk set, then re-checks each current collection individually for the readonly merge.
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyUserAccess)))
+            .Returns(AuthorizationResult.Success());
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Collection>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyUserAccess)))
@@ -198,7 +203,13 @@ public class OrganizationUserControllerPutTests
         var orgUserId = organizationUser.Id;
         var orgUserEmail = organizationUser.Email;
 
-        // Authorize the editedCollection
+        // Authorize the posted collections as a set (only the edited collection is posted)
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Is<IEnumerable<Collection>>(colls => colls.All(c => c.Id == editedCollectionId)),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyUserAccess)))
+            .Returns(AuthorizationResult.Success());
+
+        // Authorize the editedCollection individually (readonly-merge check)
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Is<Collection>(c => c.Id == editedCollectionId),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyUserAccess)))
@@ -245,7 +256,7 @@ public class OrganizationUserControllerPutTests
 
         // But the saving user does not have permission to update them
         sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Is<Collection>(c => postedCollectionIds.Contains(c.Id)),
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Is<IEnumerable<Collection>>(colls => colls.All(c => postedCollectionIds.Contains(c.Id))),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyUserAccess)))
             .Returns(AuthorizationResult.Failed());
 
@@ -264,7 +275,7 @@ public class OrganizationUserControllerPutTests
         var postedCollectionIds = model.Collections.Select(c => c.Id).ToHashSet();
         // But the saving user does not have permission to assign access to the collections
         sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Is<Collection>(c => postedCollectionIds.Contains(c.Id)),
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Is<IEnumerable<Collection>>(colls => colls.All(c => postedCollectionIds.Contains(c.Id))),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyUserAccess)))
             .Returns(AuthorizationResult.Failed());
 
