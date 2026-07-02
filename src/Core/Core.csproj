@@ -89,6 +89,6 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Infrastructure.IntegrationTest" />
-    <InternalsVisibleTo Include="Commercial.Pam" />
+    <InternalsVisibleTo Include="Pam" />
   </ItemGroup>
 </Project>

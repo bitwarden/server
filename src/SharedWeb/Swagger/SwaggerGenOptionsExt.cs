@@ -40,9 +40,15 @@ public static class SwaggerGenOptionsExt
     /// <summary>
     /// Builds the operation ID for an endpoint. MVC controllers produce "{controller}_{action}".
     /// Minimal API endpoints carry no controller/action route values, so we fall back to the endpoint
-    /// name assigned via <c>.WithName(...)</c>.
+    /// name assigned via <c>.WithName(...)</c>, and finally to a deterministic id derived from the route.
     /// </summary>
-    public static string? BuildOperationId(ApiDescription apiDescription)
+    /// <remarks>
+    /// Never returns null or empty. Swashbuckle writes the selector's return value straight onto
+    /// <c>operation.OperationId</c> — it does not substitute a default when a custom selector is set — so a
+    /// null/empty id would collapse distinct endpoints onto the same id, which
+    /// <see cref="CheckDuplicateOperationIdsDocumentFilter"/> rejects, aborting offline spec generation.
+    /// </remarks>
+    public static string BuildOperationId(ApiDescription apiDescription)
     {
         apiDescription.ActionDescriptor.RouteValues.TryGetValue("controller", out var controller);
         apiDescription.ActionDescriptor.RouteValues.TryGetValue("action", out var action);
@@ -51,8 +57,21 @@ public static class SwaggerGenOptionsExt
             return $"{controller}_{action}";
         }
 
-        return apiDescription.ActionDescriptor.EndpointMetadata
+        var endpointName = apiDescription.ActionDescriptor.EndpointMetadata
             .OfType<IEndpointNameMetadata>()
             .LastOrDefault()?.EndpointName;
+        if (!string.IsNullOrEmpty(endpointName))
+        {
+            return endpointName;
+        }
+
+        // Last resort for a Minimal API endpoint mapped without .WithName(): derive a stable id from the
+        // HTTP method and route template. {method}+{path} is OpenAPI's uniqueness key, so this stays unique
+        // per operation and keeps the generated spec valid. HttpMethod defaults to "ANY", so the result is
+        // never empty after sanitizing non-identifier characters.
+        var method = apiDescription.HttpMethod ?? "ANY";
+        var path = apiDescription.RelativePath ?? string.Empty;
+        var sanitized = new string($"{method}_{path}".Select(c => char.IsLetterOrDigit(c) ? c : '_').ToArray());
+        return sanitized.Trim('_');
     }
 }

@@ -19,7 +19,7 @@ namespace Bit.HttpExtensions;
 /// <see cref="EndpointDataSource"/>, so a source-per-feature would let the last-registered hide the rest. See
 /// <see cref="EndpointDataSourceServiceCollectionExtensions.AddOpenApiEndpointDataSource"/>.
 /// </summary>
-public sealed class StandaloneEndpointDataSource : EndpointDataSource
+internal sealed class StandaloneEndpointDataSource : EndpointDataSource
 {
     private readonly EndpointDataSource _source;
 

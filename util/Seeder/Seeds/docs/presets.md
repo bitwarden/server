@@ -84,14 +84,15 @@ Individual user accounts with no organization. Useful for testing personal vault
 dotnet run -- preset --name individual.{name} --mangle
 ```
 
-| Preset  | Account Type  | Folders | Ciphers | Assignments |
-| ------- | ------------- | ------- | ------- | ----------- |
-| free    | Free          | —       | 0       | —           |
-| premium | Premium (1GB) | —       | 0       | —           |
+| Preset         | Account Type  | Folders | Ciphers     | Assignments |
+| -------------- | ------------- | ------- | ----------- | ----------- |
+| free           | Free          | —       | 0           | —           |
+| premium        | Premium (1GB) | —       | 0           | —           |
+| blob-migration | Premium (1GB) | —       | 7 (fixture) | —           |
 
 `free` and `premium` create accounts with no vault data — useful for testing account setup flows. Cipher count is set to 0 (TBD).
 
-**Login emails:** `free` uses `freeuser@individual.example`; `premium` uses `premuser@individual.example`.
+**Login emails:** `free` uses `freeuser@individual.example`; `premium` uses `premuser@individual.example`; `blob-migration` uses `blobmigration@individual.example`.
 
 ## Validation
 

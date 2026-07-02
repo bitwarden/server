@@ -1,4 +1,6 @@
-﻿using Bit.Core.Vault.Enums;
+﻿using System.Globalization;
+using Bit.Core.Vault.Enums;
+using Bit.Seeder.Factories;
 
 namespace Bit.Seeder.Models;
 
@@ -119,7 +121,8 @@ internal record CipherSeed
         {
             Name = f.Name,
             Value = f.Value,
-            Type = MapFieldType(f.Type)
+            Type = MapFieldType(f.Type),
+            LinkedId = f.LinkedId
         }).ToList();
 
     private static int MapFieldType(string type) => type switch
@@ -141,8 +144,25 @@ internal record CipherSeed
             {
                 Uri = u.Uri,
                 Match = MapUriMatchType(u.Match)
-            }).ToList()
+            }).ToList(),
+            // Key material is synthesized; the fixture only supplies the relying-party/user identifiers.
+            Fido2Credentials = login.Fido2Credentials?.Select(f => LoginCipherSeeder.CreateFido2Credential(
+                f.RpId ?? "example.com",
+                f.RpName ?? f.RpId ?? "Example",
+                f.UserName ?? login.Username ?? "user")).ToList(),
+            PasswordHistory = MapPasswordHistory(login.PasswordHistory)
         };
+
+    private static List<PasswordHistoryViewDto>? MapPasswordHistory(List<SeedPasswordHistory>? history) =>
+        history?.Select(p =>
+        {
+            var dto = new PasswordHistoryViewDto { Password = p.Password };
+            if (p.LastUsedDate is not null)
+            {
+                dto.LastUsedDate = DateTime.Parse(p.LastUsedDate, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+            }
+            return dto;
+        }).ToList();
 
     private static int MapUriMatchType(string match) => match switch
     {

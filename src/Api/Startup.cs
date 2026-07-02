@@ -37,11 +37,11 @@ using Bit.Core.Enums;
 
 
 #if !OSS
-using Bit.Commercial.Pam.Api.Endpoints;
 using Bit.Commercial.Core.SecretsManager;
 using Bit.Commercial.Core.Utilities;
 using Bit.Commercial.Infrastructure.EntityFramework.SecretsManager;
-using Bit.Commercial.Pam.Utilities;
+using Bit.Services.Pam.Api.Endpoints;
+using Bit.Services.Pam.Utilities;
 #endif
 
 namespace Bit.Api;
@@ -206,8 +206,8 @@ public class Startup
 #else
         services.AddCommercialCoreServices();
         services.AddCommercialSecretsManagerServices();
-        services.AddCommercialPamServices();
         services.AddSecretsManagerEfRepositories();
+        services.AddPamServices();
         Jobs.JobsHostedService.AddCommercialSecretsManagerJobServices(services);
 #endif
 
@@ -218,7 +218,7 @@ public class Startup
             config.Conventions.Add(new PublicApiControllersModelConvention());
         });
 
-        // Required for the PAM Minimal API endpoints to be discovered by ApiExplorer/Swagger.
+        // Required for ApiExplorer to enumerate Minimal API endpoints (e.g. PAM) so they appear in the OpenAPI spec.
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(globalSettings, Environment);
         Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);

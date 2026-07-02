@@ -1,5 +1,5 @@
 ﻿using Bit.Api.Vault.Models.Response;
-using Bit.Commercial.Pam.OrganizationFeatures.Queries.Interfaces;
+using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Core;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Exceptions;

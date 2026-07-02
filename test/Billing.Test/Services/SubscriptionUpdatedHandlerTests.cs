@@ -26,6 +26,7 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using NSubstitute.ReturnsExtensions;
 using Stripe;
+using Stripe.TestHelpers;
 using Xunit;
 using static Bit.Core.Billing.Constants.StripeConstants;
 using Event = Stripe.Event;
@@ -3111,6 +3112,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterprise2020Annual.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterprise2020Annual.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             }
@@ -3128,6 +3134,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterpriseAnnual.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterpriseAnnual.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             },
@@ -3212,6 +3223,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterprise2020Annual.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterprise2020Annual.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             }
@@ -3229,6 +3245,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterpriseAnnual.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterpriseAnnual.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             },
@@ -3309,6 +3330,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterprise2020Annual.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterprise2020Annual.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             }
@@ -3326,6 +3352,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterpriseAnnual.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterpriseAnnual.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             },
@@ -3869,6 +3900,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = teams2020Monthly.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = teams2020Monthly.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teams2020Monthly.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teams2020Monthly.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             }
@@ -3886,6 +3922,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsMonthly.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsMonthly.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             },
@@ -3969,6 +4010,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = teamsStarter2023.PasswordManager.StripePlanId },
                         Plan = new Plan { Id = teamsStarter2023.PasswordManager.StripePlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsStarter2023.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsStarter2023.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             }
@@ -3986,6 +4032,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsMonthly.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsMonthly.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             },
@@ -4045,6 +4096,127 @@ public class SubscriptionUpdatedHandlerTests
                 options.Metadata["organizationId"] == organizationId.ToString() &&
                 options.Items == null));
 
+        Assert.NotNull(assignment.MigratedDate);
+    }
+
+    // PM-39569 / PM-39286: in the test-clock-driven QA migration flow, Stripe rejects writes to a
+    // subscription whose test clock is still advancing. The handler must wait for the clock to settle
+    // BEFORE the grace write; otherwise the write 500s and the org is left plan-changed but with
+    // MigratedDate unstamped (stuck in "Scheduled"). The wait is a no-op in production (TestClock null).
+    [Fact]
+    public async Task HandleAsync_BusinessMigration_WithTestClock_WaitsForClockBeforeGraceWrite()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var teamsStarter2023 = new TeamsStarterPlan2023(); // source SM base 50
+        var teamsMonthly = new TeamsPlan(false);           // target SM base 20
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsStarter2023.PasswordManager.StripePlanId },
+                        Plan = new Plan { Id = teamsStarter2023.PasswordManager.StripePlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsStarter2023.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsStarter2023.SecretsManager.StripeSeatPlanId }
+                    }
+                ]
+            }
+        };
+
+        var testClock = new TestClock { Id = "clock_advancing", Status = TestClockStatus.Ready };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_grace_testclock",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsMonthly.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsMonthly.SecretsManager.StripeSeatPlanId }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle },
+            TestClock = testClock
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.TeamsStarter2023,
+            Plan = teamsStarter2023.Name,
+            Seats = 10,
+            SmServiceAccounts = 50
+        };
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            CohortId = cohortId
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsStarter2023).Returns(teamsStarter2023);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthly);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "TeamsStarter2023",
+            MigrationPathId = MigrationPathId.TeamsStarter2023ToCurrent,
+            IsActive = true
+        });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — the handler waited on the subscription's test clock before writing grace metadata.
+        // The ordering is the regression guard: writing first is exactly what 500s the webhook.
+        await _stripeAdapter.Received(1).WaitForTestClockToAdvanceAsync(testClock);
+
+        Received.InOrder(() =>
+        {
+            _stripeAdapter.WaitForTestClockToAdvanceAsync(testClock);
+            _stripeAdapter.UpdateSubscriptionAsync(
+                subscription.Id,
+                Arg.Is<SubscriptionUpdateOptions>(options =>
+                    options.Metadata[MetadataKeys.MigrationGraceServiceAccounts] == "30"));
+        });
+
+        // And the migration completed: grace written + MigratedDate stamped (org -> Migrated).
         Assert.NotNull(assignment.MigratedDate);
     }
 
@@ -4255,6 +4427,327 @@ public class SubscriptionUpdatedHandlerTests
         Assert.NotNull(assignment.MigratedDate);
     }
 
+    // PM-39816: the migrated Seats must cover purchased Secrets Manager seats so the current Teams invariant
+    // SM <= PM holds in the persisted record. The DB-domain reconcile floors Seats on the DB SmSeats value,
+    // never lowering SmSeats. Applies to every Packaged source: both Teams Starter PlanTypes (21, 16) and
+    // Teams 2019 (the same target invariant and the same latent bug).
+    [Theory]
+    [InlineData(PlanType.TeamsStarter, 4, 5, 5)]        // SM purchased above billed PM -> raise Seats to 5
+    [InlineData(PlanType.TeamsStarter2023, 4, 5, 5)]    // 2023 starter source
+    [InlineData(PlanType.TeamsMonthly2019, 4, 5, 5)]    // Teams 2019 packaged source
+    [InlineData(PlanType.TeamsStarter, 4, null, 4)]     // no SM seats -> Seats stays at billed (no regression)
+    [InlineData(PlanType.TeamsStarter2023, 4, null, 4)]
+    [InlineData(PlanType.TeamsMonthly2019, 4, null, 4)]
+    [InlineData(PlanType.TeamsStarter, 1, 3, 3)]        // floored billed PM (1), SM 3 -> Seats 3
+    [InlineData(PlanType.TeamsStarter2023, 1, 3, 3)]
+    [InlineData(PlanType.TeamsMonthly2019, 1, 3, 3)]
+    public async Task HandleAsync_BusinessMigration_PackagedSource_FloorsSeatsOnSmSeats(
+        PlanType sourcePlanType, long billedSeats, int? smSeats, int expectedSeats)
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var sourcePlan = MockPlans.Get(sourcePlanType);
+        var teamsMonthly = MockPlans.Get(PlanType.TeamsMonthly);
+        var migrationPathId = sourcePlanType switch
+        {
+            PlanType.TeamsStarter => MigrationPathId.TeamsStarterToCurrent,
+            PlanType.TeamsStarter2023 => MigrationPathId.TeamsStarter2023ToCurrent,
+            PlanType.TeamsMonthly2019 => MigrationPathId.Teams2019MonthlyToCurrent,
+            _ => throw new ArgumentOutOfRangeException(nameof(sourcePlanType))
+        };
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = sourcePlan.PasswordManager.StripePlanId },
+                        Plan = new Plan { Id = sourcePlan.PasswordManager.StripePlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_floor_sm",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                        Quantity = billedSeats
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = sourcePlanType,
+            Plan = sourcePlan.Name,
+            Seats = 10,
+            SmSeats = smSeats,
+            SmServiceAccounts = 20
+        };
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            CohortId = cohortId
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(sourcePlanType).Returns(sourcePlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthly);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = sourcePlanType.ToString(),
+            MigrationPathId = migrationPathId,
+            IsActive = true
+        });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — Seats floored at SmSeats and persisted; SmSeats itself untouched (we raise PM, never lower SM).
+        Assert.Equal(expectedSeats, organization.Seats);
+        Assert.Equal(smSeats, organization.SmSeats);
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
+            o.Id == organizationId &&
+            o.PlanType == PlanType.TeamsMonthly &&
+            o.Seats == expectedSeats &&
+            o.SmSeats == smSeats));
+    }
+
+    // PM-39816 (Risk 4): the Math.Max floor is idempotent. If Stripe replays the event before MigratedDate is
+    // stamped, the reconcile re-runs and must recompute the identical Seats value.
+    [Fact]
+    public async Task HandleAsync_BusinessMigration_TeamsStarter_FloorOnSmSeatsIsIdempotentAcrossRetry()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var teamsStarter = new TeamsStarterPlan();
+        var teamsMonthly = new TeamsPlan(false);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsStarter.PasswordManager.StripePlanId },
+                        Plan = new Plan { Id = teamsStarter.PasswordManager.StripePlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_idem_sm",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                        Quantity = 4
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.TeamsStarter,
+            Plan = teamsStarter.Name,
+            Seats = 10,
+            SmSeats = 5,
+            SmServiceAccounts = 20
+        };
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            CohortId = cohortId
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsStarter).Returns(teamsStarter);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthly);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "TeamsStarter",
+            MigrationPathId = MigrationPathId.TeamsStarterToCurrent,
+            IsActive = true
+        });
+
+        // Act — first apply, then simulate a pre-stamp Stripe retry by clearing MigratedDate so the reconcile re-runs.
+        await _sut.HandleAsync(parsedEvent);
+        Assert.Equal(5, organization.Seats);
+
+        assignment.MigratedDate = null;
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — the replay recomputes the identical floored value.
+        Assert.Equal(5, organization.Seats);
+        Assert.Equal(5, organization.SmSeats);
+    }
+
+    [Theory]
+    [InlineData(3)]
+    [InlineData(7)]
+    public async Task HandleAsync_BusinessMigration_Teams2019MonthlyToCurrent_ReconcilesSeatsToBilledQuantity(long billedSeats)
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var teams2019 = new Teams2019Plan(false); // packaged source: base + seat-overage prices
+        var teamsMonthly = new TeamsPlan(false);   // per-seat target
+
+        // The pre-migration (Phase 1) subscription carries only the flat base line — a sub-5 org has no
+        // overage line at all. Detection must find the source by its base price.
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teams2019.PasswordManager.StripePlanId },
+                        Plan = new Plan { Id = teams2019.PasswordManager.StripePlanId }
+                    }
+                ]
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_reconcile_t2019",
+            ScheduleId = "sub_sched_x",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                        Quantity = billedSeats
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.TeamsMonthly2019,
+            Plan = teams2019.Name,
+            Seats = 5 // base allotment; reconciliation should overwrite this with the billed quantity
+        };
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            CohortId = cohortId
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2019).Returns(teams2019);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthly);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "Teams2019Monthly",
+            MigrationPathId = MigrationPathId.Teams2019MonthlyToCurrent,
+            IsActive = true
+        });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — handler did not bail (Gap A), plan-shape updated, and Seats reconciled to billed (Gap B).
+        Assert.Equal((int)billedSeats, organization.Seats);
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
+            o.Id == organizationId &&
+            o.PlanType == PlanType.TeamsMonthly &&
+            o.Seats == (int)billedSeats));
+
+        Assert.NotNull(assignment.MigratedDate);
+    }
+
     // PM-39562: gate is false for a per-seat source, so Seats stays put even when it differs from the billed quantity.
     [Fact]
     public async Task HandleAsync_BusinessMigration_PerSeatSource_LeavesSeatsUnchanged()
@@ -4374,6 +4867,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = teams2020Monthly.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = teams2020Monthly.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teams2020Monthly.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teams2020Monthly.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             }
@@ -4391,6 +4889,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = teamsMonthly.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = teamsMonthly.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             },
@@ -5462,6 +5965,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = enterprise2019Annual.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = enterprise2019Annual.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterprise2019Annual.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterprise2019Annual.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             }
@@ -5479,6 +5987,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterpriseAnnual.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterpriseAnnual.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             },
@@ -5558,6 +6071,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = enterprise2019Monthly.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = enterprise2019Monthly.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterprise2019Monthly.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterprise2019Monthly.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             }
@@ -5575,6 +6093,11 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Price = new Price { Id = enterpriseMonthly.PasswordManager.StripeSeatPlanId },
                         Plan = new Plan { Id = enterpriseMonthly.PasswordManager.StripeSeatPlanId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterpriseMonthly.SecretsManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterpriseMonthly.SecretsManager.StripeSeatPlanId }
                     }
                 ]
             },
@@ -5632,11 +6155,12 @@ public class SubscriptionUpdatedHandlerTests
                 options.Metadata["organizationId"] == organizationId.ToString()));
     }
 
-    // PM-37513: an Enterprise 2019 org with no SM line items (PM seat only) still migrates its plan
-    // shape and marks migrated. Grace metadata is computed from plan baselines (150) and written
-    // regardless of SM usage; this confirms that write does not disrupt the no-SM migration path.
+    // PM-39584 (headline): an Enterprise 2019 org with no SM line items (PM seat only) migrates its plan
+    // shape and marks migrated, but the SM grace allowance is NOT written — a PM-only org never carried
+    // Secrets Manager, so it never earned the source plan's base service accounts. This is the bug fix:
+    // the grace write is gated on the migrating subscription actually carrying Secrets Manager.
     [Fact]
-    public async Task HandleAsync_BusinessMigration_EnterpriseAnnual2019NoSecretsManager_MigratesCleanly()
+    public async Task HandleAsync_BusinessMigration_EnterpriseAnnual2019NoSecretsManager_DoesNotWriteGrace()
     {
         // Arrange
         var organizationId = Guid.NewGuid();
@@ -5733,12 +6257,13 @@ public class SubscriptionUpdatedHandlerTests
         await _cohortAssignmentRepository.Received(1).ReplaceAsync(
             Arg.Is<OrganizationPlanMigrationCohortAssignment>(a => a.Id == assignmentId && a.MigratedDate.HasValue));
 
-        // Grace metadata is still written from the plan baselines (200 - 50 = 150) even though this org
-        // carries no SM line items. This is intentional and matches Enterprise 2020 behavior — pinning it
-        // here so the no-SM grace write is a deliberate contract, not an accident a future change silences.
-        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+        // Grace metadata is NOT written: the migrating subscription carries no SM line item, so the org
+        // never had Secrets Manager and never earned the source plan's base service accounts (200 - 50 = 150).
+        // This is the PM-39584 fix — pinning the no-write so a future change cannot reintroduce the leak.
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
             subscription.Id,
             Arg.Is<SubscriptionUpdateOptions>(options =>
-                options.Metadata[MetadataKeys.MigrationGraceServiceAccounts] == "150"));
+                options.Metadata != null &&
+                options.Metadata.ContainsKey(MetadataKeys.MigrationGraceServiceAccounts)));
     }
 }
