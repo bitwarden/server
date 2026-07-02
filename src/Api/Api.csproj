@@ -31,6 +31,7 @@
       <ItemGroup>
         <ProjectReference Include="..\..\bitwarden_license\src\Commercial.Core\Commercial.Core.csproj" />
         <ProjectReference Include="..\..\bitwarden_license\src\Commercial.Infrastructure.EntityFramework\Commercial.Infrastructure.EntityFramework.csproj" />
+        <ProjectReference Include="..\..\bitwarden_license\src\Services\Pam\Pam.csproj" />
       </ItemGroup>
     </When>
   </Choose>
