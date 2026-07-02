@@ -540,7 +540,7 @@ public class UpcomingInvoiceHandler(
         return (int)(seats ?? 0);
     }
 
-    private sealed record Discount(bool IsPercentage, decimal Value, string Display);
+    private sealed record Discount(bool IsPercentage, decimal Value, string Display, string CouponId, long Months);
 
     private async Task<List<Discount>> ResolveDiscountsAsync(
         OrganizationPlanMigrationCohort cohort,
