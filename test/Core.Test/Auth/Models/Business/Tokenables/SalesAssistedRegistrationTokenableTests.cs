@@ -5,6 +5,7 @@ using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
@@ -13,11 +14,6 @@ namespace Bit.Core.Test.Auth.Models.Business.Tokenables;
 // Note: test names follow MethodName_StateUnderTest_ExpectedBehavior pattern.
 public class SalesAssistedRegistrationTokenableTests
 {
-    // Allow a small tolerance for possible execution delays or clock precision to avoid flaky tests.
-    private static readonly TimeSpan _timeTolerance = TimeSpan.FromSeconds(10);
-
-    private const int _lifetimeDays = 5;
-
     private static DataProtectorTokenFactory<SalesAssistedRegistrationTokenable> GetSigningFactory()
     {
         var fixture = new Fixture();
@@ -35,7 +31,7 @@ public class SalesAssistedRegistrationTokenableTests
     public void ProtectUnprotect_ValidToken_PreservesData(string email, string name)
     {
         var factory = GetSigningFactory();
-        var token = new SalesAssistedRegistrationTokenable(email, name, _lifetimeDays);
+        var token = new SalesAssistedRegistrationTokenable(email, name);
 
         var protectedToken = factory.Protect(token);
         var recovered = factory.Unprotect(protectedToken);
@@ -55,19 +51,7 @@ public class SalesAssistedRegistrationTokenableTests
     public void Constructor_NullOrWhitespaceEmail_Throws(string? email)
     {
         Assert.Throws<ArgumentException>(() =>
-            new SalesAssistedRegistrationTokenable(email!, "name", _lifetimeDays));
-    }
-
-    /// <summary>
-    /// Tests that the constructor sets the expiration date to now plus the supplied lifetime.
-    /// </summary>
-    [Theory, AutoData]
-    public void Constructor_ValidInputs_ExpirationSetToLifetime(string email, string name)
-    {
-        var expected = DateTime.UtcNow.AddDays(_lifetimeDays);
-        var token = new SalesAssistedRegistrationTokenable(email, name, _lifetimeDays);
-
-        Assert.True((expected - token.ExpirationDate).Duration() < _timeTolerance);
+            new SalesAssistedRegistrationTokenable(email!, "name"));
     }
 
     /// <summary>
@@ -76,7 +60,7 @@ public class SalesAssistedRegistrationTokenableTests
     [Theory, AutoData]
     public void TokenIsValid_MatchingEmail_ReturnsTrue(string email, string name)
     {
-        var token = new SalesAssistedRegistrationTokenable(email, name, _lifetimeDays);
+        var token = new SalesAssistedRegistrationTokenable(email, name);
 
         Assert.True(token.TokenIsValid(email));
     }
@@ -87,7 +71,7 @@ public class SalesAssistedRegistrationTokenableTests
     [Theory, AutoData]
     public void TokenIsValid_EmailCaseInsensitive_ReturnsTrue(string email, string name)
     {
-        var token = new SalesAssistedRegistrationTokenable(email, name, _lifetimeDays);
+        var token = new SalesAssistedRegistrationTokenable(email, name);
 
         Assert.True(token.TokenIsValid(email.ToUpperInvariant()));
     }
@@ -98,7 +82,7 @@ public class SalesAssistedRegistrationTokenableTests
     [Theory, AutoData]
     public void TokenIsValid_WrongEmail_ReturnsFalse(string email, string name)
     {
-        var token = new SalesAssistedRegistrationTokenable(email, name, _lifetimeDays);
+        var token = new SalesAssistedRegistrationTokenable(email, name);
 
         Assert.False(token.TokenIsValid("wrong@example.com"));
     }
@@ -109,9 +93,10 @@ public class SalesAssistedRegistrationTokenableTests
     [Theory, AutoData]
     public void Valid_WrongIdentifier_ReturnsFalse(string email, string name)
     {
-        var token = new SalesAssistedRegistrationTokenable(email, name, _lifetimeDays)
+        var token = new SalesAssistedRegistrationTokenable(email, name)
         {
-            Identifier = "InvalidIdentifier"
+            Identifier = "InvalidIdentifier",
+            ExpirationDate = DateTime.UtcNow.AddDays(1)
         };
 
         Assert.False(token.Valid);
@@ -125,7 +110,10 @@ public class SalesAssistedRegistrationTokenableTests
     public void ValidateSalesAssistedRegistrationToken_ValidTokenAndEmail_ReturnsNull(string email, string name)
     {
         var factory = GetSigningFactory();
-        var token = new SalesAssistedRegistrationTokenable(email, name, _lifetimeDays);
+        var token = new SalesAssistedRegistrationTokenable(email, name)
+        {
+            ExpirationDate = DateTime.UtcNow.AddDays(1)
+        };
         var protectedToken = factory.Protect(token);
 
         var result = SalesAssistedRegistrationTokenable.ValidateSalesAssistedRegistrationToken(
@@ -182,20 +170,23 @@ public class SalesAssistedRegistrationTokenableTests
     }
 
     /// <summary>
-    /// Tests that the factory applies the configured GlobalSettings lifetime to the minted token's ExpirationDate.
+    /// Tests that the factory applies the configured GlobalSettings lifetime to the minted token's ExpirationDate,
+    /// computed from the injected clock rather than the system clock.
     /// </summary>
     [Theory, AutoData]
     public void Factory_CreateToken_AppliesGlobalSettingsLifetime(string email, string name)
     {
         var globalSettings = new GlobalSettings { SalesAssistedRegistrationTokenLifetimeDays = 7 };
-        var sut = new SalesAssistedRegistrationTokenableFactory(globalSettings);
+        var timeProvider = new FakeTimeProvider();
+        timeProvider.SetUtcNow(new DateTimeOffset(2026, 5, 22, 12, 0, 0, TimeSpan.Zero));
+        var sut = new SalesAssistedRegistrationTokenableFactory(globalSettings, timeProvider);
 
-        var expected = DateTime.UtcNow.AddDays(7);
+        var expected = timeProvider.GetUtcNow().UtcDateTime.AddDays(7);
         var token = sut.CreateToken(email, name);
 
         Assert.Equal(email, token.Email);
         Assert.Equal(name, token.Name);
         Assert.Equal(SalesAssistedRegistrationTokenable.TokenIdentifier, token.Identifier);
-        Assert.True((expected - token.ExpirationDate).Duration() < _timeTolerance);
+        Assert.Equal(expected, token.ExpirationDate);
     }
 }

@@ -260,6 +260,7 @@ public static class ServiceCollectionExtensions
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable>>>()));
 
+        services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<ISalesAssistedRegistrationTokenableFactory, SalesAssistedRegistrationTokenableFactory>();
         services.AddSingleton<IDataProtectorTokenFactory<SalesAssistedRegistrationTokenable>>(
             serviceProvider => new DataProtectorTokenFactory<SalesAssistedRegistrationTokenable>(

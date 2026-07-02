@@ -21,15 +21,18 @@ public class SalesAssistedRegistrationTokenable : ExpiringTokenable
 
     /// <summary>
     /// The token is minted exclusively through <see cref="ISalesAssistedRegistrationTokenableFactory"/>, which is the
-    /// sole guaranteed path to a configured lifetime. The lifetime-setting constructor is intentionally internal so
-    /// callers in other assemblies (Identity/Admin/Api) cannot bypass the factory.
+    /// sole guaranteed path to a configured lifetime — the factory sets <see cref="Tokens.ExpiringTokenable.ExpirationDate"/>
+    /// after construction. Both constructors are internal — including this one, despite <c>[JsonConstructor]</c> — so
+    /// callers in other assemblies (Identity/Admin/Api) cannot bypass the factory. System.Text.Json's reflection-based
+    /// deserializer can invoke non-public constructors marked <c>[JsonConstructor]</c>, so visibility here doesn't
+    /// affect deserialization.
     /// </summary>
     [JsonConstructor]
-    public SalesAssistedRegistrationTokenable()
+    internal SalesAssistedRegistrationTokenable()
     {
     }
 
-    internal SalesAssistedRegistrationTokenable(string email, string? name, int lifetimeDays)
+    internal SalesAssistedRegistrationTokenable(string email, string? name)
     {
         if (string.IsNullOrWhiteSpace(email))
         {
@@ -39,7 +42,6 @@ public class SalesAssistedRegistrationTokenable : ExpiringTokenable
         Identifier = TokenIdentifier;
         Email = email;
         Name = name;
-        ExpirationDate = DateTime.UtcNow.AddDays(lifetimeDays);
     }
 
     public bool TokenIsValid(string email) =>
