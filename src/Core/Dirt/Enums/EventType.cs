@@ -81,6 +81,7 @@ public enum EventType : int
     OrganizationUser_Revoked_TwoFactorNonCompliance = 1520,
     OrganizationUser_Revoked_SingleOrganizationNonCompliance = 1521,
     OrganizationUser_NotificationBannerActionClicked = 1522,
+    OrganizationUser_Staged = 1523, // Member provisioned without an invitation (e.g. via SCIM / Directory Connector)
 
     Organization_Updated = 1600,
     Organization_PurgedVault = 1601,
