@@ -622,7 +622,9 @@ jobs:
     name: Trigger K8s deploy
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-22.04
-    needs: build-artifacts
+    needs:
+      - build-artifacts
+      - image-manifest
     permissions:
       id-token: write
     steps:
