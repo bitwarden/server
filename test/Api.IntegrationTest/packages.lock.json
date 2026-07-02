@@ -1351,7 +1351,7 @@
           "Azure.Messaging.EventGrid": "[5.0.0, 5.0.0]",
           "Commercial.Core": "[2026.6.1, )",
           "Commercial.Infrastructure.EntityFramework": "[2026.6.1, )",
-          "Commercial.Pam": "[2026.6.1, )",
+          "Pam": "[2026.6.1, )",
           "Core": "[2026.6.1, )",
           "HttpExtensions": "[2026.6.1, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.15.3, )",
@@ -1380,7 +1380,7 @@
           "Infrastructure.EntityFramework": "[2026.6.1, )"
         }
       },
-      "commercial.pam": {
+      "pam": {
         "type": "Project",
         "dependencies": {
           "Core": "[2026.6.1, )",

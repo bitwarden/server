@@ -81,14 +81,12 @@ public static class ServiceCollectionExtensions
 
             // Include every assembly documentation file emitted into the output directory (each XML is paired with
             // its .dll). A project's docs surface in the spec simply by emitting a <DocumentationFile> — no change is
-            // needed here, and commercial-only assemblies (e.g. Commercial.Pam) are picked up when present.
+            // needed here, and commercial-only assemblies (e.g. Pam) are picked up when present.
             // includeControllerXmlComments is on so controller and Minimal API summaries are read too.
-            foreach (var xmlDocPath in Directory.EnumerateFiles(AppContext.BaseDirectory, "*.xml"))
+            foreach (var xmlDocPath in Directory.EnumerateFiles(AppContext.BaseDirectory, "*.xml")
+                         .Where(xmlDocPath => File.Exists(Path.ChangeExtension(xmlDocPath, ".dll"))))
             {
-                if (File.Exists(Path.ChangeExtension(xmlDocPath, ".dll")))
-                {
-                    config.IncludeXmlComments(xmlDocPath, includeControllerXmlComments: true);
-                }
+                config.IncludeXmlComments(xmlDocPath, includeControllerXmlComments: true);
             }
         });
     }

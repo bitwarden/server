@@ -13,7 +13,7 @@ dotnet build
 dotnet run -- <command> [options]
 ```
 
-**Login Credentials:** All seeded users use password `asdfasdfasdf` by default (override with `--password`). For org presets the owner email is `owner@<domain>`; for individual presets the email comes from the preset's `user.email` field. For the `individual` command with `--first-name`/`--last-name`, the email is `{first}.{last}@individual.example`; without names, a random Faker identity is generated and mangling is auto-enabled.
+**Login Credentials:** All seeded users use password `asdfasdfasdf` by default (override with `--password`). For org presets the owner email is `owner@<domain>` (override with `--owner-email`); for individual presets the email comes from the preset's `user.email` field. For the `individual` command with `--first-name`/`--last-name`, the email is `{first}.{last}@individual.example`; without names, a random Faker identity is generated and mangling is auto-enabled.
 
 ## Commands
 
@@ -47,7 +47,12 @@ dotnet run -- individual --subscription premium --first-name Jane --last-name Sm
 
 # Random name — mangling auto-enabled
 dotnet run -- individual --subscription premium --vault
+
+# Self-hosted instance — writes a license file so premium status is recognized
+dotnet run -- individual --subscription premium --first-name Jane --last-name Smith --self-hosted
 ```
+
+Add `--self-hosted` when targeting a self-hosted instance — without it, premium status won't be recognized.
 
 ### `preset` - Fixture-Based Seeding
 

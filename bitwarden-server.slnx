@@ -38,13 +38,13 @@
       <BuildDependency Project="src/Core/Core.csproj" />
     </Project>
     <Project Path="bitwarden_license/src/Commercial.Infrastructure.EntityFramework/Commercial.Infrastructure.EntityFramework.csproj" />
-    <Project Path="bitwarden_license/src/Commercial.Pam/Commercial.Pam.csproj" />
+    <Project Path="bitwarden_license/src/Services/Pam/Pam.csproj" />
     <Project Path="bitwarden_license/src/Scim/Scim.csproj" />
     <Project Path="bitwarden_license/src/Sso/Sso.csproj" />
   </Folder>
   <Folder Name="/test - Bitwarden License/">
     <Project Path="bitwarden_license/test/Commercial.Core.Test/Commercial.Core.Test.csproj" />
-    <Project Path="bitwarden_license/test/Commercial.Pam.Test/Commercial.Pam.Test.csproj" />
+    <Project Path="bitwarden_license/test/Services/Pam.Test/Pam.Test.csproj" />
     <Project Path="bitwarden_license/test/Scim.IntegrationTest/Scim.IntegrationTest.csproj" />
     <Project Path="bitwarden_license/test/Scim.Test/Scim.Test.csproj" />
     <Project Path="bitwarden_license/test/Sso.IntegrationTest/Sso.IntegrationTest.csproj" />
@@ -54,6 +54,7 @@
     <Project Path="test/Admin.Test/Admin.Test.csproj" />
     <Project Path="test/Api.IntegrationTest/Api.IntegrationTest.csproj" />
     <Project Path="test/Api.Test/Api.Test.csproj" />
+    <Project Path="test/Billing.IntegrationTest/Billing.IntegrationTest.csproj" />
     <Project Path="test/Billing.Test/Billing.Test.csproj" />
     <Project Path="test/Common/Common.csproj" />
     <Project Path="test/Core.IntegrationTest/Core.IntegrationTest.csproj" />

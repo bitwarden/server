@@ -4,7 +4,6 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Response;
-using Bit.Core;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
@@ -13,7 +12,6 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using NSubstitute;
 using Xunit;
 
@@ -36,12 +34,6 @@ public class OrganizationUserControllerBulkAutoConfirmTests : IClassFixture<ApiA
     public OrganizationUserControllerBulkAutoConfirmTests(ApiApplicationFactory factory)
     {
         _factory = factory;
-        _factory.SubstituteService<IFeatureService>(featureService =>
-        {
-            featureService
-                .IsEnabled(FeatureFlagKeys.BulkAutoConfirmOnLogin)
-                .Returns(true);
-        });
         _factory.SubstituteService<IOrganizationAbilityCacheService>(cacheService =>
         {
             cacheService

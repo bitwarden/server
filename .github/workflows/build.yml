@@ -497,12 +497,27 @@ jobs:
 
   bitwarden-lite-build:
     name: Trigger Bitwarden lite build
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-22.04
     needs: build-artifacts
     permissions:
       id-token: write
     steps:
+      - name: Compute Bitwarden lite server tag
+        id: server-tag
+        uses: bitwarden/gh-actions/sanitize-image-tag@main
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+          fork_repo: ${{ github.event.pull_request.head.repo.fork == true && github.event.pull_request.head.repo.full_name || '' }}
+
+      - name: Compute Bitwarden lite override tag
+        id: override-tag
+        uses: bitwarden/gh-actions/sanitize-image-tag@main
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+          fork_repo: ${{ github.event.pull_request.head.repo.fork == true && github.event.pull_request.head.repo.full_name || '' }}
+          prefix: "server-"
+
       - name: Log in to Azure
         uses: bitwarden/gh-actions/azure-login@main
         with:
@@ -531,6 +546,10 @@ jobs:
 
       - name: Trigger Bitwarden lite build
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          SERVER_BRANCH: ${{ github.head_ref || github.ref_name }}
+          SERVER_TAG: ${{ steps.server-tag.outputs.tag }}
+          OVERRIDE_TAG: ${{ steps.override-tag.outputs.tag }}
         with:
           github-token: ${{ steps.app-token.outputs.token }}
           script: |
@@ -540,7 +559,9 @@ jobs:
               workflow_id: 'build-bitwarden-lite.yml',
               ref: 'main',
               inputs: {
-                server_branch: process.env.GITHUB_REF
+                server_branch: process.env.SERVER_BRANCH,
+                server_tag: process.env.SERVER_TAG,
+                override_tag: process.env.OVERRIDE_TAG
               }
             });
 
