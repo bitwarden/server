@@ -1182,7 +1182,7 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.1, )",
+          "Core": "[2026.6.2, )",
           "Dapper": "[2.1.66, 2.1.66]"
         }
       },
@@ -1190,7 +1190,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper": "[14.0.0, 14.0.0]",
-          "Core": "[2026.6.1, )",
+          "Core": "[2026.6.2, )",
           "Microsoft.EntityFrameworkCore.Relational": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.SqlServer": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.Sqlite": "[8.0.8, 8.0.8]",
@@ -1203,9 +1203,9 @@
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.6.1, )",
-          "Infrastructure.Dapper": "[2026.6.1, )",
-          "Infrastructure.EntityFramework": "[2026.6.1, )",
+          "Core": "[2026.6.2, )",
+          "Infrastructure.Dapper": "[2026.6.2, )",
+          "Infrastructure.EntityFramework": "[2026.6.2, )",
           "Microsoft.Bot.Builder.Integration.AspNet.Core": "[4.23.0, 4.23.0]",
           "Swashbuckle.AspNetCore.SwaggerGen": "[10.1.7, 10.1.7]"
         }

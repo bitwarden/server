@@ -1234,13 +1234,6 @@
           "ZiggyCreatures.FusionCache": "2.0.2"
         }
       },
-      "pam": {
-        "type": "Project",
-        "dependencies": {
-          "Core": "[2026.6.1, )",
-          "HttpExtensions": "[2026.6.1, )"
-        }
-      },
       "core": {
         "type": "Project",
         "dependencies": {
@@ -1296,6 +1289,13 @@
       },
       "httpextensions": {
         "type": "Project"
+      },
+      "pam": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.6.2, )",
+          "HttpExtensions": "[2026.6.2, )"
+        }
       }
     }
   }
