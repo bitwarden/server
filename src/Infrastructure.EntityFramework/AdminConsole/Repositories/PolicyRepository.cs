@@ -299,4 +299,56 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
 
         return await query.ToListAsync();
     }
+
+    public async Task<IEnumerable<PolicyDetailsWithState>> GetPolicyDetailsWithStateByUserIdAndPolicyTypeAsync(Guid userId, PolicyType policyType)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        // Get user email for invited user matching
+        var userEmail = await dbContext.Users
+            .Where(u => u.Id == userId)
+            .Select(u => u.Email)
+            .FirstOrDefaultAsync();
+
+        // Get provider relationships
+        var providerOrganizationIds = await (from pu in dbContext.ProviderUsers
+                                             join po in dbContext.ProviderOrganizations on pu.ProviderId equals po.ProviderId
+                                             where pu.UserId == userId
+                                             select po.OrganizationId)
+            .Distinct()
+            .ToListAsync();
+
+        var providerSet = new HashSet<Guid>(providerOrganizationIds);
+
+        // Get organization users (both confirmed/accepted/revoked and invited)
+        var orgUsersQuery = dbContext.OrganizationUsers
+            .Where(ou => (((ou.Status == OrganizationUserStatusType.Accepted ||
+                            ou.Status == OrganizationUserStatusType.Confirmed ||
+                            ou.Status == OrganizationUserStatusType.Revoked) && ou.UserId == userId) ||
+                         (ou.Status == OrganizationUserStatusType.Invited && ou.Email == userEmail && userEmail != null)));
+
+        // LEFT JOIN policies so a row is returned for every organization the user belongs to that supports policies,
+        // regardless of whether the policy is enabled, disabled, or has no row. Enabled is null when no row exists.
+        var query = from orgUser in orgUsersQuery
+                    join org in dbContext.Organizations on orgUser.OrganizationId equals org.Id
+                    where org.Enabled && org.UsePolicies
+                    join policy in dbContext.Policies.Where(p => p.Type == policyType)
+                        on org.Id equals policy.OrganizationId into policyGroup
+                    from policy in policyGroup.DefaultIfEmpty()
+                    select new PolicyDetailsWithState
+                    {
+                        OrganizationUserId = orgUser.Id,
+                        OrganizationId = org.Id,
+                        PolicyType = policyType,
+                        PolicyData = policy != null ? policy.Data : null,
+                        OrganizationUserType = orgUser.Type,
+                        OrganizationUserStatus = orgUser.Status,
+                        OrganizationUserPermissionsData = orgUser.Permissions,
+                        IsProvider = providerSet.Contains(org.Id),
+                        Enabled = policy != null ? policy.Enabled : (bool?)null
+                    };
+
+        return await query.ToListAsync();
+    }
 }

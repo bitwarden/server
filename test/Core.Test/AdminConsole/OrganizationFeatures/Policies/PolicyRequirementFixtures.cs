@@ -12,9 +12,13 @@ public class TestPolicyRequirement : IPolicyRequirement
     public IEnumerable<PolicyDetails> Policies { get; init; } = [];
 }
 
-public class TestPolicyRequirementFactory(Func<PolicyDetails, bool> enforce) : IPolicyRequirementFactory<TestPolicyRequirement>
+public class TestPolicyRequirementFactory(
+    Func<PolicyDetails, bool> enforce,
+    PolicyDefaultState defaultState = PolicyDefaultState.Disabled) : IPolicyRequirementFactory<TestPolicyRequirement>
 {
     public PolicyType PolicyType => PolicyType.SingleOrg;
+
+    public PolicyDefaultState DefaultState => defaultState;
 
     public bool Enforce(PolicyDetails policyDetails) => enforce(policyDetails);
 

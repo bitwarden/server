@@ -1,11 +1,14 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 
-public class PolicyQuery(IPolicyRepository policyRepository) : IPolicyQuery
+public class PolicyQuery(
+    IPolicyRepository policyRepository,
+    IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories) : IPolicyQuery
 {
     public async Task<IEnumerable<PolicyStatus>> GetAllAsync(Guid organizationId)
     {
@@ -18,6 +21,12 @@ public class PolicyQuery(IPolicyRepository policyRepository) : IPolicyQuery
             var synthesized = await SynthesizeSendControlsStatusAsync(organizationId);
             results.Add(synthesized);
         }
+
+        // A policy that is enabled by default with no saved row is still enabled for the organization.
+        var missingDefaultOnTypes = DefaultOnPolicyTypes()
+            .Where(type => results.All(r => r.Type != type));
+        results.AddRange(missingDefaultOnTypes
+            .Select(type => new PolicyStatus(organizationId, type) { Enabled = true }));
 
         return results;
     }
@@ -32,8 +41,21 @@ public class PolicyQuery(IPolicyRepository policyRepository) : IPolicyQuery
             return await SynthesizeSendControlsStatusAsync(organizationId);
         }
 
+        // A policy that is enabled by default with no saved row is enabled for the organization. An explicitly
+        // disabled row still yields Enabled = false via the PolicyStatus constructor.
+        if (dbPolicy == null && IsEnabledByDefault(policyType))
+        {
+            return new PolicyStatus(organizationId, policyType) { Enabled = true };
+        }
+
         return new PolicyStatus(organizationId, policyType, dbPolicy);
     }
+
+    private bool IsEnabledByDefault(PolicyType policyType)
+        => factories.Any(f => f.PolicyType == policyType && f.DefaultState == PolicyDefaultState.Enabled);
+
+    private IEnumerable<PolicyType> DefaultOnPolicyTypes()
+        => factories.Where(f => f.DefaultState == PolicyDefaultState.Enabled).Select(f => f.PolicyType);
 
     /// <summary>
     /// When no SendControls policy row exists in the database, synthesizes a PolicyStatus

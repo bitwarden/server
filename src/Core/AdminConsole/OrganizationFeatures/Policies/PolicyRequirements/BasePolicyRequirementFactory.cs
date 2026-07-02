@@ -34,6 +34,10 @@ public abstract class BasePolicyRequirementFactory<T> : IPolicyRequirementFactor
     /// <inheritdoc />
     public abstract PolicyType PolicyType { get; }
 
+    /// <inheritdoc />
+    /// <remarks>Defaults to <see cref="PolicyDefaultState.Disabled"/>; override for a policy that is on by default.</remarks>
+    public virtual PolicyDefaultState DefaultState => PolicyDefaultState.Disabled;
+
     public bool Enforce(PolicyDetails policyDetails)
         => !policyDetails.HasRole(ExemptRoles) &&
             !policyDetails.HasStatus(ExemptStatuses) &&

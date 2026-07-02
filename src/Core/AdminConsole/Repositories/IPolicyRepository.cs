@@ -73,4 +73,19 @@ public interface IPolicyRepository : IRepository<Policy, Guid>
     /// the policy information associated with the specified user and policy type.
     /// </returns>
     Task<IEnumerable<PolicyDetails>> GetPolicyDetailsByUserIdAndPolicyTypeAsync(Guid userId, PolicyType policyType);
+
+    /// <summary>
+    /// Retrieves policy details for a single user filtered by the specified policy type, along with the raw enabled
+    /// state of each organization's policy row, for use by policies that are enabled by default.
+    /// </summary>
+    /// <remarks>
+    /// Unlike <see cref="GetPolicyDetailsByUserIdAndPolicyTypeAsync"/>, this returns a row for every organization the
+    /// user belongs to that supports policies (via a LEFT JOIN) regardless of whether the policy is enabled, disabled,
+    /// or has no row. <see cref="PolicyDetailsWithState.Enabled"/> is null when no row exists. Callers interpret the
+    /// state (e.g. treat "no row" as enabled for a default-on policy). This includes both confirmed users (matched by
+    /// UserId) and invited users (matched by email); provider users are identified via the IsProvider flag.
+    /// </remarks>
+    /// <param name="userId">The user identifier for which policy details are to be fetched.</param>
+    /// <param name="policyType">The type of policy for which the details are required.</param>
+    Task<IEnumerable<PolicyDetailsWithState>> GetPolicyDetailsWithStateByUserIdAndPolicyTypeAsync(Guid userId, PolicyType policyType);
 }

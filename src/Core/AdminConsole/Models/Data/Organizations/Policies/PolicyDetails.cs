@@ -37,3 +37,20 @@ public class PolicyDetails
     public Permissions GetOrganizationUserCustomPermissions()
         => CoreHelpers.LoadClassFromJsonData<Permissions>(OrganizationUserPermissionsData);
 }
+
+/// <summary>
+/// A <see cref="PolicyDetails"/> that also carries the raw enabled state of the underlying policy row, including the
+/// case where no row exists. Used by the query path for policies that are enabled by default so that "no row" can be
+/// distinguished from "disabled".
+/// </summary>
+/// <remarks>
+/// This is an internal repository→query DTO. It is not passed to policy requirement factories: after interpreting
+/// <see cref="Enabled"/>, the query hands factories the base <see cref="PolicyDetails"/>.
+/// </remarks>
+public class PolicyDetailsWithState : PolicyDetails
+{
+    /// <summary>
+    /// The underlying policy row's enabled flag, or null when the organization has no row for this policy type.
+    /// </summary>
+    public bool? Enabled { get; set; }
+}

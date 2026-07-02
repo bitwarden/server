@@ -21,6 +21,12 @@ public interface IPolicyRequirementFactory<out T> where T : IPolicyRequirement
     PolicyType PolicyType { get; }
 
     /// <summary>
+    /// Whether the policy is enabled or disabled by default. When <see cref="PolicyDefaultState.Enabled"/>, an
+    /// organization that has never saved a policy row is treated as having the policy enabled.
+    /// </summary>
+    PolicyDefaultState DefaultState { get; }
+
+    /// <summary>
     /// A predicate that determines whether a policy should be enforced against the user.
     /// </summary>
     /// <remarks>Use this to exempt users based on their role, status or other attributes.</remarks>
