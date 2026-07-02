@@ -1369,6 +1369,7 @@
           "OpenTelemetry.Instrumentation.Http": "[1.15.0, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.15.0, )",
           "OpenTelemetry.Instrumentation.SqlClient": "[1.12.0-beta.3, )",
+          "Pam": "[2026.6.2, )",
           "SharedWeb": "[2026.6.2, )",
           "Swashbuckle.AspNetCore": "[10.1.7, 10.1.7]"
         }
@@ -1516,6 +1517,13 @@
           "Core": "[2026.6.2, )",
           "Microsoft.Extensions.Logging": "[10.0.8, 10.0.8]",
           "dbup-sqlserver": "[7.2.0, 7.2.0]"
+        }
+      },
+      "pam": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.6.2, )",
+          "HttpExtensions": "[2026.6.2, )"
         }
       },
       "rustsdk": {

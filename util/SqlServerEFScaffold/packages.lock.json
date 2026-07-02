@@ -1646,6 +1646,7 @@
           "OpenTelemetry.Instrumentation.Http": "[1.15.0, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.15.0, )",
           "OpenTelemetry.Instrumentation.SqlClient": "[1.12.0-beta.3, )",
+          "Pam": "[2026.6.2, )",
           "SharedWeb": "[2026.6.2, )",
           "Swashbuckle.AspNetCore": "[10.1.7, 10.1.7]"
         }
@@ -1747,6 +1748,13 @@
           "Pomelo.EntityFrameworkCore.MySql": "[8.0.2, 8.0.2]",
           "linq2db": "[5.4.1, 5.4.1]",
           "linq2db.EntityFrameworkCore": "[8.1.0, 8.1.0]"
+        }
+      },
+      "pam": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.6.2, )",
+          "HttpExtensions": "[2026.6.2, )"
         }
       },
       "sharedweb": {

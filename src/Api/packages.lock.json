@@ -1244,6 +1244,13 @@
           "linq2db.EntityFrameworkCore": "[8.1.0, 8.1.0]"
         }
       },
+      "pam": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.6.2, )",
+          "HttpExtensions": "[2026.6.2, )"
+        }
+      },
       "sharedweb": {
         "type": "Project",
         "dependencies": {
