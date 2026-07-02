@@ -1,10 +1,12 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Test.Common.AutoFixture;
@@ -255,7 +257,13 @@ public class OrganizationDataOwnershipPolicyEventHandlerTests
                 Id = callInfo.Arg<Guid>(),
                 UseMyItems = useMyItems
             });
-        var sut = new OrganizationDataOwnershipPolicyEventHandler(policyRepository, collectionRepository, organizationRepository, [factory]);
+
+        // Default the ability cache to a miss so the handler falls back to the organization repository
+        var organizationAbilityCacheService = Substitute.For<IOrganizationAbilityCacheService>();
+        organizationAbilityCacheService.GetOrganizationAbilityAsync(Arg.Any<Guid>())
+            .Returns((OrganizationAbility?)null);
+
+        var sut = new OrganizationDataOwnershipPolicyEventHandler(policyRepository, collectionRepository, organizationRepository, organizationAbilityCacheService, [factory]);
         return sut;
     }
 
@@ -438,7 +446,12 @@ public class OrganizationDataOwnershipPolicyEventHandlerTests
         // Return null to simulate organization not found
         organizationRepository.GetByIdAsync(Arg.Any<Guid>()).Returns((Organization?)null);
 
-        var sut = new OrganizationDataOwnershipPolicyEventHandler(policyRepository, collectionRepository, organizationRepository, [factory]);
+        // Simulate a cache miss so the handler falls back to the organization repository
+        var organizationAbilityCacheService = Substitute.For<IOrganizationAbilityCacheService>();
+        organizationAbilityCacheService.GetOrganizationAbilityAsync(Arg.Any<Guid>())
+            .Returns((OrganizationAbility?)null);
+
+        var sut = new OrganizationDataOwnershipPolicyEventHandler(policyRepository, collectionRepository, organizationRepository, organizationAbilityCacheService, [factory]);
         var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
         // Act & Assert
@@ -478,5 +491,133 @@ public class OrganizationDataOwnershipPolicyEventHandlerTests
                 Arg.Any<Guid>(),
                 Arg.Any<IEnumerable<Guid>>(),
                 Arg.Any<string>());
+    }
+
+    [Theory]
+    [BitMemberAutoData(nameof(ShouldUpsertDefaultCollectionsTestCases))]
+    public async Task ExecutePostUpsertSideEffectAsync_CacheHitUseMyItemsEnabled_UsesCacheAndSkipsOrganizationRepository(
+        Policy postUpdatedPolicy,
+        Policy? previousPolicyState,
+        [PolicyUpdate(PolicyType.OrganizationDataOwnership)] PolicyUpdate policyUpdate,
+        [OrganizationPolicyDetails(PolicyType.OrganizationDataOwnership)] IEnumerable<OrganizationPolicyDetails> orgPolicyDetails,
+        OrganizationDataOwnershipPolicyRequirementFactory factory)
+    {
+        // Arrange
+        var orgPolicyDetailsList = orgPolicyDetails.ToList();
+        foreach (var policyDetail in orgPolicyDetailsList)
+        {
+            policyDetail.OrganizationId = policyUpdate.OrganizationId;
+        }
+
+        var policyRepository = ArrangePolicyRepository(orgPolicyDetailsList);
+        var collectionRepository = Substitute.For<ICollectionRepository>();
+        var organizationRepository = Substitute.For<IOrganizationRepository>();
+
+        var organizationAbilityCacheService = Substitute.For<IOrganizationAbilityCacheService>();
+        organizationAbilityCacheService.GetOrganizationAbilityAsync(policyUpdate.OrganizationId)
+            .Returns(new OrganizationAbility { Id = policyUpdate.OrganizationId, UseMyItems = true });
+
+        var sut = new OrganizationDataOwnershipPolicyEventHandler(policyRepository, collectionRepository, organizationRepository, organizationAbilityCacheService, [factory]);
+        var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
+
+        // Act
+        await sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+
+        // Assert - Should trust the cached value and never hit the organization repository
+        await organizationRepository
+            .DidNotReceiveWithAnyArgs()
+            .GetByIdAsync(default);
+
+        await collectionRepository
+            .Received(1)
+            .CreateDefaultCollectionsBulkAsync(
+                policyUpdate.OrganizationId,
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == 3),
+                _defaultUserCollectionName);
+    }
+
+    [Theory]
+    [BitMemberAutoData(nameof(ShouldUpsertDefaultCollectionsTestCases))]
+    public async Task ExecutePostUpsertSideEffectAsync_CacheHitUseMyItemsDisabled_ShortcutsWithoutHittingOrganizationRepository(
+        Policy postUpdatedPolicy,
+        Policy? previousPolicyState,
+        [PolicyUpdate(PolicyType.OrganizationDataOwnership)] PolicyUpdate policyUpdate,
+        [OrganizationPolicyDetails(PolicyType.OrganizationDataOwnership)] IEnumerable<OrganizationPolicyDetails> orgPolicyDetails,
+        OrganizationDataOwnershipPolicyRequirementFactory factory)
+    {
+        // Arrange
+        var orgPolicyDetailsList = orgPolicyDetails.ToList();
+        foreach (var policyDetail in orgPolicyDetailsList)
+        {
+            policyDetail.OrganizationId = policyUpdate.OrganizationId;
+        }
+
+        var policyRepository = ArrangePolicyRepository(orgPolicyDetailsList);
+        var collectionRepository = Substitute.For<ICollectionRepository>();
+        var organizationRepository = Substitute.For<IOrganizationRepository>();
+
+        var organizationAbilityCacheService = Substitute.For<IOrganizationAbilityCacheService>();
+        organizationAbilityCacheService.GetOrganizationAbilityAsync(policyUpdate.OrganizationId)
+            .Returns(new OrganizationAbility { Id = policyUpdate.OrganizationId, UseMyItems = false });
+
+        var sut = new OrganizationDataOwnershipPolicyEventHandler(policyRepository, collectionRepository, organizationRepository, organizationAbilityCacheService, [factory]);
+        var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
+
+        // Act
+        await sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+
+        // Assert - Should shortcut based on the cached value alone, without ever calling the organization repository
+        await organizationRepository
+            .DidNotReceiveWithAnyArgs()
+            .GetByIdAsync(default);
+
+        await collectionRepository
+            .DidNotReceiveWithAnyArgs()
+            .CreateDefaultCollectionsBulkAsync(default, default, default);
+    }
+
+    [Theory]
+    [BitMemberAutoData(nameof(ShouldUpsertDefaultCollectionsTestCases))]
+    public async Task ExecutePostUpsertSideEffectAsync_CacheMiss_FallsBackToOrganizationRepository(
+        Policy postUpdatedPolicy,
+        Policy? previousPolicyState,
+        [PolicyUpdate(PolicyType.OrganizationDataOwnership)] PolicyUpdate policyUpdate,
+        [OrganizationPolicyDetails(PolicyType.OrganizationDataOwnership)] IEnumerable<OrganizationPolicyDetails> orgPolicyDetails,
+        OrganizationDataOwnershipPolicyRequirementFactory factory)
+    {
+        // Arrange
+        var orgPolicyDetailsList = orgPolicyDetails.ToList();
+        foreach (var policyDetail in orgPolicyDetailsList)
+        {
+            policyDetail.OrganizationId = policyUpdate.OrganizationId;
+        }
+
+        var policyRepository = ArrangePolicyRepository(orgPolicyDetailsList);
+        var collectionRepository = Substitute.For<ICollectionRepository>();
+        var organizationRepository = Substitute.For<IOrganizationRepository>();
+        organizationRepository.GetByIdAsync(policyUpdate.OrganizationId)
+            .Returns(new Organization { Id = policyUpdate.OrganizationId, UseMyItems = true });
+
+        var organizationAbilityCacheService = Substitute.For<IOrganizationAbilityCacheService>();
+        organizationAbilityCacheService.GetOrganizationAbilityAsync(policyUpdate.OrganizationId)
+            .Returns((OrganizationAbility?)null);
+
+        var sut = new OrganizationDataOwnershipPolicyEventHandler(policyRepository, collectionRepository, organizationRepository, organizationAbilityCacheService, [factory]);
+        var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
+
+        // Act
+        await sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+
+        // Assert - On a cache miss, the organization repository should be consulted as the source of truth
+        await organizationRepository
+            .Received(1)
+            .GetByIdAsync(policyUpdate.OrganizationId);
+
+        await collectionRepository
+            .Received(1)
+            .CreateDefaultCollectionsBulkAsync(
+                policyUpdate.OrganizationId,
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == 3),
+                _defaultUserCollectionName);
     }
 }
