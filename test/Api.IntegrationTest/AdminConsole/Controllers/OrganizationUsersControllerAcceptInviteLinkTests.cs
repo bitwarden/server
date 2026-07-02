@@ -70,6 +70,7 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
         {
             AllowedDomains = ["example.com"],
             Invite = _invite,
+            SupportsConfirmation = false,
         };
         var createResponse = await _client.PostAsJsonAsync(
             $"/organizations/{_organization.Id}/invite-link", createRequest);

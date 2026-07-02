@@ -74,6 +74,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         {
             AllowedDomains = ["acme.com"],
             Invite = _invite,
+            SupportsConfirmation = false,
         };
         var createResponse = await _client.PostAsJsonAsync(
             $"/organizations/{_organization.Id}/invite-link", createRequest);
@@ -104,6 +105,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         {
             AllowedDomains = ["acme.com", "example.com"],
             Invite = _invite,
+            SupportsConfirmation = true,
         };
 
         static void AssertInviteLink(OrganizationInviteLinkResponseModel? content, Organization organization)
@@ -114,6 +116,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
             Assert.Equal(organization.Id, content.OrganizationId);
             Assert.Equal(["acme.com", "example.com"], content.AllowedDomains);
             Assert.Equal(_invite, content.Invite);
+            // Server hardcodes SupportsConfirmation to false regardless of the request's value.
             Assert.False(content.SupportsConfirmation);
         }
 
@@ -140,6 +143,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         {
             AllowedDomains = ["acme.com"],
             Invite = _invite,
+            SupportsConfirmation = false,
         };
 
         var createResponse = await _client.PostAsJsonAsync(
@@ -187,6 +191,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         {
             AllowedDomains = ["acme.com"],
             Invite = _invite,
+            SupportsConfirmation = false,
         };
         var createResponse = await _client.PostAsJsonAsync(
             $"/organizations/{_organization.Id}/invite-link", createRequest);
@@ -211,6 +216,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         {
             AllowedDomains = ["acme.com", "example.com"],
             Invite = _invite,
+            SupportsConfirmation = false,
         };
         var createResponse = await _client.PostAsJsonAsync(
             $"/organizations/{_organization.Id}/invite-link", createRequest);
@@ -221,6 +227,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         var refreshRequest = new RefreshOrganizationInviteLinkRequestModel
         {
             Invite = _invite,
+            SupportsConfirmation = false,
         };
         var refreshResponse = await _client.PostAsJsonAsync(
             $"/organizations/{_organization.Id}/invite-link/refresh", refreshRequest);
@@ -247,6 +254,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         {
             AllowedDomains = ["acme.com"],
             Invite = _invite,
+            SupportsConfirmation = false,
         };
         var createResponse = await _client.PostAsJsonAsync(
             $"/organizations/{_organization.Id}/invite-link", createRequest);
@@ -273,6 +281,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         {
             AllowedDomains = ["acme.com"],
             Invite = _invite,
+            SupportsConfirmation = false,
         };
         var createResponse = await _client.PostAsJsonAsync(
             $"/organizations/{_organization.Id}/invite-link", createRequest);

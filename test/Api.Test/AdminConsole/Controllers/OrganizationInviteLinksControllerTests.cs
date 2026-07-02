@@ -33,6 +33,7 @@ public class OrganizationInviteLinksControllerTests
         {
             AllowedDomains = ["acme.com"],
             Invite = "invite-blob",
+            SupportsConfirmation = false,
         };
 
         sutProvider.GetDependency<ICreateOrganizationInviteLinkCommand>()
@@ -64,6 +65,7 @@ public class OrganizationInviteLinksControllerTests
         {
             AllowedDomains = ["acme.com"],
             Invite = "invite-blob",
+            SupportsConfirmation = false,
         };
 
         sutProvider.GetDependency<ICreateOrganizationInviteLinkCommand>()
@@ -136,6 +138,7 @@ public class OrganizationInviteLinksControllerTests
         {
             AllowedDomains = [],
             Invite = "invite-blob",
+            SupportsConfirmation = false,
         };
 
         sutProvider.GetDependency<ICreateOrganizationInviteLinkCommand>()

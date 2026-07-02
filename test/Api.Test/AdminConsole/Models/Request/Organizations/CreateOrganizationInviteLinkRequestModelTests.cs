@@ -15,6 +15,7 @@ public class CreateOrganizationInviteLinkRequestModelTests
         {
             AllowedDomains = new[] { "acme.com" },
             Invite = _invite,
+            SupportsConfirmation = false,
         };
 
         var results = Validate(model);
@@ -34,6 +35,7 @@ public class CreateOrganizationInviteLinkRequestModelTests
         {
             AllowedDomains = new[] { invalidDomain },
             Invite = _invite,
+            SupportsConfirmation = false,
         };
 
         var results = Validate(model);
@@ -49,6 +51,7 @@ public class CreateOrganizationInviteLinkRequestModelTests
         {
             AllowedDomains = Array.Empty<string>(),
             Invite = _invite,
+            SupportsConfirmation = false,
         };
 
         var results = Validate(model);
@@ -64,6 +67,7 @@ public class CreateOrganizationInviteLinkRequestModelTests
         {
             AllowedDomains = new[] { "acme.com", "not a domain", "<script>" },
             Invite = _invite,
+            SupportsConfirmation = false,
         };
 
         var results = Validate(model);

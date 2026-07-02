@@ -38,7 +38,7 @@ public class CreateOrganizationInviteLinkCommand(
         {
             OrganizationId = request.OrganizationId,
             Invite = request.Invite,
-            // Confirmation isn't supported until Milestone 3; links can only be used to accept for now.
+            // Auto confirmation isn't supported yet — force to false regardless of the request.
             SupportsConfirmation = false,
             CreationDate = now,
             RevisionDate = now,

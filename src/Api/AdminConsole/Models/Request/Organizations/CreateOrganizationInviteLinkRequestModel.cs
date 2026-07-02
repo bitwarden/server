@@ -19,12 +19,20 @@ public class CreateOrganizationInviteLinkRequestModel
     /// validated here.
     /// </summary>
     [Required]
+    [EncryptedStringLength(3000)]
     public required string Invite { get; set; }
+
+    /// <summary>
+    /// Indicates if the link supports user auto confirmation (not supported yet).
+    /// </summary>
+    [Required]
+    public required bool SupportsConfirmation { get; set; }
 
     public CreateOrganizationInviteLinkRequest ToCommandRequest(Guid organizationId) => new()
     {
         OrganizationId = organizationId,
         AllowedDomains = AllowedDomains,
         Invite = Invite,
+        SupportsConfirmation = SupportsConfirmation,
     };
 }

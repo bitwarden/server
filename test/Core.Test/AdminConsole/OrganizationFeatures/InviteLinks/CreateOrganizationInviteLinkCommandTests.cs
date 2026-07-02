@@ -26,6 +26,7 @@ public class CreateOrganizationInviteLinkCommandTests
             OrganizationId = organizationId,
             AllowedDomains = ["acme.com", "example.com"],
             Invite = "invite-blob-value",
+            SupportsConfirmation = true,
         };
 
         var result = await sutProvider.Sut.CreateAsync(request);
@@ -36,6 +37,7 @@ public class CreateOrganizationInviteLinkCommandTests
         Assert.NotEqual(Guid.Empty, link.Id);
         Assert.NotEqual(Guid.Empty, link.Code);
         Assert.Equal(request.Invite, link.Invite);
+        // Server hardcodes SupportsConfirmation to false regardless of the request's value.
         Assert.False(link.SupportsConfirmation);
 
         var deserializedDomains = JsonSerializer.Deserialize<List<string>>(link.AllowedDomains);
@@ -66,6 +68,7 @@ public class CreateOrganizationInviteLinkCommandTests
             OrganizationId = organizationId,
             AllowedDomains = ["acme.com"],
             Invite = "invite-blob",
+            SupportsConfirmation = false,
         };
 
         var result = await sutProvider.Sut.CreateAsync(request);
@@ -90,6 +93,7 @@ public class CreateOrganizationInviteLinkCommandTests
             OrganizationId = organizationId,
             AllowedDomains = [],
             Invite = "invite-blob",
+            SupportsConfirmation = false,
         };
 
         var result = await sutProvider.Sut.CreateAsync(request);
@@ -114,6 +118,7 @@ public class CreateOrganizationInviteLinkCommandTests
             OrganizationId = organizationId,
             AllowedDomains = [" ", ""],
             Invite = "invite-blob",
+            SupportsConfirmation = false,
         };
 
         var result = await sutProvider.Sut.CreateAsync(request);
@@ -134,6 +139,7 @@ public class CreateOrganizationInviteLinkCommandTests
             OrganizationId = organizationId,
             AllowedDomains = null!,
             Invite = "invite-blob",
+            SupportsConfirmation = false,
         };
 
         var result = await sutProvider.Sut.CreateAsync(request);
@@ -154,6 +160,7 @@ public class CreateOrganizationInviteLinkCommandTests
             OrganizationId = organizationId,
             AllowedDomains = ["acme.com"],
             Invite = "invite-blob",
+            SupportsConfirmation = false,
         };
 
         var result = await sutProvider.Sut.CreateAsync(request);
@@ -180,6 +187,7 @@ public class CreateOrganizationInviteLinkCommandTests
             OrganizationId = organizationId,
             AllowedDomains = ["acme.com"],
             Invite = "invite-blob",
+            SupportsConfirmation = false,
         };
 
         var result = await sutProvider.Sut.CreateAsync(request);
