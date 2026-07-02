@@ -2,7 +2,9 @@
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -53,6 +55,62 @@ public class PolicyQueryTests
         Assert.Equal(policyType, policyData.Type);
         Assert.False(policyData.Enabled);
         Assert.Null(policyData.Data);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RunAsync_WithNonExistentDefaultOnPolicy_ReturnsEnabled(Guid organizationId)
+    {
+        // Arrange — no saved row for a policy whose factory is enabled by default (SingleOrg here)
+        const PolicyType defaultOnType = PolicyType.SingleOrg;
+        var policyRepository = Substitute.For<IPolicyRepository>();
+        policyRepository.GetByOrganizationIdTypeAsync(organizationId, defaultOnType).ReturnsNull();
+        var factory = new TestPolicyRequirementFactory(_ => true, PolicyDefaultState.Enabled);
+        var sut = new PolicyQuery(policyRepository, [factory]);
+
+        // Act
+        var policyData = await sut.RunAsync(organizationId, defaultOnType);
+
+        // Assert — absence of a row maps to enabled
+        Assert.True(policyData.Enabled);
+        Assert.Equal(defaultOnType, policyData.Type);
+        Assert.Equal(organizationId, policyData.OrganizationId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RunAsync_WithDisabledDefaultOnPolicy_ReturnsDisabled(Guid organizationId)
+    {
+        // Arrange — an explicitly disabled row exists for a default-on policy
+        const PolicyType defaultOnType = PolicyType.SingleOrg;
+        var disabledPolicy = new Policy { OrganizationId = organizationId, Type = defaultOnType, Enabled = false };
+        var policyRepository = Substitute.For<IPolicyRepository>();
+        policyRepository.GetByOrganizationIdTypeAsync(organizationId, defaultOnType).Returns(disabledPolicy);
+        var factory = new TestPolicyRequirementFactory(_ => true, PolicyDefaultState.Enabled);
+        var sut = new PolicyQuery(policyRepository, [factory]);
+
+        // Act
+        var policyData = await sut.RunAsync(organizationId, defaultOnType);
+
+        // Assert — an explicit disabled row wins over the default
+        Assert.False(policyData.Enabled);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAllAsync_WithMissingDefaultOnPolicy_SynthesizesEnabledEntry(Guid organizationId)
+    {
+        // Arrange — org has no row for the default-on type (SingleOrg)
+        const PolicyType defaultOnType = PolicyType.SingleOrg;
+        var policyRepository = Substitute.For<IPolicyRepository>();
+        policyRepository.GetManyByOrganizationIdAsync(organizationId).Returns(new List<Policy>());
+        var factory = new TestPolicyRequirementFactory(_ => true, PolicyDefaultState.Enabled);
+        var sut = new PolicyQuery(policyRepository, [factory]);
+
+        // Act
+        var results = (await sut.GetAllAsync(organizationId)).ToList();
+
+        // Assert — an enabled entry is synthesized for the missing default-on policy
+        var synthesized = results.Single(p => p.Type == defaultOnType);
+        Assert.True(synthesized.Enabled);
+        Assert.Equal(organizationId, synthesized.OrganizationId);
     }
 
     [Theory, BitAutoData]

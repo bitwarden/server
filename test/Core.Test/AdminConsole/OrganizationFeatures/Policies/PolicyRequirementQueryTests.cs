@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -119,6 +120,102 @@ public class PolicyRequirementQueryTests
         var requirement = await sut.GetAsyncVNext<TestPolicyRequirement>(userId);
 
         Assert.Empty(requirement.Policies);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsyncVNext_ForDefaultOnFactory_UsesWithStateQueryAndTreatsMissingAsEnabled(Guid userId)
+    {
+        // Arrange raw-state rows: an enabled org, a default (no row) org, and an explicitly disabled org
+        var policyRepository = Substitute.For<IPolicyRepository>();
+        var enabledOrg = new PolicyDetailsWithState { PolicyType = PolicyType.SingleOrg, Enabled = true };
+        var defaultOrg = new PolicyDetailsWithState { PolicyType = PolicyType.SingleOrg, Enabled = null };
+        var disabledOrg = new PolicyDetailsWithState { PolicyType = PolicyType.SingleOrg, Enabled = false };
+        policyRepository.GetPolicyDetailsWithStateByUserIdAndPolicyTypeAsync(userId, PolicyType.SingleOrg)
+            .Returns([enabledOrg, defaultOrg, disabledOrg]);
+
+        var factory = new TestPolicyRequirementFactory(_ => true, PolicyDefaultState.Enabled);
+        var sut = new PolicyRequirementQuery(policyRepository, [factory]);
+
+        // Act
+        var requirement = await sut.GetAsyncVNext<TestPolicyRequirement>(userId);
+
+        // Assert: enabled and default (missing) orgs are enforced; the disabled org is dropped
+        Assert.Contains(enabledOrg, requirement.Policies);
+        Assert.Contains(defaultOrg, requirement.Policies);
+        Assert.DoesNotContain(disabledOrg, requirement.Policies);
+
+        // The standard query must not be used for a default-on factory
+        await policyRepository.Received(1)
+            .GetPolicyDetailsWithStateByUserIdAndPolicyTypeAsync(userId, PolicyType.SingleOrg);
+        await policyRepository.DidNotReceive()
+            .GetPolicyDetailsByUserIdAndPolicyTypeAsync(userId, Arg.Any<PolicyType>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsyncVNext_ForDefaultOnFactory_CallsEnforceCallback(Guid userId)
+    {
+        var policyRepository = Substitute.For<IPolicyRepository>();
+        var thisPolicy = new PolicyDetailsWithState { PolicyType = PolicyType.SingleOrg, Enabled = null };
+        var otherPolicy = new PolicyDetailsWithState { PolicyType = PolicyType.SingleOrg, Enabled = true };
+        policyRepository.GetPolicyDetailsWithStateByUserIdAndPolicyTypeAsync(userId, PolicyType.SingleOrg)
+            .Returns([thisPolicy, otherPolicy]);
+
+        var callback = Substitute.For<Func<PolicyDetails, bool>>();
+        callback(Arg.Any<PolicyDetails>()).Returns(x => x.Arg<PolicyDetails>() == thisPolicy);
+
+        var factory = new TestPolicyRequirementFactory(callback, PolicyDefaultState.Enabled);
+        var sut = new PolicyRequirementQuery(policyRepository, [factory]);
+
+        var requirement = await sut.GetAsyncVNext<TestPolicyRequirement>(userId);
+
+        Assert.Contains(thisPolicy, requirement.Policies);
+        Assert.DoesNotContain(otherPolicy, requirement.Policies);
+        callback.Received()(Arg.Is<PolicyDetails>(thisPolicy));
+        callback.Received()(Arg.Is<PolicyDetails>(otherPolicy));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsyncVNext_ForDefaultOffFactory_UsesStandardQuery(Guid userId)
+    {
+        var policyRepository = Substitute.For<IPolicyRepository>();
+        var policy = new PolicyDetails { PolicyType = PolicyType.SingleOrg };
+        policyRepository.GetPolicyDetailsByUserIdAndPolicyTypeAsync(userId, PolicyType.SingleOrg)
+            .Returns([policy]);
+
+        var factory = new TestPolicyRequirementFactory(_ => true); // DefaultState.Disabled
+        var sut = new PolicyRequirementQuery(policyRepository, [factory]);
+
+        var requirement = await sut.GetAsyncVNext<TestPolicyRequirement>(userId);
+
+        Assert.Contains(policy, requirement.Policies);
+        await policyRepository.Received(1).GetPolicyDetailsByUserIdAndPolicyTypeAsync(userId, PolicyType.SingleOrg);
+        await policyRepository.DidNotReceive()
+            .GetPolicyDetailsWithStateByUserIdAndPolicyTypeAsync(userId, Arg.Any<PolicyType>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsync_Batch_ForDefaultOnFactory_Throws(Guid userIdA, Guid userIdB)
+    {
+        var policyRepository = Substitute.For<IPolicyRepository>();
+        var factory = new TestPolicyRequirementFactory(_ => true, PolicyDefaultState.Enabled);
+        var sut = new PolicyRequirementQuery(policyRepository, [factory]);
+
+        var exception = await Assert.ThrowsAsync<NotImplementedException>(()
+            => sut.GetAsync<TestPolicyRequirement>([userIdA, userIdB]));
+        Assert.Contains("GetAsyncVNext", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsync_SingleUser_ForDefaultOnFactory_Throws(Guid userId)
+    {
+        // The single-user legacy overload delegates to the batch overload, so it inherits the guard.
+        var policyRepository = Substitute.For<IPolicyRepository>();
+        var factory = new TestPolicyRequirementFactory(_ => true, PolicyDefaultState.Enabled);
+        var sut = new PolicyRequirementQuery(policyRepository, [factory]);
+
+        var exception = await Assert.ThrowsAsync<NotImplementedException>(()
+            => sut.GetAsync<TestPolicyRequirement>(userId));
+        Assert.Contains("GetAsyncVNext", exception.Message);
     }
 
     [Theory, BitAutoData]
