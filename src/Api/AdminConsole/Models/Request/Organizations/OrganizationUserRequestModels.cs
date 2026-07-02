@@ -109,6 +109,8 @@ public class OrganizationUserUpdateRequestModel
 
     [StringLength(50)]
     public string? Name { get; set; }
+
+    public string? DefaultUserCollectionName { get; set; }
 #nullable disable
 
     public OrganizationUser ToOrganizationUser(OrganizationUser existingUser)

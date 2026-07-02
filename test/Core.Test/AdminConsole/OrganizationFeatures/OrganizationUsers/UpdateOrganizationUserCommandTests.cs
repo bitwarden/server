@@ -282,6 +282,67 @@ public class UpdateOrganizationUserCommandTests
         );
     }
 
+    [Theory]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task UpdateUserAsync_WhenDemotingPrivilegedUserToUser_WithDefaultCollectionName_CreatesDefaultCollection(
+        OrganizationUserType existingUserType,
+        Organization organization,
+        OrganizationUser oldUserData,
+        OrganizationUser newUserData,
+        string defaultUserCollectionName,
+        SutProvider<UpdateOrganizationUserCommand> sutProvider)
+    {
+        newUserData.Type = OrganizationUserType.User;
+        Setup(sutProvider, organization, newUserData, oldUserData);
+
+        await sutProvider.Sut.UpdateUserAsync(newUserData, existingUserType, null, null, null, defaultUserCollectionName);
+
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).CreateDefaultCollectionsAsync(
+            newUserData.OrganizationId,
+            Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(newUserData.Id)),
+            defaultUserCollectionName);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task UpdateUserAsync_WhenExistingUserIsNotPrivileged_WithDefaultCollectionName_DoesNotCreateDefaultCollection(
+        OrganizationUserType existingUserType,
+        Organization organization,
+        OrganizationUser oldUserData,
+        OrganizationUser newUserData,
+        string defaultUserCollectionName,
+        SutProvider<UpdateOrganizationUserCommand> sutProvider)
+    {
+        newUserData.Type = OrganizationUserType.User;
+        Setup(sutProvider, organization, newUserData, oldUserData);
+
+        await sutProvider.Sut.UpdateUserAsync(newUserData, existingUserType, null, null, null, defaultUserCollectionName);
+
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive().CreateDefaultCollectionsAsync(
+            Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task UpdateUserAsync_WhenDemotingPrivilegedUserToUser_WithoutDefaultCollectionName_DoesNotCreateDefaultCollection(
+        OrganizationUserType existingUserType,
+        Organization organization,
+        OrganizationUser oldUserData,
+        OrganizationUser newUserData,
+        SutProvider<UpdateOrganizationUserCommand> sutProvider)
+    {
+        newUserData.Type = OrganizationUserType.User;
+        Setup(sutProvider, organization, newUserData, oldUserData);
+
+        await sutProvider.Sut.UpdateUserAsync(newUserData, existingUserType, null, null, null);
+
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive().CreateDefaultCollectionsAsync(
+            Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
+    }
+
     private void Setup(SutProvider<UpdateOrganizationUserCommand> sutProvider, Organization organization,
         OrganizationUser newUser, OrganizationUser oldUser)
     {

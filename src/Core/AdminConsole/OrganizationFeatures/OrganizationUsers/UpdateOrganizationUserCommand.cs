@@ -65,7 +65,8 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
     /// <exception cref="BadRequestException"></exception>
     public async Task UpdateUserAsync(OrganizationUser organizationUser, OrganizationUserType existingUserType,
         Guid? savingUserId,
-        List<CollectionAccessSelection>? collectionAccess, IEnumerable<Guid>? groupAccess)
+        List<CollectionAccessSelection>? collectionAccess, IEnumerable<Guid>? groupAccess,
+        string? defaultUserCollectionName = null)
     {
         // Avoid multiple enumeration
         var collectionAccessList = collectionAccess?.ToList() ?? [];
@@ -143,6 +144,16 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         if (groupAccess != null)
         {
             await _organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, groupAccess, _timeProvider.GetUtcNow().UtcDateTime);
+        }
+
+        var isDemotedFromPrivilegedRole = existingUserType is OrganizationUserType.Admin or OrganizationUserType.Owner
+            && organizationUser.Type is not (OrganizationUserType.Admin or OrganizationUserType.Owner);
+        if (isDemotedFromPrivilegedRole && !string.IsNullOrWhiteSpace(defaultUserCollectionName))
+        {
+            await _collectionRepository.CreateDefaultCollectionsAsync(
+                organizationUser.OrganizationId,
+                [organizationUser.Id],
+                defaultUserCollectionName);
         }
 
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Updated);

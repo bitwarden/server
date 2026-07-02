@@ -464,7 +464,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         var existingUserType = organizationUser.Type;
 
         await _updateOrganizationUserCommand.UpdateUserAsync(model.ToOrganizationUser(organizationUser), existingUserType, userId,
-            collectionsToSave, groupsToSave);
+            collectionsToSave, groupsToSave, model.DefaultUserCollectionName);
     }
 
     [HttpPost("{id}")]
