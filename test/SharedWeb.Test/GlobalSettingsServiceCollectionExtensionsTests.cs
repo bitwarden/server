@@ -141,6 +141,7 @@ public class GlobalSettingsServiceCollectionExtensionsTests
         var preExisting = new GlobalSettings { SiteName = "pre-existing" };
         var services = new ServiceCollection();
         services.AddSingleton(preExisting);
+        services.AddSingleton<IGlobalSettings>(preExisting);
 
         var returned = services.AddGlobalSettingsServices(
             BuildConfiguration(new() { { "GlobalSettings:SiteName", "should-not-bind" } }),
