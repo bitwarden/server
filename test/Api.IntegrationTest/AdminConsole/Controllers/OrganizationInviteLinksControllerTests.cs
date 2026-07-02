@@ -22,8 +22,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
     private readonly ApiApplicationFactory _factory;
     private readonly LoginHelper _loginHelper;
 
-    private const string _validEncryptedKey =
-        "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
+    private const string _invite = "opaque-invite-blob";
 
     private Organization _organization = null!;
     private string _ownerEmail = null!;
@@ -74,7 +73,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         var createRequest = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = ["acme.com"],
-            EncryptedInviteKey = _validEncryptedKey,
+            Invite = _invite,
         };
         var createResponse = await _client.PostAsJsonAsync(
             $"/organizations/{_organization.Id}/invite-link", createRequest);
@@ -104,7 +103,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         var request = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = ["acme.com", "example.com"],
-            EncryptedInviteKey = _validEncryptedKey,
+            Invite = _invite,
         };
 
         static void AssertInviteLink(OrganizationInviteLinkResponseModel? content, Organization organization)
@@ -114,7 +113,8 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
             Assert.NotEqual(Guid.Empty, content.Code);
             Assert.Equal(organization.Id, content.OrganizationId);
             Assert.Equal(["acme.com", "example.com"], content.AllowedDomains);
-            Assert.Equal(_validEncryptedKey, content.EncryptedInviteKey);
+            Assert.Equal(_invite, content.Invite);
+            Assert.False(content.SupportsConfirmation);
         }
 
         var createResponse = await _client.PostAsJsonAsync(
@@ -139,7 +139,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         var createRequest = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = ["acme.com"],
-            EncryptedInviteKey = _validEncryptedKey,
+            Invite = _invite,
         };
 
         var createResponse = await _client.PostAsJsonAsync(
@@ -165,7 +165,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         Assert.Equal(created.Id, updated.Id);
         Assert.Equal(created.Code, updated.Code);
         Assert.Equal(_organization.Id, updated.OrganizationId);
-        Assert.Equal(_validEncryptedKey, updated.EncryptedInviteKey);
+        Assert.Equal(_invite, updated.Invite);
         Assert.Equal(["example.com", "new.com"], updated.AllowedDomains);
 
         var getResponse = await _client.GetAsync($"/organizations/{_organization.Id}/invite-link");
@@ -176,7 +176,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         Assert.NotNull(content);
         Assert.Equal(created.Id, content.Id);
         Assert.Equal(created.Code, content.Code);
-        Assert.Equal(_validEncryptedKey, content.EncryptedInviteKey);
+        Assert.Equal(_invite, content.Invite);
         Assert.Equal(["example.com", "new.com"], content.AllowedDomains);
     }
 
@@ -186,7 +186,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         var createRequest = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = ["acme.com"],
-            EncryptedInviteKey = _validEncryptedKey,
+            Invite = _invite,
         };
         var createResponse = await _client.PostAsJsonAsync(
             $"/organizations/{_organization.Id}/invite-link", createRequest);
@@ -210,7 +210,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         var createRequest = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = ["acme.com", "example.com"],
-            EncryptedInviteKey = _validEncryptedKey,
+            Invite = _invite,
         };
         var createResponse = await _client.PostAsJsonAsync(
             $"/organizations/{_organization.Id}/invite-link", createRequest);
@@ -220,7 +220,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
 
         var refreshRequest = new RefreshOrganizationInviteLinkRequestModel
         {
-            EncryptedInviteKey = _validEncryptedKey,
+            Invite = _invite,
         };
         var refreshResponse = await _client.PostAsJsonAsync(
             $"/organizations/{_organization.Id}/invite-link/refresh", refreshRequest);
@@ -246,7 +246,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         var createRequest = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = ["acme.com"],
-            EncryptedInviteKey = _validEncryptedKey,
+            Invite = _invite,
         };
         var createResponse = await _client.PostAsJsonAsync(
             $"/organizations/{_organization.Id}/invite-link", createRequest);
@@ -272,7 +272,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         var createRequest = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = ["acme.com"],
-            EncryptedInviteKey = _validEncryptedKey,
+            Invite = _invite,
         };
         var createResponse = await _client.PostAsJsonAsync(
             $"/organizations/{_organization.Id}/invite-link", createRequest);

@@ -32,7 +32,7 @@ public class OrganizationInviteLinksControllerTests
         var model = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = ["acme.com"],
-            EncryptedInviteKey = "encrypted-key",
+            Invite = "invite-blob",
         };
 
         sutProvider.GetDependency<ICreateOrganizationInviteLinkCommand>()
@@ -52,7 +52,7 @@ public class OrganizationInviteLinksControllerTests
             .Received(1)
             .CreateAsync(Arg.Is<CreateOrganizationInviteLinkRequest>(r =>
                 r.OrganizationId == orgId &&
-                r.EncryptedInviteKey == "encrypted-key"));
+                r.Invite == "invite-blob"));
     }
 
     [Theory, BitAutoData]
@@ -63,7 +63,7 @@ public class OrganizationInviteLinksControllerTests
         var model = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = ["acme.com"],
-            EncryptedInviteKey = "encrypted-key",
+            Invite = "invite-blob",
         };
 
         sutProvider.GetDependency<ICreateOrganizationInviteLinkCommand>()
@@ -135,7 +135,7 @@ public class OrganizationInviteLinksControllerTests
         var model = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = [],
-            EncryptedInviteKey = "encrypted-key",
+            Invite = "invite-blob",
         };
 
         sutProvider.GetDependency<ICreateOrganizationInviteLinkCommand>()
