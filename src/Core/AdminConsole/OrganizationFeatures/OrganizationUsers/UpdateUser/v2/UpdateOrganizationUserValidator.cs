@@ -72,8 +72,7 @@ public class UpdateOrganizationUserValidator(
             }
         }
 
-        // A caller cannot grant a role higher than their own. Mirrors v1's
-        // OrganizationService.ValidateOrganizationUserUpdatePermissions escalation guard.
+        // A caller cannot grant a role higher than their own.
         var escalationError = ValidateNotEscalatingAboveOwnRole(request);
         if (escalationError is not null)
         {
@@ -141,9 +140,9 @@ public class UpdateOrganizationUserValidator(
     /// Prevents a caller from granting a role higher than their own (privilege escalation). Delegates the
     /// authority decision to the shared <see cref="IOrganizationUserValidationService.CanManage"/> rules,
     /// checking both the member's current role and the requested role so an existing higher-ranked member
-    /// cannot be modified from below either. System users act with full authority (v1 gated this on a real
-    /// acting user), so the check is skipped for them. The v1-specific error messages are preserved by
-    /// mapping the denial back to which role was out of reach.
+    /// cannot be modified from below either. System users act with full authority, so the check is skipped
+    /// for them. The specific error messages are preserved by mapping the denial back to which role was out
+    /// of reach.
     /// </summary>
     private Error? ValidateNotEscalatingAboveOwnRole(UpdateOrganizationUserValidationRequest request)
     {
@@ -165,7 +164,7 @@ public class UpdateOrganizationUserValidator(
             return null;
         }
 
-        // Map the denial to v1's specific message. An Owner (current or requested) can only be managed by an
+        // Map the denial to its specific message. An Owner (current or requested) can only be managed by an
         // Owner; everything else that trips the check is a Custom user reaching above their authority.
         if (request.OrganizationUser.Type == OrganizationUserType.Owner || request.NewType == OrganizationUserType.Owner)
         {
