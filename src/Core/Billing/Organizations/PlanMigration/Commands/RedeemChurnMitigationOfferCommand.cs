@@ -253,7 +253,12 @@ public class RedeemChurnMitigationOfferCommand(
             return await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
                 new SubscriptionGetOptions
                 {
-                    Expand = ["customer", "test_clock", "discounts.coupon"]
+                    // `customer.discount.source.coupon` (4 levels — Stripe's cap) and
+                    // `discounts.source.coupon` are needed because the redeem flow
+                    // reads `subscription.Discounts[].Source.Coupon.Id` (not null-safe
+                    // — would NRE otherwise) and passes `subscription.Customer.Discount`
+                    // into MergeDiscountCouponIds, which reads `Source.Coupon.Id`.
+                    Expand = ["customer.discount.source.coupon", "test_clock", "discounts.source.coupon"]
                 });
         }
         catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)

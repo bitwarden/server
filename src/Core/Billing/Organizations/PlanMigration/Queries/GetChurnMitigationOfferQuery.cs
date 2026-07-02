@@ -145,12 +145,14 @@ public class GetChurnMitigationOfferQuery(
         try
         {
             // `test_clock` is included so the migration-cohort current_phase check is honest
-            // against test customers; `discount`/`discounts.coupon` give us the churn-only
-            // ineligibility surfaces without a second round-trip.
+            // against test customers; `customer.discount.source.coupon` and
+            // `discounts.source.coupon` populate the customer- and subscription-level coupon
+            // ids the ineligibility checks below read (both dereference `.Source.Coupon.Id`
+            // after the 2025-09-30.clover Discount refactor wrapped Coupon under Source).
             return await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
                 new SubscriptionGetOptions
                 {
-                    Expand = ["customer", "test_clock", "discounts.coupon"]
+                    Expand = ["customer.discount.source.coupon", "test_clock", "discounts.source.coupon"]
                 });
         }
         catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
