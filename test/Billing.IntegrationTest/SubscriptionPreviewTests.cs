@@ -81,6 +81,53 @@ public class SubscriptionPreviewTests(StripeTestsFixture fixture) : IClassFixtur
     }
 
     [BillingFact]
+    public async Task PlanChange_WithCustomerLevelCoupon_AppliesCouponToPreviewTotal()
+    {
+        // Drives PreviewOrganizationTaxCommand.Run(org, planChange, ...), which
+        // fetches the subscription with `Expand = ["customer"]` and — if the customer
+        // has an active discount — carries `subscription.Customer.Discount.Source.Coupon.Id`
+        // into the invoice preview's Discounts list. Regression coverage for the
+        // customer.discount read after the SDK bump wrapped Coupon under Source.
+        //
+        // Customer-level coupon attach uses a raw-HTTP write with a pre-clover
+        // Stripe-Version, since the typed CustomerUpdateOptions no longer exposes
+        // `coupon`. The helper verifies the attach took effect before returning.
+        var (client, _, organizationId, _) =
+            await fixture.PrepareOrganizationOwnerAsync("preview-plan-change-customer-coupon@example.com");
+
+        // Sanity baseline: preview without a coupon.
+        var baselineResponse = await client.PostAsJsonAsync(
+            $"/billing/preview-invoice/organizations/{organizationId}/subscription/plan-change",
+            new
+            {
+                Plan = new { Tier = "Teams", Cadence = "Annually" },
+                BillingAddress = new { Country = "US", PostalCode = "43432" },
+            });
+        await Assert.SuccessResponseAsync(baselineResponse);
+        var baseline = (await baselineResponse.Content.ReadFromJsonAsync<JsonObject>())!;
+        var baselineTotal = baseline["total"]!.GetValue<decimal>();
+
+        var customerId = await fixture.GetOrganizationGatewayCustomerIdAsync(organizationId);
+        var couponId = $"cust_coupon_{Guid.NewGuid():N}";
+        await fixture.SeedAndAttachCustomerCouponAsync(customerId, couponId, percentOff: 25);
+
+        var discountedResponse = await client.PostAsJsonAsync(
+            $"/billing/preview-invoice/organizations/{organizationId}/subscription/plan-change",
+            new
+            {
+                Plan = new { Tier = "Teams", Cadence = "Annually" },
+                BillingAddress = new { Country = "US", PostalCode = "43432" },
+            });
+        await Assert.SuccessResponseAsync(discountedResponse);
+        var discounted = (await discountedResponse.Content.ReadFromJsonAsync<JsonObject>())!;
+        var discountedTotal = discounted["total"]!.GetValue<decimal>();
+
+        // The 25% customer coupon must reduce the preview total.
+        Assert.True(discountedTotal < baselineTotal,
+            $"Expected discounted total ({discountedTotal}) to be less than baseline ({baselineTotal})");
+    }
+
+    [BillingFact]
     public async Task PremiumPurchase_ReturnsTaxAndTotal()
     {
         // Drives PreviewPremiumTaxCommand.Run(user, preview, billingAddress),

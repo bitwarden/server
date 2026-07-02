@@ -272,6 +272,18 @@ public class StripeTestsFixture : IAsyncDisposable
     }
 
     /// <summary>
+    /// Convenience: same as <see cref="GetUserGatewayCustomerIdAsync(Guid)"/> but
+    /// keyed by email, for premium prep helpers that don't hand back a user id.
+    /// </summary>
+    public async Task<string> GetUserGatewayCustomerIdByEmailAsync(string email)
+    {
+        using var scope = Api.Services.CreateScope();
+        var user = await scope.ServiceProvider.GetRequiredService<IUserRepository>()
+            .GetByEmailAsync(email);
+        return user!.GatewayCustomerId!;
+    }
+
+    /// <summary>
     /// Looks up the persisted Stripe subscription id for a user (premium subscriber).
     /// </summary>
     public async Task<string> GetUserGatewaySubscriptionIdAsync(Guid userId)
@@ -742,6 +754,134 @@ public class StripeTestsFixture : IAsyncDisposable
             });
 
         return client;
+    }
+
+    /// <summary>
+    /// Creates (or replaces) a Stripe coupon with the given id. Optionally scoped
+    /// to a product via <c>applies_to.products</c>. Any pre-existing coupon with
+    /// the same id is deleted first so the test is re-runnable.
+    /// </summary>
+    public async Task CreateStripeCouponAsync(
+        string couponId,
+        decimal percentOff,
+        string? scopedToProductId = null)
+    {
+        var stripeClient = CreateStripeClient();
+
+        try { await stripeClient.V1.Coupons.DeleteAsync(couponId); }
+        catch (StripeException ex) when (ex.StripeError?.Code == "resource_missing") { /* first run */ }
+
+        await stripeClient.V1.Coupons.CreateAsync(new CouponCreateOptions
+        {
+            Id = couponId,
+            Name = "IT Customer Coupon",
+            PercentOff = percentOff,
+            Duration = "once",
+            AppliesTo = scopedToProductId is not null
+                ? new CouponAppliesToOptions { Products = [scopedToProductId] }
+                : null,
+        });
+    }
+
+    /// <summary>
+    /// Attaches a coupon to a Stripe customer via a raw <c>POST /v1/customers/{id}</c>
+    /// with a legacy <c>Stripe-Version</c> header. Stripe.net 51.1 (pinned at
+    /// <c>2026-04-22.dahlia</c>) removed <c>coupon</c> from the typed
+    /// <see cref="CustomerUpdateOptions"/>, and the newer HTTP endpoint rejects
+    /// <c>coupon</c> in the body. Since Bitwarden never programmatically writes
+    /// <see cref="Stripe.Customer.Discount"/> in production (see the comment in
+    /// <see cref="Bit.Core.Billing.Organizations.PlanMigration.Queries.GetChurnMitigationOfferQuery"/>
+    /// about manual coupon application by finance), we simulate that state with
+    /// a request pinned to a pre-clover API version. The subsequent SDK reads
+    /// use the current API version and return the discount in the modern
+    /// <c>Discount.Source.Coupon</c> shape.
+    /// </summary>
+    private async Task AttachCustomerCouponAsync(string customerId, string couponId)
+    {
+        var settings = Api.Services.GetRequiredService<GlobalSettings>().Stripe;
+        using var http = new HttpClient();
+        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", settings.ApiKey);
+        // Pre-clover API version: still accepts the `coupon` body param on customer update.
+        http.DefaultRequestHeaders.Add("Stripe-Version", "2024-06-20");
+
+        using var content = new FormUrlEncodedContent(new[]
+        {
+            new KeyValuePair<string, string>("coupon", couponId),
+        });
+
+        var response = await http.PostAsync(
+            $"https://api.stripe.com/v1/customers/{customerId}", content);
+        response.EnsureSuccessStatusCode();
+    }
+
+    /// <summary>
+    /// Convenience: seed a percent-off coupon and attach it to the given customer.
+    /// Callers pass the customer id resolved from an already-prepared org/premium/provider.
+    /// Verifies the attach took effect by re-fetching the customer via the typed
+    /// SDK and asserting <see cref="Stripe.Customer.Discount"/> is populated —
+    /// guards against the raw-HTTP write silently no-op'ing if Stripe ever stops
+    /// honoring the legacy <c>Stripe-Version</c> header for this endpoint.
+    /// </summary>
+    public async Task SeedAndAttachCustomerCouponAsync(
+        string customerId,
+        string couponId,
+        decimal percentOff,
+        string? scopedToProductId = null)
+    {
+        await CreateStripeCouponAsync(couponId, percentOff, scopedToProductId);
+        await AttachCustomerCouponAsync(customerId, couponId);
+
+        var stripeClient = CreateStripeClient();
+        var customer = await stripeClient.V1.Customers.GetAsync(customerId, new CustomerGetOptions
+        {
+            Expand = ["discount.source.coupon"],
+        });
+
+        if (customer.Discount?.Source?.Coupon?.Id != couponId)
+        {
+            throw new InvalidOperationException(
+                $"Raw-HTTP customer-coupon attach did not take effect for customer {customerId}. " +
+                $"Expected Discount.Source.Coupon.Id = '{couponId}', got '{customer.Discount?.Source?.Coupon?.Id ?? "<null>"}'. " +
+                $"Stripe may have stopped accepting the legacy Stripe-Version pinned in AttachCustomerCouponAsync.");
+        }
+    }
+
+    /// <summary>
+    /// Fetches the org's Stripe subscription and returns the first line item's
+    /// product id. Used by tests that need to scope a coupon's
+    /// <c>applies_to.products</c> to a product actually present on the subscription
+    /// (e.g. the SM standalone metadata check's product-id intersection).
+    /// </summary>
+    public async Task<string> GetOrganizationFirstProductIdAsync(Guid organizationId)
+    {
+        var stripeClient = CreateStripeClient();
+        var subscriptionId = await GetOrganizationGatewaySubscriptionIdAsync(organizationId);
+        var subscription = await stripeClient.V1.Subscriptions.GetAsync(subscriptionId, new SubscriptionGetOptions
+        {
+            Expand = ["items.data.price.product"],
+        });
+        return subscription.Items.Data.First().Price.Product.Id;
+    }
+
+    /// <summary>
+    /// Attaches a product-scoped Stripe coupon to a subscription's Discounts list
+    /// via the typed SDK (no raw-HTTP legacy header needed for the subscription
+    /// endpoint — <c>SubscriptionUpdateOptions.Discounts</c> is still typed).
+    /// Deletes any pre-existing coupon with the same id first for re-runnability.
+    /// </summary>
+    public async Task SeedAndAttachSubscriptionCouponAsync(
+        string subscriptionId,
+        string couponId,
+        decimal percentOff,
+        string? scopedToProductId = null)
+    {
+        await CreateStripeCouponAsync(couponId, percentOff, scopedToProductId);
+
+        var stripeClient = CreateStripeClient();
+        await stripeClient.V1.Subscriptions.UpdateAsync(subscriptionId, new SubscriptionUpdateOptions
+        {
+            Discounts = [new SubscriptionDiscountOptions { Coupon = couponId }],
+        });
     }
 
     /// <summary>
