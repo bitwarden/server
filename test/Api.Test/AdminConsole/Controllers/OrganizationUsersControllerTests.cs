@@ -39,6 +39,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using NSubstitute;
 using OneOf.Types;
 using Xunit;
+using V2_UpdateUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 
 namespace Bit.Api.Test.AdminConsole.Controllers;
 
@@ -759,5 +760,88 @@ public class OrganizationUsersControllerTests
         await sutProvider.GetDependency<IBulkResendOrganizationInvitesCommand>()
             .Received(1)
             .BulkResendInvitesAsync(organizationId, userId, bulkRequestModel.Ids);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_WhenFeatureFlagEnabled_RoutesToV2AndReturnsNoContentOnSuccess(
+        Organization organization, OrganizationUserUpdateRequestModel model, Guid userId, OrganizationAbility organizationAbility,
+        OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        PutSetup(sutProvider, organization, organizationUser, organizationAbility, userId, featureEnabled: true);
+
+        sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
+            .UpdateUserAsync(Arg.Any<V2_UpdateUserCommand.UpdateOrganizationUserRequest>())
+            .Returns(new CommandResult(new None()));
+
+        var result = await sutProvider.Sut.Put(organization, organizationUser.Id, model);
+
+        Assert.IsType<NoContent>(result);
+        await sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
+            .Received(1)
+            .UpdateUserAsync(Arg.Any<V2_UpdateUserCommand.UpdateOrganizationUserRequest>());
+        await sutProvider.GetDependency<IUpdateOrganizationUserCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateUserAsync(default, default, default, default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_WhenFeatureFlagEnabledAndCommandFails_MapsErrorToStatus(
+        Organization organization, OrganizationUserUpdateRequestModel model, Guid userId, OrganizationAbility organizationAbility,
+        OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        PutSetup(sutProvider, organization, organizationUser, organizationAbility, userId, featureEnabled: true);
+
+        sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
+            .UpdateUserAsync(Arg.Any<V2_UpdateUserCommand.UpdateOrganizationUserRequest>())
+            .Returns(new CommandResult(new V2_UpdateUserCommand.MustHaveConfirmedOwner()));
+
+        var result = await sutProvider.Sut.Put(organization, organizationUser.Id, model);
+
+        Assert.IsType<BadRequest<ErrorResponseModel>>(result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_WhenFeatureFlagDisabled_RoutesToV1(
+        Organization organization, OrganizationUserUpdateRequestModel model, Guid userId, OrganizationAbility organizationAbility,
+        OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        PutSetup(sutProvider, organization, organizationUser, organizationAbility, userId, featureEnabled: false);
+
+        var result = await sutProvider.Sut.Put(organization, organizationUser.Id, model);
+
+        Assert.IsType<Ok>(result);
+        await sutProvider.GetDependency<IUpdateOrganizationUserCommand>()
+            .Received(1)
+            .UpdateUserAsync(Arg.Any<OrganizationUser>(), Arg.Any<OrganizationUserType>(), userId,
+                Arg.Any<List<CollectionAccessSelection>>(), Arg.Any<IEnumerable<Guid>>());
+        await sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateUserAsync(default);
+    }
+
+    private static void PutSetup(SutProvider<OrganizationUsersController> sutProvider, Organization organization,
+        OrganizationUser organizationUser, OrganizationAbility organizationAbility, Guid userId, bool featureEnabled)
+    {
+        organizationUser.OrganizationId = organization.Id;
+        organizationAbility.Id = organization.Id;
+        organizationAbility.AllowAdminAccessToAllCollectionItems = true;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdWithCollectionsAsync(organizationUser.Id)
+            .Returns(new Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>(
+                organizationUser, new List<CollectionAccessSelection>()));
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(organization.Id)
+            .Returns(organizationAbility);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection>());
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<object>(), Arg.Any<IEnumerable<IAuthorizationRequirement>>())
+            .Returns(AuthorizationResult.Success());
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(Bit.Core.FeatureFlagKeys.ChangeMemberEmailNoMp)
+            .Returns(featureEnabled);
     }
 }

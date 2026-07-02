@@ -4,6 +4,7 @@ using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Models.Request;
 using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -46,7 +47,7 @@ public class OrganizationUserControllerPutTests
         var existingUserType = organizationUser.Type;
 
         // Act
-        await sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model);
+        await sutProvider.Sut.Put(new Organization { Id = organizationAbility.Id }, organizationUser.Id, model);
 
         // Assert
         await sutProvider.GetDependency<IUpdateOrganizationUserCommand>().Received(1).UpdateUserAsync(Arg.Is<OrganizationUser>(ou =>
@@ -73,7 +74,7 @@ public class OrganizationUserControllerPutTests
 
         Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, currentCollectionAccess: []);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.Put(new Organization { Id = organizationAbility.Id }, organizationUser.Id, model));
         Assert.Contains("You cannot add yourself to a collection.", exception.Message);
     }
     [Theory]
@@ -97,7 +98,7 @@ public class OrganizationUserControllerPutTests
         var existingUserType = organizationUser.Type;
 
         // Act
-        await sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model);
+        await sutProvider.Sut.Put(new Organization { Id = organizationAbility.Id }, organizationUser.Id, model);
 
         // Assert
         await sutProvider.GetDependency<IUpdateOrganizationUserCommand>().Received(1).UpdateUserAsync(Arg.Is<OrganizationUser>(ou =>
@@ -134,7 +135,7 @@ public class OrganizationUserControllerPutTests
         var existingUserType = organizationUser.Type;
 
         // Act
-        await sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model);
+        await sutProvider.Sut.Put(new Organization { Id = organizationAbility.Id }, organizationUser.Id, model);
 
         // Assert
         await sutProvider.GetDependency<IUpdateOrganizationUserCommand>().Received(1).UpdateUserAsync(Arg.Is<OrganizationUser>(ou =>
@@ -211,7 +212,7 @@ public class OrganizationUserControllerPutTests
         var existingUserType = organizationUser.Type;
 
         // Act
-        await sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model);
+        await sutProvider.Sut.Put(new Organization { Id = organizationAbility.Id }, organizationUser.Id, model);
 
         // Assert
         // Expect all collection access (modified and unmodified) to be saved
@@ -248,7 +249,7 @@ public class OrganizationUserControllerPutTests
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyUserAccess)))
             .Returns(AuthorizationResult.Failed());
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Put(new Organization { Id = organizationAbility.Id }, organizationUser.Id, model));
     }
 
     [Theory]
@@ -267,7 +268,7 @@ public class OrganizationUserControllerPutTests
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyUserAccess)))
             .Returns(AuthorizationResult.Failed());
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Put(new Organization { Id = organizationAbility.Id }, organizationUser.Id, model));
     }
 
     private void Put_Setup(SutProvider<OrganizationUsersController> sutProvider,
