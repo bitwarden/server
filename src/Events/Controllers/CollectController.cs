@@ -148,6 +148,7 @@ public class CollectController : Controller
                 case EventType.Organization_ClientExportedVault:
                 case EventType.Organization_AutoConfirmEnabled_Admin:
                 case EventType.Organization_AutoConfirmDisabled_Admin:
+                case EventType.Organization_InviteLinkClientCopied:
                     if (!eventModel.OrganizationId.HasValue)
                     {
                         continue;

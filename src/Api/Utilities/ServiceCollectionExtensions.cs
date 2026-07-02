@@ -79,10 +79,15 @@ public static class ServiceCollectionExtensions
 
             config.InitializeSwaggerFilters(environment);
 
-            var apiFilePath = Path.Combine(AppContext.BaseDirectory, "Api.xml");
-            config.IncludeXmlComments(apiFilePath, true);
-            var coreFilePath = Path.Combine(AppContext.BaseDirectory, "Core.xml");
-            config.IncludeXmlComments(coreFilePath);
+            // Include every assembly documentation file emitted into the output directory (each XML is paired with
+            // its .dll). A project's docs surface in the spec simply by emitting a <DocumentationFile> — no change is
+            // needed here, and commercial-only assemblies (e.g. Pam) are picked up when present.
+            // includeControllerXmlComments is on so controller and Minimal API summaries are read too.
+            foreach (var xmlDocPath in Directory.EnumerateFiles(AppContext.BaseDirectory, "*.xml")
+                         .Where(xmlDocPath => File.Exists(Path.ChangeExtension(xmlDocPath, ".dll"))))
+            {
+                config.IncludeXmlComments(xmlDocPath, includeControllerXmlComments: true);
+            }
         });
     }
 
