@@ -15,10 +15,10 @@ public class AccessRequestResponseModel : ResponseModel
         CollectionId = request.CollectionId;
         OrganizationId = request.OrganizationId;
         Status = AccessRequestStatusNames.From(request.Status, hasLease: false);
-        NotBefore = request.NotBefore.AsUtc();
-        NotAfter = request.NotAfter.AsUtc();
+        LeaseNotBefore = request.NotBefore.AsUtc();
+        LeaseNotAfter = request.NotAfter.AsUtc();
         Reason = request.Reason;
-        CreationDate = request.CreationDate.AsUtc();
+        SubmittedAt = request.CreationDate.AsUtc();
     }
 
     public Guid Id { get; }
@@ -29,8 +29,9 @@ public class AccessRequestResponseModel : ResponseModel
     /// <summary><c>pending | approved | activated | denied | cancelled | expired</c>.</summary>
     public string Status { get; }
 
-    public DateTime NotBefore { get; }
-    public DateTime NotAfter { get; }
+    /// <summary>The activation window resolved at submit — when this request may be promoted to a lease.</summary>
+    public DateTime LeaseNotBefore { get; }
+    public DateTime LeaseNotAfter { get; }
     public string? Reason { get; }
-    public DateTime CreationDate { get; }
+    public DateTime SubmittedAt { get; }
 }

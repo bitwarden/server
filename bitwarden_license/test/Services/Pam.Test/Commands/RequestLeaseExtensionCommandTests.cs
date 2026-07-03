@@ -1,12 +1,12 @@
-﻿using Bit.Services.Pam.Engine;
+﻿using Bit.Core.Exceptions;
+using Bit.Pam.Entities;
+using Bit.Pam.Enums;
+using Bit.Pam.Repositories;
+using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.Models;
 using Bit.Services.Pam.Models.Conditions;
 using Bit.Services.Pam.OrganizationFeatures.Commands;
 using Bit.Services.Pam.Services;
-using Bit.Core.Exceptions;
-using Bit.Pam.Entities;
-using Bit.Pam.Enums;
-using Bit.Pam.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Time.Testing;
@@ -150,10 +150,10 @@ public class RequestLeaseExtensionCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ExtendAsync_Valid_RecordsApprovedExtensionAndExtendsLeaseInPlace(AccessLease lease)
+    public async Task ExtendAsync_Valid_RecordsApprovedExtensionAndExtendsLeaseInPlace(AccessLease lease, Guid ruleId)
     {
         var sutProvider = Setup();
-        SetupExtendableLease(sutProvider, lease);
+        SetupExtendableLease(sutProvider, lease, ruleId: ruleId);
         const int duration = 2 * 60 * 60;
         var expectedNotAfter = lease.NotAfter.AddSeconds(duration);
 
@@ -166,6 +166,7 @@ public class RequestLeaseExtensionCommandTests
         Assert.Equal(lease.OrganizationId, result.OrganizationId);
         Assert.Equal(lease.CollectionId, result.CollectionId);
         Assert.Equal(lease.RequesterId, result.RequesterId);
+        Assert.Equal(ruleId, result.RuleId);
         Assert.Equal(lease.NotAfter, result.NotBefore);
         Assert.Equal(expectedNotAfter, result.NotAfter);
         Assert.Equal("incident", result.Reason);
@@ -176,6 +177,7 @@ public class RequestLeaseExtensionCommandTests
             Arg.Is<AccessRequest>(r =>
                 r.ExtensionOfLeaseId == lease.Id
                 && r.Status == AccessRequestStatus.Approved
+                && r.RuleId == ruleId
                 && r.NotBefore == lease.NotAfter
                 && r.NotAfter == expectedNotAfter),
             Arg.Is<AccessDecision>(d =>
@@ -232,7 +234,8 @@ public class RequestLeaseExtensionCommandTests
     // An active, in-window lease owned by its BitAutoData requester, governed by an extension-enabled rule with no
     // extension used yet, and a repo that extends successfully. Tests override the precondition they exercise.
     private static void SetupExtendableLease(
-        SutProvider<RequestLeaseExtensionCommand> sutProvider, AccessLease lease, bool allowsExtensions = true)
+        SutProvider<RequestLeaseExtensionCommand> sutProvider, AccessLease lease, bool allowsExtensions = true,
+        Guid ruleId = default)
     {
         lease.Status = AccessLeaseStatus.Active;
         lease.NotAfter = _now.AddHours(1);
@@ -244,6 +247,7 @@ public class RequestLeaseExtensionCommandTests
             .Returns(new GoverningRule(lease.OrganizationId, lease.CollectionId, RequiresHumanApproval: true,
                 [new HumanApprovalCondition()])
             {
+                RuleId = ruleId,
                 AllowsExtensions = allowsExtensions,
                 MaxExtensionDurationSeconds = _maxExtensionDurationSeconds,
             });

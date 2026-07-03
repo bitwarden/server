@@ -1,6 +1,6 @@
-﻿using Bit.Services.Pam.Api.Models.Response;
-using Bit.Pam.Enums;
+﻿using Bit.Pam.Enums;
 using Bit.Pam.Models;
+using Bit.Services.Pam.Api.Models.Response;
 using Xunit;
 
 namespace Bit.Services.Pam.Test.Api.Models;
@@ -25,12 +25,12 @@ public class AccessRequestDetailsResponseModelTests
 
         var model = new AccessRequestDetailsResponseModel(details);
 
-        Assert.Equal(DateTimeKind.Utc, model.RequestedNotBefore.Kind);
-        Assert.Equal(DateTimeKind.Utc, model.RequestedNotAfter.Kind);
+        Assert.Equal(DateTimeKind.Utc, model.LeaseNotBefore.Kind);
+        Assert.Equal(DateTimeKind.Utc, model.LeaseNotAfter.Kind);
         Assert.Equal(DateTimeKind.Utc, model.SubmittedAt.Kind);
         Assert.Equal(DateTimeKind.Utc, model.ResolvedAt!.Value.Kind);
         // SpecifyKind relabels without shifting the wall clock.
-        Assert.Equal(unspecified.Ticks, model.RequestedNotBefore.Ticks);
+        Assert.Equal(unspecified.Ticks, model.LeaseNotBefore.Ticks);
     }
 
     [Fact]
@@ -127,6 +127,31 @@ public class AccessRequestDetailsResponseModelTests
         Assert.Null(decision.Id);
         Assert.Null(decision.Name);
         Assert.Equal(AccessDecisionVerdict.Approve, decision.Verdict);
+    }
+
+    [Fact]
+    public void Ctor_PassesThroughPinnedRuleIdAndLeavesItNullWhenUnpinned()
+    {
+        // The governing rule pinned at submit flows through verbatim; a request created before pinning existed has no
+        // pinned rule and must report null rather than a value fabricated from a re-resolution. ExpiredAt stays null
+        // (no backing store in v1).
+        var ruleId = Guid.NewGuid();
+        var unspecified = new DateTime(2026, 6, 15, 13, 0, 0, DateTimeKind.Unspecified);
+        var details = new AccessRequestDetails
+        {
+            Status = AccessRequestStatus.Pending,
+            NotBefore = unspecified,
+            NotAfter = unspecified.AddHours(1),
+            CreationDate = unspecified,
+        };
+
+        Assert.Null(new AccessRequestDetailsResponseModel(details).RuleId);
+
+        details.RuleId = ruleId;
+        var model = new AccessRequestDetailsResponseModel(details);
+
+        Assert.Equal(ruleId, model.RuleId);
+        Assert.Null(model.ExpiredAt);
     }
 
     [Fact]

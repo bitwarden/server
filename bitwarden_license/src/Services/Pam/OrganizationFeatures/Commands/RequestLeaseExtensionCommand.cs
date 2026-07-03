@@ -1,13 +1,13 @@
-﻿using Bit.Services.Pam.Engine;
-using Bit.Services.Pam.Models;
-using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
-using Bit.Services.Pam.Services;
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Engine;
+using Bit.Services.Pam.Models;
+using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Services.Pam.Services;
 
 namespace Bit.Services.Pam.OrganizationFeatures.Commands;
 
@@ -102,6 +102,7 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
             CollectionId = lease.CollectionId,
             CipherId = lease.CipherId,
             RequesterId = userId,
+            RuleId = governingRule.RuleId,
             NotBefore = lease.NotAfter,
             NotAfter = lease.NotAfter.AddSeconds(submission.DurationSeconds),
             Reason = submission.Reason,
@@ -147,6 +148,7 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
             CollectionId = request.CollectionId,
             CipherId = request.CipherId,
             RequesterId = request.RequesterId,
+            RuleId = request.RuleId,
             NotBefore = request.NotBefore,
             NotAfter = request.NotAfter,
             Reason = request.Reason,

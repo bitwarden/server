@@ -1,11 +1,11 @@
 ﻿using System.Net;
-using Bit.Services.Pam.Engine;
-using Bit.Services.Pam.Models.Conditions;
-using Bit.Services.Pam.Services;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Engine;
+using Bit.Services.Pam.Models.Conditions;
+using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -16,7 +16,8 @@ namespace Bit.Services.Pam.Test.Services;
 [SutProviderCustomize]
 public class GoverningRuleResolverTests
 {
-    // The resolver now evaluates each candidate rule, so the tests drive the real engine through the substitute.
+    // Selection is structural (oldest rule wins); the resolver still evaluates the chosen rule's conditions to report
+    // whether it needs human approval, so the tests drive the real engine through the substitute for that step.
     private static readonly IAccessRuleEngine _engine = new AccessRuleEngine();
 
     // An in-range IP for the 10.0.0.0/8 allowlists below; out-of-range for the 192.168/172.16 allowlists, which
@@ -125,95 +126,117 @@ public class GoverningRuleResolverTests
     }
 
     [Theory, BitAutoData]
-    public async Task ResolveAsync_AutomaticGrantPath_BeatsHumanApprovalPath(
+    public async Task ResolveAsync_MultipleRules_OldestCreationDateWins(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
-        Collection automaticCollection, AccessRule automaticRule, Collection humanCollection, AccessRule humanRule)
+        Collection olderCollection, AccessRule olderRule, Collection newerCollection, AccessRule newerRule)
     {
-        // One reachable collection auto-grants (passing IP allowlist); the other needs human approval.
-        automaticRule.Conditions = """[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]}]""";
-        humanRule.Conditions = """[{"kind":"human_approval"}]""";
+        // The older rule needs human approval; the newer one would auto-grant. Oldest wins even though it is the more
+        // restrictive path — the caller is routed to an approver rather than auto-granted (do not reintroduce the
+        // retired least-restrictive behaviour).
+        olderRule.CreationDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        olderRule.Conditions = """[{"kind":"human_approval"}]""";
+        newerRule.CreationDate = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+        newerRule.Conditions = """[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]}]""";
         SetupGovernedCollections(sutProvider, userId, cipherId,
-            (automaticCollection, automaticRule), (humanCollection, humanRule));
+            (olderCollection, olderRule), (newerCollection, newerRule));
 
         var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
 
-        // Least-restrictive wins: the caller is never routed to an approver when some path would auto-grant.
-        Assert.NotNull(result);
-        Assert.False(result!.RequiresHumanApproval);
-        Assert.Equal(automaticCollection.Id, result.CollectionId);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ResolveAsync_FailingAutomaticRule_DoesNotPreemptGrantingHumanApprovalPath(
-        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
-        Collection automaticCollection, AccessRule automaticRule, Collection humanCollection, AccessRule humanRule)
-    {
-        // The automatic rule's IP allowlist fails for this caller; the human-approval rule would still grant.
-        automaticRule.Conditions = """[{"kind":"ip_allowlist","cidrs":["192.168.0.0/16"]}]""";
-        humanRule.Conditions = """[{"kind":"human_approval"}]""";
-        SetupGovernedCollections(sutProvider, userId, cipherId,
-            (automaticCollection, automaticRule), (humanCollection, humanRule));
-
-        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
-
-        // A failing automatic rule must not pre-empt a path that needs approval but would grant.
         Assert.NotNull(result);
         Assert.True(result!.RequiresHumanApproval);
-        Assert.Equal(humanCollection.Id, result.CollectionId);
+        Assert.Equal(olderCollection.Id, result.CollectionId);
+        Assert.Equal(olderRule.Id, result.RuleId);
     }
 
     [Theory, BitAutoData]
-    public async Task ResolveAsync_NoRulePasses_ResolvesToAutoDenyPath(
+    public async Task ResolveAsync_MultipleRules_OlderAutomaticWinsOverNewerHumanApproval(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
-        Collection firstCollection, AccessRule firstRule, Collection secondCollection, AccessRule secondRule)
+        Collection olderCollection, AccessRule olderRule, Collection newerCollection, AccessRule newerRule)
     {
-        // Neither automatic rule's allowlist matches the caller, and no approval path exists, so every path denies.
-        firstRule.Conditions = """[{"kind":"ip_allowlist","cidrs":["192.168.0.0/16"]}]""";
-        secondRule.Conditions = """[{"kind":"ip_allowlist","cidrs":["172.16.0.0/12"]}]""";
+        // The mirror of the previous case: here the oldest rule auto-grants and the newer one needs human approval, so
+        // the caller is auto-granted. Whichever is older governs, regardless of which is more permissive.
+        olderRule.CreationDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        olderRule.Conditions = """[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]}]""";
+        newerRule.CreationDate = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+        newerRule.Conditions = """[{"kind":"human_approval"}]""";
         SetupGovernedCollections(sutProvider, userId, cipherId,
-            (firstCollection, firstRule), (secondCollection, secondRule));
-
-        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
-
-        // Falls through to a deny path (not routed to a human); the auto path then surfaces the denial downstream.
-        Assert.NotNull(result);
-        Assert.False(result!.RequiresHumanApproval);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ResolveAsync_TwoAutomaticRules_ResolvesToThePassingOne(
-        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
-        Collection failingCollection, AccessRule failingRule, Collection passingCollection, AccessRule passingRule)
-    {
-        failingRule.Conditions = """[{"kind":"ip_allowlist","cidrs":["192.168.0.0/16"]}]""";
-        passingRule.Conditions = """[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]}]""";
-        SetupGovernedCollections(sutProvider, userId, cipherId,
-            (failingCollection, failingRule), (passingCollection, passingRule));
+            (olderCollection, olderRule), (newerCollection, newerRule));
 
         var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
 
         Assert.NotNull(result);
         Assert.False(result!.RequiresHumanApproval);
-        Assert.Equal(passingCollection.Id, result.CollectionId);
+        Assert.Equal(olderCollection.Id, result.CollectionId);
+        Assert.Equal(olderRule.Id, result.RuleId);
     }
 
     [Theory, BitAutoData]
-    public async Task ResolveAsync_MalformedRuleAlongsidePassingAutomatic_AutoGrants(
+    public async Task ResolveAsync_OldestRuleFailsAutomatedConditions_StillGoverns(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
-        Collection malformedCollection, AccessRule malformedRule, Collection automaticCollection, AccessRule automaticRule)
+        Collection olderCollection, AccessRule olderRule, Collection newerCollection, AccessRule newerRule)
     {
-        // The malformed rule fails safe to human approval for its own path, but a different parseable rule auto-grants,
-        // so the union/OR auto-grant path wins.
-        malformedRule.Conditions = "not json";
-        automaticRule.Conditions = """[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]}]""";
+        // The oldest rule's IP allowlist fails for this caller; a newer rule would pass. Selection is structural, so
+        // the failing oldest rule still governs — the resolver never lets a newer path pre-empt it by evaluating
+        // conditions. (Downstream, the auto path then surfaces the denial; that is not the resolver's concern.)
+        olderRule.CreationDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        olderRule.Conditions = """[{"kind":"ip_allowlist","cidrs":["192.168.0.0/16"]}]""";
+        newerRule.CreationDate = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+        newerRule.Conditions = """[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]}]""";
         SetupGovernedCollections(sutProvider, userId, cipherId,
-            (malformedCollection, malformedRule), (automaticCollection, automaticRule));
+            (olderCollection, olderRule), (newerCollection, newerRule));
 
         var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
 
         Assert.NotNull(result);
         Assert.False(result!.RequiresHumanApproval);
-        Assert.Equal(automaticCollection.Id, result.CollectionId);
+        Assert.Equal(olderCollection.Id, result.CollectionId);
+        Assert.Equal(olderRule.Id, result.RuleId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_TieOnCreationDate_LowerRuleIdWins(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
+        Collection lowerCollection, AccessRule lowerRule, Collection higherCollection, AccessRule higherRule)
+    {
+        // Two rules created at the same instant: the tie breaks on rule id (lowest wins) so the choice is total and
+        // stable rather than dependent on iteration order.
+        var sharedCreation = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc);
+        lowerRule.Id = new Guid("00000000-0000-0000-0000-000000000001");
+        lowerRule.CreationDate = sharedCreation;
+        lowerRule.Conditions = """[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]}]""";
+        higherRule.Id = new Guid("00000000-0000-0000-0000-000000000002");
+        higherRule.CreationDate = sharedCreation;
+        higherRule.Conditions = """[{"kind":"human_approval"}]""";
+        SetupGovernedCollections(sutProvider, userId, cipherId,
+            (higherCollection, higherRule), (lowerCollection, lowerRule));
+
+        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
+
+        Assert.NotNull(result);
+        Assert.Equal(lowerRule.Id, result!.RuleId);
+        Assert.Equal(lowerCollection.Id, result.CollectionId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_OldestRuleMalformed_FailsSafeToHumanApprovalEvenWithNewerAutoPath(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
+        Collection olderCollection, AccessRule olderRule, Collection newerCollection, AccessRule newerRule)
+    {
+        // The oldest rule is unparseable; a newer rule would auto-grant. Because the oldest rule governs, it fails safe
+        // to human approval rather than letting the newer parseable path auto-grant around it.
+        olderRule.CreationDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        olderRule.Conditions = "not json";
+        newerRule.CreationDate = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+        newerRule.Conditions = """[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]}]""";
+        SetupGovernedCollections(sutProvider, userId, cipherId,
+            (olderCollection, olderRule), (newerCollection, newerRule));
+
+        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
+
+        Assert.NotNull(result);
+        Assert.True(result!.RequiresHumanApproval);
+        Assert.Equal(olderCollection.Id, result.CollectionId);
+        Assert.IsType<HumanApprovalCondition>(Assert.Single(result.Conditions));
     }
 
     private static void SetupReachableCollections(

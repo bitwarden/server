@@ -15,6 +15,14 @@ public sealed record GoverningRule(
     IReadOnlyList<AccessCondition> Conditions)
 {
     /// <summary>
+    /// The identity of the resolved access rule. Resolution is deterministic (oldest rule wins; see
+    /// <see cref="Services.IGoverningRuleResolver"/>), so this is the rule that a request should pin at submit once
+    /// pinning is persisted. Until then it is re-resolved on every operation and can drift if the governing rules
+    /// change between submit and a later read.
+    /// </summary>
+    public Guid RuleId { get; init; }
+
+    /// <summary>
     /// When true, a member holding an active lease under this rule may extend it once (always auto-approved), by up
     /// to <see cref="MaxExtensionDurationSeconds"/>.
     /// </summary>

@@ -1,9 +1,11 @@
 ﻿using System.Text.Json;
+using Bit.Core.Entities;
+using Bit.Core.Repositories;
+using Bit.Pam.Entities;
+using Bit.Pam.Repositories;
 using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.Models;
 using Bit.Services.Pam.Models.Conditions;
-using Bit.Core.Repositories;
-using Bit.Pam.Repositories;
 
 namespace Bit.Services.Pam.Services;
 
@@ -43,51 +45,51 @@ public class GoverningRuleResolver : IGoverningRuleResolver
         var collectionIds = collectionCiphers.Select(cc => cc.CollectionId).ToHashSet();
         var collections = await _collectionRepository.GetManyByManyIdsAsync(collectionIds);
 
-        // Deterministic order so ties between equally-favourable rules resolve to a stable governing collection.
-        var governed = collections
-            .Where(c => collectionIds.Contains(c.Id) && c.AccessRuleId.HasValue)
-            .OrderBy(c => c.Id);
+        var governedCollections = collections
+            .Where(c => collectionIds.Contains(c.Id) && c.AccessRuleId.HasValue);
 
-        // Least-restrictive wins: among the rules on the collections through which the caller reaches the cipher,
-        // an automatic grant (Allow) is favoured over one needing human approval (RequiresApproval), which is
-        // favoured over a denial (Deny). Evaluating each rule against the request signals means a failing automatic
-        // rule (e.g. an out-of-range IP) never pre-empts a different path that would grant or route to a human.
-        GoverningRule? best = null;
-        var bestOutcome = AccessEvaluationOutcome.Deny;
-        foreach (var collection in governed)
+        // Load every rule on the collections through which the caller reaches the cipher, keeping each paired with
+        // the collection it gates. A rule that no longer loads (e.g. a soft-deleted one, which the read filters out)
+        // is skipped, so a deleted rule stops governing.
+        var candidates = new List<(Collection Collection, AccessRule Rule)>();
+        foreach (var collection in governedCollections)
         {
             var accessRule = await _accessRuleRepository.GetByIdAsync(collection.AccessRuleId!.Value);
-            if (accessRule is null)
+            if (accessRule is not null)
             {
-                continue;
-            }
-
-            var conditions = Parse(accessRule.Conditions);
-            var outcome = _ruleEngine.Evaluate(conditions, signals).Outcome;
-            if (best is not null && outcome >= bestOutcome)
-            {
-                continue;
-            }
-
-            bestOutcome = outcome;
-            best = new GoverningRule(
-                collection.OrganizationId,
-                collection.Id,
-                outcome == AccessEvaluationOutcome.RequiresApproval,
-                conditions)
-            {
-                AllowsExtensions = accessRule.AllowsExtensions,
-                MaxExtensionDurationSeconds = accessRule.MaxExtensionDurationSeconds,
-            };
-
-            if (outcome == AccessEvaluationOutcome.Allow)
-            {
-                // Nothing beats an automatic grant; stop scanning the remaining collections.
-                break;
+                candidates.Add((collection, accessRule));
             }
         }
 
-        return best;
+        if (candidates.Count == 0)
+        {
+            return null;
+        }
+
+        // Oldest wins: the rule with the earliest CreationDate governs, ties broken on rule id so the choice is total
+        // and stable. Selection is purely structural — it does NOT depend on how a rule's conditions evaluate for the
+        // current signals — so a newer path never pre-empts an older one, whichever is the more permissive. This is a
+        // deliberate trade of determinism over least-restriction: a member may be routed to an approver even though a
+        // newer path would have auto-granted, because the older rule governs. The chosen rule's conditions are then
+        // evaluated below only to decide whether it routes to a human or resolves automatically.
+        var (governingCollection, governingRule) = candidates
+            .OrderBy(c => c.Rule.CreationDate)
+            .ThenBy(c => c.Rule.Id)
+            .First();
+
+        var conditions = Parse(governingRule.Conditions);
+        var outcome = _ruleEngine.Evaluate(conditions, signals).Outcome;
+
+        return new GoverningRule(
+            governingCollection.OrganizationId,
+            governingCollection.Id,
+            outcome == AccessEvaluationOutcome.RequiresApproval,
+            conditions)
+        {
+            RuleId = governingRule.Id,
+            AllowsExtensions = governingRule.AllowsExtensions,
+            MaxExtensionDurationSeconds = governingRule.MaxExtensionDurationSeconds,
+        };
     }
 
     /// <summary>

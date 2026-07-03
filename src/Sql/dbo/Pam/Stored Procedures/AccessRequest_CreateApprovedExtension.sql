@@ -9,7 +9,8 @@ CREATE PROCEDURE [dbo].[AccessRequest_CreateApprovedExtension]
     @NotBefore DATETIME2(7),
     @NotAfter DATETIME2(7),
     @Reason NVARCHAR(MAX) = NULL,
-    @Now DATETIME2(7)
+    @Now DATETIME2(7),
+    @RuleId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -52,12 +53,12 @@ BEGIN
     INSERT INTO [dbo].[AccessRequest]
     (
         [Id], [ExtensionOfLeaseId], [OrganizationId], [CollectionId], [CipherId], [RequesterId],
-        [NotBefore], [NotAfter], [Reason], [Status], [CreationDate], [ResolvedDate]
+        [NotBefore], [NotAfter], [Reason], [Status], [CreationDate], [ResolvedDate], [RuleId]
     )
     VALUES
     (
         @AccessRequestId, @ExtensionOfLeaseId, @OrganizationId, @CollectionId, @CipherId, @RequesterId,
-        @NotBefore, @NotAfter, @Reason, 1 /* Approved */, @Now, @Now
+        @NotBefore, @NotAfter, @Reason, 1 /* Approved */, @Now, @Now, @RuleId
     )
 
     INSERT INTO [dbo].[AccessDecision]

@@ -1,8 +1,4 @@
-﻿using Bit.Services.Pam.Engine;
-using Bit.Services.Pam.Models;
-using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
-using Bit.Services.Pam.Services;
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -10,6 +6,10 @@ using Bit.Core.Vault.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Engine;
+using Bit.Services.Pam.Models;
+using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Services.Pam.Services;
 
 namespace Bit.Services.Pam.OrganizationFeatures.Commands;
 
@@ -143,6 +143,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
             CollectionId = governingRule.CollectionId,
             CipherId = cipherId,
             RequesterId = userId,
+            RuleId = governingRule.RuleId,
             NotBefore = now,
             NotAfter = notAfter,
             Reason = string.IsNullOrWhiteSpace(submission.Reason) ? null : submission.Reason,
@@ -209,6 +210,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
             CollectionId = governingRule.CollectionId,
             CipherId = cipherId,
             RequesterId = userId,
+            RuleId = governingRule.RuleId,
             NotBefore = start,
             NotAfter = end,
             Reason = submission.Reason,

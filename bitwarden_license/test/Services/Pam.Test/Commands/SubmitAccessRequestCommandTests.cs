@@ -1,10 +1,4 @@
-﻿using Bit.Services.Pam.Engine;
-using Bit.Services.Pam.Enums;
-using Bit.Services.Pam.Models;
-using Bit.Services.Pam.Models.Conditions;
-using Bit.Services.Pam.OrganizationFeatures.Commands;
-using Bit.Services.Pam.Services;
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -14,6 +8,12 @@ using Bit.Core.Vault.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Engine;
+using Bit.Services.Pam.Enums;
+using Bit.Services.Pam.Models;
+using Bit.Services.Pam.Models.Conditions;
+using Bit.Services.Pam.OrganizationFeatures.Commands;
+using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Time.Testing;
@@ -52,11 +52,11 @@ public class SubmitAccessRequestCommandTests
 
     [Theory, BitAutoData]
     public async Task SubmitAsync_Automatic_CreatesApprovedRequestWithoutMintingLease(
-        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId, Guid ruleId)
     {
         var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
-        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false, ruleId);
         SetupEvaluation(sutProvider, AccessEvaluation.Allow);
 
         var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
@@ -73,7 +73,7 @@ public class SubmitAccessRequestCommandTests
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1)
             .CreateAutoApprovedAsync(
                 Arg.Is<AccessRequest>(r => r.Status == AccessRequestStatus.Approved && r.NotBefore == _now
-                    && r.NotAfter == _now.AddSeconds(3600)),
+                    && r.NotAfter == _now.AddSeconds(3600) && r.RuleId == ruleId),
                 Arg.Is<AccessDecision>(d => d.DeciderKind == AccessDeciderKind.Automatic
                     && d.Verdict == AccessDecisionVerdict.Approve));
     }
@@ -135,11 +135,11 @@ public class SubmitAccessRequestCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SubmitAsync_Human_CreatesPendingRequest(Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    public async Task SubmitAsync_Human_CreatesPendingRequest(Guid userId, Guid cipherId, Guid orgId, Guid collectionId, Guid ruleId)
     {
         var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
-        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: true);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: true, ruleId);
         sutProvider.GetDependency<IAccessRequestRepository>()
             .CreateAsync(Arg.Any<AccessRequest>())
             .Returns(callInfo => callInfo.Arg<AccessRequest>());
@@ -155,6 +155,7 @@ public class SubmitAccessRequestCommandTests
         Assert.Equal(start, result.Request.NotBefore);
         Assert.Equal(end, result.Request.NotAfter);
         Assert.Equal("audit", result.Request.Reason);
+        Assert.Equal(ruleId, result.Request.RuleId);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CreateAutoApprovedAsync(default!, default!);
         await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
@@ -400,12 +401,12 @@ public class SubmitAccessRequestCommandTests
     }
 
     private static void SetupResolution(SutProvider<SubmitAccessRequestCommand> sutProvider, Guid userId, Guid cipherId,
-        Guid orgId, Guid collectionId, bool requiresHuman)
+        Guid orgId, Guid collectionId, bool requiresHuman, Guid ruleId = default)
     {
         var condition = requiresHuman ? new HumanApprovalCondition() : (AccessCondition)new IpAllowlistCondition { Cidrs = ["10.0.0.0/8"] };
         sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
-            .Returns(new GoverningRule(orgId, collectionId, requiresHuman, [condition]));
+            .Returns(new GoverningRule(orgId, collectionId, requiresHuman, [condition]) { RuleId = ruleId });
     }
 
     private static void SetupEvaluation(SutProvider<SubmitAccessRequestCommand> sutProvider, AccessEvaluation evaluation)
