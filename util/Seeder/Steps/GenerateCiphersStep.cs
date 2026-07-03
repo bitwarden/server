@@ -48,8 +48,30 @@ internal sealed class GenerateCiphersStep(
         var passwordDistribution = pwDist ?? PasswordDistributions.Realistic;
         var companies = Companies.All;
 
-        var userDigests = assignFolders ? context.Registry.UserDigests : null;
+        var userDigests = context.Registry.UserDigests;
         var userFolderIds = assignFolders ? context.Registry.UserFolderIds : null;
+        var canArchive = userDigests is { Count: > 0 };
+
+        // Archive and delete targets/ceilings are computed independently of GeneratePersonalCiphersStep's
+        // personal-cipher pool — each pool enforces its own MaxArchivedCiphers/MaxDeletedCiphers cap
+        // rather than sharing one combined budget across steps. Org ciphers are archived "for" a
+        // round-robin-selected user (there's no single owning user like a personal cipher has), so
+        // archiving requires at least one user to exist.
+        var (archivedOrgTarget, deletedOrgTarget, bothOrgTarget, deletedOnlyOrgTarget) = ArchiveDeleteDistribution.ComputeTargets(
+            count,
+            _density?.ArchivedCipherRate ?? 0, _density?.DeletedCipherRate ?? 0, _density?.ArchivedAndDeletedOverlapRate ?? 0,
+            _density?.MaxArchivedCiphers ?? 0, _density?.MaxDeletedCiphers ?? 0,
+            canArchive);
+
+        var selection = ArchiveDeleteDistribution.Select(count, archivedOrgTarget, bothOrgTarget, deletedOnlyOrgTarget);
+
+        // CreateOwnerStep always adds the Owner to UserDigests before CreateUsersStep runs, so
+        // userDigests[0] is the Owner — meaning the first archived cipher (position 0) is always
+        // archived for the Owner. Positions are precomputed (not indexed by the raw loop variable i)
+        // so the round-robin cycles through every user regardless of how the archived target divides.
+        var archivedUserPositions = canArchive
+            ? ArchiveDeleteDistribution.AssignRoundRobinUserPositions(selection.ArchivedOrder, userDigests.Count)
+            : new Dictionary<int, int>();
 
         var ciphers = new List<Cipher>(count);
         var cipherIds = new List<Guid>(count);
@@ -68,6 +90,8 @@ internal sealed class GenerateCiphersStep(
                 var userDigest = userDigests[i % userDigests.Count];
                 CipherComposer.AssignFolder(cipher, userDigest.UserId, i, userFolderIds);
             }
+
+            CipherComposer.AssignArchiveOrDeleteState(cipher, i, selection, idx => userDigests[archivedUserPositions[idx]].UserId);
 
             ciphers.Add(cipher);
             cipherIds.Add(cipher.Id);
@@ -143,10 +167,42 @@ internal sealed class GenerateCiphersStep(
                     }
                 }
             }
+
+            // Guarantee the Owner always has an archived and a deleted cipher visible in their own
+            // vault sync for manual QA. Visibility requires both the lifecycle-state flag and
+            // collection access under Flexible Collections — neither the round-robin nor the
+            // density-driven collection assignment has any reason to grant both to the same user
+            // otherwise.
+            if (context.OwnerOrgUser is { } ownerOrgUser)
+            {
+                var ownerCollectionId = context.CollectionUsers
+                    .FirstOrDefault(cu => cu.OrganizationUserId == ownerOrgUser.Id)?.CollectionId;
+
+                if (ownerCollectionId is { } collectionId)
+                {
+                    if (selection.ArchivedOrder.Count > 0)
+                    {
+                        EnsureCollectionAssignment(collectionCiphers, ciphers[selection.ArchivedOrder[0]].Id, collectionId);
+                    }
+
+                    if (selection.DeletedOnly.Count > 0)
+                    {
+                        EnsureCollectionAssignment(collectionCiphers, ciphers[selection.DeletedOnly.First()].Id, collectionId);
+                    }
+                }
+            }
         }
 
         context.Ciphers.AddRange(ciphers);
         context.Registry.CipherIds.AddRange(cipherIds);
         context.CollectionCiphers.AddRange(collectionCiphers);
+    }
+
+    private static void EnsureCollectionAssignment(List<CollectionCipher> collectionCiphers, Guid cipherId, Guid collectionId)
+    {
+        if (!collectionCiphers.Any(cc => cc.CipherId == cipherId && cc.CollectionId == collectionId))
+        {
+            collectionCiphers.Add(new CollectionCipher { CipherId = cipherId, CollectionId = collectionId });
+        }
     }
 }

@@ -240,6 +240,11 @@ internal static class PresetLoader
             CipherTypeDistribution = ParseCipherTypes(preset.CipherTypes),
             PersonalCipherDistribution = ParsePersonalCipherDistribution(preset.PersonalCiphers?.Shape),
             FolderDistribution = ParseFolderDistribution(preset.Folders?.Shape),
+            ArchivedCipherRate = preset.CipherAssignment?.ArchivedRate ?? 0,
+            DeletedCipherRate = preset.CipherAssignment?.DeletedRate ?? 0,
+            ArchivedAndDeletedOverlapRate = preset.CipherAssignment?.ArchivedAndDeletedOverlapRate ?? 0,
+            MaxArchivedCiphers = preset.CipherAssignment?.MaxArchivedCiphers ?? 50,
+            MaxDeletedCiphers = preset.CipherAssignment?.MaxDeletedCiphers ?? 25,
         };
     }
 
