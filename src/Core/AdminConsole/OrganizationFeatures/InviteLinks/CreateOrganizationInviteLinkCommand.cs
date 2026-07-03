@@ -43,8 +43,7 @@ public class CreateOrganizationInviteLinkCommand(
         {
             OrganizationId = request.OrganizationId,
             Invite = request.Invite,
-            // Auto confirmation isn't supported yet — force to false regardless of the request.
-            SupportsConfirmation = false,
+            SupportsConfirmation = request.SupportsConfirmation,
             CreationDate = now,
             RevisionDate = now,
         };

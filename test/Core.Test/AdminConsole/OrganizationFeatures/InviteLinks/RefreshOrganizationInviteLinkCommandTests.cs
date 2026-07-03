@@ -54,8 +54,7 @@ public class RefreshOrganizationInviteLinkCommandTests
         Assert.NotEqual(existingLink.Id, link.Id);
         Assert.NotEqual(existingLink.Code, link.Code);
         Assert.Equal(request.Invite, link.Invite);
-        // Server hardcodes SupportsConfirmation to false regardless of the request's value.
-        Assert.False(link.SupportsConfirmation);
+        Assert.Equal(request.SupportsConfirmation, link.SupportsConfirmation);
         Assert.Equal(existingLink.AllowedDomains, link.AllowedDomains);
         Assert.Contains("acme.com", link.GetAllowedDomains());
         Assert.Contains("example.com", link.GetAllowedDomains());

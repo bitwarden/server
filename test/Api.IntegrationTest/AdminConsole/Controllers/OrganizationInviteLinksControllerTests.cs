@@ -116,8 +116,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
             Assert.Equal(organization.Id, content.OrganizationId);
             Assert.Equal(["acme.com", "example.com"], content.AllowedDomains);
             Assert.Equal(_invite, content.Invite);
-            // Server hardcodes SupportsConfirmation to false regardless of the request's value.
-            Assert.False(content.SupportsConfirmation);
+            Assert.True(content.SupportsConfirmation);
         }
 
         var createResponse = await _client.PostAsJsonAsync(

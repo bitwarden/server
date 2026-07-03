@@ -47,8 +47,7 @@ public class CreateOrganizationInviteLinkCommandTests
         Assert.NotEqual(Guid.Empty, link.Id);
         Assert.NotEqual(Guid.Empty, link.Code);
         Assert.Equal(request.Invite, link.Invite);
-        // Server hardcodes SupportsConfirmation to false regardless of the request's value.
-        Assert.False(link.SupportsConfirmation);
+        Assert.Equal(request.SupportsConfirmation, link.SupportsConfirmation);
 
         var deserializedDomains = JsonSerializer.Deserialize<List<string>>(link.AllowedDomains);
         Assert.NotNull(deserializedDomains);
