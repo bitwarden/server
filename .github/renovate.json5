@@ -122,6 +122,7 @@
     },
     {
       matchPackageNames: [
+        "AutoMapper",
         "AutoMapper.Extensions.Microsoft.DependencyInjection",
         "AWSSDK.SimpleEmail",
         "AWSSDK.SQS",
@@ -236,6 +237,15 @@
       ],
       matchUpdateTypes: ["minor"],
       dependencyDashboardApproval: true,
+    },
+
+    // ==================== Version Constraint Rules ====================
+    {
+      // AutoMapper 15+ changed to a commercial license, so we stay on the
+      // last MIT-licensed major version (14.x).
+      matchPackageNames: ["AutoMapper","AutoMapper.Extensions.Microsoft.DependencyInjection"],
+      allowedVersions: "<15",
+      description: "Pin AutoMapper below 15",
     },
   ],
   ignoreDeps: ["dotnet-sdk"],
