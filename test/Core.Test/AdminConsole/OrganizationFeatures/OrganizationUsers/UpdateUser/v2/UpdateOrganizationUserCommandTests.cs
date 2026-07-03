@@ -186,6 +186,7 @@ public class UpdateOrganizationUserCommandTests
             new OrganizationUser { Type = OrganizationUserType.Owner },
             collections,
             groups,
+            [],
             []);
     }
 }

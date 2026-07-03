@@ -822,6 +822,56 @@ public class OrganizationUsersControllerTests
             .UpdateUserAsync(default);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task Put_WhenFeatureFlagEnabled_ExcludesDefaultCollectionsFromPreservedAccess(
+        Organization organization, OrganizationUserUpdateRequestModel model, Guid userId, OrganizationAbility organizationAbility,
+        OrganizationUser organizationUser, Guid sharedCollectionId, Guid defaultCollectionId,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        PutSetup(sutProvider, organization, organizationUser, organizationAbility, userId, featureEnabled: true);
+
+        // The client posts no collections; the user currently has access to a shared and a default collection.
+        model.Collections = [];
+        var currentAccess = new List<CollectionAccessSelection>
+        {
+            new() { Id = sharedCollectionId },
+            new() { Id = defaultCollectionId }
+        };
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdWithCollectionsAsync(organizationUser.Id)
+            .Returns(new Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>(organizationUser, currentAccess));
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection>
+            {
+                new() { Id = sharedCollectionId, OrganizationId = organization.Id, Type = CollectionType.SharedCollection },
+                new() { Id = defaultCollectionId, OrganizationId = organization.Id, Type = CollectionType.DefaultUserCollection }
+            });
+
+        // The saving user cannot ModifyUserAccess on the current collections, so they would be preserved as read-only.
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Collection>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>())
+            .Returns(AuthorizationResult.Failed());
+
+        V2_UpdateUserCommand.UpdateOrganizationUserRequest captured = null;
+        sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
+            .UpdateUserAsync(Arg.Do<V2_UpdateUserCommand.UpdateOrganizationUserRequest>(r => captured = r))
+            .Returns(new CommandResult(new None()));
+
+        var result = await sutProvider.Sut.Put(organization, organizationUser.Id, model);
+
+        Assert.IsType<NoContent>(result);
+        Assert.NotNull(captured);
+        // The default collection is dropped from the preserved set; the shared one is kept.
+        Assert.Contains(captured.CollectionsToSave, c => c.Id == sharedCollectionId);
+        Assert.DoesNotContain(captured.CollectionsToSave, c => c.Id == defaultCollectionId);
+        // Both hydrated collections are still passed through so the validator can reject any posted default.
+        Assert.Contains(captured.PostedCollections, c => c.Id == defaultCollectionId);
+    }
+
     private static void PutSetup(SutProvider<OrganizationUsersController> sutProvider, Organization organization,
         OrganizationUser organizationUser, OrganizationAbility organizationAbility, Guid userId, bool featureEnabled)
     {

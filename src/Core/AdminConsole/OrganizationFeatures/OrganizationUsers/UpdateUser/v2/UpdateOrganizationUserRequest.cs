@@ -27,6 +27,9 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUse
 /// <param name="CollectionsToSave">The user's updated collection access. Null removes all collection access.</param>
 /// <param name="GroupsToSave">The user's updated group access. Null means groups are not updated.</param>
 /// <param name="CurrentAccessIds">The collection ids the user currently has access to (used for the self-add check).</param>
+/// <param name="PostedCollections">The hydrated collections referenced by <paramref name="CollectionsToSave"/>, already
+/// loaded and authorized by the API layer, so the validator can check existence and reject default collections without
+/// re-querying.</param>
 public record UpdateOrganizationUserRequest(
     OrganizationUser OrganizationUser,
     Organization Organization,
@@ -38,7 +41,8 @@ public record UpdateOrganizationUserRequest(
     OrganizationUser? PerformedByOrganizationUser,
     List<CollectionAccessSelection>? CollectionsToSave,
     IEnumerable<Guid>? GroupsToSave,
-    HashSet<Guid> CurrentAccessIds);
+    HashSet<Guid> CurrentAccessIds,
+    ICollection<Collection> PostedCollections);
 
 /// <summary>
 /// The input to the validator: the <see cref="OrganizationUser"/> in its current (unmodified) database state,
@@ -55,4 +59,5 @@ public record UpdateOrganizationUserValidationRequest(
     IEnumerable<Guid>? GroupsToSave,
     HashSet<Guid> CurrentAccessIds,
     Organization Organization,
-    OrganizationAbility OrganizationAbility);
+    OrganizationAbility OrganizationAbility,
+    ICollection<Collection> PostedCollections);

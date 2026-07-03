@@ -102,11 +102,8 @@ public class UpdateOrganizationUserValidatorTests
         Guid missingCollectionId)
     {
         var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User,
-            collections: [new CollectionAccessSelection { Id = missingCollectionId }]);
-
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(new List<Collection>());
+            collections: [new CollectionAccessSelection { Id = missingCollectionId }],
+            postedCollections: []);
 
         var result = await sutProvider.Sut.ValidateAsync(request);
 
@@ -180,13 +177,6 @@ public class UpdateOrganizationUserValidatorTests
             ability: ability,
             collections: [new CollectionAccessSelection { Id = collectionId, Manage = true, ReadOnly = true }]);
 
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(new List<Collection>
-            {
-                new() { Id = collectionId, OrganizationId = orgUser.OrganizationId, Type = CollectionType.SharedCollection }
-            });
-
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         Assert.True(result.IsError);
@@ -195,7 +185,7 @@ public class UpdateOrganizationUserValidatorTests
 
     [Theory]
     [BitAutoData]
-    public async Task ValidateAsync_FiltersDefaultUserCollectionsFromValidResult(
+    public async Task ValidateAsync_WhenAssigningDefaultUserCollection_ReturnsCannotAssignDefaultCollection(
         SutProvider<UpdateOrganizationUserValidator> sutProvider,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser,
         Guid sharedCollectionId,
@@ -208,21 +198,17 @@ public class UpdateOrganizationUserValidatorTests
             [
                 new CollectionAccessSelection { Id = sharedCollectionId },
                 new CollectionAccessSelection { Id = defaultCollectionId }
+            ],
+            postedCollections:
+            [
+                new Collection { Id = sharedCollectionId, OrganizationId = orgUser.OrganizationId, Type = CollectionType.SharedCollection },
+                new Collection { Id = defaultCollectionId, OrganizationId = orgUser.OrganizationId, Type = CollectionType.DefaultUserCollection }
             ]);
-
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(new List<Collection>
-            {
-                new() { Id = sharedCollectionId, OrganizationId = orgUser.OrganizationId, Type = CollectionType.SharedCollection },
-                new() { Id = defaultCollectionId, OrganizationId = orgUser.OrganizationId, Type = CollectionType.DefaultUserCollection }
-            });
 
         var result = await sutProvider.Sut.ValidateAsync(request);
 
-        Assert.True(result.IsValid);
-        Assert.Single(result.Request.CollectionsToSave);
-        Assert.Equal(sharedCollectionId, result.Request.CollectionsToSave.Single().Id);
+        Assert.True(result.IsError);
+        Assert.IsType<CannotAssignDefaultCollection>(result.AsError);
     }
 
     [Theory]
@@ -350,7 +336,8 @@ public class UpdateOrganizationUserValidatorTests
         OrganizationAbility ability = null,
         List<CollectionAccessSelection> collections = null,
         IEnumerable<Guid> groups = null,
-        HashSet<Guid> currentAccessIds = null)
+        HashSet<Guid> currentAccessIds = null,
+        ICollection<Collection> postedCollections = null)
     {
         // Use the real role-validation service so the escalation check exercises its actual rules. The
         // dependency is set under the constructor parameter name because BitAutoData has already stored an
@@ -373,7 +360,17 @@ public class UpdateOrganizationUserValidatorTests
             groups,
             currentAccessIds ?? [],
             organization ?? CreateOrganization(organizationUser.OrganizationId, PlanType.EnterpriseAnnually),
-            ability ?? CreateAbility(organizationUser.OrganizationId, allowAdminAccessToAllCollectionItems: true));
+            ability ?? CreateAbility(organizationUser.OrganizationId, allowAdminAccessToAllCollectionItems: true),
+            // By default, treat every posted collection as an existing shared collection in the org so
+            // validation passes; tests override this to exercise missing or default collections.
+            postedCollections ?? (collections ?? [])
+                .Select(c => new Collection
+                {
+                    Id = c.Id,
+                    OrganizationId = organizationUser.OrganizationId,
+                    Type = CollectionType.SharedCollection
+                })
+                .ToList());
     }
 
     // The acting user's own membership. Custom users are given ManageUsers by default, since that is the

@@ -17,7 +17,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUse
 
 public class UpdateOrganizationUserValidator(
     IOrganizationUserRepository organizationUserRepository,
-    ICollectionRepository collectionRepository,
     IGroupRepository groupRepository,
     IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
     IOrganizationUserValidationService organizationUserValidationService)
@@ -28,7 +27,6 @@ public class UpdateOrganizationUserValidator(
     {
         var organizationUser = request.OrganizationUser;
 
-        // The user must already be invited to the organization.
         if (organizationUser.Id == Guid.Empty)
         {
             return Invalid(request, new InviteUserFirst());
@@ -47,18 +45,22 @@ public class UpdateOrganizationUserValidator(
             return Invalid(request, new CannotAddSelfToCollection());
         }
 
-        // All posted collections must exist and belong to the organization. Default user collections are
-        // filtered out of the set that is ultimately persisted.
+        // All posted collections must exist and belong to the organization. The API layer has already loaded
+        // and authorized these collections, so they are validated against the request rather than re-queried.
         var collectionsToSave = request.CollectionsToSave;
         if (collectionsToSave.Count != 0)
         {
-            var collections = await collectionRepository.GetManyByManyIdsAsync(collectionsToSave.Select(c => c.Id));
-            if (!CollectionsAreValid(collectionsToSave, collections, organizationUser.OrganizationId))
+            if (!CollectionsAreValid(collectionsToSave, request.PostedCollections, organizationUser.OrganizationId))
             {
                 return Invalid(request, new CollectionNotFound());
             }
 
-            collectionsToSave = ExcludeDefaultUserCollections(collectionsToSave, collections);
+            // Default user collections ("My Items") cannot be assigned through member management; their presence
+            // here is invalid input (they are excluded from the current-access set upstream).
+            if (ContainsDefaultUserCollection(collectionsToSave, request.PostedCollections))
+            {
+                return Invalid(request, new CannotAssignDefaultCollection());
+            }
         }
 
         // All posted groups must exist and belong to the organization.
@@ -80,7 +82,7 @@ public class UpdateOrganizationUserValidator(
         }
 
         // Custom permissions require an Enterprise plan.
-        if (request.NewType == OrganizationUserType.Custom && !request.Organization.UseCustomPermissions)
+        if (request is { NewType: OrganizationUserType.Custom, Organization.UseCustomPermissions: false })
         {
             return Invalid(request, new CustomPermissionsNotEnabled());
         }
@@ -99,7 +101,7 @@ public class UpdateOrganizationUserValidator(
             return Invalid(request, new ManageMutuallyExclusive());
         }
 
-        return Valid(request with { CollectionsToSave = collectionsToSave });
+        return Valid(request);
     }
 
     private async Task<bool> IsValidFreeOrganizationAdminAsync(OrganizationUser organizationUser, OrganizationUserType newType, Organization organization)
@@ -195,11 +197,10 @@ public class UpdateOrganizationUserValidator(
         return missingCollection == null && collections.All(c => c.OrganizationId == organizationId);
     }
 
-    private static List<CollectionAccessSelection> ExcludeDefaultUserCollections(
+    private static bool ContainsDefaultUserCollection(
         List<CollectionAccessSelection> collectionAccess, ICollection<Collection> collections) =>
         collectionAccess
-            .Where(cas => collections.Any(c => c.Id == cas.Id && c.Type != CollectionType.DefaultUserCollection))
-            .ToList();
+            .Any(cas => collections.Any(c => c.Id == cas.Id && c.Type == CollectionType.DefaultUserCollection));
 
     private static bool GroupsAreValid(ICollection<Guid> groupAccess, ICollection<Group> groups, Guid organizationId)
     {

@@ -34,14 +34,14 @@ public class UpdateOrganizationUserCommand(
             request.GroupsToSave,
             request.CurrentAccessIds,
             organization,
-            organizationAbility));
+            organizationAbility,
+            request.PostedCollections));
 
         if (validationResult.IsError)
         {
             return validationResult.AsError;
         }
 
-        // The validator returns the collection access with default user collections filtered out.
         var collectionsToSave = validationResult.Request.CollectionsToSave;
         var groupsToSave = validationResult.Request.GroupsToSave;
 

@@ -427,8 +427,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
         if (_featureService.IsEnabled(FeatureFlagKeys.ChangeMemberEmailNoMp))
         {
-            // The self-add-to-collection check is handled by the v2 validator.
-            var collectionsToSave = await GetAuthorizedCollectionsToSaveAsync(model, currentAccess);
+            var (collectionsToSave, postedCollections) = await GetAuthorizedCollectionsToSaveAsync(model, currentAccess);
 
             // The acting user's own membership drives the role-escalation check. Null when the caller is not
             // an organization member (e.g. a provider), whose authority comes from the owner/provider flag.
@@ -451,7 +450,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
                 savingOrganizationUser,
                 collectionsToSave,
                 groupsToSave,
-                currentAccessIds);
+                currentAccessIds,
+                postedCollections);
 
             var result = await _updateOrganizationUserCommandVNext.UpdateUserAsync(request);
             return Handle(result);
@@ -467,7 +467,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
             throw new BadRequestException("You cannot add yourself to a collection.");
         }
 
-        var collectionsToSaveV1 = await GetAuthorizedCollectionsToSaveAsync(model, currentAccess);
+        var (collectionsToSaveV1, _) = await GetAuthorizedCollectionsToSaveAsync(model, currentAccess);
 
         await _updateOrganizationUserCommand.UpdateUserAsync(model.ToOrganizationUser(organizationUser), existingUserType, userId,
             collectionsToSaveV1, groupsToSave);
@@ -480,7 +480,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     /// cannot <see cref="BulkCollectionOperations.ModifyUserAccess"/> are validated and the user's current
     /// access to them is preserved so it is not accidentally overwritten.
     /// </summary>
-    private async Task<List<CollectionAccessSelection>> GetAuthorizedCollectionsToSaveAsync(OrganizationUserUpdateRequestModel model, ICollection<CollectionAccessSelection> currentAccess)
+    private async Task<(List<CollectionAccessSelection> CollectionsToSave, ICollection<Collection> Collections)> GetAuthorizedCollectionsToSaveAsync(OrganizationUserUpdateRequestModel model, ICollection<CollectionAccessSelection> currentAccess)
     {
         // Authorization check:
         // You must have authorization to ModifyUserAccess for all collections being saved. The bulk handler
@@ -507,11 +507,29 @@ public class OrganizationUsersController : BaseAdminConsoleController
             }
         }
 
+        // Default user collections ("My Items") are never managed through this flow. Exclude any current-access
+        // defaults from the preserved set so they are not re-saved; posted defaults are rejected downstream.
+        var defaultCollectionIds = postedCollections
+            .Concat(currentCollections)
+            .Where(c => c.Type == CollectionType.DefaultUserCollection)
+            .Select(c => c.Id)
+            .ToHashSet();
+
         var editedCollectionAccess = model.Collections.Select(c => c.ToSelectionReadOnly());
-        var readonlyCollectionAccess = currentAccess.Where(ca => readonlyCollectionIds.Contains(ca.Id));
-        return editedCollectionAccess
+        var readonlyCollectionAccess = currentAccess
+            .Where(ca => readonlyCollectionIds.Contains(ca.Id) && !defaultCollectionIds.Contains(ca.Id));
+        var collectionsToSave = editedCollectionAccess
             .Concat(readonlyCollectionAccess)
             .ToList();
+
+        // The hydrated collections referenced by collectionsToSave (posted plus preserved read-only) so the
+        // validator can check existence and reject defaults without re-querying.
+        var collections = postedCollections
+            .Concat(currentCollections)
+            .DistinctBy(c => c.Id)
+            .ToList();
+
+        return (collectionsToSave, collections);
     }
 
     [HttpPost("{id}")]
