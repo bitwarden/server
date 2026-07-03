@@ -4,8 +4,8 @@ namespace Bit.Services.Pam.Api.Models.Response;
 
 /// <summary>
 /// An access request with its denormalized requester identity, serving the approver inbox, the caller's own request
-/// list, and the cipher access-state snapshot. Fields without a backing store in v1 (<see cref="ExpiredAt"/>) are
-/// always null.
+/// list, and the cipher access-state snapshot. <see cref="ExpiredAt"/> has no backing store in v1 and is always null;
+/// <see cref="RuleId"/> is the rule pinned at submit (null for requests created before pinning existed).
 /// </summary>
 public class AccessRequestDetailsResponseModel : ResponseModel
 {
@@ -29,19 +29,25 @@ public class AccessRequestDetailsResponseModel : ResponseModel
     /// <summary>The member who opened the request.</summary>
     public Guid RequesterId { get; set; }
 
+    /// <summary>
+    /// The access rule that gated the cipher and that this request is evaluated against, resolved once at submit
+    /// (oldest wins) and pinned on the request. Null for requests created before pinning existed.
+    /// </summary>
+    public Guid? RuleId { get; set; }
+
     /// <summary>The request's lifecycle state.</summary>
     public AccessRequestStatus Status { get; set; }
 
     /// <summary>
-    /// The resolved absolute access window. Both request modes collapse into it at submit (on-demand →
-    /// <c>now</c>..<c>now + duration</c>, scheduled → the chosen start/end), so there is no separate duration or mode
-    /// field; the length is <see cref="RequestedNotAfter"/> minus <see cref="RequestedNotBefore"/>. In v1 the approved
-    /// and leased windows are identical to this one.
+    /// The activation window resolved at submit — the bounds on WHEN this request may be promoted to a lease. Both
+    /// request modes collapse into it (on-demand → <c>now</c>..<c>now + duration</c>, scheduled → the chosen
+    /// start/end), so there is no separate duration or mode field; the length is <see cref="LeaseNotAfter"/> minus
+    /// <see cref="LeaseNotBefore"/>. In v1 the approved and leased windows are identical to this one.
     /// </summary>
-    public DateTime RequestedNotBefore { get; set; }
+    public DateTime LeaseNotBefore { get; set; }
 
-    /// <summary>The end of the resolved access window (UTC); see <see cref="RequestedNotBefore"/>.</summary>
-    public DateTime RequestedNotAfter { get; set; }
+    /// <summary>The end of the resolved activation window (UTC); see <see cref="LeaseNotBefore"/>.</summary>
+    public DateTime LeaseNotAfter { get; set; }
 
     /// <summary>The optional justification the requester supplied when opening the request.</summary>
     public string? Reason { get; set; }
