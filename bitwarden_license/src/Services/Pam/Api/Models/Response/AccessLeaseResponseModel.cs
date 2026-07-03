@@ -3,9 +3,9 @@
 namespace Bit.Services.Pam.Api.Models.Response;
 
 /// <summary>
-/// An access lease as its requester sees it: the originating request, string status vocabulary, and revocation
-/// fields. Powers the request-submission envelope, the caller-scoped "my active leases" surface, and the cipher
-/// access-state snapshot. Fields without a backing store in v1 (<see cref="RuleId"/>,
+/// An access lease as its requester sees it: the originating request, its lifecycle <see cref="Status"/>, and
+/// revocation fields. Powers the request-submission envelope, the caller-scoped "my active leases" surface, and the
+/// cipher access-state snapshot. Fields without a backing store in v1 (<see cref="RuleId"/>,
 /// <see cref="RevocationReason"/>) are null.
 /// </summary>
 public class AccessLeaseResponseModel : ResponseModel
@@ -36,8 +36,8 @@ public class AccessLeaseResponseModel : ResponseModel
     /// <summary>The user the lease was granted to (the original requester).</summary>
     public Guid RequesterId { get; set; }
 
-    /// <summary><c>active | expired | revoked</c>.</summary>
-    public string Status { get; set; } = null!;
+    /// <summary>The lease's lifecycle state.</summary>
+    public AccessLeaseStatus Status { get; set; }
 
     /// <summary>When the lease's access window opens (UTC).</summary>
     public DateTime NotBefore { get; set; }

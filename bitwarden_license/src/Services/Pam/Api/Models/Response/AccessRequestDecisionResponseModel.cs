@@ -11,8 +11,8 @@
 /// </summary>
 public class AccessRequestDecisionResponseModel
 {
-    /// <summary><c>human | automatic</c>.</summary>
-    public string DeciderKind { get; set; } = "human";
+    /// <summary>Whether a human approver or an automatic access-rule decision produced this entry.</summary>
+    public DeciderKind DeciderKind { get; set; }
 
     /// <summary>The human approver's user id, or null for an automatic decision.</summary>
     public Guid? Id { get; set; }

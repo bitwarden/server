@@ -29,8 +29,8 @@ public class AccessRequestDetailsResponseModel : ResponseModel
     /// <summary>The member who opened the request.</summary>
     public Guid RequesterId { get; set; }
 
-    /// <summary><c>pending | approved | activated | denied | cancelled | expired</c>.</summary>
-    public string Status { get; set; } = null!;
+    /// <summary>The request's lifecycle state.</summary>
+    public AccessRequestStatus Status { get; set; }
 
     /// <summary>
     /// The resolved absolute access window. Both request modes collapse into it at submit (on-demand →
@@ -66,10 +66,10 @@ public class AccessRequestDetailsResponseModel : ResponseModel
     public Guid? ProducedLeaseId { get; set; }
 
     /// <summary>
-    /// The produced lease's status (<c>active | expired | revoked</c>), or null when no lease exists. The inbox uses
-    /// this to keep an ended lease out of the "active" group so it is not offered for revocation.
+    /// The produced lease's status, or null when no lease exists. The inbox uses this to keep an ended lease out of
+    /// the "active" group so it is not offered for revocation.
     /// </summary>
-    public string? ProducedLeaseStatus { get; set; }
+    public AccessLeaseStatus? ProducedLeaseStatus { get; set; }
 
     /// <summary>The parent lease if this is an extension request.</summary>
     public Guid? ExtensionOfLeaseId { get; set; }
