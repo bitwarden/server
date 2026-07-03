@@ -39,6 +39,43 @@ public static class Claims
         public const string ManageResetPassword = "manageresetpassword";
         public const string ManageScim = "managescim";
     }
+
+    /// <summary>
+    /// The membership and authorization claim types that
+    /// <see cref="Bit.Core.Utilities.CoreHelpers.BuildIdentityClaims"/> is authoritative for. These are rebuilt
+    /// from the database on every token issuance, so the Identity Profile Service must not carry them over from the
+    /// existing subject when refreshing a token — a refreshed token should always reflect the member's current
+    /// organization and provider membership.
+    /// <para>
+    /// Keep this in sync with <c>BuildIdentityClaims</c>. It intentionally excludes user-identity claims
+    /// (<see cref="Premium"/>, email, email_verified, name, <see cref="SecurityStamp"/>) and non-membership claims
+    /// (<see cref="Type"/>, <see cref="Organization"/>, <see cref="Device"/>, <see cref="DeviceType"/>, send_*),
+    /// which are overwritten or preserved separately.
+    /// </para>
+    /// </summary>
+    public static readonly IReadOnlySet<string> MembershipClaimTypes = new HashSet<string>
+    {
+        OrganizationOwner,
+        OrganizationAdmin,
+        OrganizationUser,
+        OrganizationCustom,
+        ProviderAdmin,
+        ProviderServiceUser,
+        SecretsManagerAccess,
+        CustomPermissions.AccessEventLogs,
+        CustomPermissions.AccessImportExport,
+        CustomPermissions.AccessReports,
+        CustomPermissions.CreateNewCollections,
+        CustomPermissions.EditAnyCollection,
+        CustomPermissions.DeleteAnyCollection,
+        CustomPermissions.ManageGroups,
+        CustomPermissions.ManagePolicies,
+        CustomPermissions.ManageSso,
+        CustomPermissions.ManageUsers,
+        CustomPermissions.ManageResetPassword,
+        CustomPermissions.ManageScim,
+    };
+
     public static class SendAccessClaims
     {
         public const string SendId = "send_id";
